@@ -1,7 +1,8 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-import { Package, Droplets, Baby, CalendarDays } from 'lucide-react';
+import { Package, Droplets, Baby, CalendarDays, BarChart3 } from 'lucide-react';
 import { ProductType, INFO_POINT_SIZES, User } from '../../types';
 import SkeletonLoader from '../../components/SkeletonLoader';
 
@@ -11,6 +12,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) => {
+    const navigate = useNavigate();
     const { products, baptisms, presentations, events, isLoading } = useStore();
 
     // Stats Calculations
@@ -62,9 +64,19 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
 
     return (
         <div className="space-y-8 animate-fadeIn p-1">
-            <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-black">
-                Resumen General
-            </h2>
+            {/* Header con título y botón de Reportes (solo desktop) */}
+            <div className="flex justify-between items-center">
+                <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-black">
+                    Resumen General
+                </h2>
+                <button
+                    onClick={() => navigate('/pastores')}
+                    className="hidden md:flex items-center gap-2 px-4 py-2 bg-white text-black border-2 border-black font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none transition-all"
+                >
+                    <BarChart3 size={18} />
+                    REPORTES
+                </button>
+            </div>
 
             {/* Top Cards Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">

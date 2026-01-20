@@ -1,13 +1,16 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ViewState } from '../../types';
-import { Package, CalendarRange, ArrowLeftRight, Search, PlusCircle, Baby, User, Settings, Layers, Tag } from 'lucide-react';
+import { Package, CalendarRange, ArrowLeftRight, Search, PlusCircle, Baby, User, Settings, Layers, Tag, BarChart3 } from 'lucide-react';
 
 interface InfoPointMenuProps {
     onNavigate: (view: ViewState) => void;
 }
 
+
 const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate }) => {
+    const navigate = useNavigate();
 
     // Menu Config
     const menuItems = [
@@ -20,8 +23,17 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate }) => {
         { id: 'SEARCH', label: 'Buscar', icon: Search, color: 'bg-slate-100' },
         { id: 'BAPTISMS', label: 'Bautismos', icon: User, color: 'bg-cyan-100' },
         { id: 'PRESENTATIONS', label: 'Presentaciones', icon: Baby, color: 'bg-purple-100' },
+        { id: 'REPORTES', label: 'Reportes', icon: BarChart3, color: 'bg-teal-100', externalRoute: '/pastores' },
         { id: 'ADMIN_PANEL', label: 'Configuración', icon: Settings, color: 'bg-gray-200' },
     ];
+
+    const handleItemClick = (item: typeof menuItems[0]) => {
+        if (item.externalRoute) {
+            navigate(item.externalRoute);
+        } else {
+            onNavigate(item.id as ViewState);
+        }
+    };
 
     return (
         <div className="space-y-6 pt-4 pb-20">
@@ -34,7 +46,7 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate }) => {
                 {menuItems.map((item) => (
                     <button
                         key={item.id}
-                        onClick={() => onNavigate(item.id as ViewState)}
+                        onClick={() => handleItemClick(item)}
                         className="flex flex-col items-center justify-center p-6 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:shadow-none transition-all active:scale-95"
                     >
                         <div className={`p-4 rounded-full ${item.color} border-2 border-black mb-3`}>
@@ -51,3 +63,4 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate }) => {
 };
 
 export default InfoPointMenu;
+
