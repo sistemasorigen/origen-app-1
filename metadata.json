@@ -1,0 +1,7 @@
+{
+  "name": "Origen app",
+  "description": "Una suite de gestión integral que incluye Puntos de Información, Grupos de Conexión y paneles de Administración con análisis impulsados por IA y generación de recursos.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
