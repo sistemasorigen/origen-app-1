@@ -41,11 +41,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Core Auth State
     const [user, setUser] = useState<User | null>(null);
 
-    // DEBUG: Monitor User State
-    useEffect(() => {
-        console.log('[Auth] User State Updated:', user ? `${user.email} (${user.role})` : 'null');
-    }, [user]);
-
     // Split Loading State for "Non-Blocking Auth"
     const [isLoadingSession, setIsLoadingSession] = useState(true);
     const [isLoadingProfile, setIsLoadingProfile] = useState(false);
