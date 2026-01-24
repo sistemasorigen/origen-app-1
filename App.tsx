@@ -284,10 +284,14 @@ const AppContent: React.FC = () => {
     }
 
     // Show profile completion modal for OAuth users missing data
-    if (needsProfileCompletion && user) {
+    // "Smart Session Hydration": Only show if profile is fully synced to prevent race conditions
+    // and ensure we don't show it during initial load
+    const shouldShowOnboarding = !authLoading && user && needsProfileCompletion;
+
+    if (shouldShowOnboarding) {
         return (
             <CompleteProfileModal
-                userName={user.name || 'Usuario'}
+                userName={user?.name || 'Usuario'}
                 onComplete={completeProfile}
             />
         );

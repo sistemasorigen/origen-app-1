@@ -8,6 +8,7 @@ interface AuthContextType {
     loading: boolean;
     error: string | null;
     isRecoveryMode: boolean;  // True when user arrived with recovery tokens
+    isProfileSynced: boolean; // True when user profile is confirmed synced with DB
     needsProfileCompletion: boolean; // True when user is missing phone/age/gender
     signIn: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
     signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
@@ -41,8 +42,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [error, setError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
 
+    // Flag to track if we have successfully synced with the DB
+    const [isProfileSynced, setIsProfileSynced] = useState(false);
+
     // Computed: Check if profile needs completion (OAuth users missing phone/age/gender/birthDate)
-    const needsProfileCompletion = !!(user && (!user.phone || !user.age || !user.gender || !user.birthDate));
+    // ONLY true if we have confirmed sync with DB to avoid race conditions
+    const needsProfileCompletion = !!(user && isProfileSynced && (!user.phone || !user.age || !user.gender || !user.birthDate));
 
     // Detect recovery mode synchronously from URL hash BEFORE Supabase cleans it
     const [isRecoveryMode, setIsRecoveryMode] = useState(() => {
@@ -76,7 +81,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const processSession = async (session: any, source: string) => {
             if (!session?.user) {
                 console.log(`[Auth] No session from ${source}`);
-                if (isMounted) setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                    setIsProfileSynced(true); // "Synced" effectively means we know there's no user
+                }
                 return;
             }
 
@@ -164,6 +172,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     } else if (event === 'SIGNED_OUT') {
                         setUser(null);
                         setLoading(false);
+                        setIsProfileSynced(false);
+                        hasProcessedSession = false; // Reset for next login
                         clearTimeout(safetyTimeout);
                     }
                 });
@@ -232,6 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (loadedProfileRef.current === authUserId) {
             console.log('[Auth] Profile already loaded for:', authUserId);
             setLoading(false);
+            setIsProfileSynced(true);
             return;
         }
         if (loadingInProgressRef.current) {
@@ -288,6 +299,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 });
                 setError(null);
                 loadedProfileRef.current = authUserId; // Mark as loaded
+                setIsProfileSynced(true);
                 console.log('[Auth] Profile loaded successfully:', data.email, data.role);
             } else if (dbError) {
                 // Profile doesn't exist, try to create it
@@ -301,6 +313,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } finally {
             loadingInProgressRef.current = false;
             setLoading(false);
+            // NOTE: isProfileSynced is set in success path or fallback path
         }
     };
 
@@ -343,6 +356,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(fallbackUser);
             setError(null);
             console.log("Fallback user set from auth data:", fallbackUser.email);
+            setIsProfileSynced(true);
 
             // Try to upsert profile in background (don't block)
             supabase
@@ -368,11 +382,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             isActive: newUser.is_active,
                             linkedGroupId: newUser.linked_group_id,
                             volunteerRoles: newUser.volunteer_roles || [],
-                            phone: authUser?.user_metadata?.phone || authUser?.phone || '',
+                            // BUGFIX: Prioritize phone from DB (newUser) over session (authUser)
+                            // because session phone might be empty (Google Auth) while DB has it.
+                            phone: newUser.phone || authUser?.user_metadata?.phone || authUser?.phone || '',
                             age: newUser.age,
                             gender: newUser.gender,
                             birthDate: newUser.birth_date
                         });
+                        setIsProfileSynced(true);
                         console.log("User profile synced from DB:", newUser.email, newUser.role);
                     } else {
                         console.warn("Background profile sync failed:", createError?.message);
@@ -519,6 +536,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             loading,
             error,
             isRecoveryMode,
+            isProfileSynced,
             needsProfileCompletion,
             signIn,
             signInWithGoogle,

@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize Gemini with API key
@@ -123,4 +124,40 @@ function applyRegexCorrections(text: string): string {
  */
 export function isGeminiAvailable(): boolean {
   return Boolean(API_KEY);
+}
+
+/**
+ * Validate user profile data with Gemini
+ */
+export async function validateProfileWithGemini(data: { name: string; phone: string; age: number; gender: string }): Promise<{
+  isValid: boolean;
+  correctedData?: typeof data;
+  message?: string;
+}> {
+  if (!API_KEY) {
+    console.warn('Gemini API key missing, skipping validation');
+    return { isValid: true, correctedData: data };
+  }
+
+  const prompt = `Analiza este JSON de perfil de usuario: ${JSON.stringify(data)}. 
+  Corrige mayúsculas en el nombre y verifica si el teléfono parece válido para Argentina (+54...). 
+  Si el teléfono es inválido o muy corto, marca isValid: false.
+  Retorna SOLO un JSON limpio con esta estructura:
+  {
+    "isValid": boolean,
+    "correctedData": { "name": string, "phone": string, "age": number, "gender": string },
+    "message": string (breve explicación si hay error o corrección)
+  }`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+
+    return JSON.parse(text);
+  } catch (error) {
+    console.error('Gemini Validation Error:', error);
+    // On error, allow to proceed but warn
+    return { isValid: true, correctedData: data };
+  }
 }

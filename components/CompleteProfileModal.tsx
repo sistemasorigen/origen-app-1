@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import NeoModal from './NeoModal';
-import { User, Phone, Calendar, Users, Loader2 } from 'lucide-react';
+import { User, Phone, Calendar, Users, Loader2, Sparkles } from 'lucide-react';
+import { validateProfileWithGemini } from '../services/geminiService';
 
 interface CompleteProfileModalProps {
     userName: string;
@@ -12,6 +13,7 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
     const [birthDate, setBirthDate] = useState('');
     const [gender, setGender] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isValidating, setIsValidating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Calculate age from birth date
@@ -51,13 +53,38 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
         }
 
         setIsSubmitting(true);
+        setIsValidating(true);
+        setError(null);
+
         try {
-            const success = await onComplete({
+            // 🤖 Gemini AI Validation
+            const validationData = {
+                name: userName,
                 phone: phone.trim(),
                 age: calculatedAge,
-                gender,
+                gender
+            };
+
+            const aiResult = await validateProfileWithGemini(validationData);
+
+            if (!aiResult.isValid) {
+                setError(aiResult.message || 'Los datos ingresados no parecen válidos. Por favor verifícalos.');
+                setIsSubmitting(false);
+                setIsValidating(false);
+                return;
+            }
+
+            // Use corrected data if available
+            const finalData = aiResult.correctedData || validationData;
+
+            // Submit to Supabase
+            const success = await onComplete({
+                phone: finalData.phone,
+                age: finalData.age,
+                gender: finalData.gender,
                 birthDate
             });
+
             if (!success) {
                 setError('Error al guardar. Por favor intenta de nuevo.');
             }
@@ -65,6 +92,7 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
             setError('Error al guardar. Por favor intenta de nuevo.');
         } finally {
             setIsSubmitting(false);
+            setIsValidating(false);
         }
     };
 
@@ -156,8 +184,12 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
                     disabled={isSubmitting}
                     className="w-full px-6 py-4 bg-black text-white text-sm font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(100,100,100,1)] hover:shadow-[6px_6px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {isSubmitting ? 'Guardando...' : 'Continuar'}
+                    {isSubmitting ? (
+                        <>
+                            {isValidating ? <Sparkles className="w-4 h-4 animate-pulse" /> : <Loader2 className="w-4 h-4 animate-spin" />}
+                            {isValidating ? 'Analizando con IA...' : 'Guardando...'}
+                        </>
+                    ) : 'Continuar'}
                 </button>
             </form>
 
