@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { WelcomeVisitor, VisitorStage } from '../../types';
 import { MoreHorizontal, GripVertical, Phone, User as UserIcon, Calendar } from 'lucide-react';
 
@@ -36,7 +35,6 @@ const STAGE_LABELS: Record<VisitorStage, string> = {
 const VisitorCard: React.FC<VisitorCardProps> = ({ visitor, onClick, onMove }) => {
     const [showMenu, setShowMenu] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
-    const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
 
     const handleMove = (e: React.MouseEvent, stage: VisitorStage) => {
         e.stopPropagation();
@@ -46,24 +44,15 @@ const VisitorCard: React.FC<VisitorCardProps> = ({ visitor, onClick, onMove }) =
 
     const toggleMenu = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!showMenu && buttonRef.current) {
-            const rect = buttonRef.current.getBoundingClientRect();
-            // Align right edge of menu with right edge of button
-            // Menu width is w-48 (12rem = 192px)
-            setMenuPos({
-                top: rect.bottom + window.scrollY + 4,
-                left: rect.right + window.scrollX - 192
-            });
-        }
         setShowMenu(!showMenu);
     };
 
-    // Close on scroll
+    // Close on click outside
     useEffect(() => {
         if (!showMenu) return;
-        const handleScroll = () => setShowMenu(false);
-        window.addEventListener('scroll', handleScroll, true);
-        return () => window.removeEventListener('scroll', handleScroll, true);
+        const handleClickOutside = () => setShowMenu(false);
+        window.addEventListener('click', handleClickOutside);
+        return () => window.removeEventListener('click', handleClickOutside);
     }, [showMenu]);
 
     return (
@@ -84,34 +73,27 @@ const VisitorCard: React.FC<VisitorCardProps> = ({ visitor, onClick, onMove }) =
                         <MoreHorizontal size={16} />
                     </button>
 
-                    {/* Move Menu (Portal) */}
-                    {showMenu && createPortal(
-                        <>
-                            <div
-                                className="fixed inset-0 z-[9998] bg-transparent"
-                                onClick={(e) => { e.stopPropagation(); setShowMenu(false); }}
-                            />
-                            <div
-                                className="fixed z-[9999] w-48 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] py-1 animate-fadeIn"
-                                style={{ top: menuPos.top, left: menuPos.left }}
-                            >
-                                <div className="px-3 py-1 border-b-2 border-black bg-neutral-100 text-[10px] font-black uppercase tracking-widest text-neutral-500">
-                                    Mover a...
-                                </div>
-                                <div className="max-h-[300px] overflow-y-auto">
-                                    {STAGES.filter(s => s !== visitor.stage).map(stage => (
-                                        <button
-                                            key={stage}
-                                            onClick={(e) => handleMove(e, stage)}
-                                            className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-black hover:text-white transition-colors uppercase"
-                                        >
-                                            {STAGE_LABELS[stage] || stage.replace('_', ' ')}
-                                        </button>
-                                    ))}
-                                </div>
+                    {/* Move Menu (Absolute) */}
+                    {showMenu && (
+                        <div
+                            className="absolute right-0 top-full mt-1 z-[9999] w-48 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] py-1 animate-fadeIn"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="px-3 py-1 border-b-2 border-black bg-neutral-100 text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                                Mover a...
                             </div>
-                        </>,
-                        document.body
+                            <div className="max-h-[300px] overflow-y-auto">
+                                {STAGES.filter(s => s !== visitor.stage).map(stage => (
+                                    <button
+                                        key={stage}
+                                        onClick={(e) => handleMove(e, stage)}
+                                        className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-black hover:text-white transition-colors uppercase"
+                                    >
+                                        {STAGE_LABELS[stage] || stage.replace('_', ' ')}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
