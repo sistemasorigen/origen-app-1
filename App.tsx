@@ -75,27 +75,76 @@ const AppContent: React.FC = () => {
     // Optimized: uses isInitialized for fast hydration check
     const {
         user,
-        loading: authLoading,
-        isInitialized,
+        isLoadingSession, // Only block if we don't know the session yet
         error: authError,
         signIn,
+        signOut,
         retryAuth,
         isRecoveryMode,
         needsProfileCompletion,
         completeProfile
     } = useAuth();
 
+    // Hooks
+    const navigate = useNavigate();
+
     // App Config
     const [config, setConfig] = useState<AppConfig>(db.getAppConfig());
     const [configLoading, setConfigLoading] = useState(false);
 
-    // ... (rest of simple state)
+    // State
+    const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
+    const [isVolunteerModalOpen, setIsVolunteerModalOpen] = useState(false);
 
-    // ... (effects)
+    // Derived/Constant (could be from config)
+    const showVolunteerAccess = true;
 
-    // Show loading screen ONLY if not initialized yet
-    // This allows the app to render much faster (Fast Hydration)
-    if (!isInitialized) {
+    // Effects
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (isLoadingSession) {
+            timer = setTimeout(() => {
+                setShowLoadingTimeout(true);
+            }, LOADING_TIMEOUT);
+        } else {
+            setShowLoadingTimeout(false);
+        }
+        return () => clearTimeout(timer);
+    }, [isLoadingSession]);
+
+    // Handlers
+    const handleAuthScreenLogin = () => {
+        navigate('/');
+    };
+
+    const onLogoutClick = async () => {
+        await signOut();
+    };
+
+    const handleLogin = () => {
+        navigate('/auth');
+    };
+
+    const handleGlobalVolunteerLogin = async (email: string, pass: string) => {
+        const { success } = await signIn(email, pass);
+        if (success) {
+            setIsVolunteerModalOpen(false);
+        }
+        return success;
+    };
+
+    const isSuperAdmin = (u: User | null) => {
+        if (!u) return false;
+        return u.role === UserRole.SUPER_ADMIN || u.roles?.includes(UserRole.SUPER_ADMIN);
+    };
+
+    const refreshConfig = () => {
+        setConfig(db.getAppConfig());
+    };
+
+    // Show loading screen ONLY if session is unknown
+    // This allows the app to render much faster (Non-Blocking)
+    if (isLoadingSession) {
         return (
             <LoadingScreen
                 onRetry={retryAuth}

@@ -166,8 +166,11 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
         };
 
         init();
-        setTimeout(() => setIsLoaded(true), 100);
-    }, []);
+        // Only set loaded on first mount/init
+        if (!isLoaded) {
+            setTimeout(() => setIsLoaded(true), 100);
+        }
+    }, [currentUser]); // FIX: Re-run when user changes (e.g. upgrades to Admin)
 
     // ═══════════════════════════════════════════════════════════════════════════
     // LAZY INITIALIZATION: Only enable physics AFTER user is confirmed + 3s idle

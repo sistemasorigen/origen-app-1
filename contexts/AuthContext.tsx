@@ -1,16 +1,16 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { supabaseService } from '../services/supabaseService';
 import { User, UserRole } from '../types';
 
 interface AuthContextType {
     user: User | null;
-    loading: boolean;
+    isLoadingSession: boolean; // True only while checking if a session exists (Fast)
+    isLoadingProfile: boolean; // True while fetching detailed profile from DB (Slow)
     error: string | null;
-    isRecoveryMode: boolean;  // True when user arrived with recovery tokens
-    isInitialized: boolean;   // Optimized loading state (true = we know if user is logged in or not)
-    isProfileSynced: boolean; // True when user profile is confirmed synced with DB
-    needsProfileCompletion: boolean; // Computed inside context for simplicity
+    isRecoveryMode: boolean;
+    isProfileSynced: boolean;
+    needsProfileCompletion: boolean;
     signIn: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
     signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
     signOut: () => Promise<void>;
@@ -20,7 +20,7 @@ interface AuthContextType {
     completeProfile: (data: { phone: string; age: number; gender: string; birthDate: string }) => Promise<boolean>;
     refreshSession: () => Promise<void>;
     retryAuth: () => void;
-    clearRecoveryMode: () => void;  // Call this after password is updated
+    clearRecoveryMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,27 +33,33 @@ const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage = 'Timeou
     return Promise.race([promise, timeout]);
 };
 
-// Timeout constants (balanced for reliability)
-const SESSION_TIMEOUT = 10000; // 10 seconds
-const PROFILE_TIMEOUT = 10000; // 10 seconds
+// Timeout constants
+const SESSION_TIMEOUT = 10000;
+const PROFILE_TIMEOUT = 10000;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     // Core Auth State
     const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+
+    // DEBUG: Monitor User State
+    useEffect(() => {
+        console.log('[Auth] User State Updated:', user ? `${user.email} (${user.role})` : 'null');
+    }, [user]);
+
+    // Split Loading State for "Non-Blocking Auth"
+    const [isLoadingSession, setIsLoadingSession] = useState(true);
+    const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+
     const [error, setError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
-
-    // Flag for initial hydration: UI can show skeleton instead of generic loading
-    const [isInitialized, setIsInitialized] = useState(false);
 
     // Flag to track if we have successfully synced with the DB
     const [isProfileSynced, setIsProfileSynced] = useState(false);
 
-    // Computed: Needs onboarding? (Safe check using synced profile)
+    // Computed: Needs onboarding?
     const needsOnboarding = !!(user && isProfileSynced && (!user.phone || !user.age));
 
-    // Detect recovery mode synchronously from URL hash BEFORE Supabase cleans it
+    // Detect recovery mode synchronously
     const [isRecoveryMode, setIsRecoveryMode] = useState(() => {
         const hash = window.location.hash;
         return hash.includes('access_token') && hash.includes('type=recovery');
@@ -61,163 +67,217 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const clearRecoveryMode = () => setIsRecoveryMode(false);
 
-    // Main Auth Listener: The faster source of truth
+    // Mounted ref for async safety
+    const mounted = useRef(true);
     useEffect(() => {
-        let mounted = true;
+        mounted.current = true;
+        return () => { mounted.current = false; };
+    }, []);
 
-        // Function to load profile in parallel with session
-        // Handles the "User in Auth but maybe not in DB" case gracefully
-        const hydrateUser = async (sessionUser: any) => {
-            if (!sessionUser) {
-                if (mounted) {
-                    setUser(null);
-                    setIsProfileSynced(false);
-                    setLoading(false);
-                    setIsInitialized(true);
-                }
-                return;
+    // Safety: Force loading to stop after 5s if it gets stuck
+    useEffect(() => {
+        const safetyTimer = setTimeout(() => {
+            if (isLoadingSession) {
+                console.warn('[Auth] Safety timeout reached, forcing session load end.');
+                setIsLoadingSession(false);
             }
+        }, 5000);
+        return () => clearTimeout(safetyTimer);
+    }, [isLoadingSession]);
 
-            // Start fetching profile immediately
-            // Note: We don't await this to set the initial user state if we wanted to show *something* 
-            // but for strict sync we wait. Parallelizing request for speed.
+    // Helper to cache/retrieve user profile from LocalStorage
+    // "Stale-While-Revalidate" pattern to prevent role flickering
+    const STORAGE_KEY = 'origen_user_profile';
+    const saveProfileToCache = (user: User) => {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        } catch (e) { console.error('[Auth] Cache write error', e); }
+    };
+    const getProfileFromCache = (): User | null => {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : null;
+        } catch (e) { return null; }
+    };
 
-            try {
-                // 1. Fetch Profile from DB
-                const profilePromise = supabase
-                    .from('users')
-                    .select('*')
-                    .eq('id', sessionUser.id)
-                    .single();
+    // Helper to create a partial user from session immediately
+    const createPartialUser = (sessionUser: any): User => {
+        // 1. Try to recover from Cache first (optimistic)
+        const cached = getProfileFromCache();
+        if (cached && cached.id === sessionUser.id) {
+            console.log('[Auth] Using cached profile for immediate render.');
+            return cached;
+        }
 
-                // 2. Fetch Auth Metadata (for phone fallback)
-                // Often available in sessionUser, but good to ensure
-                const authUserPromise = supabase.auth.getUser();
+        // 2. Fallback to generic viewer if no cache
+        const metadata = sessionUser.user_metadata || {};
+        const phone = sessionUser.phone || metadata.phone || '';
+        return {
+            id: sessionUser.id,
+            name: metadata.name || sessionUser.email?.split('@')[0] || 'Usuario',
+            email: sessionUser.email,
+            role: UserRole.VIEWER, // Default safe role until profile loads
+            roles: [UserRole.VIEWER],
+            isActive: true, // Optimistic
+            phone: phone
+        };
+    };
 
-                const [profileResult, authResult] = await Promise.all([profilePromise, authUserPromise]);
+    // Hydrate User Function (Hoisted)
+    const hydrateUser = async (sessionUser: any) => {
+        console.log('[Auth] Hydrating user:', sessionUser?.email);
+        if (!sessionUser) {
+            console.log('[Auth] No session user, clearing state.');
+            setUser(null);
+            localStorage.removeItem(STORAGE_KEY); // Clear cache
+            setIsProfileSynced(false);
+            setIsLoadingSession(false);
+            setIsLoadingProfile(false);
+            return;
+        }
 
-                const profileData = profileResult.data;
-                const authMetadata = authResult.data?.user || sessionUser;
-                const phone = profileData?.phone || authMetadata?.user_metadata?.phone || authMetadata?.phone || '';
+        // CRITICAL: Unblock UI immediately with partial user (or cached user)
+        // We SKIP the mounted check here to ensure we unblock even if strict mode is doing weird things
+        console.log('[Auth] Setting partial user immediately.');
+        setUser(prev => prev || createPartialUser(sessionUser));
+        setIsLoadingSession(false); // <--- UNBLOCKS APP SHELL
+        setIsLoadingProfile(true);  // Indicates background work
 
-                if (profileData) {
-                    // Optimized: User exists in DB
-                    if (mounted) {
-                        setUser({
-                            id: profileData.id,
-                            name: profileData.name,
-                            email: profileData.email,
-                            role: profileData.role as UserRole,
-                            roles: profileData.roles as UserRole[],
-                            isActive: profileData.is_active,
-                            linkedGroupId: profileData.linked_group_id,
-                            volunteerRoles: profileData.volunteer_roles || [],
-                            phone: phone,
-                            age: profileData.age,
-                            gender: profileData.gender,
-                            birthDate: profileData.birth_date
-                        });
-                        setIsProfileSynced(true);
+        try {
+            // Function to fetch profile with retry
+            const fetchProfile = async (retries = 3, delay = 500) => {
+                for (let i = 0; i < retries; i++) {
+                    const { data, error } = await supabase
+                        .from('users')
+                        .select('*')
+                        .eq('id', sessionUser.id)
+                        .single();
+
+                    if (data) return { data, error: null };
+                    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+                        console.warn(`[Auth] Profile fetch attempt ${i + 1} failed:`, error.message);
                     }
-                } else {
-                    // Smart Fallback: User in Auth but not in DB -> Create basic profile in memory
-                    // This unblocks the UI without 404ing
-                    console.warn('[Auth] Profile missing in DB, using fallback.');
-                    if (mounted) {
-                        setUser({
-                            id: sessionUser.id,
-                            name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || 'Usuario',
-                            email: sessionUser.email,
-                            role: UserRole.VIEWER,
-                            roles: [UserRole.VIEWER],
-                            isActive: true,
-                            linkedGroupId: null,
-                            volunteerRoles: [],
-                            phone: phone,
-                            age: 0,
-                            gender: '',
-                            birthDate: ''
-                        });
-                        // We set synced=true so app can load (and likely trigger onboarding)
-                        setIsProfileSynced(true);
-                    }
-                    // Optional: Trigger background creation here if needed
+                    if (i < retries - 1) await new Promise(r => setTimeout(r, delay));
                 }
-            } catch (err) {
-                console.error('[Auth] Hydration error:', err);
-                // Fallback to minimal user to prevent lock-out
-                if (mounted && sessionUser) {
-                    setUser({
-                        id: sessionUser.id,
-                        name: 'Usuario',
-                        email: sessionUser.email,
-                        role: UserRole.VIEWER,
-                        roles: [UserRole.VIEWER],
-                        isActive: true,
-                        linkedGroupId: null,
-                        volunteerRoles: [],
-                        phone: '',
+                return { data: null, error: 'Max retries reached' };
+            };
+
+            // 1. Fetch Profile from DB with retry logic
+            const profilePromise = fetchProfile();
+
+            // 2. Fetch Auth Metadata (for consistent phone fallback)
+            const authUserPromise = supabase.auth.getUser();
+
+            const [{ data: profileData }, authResult] = await Promise.all([profilePromise, authUserPromise]);
+            const authMetadata = authResult.data?.user || sessionUser;
+            const phone = profileData?.phone || authMetadata?.user_metadata?.phone || authMetadata?.phone || '';
+
+            if (mounted.current) {
+                if (profileData) {
+                    console.log(`[Auth] Full profile found (Role: ${profileData.role}), updating user.`);
+                    const fullUser: User = {
+                        id: profileData.id,
+                        name: profileData.name,
+                        email: profileData.email,
+                        role: profileData.role as UserRole,
+                        roles: profileData.roles as UserRole[],
+                        isActive: profileData.is_active,
+                        linkedGroupId: profileData.linked_group_id,
+                        volunteerRoles: profileData.volunteer_roles || [],
+                        phone: phone,
+                        age: profileData.age,
+                        gender: profileData.gender,
+                        birthDate: profileData.birth_date
+                    };
+
+                    // Update state and cache
+                    setUser(fullUser);
+                    saveProfileToCache(fullUser);
+
+                    setIsProfileSynced(true);
+                } else {
+                    // Fallback Profile logic
+                    console.warn('[Auth] Profile missing in DB, using fallback.');
+                    // If we have a cached one that was good, maybe keep it? 
+                    // No, invalid DB means we should degrade.
+                    const fallbackUser = {
+                        ...createPartialUser(sessionUser),
+                        phone: phone, // Ensure verified phone is kept
                         age: 0,
                         gender: '',
                         birthDate: ''
+                    };
+                    setUser(prev => {
+                        // Merge explicitly
+                        const merged = { ...prev!, ...fallbackUser };
+                        return merged;
                     });
                     setIsProfileSynced(true);
                 }
-            } finally {
-                if (mounted) {
-                    setLoading(false);
-                    setIsInitialized(true);
-                }
             }
-        };
+        } catch (err) {
+            console.error('[Auth] Profile hydration error:', err);
+            // Keep partial user, maybe set error toast?
+            // Don't block the user, they can just use basic features
+            if (mounted.current) {
+                setIsProfileSynced(true); // Technically "synced" with failure, prevents infinite loading
+            }
+        } finally {
+            if (mounted.current) {
+                setIsLoadingProfile(false);
+            }
+        }
+    };
 
-        // Initialize listener
+    // Main Auth Listener
+    useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             console.log(`[Auth] State Change: ${event}`);
 
             if (event === 'INITIAL_SESSION') {
-                // If no session, unlock immediately. If session, hydrate.
                 if (!session) {
-                    if (mounted) {
-                        setLoading(false);
-                        setIsInitialized(true);
+                    if (mounted.current) {
+                        setIsLoadingSession(false);
+                        setIsLoadingProfile(false);
                     }
                 } else {
                     hydrateUser(session.user);
                 }
             } else if (event === 'SIGNED_IN') {
                 if (session?.user) {
-                    setLoading(true); // Short loading while fetching profile
+                    setIsLoadingSession(false); // Ensure unblocked
                     hydrateUser(session.user);
                 }
             } else if (event === 'SIGNED_OUT') {
-                if (mounted) {
+                if (mounted.current) {
                     setUser(null);
                     setIsProfileSynced(false);
-                    setLoading(false);
-                    setIsInitialized(true);
+                    setIsLoadingSession(false);
+                    setIsLoadingProfile(false);
                 }
             }
         });
 
-        // Trigger an initial check just in case onAuthStateChange is lazy (it usually isn't)
-        // This is the "fast check"
+        // Backup safety check (very fast check)
+        // Fix: If session exists but listener hasn't fired yet, we MUST hydrate manually.
         supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session && mounted && !isInitialized) {
-                // No session found on quick check -> unlock
-                // But don't override if onAuthStateChange already fired
-                setLoading(false);
-                setIsInitialized(true);
+            if (mounted.current && isLoadingSession) {
+                if (!session) {
+                    setIsLoadingSession(false);
+                } else {
+                    console.log('[Auth] Session found by getSession (backup check), hydrating...');
+                    hydrateUser(session.user);
+                }
             }
         });
 
         return () => {
-            mounted = false;
             subscription.unsubscribe();
         };
-    }, []);
+    }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
 
     const signIn = async (email: string, pass: string) => {
+        setIsLoadingSession(true); // Block UI during login attempt (optional, but good UX)
         try {
             const result = await withTimeout(
                 supabaseService.signInUser(email, pass),
@@ -226,12 +286,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             );
 
             if (result.user) {
-                setUser(result.user);
+                // EXPLICIT HYDRATION: Don't wait for listener
+                console.log('[Auth] SignIn success, manually hydrating...');
+                await hydrateUser(result.user);
+
                 setError(null);
                 return { success: true };
             }
+            setIsLoadingSession(false); // Unblock if failed
             return { success: false, error: result.error };
         } catch (e: any) {
+            setIsLoadingSession(false);
             return { success: false, error: e.message };
         }
     };
@@ -241,25 +306,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    // This automatically detects if you are on localhost or test-origen.online
                     redirectTo: `${window.location.origin}/`
                 }
             });
             if (error) {
-                console.error("Google Login Error:", error.message);
                 return { success: false, error: error.message };
             }
             return { success: true };
         } catch (e: any) {
-            console.error("Google Login Exception:", e);
             return { success: false, error: e.message };
         }
     };
 
     const signOut = async () => {
-        // Immediate State Clear
         setUser(null);
-        setLoading(false);
+        localStorage.removeItem(STORAGE_KEY); // Clear cache
+        setIsLoadingSession(false);
+        setIsLoadingProfile(false);
         setError(null);
 
         try {
@@ -307,25 +370,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const refreshSession = async () => {
         if (user) {
-            await loadUserProfile(user.id);
+            await hydrateUser({ ...user, id: user.id });
         }
     };
 
-    // Retry function for error recovery
     const retryAuth = () => {
-        setLoading(true);
+        setIsLoadingSession(true);
         setError(null);
         setRetryCount(prev => prev + 1);
+        // Force re-check
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) hydrateUser(session.user);
+            else setIsLoadingSession(false);
+        });
     };
 
-    // Complete profile for OAuth users
     const completeProfile = async (data: { phone: string; age: number; gender: string; birthDate: string }): Promise<boolean> => {
         if (!user) return false;
 
         try {
             const success = await supabaseService.updateUserProfile(user.id, data);
             if (success) {
-                // Update local user state with new data
                 setUser({
                     ...user,
                     phone: data.phone,
@@ -345,12 +410,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return (
         <AuthContext.Provider value={{
             user,
-            loading,
+            isLoadingSession,
+            isLoadingProfile,
             error,
             isRecoveryMode,
-            isInitialized,
             isProfileSynced,
-            needsProfileCompletion: needsOnboarding, // Mapped to internal const
+            needsProfileCompletion: needsOnboarding,
             signIn,
             signInWithGoogle,
             signOut,
