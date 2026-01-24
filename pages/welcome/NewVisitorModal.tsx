@@ -39,16 +39,23 @@ const NewVisitorModal: React.FC<NewVisitorModalProps> = ({ isOpen, onClose, onSu
 
             if (error) throw error;
 
-            // 2. Trigger WhatsApp
-            const message = "Bienvenido/a a Origen Iglesia. Gracias por estar hoy con nosotros. Creemos que cada persona tiene un propósito y que Dios sigue escribiendo historias nuevas. Este formulario es solo para conocerte un poco mejor y poder acompañarte. Tus respuestas son confidenciales y podés completar solo lo que quieras. Gracias por tomarte unos minutos. ¡Bienvenido/a a casa!";
+            // 2. Prepare WhatsApp Client-Side Redirection
+            const phoneClean = formData.phone.replace(/\D/g, ''); // Remove non-digits
 
-            // Non-blocking call or awaited depending on preference. Using await for confirmation.
-            // Note: This assumes the 'send-whatsapp' function is deployed and ready.
-            await supabase.functions.invoke('send-whatsapp', {
-                body: { phone: formData.phone, message }
-            });
+            const message = `Bienvenido/a a Origen Iglesia
+Gracias por estar hoy con nosotros.
+Creemos que cada persona tiene un propósito y que Dios sigue escribiendo historias nuevas.
+Este formulario es solo para conocerte un poco mejor y poder acompañarte.
+Tus respuestas son confidenciales y podés completar solo lo que quieras.
+Gracias por tomarte unos minutos.
+¡Bienvenido/a a casa!`;
 
-            toast.success('Visitante registrado y mensaje enviado.');
+            const url = `https://wa.me/${phoneClean}?text=${encodeURIComponent(message)}`;
+
+            // 3. Open WhatsApp in new tab
+            window.open(url, '_blank');
+
+            toast.success('Guardado. Abriendo WhatsApp...');
             onSuccess();
             onClose();
             setFormData({ firstName: '', lastName: '', age: '', phone: '' });

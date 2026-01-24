@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { WelcomeVisitor, VisitorStage } from '../../types';
-import { MoreHorizontal, GripVertical, Phone, User as UserIcon } from 'lucide-react';
+import { MoreHorizontal, GripVertical, Phone, User as UserIcon, Calendar } from 'lucide-react';
 
 interface VisitorCardProps {
     visitor: WelcomeVisitor;
@@ -125,6 +125,12 @@ const VisitorCard: React.FC<VisitorCardProps> = ({ visitor, onClick, onMove }) =
                     <div className="flex items-center gap-2 text-xs font-bold text-neutral-600 truncate">
                         <Phone size={12} className="text-black" />
                         <span>{visitor.phone}</span>
+                    </div>
+                )}
+                {visitor.created_at && (
+                    <div className="flex items-center gap-2 text-xs font-bold text-neutral-600 truncate">
+                        <Calendar size={12} className="text-black" />
+                        <span>{new Date(visitor.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                     </div>
                 )}
             </div>

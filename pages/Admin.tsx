@@ -218,6 +218,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                 'STORE': UserRole.VOLUNTEER, // Keep generic for now, or add VOLUNTARIO_STORE if needed
                 'GROUPS_VOL': UserRole.VOLUNTARIO_GRUPOS,
                 'ALABANZA': UserRole.VOLUNTEER, // Keep generic for now
+                'WELCOME': UserRole.VOLUNTARIO_BIENVENIDA,
             };
 
             const specificRole = scopeToRoleMap[systemScope];
@@ -636,6 +637,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                         isOpen={isEditing}
                         onClose={() => setIsEditing(false)}
                         title={currentUserData.id ? 'Editar Usuario' : 'Nuevo Usuario'}
+                        maxWidth="max-w-5xl"
                     >
                         <div className="flex flex-col gap-6">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12">
@@ -701,6 +703,10 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                             <span className="block text-[10px] md:text-xs font-black uppercase">ENCARGADO ALABANZA</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Gestión Alabanza</span>
                                         </div>
+                                        <div onClick={() => toggleRole(UserRole.ENCARGADO_BIENVENIDA)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ENCARGADO_BIENVENIDA) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">ENCARGADO BIENVENIDA</span>
+                                            <span className="hidden md:block text-[10px] opacity-70">Gestión Bienvenida</span>
+                                        </div>
 
                                         {/* Level 5 */}
                                         <div onClick={() => toggleRole(UserRole.PASTOR)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.PASTOR) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
@@ -727,6 +733,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                                 <option value="PUNTO">Voluntario: Punto de Info</option>
                                                 <option value="STORE">Voluntario: Tienda</option>
                                                 <option value="ALABANZA">Voluntario: Alabanza</option>
+                                                <option value="WELCOME">Voluntario: Bienvenida</option>
                                             </select>
                                             <p className="text-[10px] text-neutral-400 leading-tight">
                                                 Si seleccionas un área, el usuario será marcado como Voluntario de ese sistema.

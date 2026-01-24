@@ -8,9 +8,10 @@ interface NeoModalProps {
     title?: string;
     children: ReactNode;
     persistent?: boolean; // If true, modal cannot be closed by user
+    maxWidth?: string; // e.g. 'max-w-2xl', 'max-w-4xl'
 }
 
-const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, persistent = false }) => {
+const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, persistent = false, maxWidth = 'max-w-2xl' }) => {
     // Media Query for Responsive Animations
     const [isMobile, setIsMobile] = useState(false);
 
@@ -78,7 +79,7 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                         {/* MODAL CONTENT */}
                         <motion.div
                             className={`
-                                relative w-full md:w-auto md:min-w-[500px] max-w-2xl
+                                relative w-full md:w-auto md:min-w-[500px] ${maxWidth}
                                 bg-white !bg-white z-[100] flex flex-col isolate
                                 ${isMobile
                                     ? 'rounded-t-2xl max-h-[90vh]' // Mobile Sheet
