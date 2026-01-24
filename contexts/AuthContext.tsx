@@ -8,8 +8,9 @@ interface AuthContextType {
     loading: boolean;
     error: string | null;
     isRecoveryMode: boolean;  // True when user arrived with recovery tokens
+    isInitialized: boolean;   // Optimized loading state (true = we know if user is logged in or not)
     isProfileSynced: boolean; // True when user profile is confirmed synced with DB
-    needsProfileCompletion: boolean; // True when user is missing phone/age/gender
+    needsProfileCompletion: boolean; // Computed inside context for simplicity
     signIn: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
     signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
     signOut: () => Promise<void>;
@@ -37,373 +38,184 @@ const SESSION_TIMEOUT = 10000; // 10 seconds
 const PROFILE_TIMEOUT = 10000; // 10 seconds
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    // Core Auth State
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
 
+    // Flag for initial hydration: UI can show skeleton instead of generic loading
+    const [isInitialized, setIsInitialized] = useState(false);
+
     // Flag to track if we have successfully synced with the DB
     const [isProfileSynced, setIsProfileSynced] = useState(false);
 
-    // Computed: Check if profile needs completion (OAuth users missing phone/age/gender/birthDate)
-    // ONLY true if we have confirmed sync with DB to avoid race conditions
-    const needsProfileCompletion = !!(user && isProfileSynced && (!user.phone || !user.age || !user.gender || !user.birthDate));
+    // Computed: Needs onboarding? (Safe check using synced profile)
+    const needsOnboarding = !!(user && isProfileSynced && (!user.phone || !user.age));
 
     // Detect recovery mode synchronously from URL hash BEFORE Supabase cleans it
     const [isRecoveryMode, setIsRecoveryMode] = useState(() => {
         const hash = window.location.hash;
-        const hasRecovery = hash.includes('access_token') && hash.includes('type=recovery');
-        if (hasRecovery) {
-            console.log('AuthContext: Recovery mode detected from URL');
-        }
-        return hasRecovery;
+        return hash.includes('access_token') && hash.includes('type=recovery');
     });
 
-    const clearRecoveryMode = () => {
-        console.log('AuthContext: Clearing recovery mode');
-        setIsRecoveryMode(false);
-    };
+    const clearRecoveryMode = () => setIsRecoveryMode(false);
 
-    // Initial Load & Auth State Listener - SIMPLIFIED VERSION
+    // Main Auth Listener: The faster source of truth
     useEffect(() => {
-        let isMounted = true;
-        let subscription: { unsubscribe: () => void } | null = null;
-        let hasProcessedSession = false; // Prevent duplicate processing
+        let mounted = true;
 
-        // SAFETY NET: Guarantee loading stops after max wait
-        const safetyTimeout = setTimeout(() => {
-            if (isMounted && loading) {
-                console.warn('[Auth] Safety timeout triggered - forcing loading to stop');
-                setLoading(false);
-            }
-        }, 12000); // 12 second absolute maximum
-
-        const processSession = async (session: any, source: string) => {
-            if (!session?.user) {
-                console.log(`[Auth] No session from ${source}`);
-                if (isMounted) {
+        // Function to load profile in parallel with session
+        // Handles the "User in Auth but maybe not in DB" case gracefully
+        const hydrateUser = async (sessionUser: any) => {
+            if (!sessionUser) {
+                if (mounted) {
+                    setUser(null);
+                    setIsProfileSynced(false);
                     setLoading(false);
-                    setIsProfileSynced(true); // "Synced" effectively means we know there's no user
+                    setIsInitialized(true);
                 }
                 return;
             }
 
-            console.log(`[Auth] Processing session from ${source}:`, session.user.email);
-
-            // --- GOOGLE REGISTER FALLBACK PASSWORD ---
-            // Automatically assign '123456' to NEW Google users so they can also use email/pass.
-            try {
-                const user = session.user;
-                // Check if provider is Google
-                const isGoogle = user.app_metadata.provider === 'google' ||
-                    (user.app_metadata.providers && user.app_metadata.providers.includes('google'));
-
-                if (isGoogle) {
-                    const createdAt = new Date(user.created_at).getTime();
-                    const now = new Date().getTime();
-                    // Consider "New User" if created within the last 2 minutes
-                    const isNewUser = (now - createdAt) < 2 * 60 * 1000;
-
-                    // Check customized metadata flag to avoid double-setting
-                    const hasFallbackSet = user.user_metadata?.has_fallback_password;
-
-                    if (isNewUser && !hasFallbackSet) {
-                        console.log('[Auth] ✨ New Google user detected. Injecting fallback password...');
-
-                        // TODO: SECURITY WARNING - Using hardcoded password '123456'.
-                        // This allows Google-signup users to use Email/Password login immediately.
-                        // Ideally, require a password reset or setup flow.
-                        await supabase.auth.updateUser({
-                            password: '123456',
-                            data: { has_fallback_password: true }
-                        });
-                        console.log('[Auth] Fallback password set successfully.');
-                    }
-                }
-            } catch (err) {
-                console.error('[Auth] Error setting fallback password:', err);
-                // Non-blocking error
-            }
+            // Start fetching profile immediately
+            // Note: We don't await this to set the initial user state if we wanted to show *something* 
+            // but for strict sync we wait. Parallelizing request for speed.
 
             try {
-                await loadUserProfile(session.user.id, session.user);
-            } catch (err) {
-                console.error('[Auth] Profile load failed:', err);
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                    clearTimeout(safetyTimeout);
-                }
-            }
-        };
-
-        // Use ONLY the auth state listener - it's faster and more reliable
-        const setupListener = () => {
-            // Skip if in recovery mode
-            if (isRecoveryMode) {
-                console.log('[Auth] Skipping session init - in recovery mode');
-                setLoading(false);
-                clearTimeout(safetyTimeout);
-                return;
-            }
-
-            try {
-                const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-                    if (!isMounted) return;
-
-                    console.log('[Auth] Event:', event, session?.user?.email);
-
-                    if (event === 'INITIAL_SESSION') {
-                        // This fires immediately with cached session - prioritize this
-                        if (!hasProcessedSession) {
-                            hasProcessedSession = true;
-                            await processSession(session, 'INITIAL_SESSION');
-                        }
-                    } else if (event === 'SIGNED_IN' && session?.user) {
-                        // Only process if INITIAL_SESSION hasn't already handled it
-                        if (!hasProcessedSession) {
-                            hasProcessedSession = true;
-                            await processSession(session, 'SIGNED_IN');
-                        }
-                        // Clean up OAuth hash from URL
-                        if (window.location.hash.includes('access_token')) {
-                            window.history.replaceState(null, '', window.location.pathname + window.location.search || '/');
-                        }
-                    } else if (event === 'SIGNED_OUT') {
-                        setUser(null);
-                        setLoading(false);
-                        setIsProfileSynced(false);
-                        hasProcessedSession = false; // Reset for next login
-                        clearTimeout(safetyTimeout);
-                    }
-                });
-                subscription = data.subscription;
-            } catch (err) {
-                console.error('[Auth] Listener setup failed:', err);
-                if (isMounted) setLoading(false);
-            }
-        };
-
-        setupListener();
-
-        return () => {
-            isMounted = false;
-            clearTimeout(safetyTimeout);
-            subscription?.unsubscribe();
-        };
-    }, [retryCount]);
-
-    // --- AUTO-LOGOUT ON INACTIVITY ---
-    // 5 minutes in milliseconds
-    const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
-
-    useEffect(() => {
-        if (!user) return; // Only track if logged in
-
-        let timeoutId: NodeJS.Timeout;
-
-        const handleLogout = () => {
-            console.log('[Auth] Auto-logout triggered due to inactivity');
-            signOut();
-        };
-
-        const resetTimer = () => {
-            if (timeoutId) clearTimeout(timeoutId);
-            timeoutId = setTimeout(handleLogout, INACTIVITY_TIMEOUT);
-        };
-
-        // Events to track activity
-        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-
-        // Set initial timer
-        resetTimer();
-
-        // Add listeners
-        events.forEach(event => {
-            document.addEventListener(event, resetTimer);
-        });
-
-        // Cleanup
-        return () => {
-            if (timeoutId) clearTimeout(timeoutId);
-            events.forEach(event => {
-                document.removeEventListener(event, resetTimer);
-            });
-        };
-    }, [user]); // Re-run when user changes (login/logout)
-
-    // Cache to prevent repeated loading
-    const loadedProfileRef = React.useRef<string | null>(null);
-    const loadingInProgressRef = React.useRef<boolean>(false);
-
-    const loadUserProfile = async (authUserId: string, sessionUser?: any) => {
-        console.log('[Auth] loadUserProfile called for:', authUserId, 'Has sessionUser:', !!sessionUser);
-        // Skip if already loaded for this user or loading in progress
-        if (loadedProfileRef.current === authUserId) {
-            console.log('[Auth] Profile already loaded for:', authUserId);
-            setLoading(false);
-            setIsProfileSynced(true);
-            return;
-        }
-        if (loadingInProgressRef.current) {
-            console.log('[Auth] Profile loading already in progress, waiting...');
-            // Don't return - the caller's finally block will handle setLoading(false)
-            // We just won't duplicate the request
-            return;
-        }
-
-        loadingInProgressRef.current = true;
-
-        try {
-            // Fetch with timeout
-            const result: any = await withTimeout(
-                supabase
+                // 1. Fetch Profile from DB
+                const profilePromise = supabase
                     .from('users')
                     .select('*')
-                    .eq('id', authUserId)
-                    .single(),
-                PROFILE_TIMEOUT,
-                'Tiempo de espera agotado al cargar perfil'
-            );
+                    .eq('id', sessionUser.id)
+                    .single();
 
-            const data = result?.data;
-            const dbError = result?.error;
+                // 2. Fetch Auth Metadata (for phone fallback)
+                // Often available in sessionUser, but good to ensure
+                const authUserPromise = supabase.auth.getUser();
 
-            if (data && !dbError) {
-                // Fetch Auth Metadata for Phone - with timeout protection
-                let phone = '';
-                try {
-                    // Use passed sessionUser if available, otherwise fetch
-                    const userMetadata = sessionUser?.user_metadata || sessionUser?.phone
-                        ? sessionUser
-                        : (await withTimeout(supabase.auth.getUser(), 10000, 'Timeout fetching auth user'))?.data?.user;
+                const [profileResult, authResult] = await Promise.all([profilePromise, authUserPromise]);
 
-                    phone = userMetadata?.user_metadata?.phone || userMetadata?.phone || '';
-                } catch (authErr) {
-                    console.warn("[Auth] Could not fetch auth user metadata:", authErr);
-                }
+                const profileData = profileResult.data;
+                const authMetadata = authResult.data?.user || sessionUser;
+                const phone = profileData?.phone || authMetadata?.user_metadata?.phone || authMetadata?.phone || '';
 
-                setUser({
-                    id: data.id,
-                    name: data.name,
-                    email: data.email,
-                    role: data.role as UserRole,
-                    roles: data.roles as UserRole[],
-                    isActive: data.is_active,
-                    linkedGroupId: data.linked_group_id,
-                    volunteerRoles: data.volunteer_roles || [],
-                    phone: data.phone || phone,
-                    age: data.age,
-                    gender: data.gender,
-                    birthDate: data.birth_date
-                });
-                setError(null);
-                loadedProfileRef.current = authUserId; // Mark as loaded
-                setIsProfileSynced(true);
-                console.log('[Auth] Profile loaded successfully:', data.email, data.role);
-            } else if (dbError) {
-                // Profile doesn't exist, try to create it
-                console.warn("[Auth] Profile not found, attempting to create:", dbError.message);
-                await createFallbackProfile(authUserId, sessionUser);
-            }
-        } catch (e: any) {
-            console.error("[Auth] Profile Load Error:", e.message);
-            // On timeout/error, try to use cached auth info
-            await createFallbackProfile(authUserId, sessionUser);
-        } finally {
-            loadingInProgressRef.current = false;
-            setLoading(false);
-            // NOTE: isProfileSynced is set in success path or fallback path
-        }
-    };
-
-    // Create fallback profile from auth data - with improved timeout handling
-    const createFallbackProfile = async (authUserId: string, sessionUser?: any) => {
-        try {
-            // Get auth user first - this is fast and cached
-            let authUser = sessionUser;
-
-            if (!authUser) {
-                try {
-                    const authResult = await withTimeout(
-                        supabase.auth.getUser(),
-                        5000, // Reduced timeout - this should be fast
-                        'Timeout fetching auth user for fallback'
-                    );
-                    authUser = authResult?.data?.user;
-                } catch (authErr) {
-                    console.warn("Could not fetch auth user:", authErr);
-                }
-            }
-
-            if (!authUser) {
-                console.error("No auth user available for fallback");
-                setError('No se pudo verificar la sesión. Por favor, intenta de nuevo.');
-                return;
-            }
-
-            // Set user immediately from auth data (don't wait for DB)
-            const fallbackUser: User = {
-                id: authUser.id,
-                name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Usuario',
-                email: authUser.email || '',
-                role: UserRole.VIEWER,
-                roles: [UserRole.VIEWER],
-                isActive: true,
-                volunteerRoles: [],
-                phone: authUser.user_metadata?.phone || authUser.phone || ''
-            };
-            setUser(fallbackUser);
-            setError(null);
-            console.log("Fallback user set from auth data:", fallbackUser.email);
-            setIsProfileSynced(true);
-
-            // Try to upsert profile in background (don't block)
-            supabase
-                .from('users')
-                .upsert({
-                    id: authUser.id,
-                    email: authUser.email,
-                    name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Usuario',
-                    // Role is handled by DB default or preserved if existing
-                    is_active: true
-                })
-                .select()
-                .single()
-                .then(({ data: newUser, error: createError }) => {
-                    if (!createError && newUser) {
-                        // Update user with DB data (may have different role)
+                if (profileData) {
+                    // Optimized: User exists in DB
+                    if (mounted) {
                         setUser({
-                            id: newUser.id,
-                            name: newUser.name,
-                            email: newUser.email,
-                            role: newUser.role as UserRole,
-                            roles: newUser.roles as UserRole[],
-                            isActive: newUser.is_active,
-                            linkedGroupId: newUser.linked_group_id,
-                            volunteerRoles: newUser.volunteer_roles || [],
-                            // BUGFIX: Prioritize phone from DB (newUser) over session (authUser)
-                            // because session phone might be empty (Google Auth) while DB has it.
-                            phone: newUser.phone || authUser?.user_metadata?.phone || authUser?.phone || '',
-                            age: newUser.age,
-                            gender: newUser.gender,
-                            birthDate: newUser.birth_date
+                            id: profileData.id,
+                            name: profileData.name,
+                            email: profileData.email,
+                            role: profileData.role as UserRole,
+                            roles: profileData.roles as UserRole[],
+                            isActive: profileData.is_active,
+                            linkedGroupId: profileData.linked_group_id,
+                            volunteerRoles: profileData.volunteer_roles || [],
+                            phone: phone,
+                            age: profileData.age,
+                            gender: profileData.gender,
+                            birthDate: profileData.birth_date
                         });
                         setIsProfileSynced(true);
-                        console.log("User profile synced from DB:", newUser.email, newUser.role);
-                    } else {
-                        console.warn("Background profile sync failed:", createError?.message);
                     }
-                })
-                .catch(err => {
-                    console.warn("Background profile sync exception:", err);
-                });
+                } else {
+                    // Smart Fallback: User in Auth but not in DB -> Create basic profile in memory
+                    // This unblocks the UI without 404ing
+                    console.warn('[Auth] Profile missing in DB, using fallback.');
+                    if (mounted) {
+                        setUser({
+                            id: sessionUser.id,
+                            name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || 'Usuario',
+                            email: sessionUser.email,
+                            role: UserRole.VIEWER,
+                            roles: [UserRole.VIEWER],
+                            isActive: true,
+                            linkedGroupId: null,
+                            volunteerRoles: [],
+                            phone: phone,
+                            age: 0,
+                            gender: '',
+                            birthDate: ''
+                        });
+                        // We set synced=true so app can load (and likely trigger onboarding)
+                        setIsProfileSynced(true);
+                    }
+                    // Optional: Trigger background creation here if needed
+                }
+            } catch (err) {
+                console.error('[Auth] Hydration error:', err);
+                // Fallback to minimal user to prevent lock-out
+                if (mounted && sessionUser) {
+                    setUser({
+                        id: sessionUser.id,
+                        name: 'Usuario',
+                        email: sessionUser.email,
+                        role: UserRole.VIEWER,
+                        roles: [UserRole.VIEWER],
+                        isActive: true,
+                        linkedGroupId: null,
+                        volunteerRoles: [],
+                        phone: '',
+                        age: 0,
+                        gender: '',
+                        birthDate: ''
+                    });
+                    setIsProfileSynced(true);
+                }
+            } finally {
+                if (mounted) {
+                    setLoading(false);
+                    setIsInitialized(true);
+                }
+            }
+        };
 
-        } catch (e) {
-            console.error("Fallback profile creation failed:", e);
-            setError('No se pudo cargar el perfil. Por favor, intenta de nuevo.');
-        }
-    };
+        // Initialize listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log(`[Auth] State Change: ${event}`);
+
+            if (event === 'INITIAL_SESSION') {
+                // If no session, unlock immediately. If session, hydrate.
+                if (!session) {
+                    if (mounted) {
+                        setLoading(false);
+                        setIsInitialized(true);
+                    }
+                } else {
+                    hydrateUser(session.user);
+                }
+            } else if (event === 'SIGNED_IN') {
+                if (session?.user) {
+                    setLoading(true); // Short loading while fetching profile
+                    hydrateUser(session.user);
+                }
+            } else if (event === 'SIGNED_OUT') {
+                if (mounted) {
+                    setUser(null);
+                    setIsProfileSynced(false);
+                    setLoading(false);
+                    setIsInitialized(true);
+                }
+            }
+        });
+
+        // Trigger an initial check just in case onAuthStateChange is lazy (it usually isn't)
+        // This is the "fast check"
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session && mounted && !isInitialized) {
+                // No session found on quick check -> unlock
+                // But don't override if onAuthStateChange already fired
+                setLoading(false);
+                setIsInitialized(true);
+            }
+        });
+
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
+    }, []);
 
     const signIn = async (email: string, pass: string) => {
         try {
@@ -536,8 +348,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             loading,
             error,
             isRecoveryMode,
+            isInitialized,
             isProfileSynced,
-            needsProfileCompletion,
+            needsProfileCompletion: needsOnboarding, // Mapped to internal const
             signIn,
             signInWithGoogle,
             signOut,

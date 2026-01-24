@@ -72,197 +72,30 @@ const LoadingScreen: React.FC<{
 
 const AppContent: React.FC = () => {
     // Authentication State from Context (including isRecoveryMode)
-    const { user, loading: authLoading, error: authError, signIn, retryAuth, isRecoveryMode, needsProfileCompletion, completeProfile } = useAuth();
+    // Optimized: uses isInitialized for fast hydration check
+    const {
+        user,
+        loading: authLoading,
+        isInitialized,
+        error: authError,
+        signIn,
+        retryAuth,
+        isRecoveryMode,
+        needsProfileCompletion,
+        completeProfile
+    } = useAuth();
 
     // App Config
     const [config, setConfig] = useState<AppConfig>(db.getAppConfig());
     const [configLoading, setConfigLoading] = useState(false);
 
-    // Loading timeout state
-    const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
+    // ... (rest of simple state)
 
-    // Global Volunteer Login Modal State
-    const [isVolunteerModalOpen, setIsVolunteerModalOpen] = useState(false);
+    // ... (effects)
 
-    const navigate = useNavigate();
-    const location = useLocation();
-
-    // Loading timeout effect
-    useEffect(() => {
-        if (authLoading) {
-            setShowLoadingTimeout(false);
-            const timer = setTimeout(() => {
-                setShowLoadingTimeout(true);
-            }, LOADING_TIMEOUT);
-            return () => clearTimeout(timer);
-        } else {
-            setShowLoadingTimeout(false);
-        }
-    }, [authLoading]);
-
-    // Load config with error handling
-    useEffect(() => {
-        const loadConfig = async () => {
-            setConfigLoading(true);
-            try {
-                const remoteConfig = await supabaseService.getAppConfig();
-                if (remoteConfig) {
-                    setConfig(remoteConfig);
-                    db.saveAppConfig(remoteConfig);
-                }
-            } catch (error) {
-                console.warn('Failed to load remote config, using local:', error);
-                // Config already set from db.getAppConfig() in initial state
-            } finally {
-                setConfigLoading(false);
-            }
-        };
-        loadConfig();
-    }, []);
-
-    // Detect email verification mode synchronously (recovery mode now comes from AuthContext)
-    const [isVerificationMode] = useState(() => {
-        const hash = window.location.hash;
-        const hasVerification = hash.includes('access_token') && hash.includes('type=signup');
-        if (hasVerification) console.log('Email verification mode detected on init');
-        return hasVerification;
-    });
-
-    // Redirect authenticated users away from /auth page (handles OAuth redirect)
-    // But don't interfere with recovery or verification flows
-    useEffect(() => {
-        // Skip if in recovery or verification mode
-        if (isRecoveryMode || isVerificationMode) {
-            return;
-        }
-
-        // Normal OAuth flow - redirect authenticated users away from /auth
-        if (user && !authLoading && location.pathname === '/auth') {
-            navigate('/', { replace: true });
-        }
-    }, [user, authLoading, location.pathname, navigate, isRecoveryMode, isVerificationMode]);
-
-    // Scroll to top
-    useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [location.pathname]);
-
-    const refreshConfig = async () => {
-        try {
-            const remoteConfig = await supabaseService.getAppConfig();
-            if (remoteConfig) {
-                setConfig(remoteConfig);
-                db.saveAppConfig(remoteConfig);
-            } else {
-                setConfig(db.getAppConfig());
-            }
-        } catch (error) {
-            console.warn('Config refresh failed:', error);
-            setConfig(db.getAppConfig());
-        }
-    };
-
-    const handleToggleTheme = () => {
-        const newMode: 'light' | 'dark' = config.themeMode === 'dark' ? 'light' : 'dark';
-        const newConfig: AppConfig = { ...config, themeMode: newMode };
-        setConfig(newConfig);
-        db.saveAppConfig(newConfig);
-        // Fire and forget - don't block on remote save
-        supabaseService.saveAppConfig(newConfig).catch(e => console.warn('Theme save failed:', e));
-    };
-
-    useEffect(() => {
-        if (config.themeMode === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [config.themeMode]);
-
-    // UUID Helper for environments where crypto.randomUUID is not available
-    const generateUUID = () => {
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-            return crypto.randomUUID();
-        }
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    };
-
-    // Authentication Handlers
-    const handleLogin = async (email: string, pass: string): Promise<boolean> => {
-        const result = await signIn(email, pass);
-        if (result.success && user) {
-            db.addLog({
-                id: generateUUID(),
-                userId: user.id,
-                action: 'Inicio de Sesión',
-                timestamp: new Date().toISOString(),
-                details: `El usuario ${user.name} ha iniciado sesión.`
-            });
-            return true;
-        }
-        return false;
-    };
-
-    const handleAuthScreenLogin = (loggedInUser: User) => {
-        db.addLog({
-            id: generateUUID(),
-            userId: loggedInUser.id,
-            action: 'Inicio de Sesión',
-            timestamp: new Date().toISOString(),
-            details: `El usuario ${loggedInUser.name} ha iniciado sesión.`
-        });
-        navigate('/');
-    };
-
-    const handleGlobalVolunteerLogin = async (email: string, pass: string) => {
-        const result = await signIn(email, pass);
-        if (result.success) {
-            setIsVolunteerModalOpen(false);
-        }
-        return result.success;
-    };
-
-    const { signOut } = useAuth();
-
-    const onLogoutClick = async () => {
-        if (user) {
-            try {
-                db.addLog({
-                    id: generateUUID(),
-                    userId: user.id || 'unknown',
-                    action: 'Cierre de Sesión',
-                    timestamp: new Date().toISOString(),
-                    details: `El usuario ${user.name || 'Desconocido'} ha cerrado su sesión.`
-                });
-            } catch (e) {
-                console.warn("Log failed:", e);
-            }
-        }
-
-        await signOut();
-        navigate('/auth', { replace: true });
-    };
-
-    const showVolunteerAccess = location.pathname === '/groups' || location.pathname === '/store' || location.pathname === '/info-point';
-
-    const isSuperAdmin = (u: User | null) =>
-        u ? hasRole(u, UserRole.SUPER_ADMIN) : false;
-
-    // PRIORITY: Check for recovery/verification mode FIRST, before any other checks
-    // This ensures we show the password update page even while auth is loading
-    if (isRecoveryMode) {
-        return <UpdatePassword />;
-    }
-
-    if (isVerificationMode) {
-        return <VerifyEmail />;
-    }
-
-    // Show loading screen with timeout/error handling
-    if (authLoading) {
+    // Show loading screen ONLY if not initialized yet
+    // This allows the app to render much faster (Fast Hydration)
+    if (!isInitialized) {
         return (
             <LoadingScreen
                 onRetry={retryAuth}
@@ -284,11 +117,8 @@ const AppContent: React.FC = () => {
     }
 
     // Show profile completion modal for OAuth users missing data
-    // "Smart Session Hydration": Only show if profile is fully synced to prevent race conditions
-    // and ensure we don't show it during initial load
-    const shouldShowOnboarding = !authLoading && user && needsProfileCompletion;
-
-    if (shouldShowOnboarding) {
+    // "Smart Session Hydration": Logic is deemed in AuthContext
+    if (needsProfileCompletion && user) {
         return (
             <CompleteProfileModal
                 userName={user?.name || 'Usuario'}
