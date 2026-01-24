@@ -12,6 +12,7 @@ interface InfoPointMenuProps {
 const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate }) => {
     const navigate = useNavigate();
 
+
     // Menu Config
     const menuItems = [
         { id: 'SUMMARY', label: 'Resumen', icon: Layers, color: 'bg-indigo-100' },

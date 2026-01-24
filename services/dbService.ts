@@ -10,7 +10,7 @@ const DEFAULT_USERS: User[] = [
         name: 'Super Admin',
         email: 'admin@origen.com',
         role: UserRole.SUPER_ADMIN,
-        roles: [UserRole.SUPER_ADMIN],
+        roles: [UserRole.SUPER_ADMIN, UserRole.ENCARGADO_BIENVENIDA],
         isActive: true
     },
     {
@@ -137,6 +137,25 @@ const MODULES: SystemModule[] = [
         gradientFrom: 'slate-700',
         gradientTo: 'slate-900',
         iconColor: 'text-slate-700',
+        status: 'active'
+    },
+    {
+        id: 'welcome-system',
+        title: 'Bienvenida',
+        subtitle: 'Nuevo Ingresante',
+        description: 'Seguimiento y gestión de nuevas personas.',
+        icon: 'heart-handshake',
+        route: '/welcome',
+        allowedRoles: [
+            UserRole.SUPER_ADMIN,
+            UserRole.ENCARGADO_BIENVENIDA,
+            UserRole.VOLUNTARIO_BIENVENIDA
+        ],
+        publicAccess: false,
+        useImage: false,
+        gradientFrom: 'pink-500',
+        gradientTo: 'rose-600',
+        iconColor: 'text-pink-600',
         status: 'active'
     },
     {

@@ -14,6 +14,7 @@ import Pastores from './pages/Pastores';
 import HostDashboard from './pages/HostDashboard';
 import UpdatePassword from './pages/UpdatePassword';
 import VerifyEmail from './pages/VerifyEmail';
+import Bienvenida from './pages/welcome/Bienvenida';
 import SystemLoginModal from './components/SystemLoginModal';
 import CompleteProfileModal from './components/CompleteProfileModal';
 import { User, UserRole, AppConfig } from './types';
@@ -345,6 +346,16 @@ const AppContent: React.FC = () => {
                                     UserRole.ADMIN_GROUPS
                                 ]))
                                     ? <Pastores currentUser={user} />
+                                    : <Navigate to="/" />
+                            } />
+
+                            <Route path="/welcome" element={
+                                (user && hasRole(user, [
+                                    UserRole.SUPER_ADMIN,
+                                    UserRole.ENCARGADO_BIENVENIDA,
+                                    UserRole.VOLUNTARIO_BIENVENIDA
+                                ]))
+                                    ? <Bienvenida />
                                     : <Navigate to="/" />
                             } />
 

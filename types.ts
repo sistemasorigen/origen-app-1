@@ -21,7 +21,9 @@ export enum UserRole {
     ENCARGADO_GRUPOS = 'ENCARGADO_GRUPOS',
     ENCARGADO_STORE = 'ENCARGADO_STORE',
     ENCARGADO_ALABANZA = 'ENCARGADO_ALABANZA',
-    REPORTES = 'REPORTES'
+    REPORTES = 'REPORTES',
+    ENCARGADO_BIENVENIDA = 'ENCARGADO_BIENVENIDA',
+    VOLUNTARIO_BIENVENIDA = 'VOLUNTARIO_BIENVENIDA'
 }
 
 export enum ImageAspectRatio {
@@ -256,6 +258,7 @@ export type ViewState =
     | 'EVENTS'
     | 'SEARCH'
     | 'SUMMARY'
+    | 'WELCOME'
     | 'ADMIN_PANEL';
 
 // --- END INFO POINT TYPES ---
@@ -662,4 +665,36 @@ export interface AppConfig {
     valuesSection?: ValuesSectionConfig; // New Values Section Config
     verses?: BiblicalVerse[]; // New: Array of verses
     footerLinks?: FooterLinks; // New Footer Links
+}
+
+// --- WELCOME SYSTEM TYPES ---
+
+export type VisitorStage =
+    | 'NEW'
+    | 'FILLED_FORM'
+    | 'SECOND_CONTACT'
+    | 'THIRD_CONTACT'
+    | 'INTERESTED_GROWTH'
+    | 'DOING_GROWTH'
+    | 'DOING_TRAINING'
+    | 'VOLUNTEERS'
+    | 'NO_RESPONSE';
+
+export interface WelcomeVisitor {
+    id: string;
+    created_at: string;
+    first_name: string;
+    last_name: string;
+    age?: number;
+    phone?: string;
+    stage: VisitorStage;
+
+    // Detailed Form Fields
+    is_first_time?: boolean;
+    accepted_jesus?: string; // 'Si' | 'No, antes'
+    referral_source?: string;
+    experience_rating?: string;
+    wants_growth?: string; // 'Si', 'No', 'Tal vez'
+    interest_areas?: string[];
+    prayer_request?: string;
 }

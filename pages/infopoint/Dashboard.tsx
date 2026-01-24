@@ -34,8 +34,11 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
         };
     });
 
-    const StatCard = ({ title, value, icon: Icon, colorClass, bgClass }: any) => (
-        <div className={`p-6 border-2 md:border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col justify-between h-36 ${bgClass || 'bg-white'}`}>
+    const StatCard = ({ title, value, icon: Icon, colorClass, bgClass, onClick }: any) => (
+        <div
+            onClick={onClick}
+            className={`p-6 border-2 md:border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col justify-between h-36 ${bgClass || 'bg-white'} ${onClick ? 'cursor-pointer' : ''}`}
+        >
             <div className="flex justify-between items-start">
                 <span className="text-xs font-black uppercase tracking-widest border-b-2 border-black pb-1 mb-2">{title}</span>
                 <div className={`p-2 border-2 border-black ${colorClass || 'bg-black text-white'}`}>
@@ -86,6 +89,9 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                     icon={Package}
                     colorClass="bg-indigo-600 text-white"
                 />
+
+
+
                 <StatCard
                     title="Stock Buzos"
                     value={stockBuzos}

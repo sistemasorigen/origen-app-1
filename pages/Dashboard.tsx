@@ -18,7 +18,8 @@ import {
     Instagram,
     Facebook,
     Youtube,
-    Music as MusicIcon
+    Music as MusicIcon,
+    HeartHandshake
 } from 'lucide-react';
 import HeroCarousel, { HeroSlideData } from '../components/HeroCarousel';
 
@@ -58,6 +59,7 @@ const getModuleIcon = (id: string, defaultIcon: string, isConstruction?: boolean
         case 'info-point': return <Info className={iconClass} />;
         case 'store': return <ShoppingCart className={iconClass} />;
         case 'groups': return <Users className={iconClass} />;
+        case 'welcome-system': return <HeartHandshake className={iconClass} />;
         case 'alabanza': return <Music className={iconClass} />;
         case 'pastores': return <AlertTriangle className={iconClass} />;
         case 'admin': return <Settings className={iconClass} />;
@@ -432,7 +434,8 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
         const hasAccess = isAdmin || (currentUser && hasRole(currentUser, system.allowedRoles));
 
         if (!hasAccess && currentUser) {
-            return;
+            // Remove strict return to allow modal to open
+            // return; 
         }
 
         if (system.publicAccess) {
