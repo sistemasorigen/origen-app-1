@@ -566,6 +566,13 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         }
     };
 
+    // Helper to check if a group is finished
+    const isGroupFinished = (group: Group) => {
+        if (!group.endDate) return false;
+        const today = new Date().toISOString().split('T')[0];
+        return group.endDate < today;
+    };
+
     // --- Status Badge Helper ---
     const getStatusBadge = (status?: string) => {
         switch (status) {
@@ -1372,8 +1379,13 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         <div className="flex gap-2 self-end xl:self-auto">
                                             <span className="px-3 py-2.5 text-xs font-black uppercase bg-emerald-100 text-emerald-800 border-2 border-emerald-300 rounded-full flex items-center gap-2 whitespace-nowrap shrink-0">
                                                 <CheckCircle className="w-4 h-4" />
-                                                {adminGroups.filter(g => g.status === 'approved').length}
+                                                {adminGroups.filter(g => g.status === 'approved' && !isGroupFinished(g)).length}
                                                 <span>Aprobados</span>
+                                            </span>
+                                            <span className="px-3 py-2.5 text-xs font-black uppercase bg-neutral-200 text-neutral-600 border-2 border-neutral-400 rounded-full flex items-center gap-2 whitespace-nowrap shrink-0">
+                                                <CheckCircle className="w-4 h-4" />
+                                                {adminGroups.filter(g => g.status === 'approved' && isGroupFinished(g)).length}
+                                                <span>Finalizados</span>
                                             </span>
                                             <span className="px-3 py-2.5 text-xs font-black uppercase bg-yellow-100 text-yellow-800 border-2 border-yellow-300 rounded-full flex items-center gap-2 whitespace-nowrap shrink-0">
                                                 <Loader2 className="w-4 h-4" />
