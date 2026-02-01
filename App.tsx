@@ -87,6 +87,7 @@ const AppContent: React.FC = () => {
 
     // Hooks
     const navigate = useNavigate();
+    const location = useLocation();
 
     // App Config
     const [config, setConfig] = useState<AppConfig>(db.getAppConfig());
@@ -98,6 +99,12 @@ const AppContent: React.FC = () => {
 
     // Derived/Constant (could be from config)
     const showVolunteerAccess = true;
+
+    // Scroll to top on route change
+    useEffect(() => {
+        const path = window.location.hash; // Handle HashRouter explicitly if needed, but scrollTo works generally
+        window.scrollTo(0, 0);
+    }, [location.pathname]); // location is derived from useLocation hook logic from react-router
 
     // Effects
     useEffect(() => {
