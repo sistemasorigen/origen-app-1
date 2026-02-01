@@ -2664,6 +2664,10 @@ export const supabaseService = {
     }
   },
 
+  async promoteUserToHost(userId: string): Promise<boolean> {
+    return this.toggleUserRole(userId, UserRole.ANFITRION, true);
+  },
+
   // --- ATTENDANCE SYSTEM ---
 
   /**

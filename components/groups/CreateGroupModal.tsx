@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import NeoModal from '../NeoModal';
 import { Group, User, GroupTag } from '../../types';
 import { supabaseService, insertGroupDirect, updateGroupDirect } from '../../services/supabaseService';
@@ -659,9 +660,9 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 </button>
             </form>
 
-            {/* SPELLING WARNING DIALOG */}
-            {showSpellingWarning && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+            {/* SPELLING WARNING DIALOG - PORTALED TO BODY TO AVOID Z-INDEX/TRANSFORM ISSUES */}
+            {showSpellingWarning && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-white border-2 border-black p-6 w-full max-w-sm shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-scaleIn">
                         <div className="flex flex-col items-center text-center space-y-4">
                             <div className="w-12 h-12 bg-yellow-400 border-2 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
@@ -699,7 +700,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </NeoModal>
     );
