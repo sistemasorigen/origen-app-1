@@ -75,6 +75,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         endDate: ''
     });
 
+    const [showSpellingWarning, setShowSpellingWarning] = useState(false);
+
     // AI Spelling Guard
     const { isChecking: isCheckingSpelling, isCorrecting, hasErrors: spellingErrors, correctionStatus, checkSpelling, fixText, resetState: resetSpelling } = useSpellingAI();
 
@@ -94,6 +96,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     const handleFixSpelling = async () => {
         const corrected = await fixText(form.description);
         setForm(prev => ({ ...prev, description: corrected }));
+        setShowSpellingWarning(false); // Close warning if fixed
     };
 
     useEffect(() => {
@@ -170,6 +173,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             setSelectedHostId('');
             setHostSearchTerm('');
             setIsHostSelectOpen(false);
+            setShowSpellingWarning(false);
         }
     }, [isOpen, editingGroup, isAdminView]);
 
@@ -194,7 +198,23 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Mandatory Fields Validation
         if (!form.name.trim()) return alert('El nombre del grupo es obligatorio');
+        if (!form.categoryId) return alert('Debes seleccionar una categoría.');
+        if (!form.location.trim()) return alert('El barrio/ubicación es obligatorio.');
+        if (!form.description.trim()) return alert('La descripción es obligatoria.');
+        if (!form.startDate) return alert('La fecha de arranque es obligatoria.');
+        if (!form.endDate) return alert('La fecha de fin es obligatoria.');
+
+        // Numeric Validations
+        if (form.maxCapacity <= 0) return alert('La capacidad debe ser mayor a 0.');
+        if (form.minAge <= 0) return alert('La edad mínima debe ser mayor a 0.');
+        if (form.maxAge <= 0) return alert('La edad máxima debe ser mayor a 0.');
+        if (form.minAge > form.maxAge) return alert('La edad mínima no puede ser mayor a la edad máxima.');
+
+        if (!form.meetingDay) return alert('El día de encuentro es obligatorio.');
+        if (!form.meetingTime) return alert('El horario de encuentro es obligatorio.');
 
         if (isAdminView && !editingGroup && !selectedHostId) {
             return alert('Debes asignar un Anfitrión para el grupo.');
@@ -212,7 +232,30 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             return alert('La fecha de fin debe ser posterior a la fecha de arranque.');
         }
 
+        // Check for spelling errors before submitting, unless user already confirmed (showSpellingWarning is true -> wait, this logic is tricky)
+        // Correct logic: If spelling errors exist AND we haven't shown the warning yet (or user cancelled), show warning.
+        // If user actively clicked "Crear de todas formas" in the modal, we bypass this check.
+        // But this function is attached to the form onSubmit.
+        // We will handle the "real" submit in a separate function call or use a flag.
+        // Better: preventDefault here. If spellingErrors && !showSpellingWarning, show warning and return.
+
+        if (spellingErrors && !showSpellingWarning) {
+            setShowSpellingWarning(true);
+            return;
+        }
+
+        // If we are here, either no errors OR user confirmed via "Crear de todas formas" (which will call this function again? No, we need a separate trigger or state).
+        // Actually, let's keep it simple:
+        // 1. Submit button calls handleSubmit.
+        // 2. handleSubmit checks errors. If errors -> show warning. disable further execution.
+        // 3. Warning modal has "Crear de todas formas" button which calls `confirmSubmit`.
+
+        await confirmSubmit();
+    };
+
+    const confirmSubmit = async () => {
         setLoading(true);
+        setShowSpellingWarning(false); // Close warning if open
 
         try {
             let finalHostId = currentUser?.id;
@@ -601,8 +644,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
                 <button
                     type="submit"
-                    disabled={loading || spellingErrors || isCheckingSpelling}
-                    className={`w-full py-4 text-white font-black uppercase tracking-widest border-2 border-black transition-all flex items-center justify-center gap-2 ${spellingErrors || isCheckingSpelling
+                    disabled={loading || isCheckingSpelling}
+                    className={`w-full py-4 text-white font-black uppercase tracking-widest border-2 border-black transition-all flex items-center justify-center gap-2 ${isCheckingSpelling
                         ? 'bg-neutral-300 text-neutral-500 border-neutral-400 cursor-not-allowed'
                         : 'bg-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
                         }`}
@@ -615,6 +658,49 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                     )}
                 </button>
             </form>
+
+            {/* SPELLING WARNING DIALOG */}
+            {showSpellingWarning && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white border-2 border-black p-6 w-full max-w-sm shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-scaleIn">
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="w-12 h-12 bg-yellow-400 border-2 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                <span className="text-2xl">⚠️</span>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lg font-black uppercase">¡Atención!</h3>
+                                <p className="text-sm font-medium text-neutral-600 mt-2">
+                                    La descripción de tu grupo contiene posibles errores de ortografía.
+                                </p>
+                                <p className="text-sm font-medium text-neutral-600">
+                                    ¿Deseas corregirlos antes de continuar?
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col gap-2 w-full pt-2">
+                                <button
+                                    onClick={() => {
+                                        setShowSpellingWarning(false);
+                                        handleFixSpelling();
+                                    }}
+                                    className="w-full py-3 bg-yellow-400 text-black font-black uppercase border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Wand2 className="w-4 h-4" />
+                                    Corregir Errores
+                                </button>
+
+                                <button
+                                    onClick={() => confirmSubmit()}
+                                    className="w-full py-3 bg-white text-neutral-500 font-bold uppercase border-2 border-transparent hover:text-black hover:underline transition-all"
+                                >
+                                    Crear de todas formas
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </NeoModal>
     );
 };

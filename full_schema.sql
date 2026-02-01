@@ -103,6 +103,10 @@ CREATE TABLE public.users (
   linked_group_id UUID,          -- Can link to a group if they are a leader
   volunteer_roles TEXT[],        -- Array of roles/modules they help with
   is_system_volunteer BOOLEAN DEFAULT false,
+  phone TEXT,
+  gender TEXT,
+  birth_date TEXT,
+  age INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
