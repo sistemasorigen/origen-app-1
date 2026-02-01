@@ -146,12 +146,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         .from('users')
                         .select('*')
                         .eq('id', sessionUser.id)
-                        .single();
+                        .maybeSingle();
 
                     if (data) return { data, error: null };
-                    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+
+                    if (error) {
                         console.warn(`[Auth] Profile fetch attempt ${i + 1} failed:`, error.message);
                     }
+
+                    // If no data and no error involved (just null), it means not found.
+                    // We still retry a few times in case a DB trigger is creating the user.
                     if (i < retries - 1) await new Promise(r => setTimeout(r, delay));
                 }
                 return { data: null, error: 'Max retries reached' };

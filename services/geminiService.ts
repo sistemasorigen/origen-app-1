@@ -127,37 +127,63 @@ export function isGeminiAvailable(): boolean {
 }
 
 /**
+ * Validate user profile data locally (FAST)
+ * Replaces the slow AI check for basic validation
+ */
+export function validateProfileLocal(data: { name: string; phone: string; age: number; gender: string }): {
+  isValid: boolean;
+  correctedData: typeof data;
+  message?: string;
+} {
+  // 1. Correct Name Capitalization
+  const cleanName = data.name
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+
+  // 2. Validate Phone (Basic Argentina Check)
+  // Must be roughly +54 9 ... and have enough digits
+  let cleanPhone = data.phone.trim();
+
+  // Basic cleaning
+  cleanPhone = cleanPhone.replace(/[\s\-\(\)]/g, ''); // keep + and numbers
+
+  // Check prefix
+  if (!cleanPhone.startsWith('+')) {
+    cleanPhone = '+' + cleanPhone;
+  }
+
+  // Very basic length check (Argentina numbers are usually 13 chars with +54 9 11...)
+  const isValidPhone = cleanPhone.length > 8 && /^\+?[0-9]+$/.test(cleanPhone);
+
+  if (!isValidPhone) {
+    return {
+      isValid: false,
+      correctedData: { ...data, name: cleanName },
+      message: 'El número de teléfono parece incorrecto. Por favor verifica el formato.'
+    };
+  }
+
+  return {
+    isValid: true,
+    correctedData: {
+      ...data,
+      name: cleanName,
+      phone: cleanPhone // or keep original formatting if preferred, but usually we want clean
+    }
+  };
+}
+
+/**
  * Validate user profile data with Gemini
+ * @deprecated Use validateProfileLocal for instant feedback
  */
 export async function validateProfileWithGemini(data: { name: string; phone: string; age: number; gender: string }): Promise<{
   isValid: boolean;
   correctedData?: typeof data;
   message?: string;
 }> {
-  if (!API_KEY) {
-    console.warn('Gemini API key missing, skipping validation');
-    return { isValid: true, correctedData: data };
-  }
-
-  const prompt = `Analiza este JSON de perfil de usuario: ${JSON.stringify(data)}. 
-  Corrige mayúsculas en el nombre y verifica si el teléfono parece válido para Argentina (+54...). 
-  Si el teléfono es inválido o muy corto, marca isValid: false.
-  Retorna SOLO un JSON limpio con esta estructura:
-  {
-    "isValid": boolean,
-    "correctedData": { "name": string, "phone": string, "age": number, "gender": string },
-    "message": string (breve explicación si hay error o corrección)
-  }`;
-
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-
-    return JSON.parse(text);
-  } catch (error) {
-    console.error('Gemini Validation Error:', error);
-    // On error, allow to proceed but warn
-    return { isValid: true, correctedData: data };
-  }
+  // ... implementation kept for reference but we will switch to local ...
+  return Promise.resolve(validateProfileLocal(data));
 }

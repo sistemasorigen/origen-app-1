@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import NeoModal from './NeoModal';
-import { User, Phone, Calendar, Users, Loader2, Sparkles } from 'lucide-react';
-import { validateProfileWithGemini } from '../services/geminiService';
+import { User, Phone, Calendar, Users, Loader2 } from 'lucide-react';
+import { validateProfileLocal } from '../services/geminiService';
 
 interface CompleteProfileModalProps {
     userName: string;
@@ -13,7 +13,6 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
     const [birthDate, setBirthDate] = useState('');
     const [gender, setGender] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isValidating, setIsValidating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Calculate age from birth date
@@ -53,11 +52,10 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
         }
 
         setIsSubmitting(true);
-        setIsValidating(true);
         setError(null);
 
         try {
-            // 🤖 Gemini AI Validation
+            // Local Validation (Fast)
             const validationData = {
                 name: userName,
                 phone: phone.trim(),
@@ -65,17 +63,16 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
                 gender
             };
 
-            const aiResult = await validateProfileWithGemini(validationData);
+            const result = validateProfileLocal(validationData);
 
-            if (!aiResult.isValid) {
-                setError(aiResult.message || 'Los datos ingresados no parecen válidos. Por favor verifícalos.');
+            if (!result.isValid) {
+                setError(result.message || 'Los datos ingresados no parecen válidos. Por favor verifícalos.');
                 setIsSubmitting(false);
-                setIsValidating(false);
                 return;
             }
 
             // Use corrected data if available
-            const finalData = aiResult.correctedData || validationData;
+            const finalData = result.correctedData || validationData;
 
             // Submit to Supabase
             const success = await onComplete({
@@ -92,7 +89,6 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
             setError('Error al guardar. Por favor intenta de nuevo.');
         } finally {
             setIsSubmitting(false);
-            setIsValidating(false);
         }
     };
 
@@ -186,8 +182,8 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
                 >
                     {isSubmitting ? (
                         <>
-                            {isValidating ? <Sparkles className="w-4 h-4 animate-pulse" /> : <Loader2 className="w-4 h-4 animate-spin" />}
-                            {isValidating ? 'Analizando con IA...' : 'Guardando...'}
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Guardando...
                         </>
                     ) : 'Continuar'}
                 </button>

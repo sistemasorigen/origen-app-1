@@ -594,18 +594,58 @@ export const supabaseService = {
 
   // Update user profile fields (phone, age, gender, birthDate) - used for OAuth profile completion
   async updateUserProfile(userId: string, profileData: { phone?: string; age?: number; gender?: string; birthDate?: string }): Promise<boolean> {
-    const { error } = await supabase
+    // We use upsert here because for Google Sign In users, the public.users row might not exist yet
+    // if the trigger failed or hasn't fired. We need to Ensure it exists.
+
+    // First, we need to get the email/name from auth metadata if we are inserting a new row
+    // BUT, we only have the profile data here. 
+    // Ideally, we should fetch the user from auth first to get the email/name if we need to insert.
+    // However, to keep it simple and robust:
+
+    // Attempt UPDATE first (most common case is user exists)
+    const { error: updateError, data } = await supabase
       .from('users')
       .update({
         phone: profileData.phone,
         age: profileData.age,
         gender: profileData.gender,
-        birth_date: profileData.birthDate
+        birth_date: profileData.birthDate,
+        is_active: true // Activate them if they are completing profile
       })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select();
 
-    if (error) {
-      console.error('Error updating user profile:', error);
+    if (!updateError && data && data.length > 0) {
+      return true;
+    }
+
+    // If update failed (likely no row), we MUST doing a full INSERT/UPSERT.
+    // But we need the email/name.
+    console.warn("Update failed or no row (Google User?), attempting UPSERT with Auth Data fetch...");
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    if (!authUser || authUser.id !== userId) {
+      console.error("Critical: Auth user mismatch during profile completion.");
+      return false;
+    }
+
+    const { error: upsertError } = await supabase
+      .from('users')
+      .upsert({
+        id: userId,
+        email: authUser.email,
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuario',
+        role: UserRole.VIEWER,
+        is_active: true,
+        phone: profileData.phone,
+        age: profileData.age,
+        gender: profileData.gender,
+        birth_date: profileData.birthDate
+      });
+
+    if (upsertError) {
+      console.error('Error upserting user profile:', upsertError);
       return false;
     }
     return true;
