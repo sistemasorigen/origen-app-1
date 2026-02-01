@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect } from '../services/supabaseService';
@@ -322,6 +322,50 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // State for existing leader applications (for duplicate checking)
     const [existingApplications, setExistingApplications] = useState<{ email: string, phone: string, firstName: string, lastName: string }[]>([]);
 
+    // Helper to check if a group is finished
+    const isGroupFinished = (group: Group) => {
+        if (!group.endDate) return false;
+        const today = new Date().toISOString().split('T')[0];
+        return group.endDate < today;
+    };
+
+
+    // Admin Status Filter
+    const [adminStatusFilter, setAdminStatusFilter] = useState<'ALL' | 'APPROVED' | 'FINALIZED' | 'PENDING'>('ALL');
+    const [adminSearchTerm, setAdminSearchTerm] = useState('');
+
+    const filteredAdminGroups = useMemo(() => {
+        let filtered = adminGroups;
+
+        // 1. Filter by Status
+        if (adminStatusFilter !== 'ALL') {
+            filtered = filtered.filter(g => {
+                const isFinished = isGroupFinished(g);
+                if (adminStatusFilter === 'APPROVED') return g.status === 'approved' && !isFinished;
+                if (adminStatusFilter === 'FINALIZED') return g.status === 'approved' && isFinished;
+                if (adminStatusFilter === 'PENDING') return g.status === 'pending' || !g.status;
+                return true;
+            });
+        }
+
+        // 2. Filter by Search Term
+        if (adminSearchTerm.trim()) {
+            const term = adminSearchTerm.toLowerCase().trim();
+            filtered = filtered.filter(g => {
+                const groupName = g.name?.toLowerCase() || '';
+                const leaderName = `${g.leaderName || ''} ${g.leaderSurname || ''}`.toLowerCase();
+                const categoryName = categories.find(c => c.id === g.categoryId)?.name?.toLowerCase() || '';
+                const location = g.location?.toLowerCase() || '';
+
+                return groupName.includes(term) ||
+                    leaderName.includes(term) ||
+                    categoryName.includes(term) ||
+                    location.includes(term);
+            });
+        }
+
+        return filtered;
+    }, [adminGroups, adminStatusFilter, adminSearchTerm, categories]);
 
 
     // Fetch existing applications when postulation modal opens AND auto-fill form with user data
@@ -566,12 +610,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         }
     };
 
-    // Helper to check if a group is finished
-    const isGroupFinished = (group: Group) => {
-        if (!group.endDate) return false;
-        const today = new Date().toISOString().split('T')[0];
-        return group.endDate < today;
-    };
+
 
     // --- Status Badge Helper ---
     const getStatusBadge = (status?: string) => {
@@ -1279,6 +1318,27 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                     <h3 className="text-base sm:text-lg font-black uppercase tracking-tight text-slate-900">Moderación de Grupos</h3>
                                                     <p className="text-[11px] sm:text-xs text-slate-500">Revisa y aprueba grupos pendientes</p>
                                                 </div>
+
+                                                {/* Search Bar */}
+                                                <div className="relative w-full sm:w-64">
+                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Buscar grupo, líder..."
+                                                        value={adminSearchTerm}
+                                                        onChange={(e) => setAdminSearchTerm(e.target.value)}
+                                                        className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-black transition-all placeholder:font-medium"
+                                                    />
+                                                    {adminSearchTerm && (
+                                                        <button
+                                                            onClick={() => setAdminSearchTerm('')}
+                                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full"
+                                                        >
+                                                            <X className="w-3 h-3 text-slate-400" />
+                                                        </button>
+                                                    )}
+                                                </div>
+
                                                 {/* Mobile Actions Menu (3 dots) */}
                                                 <div className="relative sm:hidden z-20">
                                                     <button
@@ -1376,28 +1436,51 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         </div>
 
                                         {/* Status Pills (Right side) - Always Visible */}
-                                        <div className="flex gap-2 self-end xl:self-auto">
-                                            <span className="px-3 py-2.5 text-xs font-black uppercase bg-emerald-100 text-emerald-800 border-2 border-emerald-300 rounded-full flex items-center gap-2 whitespace-nowrap shrink-0">
-                                                <CheckCircle className="w-4 h-4" />
+                                        <div
+                                            className="flex items-center gap-1.5 sm:gap-2 w-full xl:w-auto overflow-x-auto xl:overflow-visible pb-1 xl:pb-0 justify-start xl:justify-end no-scrollbar"
+                                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                        >
+                                            <button
+                                                onClick={() => setAdminStatusFilter(prev => prev === 'APPROVED' ? 'ALL' : 'APPROVED')}
+                                                className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'APPROVED'
+                                                    ? 'bg-emerald-200 text-emerald-900 border-2 border-emerald-500 ring-2 ring-emerald-200 ring-offset-1'
+                                                    : 'bg-emerald-100 text-emerald-800 border sm:border-2 border-emerald-300 hover:bg-emerald-200'
+                                                    } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'APPROVED' ? 'opacity-50 grayscale' : ''}`}
+                                            >
+                                                <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                 {adminGroups.filter(g => g.status === 'approved' && !isGroupFinished(g)).length}
                                                 <span>Aprobados</span>
-                                            </span>
-                                            <span className="px-3 py-2.5 text-xs font-black uppercase bg-neutral-200 text-neutral-600 border-2 border-neutral-400 rounded-full flex items-center gap-2 whitespace-nowrap shrink-0">
-                                                <CheckCircle className="w-4 h-4" />
+                                            </button>
+
+                                            <button
+                                                onClick={() => setAdminStatusFilter(prev => prev === 'FINALIZED' ? 'ALL' : 'FINALIZED')}
+                                                className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'FINALIZED'
+                                                    ? 'bg-neutral-300 text-neutral-800 border-2 border-neutral-500 ring-2 ring-neutral-200 ring-offset-1'
+                                                    : 'bg-neutral-200 text-neutral-600 border sm:border-2 border-neutral-400 hover:bg-neutral-300'
+                                                    } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'FINALIZED' ? 'opacity-50 grayscale' : ''}`}
+                                            >
+                                                <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                 {adminGroups.filter(g => g.status === 'approved' && isGroupFinished(g)).length}
                                                 <span>Finalizados</span>
-                                            </span>
-                                            <span className="px-3 py-2.5 text-xs font-black uppercase bg-yellow-100 text-yellow-800 border-2 border-yellow-300 rounded-full flex items-center gap-2 whitespace-nowrap shrink-0">
-                                                <Loader2 className="w-4 h-4" />
+                                            </button>
+
+                                            <button
+                                                onClick={() => setAdminStatusFilter(prev => prev === 'PENDING' ? 'ALL' : 'PENDING')}
+                                                className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'PENDING'
+                                                    ? 'bg-yellow-200 text-yellow-900 border-2 border-yellow-500 ring-2 ring-yellow-200 ring-offset-1'
+                                                    : 'bg-yellow-100 text-yellow-800 border sm:border-2 border-yellow-300 hover:bg-yellow-200'
+                                                    } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'PENDING' ? 'opacity-50 grayscale' : ''}`}
+                                            >
+                                                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                 {adminGroups.filter(g => g.status === 'pending' || !g.status).length}
                                                 <span>Pendientes</span>
-                                            </span>
+                                            </button>
                                         </div>
                                     </div>
 
                                     {/* Mobile Card View for Admin */}
                                     <div className="md:hidden space-y-4">
-                                        {adminGroups.map(group => (
+                                        {filteredAdminGroups.map(group => (
                                             <div key={group.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative">
                                                 {/* Kebab Menu Button - Top Right */}
                                                 <div className="absolute top-4 right-4">
@@ -1515,7 +1598,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
-                                                {adminGroups.map(group => (
+                                                {filteredAdminGroups.map((group) => (
                                                     <tr key={group.id} className={`hover:bg-slate-50 transition-colors ${group.status === 'pending' || !group.status ? 'bg-yellow-50/50' : ''}`}>
                                                         <td className="p-4">
                                                             {group.endDate && group.endDate < new Date().toISOString().split('T')[0] ? (
