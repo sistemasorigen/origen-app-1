@@ -2574,22 +2574,92 @@ export const supabaseService = {
   },
 
   /**
-   * Promote a user to 'ANFITRION' role
+  /**
+   * Search ANY user in the system (for Host/Co-host assignment)
    */
-  async promoteUserToHost(userId: string): Promise<boolean> {
+  async searchUsersGlobal(term: string): Promise<User[]> {
     try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .ilike('name', `%${term}%`)
+        .limit(20);
+
+      if (error) {
+        console.error('[User Search] Error:', error);
+        return [];
+      }
+
+      return (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role as UserRole,
+        roles: (u.roles || [u.role]) as UserRole[],
+        isActive: u.is_active,
+        linkedGroupId: u.linked_group_id,
+        volunteerRoles: u.volunteer_roles || []
+      }));
+    } catch (error) {
+      console.error('[User Search] Exception:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get all users with a specific role (ANFITRION or CO_ANFITRION)
+   */
+  async getUsersByRole(role: UserRole): Promise<User[]> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', role)
+        .order('name');
+
+      if (error) {
+        console.error(`[User Mgmt] Error fetching ${role}:`, error);
+        return [];
+      }
+
+      return (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role as UserRole,
+        roles: (u.roles || [u.role]) as UserRole[],
+        isActive: u.is_active,
+        linkedGroupId: u.linked_group_id,
+        volunteerRoles: u.volunteer_roles || []
+      }));
+    } catch (error) {
+      console.error(`[User Mgmt] Exception fetching ${role}:`, error);
+      return [];
+    }
+  },
+
+  /**
+   * Toggle a specific role for a user
+   * If 'assign' is true, sets the role.
+   * If 'assign' is false, sets role to 'USUARIO' (fallback).
+   */
+  async toggleUserRole(userId: string, roleToAssign: UserRole, assign: boolean): Promise<boolean> {
+    try {
+      // Fallback to USUARIO if removing role
+      const newRole = assign ? roleToAssign : UserRole.USUARIO;
+
       const { error } = await supabase
-        .from('profiles')
-        .update({ role: 'ANFITRION' })
+        .from('users')
+        .update({ role: newRole })
         .eq('id', userId);
 
       if (error) {
-        console.error('[User Mgmt] Error promoting user:', error);
+        console.error('[User Mgmt] Error updating role:', error);
         return false;
       }
       return true;
     } catch (error) {
-      console.error('[User Mgmt] Exception promoting user:', error);
+      console.error('[User Mgmt] Exception updating role:', error);
       return false;
     }
   },

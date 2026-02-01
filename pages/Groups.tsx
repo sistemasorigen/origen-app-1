@@ -1,10 +1,11 @@
+// ... imports
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect } from '../services/supabaseService';
 import { hasRole } from '../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration } from '../types';
-import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu } from 'lucide-react';
+import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield } from 'lucide-react';
 import HeroCarousel, { HeroSlideData } from '../components/HeroCarousel';
 import ImageUpload from '../components/ImageUpload';
 import GroupCard from '../components/groups/GroupCard';
@@ -16,6 +17,9 @@ import AdminAddMemberModal from '../components/groups/AdminAddMemberModal';
 import ApplicantsModal from '../components/groups/ApplicantsModal';
 import NeoModal from '../components/NeoModal';
 import AdminDropoutInbox from '../components/groups/AdminDropoutInbox';
+import HostsManagementPanel from '../components/groups/HostsManagementPanel';
+
+
 
 
 interface GroupsProps {
@@ -61,6 +65,7 @@ const generateUUID = (): string => {
 // --- COMPONENTS ---
 
 // --- NAVBAR PROPS INTERFACE ---
+// --- NAVBAR PROPS INTERFACE ---
 interface GroupsNavbarProps {
     view: 'public' | 'admin';
     setView: (v: 'public' | 'admin') => void;
@@ -68,8 +73,8 @@ interface GroupsNavbarProps {
     isGroupLeader: boolean;
     isSuperAdmin: boolean;
     // Admin Navigation Props
-    activeSubTab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG';
-    setSubTab: (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG') => void;
+    activeSubTab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS';
+    setSubTab: (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS') => void;
     canSeeConfig: boolean;
 }
 
@@ -90,10 +95,11 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
         'GROUPS': 'Gestión de Grupos',
         'CATEGORIES': 'Categorías',
         'TAGS': 'Etiquetas',
-        'CONFIG': 'Config'
+        'CONFIG': 'Config',
+        'HOSTS': 'Anfitriones'
     };
 
-    const handleTabClick = (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG') => {
+    const handleTabClick = (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS') => {
         setSubTab(tab);
         setIsMenuOpen(false);
     };
@@ -142,6 +148,16 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
                                         {/* Config-only tabs */}
                                         {canSeeConfig && (
                                             <>
+                                                <button
+                                                    onClick={() => handleTabClick('HOSTS')}
+                                                    className={`flex items-center gap-3 p-4 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeSubTab === 'HOSTS'
+                                                        ? 'bg-black text-white'
+                                                        : 'bg-slate-50 text-black hover:bg-slate-100 border border-slate-200'
+                                                        }`}
+                                                >
+                                                    <Shield className="w-5 h-5 shrink-0" />
+                                                    ANFITRIONES
+                                                </button>
                                                 <button
                                                     onClick={() => handleTabClick('CATEGORIES')}
                                                     className={`flex items-center gap-3 p-4 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeSubTab === 'CATEGORIES'
@@ -1875,6 +1891,13 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                             )}
                                         </div>
                                     </div>
+                                </div>
+                            )}
+
+                            {/* HOSTS MANAGEMENT TAB */}
+                            {adminSubTab === 'HOSTS' && (
+                                <div className="max-w-7xl">
+                                    <HostsManagementPanel groups={adminGroups} onUpdate={fetchAdminGroups} />
                                 </div>
                             )}
                         </>
