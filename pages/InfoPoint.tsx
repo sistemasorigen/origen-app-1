@@ -9,7 +9,7 @@ import NeoSidebar from './infopoint/NeoSidebar';
 import SystemLoginModal from '../components/SystemLoginModal';
 import { db } from '../services/dbService';
 import { Menu } from 'lucide-react';
-import { ToastProvider } from './infopoint/context/ToastContext';
+import { ToastProvider, useToast } from './infopoint/context/ToastContext';
 
 // Sub Views
 import PublicHome from './infopoint/PublicHome';
@@ -36,6 +36,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const [currentView, setCurrentView] = useState<ViewState>('PANEL');
     const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const toast = useToast();
 
     // Determines if user has enough privilege to enter the internal panel
     // Admins and Encargados have full access, Volunteers need VOLUNTARIO_INFO role
@@ -46,6 +47,13 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             currentUser.volunteerRoles?.includes('PUNTO')
         ))
     );
+
+    // Check if user can access Admin Panel (Configuration)
+    const canAccessAdminPanel = !!currentUser && hasRole(currentUser, [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN_PUNTO,
+        UserRole.ENCARGADO_PUNTO
+    ]);
 
     const handleEnterPanel = () => {
         // If user is already logged in with correct role, go to internal
@@ -196,7 +204,16 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             case 'LOANS': return <Loans />;
             case 'BAPTISMS': return <Baptisms />;
             case 'PRESENTATIONS': return <ChildPresentations />;
-            case 'ADMIN_PANEL': return <AdminPanel />;
+            case 'ADMIN_PANEL': {
+                // Role-based protection: Only SUPER_ADMIN, ADMIN_PUNTO, and ENCARGADO_PUNTO can access
+                if (!canAccessAdminPanel) {
+                    // Redirect to dashboard and show error message
+                    toast.error('No tienes permisos para acceder a Configuración');
+                    setTimeout(() => setCurrentView('PANEL'), 0);
+                    return <Dashboard />;
+                }
+                return <AdminPanel />;
+            }
             default: return <Dashboard />;
         }
     };

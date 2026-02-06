@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Package, Droplets, Baby, CalendarDays, BarChart3 } from 'lucide-react';
-import { ProductType, INFO_POINT_SIZES, User } from '../../types';
+import { ProductType, INFO_POINT_SIZES, User, UserRole } from '../../types';
 import SkeletonLoader from '../../components/SkeletonLoader';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasRole } from '../../services/authUtils';
 
 interface DashboardProps {
     currentUser?: User | null;
@@ -14,6 +16,17 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) => {
     const navigate = useNavigate();
     const { products, baptisms, presentations, events, isLoading } = useStore();
+    const { currentUser: authUser } = useAuth();
+
+    // Determine which user object to use (prop takes precedence)
+    const activeUser = currentUser || authUser;
+
+    // Check if user can access Reports
+    const canViewReports = activeUser && hasRole(activeUser, [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN_PUNTO,
+        UserRole.ENCARGADO_PUNTO
+    ]);
 
     // Stats Calculations
     const stockRemeras = products.filter(p => p.type === ProductType.REMERA).reduce((acc, p) => acc + p.stock, 0);
@@ -72,13 +85,15 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                 <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-black">
                     Resumen General
                 </h2>
-                <button
-                    onClick={() => navigate('/pastores')}
-                    className="hidden md:flex items-center gap-2 px-4 py-2 bg-white text-black border-2 border-black font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none transition-all"
-                >
-                    <BarChart3 size={18} />
-                    REPORTES
-                </button>
+                {canViewReports && (
+                    <button
+                        onClick={() => navigate('/pastores')}
+                        className="hidden md:flex items-center gap-2 px-4 py-2 bg-white text-black border-2 border-black font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none transition-all"
+                    >
+                        <BarChart3 size={18} />
+                        REPORTES
+                    </button>
+                )}
             </div>
 
             {/* Top Cards Grid */}

@@ -842,7 +842,7 @@ export const supabaseService = {
   },
 
   // 4. Group Registration Chart Data
-  async getGroupRegistrationChartData(start: string, end: string): Promise<{ name: string; value: number }[]> {
+  async getGroupRegistrationChartData(start: string, end: string): Promise<{ name: string; value: number; endDate?: string }[]> {
     try {
       console.log('[Reports] Fetching group registration data...');
 
@@ -862,10 +862,10 @@ export const supabaseService = {
         return [];
       }
 
-      // Step 2: Get all groups
+      // Step 2: Get all groups with endDate
       const { data: groups, error: groupsError } = await supabase
         .from('groups')
-        .select('id, name');
+        .select('id, name, end_date');
 
       if (groupsError) {
         console.error('[Reports] Error fetching groups:', groupsError);
@@ -874,21 +874,29 @@ export const supabaseService = {
 
       console.log('[Reports] Groups found:', groups?.length || 0);
 
-      // Create a map of group_id -> group_name
-      const groupMap: Record<string, string> = {};
+      // Create a map of group_id -> group info
+      const groupMap: Record<string, { name: string; endDate?: string }> = {};
       (groups || []).forEach(g => {
-        groupMap[g.id] = g.name;
+        groupMap[g.id] = { name: g.name, endDate: g.end_date };
       });
 
       // Aggregate by group
-      const agg: Record<string, number> = {};
+      const agg: Record<string, { count: number; endDate?: string }> = {};
 
       registrations.forEach((reg: any) => {
-        const groupName = groupMap[reg.group_id] || 'Desconocido';
-        agg[groupName] = (agg[groupName] || 0) + 1;
+        const groupInfo = groupMap[reg.group_id] || { name: 'Desconocido', endDate: undefined };
+        const groupName = groupInfo.name;
+
+        if (!agg[groupName]) {
+          agg[groupName] = { count: 0, endDate: groupInfo.endDate };
+        }
+        agg[groupName].count += 1;
       });
 
-      const result = Object.entries(agg).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+      const result = Object.entries(agg)
+        .map(([name, data]) => ({ name, value: data.count, endDate: data.endDate }))
+        .sort((a, b) => b.value - a.value);
+
       console.log('[Reports] Final chart data:', result);
       return result;
     } catch (err) {

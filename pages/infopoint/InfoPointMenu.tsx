@@ -1,8 +1,10 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ViewState } from '../../types';
+import { ViewState, UserRole } from '../../types';
 import { Package, CalendarRange, ArrowLeftRight, Search, PlusCircle, Baby, User, Settings, Layers, Tag, BarChart3 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasRole } from '../../services/authUtils';
 
 interface InfoPointMenuProps {
     onNavigate: (view: ViewState) => void;
@@ -11,10 +13,17 @@ interface InfoPointMenuProps {
 
 const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate }) => {
     const navigate = useNavigate();
+    const { currentUser } = useAuth();
 
+    // Check if user can access Admin Panel (Configuration)
+    const canViewConfig = currentUser && hasRole(currentUser, [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN_PUNTO,
+        UserRole.ENCARGADO_PUNTO
+    ]);
 
     // Menu Config
-    const menuItems = [
+    const allMenuItems = [
         { id: 'SUMMARY', label: 'Resumen', icon: Layers, color: 'bg-indigo-100' },
         { id: 'INVENTORY', label: 'Inventario', icon: Package, color: 'bg-emerald-100' },
         { id: 'MOVEMENTS', label: 'Movimientos', icon: ArrowLeftRight, color: 'bg-blue-100' },
@@ -24,9 +33,19 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate }) => {
         { id: 'SEARCH', label: 'Buscar', icon: Search, color: 'bg-slate-100' },
         { id: 'BAPTISMS', label: 'Bautismos', icon: User, color: 'bg-cyan-100' },
         { id: 'PRESENTATIONS', label: 'Presentaciones', icon: Baby, color: 'bg-purple-100' },
-        { id: 'REPORTES', label: 'Reportes', icon: BarChart3, color: 'bg-teal-100', externalRoute: '/pastores' },
-        { id: 'ADMIN_PANEL', label: 'Configuración', icon: Settings, color: 'bg-gray-200' },
+        { id: 'REPORTES', label: 'Reportes', icon: BarChart3, color: 'bg-teal-100', externalRoute: '/pastores', requiresAdminAccess: true },
+        { id: 'ADMIN_PANEL', label: 'Configuración', icon: Settings, color: 'bg-gray-200', requiresAdminAccess: true },
     ];
+
+    // Filter menu items based on user permissions
+    const menuItems = allMenuItems.filter(item => {
+        // If item requires admin access, check permission
+        if (item.requiresAdminAccess) {
+            return canViewConfig;
+        }
+        // All other items are visible to everyone
+        return true;
+    });
 
     const handleItemClick = (item: typeof menuItems[0]) => {
         if (item.externalRoute) {

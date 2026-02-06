@@ -54,6 +54,7 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
     // Sub-navigation for GROUPS tab
     const [groupsSubTab, setGroupsSubTab] = useState<GroupsSubTab>('METRICS');
     const [bajasType, setBajasType] = useState<BajasType>('INSCRIPCIONES');
+    const [groupsFilter, setGroupsFilter] = useState<'ACTIVOS' | 'FINALIZADOS'>('ACTIVOS');
 
     // Attendance Report State
     const [attendanceReport, setAttendanceReport] = useState<{
@@ -466,38 +467,88 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                 <h3 className="text-sm md:text-lg font-black text-black uppercase tracking-tight">Inscripciones por Grupo</h3>
                                                 <p className="text-[10px] md:text-xs text-neutral-500 font-bold uppercase">Total Histórico</p>
                                             </div>
-                                            <button
-                                                onClick={handleExportGroupsCSV}
-                                                className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white text-black border-2 border-black text-[10px] md:text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"
-                                            >
-                                                <Download className="w-3.5 h-3.5 md:w-4 md:h-4" /> CSV
-                                            </button>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-8">
-                                            {groupsData.map((item, idx) => (
-                                                <div key={idx} className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-white hover:bg-amber-50 transition-colors">
-                                                    <span className="font-bold text-xs md:text-sm text-black truncate mr-2 md:mr-4">{item.name}</span>
-                                                    <span className="font-black text-lg md:text-xl text-amber-600 shrink-0">{item.value}</span>
+                                            <div className="flex items-center gap-3">
+                                                {/* Filter Toggle */}
+                                                <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                                                    <button
+                                                        onClick={() => setGroupsFilter('ACTIVOS')}
+                                                        className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'ACTIVOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'
+                                                            }`}
+                                                    >
+                                                        Activos
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setGroupsFilter('FINALIZADOS')}
+                                                        className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'FINALIZADOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'
+                                                            }`}
+                                                    >
+                                                        Finalizados
+                                                    </button>
                                                 </div>
-                                            ))}
+                                                <button
+                                                    onClick={handleExportGroupsCSV}
+                                                    className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white text-black border-2 border-black text-[10px] md:text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"
+                                                >
+                                                    <Download className="w-3.5 h-3.5 md:w-4 md:h-4" /> CSV
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        <div className="block h-[500px] md:h-[600px] mt-4">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={groupsData} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e5e5" />
-                                                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: 'bold' }} allowDecimals={false} />
-                                                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: 'bold' }} width={100} />
-                                                    <Tooltip
-                                                        contentStyle={{ backgroundColor: '#000', border: '2px solid #000', color: '#fff', fontWeight: 'bold' }}
-                                                        cursor={{ fill: '#fef3c7' }}
-                                                        formatter={(value: number) => [`${value} inscriptos`, 'Total']}
-                                                    />
-                                                    <Bar dataKey="value" name="Inscriptos" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20} label={{ position: 'right', fill: '#000', fontWeight: 'bold', fontSize: 10 }} />
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
+                                        {(() => {
+                                            // Filter groups based on active/finalized status
+                                            const now = new Date();
+                                            const filteredGroups = groupsData.filter(item => {
+                                                // We need to check endDate from the actual group data
+                                                // Since groupsData only has name and value, we need to enhance this
+                                                // For now, we'll assume the service provides endDate info
+                                                // This might need adjustment based on actual data structure
+                                                if (groupsFilter === 'ACTIVOS') {
+                                                    // Active groups: no endDate or endDate is in the future
+                                                    return !item.endDate || new Date(item.endDate) >= now;
+                                                } else {
+                                                    // Finalized groups: endDate is in the past
+                                                    return item.endDate && new Date(item.endDate) < now;
+                                                }
+                                            });
+
+                                            if (filteredGroups.length === 0) {
+                                                return (
+                                                    <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg">
+                                                        <Layers className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                                        <p className="text-slate-500 font-bold">No hay grupos {groupsFilter.toLowerCase()}</p>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-8">
+                                                        {filteredGroups.map((item, idx) => (
+                                                            <div key={idx} className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-white hover:bg-amber-50 transition-colors">
+                                                                <span className="font-bold text-xs md:text-sm text-black truncate mr-2 md:mr-4">{item.name}</span>
+                                                                <span className="font-black text-lg md:text-xl text-amber-600 shrink-0">{item.value}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="block h-[500px] md:h-[600px] mt-4">
+                                                        <ResponsiveContainer width="100%" height="100%">
+                                                            <BarChart data={filteredGroups} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
+                                                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e5e5" />
+                                                                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: 'bold' }} allowDecimals={false} />
+                                                                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: 'bold' }} width={100} />
+                                                                <Tooltip
+                                                                    contentStyle={{ backgroundColor: '#000', border: '2px solid #000', color: '#fff', fontWeight: 'bold' }}
+                                                                    cursor={{ fill: '#fef3c7' }}
+                                                                    formatter={(value: number) => [`${value} inscriptos`, 'Total']}
+                                                                />
+                                                                <Bar dataKey="value" name="Inscriptos" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20} label={{ position: 'right', fill: '#000', fontWeight: 'bold', fontSize: 10 }} />
+                                                            </BarChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 )}
 
@@ -780,8 +831,8 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                 <div
                                     key={member.id}
                                     className={`flex items-center gap-3 p-3 rounded-lg border-2 ${attendanceModalType === 'present'
-                                            ? 'border-emerald-200 bg-emerald-50'
-                                            : 'border-red-200 bg-red-50'
+                                        ? 'border-emerald-200 bg-emerald-50'
+                                        : 'border-red-200 bg-red-50'
                                         }`}
                                 >
                                     {attendanceModalType === 'present' ? (
