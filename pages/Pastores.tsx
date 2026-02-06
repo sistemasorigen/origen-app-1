@@ -11,13 +11,14 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NeoModal from '../components/NeoModal';
+import InteractionsDashboard from '../components/pastores/InteractionsDashboard';
 
 interface PastoresProps {
     currentUser: User | null;
 }
 
 type Tab = 'INFO' | 'GROUPS';
-type GroupsSubTab = 'METRICS' | 'ASISTENCIAS' | 'BAJAS';
+type GroupsSubTab = 'METRICS' | 'ASISTENCIAS' | 'BAJAS' | 'INTERACCIONES';
 type BajasType = 'INSCRIPCIONES' | 'GRUPOS';
 
 const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
@@ -443,7 +444,7 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                             <div className="space-y-4 md:space-y-6 animate-fadeIn">
                                 {/* Sub-Navigation Pills */}
                                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                    {(['METRICS', 'ASISTENCIAS', 'BAJAS'] as GroupsSubTab[]).map((tab) => (
+                                    {(['METRICS', 'ASISTENCIAS', 'BAJAS', 'INTERACCIONES'] as GroupsSubTab[]).map((tab) => (
                                         <button
                                             key={tab}
                                             onClick={() => setGroupsSubTab(tab)}
@@ -455,6 +456,7 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                             {tab === 'METRICS' && 'Métricas'}
                                             {tab === 'ASISTENCIAS' && 'Asistencias'}
                                             {tab === 'BAJAS' && 'Bajas'}
+                                            {tab === 'INTERACCIONES' && 'Interacciones'}
                                         </button>
                                     ))}
                                 </div>
@@ -800,6 +802,11 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                             );
                                         })()}
                                     </div>
+                                )}
+
+                                {/* INTERACCIONES Sub-Tab */}
+                                {groupsSubTab === 'INTERACCIONES' && (
+                                    <InteractionsDashboard />
                                 )}
                             </div>
                         )}

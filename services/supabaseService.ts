@@ -905,6 +905,301 @@ export const supabaseService = {
     }
   },
 
+  // 5. Group Analytics by Category
+  async getGroupAnalyticsByCategory(
+    startDate: string,
+    endDate: string,
+    groupStatus: 'ACTIVOS' | 'FINALIZADOS' | 'TODOS'
+  ): Promise<{ categoryId: string; categoryName: string; categoryColor: string; count: number; percentage: number }[]> {
+    try {
+      console.log('[Analytics] Fetching category analytics...', { startDate, endDate, groupStatus });
+
+      // Get all groups with their categories
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select(`
+          id,
+          category_id,
+          end_date,
+          group_categories!inner(id, name, color)
+        `);
+
+      if (groupsError) {
+        console.error('[Analytics] Error fetching groups:', groupsError);
+        return [];
+      }
+
+      if (!groups || groups.length === 0) {
+        return [];
+      }
+
+      // Filter groups by status
+      const now = new Date();
+      const filteredGroups = groups.filter((g: any) => {
+        if (groupStatus === 'ACTIVOS') {
+          return !g.end_date || new Date(g.end_date) >= now;
+        } else if (groupStatus === 'FINALIZADOS') {
+          return g.end_date && new Date(g.end_date) < now;
+        }
+        return true; // TODOS
+      });
+
+      // Get registrations within date range
+      const { data: registrations, error: regError } = await supabase
+        .from('group_registrations')
+        .select('group_id')
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+
+      if (regError) {
+        console.error('[Analytics] Error fetching registrations:', regError);
+        return [];
+      }
+
+      // Count registrations per category
+      const categoryCount: Record<string, { name: string; color: string; count: number }> = {};
+
+      registrations?.forEach((reg: any) => {
+        const group = filteredGroups.find((g: any) => g.id === reg.group_id);
+        if (group && group.group_categories) {
+          const catId = group.category_id;
+          const catName = group.group_categories.name;
+          const catColor = group.group_categories.color;
+
+          if (!categoryCount[catId]) {
+            categoryCount[catId] = { name: catName, color: catColor, count: 0 };
+          }
+          categoryCount[catId].count += 1;
+        }
+      });
+
+      // Calculate percentages
+      const total = Object.values(categoryCount).reduce((sum, cat) => sum + cat.count, 0);
+
+      const result = Object.entries(categoryCount).map(([id, data]) => ({
+        categoryId: id,
+        categoryName: data.name,
+        categoryColor: data.color,
+        count: data.count,
+        percentage: total > 0 ? Math.round((data.count / total) * 100) : 0
+      })).sort((a, b) => b.count - a.count);
+
+      console.log('[Analytics] Category analytics result:', result);
+      return result;
+    } catch (err) {
+      console.error('[Analytics] Exception in getGroupAnalyticsByCategory:', err);
+      return [];
+    }
+  },
+
+  // 6. Group Analytics by Tags
+  async getGroupAnalyticsByTags(
+    startDate: string,
+    endDate: string,
+    groupStatus: 'ACTIVOS' | 'FINALIZADOS' | 'TODOS'
+  ): Promise<{ tagName: string; count: number; percentage: number }[]> {
+    try {
+      console.log('[Analytics] Fetching tag analytics...', { startDate, endDate, groupStatus });
+
+      // Get all groups with tags
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select('id, tags, end_date');
+
+      if (groupsError) {
+        console.error('[Analytics] Error fetching groups:', groupsError);
+        return [];
+      }
+
+      if (!groups || groups.length === 0) {
+        return [];
+      }
+
+      // Filter groups by status
+      const now = new Date();
+      const filteredGroups = groups.filter((g: any) => {
+        if (groupStatus === 'ACTIVOS') {
+          return !g.end_date || new Date(g.end_date) >= now;
+        } else if (groupStatus === 'FINALIZADOS') {
+          return g.end_date && new Date(g.end_date) < now;
+        }
+        return true; // TODOS
+      });
+
+      // Get registrations within date range
+      const { data: registrations, error: regError } = await supabase
+        .from('group_registrations')
+        .select('group_id')
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+
+      if (regError) {
+        console.error('[Analytics] Error fetching registrations:', regError);
+        return [];
+      }
+
+      // Count registrations per tag
+      const tagCount: Record<string, number> = {};
+
+      registrations?.forEach((reg: any) => {
+        const group = filteredGroups.find((g: any) => g.id === reg.group_id);
+        if (group && group.tags && Array.isArray(group.tags)) {
+          group.tags.forEach((tag: string) => {
+            tagCount[tag] = (tagCount[tag] || 0) + 1;
+          });
+        }
+      });
+
+      // Calculate percentages
+      const total = Object.values(tagCount).reduce((sum, count) => sum + count, 0);
+
+      const result = Object.entries(tagCount).map(([name, count]) => ({
+        tagName: name,
+        count: count,
+        percentage: total > 0 ? Math.round((count / total) * 100) : 0
+      })).sort((a, b) => b.count - a.count);
+
+      console.log('[Analytics] Tag analytics result:', result);
+      return result;
+    } catch (err) {
+      console.error('[Analytics] Exception in getGroupAnalyticsByTags:', err);
+      return [];
+    }
+  },
+
+  // 7. Detailed Analytics for Export
+  async getDetailedAnalyticsForExport(
+    type: 'CATEGORIAS' | 'ETIQUETAS' | 'TODAS',
+    startDate: string,
+    endDate: string,
+    groupStatus: 'ACTIVOS' | 'FINALIZADOS' | 'TODOS'
+  ): Promise<{ tipo: string; nombre: string; cantidadInscritos: number; estadoGrupo: string; fechaInicio: string }[]> {
+    try {
+      console.log('[Analytics] Fetching detailed export data...', { type, startDate, endDate, groupStatus });
+
+      // Get all groups with full details
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select(`
+          id,
+          category_id,
+          tags,
+          end_date,
+          start_date,
+          group_categories(name)
+        `);
+
+      if (groupsError) {
+        console.error('[Analytics] Error fetching groups:', groupsError);
+        return [];
+      }
+
+      if (!groups || groups.length === 0) {
+        return [];
+      }
+
+      // Filter groups by status
+      const now = new Date();
+      const filteredGroups = groups.filter((g: any) => {
+        if (groupStatus === 'ACTIVOS') {
+          return !g.end_date || new Date(g.end_date) >= now;
+        } else if (groupStatus === 'FINALIZADOS') {
+          return g.end_date && new Date(g.end_date) < now;
+        }
+        return true; // TODOS
+      });
+
+      // Get registrations within date range
+      const { data: registrations, error: regError } = await supabase
+        .from('group_registrations')
+        .select('group_id')
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+
+      if (regError) {
+        console.error('[Analytics] Error fetching registrations:', regError);
+        return [];
+      }
+
+      const results: { tipo: string; nombre: string; cantidadInscritos: number; estadoGrupo: string; fechaInicio: string }[] = [];
+
+      // Process categories
+      if (type === 'CATEGORIAS' || type === 'TODAS') {
+        const categoryCount: Record<string, { name: string; count: number; dates: string[] }> = {};
+
+        registrations?.forEach((reg: any) => {
+          const group = filteredGroups.find((g: any) => g.id === reg.group_id);
+          if (group && group.category_id && group.group_categories) {
+            const catId = group.category_id;
+            const catName = group.group_categories.name;
+
+            if (!categoryCount[catId]) {
+              categoryCount[catId] = { name: catName, count: 0, dates: [] };
+            }
+            categoryCount[catId].count += 1;
+            if (group.start_date) {
+              categoryCount[catId].dates.push(group.start_date);
+            }
+          }
+        });
+
+        Object.values(categoryCount).forEach(cat => {
+          const earliestDate = cat.dates.length > 0
+            ? cat.dates.sort()[0].split('T')[0]
+            : 'N/A';
+
+          results.push({
+            tipo: 'Categoría',
+            nombre: cat.name,
+            cantidadInscritos: cat.count,
+            estadoGrupo: groupStatus === 'TODOS' ? 'Mixto' : groupStatus === 'ACTIVOS' ? 'Activo' : 'Finalizado',
+            fechaInicio: earliestDate
+          });
+        });
+      }
+
+      // Process tags
+      if (type === 'ETIQUETAS' || type === 'TODAS') {
+        const tagCount: Record<string, { count: number; dates: string[] }> = {};
+
+        registrations?.forEach((reg: any) => {
+          const group = filteredGroups.find((g: any) => g.id === reg.group_id);
+          if (group && group.tags && Array.isArray(group.tags)) {
+            group.tags.forEach((tag: string) => {
+              if (!tagCount[tag]) {
+                tagCount[tag] = { count: 0, dates: [] };
+              }
+              tagCount[tag].count += 1;
+              if (group.start_date) {
+                tagCount[tag].dates.push(group.start_date);
+              }
+            });
+          }
+        });
+
+        Object.entries(tagCount).forEach(([tagName, data]) => {
+          const earliestDate = data.dates.length > 0
+            ? data.dates.sort()[0].split('T')[0]
+            : 'N/A';
+
+          results.push({
+            tipo: 'Etiqueta',
+            nombre: tagName,
+            cantidadInscritos: data.count,
+            estadoGrupo: groupStatus === 'TODOS' ? 'Mixto' : groupStatus === 'ACTIVOS' ? 'Activo' : 'Finalizado',
+            fechaInicio: earliestDate
+          });
+        });
+      }
+
+      console.log('[Analytics] Export data result:', results);
+      return results.sort((a, b) => b.cantidadInscritos - a.cantidadInscritos);
+    } catch (err) {
+      console.error('[Analytics] Exception in getDetailedAnalyticsForExport:', err);
+      return [];
+    }
+  },
+
   // --- APP CONFIG ---
   async getAppConfig(): Promise<AppConfig | null> {
     const { data, error } = await supabase
