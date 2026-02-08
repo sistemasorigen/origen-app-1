@@ -38,18 +38,29 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const toast = useToast();
 
+    // Local state to track the user authorized for InfoPoint
+    // This can be the global currentUser OR a locally logged in user (via modal)
+    const [authorizedUser, setAuthorizedUser] = useState<User | null>(currentUser);
+
+    // Sync with global user changes
+    useEffect(() => {
+        if (currentUser) {
+            setAuthorizedUser(currentUser);
+        }
+    }, [currentUser]);
+
     // Determines if user has enough privilege to enter the internal panel
     // Admins and Encargados have full access, Volunteers need VOLUNTARIO_INFO role
-    const canEnterPanel = !!currentUser && (
-        hasRole(currentUser, [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO]) ||
-        (hasRole(currentUser, UserRole.ANFITRION) && (
-            currentUser.linkedGroupId === 'PUNTO' ||
-            currentUser.volunteerRoles?.includes('PUNTO')
+    const canEnterPanel = !!authorizedUser && (
+        hasRole(authorizedUser, [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO]) ||
+        (hasRole(authorizedUser, UserRole.ANFITRION) && (
+            authorizedUser.linkedGroupId === 'PUNTO' ||
+            authorizedUser.volunteerRoles?.includes('PUNTO')
         ))
     );
 
     // Check if user can access Admin Panel (Configuration)
-    const canAccessAdminPanel = !!currentUser && hasRole(currentUser, [
+    const canAccessAdminPanel = !!authorizedUser && hasRole(authorizedUser, [
         UserRole.SUPER_ADMIN,
         UserRole.ADMIN_PUNTO,
         UserRole.ENCARGADO_PUNTO
@@ -76,6 +87,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             ))
         )) {
             // In a real app we'd update global state, but here we just grant access to the view
+            setAuthorizedUser(user);
             setViewMode('INTERNAL');
             return true;
         }
@@ -122,6 +134,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 console.log('Auto-logout due to inactivity');
                 setViewMode('PUBLIC');
                 setCurrentView('PANEL'); // Reset to root view
+                // Optionally reset authorized user if it was a local login, but keeping it for now might be better UX
             }, TIMEOUT_MS);
         };
 
@@ -236,7 +249,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 {/* 2. Content Stack (Scrollable) */}
                 <main className="flex-1 overflow-y-auto overscroll-contain bg-white">
                     {currentView === 'PANEL' ? (
-                        <InfoPointMenu onNavigate={setCurrentView} />
+                        <InfoPointMenu onNavigate={setCurrentView} currentUser={authorizedUser} />
                     ) : (
                         <div className="pb-20 px-6 pt-6">
                             {renderView()}
@@ -251,7 +264,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                     settings={settings}
                     isOpen={isSidebarOpen}
                     onClose={() => setIsSidebarOpen(false)}
-                    currentUser={currentUser}
+                    currentUser={authorizedUser}
                 />
             </div>
 
@@ -266,7 +279,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                     settings={settings}
                     isOpen={isSidebarOpen} // Always managed by state, but desktop sidebar is usually persistent/responsive
                     onClose={() => setIsSidebarOpen(false)}
-                    currentUser={currentUser}
+                    currentUser={authorizedUser}
                 />
 
                 <main className="flex-1 overflow-y-auto p-8 relative">

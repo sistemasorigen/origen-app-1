@@ -1,4 +1,6 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import { ViewState, AppSettings, UserRole, User } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import {
@@ -12,8 +14,10 @@ import {
     CalendarDays,
     Search,
     Settings,
-    X
+    X,
+    FileText
 } from 'lucide-react';
+
 
 interface NeoSidebarProps {
     currentView: ViewState;
@@ -25,8 +29,10 @@ interface NeoSidebarProps {
 }
 
 const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings, isOpen, onClose, currentUser }) => {
+    const navigate = useNavigate();
 
     // Menu Configuration based on Role requirements:
+
     const allMenuItems = [
         { id: 'PANEL', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'SEARCH', label: 'Búsqueda de Stock', icon: Search, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
@@ -38,7 +44,11 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
         { id: 'PRESENTATIONS', label: 'Presentación', icon: Baby, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'EVENTS', label: 'Eventos', icon: CalendarDays, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
         { id: 'ADMIN_PANEL', label: 'Configuración', icon: Settings, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
+        { id: 'REPORTS', label: 'Reportes', icon: FileText, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
+
+
     ];
+
 
     // Filter items based on role
     const visibleItems = allMenuItems.filter(item => {
@@ -85,7 +95,11 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                         <button
                             key={item.id}
                             onClick={() => {
-                                setView(item.id as ViewState);
+                                if (item.id === 'REPORTS') {
+                                    navigate('/pastores');
+                                } else {
+                                    setView(item.id as ViewState);
+                                }
                                 onClose(); // Auto close on mobile click
                             }}
                             className={`w-full flex items-center gap-3 px-6 py-4 text-sm font-bold uppercase tracking-tight transition-all border-b border-neutral-200

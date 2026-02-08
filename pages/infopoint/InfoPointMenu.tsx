@@ -1,29 +1,34 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ViewState, UserRole } from '../../types';
-import { Package, CalendarRange, ArrowLeftRight, Search, PlusCircle, Baby, User, Settings, Layers, Tag, BarChart3 } from 'lucide-react';
+import { ViewState, UserRole, User as UserType } from '../../types';
+import { Package, CalendarRange, ArrowLeftRight, Search, PlusCircle, Baby, User, Settings, Layers, Tag, FileText } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasRole } from '../../services/authUtils';
 
 interface InfoPointMenuProps {
     onNavigate: (view: ViewState) => void;
+    currentUser?: UserType | null;
 }
 
+interface MenuItem {
+    id: string;
+    label: string;
+    icon: React.ElementType;
+    color: string;
+    externalRoute?: string;
+    roles?: UserRole[]; // Optional: if defined, restricts access to these roles
+}
 
-const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate }) => {
+const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: propUser }) => {
     const navigate = useNavigate();
-    const { currentUser } = useAuth();
+    const { currentUser: globalUser } = useAuth();
 
-    // Check if user can access Admin Panel (Configuration)
-    const canViewConfig = currentUser && hasRole(currentUser, [
-        UserRole.SUPER_ADMIN,
-        UserRole.ADMIN_PUNTO,
-        UserRole.ENCARGADO_PUNTO
-    ]);
+    // Use prop user (local auth) or global user
+    const userToUse = propUser || globalUser;
 
     // Menu Config
-    const allMenuItems = [
+    const allMenuItems: MenuItem[] = [
         { id: 'SUMMARY', label: 'Resumen', icon: Layers, color: 'bg-indigo-100' },
         { id: 'INVENTORY', label: 'Inventario', icon: Package, color: 'bg-emerald-100' },
         { id: 'MOVEMENTS', label: 'Movimientos', icon: ArrowLeftRight, color: 'bg-blue-100' },
@@ -33,21 +38,44 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate }) => {
         { id: 'SEARCH', label: 'Buscar', icon: Search, color: 'bg-slate-100' },
         { id: 'BAPTISMS', label: 'Bautismos', icon: User, color: 'bg-cyan-100' },
         { id: 'PRESENTATIONS', label: 'Presentaciones', icon: Baby, color: 'bg-purple-100' },
-        { id: 'REPORTES', label: 'Reportes', icon: BarChart3, color: 'bg-teal-100', externalRoute: '/pastores', requiresAdminAccess: true },
-        { id: 'ADMIN_PANEL', label: 'Configuración', icon: Settings, color: 'bg-gray-200', requiresAdminAccess: true },
+        // Admin / Reports Section
+        {
+            id: 'REPORTES',
+            label: 'Reportes',
+            icon: FileText,
+            color: 'bg-teal-100',
+            externalRoute: '/pastores',
+            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO]
+        },
+        {
+            id: 'ADMIN_PANEL',
+            label: 'Configuración',
+            icon: Settings,
+            color: 'bg-gray-200',
+            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO]
+        },
     ];
 
     // Filter menu items based on user permissions
     const menuItems = allMenuItems.filter(item => {
-        // If item requires admin access, check permission
-        if (item.requiresAdminAccess) {
-            return canViewConfig;
+        // Public items (no roles defined) are visible to everyone
+        if (!item.roles || item.roles.length === 0) {
+            return true;
         }
-        // All other items are visible to everyone
-        return true;
+
+        // Restricted items require user to be logged in
+        if (!userToUse) return false;
+
+        // Explicitly check for SUPER_ADMIN as a safeguard
+        if (userToUse.roles?.includes(UserRole.SUPER_ADMIN) || userToUse.role === UserRole.SUPER_ADMIN) {
+            return true;
+        }
+
+        // Use standard role check
+        return hasRole(userToUse, item.roles);
     });
 
-    const handleItemClick = (item: typeof menuItems[0]) => {
+    const handleItemClick = (item: MenuItem) => {
         if (item.externalRoute) {
             navigate(item.externalRoute);
         } else {

@@ -259,7 +259,9 @@ export type ViewState =
     | 'SEARCH'
     | 'SUMMARY'
     | 'WELCOME'
+    | 'REPORTES'
     | 'ADMIN_PANEL';
+
 
 // --- END INFO POINT TYPES ---
 
