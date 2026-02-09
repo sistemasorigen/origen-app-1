@@ -204,30 +204,6 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
         }
     };
 
-    const FormInput = ({ label, value, onChange, type = "text", placeholder, onBlur, isValid }: {
-        label: string;
-        value: string;
-        onChange: (v: string) => void;
-        type?: string;
-        placeholder?: string;
-        onBlur?: () => void;
-        isValid?: boolean;
-    }) => (
-        <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-widest ml-1">{label}</label>
-            <div className="relative">
-                <input
-                    type={type}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    onBlur={onBlur}
-                    className={`w-full p-3 border-2 border-black font-bold outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all placeholder:text-neutral-400 rounded-none ${isValid ? 'border-green-600 bg-green-50' : 'bg-white'}`}
-                    placeholder={placeholder}
-                />
-                {isValid && <Check className="absolute right-3 top-3.5 w-4 h-4 text-green-600" />}
-            </div>
-        </div>
-    );
 
     // Success View via NeoModal content replacement
     if (successView) {
@@ -353,5 +329,30 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
         </NeoModal>
     );
 };
+
+const FormInput = ({ label, value, onChange, type = "text", placeholder, onBlur, isValid }: {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    type?: string;
+    placeholder?: string;
+    onBlur?: () => void;
+    isValid?: boolean;
+}) => (
+    <div className="space-y-1">
+        <label className="text-[10px] font-black uppercase tracking-widest ml-1">{label}</label>
+        <div className="relative">
+            <input
+                type={type}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                onBlur={onBlur}
+                className={`w-full p-3 border-2 border-black font-bold outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all placeholder:text-neutral-400 rounded-none ${isValid ? 'border-green-600 bg-green-50' : 'bg-white'}`}
+                placeholder={placeholder}
+            />
+            {isValid && <Check className="absolute right-3 top-3.5 w-4 h-4 text-green-600" />}
+        </div>
+    </div>
+);
 
 export default JoinGroupModal;

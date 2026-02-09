@@ -64,12 +64,12 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         meetingTime: '20:00',
         location: '',
         description: '',
-        maxCapacity: 12,
+        maxCapacity: 12 as number | string,
         imageUrl: '',
         coHostFirstName: '',
         coHostLastName: '',
-        minAge: 0,
-        maxAge: 100,
+        minAge: 0 as number | string,
+        maxAge: 100 as number | string,
         targetGender: 'Mixto',
         tags: [] as string[],
         startDate: '',
@@ -180,9 +180,18 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+
+        if (name === 'maxCapacity' || name === 'maxAge' || name === 'minAge') {
+            setForm(prev => ({
+                ...prev,
+                [name]: value === '' ? '' : parseInt(value)
+            }));
+            return;
+        }
+
         setForm(prev => ({
             ...prev,
-            [name]: (name === 'maxCapacity' || name === 'maxAge' || name === 'minAge') ? (parseInt(value) || 0) : value
+            [name]: value
         }));
     };
 
@@ -209,10 +218,14 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         if (!form.endDate) return alert('La fecha de fin es obligatoria.');
 
         // Numeric Validations
-        if (form.maxCapacity <= 0) return alert('La capacidad debe ser mayor a 0.');
-        if (form.minAge <= 0) return alert('La edad mínima debe ser mayor a 0.');
-        if (form.maxAge <= 0) return alert('La edad máxima debe ser mayor a 0.');
-        if (form.minAge > form.maxAge) return alert('La edad mínima no puede ser mayor a la edad máxima.');
+        const maxCapacityFn = Number(form.maxCapacity);
+        const minAgeFn = Number(form.minAge);
+        const maxAgeFn = Number(form.maxAge);
+
+        if (maxCapacityFn <= 0) return alert('La capacidad debe ser mayor a 0.');
+        if (minAgeFn < 0) return alert('La edad mínima no puede ser negativa.');
+        if (maxAgeFn <= 0) return alert('La edad máxima debe ser mayor a 0.');
+        if (minAgeFn > maxAgeFn) return alert('La edad mínima no puede ser mayor a la edad máxima.');
 
         if (!form.meetingDay) return alert('El día de encuentro es obligatorio.');
         if (!form.meetingTime) return alert('El horario de encuentro es obligatorio.');
@@ -307,7 +320,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 meetingTime: form.meetingTime,
                 location: form.location,
                 description: form.description,
-                maxCapacity: form.maxCapacity,
+                maxCapacity: Number(form.maxCapacity),
                 imageUrl: form.imageUrl,
                 categoryId: form.categoryId,
                 membersCount: editingGroup?.membersCount || 0,
@@ -315,8 +328,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 host_id: finalHostId,
                 coHostFirstName: form.coHostFirstName,
                 coHostLastName: form.coHostLastName,
-                minAge: form.minAge,
-                maxAge: form.maxAge,
+                minAge: Number(form.minAge),
+                maxAge: Number(form.maxAge),
                 targetGender: form.targetGender as any,
                 startDate: form.startDate,
                 endDate: form.endDate,

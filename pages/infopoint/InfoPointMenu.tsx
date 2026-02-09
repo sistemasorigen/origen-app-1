@@ -45,7 +45,15 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: 
             icon: FileText,
             color: 'bg-teal-100',
             externalRoute: '/pastores',
-            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO]
+            roles: [
+                UserRole.SUPER_ADMIN,
+                UserRole.ADMIN_PUNTO,
+                UserRole.ENCARGADO_PUNTO,
+                UserRole.REPORTES,
+                UserRole.PASTOR,
+                UserRole.ENCARGADO_GRUPOS,
+                UserRole.ADMIN_GROUPS
+            ]
         },
         {
             id: 'ADMIN_PANEL',
