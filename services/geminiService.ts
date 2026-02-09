@@ -1,12 +1,105 @@
 /// <reference types="vite/client" />
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { supabase } from './supabaseClient';
 
-// Initialize Gemini with API key
+// Initialize Gemini with API key (Keeping for text correction if needed)
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Use Gemini 2.5 Flash (latest fast model)
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+/**
+ * Generate an image using Supabase Edge Function (wrapping Google Gemini)
+ * @param prompt - Description of the image to generate
+ * @returns Base64 string OR Direct URL of the generated image
+ */
+/**
+ * Generate an image using a robust client-side multi-provider strategy
+ * Strategy 1: Google Imagen 4.0 (Direct Client Fetch) - Highest Quality
+ * Strategy 2: Pollinations AI Flux (Direct Client Fetch) - Fast, Free
+ * Strategy 3: Mock Keyword Dictionary - Instant Fallback
+ */
+export async function generateImage(prompt: string): Promise<string> {
+  console.log('[geminiService] Requesting image generation:', prompt);
+
+  // 1. Google Imagen 4.0 Fast (Direct)
+  if (API_KEY) {
+    try {
+      console.log('Strategy 1: Trying Google Imagen 4.0 Fast...');
+      const model = 'imagen-4.0-fast-generate-001';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${API_KEY}`;
+
+      const payload = {
+        instances: [{ prompt: prompt + ", realistic, 8k, photorealistic" }],
+        parameters: { sampleCount: 1, aspectRatio: "4:3" }
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.predictions?.[0]?.bytesBase64Encoded) {
+          console.log('Strategy 1: Success!');
+          return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
+        }
+      } else {
+        const err = await response.text();
+        console.warn('Strategy 1 Failed:', response.status, err);
+      }
+    } catch (e) {
+      console.warn('Strategy 1 Exception:', e);
+    }
+  }
+
+  // 2. Pollinations AI Flux (Direct)
+  try {
+    console.log('Strategy 2: Trying Pollinations AI...');
+    const seed = Math.floor(Math.random() * 1000000);
+    const enhancedPrompt = encodeURIComponent(prompt + " realistic, 4k, photography");
+    const pollUrl = `https://image.pollinations.ai/prompt/${enhancedPrompt}?width=800&height=600&seed=${seed}&nologo=true&model=flux`;
+
+    // Validate it's reachable (optional, or just return URL)
+    // We return URL directly specifically because checking it might cause double-load/rate-limit
+    console.log('Strategy 2: Returning URL');
+    return pollUrl;
+  } catch (e) {
+    console.warn('Strategy 2 Exception:', e);
+  }
+
+  // 3. Fallback Dictionary (Mock)
+  console.log('Strategy 3: Fallback to Dictionary');
+  return getFallbackImage(prompt);
+}
+
+function getFallbackImage(prompt: string): string {
+  const p = prompt.toLowerCase();
+  const db: Record<string, string[]> = {
+    youth: [
+      "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=800",
+      "https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=800"
+    ],
+    worship: [
+      "https://images.unsplash.com/photo-1510590337019-5ef2d3977e2e?q=80&w=800",
+      "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=800"
+    ],
+    default: [
+      "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=800",
+      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=800"
+    ]
+  };
+
+  let category = 'default';
+  if (p.includes('joven') || p.includes('amigos')) category = 'youth';
+  else if (p.includes('dios') || p.includes('alabanza')) category = 'worship';
+
+  const list = db[category] || db.default;
+  return list[Math.floor(Math.random() * list.length)];
+}
 
 /**
  * Correct Spanish text using Google Gemini AI

@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import NeoModal from '../NeoModal';
 import { Group, User, GroupTag } from '../../types';
 import { supabaseService, insertGroupDirect, updateGroupDirect } from '../../services/supabaseService';
-import { Save, UserPlus, Users, Crown, Search, Check, ChevronDown, Calendar, ArrowRight, Wand2 } from 'lucide-react';
+import { generateImage } from '../../services/geminiService';
+import { Save, UserPlus, Users, Crown, Search, Check, ChevronDown, Calendar, ArrowRight, Wand2, Sparkles } from 'lucide-react';
 import ImageUpload from '../ImageUpload';
 import { useSpellingAI } from '../../hooks/useSpellingAI';
 
@@ -49,6 +50,12 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     const [categories, setCategories] = useState<GroupCategory[]>([]);
     const [availableTags, setAvailableTags] = useState<GroupTag[]>([]);
     const [loading, setLoading] = useState(false);
+
+    // AI Image Components State
+    const [isAiMode, setIsAiMode] = useState(false); // Toggle between Upload/AI
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+    const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
     // Admin View State
     const [potentialHosts, setPotentialHosts] = useState<User[]>([]);
@@ -98,6 +105,33 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         const corrected = await fixText(form.description);
         setForm(prev => ({ ...prev, description: corrected }));
         setShowSpellingWarning(false); // Close warning if fixed
+    };
+
+    const handleGenerateImage = async () => {
+        if (!aiPrompt || aiPrompt.trim().length < 5) {
+            alert('Por favor, escribe una descripción para generar la imagen.');
+            return;
+        }
+
+        setIsGeneratingImage(true);
+        try {
+            // Contexto adicional para mejorar calidad
+            const fullPrompt = `Foto realista, alta calidad, estilo cinematográfico. Contexto: Grupo de iglesia cristiana. Descripción usuario: ${aiPrompt}`;
+
+            const base64Image = await generateImage(fullPrompt);
+
+            // Add to gallery
+            setGeneratedImages(prev => [base64Image, ...prev]);
+
+            // Auto-select the new image
+            setForm(prev => ({ ...prev, imageUrl: base64Image }));
+
+        } catch (error: any) {
+            console.error('Error generating image:', error);
+            alert(`Error al generar imagen: ${error.message}`);
+        } finally {
+            setIsGeneratingImage(false);
+        }
     };
 
     useEffect(() => {
@@ -272,6 +306,55 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         setShowSpellingWarning(false); // Close warning if open
 
         try {
+            // Handle Base64 Image Upload
+            let finalImageUrl = form.imageUrl;
+
+            // CASE 1: Base64 String (Old method or if we revert)
+            if (finalImageUrl && finalImageUrl.startsWith('data:image')) {
+                try {
+                    console.log('Detected base64 image, uploading to Storage...');
+                    const uploadedUrl = await supabaseService.uploadBase64Image(finalImageUrl, 'groups-covers');
+                    finalImageUrl = uploadedUrl;
+                } catch (uploadError: any) {
+                    console.error('Error uploading generated image (base64):', uploadError);
+                    alert(`Error al guardar la imagen generada: ${uploadError.message}`);
+                    setLoading(false);
+                    return;
+                }
+            }
+            // CASE 2: Remote URL (Pollinations/Unsplash) that needs persistence
+            else if (finalImageUrl && finalImageUrl.startsWith('http') && !finalImageUrl.includes('supabase.co')) {
+                try {
+                    console.log('Detected remote URL, fetching and uploading to Storage...', finalImageUrl);
+
+                    // Fetch the image
+                    const response = await fetch(finalImageUrl);
+                    if (!response.ok) throw new Error('Failed to fetch remote image');
+                    const blob = await response.blob();
+
+                    // Convert to Base64 for uploadBase64Image (or use uploadFile if exposed)
+                    // Using uploadBase64Image as it is already set up for this flow
+                    const reader = new FileReader();
+                    const base64Promise = new Promise<string>((resolve, reject) => {
+                        reader.onloadend = () => resolve(reader.result as string);
+                        reader.onerror = reject;
+                    });
+                    reader.readAsDataURL(blob);
+                    const base64Data = await base64Promise;
+
+                    const uploadedUrl = await supabaseService.uploadBase64Image(base64Data, 'groups-covers');
+                    finalImageUrl = uploadedUrl;
+
+                } catch (uploadError: any) {
+                    console.error('Error uploading generated image (url):', uploadError);
+                    // Fallback: Use the original URL if upload fails? 
+                    // No, Pollinations URLs might expire or change. Better to alert.
+                    alert(`Error al guardar la imagen generada: ${uploadError.message}`);
+                    setLoading(false);
+                    return;
+                }
+            }
+
             let finalHostId = currentUser?.id;
             const fullName = currentUser?.name || 'Administrador';
             const nameParts = fullName.trim().split(/\s+/);
@@ -321,7 +404,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 location: form.location,
                 description: form.description,
                 maxCapacity: Number(form.maxCapacity),
-                imageUrl: form.imageUrl,
+                imageUrl: finalImageUrl,
                 categoryId: form.categoryId,
                 membersCount: editingGroup?.membersCount || 0,
                 tags: form.tags,
@@ -538,15 +621,139 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                     </div>
                 </div>
 
-                {/* IMAGE */}
-                <div className="space-y-1">
-                    <label className="text-xs font-black uppercase tracking-widest block">Imagen</label>
-                    <ImageUpload
-                        currentImage={form.imageUrl}
-                        folder="groups"
-                        onImageUpload={(url) => setForm(prev => ({ ...prev, imageUrl: url }))}
-                        aspectRatio="wide"
-                    />
+                {/* IMAGE SELECTION */}
+                <div className="space-y-4">
+                    <label className="text-xs font-black uppercase tracking-widest block">Imagen de Portada</label>
+
+                    {/* TOGGLE SWITCH */}
+                    <div className="flex border-2 border-black p-1 bg-neutral-100 gap-1 rounded-none">
+                        <button
+                            type="button"
+                            onClick={() => setIsAiMode(false)}
+                            className={`flex-1 py-2 text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${!isAiMode
+                                ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                : 'bg-transparent text-neutral-500 hover:text-black'
+                                }`}
+                        >
+                            <UserPlus className="w-4 h-4" /> {/* Or standard Upload icon */}
+                            Subir Imagen
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsAiMode(true)}
+                            className={`flex-1 py-2 text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${isAiMode
+                                ? 'bg-purple-600 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                : 'bg-transparent text-neutral-500 hover:text-purple-600'
+                                }`}
+                        >
+                            <Sparkles className="w-4 h-4" />
+                            Crear con IA
+                        </button>
+                    </div>
+
+                    {/* CONTENT PANELS */}
+                    {!isAiMode ? (
+                        // MODE: UPLOAD
+                        <ImageUpload
+                            currentImage={form.imageUrl}
+                            folder="groups"
+                            onImageUpload={(url) => setForm(prev => ({ ...prev, imageUrl: url }))}
+                            aspectRatio="wide"
+                            placeholder="Subir portada del grupo"
+                        />
+                    ) : (
+                        // MODE: AI GENERATE
+                        <div className="space-y-4 border-2 border-black p-4 bg-purple-50 relative overflow-hidden">
+                            {/* Decorative background element */}
+                            <div className="absolute top-0 right-0 p-10 bg-purple-200 rounded-full blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+                            {/* PROMPT INPUT */}
+                            <div className="space-y-2 relative z-10">
+                                <label className="text-[10px] font-bold uppercase text-purple-900 block">
+                                    Describe tu imagen ideal
+                                </label>
+                                <textarea
+                                    value={aiPrompt}
+                                    onChange={(e) => setAiPrompt(e.target.value)}
+                                    placeholder="Ej: Un grupo de jóvenes riendo en un parque al atardecer, estilo vibrante y cálido."
+                                    className="w-full p-3 border-2 border-black min-h-[80px] text-sm font-medium focus:shadow-[4px_4px_0px_0px_rgba(147,51,234,1)] outline-none resize-none transition-shadow"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleGenerateImage}
+                                    disabled={isGeneratingImage || !aiPrompt.trim()}
+                                    className={`w-full py-3 font-black uppercase text-xs tracking-wider border-2 border-black transition-all flex items-center justify-center gap-2 ${isGeneratingImage
+                                        ? 'bg-neutral-200 text-neutral-500 cursor-not-allowed'
+                                        : 'bg-purple-600 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none'
+                                        }`}
+                                >
+                                    {isGeneratingImage ? (
+                                        <>
+                                            <Wand2 className="w-4 h-4 animate-spin" />
+                                            Generando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Wand2 className="w-4 h-4" />
+                                            Generar Imagen
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* GENERATED GALLERY */}
+                            {generatedImages.length > 0 && (
+                                <div className="space-y-2 relative z-10 pt-2 border-t-2 border-purple-200/50">
+                                    <label className="text-[10px] font-bold uppercase text-purple-900 block">
+                                        Resultados ({generatedImages.length})
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {generatedImages.map((imgUrl, index) => (
+                                            <div
+                                                key={index}
+                                                className={`relative group aspect-video cursor-pointer border-2 transition-all ${form.imageUrl === imgUrl
+                                                    ? 'border-[#118f46] shadow-[4px_4px_0px_0px_rgba(17,143,70,1)] ring-2 ring-[#118f46] ring-offset-2'
+                                                    : 'border-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                                    }`}
+                                                onClick={() => setForm(prev => ({ ...prev, imageUrl: imgUrl }))}
+                                            >
+                                                <img
+                                                    src={imgUrl}
+                                                    alt={`Generated ${index}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+
+                                                {/* Selected Indicator */}
+                                                {form.imageUrl === imgUrl && (
+                                                    <div className="absolute top-1 left-1 bg-[#118f46] text-white p-0.5 border border-black shadow-sm">
+                                                        <Check className="w-3 h-3" />
+                                                    </div>
+                                                )}
+
+                                                {/* Delete Button */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setGeneratedImages(prev => prev.filter((_, i) => i !== index));
+                                                        if (form.imageUrl === imgUrl) {
+                                                            setForm(prev => ({ ...prev, imageUrl: '' }));
+                                                        }
+                                                    }}
+                                                    className="absolute top-1 right-1 bg-white text-red-500 border border-black p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                                                >
+                                                    <span className="sr-only">Borrar</span>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* DESCRIPTION */}
