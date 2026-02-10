@@ -257,7 +257,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ onEnterPanel, canAccessPanel })
                                     className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap border border-slate-200 text-slate-600 hover:border-black hover:text-black hover:bg-black hover:text-white group"
                                 >
                                     <LogIn className="w-3.5 h-3.5" />
-                                    <span className="hidden sm:inline">Panel</span>
+                                    <span>Panel</span>
                                 </button>
                             </div>
                         )}

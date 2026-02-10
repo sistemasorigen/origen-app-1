@@ -502,9 +502,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                 imageUrl: s.imageUrl,
                                 titlePrefix: s.title || s.titlePrefix,
                                 titleHighlight: s.titleHighlight,
-                                description: s.subtitle || s.description,
-                                buttonText: s.buttonText || 'Ver Módulos',
-                                onButtonClick: () => document.getElementById('systems-grid')?.scrollIntoView({ behavior: 'smooth' })
+                                description: s.subtitle || s.description
                             }))
                             : [
                                 {
@@ -512,9 +510,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                     imageUrl: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=2073&auto=format&fit=crop',
                                     titlePrefix: 'PLATAFORMA',
                                     titleHighlight: 'ORIGEN',
-                                    description: 'Áreas de Servicio',
-                                    buttonText: 'Ver Módulos',
-                                    onButtonClick: () => document.getElementById('systems-grid')?.scrollIntoView({ behavior: 'smooth' })
+                                    description: 'Áreas de Servicio'
                                 }
                             ]
                         }
@@ -531,10 +527,10 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
 
 
 
-                    {/* Grid Cards - Physics Container */}
+                    {/* Grid Cards - Neo-Brutalist Layout */}
                     <div
                         ref={containerRef}
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 xl:gap-10 relative"
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative"
                     >
                         {systems.map((system, idx) => {
                             const isRestricted = !system.publicAccess &&
@@ -543,6 +539,8 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                 !hasRole(currentUser, system.allowedRoles);
 
                             const isConstruction = system.status === 'construction';
+                            const isFeatured = system.id === 'groups';
+                            const isAdmin = system.id === 'admin';
 
                             return (
                                 <div
@@ -554,28 +552,49 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                     tabIndex={0}
                                     aria-label={`Acceder a ${system.title}: ${system.description}`}
                                     className={`
-                                        group relative bg-white dark:bg-black
-                                        border-[3px] border-black dark:border-white
-                                        rounded-xl p-5 sm:p-8 cursor-pointer overflow-hidden
-                                        shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.2)] dark:sm:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.2)]
+                                        group relative cursor-pointer overflow-hidden
+                                        border-[3px] p-6 sm:p-8
                                         transition-all duration-200
-                                        hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] sm:hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.3)] dark:sm:hover:shadow-[12px_12px_0px_0px_rgba(255,255,255,0.3)]
-                                        hover:-translate-y-1 hover:-translate-x-1
-                                        active:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:active:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]
+                                        hover:-translate-y-[2px] hover:-translate-x-[2px]
                                         active:translate-y-0 active:translate-x-0
-                                        focus:ring-2 focus:ring-black dark:focus:ring-white focus:ring-offset-2 focus:outline-none
+                                        focus:ring-2 focus:ring-offset-2 focus:outline-none
+                                        min-h-[300px] flex flex-col justify-between
                                         ${isConstruction ? 'opacity-60' : ''}
                                         ${isLoaded ? 'animate-scaleIn' : 'opacity-0'}
+                                        ${isFeatured
+                                            ? 'md:col-span-2 bg-[#FFF9E5] dark:bg-yellow-900/30 border-black dark:border-yellow-300/50 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] dark:hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.2)] focus:ring-black dark:focus:ring-yellow-300'
+                                            : isAdmin
+                                                ? 'bg-white dark:bg-black border-blue-900 dark:border-blue-400 shadow-[8px_8px_0px_0px_rgba(30,58,138,1)] hover:shadow-[10px_10px_0px_0px_rgba(30,58,138,1)] dark:shadow-[8px_8px_0px_0px_rgba(96,165,250,0.3)] dark:hover:shadow-[10px_10px_0px_0px_rgba(96,165,250,0.4)] focus:ring-blue-900 dark:focus:ring-blue-400'
+                                                : 'bg-white dark:bg-black border-black dark:border-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.2)] dark:hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.3)] focus:ring-black dark:focus:ring-white'
+                                        }
                                     `}
                                     style={{ animationDelay: `${0.05 + idx * 0.05}s`, opacity: isLoaded ? undefined : 0 }}
                                 >
+                                    {/* Admin diagonal stripe pattern */}
+                                    {isAdmin && (
+                                        <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #1e3a8a 0, #1e3a8a 1px, transparent 0, transparent 10px)' }} />
+                                    )}
+
+                                    {/* Featured card decorative circle */}
+                                    {isFeatured && (
+                                        <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-[#ffeebb] dark:bg-yellow-700/20 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500 pointer-events-none" />
+                                    )}
+
                                     {/* Content */}
                                     <div className="relative z-10 h-full flex flex-col">
 
-                                        {/* Top Row - Status Badges */}
-                                        <div className="flex items-center justify-between mb-4 sm:mb-6">
+                                        {/* Top Row */}
+                                        <div className="flex items-start justify-between mb-6">
                                             {/* Icon Box */}
-                                            <div className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-black dark:border-white flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 group-hover:bg-black dark:group-hover:bg-white group-hover:text-white dark:group-hover:text-black transition-all duration-200">
+                                            <div className={`
+                                                flex items-center justify-center border-[3px] bg-white
+                                                ${isFeatured
+                                                    ? 'w-14 h-14 sm:w-16 sm:h-16 border-black dark:border-yellow-300 text-black dark:text-yellow-300'
+                                                    : isAdmin
+                                                        ? 'w-12 h-12 sm:w-14 sm:h-14 border-blue-900 dark:border-blue-400 text-blue-900 dark:text-blue-400 dark:bg-black'
+                                                        : 'w-12 h-12 sm:w-14 sm:h-14 border-black dark:border-white text-black dark:text-white dark:bg-black'
+                                                }
+                                            `}>
                                                 {getModuleIcon(
                                                     system.id,
                                                     system.icon,
@@ -584,35 +603,67 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                                 )}
                                             </div>
 
-                                            {/* Status Badge */}
+                                            {/* Status Badge / Lock / Admin Badge */}
                                             {isConstruction && (
                                                 <span className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border-2 border-amber-400 dark:border-amber-600">
                                                     Próximamente
                                                 </span>
                                             )}
 
-                                            {!system.publicAccess && !isConstruction && (
-                                                <div className="w-10 h-10 border-[3px] border-black dark:border-white flex items-center justify-center">
-                                                    <Lock className="w-4 h-4" />
+                                            {isAdmin && !isConstruction && (
+                                                <div className="bg-blue-900 dark:bg-blue-500 text-white text-[10px] font-bold px-2 py-1 uppercase">
+                                                    Admin
                                                 </div>
+                                            )}
+
+                                            {!system.publicAccess && !isConstruction && !isAdmin && (
+                                                <Lock className="w-5 h-5 text-gray-300 dark:text-neutral-600" />
                                             )}
                                         </div>
 
-                                        {/* Title & Subtitle */}
-                                        <h3 className="text-lg sm:text-xl md:text-2xl font-black uppercase tracking-tighter mb-1 group-hover:underline decoration-4 underline-offset-4 transition-all">
-                                            {system.title}
-                                        </h3>
-
-                                        <p className="text-xs font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.2em] mb-4">
+                                        {/* Subtitle */}
+                                        <p className={`text-xs font-mono font-bold tracking-widest uppercase mb-2
+                                            ${isFeatured
+                                                ? 'text-gray-600 dark:text-yellow-200/80'
+                                                : isAdmin
+                                                    ? 'text-blue-800 dark:text-blue-300'
+                                                    : 'text-gray-500 dark:text-neutral-500'
+                                            }
+                                        `}>
                                             {system.subtitle}
                                         </p>
 
-                                        <p className="text-sm text-neutral-800 dark:text-neutral-300 font-medium leading-relaxed flex-1">
+                                        {/* Title */}
+                                        <h3 className={`font-black uppercase leading-none mb-3
+                                            ${isFeatured
+                                                ? 'text-3xl sm:text-4xl tracking-tighter text-black dark:text-white'
+                                                : isAdmin
+                                                    ? 'text-2xl sm:text-3xl tracking-tight text-blue-900 dark:text-blue-300'
+                                                    : 'text-2xl sm:text-3xl tracking-tight text-black dark:text-white'
+                                            }
+                                        `}>
+                                            {system.title}
+                                        </h3>
+
+                                        {/* Description */}
+                                        <p className={`font-medium leading-relaxed flex-1
+                                            ${isFeatured
+                                                ? 'text-black dark:text-neutral-200 text-sm sm:text-base max-w-lg mb-8'
+                                                : 'text-gray-600 dark:text-neutral-400 text-sm mb-8'
+                                            }
+                                        `}>
                                             {system.description}
                                         </p>
 
                                         {/* Action Footer */}
-                                        <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t-2 border-black dark:border-white">
+                                        <div className={`pt-6 border-t-[3px]
+                                            ${isFeatured
+                                                ? 'border-black dark:border-yellow-300/50'
+                                                : isAdmin
+                                                    ? 'border-blue-900 dark:border-blue-400'
+                                                    : 'border-black dark:border-white'
+                                            }
+                                        `}>
                                             {isConstruction ? (
                                                 <span className="flex items-center gap-2 text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">
                                                     <Construction className="w-4 h-4" />
@@ -620,10 +671,17 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                                 </span>
                                             ) : (
                                                 <button
-                                                    className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-[10px] sm:text-xs font-black uppercase tracking-widest border-2 border-black dark:border-white hover:bg-white dark:hover:bg-black hover:text-black dark:hover:text-white transition-all duration-200 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] group-hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:group-hover:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.3)] min-h-[40px] sm:min-h-[44px]"
+                                                    className={`inline-flex items-center gap-2 font-bold text-xs uppercase
+                                                        ${isFeatured
+                                                            ? 'px-8 py-3 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-colors'
+                                                            : isAdmin
+                                                                ? 'px-6 py-2.5 bg-blue-900 text-white hover:bg-blue-800 dark:bg-blue-500 dark:hover:bg-blue-400 transition-colors w-max'
+                                                                : 'px-6 py-2.5 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-colors w-max'
+                                                        }
+                                                    `}
                                                 >
-                                                    Acceder
-                                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                                    ACCEDER
+                                                    <ArrowRight className={`${isFeatured ? 'w-4 h-4' : 'w-3 h-3'} group-hover:translate-x-1 transition-transform`} />
                                                 </button>
                                             )}
                                         </div>

@@ -163,6 +163,7 @@ export interface Movement {
     type: MovementType;
     quantity: number;
     date: string; // ISO String
+    paymentMethod?: 'Efectivo' | 'Mercado Pago'; // Payment method for OUT movements
     // Notes removed as per request
 }
 

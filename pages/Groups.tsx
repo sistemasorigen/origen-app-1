@@ -89,6 +89,7 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
     canSeeConfig
 }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const navigate = useNavigate();
 
     // Tab labels for display
     const tabLabels: Record<string, string> = {
@@ -143,6 +144,14 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
                                         >
                                             <Users className="w-5 h-5 shrink-0" />
                                             GESTIÓN DE GRUPOS
+                                        </button>
+
+                                        <button
+                                            onClick={() => navigate('/pastores')}
+                                            className="flex items-center gap-3 p-4 rounded-lg text-xs font-black uppercase tracking-wider transition-all bg-slate-50 text-black hover:bg-slate-100 border border-slate-200"
+                                        >
+                                            <BarChart3 className="w-5 h-5 shrink-0" />
+                                            REPORTES
                                         </button>
 
                                         {/* Config-only tabs */}
@@ -1250,7 +1259,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                 <Loader2 className="w-12 h-12 animate-spin text-black/20" />
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredGroups.map((group) => (
                                     <GroupCard
                                         key={group.id}
@@ -1380,13 +1389,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                                 <UserPlus className="w-4 h-4 shrink-0" />
                                                                 AGREGAR PARTICIPANTE
                                                             </button>
-                                                            <button
-                                                                onClick={() => { navigate('/pastores'); setIsMobileMenuOpen(false); }}
-                                                                className="flex items-center gap-3 px-4 py-3 bg-slate-50 text-slate-900 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-slate-100 transition-all"
-                                                            >
-                                                                <BarChart3 className="w-4 h-4 shrink-0" />
-                                                                REPORTES
-                                                            </button>
+
                                                             <button
                                                                 onClick={() => { setIsDropoutInboxOpen(true); setIsMobileMenuOpen(false); }}
                                                                 className="flex items-center gap-3 px-4 py-3 bg-slate-50 text-slate-900 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-slate-100 transition-all justify-between"
@@ -1427,13 +1430,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                 </button>
 
                                                 {/* Reportes Bypass */}
-                                                <button
-                                                    onClick={() => navigate('/pastores')}
-                                                    className="flex items-center gap-2 px-4 py-2.5 bg-white text-black border-2 border-black rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider hover:bg-black hover:text-white active:scale-95 transition-all whitespace-nowrap min-h-[40px] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                                                >
-                                                    <BarChart3 className="w-4 h-4 shrink-0" />
-                                                    <span>REPORTES</span>
-                                                </button>
+
 
                                                 {/* Bajas con Badge */}
                                                 <button

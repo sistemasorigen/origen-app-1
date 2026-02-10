@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, MapPin, Users, HeartHandshake, User, ArrowRight, CheckCircle2, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, MapPin, Users, ArrowRight, CheckCircle2, Lock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Group, GroupTag, User as AppUser, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 
@@ -14,47 +14,30 @@ interface GroupCardProps {
 }
 
 const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, userStatus, currentUser }) => {
-    // State for description expansion
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
-    // NOTE: RPC call removed temporarily due to Supabase API cache issue (404)
-    // The status is now calculated in Groups.tsx using existing working RPCs
-    // --- 1. UTILS & HELPERS ---
+    // --- BUSINESS LOGIC (unchanged) ---
 
-    // Gender Compatibility Check (Robust version)
     const isGenderCompatible = (): boolean => {
         const targetGender = group.targetGender?.toLowerCase() || '';
         const userGender = currentUser?.gender?.toLowerCase() || '';
-
-        // Scenario C: If group is Mixto or not specified, everyone can join
         const isMixto = !targetGender ||
             targetGender.includes('mixto') ||
             targetGender.includes('no especificar') ||
             targetGender === '';
         if (isMixto) return true;
-
-        // If user gender is unknown, allow as fallback (they can fill it in profile later)
         if (!userGender) return true;
-
-        // Check if group is for men or women using includes() to handle plural/singular
         const isMaleGroup = targetGender.includes('hombre');
         const isFemaleGroup = targetGender.includes('mujer');
-
-        // Normalize user gender: "masculino" = "hombre", "femenino" = "mujer"
         const isUserMale = userGender.includes('hombre') || userGender.includes('masculino');
         const isUserFemale = userGender.includes('mujer') || userGender.includes('femenino');
-
-        // Scenario A & B: Match user gender to group target
         if (isMaleGroup && isUserMale) return true;
         if (isFemaleGroup && isUserFemale) return true;
-
-        // Mismatch - blocked
         return false;
     };
 
     const genderCompatible = isGenderCompatible();
 
-    // Helper to parse local date (YYYY-MM-DD)
     const parseLocalDate = (dateStr: string) => {
         if (!dateStr) return new Date();
         const parts = dateStr.split('-');
@@ -63,13 +46,12 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, u
 
     const getArgentinaDate = () => {
         const now = new Date();
-        const argentinaOffset = -3 * 60; // UTC-3
+        const argentinaOffset = -3 * 60;
         const localOffset = now.getTimezoneOffset();
         const diff = argentinaOffset - localOffset;
         return new Date(now.getTime() + diff * 60 * 1000);
     };
 
-    // Calculate Status
     const now = getArgentinaDate();
     now.setHours(0, 0, 0, 0);
 
@@ -81,38 +63,20 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, u
     const isFull = group.membersCount >= group.maxCapacity;
 
     let status: 'AVAILABLE' | 'FULL' | 'IN_PROGRESS' | 'FINISHED' = 'AVAILABLE';
-
     if (isFinished) status = 'FINISHED';
     else if (isStarted) status = 'IN_PROGRESS';
     else if (isFull) status = 'FULL';
 
-    // Format Start Date (DD/MM)
-    const formattedStartDate = startDate
-        ? `${startDate.getDate().toString().padStart(2, '0')}/${(startDate.getMonth() + 1).toString().padStart(2, '0')}`
-        : 'Próx.';
-
-    // Format End Date (DD/MM)
-    const formattedEndDate = endDate
-        ? `${endDate.getDate().toString().padStart(2, '0')}/${(endDate.getMonth() + 1).toString().padStart(2, '0')}`
-        : null;
-
-    // Action Handler
     const handleAction = () => {
-        // Prevent action if finished
         if (status === 'FINISHED') return;
-        // Prevent action if gender incompatible
         if (!genderCompatible) return;
-        // Prevent action if pending or approved
         if (userStatus === 'PENDING' || userStatus === 'APPROVED') return;
-
         if (status === 'AVAILABLE') onJoin(group);
         else onInquiry(group);
     };
 
-    // Co-host text
     const hasCoHost = group.coHostFirstName && group.coHostFirstName.trim().length > 0;
 
-    // Helper to get gender display text for lock button
     const getGenderLockText = () => {
         const tg = group.targetGender;
         if (tg === 'Hombre') return 'SOLO HOMBRES';
@@ -120,233 +84,197 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, u
         return 'NO DISPONIBLE';
     };
 
-    // Button State Logic
     const getButtonState = () => {
         if (status === 'FINISHED') {
-            return {
-                text: 'FINALIZADO',
-                baseClass: 'bg-neutral-300 text-neutral-500 cursor-not-allowed border-none',
-                icon: null,
-                disabled: true
-            };
+            return { text: 'FINALIZADO', baseClass: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-500 cursor-not-allowed', icon: null, disabled: true };
         }
-
-        // HIGHEST PRIORITY: Gender Compatibility Check
         if (!genderCompatible) {
-            return {
-                text: getGenderLockText(),
-                baseClass: 'bg-gray-200 text-gray-500 cursor-not-allowed',
-                icon: <Lock className="w-3 h-3" />,
-                disabled: true
-            };
+            return { text: getGenderLockText(), baseClass: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed', icon: <Lock className="w-3.5 h-3.5" />, disabled: true };
         }
-
         if (userStatus === 'PENDING') {
-            return {
-                text: 'EN PROCESO',
-                baseClass: 'bg-gray-400 text-white cursor-not-allowed',
-                icon: null,
-                disabled: true
-            };
+            return { text: 'EN PROCESO', baseClass: 'bg-neutral-300 dark:bg-neutral-600 text-white cursor-not-allowed', icon: null, disabled: true };
         }
         if (userStatus === 'APPROVED') {
-            return {
-                text: 'MIEMBRO',
-                baseClass: 'bg-green-600 text-white cursor-default',
-                icon: <CheckCircle2 className="w-3 h-3" />,
-                disabled: true
-            };
+            return { text: 'MIEMBRO', baseClass: 'bg-[#28a946] text-white cursor-default', icon: <CheckCircle2 className="w-3.5 h-3.5" />, disabled: true };
         }
-
-        // Default available state
         if (status === 'AVAILABLE') {
-            return {
-                text: 'UNIRME',
-                baseClass: 'bg-[#118f46] text-white border-2 border-[#118f46] hover:bg-black hover:border-black transition-all',
-                icon: <ArrowRight className="w-3 h-3" />,
-                disabled: false
-            };
+            return { text: 'UNIRME', baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white shadow-lg shadow-[#28a946]/20 active:scale-95', icon: <ArrowRight className="w-3.5 h-3.5" />, disabled: false };
         }
-
-        // Full or In Progress
-        return {
-            text: 'VER INFO',
-            baseClass: 'bg-white text-black border-2 border-black hover:bg-black hover:text-white',
-            icon: <ArrowRight className="w-3 h-3" />,
-            disabled: false
-        };
+        return { text: 'VER INFO', baseClass: 'bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:border-[#28a946] hover:text-[#28a946]', icon: <ArrowRight className="w-3.5 h-3.5" />, disabled: false };
     };
 
     const btnState = getButtonState();
 
-    // Description truncation - check if longer than ~100 chars
     const shouldTruncate = group.description && group.description.length > 100;
     const truncatedDescription = shouldTruncate && !isDescriptionExpanded
         ? group.description.slice(0, 100) + '...'
         : group.description;
 
     const handleDescriptionToggle = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent card click
+        e.stopPropagation();
         setIsDescriptionExpanded(!isDescriptionExpanded);
     };
 
+    // --- DATE FORMATTING FOR BADGE ---
+    const monthNames = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+    const badgeMonth = startDate ? monthNames[startDate.getMonth()] : null;
+    const badgeDay = startDate ? startDate.getDate() : null;
+
+    // --- STATUS BADGE ---
+    const getStatusBadge = () => {
+        switch (status) {
+            case 'AVAILABLE':
+                return { label: 'ABIERTO', className: 'bg-[#28a946] text-white', pulse: true };
+            case 'FULL':
+                return { label: 'LLENO', className: 'bg-neutral-800 text-white', pulse: false };
+            case 'IN_PROGRESS':
+                return { label: 'EN CURSO', className: 'bg-amber-500 text-white', pulse: true };
+            case 'FINISHED':
+                return { label: 'FINALIZADO', className: 'bg-neutral-500 text-white', pulse: false };
+        }
+    };
+    const statusBadge = getStatusBadge();
+
+    // Resolve tags for this group
+    const resolvedTags = tags && group.tags && group.tags.length > 0
+        ? tags.filter(tag => group.tags?.includes(tag.id))
+        : [];
+
     return (
         <div
-            className="group relative bg-white border-2 border-black rounded-xl overflow-hidden flex flex-col md:flex-row hover:shadow-lg transition-all duration-300 cursor-pointer"
+            className="group/card relative bg-white dark:bg-neutral-900 rounded-lg shadow-xl shadow-black/5 dark:shadow-black/30 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer flex flex-col"
             onClick={handleAction}
         >
-            {/* Image - Reduced 30% */}
-            <div className="relative w-full h-44 md:w-52 md:h-[252px] shrink-0 overflow-hidden">
+            {/* ── HERO IMAGE ── */}
+            <div className="relative h-56 overflow-hidden">
                 {group.imageUrl ? (
                     <img
                         src={group.imageUrl}
                         alt={group.name}
-                        className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
                     />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-slate-200">
-                        <Users className="w-12 h-12 text-slate-400" />
+                    <div className="w-full h-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-800">
+                        <Users className="w-14 h-14 text-neutral-300 dark:text-neutral-600" />
                     </div>
                 )}
 
-                {/* Status Badge */}
-                <span className={`
-                    absolute bottom-2 left-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wide rounded-lg
-                    ${status === 'AVAILABLE' ? 'bg-[#118f46] text-white' :
-                        status === 'FULL' ? 'bg-black text-white' :
-                            status === 'FINISHED' ? 'bg-neutral-600 text-white' :
-                                'bg-white text-black border-2 border-black'}
-                `}>
-                    {status === 'AVAILABLE' ? 'ABIERTO' :
-                        status === 'FULL' ? 'LLENO' :
-                            status === 'FINISHED' ? 'FINALIZADO' :
-                                'EN CURSO'}
-                </span>
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
 
-                {/* Start/End Date Badges - Mobile top right */}
-                <div className="md:hidden absolute top-2 right-2 flex flex-row items-center gap-1">
-                    <span className="px-2 py-1.5 text-[10px] font-bold bg-white text-black border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                        Inicia {formattedStartDate}
+                {/* Status Badge — top left */}
+                <div className="absolute top-3 left-3">
+                    <span className={`${statusBadge.className} text-[11px] font-bold px-3 py-1.5 rounded-full tracking-wider flex items-center gap-1.5 shadow-lg`}>
+                        {statusBadge.pulse && (
+                            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                        )}
+                        {statusBadge.label}
                     </span>
-                    {formattedEndDate && (
-                        <span className="px-2 py-1.5 text-[10px] font-bold bg-white text-black border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                            Fin: {formattedEndDate}
-                        </span>
-                    )}
                 </div>
+
+                {/* Date Badge — top right */}
+                {badgeMonth && badgeDay && (
+                    <div className="absolute top-3 right-3 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md px-3 py-2 rounded-lg shadow-lg flex flex-col items-center min-w-[54px]">
+                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 leading-none">{badgeMonth}</span>
+                        <span className="text-xl font-extrabold text-neutral-800 dark:text-white leading-tight">{badgeDay}</span>
+                    </div>
+                )}
             </div>
 
-            {/* Content - Reduced padding */}
-            <div className="flex-1 p-4 md:p-5 flex flex-col justify-between min-w-0">
-                {/* Top: Title + Start/End Date */}
-                <div>
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 md:gap-3 mb-2">
-                        <h3 className="font-bold text-lg md:text-xl leading-tight text-black uppercase tracking-tight">
-                            {group.name}
-                        </h3>
-                        <div className="hidden md:flex flex-row items-center gap-2 shrink-0">
-                            <span className="px-3 py-1.5 text-[10px] font-bold bg-white text-black border-2 border-black rounded-lg">
-                                Inicia {formattedStartDate}
-                            </span>
-                            {formattedEndDate && (
-                                <span className="px-3 py-1.5 text-[10px] font-bold bg-white text-black border-2 border-black rounded-lg">
-                                    Fin: {formattedEndDate}
-                                </span>
-                            )}
+            {/* ── CONTENT ── */}
+            <div className="p-5 space-y-4 flex-1 flex flex-col">
+                {/* Title */}
+                <div className="space-y-2.5">
+                    <h3 className="text-xl font-extrabold text-neutral-800 dark:text-white leading-tight uppercase tracking-tight">
+                        {group.name}
+                    </h3>
+
+                    {/* Logistics: time + location */}
+                    <div className="flex items-center gap-5">
+                        <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
+                            <Clock className="w-4 h-4 text-[#28a946]" />
+                            <span className="text-sm font-medium">{group.meetingDay} {group.meetingTime} HS</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
+                            <MapPin className="w-4 h-4 text-[#28a946]" />
+                            <span className="text-sm font-medium truncate max-w-[160px]">{group.location}</span>
                         </div>
                     </div>
+                </div>
 
-                    {/* Age Requirements (if applicable) */}
-                    {/* Age Requirements & Tags Combo Line */}
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        {/* Age Badge */}
+                {/* Tags / Chips */}
+                {(resolvedTags.length > 0 || ((group.minAge && group.minAge > 0) || (group.maxAge && group.maxAge < 100))) && (
+                    <div className="flex flex-wrap gap-2">
+                        {resolvedTags.map((tag) => (
+                            <span
+                                key={tag.id}
+                                className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold"
+                            >
+                                {tag.name}
+                            </span>
+                        ))}
                         {((group.minAge && group.minAge > 0) || (group.maxAge && group.maxAge < 100)) && (
-                            <span className="px-2 py-1 rounded-lg bg-white text-black border-2 border-black text-[10px] font-bold uppercase">
-                                {group.minAge || 0} a {group.maxAge || 99} años
+                            <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold">
+                                {group.minAge || 0}–{group.maxAge || 99} años
                             </span>
                         )}
-
-                        {/* Tags */}
-                        {tags && group.tags && group.tags.length > 0 && tags
-                            .filter(tag => group.tags?.includes(tag.id))
-                            .map((tag) => (
-                                <span
-                                    key={tag.id}
-                                    style={{ backgroundColor: tag.color }}
-                                    className="inline-flex items-center justify-center border-2 border-black rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-default"
-                                >
-                                    #{tag.name}
-                                </span>
-                            ))}
                     </div>
-                </div>
+                )}
 
-                {/* Details: Day/Time + Location */}
-                <div className="flex flex-wrap items-center gap-3 text-xs mb-3">
-                    <div className="flex items-center gap-1.5 bg-white border-2 border-black px-2 py-1.5 rounded-lg">
-                        <Calendar className="w-3 h-3 text-black" />
-                        <span className="font-bold text-black">{group.meetingDay} {group.meetingTime}hs</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3 h-3 text-black" />
-                        <span className="font-medium text-black truncate max-w-[150px]">{group.location}</span>
-                    </div>
-                </div>
-
-                {/* Description with "Ver más" */}
+                {/* Description */}
                 {group.description && (
-                    <div className="mb-3">
-                        <p className="text-xs text-black/70 font-medium leading-relaxed">
+                    <div className="space-y-1.5 flex-1">
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
                             {truncatedDescription}
                         </p>
                         {shouldTruncate && (
                             <button
                                 onClick={handleDescriptionToggle}
-                                className="mt-1 text-xs font-bold text-black/60 hover:text-black flex items-center gap-1 transition-colors"
+                                className="inline-flex items-center text-[#28a946] font-bold text-sm hover:underline"
                             >
                                 {isDescriptionExpanded ? (
-                                    <>Ver menos <ChevronUp className="w-3 h-3" /></>
+                                    <>Ver menos <ChevronUp className="w-4 h-4 ml-0.5" /></>
                                 ) : (
-                                    <>Ver más <ChevronDown className="w-3 h-3" /></>
+                                    <>Ver más detalles <ArrowRight className="w-4 h-4 ml-0.5 transition-transform group-hover/card:translate-x-0.5" /></>
                                 )}
                             </button>
                         )}
                     </div>
                 )}
+            </div>
 
-
-
-                {/* Bottom: Host + Button */}
-                <div className="flex items-center justify-between gap-3 pt-3 border-t-2 border-black">
-                    {/* Host */}
-                    <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center text-xs font-bold shrink-0 border-2 border-black">
+            {/* ── FOOTER ── */}
+            <div className="px-5 py-4 bg-neutral-50/80 dark:bg-neutral-800/50 border-t border-neutral-100 dark:border-neutral-700/60 flex items-center justify-between gap-3">
+                {/* Organizer */}
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 bg-[#28a946]/10 dark:bg-[#28a946]/20 flex items-center justify-center rounded-lg border border-[#28a946]/20 shrink-0">
+                        <span className="text-[#28a946] font-bold text-sm">
                             {group.leaderName.charAt(0)}{group.leaderSurname.charAt(0)}
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-xs font-bold text-black truncate uppercase">
-                                {group.leaderName} {group.leaderSurname}
-                            </p>
-                            {hasCoHost && (
-                                <p className="text-[10px] text-black/60 font-medium truncate">
-                                    + {group.coHostFirstName} {group.coHostLastName}
-                                </p>
-                            )}
-                        </div>
+                        </span>
                     </div>
-
-                    {/* Action Button - Smaller */}
-                    <button
-                        disabled={btnState.disabled}
-                        className={`
-                            shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 transition-all
-                            ${btnState.baseClass}
-                        `}
-                    >
-                        {btnState.icon}
-                        {btnState.text}
-                    </button>
+                    <div className="min-w-0">
+                        <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-widest leading-none block">
+                            Organiza
+                        </span>
+                        <span className="text-sm font-bold text-neutral-800 dark:text-white truncate block uppercase">
+                            {group.leaderName} {group.leaderSurname}
+                        </span>
+                        {hasCoHost && (
+                            <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium truncate block">
+                                + {group.coHostFirstName} {group.coHostLastName}
+                            </span>
+                        )}
+                    </div>
                 </div>
+
+                {/* CTA Button */}
+                <button
+                    disabled={btnState.disabled}
+                    className={`shrink-0 px-5 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2 transition-all ${btnState.baseClass}`}
+                >
+                    {btnState.text}
+                    {btnState.icon}
+                </button>
             </div>
         </div>
     );

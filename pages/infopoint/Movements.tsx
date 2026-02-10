@@ -10,7 +10,8 @@ const Movements: React.FC = () => {
         type: ProductType.REMERA,
         size: '1',
         moveType: MovementType.IN,
-        quantity: 1
+        quantity: 1,
+        paymentMethod: 'Efectivo' as 'Efectivo' | 'Mercado Pago'
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +36,8 @@ const Movements: React.FC = () => {
             productName: `${form.type} Talle ${form.size}`,
             type: form.moveType,
             quantity: form.quantity,
-            date: new Date().toISOString()
+            date: new Date().toISOString(),
+            paymentMethod: form.moveType === MovementType.OUT ? form.paymentMethod : undefined
         });
 
         showNotification('¡Movimiento registrado con éxito!');
@@ -111,6 +113,35 @@ const Movements: React.FC = () => {
                             />
                         </div>
 
+                        {/* Payment Method Switch - Only for OUT movements */}
+                        {form.moveType === MovementType.OUT && (
+                            <div>
+                                <label className="text-xs font-black uppercase tracking-widest border-b-2 border-black mb-1 inline-block">Método de Pago</label>
+                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm({ ...form, paymentMethod: 'Efectivo' })}
+                                        className={`py-2 text-xs font-black uppercase tracking-tight border-2 border-black transition-all ${form.paymentMethod === 'Efectivo'
+                                            ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                            : 'bg-white text-neutral-500 hover:bg-neutral-100'
+                                            }`}
+                                    >
+                                        Efectivo
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm({ ...form, paymentMethod: 'Mercado Pago' })}
+                                        className={`py-2 text-xs font-black uppercase tracking-tight border-2 border-black transition-all ${form.paymentMethod === 'Mercado Pago'
+                                            ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                            : 'bg-white text-neutral-500 hover:bg-neutral-100'
+                                            }`}
+                                    >
+                                        Mercado Pago
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <button type="submit" className="w-full py-3 bg-blue-600 text-white font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-blue-500 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all mt-4">Confirmar</button>
                     </form>
                 </div>
@@ -132,6 +163,11 @@ const Movements: React.FC = () => {
                                 <div>
                                     <h4 className="font-black text-lg text-black uppercase tracking-tight">{m.productName}</h4>
                                     <p className="text-xs font-bold text-neutral-500 uppercase">{new Date(m.date).toLocaleString()}</p>
+                                    {m.paymentMethod && (
+                                        <p className="text-[10px] font-black text-blue-600 uppercase mt-0.5 bg-blue-50 inline-block px-2 py-0.5 rounded border border-blue-200">
+                                            💳 {m.paymentMethod}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex items-center gap-6">

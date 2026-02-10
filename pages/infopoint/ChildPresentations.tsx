@@ -11,7 +11,7 @@ const ChildPresentations: React.FC = () => {
         childName: '', childSurname: '',
         motherName: '', motherSurname: '',
         fatherName: '', fatherSurname: '',
-        email: '', phone: '', scheduledDate: ''
+        email: '', phone: ''
     });
     const [isEditing, setIsEditing] = useState<string | null>(null);
 
@@ -34,7 +34,7 @@ const ChildPresentations: React.FC = () => {
             });
             showNotification('¡Presentación agendada exitosamente!');
         }
-        setForm({ childName: '', childSurname: '', motherName: '', motherSurname: '', fatherName: '', fatherSurname: '', email: '', phone: '', scheduledDate: '' });
+        setForm({ childName: '', childSurname: '', motherName: '', motherSurname: '', fatherName: '', fatherSurname: '', email: '', phone: '' });
     };
 
     const handleEdit = (p: ChildPresentation) => {
@@ -43,7 +43,7 @@ const ChildPresentations: React.FC = () => {
             childName: p.childName, childSurname: p.childSurname,
             motherName: p.motherName, motherSurname: p.motherSurname,
             fatherName: p.fatherName, fatherSurname: p.fatherSurname,
-            email: p.email, phone: p.phone, scheduledDate: p.scheduledDate
+            email: p.email, phone: p.phone
         });
     };
 
@@ -98,39 +98,18 @@ const ChildPresentations: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Contact & Date */}
+                        {/* Contact */}
                         <div className="pt-2 space-y-2 border-t-2 border-dashed border-neutral-300">
                             <div className="space-y-1 mt-2">
                                 <label className="text-xs font-black text-neutral-500 uppercase tracking-widest">Contacto</label>
                                 <input type="email" placeholder="Email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full p-2 bg-white border-2 border-black rounded-lg outline-none font-bold text-sm focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all" />
                                 <input type="tel" placeholder="Teléfono" required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full p-2 bg-white border-2 border-black rounded-lg outline-none font-bold text-sm focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all mt-2" />
                             </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-black text-black uppercase tracking-widest bg-cyan-200 px-1">Fecha</label>
-                                <div className="relative mt-1">
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={formatDateForDisplay(form.scheduledDate)}
-                                        placeholder="DD/MM/AAAA"
-                                        className="w-full p-2 bg-white border-2 border-black rounded-lg outline-none font-bold text-sm pointer-events-none"
-                                    />
-                                    <input
-                                        type="date"
-                                        required
-                                        value={formatDateForInput(form.scheduledDate)}
-                                        onChange={e => setForm({ ...form, scheduledDate: e.target.value })}
-                                        onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
-                                        className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer appearance-none"
-                                    />
-                                </div>
-                            </div>
                         </div>
 
                         <div className="flex gap-2 pt-4">
                             <button type="submit" className="flex-1 py-3 bg-black text-white font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all">{isEditing ? 'Guardar' : 'Agendar'}</button>
-                            {isEditing && <button type="button" onClick={() => { setIsEditing(null); setForm({ childName: '', childSurname: '', motherName: '', motherSurname: '', fatherName: '', fatherSurname: '', email: '', phone: '', scheduledDate: '' }); }} className="px-4 py-3 bg-white text-black font-bold border-2 border-black hover:bg-neutral-100 transition-colors">Cancelar</button>}
+                            {isEditing && <button type="button" onClick={() => { setIsEditing(null); setForm({ childName: '', childSurname: '', motherName: '', motherSurname: '', fatherName: '', fatherSurname: '', email: '', phone: '' }); }} className="px-4 py-3 bg-white text-black font-bold border-2 border-black hover:bg-neutral-100 transition-colors">Cancelar</button>}
                         </div>
                     </form>
                 </div>
@@ -148,10 +127,11 @@ const ChildPresentations: React.FC = () => {
                                     <p>Papá: {p.fatherName} {p.fatherSurname}</p>
                                     <p className="text-xs bg-black text-white px-1 inline-block">{p.email} • {p.phone}</p>
                                 </div>
-                                <div className="flex items-center gap-3 mt-3">
-                                    <span className="text-xs font-black uppercase bg-purple-100 text-purple-900 border-2 border-purple-900 px-2 py-1">📅 {p.scheduledDate}</span>
-                                    {p.completionDate && <span className="text-xs font-black uppercase bg-emerald-100 text-emerald-900 border-2 border-emerald-900 px-2 py-1">✅ Realizado: {new Date(p.completionDate).toLocaleDateString()}</span>}
-                                </div>
+                                {p.completionDate && (
+                                    <div className="flex items-center gap-3 mt-3">
+                                        <span className="text-xs font-black uppercase bg-emerald-100 text-emerald-900 border-2 border-emerald-900 px-2 py-1">✅ Realizado: {new Date(p.completionDate).toLocaleDateString()}</span>
+                                    </div>
+                                )}
                             </div>
                             <div className="flex gap-2 items-center self-end sm:self-center">
                                 {p.isPending ? (

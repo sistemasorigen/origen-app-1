@@ -2463,7 +2463,7 @@ export const supabaseService = {
   },
 
   async getPresentations(): Promise<ChildPresentation[]> {
-    const { data, error } = await supabase.from('presentations').select('*').order('scheduledDate', { ascending: false });
+    const { data, error } = await supabase.from('presentations').select('*').order('created_at', { ascending: false });
     if (error) { console.error('Error fetching presentations:', error); return []; }
     return data as ChildPresentation[];
   },
