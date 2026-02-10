@@ -1579,7 +1579,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                     <span className="text-xs font-bold text-slate-400">
                                                         {(() => {
                                                             const cat = categories.find(c => c.id === group.categoryId);
-                                                            const isCouples = cat?.name?.toLowerCase() === 'parejas' && group.targetGender === 'Mixto';
+                                                            const isCouples = (cat?.name?.toLowerCase() === 'parejas' || group.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas')) && group.targetGender === 'Mixto';
                                                             const regCount = group.registrations?.length || 0;
                                                             return isCouples ? regCount * 2 : regCount;
                                                         })()}/{group.maxCapacity}
@@ -1638,7 +1638,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                         <td className="p-4 text-sm font-bold">
                                                             {(() => {
                                                                 const cat = categories.find(c => c.id === group.categoryId);
-                                                                const isCouples = cat?.name?.toLowerCase() === 'parejas' && group.targetGender === 'Mixto';
+                                                                const isCouples = (cat?.name?.toLowerCase() === 'parejas' || group.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas')) && group.targetGender === 'Mixto';
                                                                 const regCount = group.registrations?.length || 0;
                                                                 return isCouples ? regCount * 2 : regCount;
                                                             })()}/{group.maxCapacity}
@@ -1916,6 +1916,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     userStatus={getUserGroupStatus(selectedGroup.id)}
                     onSuccess={fetchUserRegistrations}
                     categories={categories}
+                    tags={tags}
                 />
             )}
 

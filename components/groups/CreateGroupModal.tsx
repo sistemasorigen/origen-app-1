@@ -229,13 +229,13 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         }));
     };
 
-    const toggleTag = (tagName: string) => {
+    const toggleTag = (tagId: string) => {
         setForm(prev => {
             const currentTags = prev.tags || [];
-            if (currentTags.includes(tagName)) {
-                return { ...prev, tags: currentTags.filter(t => t !== tagName) };
+            if (currentTags.includes(tagId)) {
+                return { ...prev, tags: currentTags.filter(t => t !== tagId) };
             } else {
-                return { ...prev, tags: [...currentTags, tagName] };
+                return { ...prev, tags: [...currentTags, tagId] };
             }
         });
     };
@@ -796,8 +796,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                             <button
                                 type="button"
                                 key={tag.id}
-                                onClick={() => toggleTag(tag.name)}
-                                className={`px-3 py-1 text-[10px] font-black uppercase border-2 border-black transition-all ${form.tags.includes(tag.name)
+                                onClick={() => toggleTag(tag.id)}
+                                className={`px-3 py-1 text-[10px] font-black uppercase border-2 border-black transition-all ${form.tags.includes(tag.id)
                                     ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]'
                                     : 'bg-white text-neutral-500 hover:bg-neutral-100'
                                     }`}

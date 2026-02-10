@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import NeoModal from '../NeoModal';
 import { ArrowRight, Info, CheckCircle2, Heart, Users, Check } from 'lucide-react';
-import { Group, User, GroupRegistration, SystemNotification, UserRole, GroupCategory } from '../../types';
+import { Group, User, GroupRegistration, SystemNotification, UserRole, GroupCategory, GroupTag } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import { db } from '../../services/dbService';
 
@@ -13,6 +13,7 @@ interface JoinGroupModalProps {
     userStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
     onSuccess?: () => void;
     categories?: GroupCategory[];
+    tags?: GroupTag[];
 }
 
 const generateUUID = (): string => {
@@ -26,7 +27,7 @@ const generateUUID = (): string => {
     });
 };
 
-const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group, currentUser, userStatus, onSuccess, categories = [] }) => {
+const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group, currentUser, userStatus, onSuccess, categories = [], tags = [] }) => {
 
     const getCategoryName = (): string => {
         if (!group.categoryId) return '';
@@ -41,7 +42,8 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
     };
 
     const categoryName = getCategoryName();
-    const isCouplesGroup = categoryName === 'parejas' && group.targetGender === 'Mixto';
+    const hasParejasTag = group.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas') || false;
+    const isCouplesGroup = (categoryName === 'parejas' || hasParejasTag) && group.targetGender === 'Mixto';
 
     const [formData, setFormData] = useState({
         firstName: '',
