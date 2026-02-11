@@ -1265,6 +1265,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         key={group.id}
                                         group={group}
                                         tags={tags}
+                                        categories={categories}
                                         onJoin={handleJoinClick}
                                         onInquiry={(g) => { setSelectedGroup(g); setInquiryModalOpen(true); }}
                                         userStatus={getUserGroupStatus(group.id)}

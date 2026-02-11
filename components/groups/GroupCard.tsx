@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Clock, MapPin, Users, ArrowRight, CheckCircle2, Lock, ChevronDown, ChevronUp } from 'lucide-react';
-import { Group, GroupTag, User as AppUser, UserRole } from '../../types';
+import { Group, GroupTag, GroupCategory, User as AppUser, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 
 interface GroupCardProps {
     group: Group;
     tags: GroupTag[];
+    categories?: GroupCategory[];
     onJoin: (g: Group) => void;
     onInquiry: (g: Group) => void;
     spanTwo?: boolean;
@@ -13,8 +14,9 @@ interface GroupCardProps {
     currentUser?: AppUser | null;
 }
 
-const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, userStatus, currentUser }) => {
+const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, onInquiry, userStatus, currentUser }) => {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+    const [isTagsExpanded, setIsTagsExpanded] = useState(false);
 
     // --- BUSINESS LOGIC (unchanged) ---
 
@@ -37,6 +39,17 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, u
     };
 
     const genderCompatible = isGenderCompatible();
+
+    // Age compatibility check
+    const isAgeCompatible = (): boolean => {
+        if (!currentUser?.age) return true;
+        const minAge = group.minAge || 0;
+        const maxAge = group.maxAge || 100;
+        if (currentUser.age < minAge) return false;
+        if (currentUser.age > maxAge) return false;
+        return true;
+    };
+    const ageCompatible = isAgeCompatible();
 
     const parseLocalDate = (dateStr: string) => {
         if (!dateStr) return new Date();
@@ -70,6 +83,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, u
     const handleAction = () => {
         if (status === 'FINISHED') return;
         if (!genderCompatible) return;
+        if (!ageCompatible) return;
         if (userStatus === 'PENDING' || userStatus === 'APPROVED') return;
         if (status === 'AVAILABLE') onJoin(group);
         else onInquiry(group);
@@ -90,6 +104,9 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, u
         }
         if (!genderCompatible) {
             return { text: getGenderLockText(), baseClass: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed', icon: <Lock className="w-3.5 h-3.5" />, disabled: true };
+        }
+        if (!ageCompatible) {
+            return { text: 'UNIRME', baseClass: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed', icon: <Lock className="w-3.5 h-3.5" />, disabled: true };
         }
         if (userStatus === 'PENDING') {
             return { text: 'EN PROCESO', baseClass: 'bg-neutral-300 dark:bg-neutral-600 text-white cursor-not-allowed', icon: null, disabled: true };
@@ -140,6 +157,11 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, u
         ? tags.filter(tag => group.tags?.includes(tag.id))
         : [];
 
+    // Resolve category name
+    const categoryName = categories && group.categoryId
+        ? categories.find(cat => cat.id === group.categoryId)?.name || group.categoryId
+        : group.categoryId;
+
     return (
         <div
             className="group/card relative bg-white dark:bg-neutral-900 rounded-lg shadow-xl shadow-black/5 dark:shadow-black/30 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer flex flex-col"
@@ -172,11 +194,12 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, u
                     </span>
                 </div>
 
-                {/* Date Badge — top right */}
-                {badgeMonth && badgeDay && (
-                    <div className="absolute top-3 right-3 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md px-3 py-2 rounded-lg shadow-lg flex flex-col items-center min-w-[54px]">
-                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 leading-none">{badgeMonth}</span>
-                        <span className="text-xl font-extrabold text-neutral-800 dark:text-white leading-tight">{badgeDay}</span>
+                {/* Category Badge — top right */}
+                {categoryName && (
+                    <div className="absolute top-3 right-3">
+                        <span className="bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md text-neutral-800 dark:text-white text-[11px] font-bold px-3 py-1.5 rounded-full tracking-wider shadow-lg inline-block">
+                            {categoryName}
+                        </span>
                     </div>
                 )}
             </div>
@@ -200,26 +223,18 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, u
                             <span className="text-sm font-medium truncate max-w-[160px]">{group.location}</span>
                         </div>
                     </div>
-                </div>
 
-                {/* Tags / Chips */}
-                {(resolvedTags.length > 0 || ((group.minAge && group.minAge > 0) || (group.maxAge && group.maxAge < 100))) && (
-                    <div className="flex flex-wrap gap-2">
-                        {resolvedTags.map((tag) => (
-                            <span
-                                key={tag.id}
-                                className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold"
-                            >
-                                {tag.name}
-                            </span>
-                        ))}
-                        {((group.minAge && group.minAge > 0) || (group.maxAge && group.maxAge < 100)) && (
-                            <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold">
-                                {group.minAge || 0}–{group.maxAge || 99} años
-                            </span>
-                        )}
-                    </div>
-                )}
+                    {/* Start Date - Below Day/Time */}
+                    {group.startDate && (
+                        <div className="text-xs text-neutral-400 dark:text-neutral-500 font-medium">
+                            Inicio: {new Date(group.startDate + 'T00:00:00').toLocaleDateString('es-AR', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric'
+                            })}
+                        </div>
+                    )}
+                </div>
 
                 {/* Description */}
                 {group.description && (
@@ -238,6 +253,41 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, onJoin, onInquiry, u
                                     <>Ver más detalles <ArrowRight className="w-4 h-4 ml-0.5 transition-transform group-hover/card:translate-x-0.5" /></>
                                 )}
                             </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Tags / Chips - Collapsible */}
+                {(resolvedTags.length > 0 || ((group.minAge && group.minAge > 0) || (group.maxAge && group.maxAge < 100))) && (
+                    <div className="border-t border-neutral-100 dark:border-neutral-700/60 pt-3">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsTagsExpanded(!isTagsExpanded);
+                            }}
+                            className="flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:text-[#28a946] dark:hover:text-[#28a946] transition-colors"
+                        >
+                            <ChevronDown
+                                className={`w-4 h-4 transition-transform duration-200 ${isTagsExpanded ? 'rotate-180' : ''}`}
+                            />
+                        </button>
+
+                        {isTagsExpanded && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                                {resolvedTags.map((tag) => (
+                                    <span
+                                        key={tag.id}
+                                        className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold"
+                                    >
+                                        {tag.name}
+                                    </span>
+                                ))}
+                                {((group.minAge && group.minAge > 0) || (group.maxAge && group.maxAge < 100)) && (
+                                    <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold">
+                                        {group.minAge || 0}–{group.maxAge || 99} años
+                                    </span>
+                                )}
+                            </div>
                         )}
                     </div>
                 )}
