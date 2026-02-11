@@ -371,7 +371,8 @@ export const supabaseService = {
               roles: (newUser.roles || [newUser.role]) as UserRole[],
               isActive: newUser.is_active,
               linkedGroupId: newUser.linked_group_id,
-              volunteerRoles: newUser.volunteer_roles || []
+              volunteerRoles: newUser.volunteer_roles || [],
+              assignedCategory: newUser.assigned_category || undefined
             };
             return { user: appUser };
           } else {
@@ -412,7 +413,8 @@ export const supabaseService = {
         phone: authData.user.user_metadata?.phone || authData.user.phone || '',
         age: user.age,
         gender: user.gender,
-        birthDate: user.birth_date
+        birthDate: user.birth_date,
+        assignedCategory: user.assigned_category || undefined
       };
 
       return { user: appUser };

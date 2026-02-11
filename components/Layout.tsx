@@ -40,7 +40,10 @@ const roleTranslations: Record<UserRole, string> = {
     [UserRole.ENCARGADO_STORE]: 'ENCARGADO: STORE',
     [UserRole.ENCARGADO_ALABANZA]: 'ENCARGADO: ALABANZA',
     [UserRole.USUARIO]: 'USUARIO',
-    [UserRole.REPORTES]: 'REPORTES'
+    [UserRole.REPORTES]: 'REPORTES',
+    [UserRole.COORDINATOR]: 'COORDINADOR',
+    [UserRole.ENCARGADO_BIENVENIDA]: 'ENCARGADO: BIENVENIDA',
+    [UserRole.VOLUNTARIO_BIENVENIDA]: 'VOL. BIENVENIDA'
 };
 
 const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogout, appConfig, onToggleTheme, onVolunteerClick }) => {
@@ -54,7 +57,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(db.getNotificationPreferences());
 
     const isDashboard = location.pathname === '/';
-    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/groups' || location.pathname === '/info-point' || location.pathname === '/alabanza';
+    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/groups' || location.pathname === '/info-point' || location.pathname === '/alabanza' || location.pathname === '/coordinators';
 
     // Fetch notifications from Supabase when user is logged in
     useEffect(() => {
@@ -321,6 +324,20 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                                             </svg>
                                             <span className="hidden sm:inline">Mis Grupos</span>
                                             <span className="sm:hidden">MIS GRUPOS</span>
+                                        </Link>
+                                    )}
+
+                                    {/* Coordinator Dashboard Link */}
+                                    {currentUser && hasRole(currentUser, [UserRole.COORDINATOR]) && (
+                                        <Link
+                                            to="/coordinators"
+                                            className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold text-black dark:text-white bg-teal-100 dark:bg-teal-900/30 hover:bg-teal-200 dark:hover:bg-teal-800/50 px-2 sm:px-3 py-2 min-h-[44px] rounded-full transition-all border border-teal-300 dark:border-teal-700 uppercase tracking-wider"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                                            </svg>
+                                            <span className="hidden sm:inline">Coordinador</span>
+                                            <span className="sm:hidden">COORD</span>
                                         </Link>
                                     )}
 

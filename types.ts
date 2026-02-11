@@ -23,7 +23,8 @@ export enum UserRole {
     ENCARGADO_ALABANZA = 'ENCARGADO_ALABANZA',
     REPORTES = 'REPORTES',
     ENCARGADO_BIENVENIDA = 'ENCARGADO_BIENVENIDA',
-    VOLUNTARIO_BIENVENIDA = 'VOLUNTARIO_BIENVENIDA'
+    VOLUNTARIO_BIENVENIDA = 'VOLUNTARIO_BIENVENIDA',
+    COORDINATOR = 'COORDINATOR'
 }
 
 export enum ImageAspectRatio {
@@ -58,6 +59,7 @@ export interface User {
     age?: number; // From public.users (calculated from birthDate)
     gender?: string; // From public.users
     birthDate?: string; // Exact date of birth (YYYY-MM-DD format)
+    assignedCategory?: string; // Category ID for COORDINATOR role filtering
 }
 
 // --- LEADER APPLICATION TYPES ---

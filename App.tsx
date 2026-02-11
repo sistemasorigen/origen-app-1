@@ -15,6 +15,7 @@ import HostDashboard from './pages/HostDashboard';
 import UpdatePassword from './pages/UpdatePassword';
 import VerifyEmail from './pages/VerifyEmail';
 import Bienvenida from './pages/welcome/Bienvenida';
+import Coordinators from './pages/coordinators/Coordinators';
 import SystemLoginModal from './components/SystemLoginModal';
 import CompleteProfileModal from './components/CompleteProfileModal';
 import { User, UserRole, AppConfig } from './types';
@@ -252,6 +253,12 @@ const AppContent: React.FC = () => {
                             <Route path="/host-dashboard" element={
                                 (user && hasRole(user, [UserRole.ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]))
                                     ? <HostDashboard currentUser={user} />
+                                    : <Navigate to="/" />
+                            } />
+
+                            <Route path="/coordinators" element={
+                                (user && hasRole(user, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN]))
+                                    ? <Coordinators currentUser={user} />
                                     : <Navigate to="/" />
                             } />
 

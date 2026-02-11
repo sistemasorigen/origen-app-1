@@ -186,7 +186,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         phone: phone,
                         age: profileData.age,
                         gender: profileData.gender,
-                        birthDate: profileData.birth_date
+                        birthDate: profileData.birth_date,
+                        assignedCategory: profileData.assigned_category || undefined
                     };
 
                     // Update state and cache

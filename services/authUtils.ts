@@ -92,7 +92,7 @@ export function hasAllRoles(
  */
 export function canAccessModule(
     user: User | null | undefined,
-    module: 'GROUPS' | 'PUNTO' | 'STORE' | 'ALABANZA' | 'ADMIN'
+    module: 'GROUPS' | 'PUNTO' | 'STORE' | 'ALABANZA' | 'ADMIN' | 'COORDINATORS'
 ): boolean {
     if (!user) return false;
 
@@ -136,6 +136,11 @@ export function canAccessModule(
                 UserRole.ADMIN_ALABANZA
             ]);
 
+        case 'COORDINATORS':
+            return hasRole(user, [
+                UserRole.COORDINATOR
+            ]);
+
         default:
             return false;
     }
@@ -153,6 +158,7 @@ export function getRoleDisplayNames(roles: UserRole[]): string[] {
         [UserRole.ADMIN_STORE]: 'Admin Store',
         [UserRole.ADMIN_ALABANZA]: 'Admin Alabanza',
         [UserRole.ANFITRION]: 'Anfitrión',
+        [UserRole.CO_ANFITRION]: 'Co-Anfitrión',
         [UserRole.VIEWER]: 'Usuario',
         [UserRole.VOLUNTEER]: 'Voluntario',
         [UserRole.VOLUNTARIO]: 'Voluntario',
@@ -163,7 +169,10 @@ export function getRoleDisplayNames(roles: UserRole[]): string[] {
         [UserRole.ENCARGADO_STORE]: 'Encargado Store',
         [UserRole.ENCARGADO_ALABANZA]: 'Encargado Alabanza',
         [UserRole.USUARIO]: 'Usuario',
-        [UserRole.REPORTES]: 'Reportes'
+        [UserRole.REPORTES]: 'Reportes',
+        [UserRole.COORDINATOR]: 'Coordinador',
+        [UserRole.ENCARGADO_BIENVENIDA]: 'Encargado Bienvenida',
+        [UserRole.VOLUNTARIO_BIENVENIDA]: 'Vol. Bienvenida'
     };
 
     return roles.map(role => displayNames[role] || role);
