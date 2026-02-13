@@ -159,7 +159,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
         return (
             <div className="flex flex-col h-full bg-[#f6f8f7] dark:bg-[#112118] overflow-y-auto font-sans">
                 {/* Header & Breadcrumbs */}
-                <header className="px-6 py-6 sm:px-8 border-b border-transparent">
+                <header className="px-4 py-4 md:px-6 md:py-6 border-b border-transparent">
                     <nav aria-label="Breadcrumb" className="flex mb-4">
                         <ol className="inline-flex items-center space-x-1 md:space-x-3 text-sm">
                             <li className="inline-flex items-center">
@@ -173,7 +173,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                             <li>
                                 <div className="flex items-center">
                                     <ChevronRight className="text-slate-300 text-sm mx-1 w-4 h-4" />
-                                    <span aria-current="page" className="text-slate-800 dark:text-white font-medium">{selectedGroup.name}</span>
+                                    <span aria-current="page" className="text-slate-800 dark:text-white font-medium truncate max-w-[150px] sm:max-w-none">{selectedGroup.name}</span>
                                 </div>
                             </li>
                         </ol>
@@ -181,42 +181,44 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{selectedGroup.name}</h1>
-                            <p className="mt-1 text-slate-500 dark:text-slate-400">Gestiona los miembros y la actividad de este grupo.</p>
+                            <p className="mt-1 text-slate-500 dark:text-slate-400 text-sm sm:text-base">Gestiona los miembros y la actividad de este grupo.</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <button className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-[#1a2e22] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors font-medium text-sm shadow-sm">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                            <button className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-[#1a2e22] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors font-medium text-sm shadow-sm whitespace-nowrap">
                                 <Users className="w-5 h-5" />
-                                Editar Grupo
+                                <span className="hidden sm:inline">Editar Grupo</span>
+                                <span className="sm:hidden">Editar</span>
                             </button>
-                            <button className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#19e66f] hover:bg-[#14b859] text-white rounded-lg transition-colors font-medium text-sm shadow-sm shadow-[#19e66f]/30">
+                            <button className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#19e66f] hover:bg-[#14b859] text-white rounded-lg transition-colors font-medium text-sm shadow-sm shadow-[#19e66f]/30 whitespace-nowrap">
                                 <Mail className="w-5 h-5" />
-                                Enviar Mensaje
+                                <span className="hidden sm:inline">Enviar Mensaje</span>
+                                <span className="sm:hidden">Mensaje</span>
                             </button>
                         </div>
                     </div>
                 </header>
 
                 {/* Content Body */}
-                <div className="flex-1 px-6 sm:px-8 pb-12">
+                <div className="flex-1 px-4 md:px-6 pb-12">
                     {/* KPI Cards */}
-                    <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
                         {/* Card 1: Total Inscritos */}
-                        <div className="bg-white dark:bg-[#1a2e22] p-6 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                        <div className="bg-white dark:bg-[#1a2e22] p-5 md:p-6 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <Users className="w-16 h-16 text-[#19e66f] transform rotate-12" />
                             </div>
                             <div className="flex items-start justify-between mb-4">
                                 <div>
-                                    <p className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider">Total Inscriptos</p>
-                                    <h3 className="text-4xl font-bold text-slate-900 dark:text-white mt-1">{approvedMembers.length}</h3>
+                                    <p className="text-slate-500 dark:text-slate-400 font-medium text-xs md:text-sm uppercase tracking-wider">Total Inscriptos</p>
+                                    <h3 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mt-1">{approvedMembers.length}</h3>
                                 </div>
                                 <div className="p-2 bg-[#19e66f]/10 rounded-lg">
-                                    <Users className="text-[#19e66f] w-6 h-6" />
+                                    <Users className="text-[#19e66f] w-5 h-5 md:w-6 md:h-6" />
                                 </div>
                             </div>
-                            <div className="flex items-center text-sm">
+                            <div className="flex items-center text-xs md:text-sm">
                                 <span className="flex items-center text-[#19e66f] font-medium bg-[#19e66f]/10 px-1.5 py-0.5 rounded mr-2">
-                                    <TrendingUp className="w-4 h-4 mr-0.5" />
+                                    <TrendingUp className="w-3 h-3 md:w-4 md:h-4 mr-0.5" />
                                     +5
                                 </span>
                                 <span className="text-slate-400">desde el mes pasado</span>
@@ -224,48 +226,48 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                         </div>
 
                         {/* Card 2: Proxima Reunion */}
-                        <div className="bg-white dark:bg-[#1a2e22] p-6 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                        <div className="bg-white dark:bg-[#1a2e22] p-5 md:p-6 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <CalendarIcon className="w-16 h-16 text-[#19e66f] transform -rotate-12" />
                             </div>
                             <div className="flex items-start justify-between mb-4">
                                 <div>
-                                    <p className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider">Próxima Reunión</p>
-                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-2 leading-tight">
+                                    <p className="text-slate-500 dark:text-slate-400 font-medium text-xs md:text-sm uppercase tracking-wider">Próxima Reunión</p>
+                                    <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white mt-2 leading-tight">
                                         {selectedGroup.meetingDay}, {selectedGroup.meetingTime}
                                     </h3>
                                 </div>
                                 <div className="p-2 bg-[#19e66f]/10 rounded-lg">
-                                    <CalendarIcon className="text-[#19e66f] w-6 h-6" />
+                                    <CalendarIcon className="text-[#19e66f] w-5 h-5 md:w-6 md:h-6" />
                                 </div>
                             </div>
-                            <div className="flex items-center text-sm mt-auto">
-                                <span className="flex items-center text-slate-600 dark:text-slate-300">
-                                    <MapPin className="w-4 h-4 mr-1.5 text-slate-400" />
-                                    {selectedGroup.location || 'Sin ubicación'}
+                            <div className="flex items-center text-xs md:text-sm mt-auto">
+                                <span className="flex items-center text-slate-600 dark:text-slate-300 truncate">
+                                    <MapPin className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-slate-400 shrink-0" />
+                                    <span className="truncate">{selectedGroup.location || 'Sin ubicación'}</span>
                                 </span>
                             </div>
                         </div>
 
-                        {/* Card 3: Bajas (Mocked for now as we don't track history of left members easily yet) */}
-                        <div className="bg-white dark:bg-[#1a2e22] p-6 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                        {/* Card 3: Bajas (Mocked) */}
+                        <div className="block sm:hidden md:block bg-white dark:bg-[#1a2e22] p-5 md:p-6 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <UserMinus className="w-16 h-16 text-rose-500 transform rotate-6" />
                             </div>
                             <div className="flex items-start justify-between mb-4">
                                 <div>
-                                    <p className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider">Cantidad de Bajas</p>
-                                    <h3 className="text-4xl font-bold text-slate-900 dark:text-white mt-1">
+                                    <p className="text-slate-500 dark:text-slate-400 font-medium text-xs md:text-sm uppercase tracking-wider">Cantidad de Bajas</p>
+                                    <h3 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mt-1">
                                         {(selectedGroup.registrations || []).filter(r => r.status === 'REJECTED').length}
                                     </h3>
                                 </div>
                                 <div className="p-2 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
-                                    <UserMinus className="text-rose-500 w-6 h-6" />
+                                    <UserMinus className="text-rose-500 w-5 h-5 md:w-6 md:h-6" />
                                 </div>
                             </div>
-                            <div className="flex items-center text-sm">
+                            <div className="flex items-center text-xs md:text-sm">
                                 <span className="flex items-center text-rose-500 font-medium bg-rose-50 dark:bg-rose-900/20 px-1.5 py-0.5 rounded mr-2">
-                                    <TrendingUp className="w-4 h-4 mr-0.5" />
+                                    <TrendingUp className="w-3 h-3 md:w-4 md:h-4 mr-0.5" />
                                     1
                                 </span>
                                 <span className="text-slate-400">esta semana</span>
@@ -276,18 +278,18 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                     {/* Members Section */}
                     <div className="bg-white dark:bg-[#1a2e22] rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm">
                         {/* Toolbar */}
-                        <div className="p-5 border-b border-slate-100 dark:border-slate-700/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="p-4 md:p-5 border-b border-slate-100 dark:border-slate-700/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                Miembros del Grupo
+                                Miembros
                                 <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-400 font-medium">
                                     {(selectedGroup.registrations || []).length}
                                 </span>
                             </h2>
                             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                                 <div className="relative w-full sm:w-64">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                                     <input
-                                        className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#19e66f]/50 focus:border-[#19e66f] transition-shadow placeholder-slate-400 dark:text-slate-200"
+                                        className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#19e66f]/50 focus:border-[#19e66f] transition-shadow placeholder-slate-400 dark:text-slate-200"
                                         placeholder="Buscar miembro..."
                                         type="text"
                                         value={memberSearch}
@@ -295,14 +297,54 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                     />
                                 </div>
                                 <button className="flex items-center justify-center gap-2 px-4 py-2 bg-[#19e66f]/10 text-[#19e66f] hover:bg-[#19e66f]/20 rounded-lg transition-colors font-medium text-sm whitespace-nowrap">
-                                    <Plus className="w-5 h-5" />
-                                    Nuevo Miembro
+                                    <Plus className="w-4 h-4" />
+                                    Nuevo
                                 </button>
                             </div>
                         </div>
 
-                        {/* Table */}
-                        <div className="overflow-x-auto">
+                        {/* List - Desktop Table / Mobile Cards */}
+                        <div className="block md:hidden">
+                            {/* Mobile Card List */}
+                            <div className="divide-y divide-slate-100 dark:divide-slate-700/30">
+                                {filteredMembers.map(m => (
+                                    <div key={m.id} className="p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-[#19e66f]/20 text-[#19e66f] flex items-center justify-center font-bold text-sm shrink-0">
+                                                {m.firstName.substring(0, 1)}{m.lastName.substring(0, 1)}
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{m.firstName} {m.lastName}</div>
+                                                <div className="flex flex-col text-xs text-slate-500 mt-0.5 gap-0.5">
+                                                    {m.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{m.phone}</span>}
+                                                    <span className="flex items-center gap-1">
+                                                        {m.status === 'APPROVED' ? (
+                                                            <span className="text-emerald-600 font-medium">Activo</span>
+                                                        ) : (
+                                                            <span className="text-amber-600 font-medium">Pendiente</span>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleDeleteMember(m)}
+                                            disabled={deletingMember === m.id}
+                                            className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {filteredMembers.length === 0 && (
+                                    <div className="p-8 text-center text-slate-500 text-sm">
+                                        Running out of members...
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="hidden md:block overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-semibold">
@@ -401,7 +443,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
 
     // --- Main Grid View ---
     return (
-        <div className="flex flex-col h-full bg-white relative">
+        <div className="flex flex-col h-full bg-white relative overflow-y-auto">
             {/* Header Section */}
             <div className="px-6 py-6 md:px-10 border-b border-gray-100">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
@@ -483,7 +525,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
 
                 {/* Filters Row */}
                 <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                    <div className="flex overflow-x-auto pb-2 gap-3 w-full md:w-auto hide-scrollbar">
+                    <div className="flex overflow-x-auto p-1 pb-4 gap-3 w-full md:w-auto hide-scrollbar">
                         <button
                             onClick={() => setActiveCategory('todos')}
                             className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shadow-sm ${activeCategory === 'todos'
@@ -530,7 +572,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto px-6 py-8 md:px-10 bg-[#FAFAFA]">
+            <div className="flex-1 px-6 py-8 md:px-10 bg-[#FAFAFA]">
                 {filteredGroups.length === 0 ? (
                     <div className="text-center py-20">
                         <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">

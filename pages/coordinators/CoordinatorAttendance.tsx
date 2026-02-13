@@ -226,7 +226,7 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                                         <div className="flex justify-between items-end mb-1">
                                             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Participación</span>
                                             <span className={`text-sm font-bold ${report.percentage >= 80 ? 'text-[#17cf73]' :
-                                                    report.percentage >= 50 ? 'text-yellow-600 dark:text-yellow-500' : 'text-rose-600 dark:text-rose-500'
+                                                report.percentage >= 50 ? 'text-yellow-600 dark:text-yellow-500' : 'text-rose-600 dark:text-rose-500'
                                                 }`}>
                                                 {report.percentage}%
                                             </span>
@@ -234,7 +234,7 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                                         <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
                                             <div
                                                 className={`h-2 rounded-full ${report.percentage >= 80 ? 'bg-[#17cf73]' :
-                                                        report.percentage >= 50 ? 'bg-yellow-400' : 'bg-rose-400'
+                                                    report.percentage >= 50 ? 'bg-yellow-400' : 'bg-rose-400'
                                                     }`}
                                                 style={{ width: `${report.percentage}%` }}
                                             ></div>
@@ -243,7 +243,7 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
 
                                     <div className="flex items-center justify-between mt-2">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${report.percentage >= 80 ? 'bg-[#17cf73]/20 text-[#14b061] border-[#17cf73]/20' :
-                                                report.percentage >= 50 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200'
+                                            report.percentage >= 50 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200'
                                             }`}>
                                             {report.attendedCount}/{report.totalMembers} Asistieron
                                         </span>
@@ -260,7 +260,7 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                                 {/* Expandable Details Section */}
                                 {expandedReportId === report.id && (
                                     <div className="bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700/50 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                                             <div>
                                                 <p className="text-xs font-semibold text-[#17cf73] uppercase mb-2">Asistieron ({report.attendees.length})</p>
                                                 <ul className="space-y-1 text-slate-600 dark:text-slate-400 max-h-32 overflow-y-auto custom-scrollbar pr-2">

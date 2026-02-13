@@ -143,16 +143,6 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
         );
     }, [events, selectedDate]);
 
-    // Get upcoming events (next 5 from selected date onwards)
-    const upcomingEvents = React.useMemo(() => {
-        const now = selectedDate.getTime();
-        return events
-            .filter(e => e.date.getTime() >= now)
-            .sort((a, b) => a.date.getTime() - b.date.getTime())
-            .slice(0, 10); // Show next 10
-    }, [events, selectedDate]);
-
-
     const handlePrevMonth = () => {
         setCurrentDate(new Date(year, month - 1, 1));
     };
@@ -173,8 +163,8 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
         for (let i = 0; i < firstDayOfMonth; i++) {
             const dayNum = prevMonthDays - firstDayOfMonth + 1 + i;
             cells.push(
-                <div key={`prev-${i}`} className="min-h-[100px] md:min-h-[120px] p-2 border-b border-r border-[#f1f5f9] bg-slate-50/30">
-                    <span className="text-slate-300 font-medium">{dayNum}</span>
+                <div key={`prev-${i}`} className="min-h-[80px] md:min-h-[120px] p-1 md:p-2 border-b border-r border-[#f1f5f9] bg-slate-50/30">
+                    <span className="text-slate-300 font-medium text-xs md:text-base">{dayNum}</span>
                 </div>
             );
         }
@@ -196,10 +186,10 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
                 <div
                     key={`curr-${d}`}
                     onClick={() => setSelectedDate(new Date(year, month, d))}
-                    className={`min-h-[100px] md:min-h-[120px] p-2 border-b border-r border-[#f1f5f9] transition-colors cursor-pointer group hover:bg-slate-50 relative ${isSelected ? 'bg-green-50/50' : ''}`}
+                    className={`min-h-[80px] md:min-h-[120px] p-1 md:p-2 border-b border-r border-[#f1f5f9] transition-colors cursor-pointer group hover:bg-slate-50 relative ${isSelected ? 'bg-green-50/50' : ''}`}
                 >
                     <div className="flex justify-between items-start">
-                        <span className={`w-7 h-7 flex items-center justify-center rounded-full font-medium text-sm transition-all ${isToday
+                        <span className={`w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full font-medium text-xs md:text-sm transition-all ${isToday
                             ? 'bg-[#86efac] text-white font-bold shadow-sm'
                             : isSelected
                                 ? 'text-[#065f46] font-bold bg-green-100'
@@ -209,18 +199,19 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
                         </span>
                     </div>
 
-                    <div className="mt-1 flex flex-col gap-1">
+                    <div className="mt-1 flex flex-col gap-0.5 md:gap-1">
                         {dayEvents.slice(0, 3).map((ev: any, idx: number) => (
                             <div
                                 key={idx}
-                                className="text-[10px] px-1.5 py-1 rounded truncate font-medium"
+                                className="text-[9px] md:text-[10px] px-1 md:px-1.5 py-0.5 md:py-1 rounded truncate font-medium"
                                 style={{ backgroundColor: ev.colorBg, color: ev.colorText }}
                             >
-                                {ev.time} - {ev.title}
+                                <span className="hidden md:inline">{ev.time} - </span>
+                                {ev.title}
                             </div>
                         ))}
                         {dayEvents.length > 3 && (
-                            <div className="text-[10px] text-slate-400 pl-1">
+                            <div className="text-[9px] md:text-[10px] text-slate-400 pl-1">
                                 +{dayEvents.length - 3} más
                             </div>
                         )}
@@ -233,12 +224,12 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
     };
 
     return (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden bg-[#fdfdfd] font-sans">
+        <div className="flex flex-col lg:flex-row h-full lg:h-[calc(100vh-64px)] overflow-y-auto lg:overflow-hidden bg-[#fdfdfd] font-sans">
             {/* Main Calendar Section */}
-            <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-                <header className="flex items-center justify-between px-8 py-5 border-b border-[#f1f5f9] bg-white shrink-0">
-                    <div className="flex items-center gap-6">
-                        <h1 className="text-2xl font-bold text-slate-800 capitalize">
+            <div className="flex-1 flex flex-col min-w-0 lg:h-full lg:overflow-hidden bg-[#fdfdfd]">
+                <header className="flex flex-col sm:flex-row items-center justify-between px-4 py-4 md:px-8 md:py-5 border-b border-[#f1f5f9] bg-white shrink-0 gap-4">
+                    <div className="flex items-center gap-4 md:gap-6 w-full sm:w-auto justify-between">
+                        <h1 className="text-xl md:text-2xl font-bold text-slate-800 capitalize">
                             {MONTHS_ES[month]} {year}
                         </h1>
                         <div className="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-100">
@@ -268,11 +259,11 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-auto p-6 bg-[#fdfdfd]">
-                    <div className="bg-white rounded-xl border border-[#f1f5f9] shadow-sm flex flex-col min-h-[600px]">
+                <div className="flex-1 overflow-auto p-4 md:p-6 bg-[#fdfdfd] min-h-[400px]">
+                    <div className="bg-white rounded-xl border border-[#f1f5f9] shadow-sm flex flex-col min-h-[500px]">
                         <div className="grid grid-cols-7 border-b border-[#e2e8f0]">
                             {DAYS_ES.map(day => (
-                                <div key={day} className="py-3 text-center text-sm font-semibold text-slate-400">{day}</div>
+                                <div key={day} className="py-2 md:py-3 text-center text-xs md:text-sm font-semibold text-slate-400">{day}</div>
                             ))}
                         </div>
                         <div className="grid grid-cols-7 flex-1 auto-rows-fr">
@@ -283,8 +274,8 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
             </div>
 
             {/* Right Sidebar - Upcoming Meetings */}
-            <aside className="w-80 bg-white border-l border-[#f1f5f9] flex-shrink-0 flex flex-col h-full overflow-hidden shadow-sm z-10 hidden lg:flex">
-                <div className="p-6 border-b border-[#f1f5f9] bg-slate-50/50">
+            <aside className="w-full lg:w-80 bg-white border-t lg:border-t-0 lg:border-l border-[#f1f5f9] flex-shrink-0 flex flex-col h-auto lg:h-full overflow-hidden shadow-sm z-10 order-last">
+                <div className="p-4 md:p-6 border-b border-[#f1f5f9] bg-slate-50/50">
                     <h2 className="text-lg font-bold text-slate-800">Agenda</h2>
                     <div className="flex items-center gap-2 mt-2 text-slate-500">
                         <CalendarIcon className="w-4 h-4 text-[#4ade80]" />
@@ -294,13 +285,13 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {upcomingEvents.length === 0 ? (
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[500px] lg:max-h-none">
+                    {selectedDateEvents.length === 0 ? (
                         <div className="text-center py-10 text-slate-400">
-                            <p>No hay reuniones programadas para este día o los siguientes.</p>
+                            <p>No hay reuniones programadas para este día.</p>
                         </div>
                     ) : (
-                        upcomingEvents.map((ev: any) => (
+                        selectedDateEvents.map((ev: any) => (
                             <div key={ev.id} className="relative bg-white rounded-xl border border-[#f1f5f9] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-md transition-all group">
                                 <div
                                     className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full opacity-60"

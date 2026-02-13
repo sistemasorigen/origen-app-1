@@ -1,14 +1,14 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { UserRole, AppConfig, User, SystemNotification, NotificationPreferences } from '../types';
+import { UserRole, AppConfig, User } from '../types';
 import { hasRole } from '../services/authUtils';
 import { db } from '../services/dbService';
-import { supabaseService } from '../services/supabaseService';
+
 import GlobalPlayer from './GlobalPlayer';
-import NotificationCenter from './NotificationCenter';
+import FullScreenMenu from './FullScreenMenu';
 import { useAudio } from '../contexts/AudioContext';
-import { Bell, X, Check, ArrowLeft, Moon, Sun } from 'lucide-react';
+import { X, ArrowLeft, Moon, Sun, Menu } from 'lucide-react';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -50,67 +50,20 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     const location = useLocation();
     const navigate = useNavigate();
     const { currentSong } = useAudio();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    // System Notifications State
-    const [projectNotifications, setProjectNotifications] = useState<SystemNotification[]>([]);
-    const [showNotifications, setShowNotifications] = useState(false);
-    const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(db.getNotificationPreferences());
+    // System Notifications State - REMOVED
 
     const isDashboard = location.pathname === '/';
-    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/groups' || location.pathname === '/info-point' || location.pathname === '/alabanza' || location.pathname === '/coordinators';
+    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/groups' || location.pathname === '/info-point' || location.pathname === '/alabanza' || location.pathname.startsWith('/coordinators');
 
-    // Fetch notifications from Supabase when user is logged in
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            if (currentUser?.id) {
-                try {
-                    const notifs = await supabaseService.getNotifications(currentUser.id);
-                    setProjectNotifications(notifs);
-                } catch (error) {
-                    console.error('Error fetching notifications:', error);
-                    // Fallback to localStorage
-                    setProjectNotifications(db.getNotifications());
-                }
-            }
-        };
-
-        if (userRole && currentUser) {
-            fetchNotifications();
-            // Refresh every 30 seconds
-            const interval = setInterval(fetchNotifications, 30000);
-            return () => clearInterval(interval);
-        }
-    }, [userRole, currentUser, location.pathname]);
+    // Notifications Fetcher - REMOVED
 
     const handleLogoutAction = () => {
         onLogout?.();
     };
 
-    const handleToggleNotifications = () => {
-        setShowNotifications(!showNotifications);
-    };
 
-    // Handler for marking a single notification as read
-    const handleMarkAsRead = async (id: string) => {
-        await supabaseService.markNotificationAsRead(id);
-        setProjectNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    };
-
-    // Handler for marking all notifications as read
-    const handleMarkAllAsRead = async () => {
-        if (currentUser?.id) {
-            await supabaseService.markAllNotificationsAsRead(currentUser.id);
-        }
-        setProjectNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    };
-
-    // Handler for preferences change
-    const handlePreferencesChange = (prefs: NotificationPreferences) => {
-        db.saveNotificationPreferences(prefs);
-        setNotificationPrefs(prefs);
-    };
-
-    const unreadCount = projectNotifications.filter(n => !n.read && notificationPrefs.categories[n.type]).length;
 
     const roleLabel = useMemo(() => {
         if (!userRole) return '';
@@ -193,6 +146,12 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     return (
         <div className="min-h-screen flex flex-col font-sans text-slate-900 dark:text-white bg-slate-50 dark:bg-black transition-colors duration-300 relative">
 
+            <FullScreenMenu
+                isOpen={isMenuOpen}
+                onClose={() => setIsMenuOpen(false)}
+                currentUser={currentUser}
+            />
+
             {renderModuleBackground()}
 
             {/* Navbar - Origen Light Style */}
@@ -235,130 +194,83 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                             )}
                         </div>
 
+                        {/* Center Section: Navigation Links (Desktop) */}
+                        <div className="hidden md:flex items-center justify-center flex-1 px-8">
+                            <div className="flex items-center gap-1">
+                                {/* Mis Grupos Link - Host Dashboard */}
+                                {currentUser && hasRole(currentUser, [UserRole.ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]) && (
+                                    <Link to="/host-dashboard" className={`px-4 py-2 rounded-full text-sm font-bold tracking-wide transition-all ${location.pathname.startsWith('/host-dashboard') ? 'text-black dark:text-white bg-slate-100 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700' : 'text-slate-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-900/50'}`}>
+                                        MIS GRUPOS
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Right Section: Actions */}
-                        <div className="flex items-center gap-3">
-                            {/* Mobile Back Button */}
-                            {!isDashboard && (
-                                <Link to="/" className="md:hidden p-2.5 min-h-[44px] min-w-[44px] text-black bg-slate-100 hover:bg-slate-200 rounded-full transition-colors flex items-center justify-center border border-slate-200">
-                                    <ArrowLeft className="w-5 h-5" />
-                                </Link>
-                            )}
-
-                            {!userRole && onVolunteerClick && (
-                                <button
-                                    onClick={onVolunteerClick}
-                                    className="md:hidden p-2.5 min-h-[44px] min-w-[44px] text-slate-600 bg-slate-100 rounded-full border border-slate-200 hover:bg-black hover:text-white transition-all"
-                                >
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                    </svg>
-                                </button>
-                            )}
-
-                            {onToggleTheme && !userRole && (
+                        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                            {/* Theme Toggle */}
+                            {onToggleTheme && (
                                 <button
                                     onClick={onToggleTheme}
-                                    className="p-2.5 min-h-[44px] min-w-[44px] rounded-full text-slate-600 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors focus:outline-none border border-slate-300 dark:border-zinc-700 hover:border-slate-400 dark:hover:border-zinc-600"
-                                    title={appConfig.themeMode === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
+                                    className="p-2 rounded-full text-slate-500 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-900 transition-colors"
+                                    aria-label="Alternar tema"
                                 >
-                                    {appConfig.themeMode === 'dark' ? (
-                                        <Sun className="w-5 h-5" />
-                                    ) : (
-                                        <Moon className="w-5 h-5" />
-                                    )}
+                                    <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                                    <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 top-2" />
                                 </button>
                             )}
 
-                            {userRole && (
-                                <div className="flex items-center gap-2">
-                                    {/* Theme Toggle - Right next to bell when logged in */}
-                                    {onToggleTheme && (
+
+
+                            {/* User Profile / Login */}
+                            <div className="flex items-center gap-3">
+                                {currentUser ? (
+                                    <div className="flex items-center gap-3">
+
+                                        {/* Mobile: Link to Mis Grupos if applicable */}
+                                        {currentUser && hasRole(currentUser, [UserRole.ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]) && (
+                                            <Link
+                                                to="/host-dashboard"
+                                                className={`sm:hidden flex items-center justify-center px-3 py-2 rounded-full text-[10px] font-black tracking-widest transition-all uppercase border ${location.pathname.startsWith('/host-dashboard')
+                                                    ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-md'
+                                                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800 dark:hover:bg-zinc-800'
+                                                    }`}
+                                            >
+                                                Mis Grupos
+                                            </Link>
+                                        )}
+
+                                        {/* Logout Button */}
+                                        {onLogout && (
+                                            <button
+                                                onClick={handleLogoutAction}
+                                                className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold text-black dark:text-white bg-slate-100 dark:bg-zinc-900 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black px-2 sm:px-4 py-2 min-h-[44px] rounded-full transition-all border border-slate-300 dark:border-zinc-700 hover:border-black dark:hover:border-white uppercase tracking-wider"
+                                            >
+                                                <span className="hidden sm:inline">Cerrar Sesión</span>
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                            </button>
+                                        )}
+
+                                        {/* Menu Trigger Button */}
                                         <button
-                                            onClick={onToggleTheme}
-                                            className="p-2.5 min-h-[44px] min-w-[44px] rounded-full text-slate-600 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors focus:outline-none border border-slate-300 dark:border-zinc-700 hover:border-slate-400 dark:hover:border-zinc-600"
-                                            title={appConfig.themeMode === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
+                                            onClick={() => setIsMenuOpen(true)}
+                                            className="flex items-center justify-center w-11 h-11 rounded-full bg-slate-100 dark:bg-zinc-900 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all border border-slate-300 dark:border-zinc-700 hover:border-black dark:hover:border-white group"
+                                            aria-label="Abrir menú"
                                         >
-                                            {appConfig.themeMode === 'dark' ? (
-                                                <Sun className="w-5 h-5" />
-                                            ) : (
-                                                <Moon className="w-5 h-5" />
-                                            )}
+                                            <Menu className="w-5 h-5 transition-transform group-hover:scale-110" />
                                         </button>
-                                    )}
-
-                                    {/* Notifications Bell (HIDDEN) */}
-                                    {/* <div className="relative">
-                                        <button
-                                            onClick={handleToggleNotifications}
-                                            className="p-2.5 min-h-[44px] min-w-[44px] rounded-full text-slate-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors relative border border-slate-300 dark:border-zinc-700 hover:border-slate-400 dark:hover:border-zinc-600"
-                                            aria-label="Notificaciones"
-                                        >
-                                            <Bell className="w-5 h-5" />
-                                            {unreadCount > 0 && (
-                                                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1.5 bg-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-black animate-pulse">
-                                                    {unreadCount > 99 ? '99+' : unreadCount}
-                                                </span>
-                                            )}
-                                        </button>
-
-                                        <NotificationCenter
-                                            notifications={projectNotifications}
-                                            isOpen={showNotifications}
-                                            onClose={() => setShowNotifications(false)}
-                                            onMarkAsRead={handleMarkAsRead}
-                                            onMarkAllAsRead={handleMarkAllAsRead}
-                                            preferences={notificationPrefs}
-                                            onPreferencesChange={handlePreferencesChange}
-                                            userRole={userRole}
-                                        />
-                                    </div> */}
-
-                                    {/* Host Dashboard Link - For users with ANFITRION role */}
-                                    {currentUser && hasRole(currentUser, UserRole.ANFITRION) && (
-                                        <Link
-                                            to="/host-dashboard"
-                                            className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold text-black dark:text-white bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 dark:hover:bg-emerald-800/50 px-2 sm:px-3 py-2 min-h-[44px] rounded-full transition-all border border-emerald-300 dark:border-emerald-700 uppercase tracking-wider"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                            </svg>
-                                            <span className="hidden sm:inline">Mis Grupos</span>
-                                            <span className="sm:hidden">MIS GRUPOS</span>
-                                        </Link>
-                                    )}
-
-                                    {/* Coordinator Dashboard Link */}
-                                    {currentUser && hasRole(currentUser, [UserRole.COORDINATOR]) && (
-                                        <Link
-                                            to="/coordinators"
-                                            className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold text-black dark:text-white bg-teal-100 dark:bg-teal-900/30 hover:bg-teal-200 dark:hover:bg-teal-800/50 px-2 sm:px-3 py-2 min-h-[44px] rounded-full transition-all border border-teal-300 dark:border-teal-700 uppercase tracking-wider"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                                            </svg>
-                                            <span className="hidden sm:inline">Coordinador</span>
-                                            <span className="sm:hidden">COORD</span>
-                                        </Link>
-                                    )}
-
-                                    {/* User Info */}
-                                    <div className="hidden sm:flex flex-col items-end ml-1 mr-2">
-                                        <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium uppercase tracking-widest">Bienvenido</span>
-                                        <span className="text-xs font-bold text-black dark:text-white tracking-wider">{currentUser?.name || 'Usuario'}</span>
                                     </div>
-
-                                    {/* Logout Button */}
-                                    {onLogout && (
-                                        <button
-                                            onClick={handleLogoutAction}
-                                            className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold text-black dark:text-white bg-slate-100 dark:bg-zinc-900 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black px-2 sm:px-4 py-2 min-h-[44px] rounded-full transition-all border border-slate-300 dark:border-zinc-700 hover:border-black dark:hover:border-white uppercase tracking-wider"
-                                        >
-                                            <span>Cerrar Sesión</span>
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <button className="text-sm font-bold text-slate-500 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors uppercase tracking-wider">
+                                            Ingresar
                                         </button>
-                                    )}
-                                </div>
-                            )}
+                                        <button className="px-5 py-2 rounded-full bg-black text-white dark:bg-white dark:text-black text-sm font-bold uppercase tracking-wider hover:bg-slate-800 dark:hover:bg-zinc-200 transition-colors shadow-lg shadow-slate-200 dark:shadow-zinc-900/50">
+                                            Registrarse
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

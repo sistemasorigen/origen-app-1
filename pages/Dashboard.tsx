@@ -841,7 +841,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                         </p>
                     </div>
                 </footer>
-            </div>
+            </div >
         </>
     );
 };

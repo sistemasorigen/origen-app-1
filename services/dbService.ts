@@ -303,7 +303,11 @@ class DBService {
         const saved = localStorage.getItem('notification_preferences');
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const parsed = JSON.parse(saved);
+                // Validation: Ensure categories exist
+                if (parsed && parsed.categories) {
+                    return parsed;
+                }
             } catch {
                 return DEFAULT_NOTIFICATION_PREFERENCES;
             }

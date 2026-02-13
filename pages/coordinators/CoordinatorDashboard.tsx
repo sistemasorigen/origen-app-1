@@ -166,9 +166,9 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
     return (
         <div className="flex flex-col h-full bg-[#f6f8f7] dark:bg-[#10221a] min-h-screen">
             {/* Top Header */}
-            <header className="flex items-center justify-between px-6 py-5 bg-white dark:bg-[#10221a] border-b border-gray-100 dark:border-gray-800 sticky top-0 z-10">
+            <header className="flex items-center justify-between px-4 py-4 md:px-6 md:py-5 bg-white dark:bg-[#10221a] border-b border-gray-100 dark:border-gray-800 sticky top-0 z-10">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white font-display">Dashboard General</h1>
+                    <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white font-display">Dashboard General</h1>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Resumen de actividad y métricas clave • {categoryName}</p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -195,7 +195,7 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
             </header>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-8">
+            <div className="flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8">
                 {/* KPI Section */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {/* KPI Card 1: Grupos */}
