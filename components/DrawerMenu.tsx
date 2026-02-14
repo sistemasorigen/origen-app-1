@@ -70,13 +70,19 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            document.body.style.touchAction = 'none'; // Prevent touch gestures on background
+            document.documentElement.style.overflow = 'hidden';
         } else {
-            document.body.style.overflow = 'unset';
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+            document.documentElement.style.overflow = '';
             // Collapse all items when closing
             if (!shouldRender) setExpandedItems([]);
         }
         return () => {
-            document.body.style.overflow = 'unset';
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+            document.documentElement.style.overflow = '';
         };
     }, [isOpen, shouldRender]);
 
@@ -228,6 +234,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             {/* Drawer Panel */}
             <div
                 className={`relative w-[85vw] sm:w-[350px] h-full bg-white/90 backdrop-blur-xl border-r border-white/20 shadow-[-10px_0_20px_rgba(0,0,0,0.1)] flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                style={{ touchAction: 'auto' }} // Ensure touch actions work within the panel
             >
                 {/* Header */}
                 <div className="p-6 flex items-center justify-between border-b border-gray-100/50">
@@ -241,7 +248,10 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 </div>
 
                 {/* Menu Items */}
-                <div className="flex-1 overflow-y-auto py-4 px-4 space-y-2">
+                <div
+                    className="flex-1 overflow-y-auto py-4 px-4 space-y-2"
+                    style={{ overscrollBehavior: 'contain' }} // Prevent scroll chain to background
+                >
                     {menuData.map((item, index) => {
                         // Check visibility
                         if (currentUser && item.roles && item.roles.length > 0 && !hasRole(currentUser, item.roles)) {
