@@ -2,6 +2,7 @@
 
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { db } from '../services/dbService';
 import { supabaseService } from '../services/supabaseService';
 import { User, UserRole, Log, SystemModule, AppConfig, BannerSlide, ValuesSectionConfig, Group, LeaderApplication, FooterLinks } from '../types';
@@ -80,7 +81,18 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     const [applications, setApplications] = useState<LeaderApplication[]>([]);
     const [viewingApp, setViewingApp] = useState<LeaderApplication | null>(null);
 
+
+
     const [activeTab, setActiveTab] = useState<'users' | 'leaders' | 'postulations' | 'config' | 'logs' | 'database'>('users');
+    const [searchParams] = useSearchParams();
+
+    // Deep linking
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && ['users', 'leaders', 'postulations', 'config', 'logs', 'database'].includes(tab)) {
+            setActiveTab(tab as any);
+        }
+    }, [searchParams]);
     const [configSubTab, setConfigSubTab] = useState<'IDENTITY' | 'BANNERS' | 'VALUES' | 'VERSES' | 'INFO_POINT' | 'FOOTER'>('IDENTITY');
 
     // User Sub-Tabs State - Updated to include 'all' tab

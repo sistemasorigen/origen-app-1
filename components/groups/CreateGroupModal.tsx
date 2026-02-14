@@ -62,6 +62,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     const [selectedHostId, setSelectedHostId] = useState<string>('');
     const [hostSearchTerm, setHostSearchTerm] = useState('');
     const [isHostSelectOpen, setIsHostSelectOpen] = useState(false);
+    const [isSeasonMode, setIsSeasonMode] = useState(true);
 
     // Form State
     const [form, setForm] = useState({
@@ -548,77 +549,187 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                     </div>
                 </div>
 
-                {/* START AND END DATES */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Start Date */}
-                    <div className="space-y-1">
-                        <label className="text-xs font-black uppercase tracking-widest h-8 flex items-end">Fecha de Arranque</label>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                readOnly
-                                value={((dateStr) => {
-                                    if (!dateStr) return '';
-                                    const [y, m, d] = dateStr.split('-');
-                                    return `${d}/${m}/${y}`;
-                                })(form.startDate)}
-                                placeholder="DD/MM/AAAA"
-                                className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold bg-white text-black pointer-events-none"
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-black">
-                                <Calendar className="w-5 h-5" />
-                            </div>
-                            <input
-                                type="date"
-                                name="startDate"
-                                value={form.startDate}
-                                onChange={handleChange}
-                                onClick={(e) => {
-                                    try {
-                                        if (typeof (e.currentTarget as any).showPicker === 'function') {
-                                            (e.currentTarget as any).showPicker();
-                                        }
-                                    } catch (error) { }
-                                }}
-                                className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
-                            />
+                {/* SEASON / DATES SECTION */}
+                <div className="space-y-4">
+                    <div className="flex justify-between items-end">
+                        <label className="text-xs font-black uppercase tracking-widest block">Duración del Grupo</label>
+
+                        {/* TOGGLE SWITCH: SEASON VS MANUAL */}
+                        <div className="flex bg-neutral-100 p-1 rounded-full border border-neutral-200">
+                            <button
+                                type="button"
+                                onClick={() => setIsSeasonMode(true)}
+                                className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${isSeasonMode
+                                    ? 'bg-black text-white shadow-md'
+                                    : 'text-neutral-500 hover:text-black'}`}
+                            >
+                                Temporadas
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsSeasonMode(false)}
+                                className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${!isSeasonMode
+                                    ? 'bg-black text-white shadow-md'
+                                    : 'text-neutral-500 hover:text-black'}`}
+                            >
+                                Manual
+                            </button>
                         </div>
                     </div>
 
-                    {/* End Date */}
-                    <div className="space-y-1">
-                        <label className="text-xs font-black uppercase tracking-widest h-8 flex items-end">Fin del Grupo</label>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                readOnly
-                                value={((dateStr) => {
-                                    if (!dateStr) return '';
-                                    const [y, m, d] = dateStr.split('-');
-                                    return `${d}/${m}/${y}`;
-                                })(form.endDate)}
-                                placeholder="Indefinido"
-                                className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold bg-white text-black pointer-events-none"
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-black">
-                                <Calendar className="w-5 h-5" />
-                            </div>
-                            <input
-                                type="date"
-                                name="endDate"
-                                value={form.endDate || ''}
-                                onChange={handleChange}
-                                onClick={(e) => {
-                                    try {
-                                        if (typeof (e.currentTarget as any).showPicker === 'function') {
-                                            (e.currentTarget as any).showPicker();
-                                        }
-                                    } catch (error) { }
+                    {isSeasonMode ? (
+                        <div className="grid grid-cols-1 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const year = new Date().getFullYear();
+                                    setForm(prev => ({
+                                        ...prev,
+                                        startDate: `${year}-03-23`,
+                                        endDate: `${year}-05-17`
+                                    }));
                                 }}
-                                className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
-                            />
+                                className={`p-4 border-2 text-left transition-all ${form.startDate?.endsWith('-03-23') && form.endDate?.endsWith('-05-17')
+                                    ? 'border-[#118f46] bg-[#118f46]/5 relative'
+                                    : 'border-neutral-200 hover:border-black'
+                                    }`}
+                            >
+                                <div className="flex justify-between items-center">
+                                    <span className="font-black uppercase text-sm">Primer Temporada</span>
+                                    {form.startDate?.endsWith('-03-23') && form.endDate?.endsWith('-05-17') && (
+                                        <div className="bg-[#118f46] text-white p-1 rounded-full">
+                                            <Check className="w-3 h-3" />
+                                        </div>
+                                    )}
+                                </div>
+                                <span className="text-xs text-neutral-500 font-medium block mt-1">23 de Marzo - 17 de Mayo</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const year = new Date().getFullYear();
+                                    setForm(prev => ({
+                                        ...prev,
+                                        startDate: `${year}-06-29`,
+                                        endDate: `${year}-08-23`
+                                    }));
+                                }}
+                                className={`p-4 border-2 text-left transition-all ${form.startDate?.endsWith('-06-29') && form.endDate?.endsWith('-08-23')
+                                    ? 'border-[#118f46] bg-[#118f46]/5 relative'
+                                    : 'border-neutral-200 hover:border-black'
+                                    }`}
+                            >
+                                <div className="flex justify-between items-center">
+                                    <span className="font-black uppercase text-sm">Segunda Temporada</span>
+                                    {form.startDate?.endsWith('-06-29') && form.endDate?.endsWith('-08-23') && (
+                                        <div className="bg-[#118f46] text-white p-1 rounded-full">
+                                            <Check className="w-3 h-3" />
+                                        </div>
+                                    )}
+                                </div>
+                                <span className="text-xs text-neutral-500 font-medium block mt-1">29 de Junio - 23 de Agosto</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const year = new Date().getFullYear();
+                                    setForm(prev => ({
+                                        ...prev,
+                                        startDate: `${year}-10-05`,
+                                        endDate: `${year}-11-29`
+                                    }));
+                                }}
+                                className={`p-4 border-2 text-left transition-all ${form.startDate?.endsWith('-10-05') && form.endDate?.endsWith('-11-29')
+                                    ? 'border-[#118f46] bg-[#118f46]/5 relative'
+                                    : 'border-neutral-200 hover:border-black'
+                                    }`}
+                            >
+                                <div className="flex justify-between items-center">
+                                    <span className="font-black uppercase text-sm">Tercer Temporada</span>
+                                    {form.startDate?.endsWith('-10-05') && form.endDate?.endsWith('-11-29') && (
+                                        <div className="bg-[#118f46] text-white p-1 rounded-full">
+                                            <Check className="w-3 h-3" />
+                                        </div>
+                                    )}
+                                </div>
+                                <span className="text-xs text-neutral-500 font-medium block mt-1">5 de Octubre - 29 de Noviembre</span>
+                            </button>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
+                            {/* Start Date */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-black uppercase tracking-widest h-8 flex items-end">Fecha de Arranque</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={((dateStr) => {
+                                            if (!dateStr) return '';
+                                            const [y, m, d] = dateStr.split('-');
+                                            return `${d}/${m}/${y}`;
+                                        })(form.startDate)}
+                                        placeholder="DD/MM/AAAA"
+                                        className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold bg-white text-black pointer-events-none"
+                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-black">
+                                        <Calendar className="w-5 h-5" />
+                                    </div>
+                                    <input
+                                        type="date"
+                                        name="startDate"
+                                        value={form.startDate}
+                                        onChange={handleChange}
+                                        onClick={(e) => {
+                                            try {
+                                                if (typeof (e.currentTarget as any).showPicker === 'function') {
+                                                    (e.currentTarget as any).showPicker();
+                                                }
+                                            } catch (error) { }
+                                        }}
+                                        className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* End Date */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-black uppercase tracking-widest h-8 flex items-end">Fin del Grupo</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={((dateStr) => {
+                                            if (!dateStr) return '';
+                                            const [y, m, d] = dateStr.split('-');
+                                            return `${d}/${m}/${y}`;
+                                        })(form.endDate)}
+                                        placeholder="Indefinido"
+                                        className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold bg-white text-black pointer-events-none"
+                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-black">
+                                        <Calendar className="w-5 h-5" />
+                                    </div>
+                                    <input
+                                        type="date"
+                                        name="endDate"
+                                        value={form.endDate || ''}
+                                        onChange={handleChange}
+                                        onClick={(e) => {
+                                            try {
+                                                if (typeof (e.currentTarget as any).showPicker === 'function') {
+                                                    (e.currentTarget as any).showPicker();
+                                                }
+                                            } catch (error) { }
+                                        }}
+                                        className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* IMAGE SELECTION */}

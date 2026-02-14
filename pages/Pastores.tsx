@@ -9,7 +9,7 @@ import {
 import {
     AlertTriangle, ArrowLeft, Download, Church, Layers, Info, Eye, Users, UserMinus, CheckCircle, XCircle
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import NeoModal from '../components/NeoModal';
 import InteractionsDashboard from '../components/pastores/InteractionsDashboard';
 
@@ -35,7 +35,16 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
         return isGCXOnly ? 'GROUPS' : 'INFO';
     };
 
+    const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<Tab>(getDefaultTab());
+
+    // Deep linking
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && ['INFO', 'GROUPS'].includes(tab)) {
+            setActiveTab(tab as Tab);
+        }
+    }, [searchParams]);
 
     // Date Filters (Default: Last 30 Days)
     const today = new Date().toISOString().split('T')[0];

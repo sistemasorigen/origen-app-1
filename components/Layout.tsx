@@ -6,7 +6,7 @@ import { hasRole } from '../services/authUtils';
 import { db } from '../services/dbService';
 
 import GlobalPlayer from './GlobalPlayer';
-import FullScreenMenu from './FullScreenMenu';
+import DrawerMenu from './DrawerMenu';
 import { useAudio } from '../contexts/AudioContext';
 import { X, ArrowLeft, Moon, Sun, Menu } from 'lucide-react';
 
@@ -146,38 +146,36 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     return (
         <div className="min-h-screen flex flex-col font-sans text-slate-900 dark:text-white bg-slate-50 dark:bg-black transition-colors duration-300 relative">
 
-            <FullScreenMenu
+            {/* Drawer Menu (Replaces FullScreenMenu) */}
+            <DrawerMenu
                 isOpen={isMenuOpen}
                 onClose={() => setIsMenuOpen(false)}
                 currentUser={currentUser}
-                onLogout={onLogout}
+                onLogout={handleLogoutAction}
+                isDarkMode={false}
+                onToggleTheme={onToggleTheme}
             />
 
             {renderModuleBackground()}
 
-            {/* Navbar - Origen Light Style */}
-            <nav className="sticky top-0 z-50 w-full bg-white/95 dark:bg-black/95 backdrop-blur-xl border-b border-slate-300 dark:border-zinc-800 transition-colors duration-300">
+            {/* Navbar - Transparent Visual Style */}
+            <nav className="sticky top-0 z-50 w-full bg-transparent transition-colors duration-300">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
 
-                        {/* Left Section: Logo */}
-                        <div className="flex items-center gap-4 flex-shrink-0">
-                            <Link to="/" className="flex items-center flex-shrink-0">
-                                <img
-                                    src="/origen-logo.png"
-                                    alt="Logo"
-                                    className="h-12 sm:h-14 w-auto object-contain dark:invert"
-                                />
-                            </Link>
+                        {/* Left Section: Menu trigger and optional back/volunteer buttons */}
+                        <div className="flex-1 flex items-center gap-2 sm:gap-4">
+                            {/* Unified Menu Trigger */}
+                            <button
+                                onClick={() => setIsMenuOpen(true)}
+                                className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-800 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all group"
+                                aria-label="Abrir menú"
+                            >
+                                <Menu className="w-5 h-5 transition-transform group-hover:scale-110" />
+                            </button>
 
                             {!isDashboard && (
-                                <div className="hidden md:flex items-center pl-6 border-l border-slate-200 h-8 my-auto animate-fadeIn">
-                                    <Link to="/" className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-black transition-all px-4 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 group uppercase tracking-wider">
-                                        <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                                        Volver
-                                    </Link>
-                                    <div id="navbar-portal" className="ml-2 flex items-center"></div>
-                                </div>
+                                <div id="navbar-portal" className="hidden md:flex items-center ml-2"></div>
                             )}
 
                             {!userRole && onVolunteerClick && (
@@ -195,14 +193,19 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                             )}
                         </div>
 
-                        {/* Center Section: Placeholder for dynamic content or empty space */}
-                        <div className="hidden md:flex items-center justify-center flex-1 px-8">
-                            <div className="flex items-center gap-1">
-                            </div>
+                        {/* Center Section: Centered Logo */}
+                        <div className="flex-1 flex items-center justify-center">
+                            <Link to="/" className="flex items-center">
+                                <img
+                                    src="/origen-logo.png"
+                                    alt="Logo"
+                                    className="h-10 sm:h-14 w-auto object-contain dark:invert transition-all"
+                                />
+                            </Link>
                         </div>
 
-                        {/* Right Section: Actions */}
-                        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                        {/* Right Section: Theme Toggle and Login Controls */}
+                        <div className="flex-1 flex items-center gap-2 sm:gap-4 justify-end">
                             {/* Theme Toggle */}
                             {onToggleTheme && (
                                 <button
@@ -215,24 +218,10 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                                 </button>
                             )}
 
-
-
                             {/* User Profile / Login */}
                             <div className="flex items-center gap-3">
-                                {currentUser ? (
-                                    <div className="flex items-center gap-3">
-
-                                        {/* Menu Trigger Button */}
-                                        <button
-                                            onClick={() => setIsMenuOpen(true)}
-                                            className="flex items-center justify-center w-11 h-11 rounded-full bg-slate-100 dark:bg-zinc-900 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all border border-slate-300 dark:border-zinc-700 hover:border-black dark:hover:border-white group"
-                                            aria-label="Abrir menú"
-                                        >
-                                            <Menu className="w-5 h-5 transition-transform group-hover:scale-110" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-2">
+                                {!currentUser && (
+                                    <div className="hidden md:flex items-center gap-2">
                                         <button className="text-sm font-bold text-slate-500 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors uppercase tracking-wider">
                                             Ingresar
                                         </button>

@@ -10,6 +10,7 @@ import {
     AlertTriangle,
     ChevronRight
 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, UserRole, Group, GroupCategory, GroupTag, GroupRegistration, DropoutRequest } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
@@ -27,8 +28,17 @@ interface CoordinatorsProps {
 }
 
 const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
+    const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<CoordinatorTab>('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Deep linking for tabs
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && ['dashboard', 'groups', 'attendance', 'calendar'].includes(tab)) {
+            setActiveTab(tab as CoordinatorTab);
+        }
+    }, [searchParams]);
 
     // Data state
     const [groups, setGroups] = useState<Group[]>([]);

@@ -1,6 +1,6 @@
 // ... imports
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { db } from '../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect } from '../services/supabaseService';
 import { hasRole } from '../services/authUtils';
@@ -236,10 +236,20 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
 const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // --- NAVIGATION ---
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     // --- MAIN STATE ---
     const [view, setView] = useState<'public' | 'admin'>('public');
-    const [adminSubTab, setAdminSubTab] = useState<'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG'>('GROUPS');
+    const [adminSubTab, setAdminSubTab] = useState<'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS'>('GROUPS');
+
+    // Deep linking for admin tabs
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && ['GROUPS', 'CATEGORIES', 'TAGS', 'CONFIG', 'HOSTS'].includes(tab)) {
+            setAdminSubTab(tab as any);
+            setView('admin'); // Auto-switch to admin view if a tab is requested
+        }
+    }, [searchParams]);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [groups, setGroups] = useState<Group[]>([]);
     const [categories, setCategories] = useState<GroupCategory[]>([]);
@@ -475,9 +485,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
     const isSuperAdmin = currentUser ? hasRole(currentUser, UserRole.SUPER_ADMIN) : false;
     const isGroupsAdmin = currentUser ? hasRole(currentUser, UserRole.ADMIN_GROUPS) : false;
+    const isEncargadoGroups = currentUser ? hasRole(currentUser, UserRole.ENCARGADO_GRUPOS) : false;
     const hasGroupsPrivilege = currentUser?.linkedGroupId === 'GROUPS' || (currentUser?.volunteerRoles && currentUser.volunteerRoles.includes('GROUPS'));
     const isAnfitrion = currentUser ? (hasRole(currentUser, UserRole.ANFITRION) && !!currentUser.linkedGroupId && !['PUNTO', 'STORE', 'GROUPS', 'ALABANZA'].includes(currentUser.linkedGroupId)) : false;
-    const canAccessAdmin = isSuperAdmin || isGroupsAdmin || hasGroupsPrivilege;
+    const canAccessAdmin = isSuperAdmin || isGroupsAdmin || hasGroupsPrivilege || isEncargadoGroups;
     const canSeeConfig = isSuperAdmin || isGroupsAdmin;
 
     // Fetch groups for public view (only approved)

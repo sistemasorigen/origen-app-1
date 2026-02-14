@@ -1,6 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { AppProvider, useStore } from '../store';
 import { ViewState, User, UserRole } from '../types';
@@ -32,8 +33,23 @@ interface InfoPointProps {
 
 const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const { settings, isLoading, notification } = useStore();
+    const [searchParams] = useSearchParams();
     const [viewMode, setViewMode] = useState<'PUBLIC' | 'INTERNAL'>('PUBLIC');
     const [currentView, setCurrentView] = useState<ViewState>('PANEL');
+
+    // Deep linking
+    useEffect(() => {
+        const view = searchParams.get('view');
+        if (view) {
+            setCurrentView(view as ViewState);
+
+            // If user is logged in, always switch to INTERNAL mode when a view is requested via URL
+            // This allows direct access to Dashboard (PANEL) and Search (SEARCH) from the menu
+            if (currentUser && viewMode === 'PUBLIC') {
+                setViewMode('INTERNAL');
+            }
+        }
+    }, [searchParams, currentUser]);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const toast = useToast();

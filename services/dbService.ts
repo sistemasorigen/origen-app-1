@@ -81,8 +81,8 @@ const MODULES: SystemModule[] = [
     {
         id: 'groups',
         title: 'Grupos de Conexión',
-        subtitle: 'Vida en Comunidad',
-        description: 'Encuentra tu grupo, conecta con personas y crece en tu fe.',
+        subtitle: 'FUIMOS CREADOS PARA ESTAR EN COMUNIDAD',
+        description: 'Un lugar para encontrar libertad, hacer comunidad y crecer en nuestra relación con Dios.',
         icon: 'users',
         route: '/groups',
         // General Access: Visible to ALL (Public + Authenticated)

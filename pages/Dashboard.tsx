@@ -626,7 +626,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                         </div>
 
                                         {/* Subtitle */}
-                                        <p className={`text-xs font-mono font-bold tracking-widest uppercase mb-2
+                                        <p className={`text-xs font-mono font-bold tracking-widest mb-2
                                             ${isFeatured
                                                 ? 'text-gray-600 dark:text-yellow-200/80'
                                                 : isAdmin
@@ -638,7 +638,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                         </p>
 
                                         {/* Title */}
-                                        <h3 className={`font-black uppercase leading-none mb-3
+                                        <h3 className={`font-black leading-none mb-3
                                             ${isFeatured
                                                 ? 'text-3xl sm:text-4xl tracking-tighter text-black dark:text-white'
                                                 : isAdmin
@@ -838,6 +838,9 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                     <div className="max-w-7xl mx-auto mt-8 sm:mt-12 pt-6 sm:pt-8 border-t-2 border-black dark:border-white text-center">
                         <p className="text-sm font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
                             © {new Date().getFullYear()} Sistema Origen — Todos los derechos reservados
+                        </p>
+                        <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500 mt-2 uppercase tracking-widest">
+                            Powered by IQstudios
                         </p>
                     </div>
                 </footer>
