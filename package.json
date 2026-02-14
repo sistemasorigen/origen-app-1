@@ -3,31 +3,32 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "vite preview",
-  "start": "vite preview --host --port ${PORT:-8080}"
-},
-"dependencies": {
-  "@google/genai": "^1.31.0",
-  "@google/generative-ai": "^0.24.1",
-  "@supabase/supabase-js": "2.39.0",
-  "@types/matter-js": "^0.20.2",
-  "clsx": "^2.1.0",
-  "framer-motion": "^12.26.2",
-  "idb": "^8.0.0",
-  "lucide-react": "^0.555.0",
-  "matter-js": "^0.20.0",
-  "react": "^19.2.1",
-  "react-dom": "^19.2.1",
-  "react-router-dom": "^7.10.1",
-  "recharts": "^2.15.0",
-  "tailwind-merge": "^2.2.1"
-},
-"devDependencies": {
-  "@types/node": "^22.14.0",
-  "@vitejs/plugin-react": "^5.0.0",
-  "typescript": "~5.8.2",
-  "vite": "^6.2.0"
-}
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite preview --host --port ${PORT:-8080}"
+  },
+  "dependencies": {
+    "@google/genai": "^1.31.0",
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "2.39.0",
+    "@types/matter-js": "^0.20.2",
+    "clsx": "^2.1.0",
+    "framer-motion": "^12.26.2",
+    "idb": "^8.0.0",
+    "lucide-react": "^0.555.0",
+    "matter-js": "^0.20.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-router-dom": "^7.10.1",
+    "recharts": "^2.15.0",
+    "tailwind-merge": "^2.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
 }
