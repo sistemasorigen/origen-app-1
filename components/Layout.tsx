@@ -150,6 +150,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                 isOpen={isMenuOpen}
                 onClose={() => setIsMenuOpen(false)}
                 currentUser={currentUser}
+                onLogout={onLogout}
             />
 
             {renderModuleBackground()}
@@ -194,15 +195,9 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                             )}
                         </div>
 
-                        {/* Center Section: Navigation Links (Desktop) */}
+                        {/* Center Section: Placeholder for dynamic content or empty space */}
                         <div className="hidden md:flex items-center justify-center flex-1 px-8">
                             <div className="flex items-center gap-1">
-                                {/* Mis Grupos Link - Host Dashboard */}
-                                {currentUser && hasRole(currentUser, [UserRole.ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]) && (
-                                    <Link to="/host-dashboard" className={`px-4 py-2 rounded-full text-sm font-bold tracking-wide transition-all ${location.pathname.startsWith('/host-dashboard') ? 'text-black dark:text-white bg-slate-100 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700' : 'text-slate-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-900/50'}`}>
-                                        MIS GRUPOS
-                                    </Link>
-                                )}
                             </div>
                         </div>
 
@@ -226,30 +221,6 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                             <div className="flex items-center gap-3">
                                 {currentUser ? (
                                     <div className="flex items-center gap-3">
-
-                                        {/* Mobile: Link to Mis Grupos if applicable */}
-                                        {currentUser && hasRole(currentUser, [UserRole.ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]) && (
-                                            <Link
-                                                to="/host-dashboard"
-                                                className={`sm:hidden flex items-center justify-center px-3 py-2 rounded-full text-[10px] font-black tracking-widest transition-all uppercase border ${location.pathname.startsWith('/host-dashboard')
-                                                    ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-md'
-                                                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800 dark:hover:bg-zinc-800'
-                                                    }`}
-                                            >
-                                                Mis Grupos
-                                            </Link>
-                                        )}
-
-                                        {/* Logout Button */}
-                                        {onLogout && (
-                                            <button
-                                                onClick={handleLogoutAction}
-                                                className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold text-black dark:text-white bg-slate-100 dark:bg-zinc-900 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black px-2 sm:px-4 py-2 min-h-[44px] rounded-full transition-all border border-slate-300 dark:border-zinc-700 hover:border-black dark:hover:border-white uppercase tracking-wider"
-                                            >
-                                                <span className="hidden sm:inline">Cerrar Sesión</span>
-                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                                            </button>
-                                        )}
 
                                         {/* Menu Trigger Button */}
                                         <button
