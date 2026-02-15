@@ -9,7 +9,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 // Email sender - update this to your verified domain email
-const FROM_EMAIL = "Origen App <team@test-origen.online>";
+const FROM_EMAIL = "Origen App <team@app.origeniglesia.org>";
 
 interface GroupRegistrationRecord {
   id: string;

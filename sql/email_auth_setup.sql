@@ -25,8 +25,8 @@
 -- http://localhost:5173/#/update-password
 
 -- For production (replace with your actual domain):
--- https://test-origen.online/#/verify-email
--- https://test-origen.online/#/update-password
+-- https://app.origeniglesia.org/#/verify-email
+-- https://app.origeniglesia.org/#/update-password
 
 -- =====================================================
 -- STEP 3: CUSTOMIZE EMAIL TEMPLATES (Optional)
