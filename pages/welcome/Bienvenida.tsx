@@ -22,7 +22,7 @@ const STAGES: VisitorStage[] = [
 ];
 
 const STAGE_LABELS: Record<VisitorStage, string> = {
-    'NEW': 'NUEVOS',
+    'NEW': 'INCOMPLETOS',
     'FILLED_FORM': 'FORM LLENO',
     'SECOND_CONTACT': '2° CONTACTO',
     'THIRD_CONTACT': '3° CONTACTO',
