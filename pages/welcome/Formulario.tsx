@@ -18,7 +18,7 @@ const Formulario: React.FC = () => {
         phone: '',
         email: '',
         experience: '',
-        is_first_time: true,
+        is_first_time: null as boolean | null,
         accepted_jesus: '',
         referral_source: '',
         wants_growth: '',
@@ -43,27 +43,50 @@ const Formulario: React.FC = () => {
             // 1. Search for existing visitor by phone (handle duplicates by taking latest)
             const { data: existingVisitors, error: searchError } = await supabase
                 .from('welcome_visitors')
-                .select('id')
+                .select('id, first_name, last_name')
                 .eq('phone', formData.phone)
                 .order('created_at', { ascending: false })
                 .limit(1);
 
             if (searchError) {
                 console.error("Search error", searchError);
+                toast.error('Error al buscar registro.');
+                setIsLoading(false);
+                return;
             }
 
             const existingVisitor = existingVisitors && existingVisitors.length > 0 ? existingVisitors[0] : null;
+
+            // VALIDATION: Check if visitor exists
+            if (!existingVisitor) {
+                toast.error('No se encontró un registro previo con este teléfono. Por favor acercate a recepción.');
+                setTimeout(() => navigate('/auth'), 3000);
+                return;
+            }
+
+            // VALIDATION: Check if Name and Surname match (Case insensitive, trimmed)
+            const dbName = existingVisitor.first_name?.trim().toLowerCase() || '';
+            const inputName = formData.firstName.trim().toLowerCase();
+            const dbLast = existingVisitor.last_name?.trim().toLowerCase() || '';
+            const inputLast = formData.lastName.trim().toLowerCase();
+
+            if (dbName !== inputName || dbLast !== inputLast) {
+                toast.error('El nombre y apellido no coinciden con nuestros registros de Bienvenida.');
+                setTimeout(() => navigate('/auth'), 3000);
+                return;
+            }
 
             const updateData = {
                 email: formData.email,
                 experience_description: formData.experience,
                 stage: 'FILLED_FORM',
-                first_name: formData.firstName,
-                last_name: formData.lastName,
-                phone: formData.phone,
+                // Keep original names to ensure consistency, or update if slight fix? User asked to validate match.
+                // We update the other fields.
+                // first_name: formData.firstName, // Optional: if we want to correct casing
+                // last_name: formData.lastName, 
 
                 // New Fields
-                is_first_time: formData.is_first_time,
+                is_first_time: formData.is_first_time === null ? false : formData.is_first_time,
                 accepted_jesus: formData.accepted_jesus,
                 referral_source: formData.referral_source,
                 wants_growth: formData.wants_growth,
@@ -71,27 +94,13 @@ const Formulario: React.FC = () => {
                 prayer_request: formData.prayer_request
             };
 
-            const insertData = {
-                ...updateData,
-                created_at: new Date().toISOString()
-            };
+            // Update existing
+            const { error: updateError } = await supabase
+                .from('welcome_visitors')
+                .update(updateData)
+                .eq('id', existingVisitor.id);
 
-            if (existingVisitor) {
-                // Update existing
-                const { error: updateError } = await supabase
-                    .from('welcome_visitors')
-                    .update(updateData)
-                    .eq('id', existingVisitor.id);
-
-                if (updateError) throw updateError;
-            } else {
-                // Create new
-                const { error: insertError } = await supabase
-                    .from('welcome_visitors')
-                    .insert(insertData);
-
-                if (insertError) throw insertError;
-            }
+            if (updateError) throw updateError;
 
             setStep(2);
             setTimeout(() => {
@@ -193,9 +202,14 @@ const Formulario: React.FC = () => {
                             <label className="label">¿Es primera vez?</label>
                             <select
                                 className="input-field"
-                                value={formData.is_first_time ? 'yes' : 'no'}
-                                onChange={e => setFormData({ ...formData, is_first_time: e.target.value === 'yes' })}
+                                required
+                                value={formData.is_first_time === null ? '' : (formData.is_first_time ? 'yes' : 'no')}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setFormData({ ...formData, is_first_time: val === '' ? null : val === 'yes' });
+                                }}
                             >
+                                <option value="">- Seleccionar -</option>
                                 <option value="yes">Primera vez</option>
                                 <option value="no">Ya había venido</option>
                             </select>
@@ -204,6 +218,7 @@ const Formulario: React.FC = () => {
                             <label className="label">Decisión de Fe</label>
                             <select
                                 className="input-field"
+                                required
                                 value={formData.accepted_jesus}
                                 onChange={e => setFormData({ ...formData, accepted_jesus: e.target.value })}
                             >
@@ -220,6 +235,7 @@ const Formulario: React.FC = () => {
                             <label className="label">¿Cómo nos conociste?</label>
                             <select
                                 className="input-field"
+                                required
                                 value={formData.referral_source}
                                 onChange={e => setFormData({ ...formData, referral_source: e.target.value })}
                             >
@@ -235,6 +251,7 @@ const Formulario: React.FC = () => {
                             <label className="label">¿Quiere hacer "Crecer"?</label>
                             <select
                                 className="input-field bg-yellow-50"
+                                required
                                 value={formData.wants_growth}
                                 onChange={e => setFormData({ ...formData, wants_growth: e.target.value })}
                             >

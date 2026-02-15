@@ -62,6 +62,26 @@ const generateUUID = (): string => {
     });
 };
 
+// Helper to get season from date
+const getSeasonFromDate = (dateStr?: string): 'S1' | 'S2' | 'S3' | null => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    const m = date.getMonth() + 1; // 1-12
+    const d = date.getDate(); // 1-31
+    const md = m * 100 + d; // MMDD format for comparison
+
+    // S1: 23 de marzo (323) al 17 de mayo (517)
+    if (md >= 323 && md <= 517) return 'S1';
+
+    // S2: 29 de junio (629) al 23 de agosto (823)
+    if (md >= 629 && md <= 823) return 'S2';
+
+    // S3: 5 de octubre (1005) al 29 de noviembre (1129)
+    if (md >= 1005 && md <= 1129) return 'S3';
+
+    return null;
+};
+
 // --- COMPONENTS ---
 
 // --- NAVBAR PROPS INTERFACE ---
@@ -367,19 +387,29 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
     // Admin Status Filter
     const [adminStatusFilter, setAdminStatusFilter] = useState<'ALL' | 'APPROVED' | 'FINALIZED' | 'PENDING'>('ALL');
+    const [adminFilterMode, setAdminFilterMode] = useState<'MANUAL' | 'SEASONS'>('MANUAL');
+    const [adminSeasonFilter, setAdminSeasonFilter] = useState<'S1' | 'S2' | 'S3'>('S1');
     const [adminSearchTerm, setAdminSearchTerm] = useState('');
 
     const filteredAdminGroups = useMemo(() => {
         let filtered = adminGroups;
 
-        // 1. Filter by Status
-        if (adminStatusFilter !== 'ALL') {
+        // 1. Filter by Status or Season
+        if (adminFilterMode === 'MANUAL') {
+            if (adminStatusFilter !== 'ALL') {
+                filtered = filtered.filter(g => {
+                    const isFinished = isGroupFinished(g);
+                    if (adminStatusFilter === 'APPROVED') return g.status === 'approved' && !isFinished;
+                    if (adminStatusFilter === 'FINALIZED') return g.status === 'approved' && isFinished;
+                    if (adminStatusFilter === 'PENDING') return g.status === 'pending' || !g.status;
+                    return true;
+                });
+            }
+        } else {
+            // SEASONS MODE
             filtered = filtered.filter(g => {
-                const isFinished = isGroupFinished(g);
-                if (adminStatusFilter === 'APPROVED') return g.status === 'approved' && !isFinished;
-                if (adminStatusFilter === 'FINALIZED') return g.status === 'approved' && isFinished;
-                if (adminStatusFilter === 'PENDING') return g.status === 'pending' || !g.status;
-                return true;
+                const season = getSeasonFromDate(g.startDate);
+                return season === adminSeasonFilter;
             });
         }
 
@@ -400,7 +430,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         }
 
         return filtered;
-    }, [adminGroups, adminStatusFilter, adminSearchTerm, categories]);
+    }, [adminGroups, adminStatusFilter, adminSearchTerm, categories, adminFilterMode, adminSeasonFilter]);
 
 
     // Fetch existing applications when postulation modal opens AND auto-fill form with user data
@@ -1465,41 +1495,102 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                             className="flex items-center gap-1.5 sm:gap-2 w-full xl:w-auto overflow-x-auto xl:overflow-visible pb-1 xl:pb-0 justify-start xl:justify-end no-scrollbar"
                                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                                         >
-                                            <button
-                                                onClick={() => setAdminStatusFilter(prev => prev === 'APPROVED' ? 'ALL' : 'APPROVED')}
-                                                className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'APPROVED'
-                                                    ? 'bg-emerald-200 text-emerald-900 border-2 border-emerald-500 ring-2 ring-emerald-200 ring-offset-1'
-                                                    : 'bg-emerald-100 text-emerald-800 border sm:border-2 border-emerald-300 hover:bg-emerald-200'
-                                                    } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'APPROVED' ? 'opacity-50 grayscale' : ''}`}
-                                            >
-                                                <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                {adminGroups.filter(g => g.status === 'approved' && !isGroupFinished(g)).length}
-                                                <span>Aprobados</span>
-                                            </button>
+                                            {/* Filter Mode Toggle */}
+                                            <div className="flex items-center bg-slate-100 rounded-lg p-1 mr-2 border border-slate-200">
+                                                <button
+                                                    onClick={() => setAdminFilterMode('MANUAL')}
+                                                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${adminFilterMode === 'MANUAL'
+                                                        ? 'bg-white text-black shadow-sm'
+                                                        : 'text-slate-500 hover:text-slate-800'
+                                                        }`}
+                                                >
+                                                    Manual
+                                                </button>
+                                                <button
+                                                    onClick={() => setAdminFilterMode('SEASONS')}
+                                                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${adminFilterMode === 'SEASONS'
+                                                        ? 'bg-white text-black shadow-sm'
+                                                        : 'text-slate-500 hover:text-slate-800'
+                                                        }`}
+                                                >
+                                                    Temporadas
+                                                </button>
+                                            </div>
 
-                                            <button
-                                                onClick={() => setAdminStatusFilter(prev => prev === 'FINALIZED' ? 'ALL' : 'FINALIZED')}
-                                                className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'FINALIZED'
-                                                    ? 'bg-neutral-300 text-neutral-800 border-2 border-neutral-500 ring-2 ring-neutral-200 ring-offset-1'
-                                                    : 'bg-neutral-200 text-neutral-600 border sm:border-2 border-neutral-400 hover:bg-neutral-300'
-                                                    } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'FINALIZED' ? 'opacity-50 grayscale' : ''}`}
-                                            >
-                                                <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                {adminGroups.filter(g => g.status === 'approved' && isGroupFinished(g)).length}
-                                                <span>Finalizados</span>
-                                            </button>
+                                            {adminFilterMode === 'MANUAL' ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => setAdminStatusFilter(prev => prev === 'APPROVED' ? 'ALL' : 'APPROVED')}
+                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'APPROVED'
+                                                            ? 'bg-emerald-200 text-emerald-900 border-2 border-emerald-500 ring-2 ring-emerald-200 ring-offset-1'
+                                                            : 'bg-emerald-100 text-emerald-800 border sm:border-2 border-emerald-300 hover:bg-emerald-200'
+                                                            } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'APPROVED' ? 'opacity-50 grayscale' : ''}`}
+                                                    >
+                                                        <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                        {adminGroups.filter(g => g.status === 'approved' && !isGroupFinished(g)).length}
+                                                        <span>Aprobados</span>
+                                                    </button>
 
-                                            <button
-                                                onClick={() => setAdminStatusFilter(prev => prev === 'PENDING' ? 'ALL' : 'PENDING')}
-                                                className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'PENDING'
-                                                    ? 'bg-yellow-200 text-yellow-900 border-2 border-yellow-500 ring-2 ring-yellow-200 ring-offset-1'
-                                                    : 'bg-yellow-100 text-yellow-800 border sm:border-2 border-yellow-300 hover:bg-yellow-200'
-                                                    } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'PENDING' ? 'opacity-50 grayscale' : ''}`}
-                                            >
-                                                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                {adminGroups.filter(g => g.status === 'pending' || !g.status).length}
-                                                <span>Pendientes</span>
-                                            </button>
+                                                    <button
+                                                        onClick={() => setAdminStatusFilter(prev => prev === 'FINALIZED' ? 'ALL' : 'FINALIZED')}
+                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'FINALIZED'
+                                                            ? 'bg-neutral-300 text-neutral-800 border-2 border-neutral-500 ring-2 ring-neutral-200 ring-offset-1'
+                                                            : 'bg-neutral-200 text-neutral-600 border sm:border-2 border-neutral-400 hover:bg-neutral-300'
+                                                            } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'FINALIZED' ? 'opacity-50 grayscale' : ''}`}
+                                                    >
+                                                        <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                        {adminGroups.filter(g => g.status === 'approved' && isGroupFinished(g)).length}
+                                                        <span>Finalizados</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setAdminStatusFilter(prev => prev === 'PENDING' ? 'ALL' : 'PENDING')}
+                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'PENDING'
+                                                            ? 'bg-yellow-200 text-yellow-900 border-2 border-yellow-500 ring-2 ring-yellow-200 ring-offset-1'
+                                                            : 'bg-yellow-100 text-yellow-800 border sm:border-2 border-yellow-300 hover:bg-yellow-200'
+                                                            } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'PENDING' ? 'opacity-50 grayscale' : ''}`}
+                                                    >
+                                                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                        {adminGroups.filter(g => g.status === 'pending' || !g.status).length}
+                                                        <span>Pendientes</span>
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => setAdminSeasonFilter('S1')}
+                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminSeasonFilter === 'S1'
+                                                            ? 'bg-blue-200 text-blue-900 border-2 border-blue-500 ring-2 ring-blue-200 ring-offset-1'
+                                                            : 'bg-blue-50 text-blue-800 border sm:border-2 border-blue-200 hover:bg-blue-100'
+                                                            }`}
+                                                    >
+                                                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                        <span>1ª Temporada</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setAdminSeasonFilter('S2')}
+                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminSeasonFilter === 'S2'
+                                                            ? 'bg-purple-200 text-purple-900 border-2 border-purple-500 ring-2 ring-purple-200 ring-offset-1'
+                                                            : 'bg-purple-50 text-purple-800 border sm:border-2 border-purple-200 hover:bg-purple-100'
+                                                            }`}
+                                                    >
+                                                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                        <span>2ª Temporada GCX</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setAdminSeasonFilter('S3')}
+                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminSeasonFilter === 'S3'
+                                                            ? 'bg-pink-200 text-pink-900 border-2 border-pink-500 ring-2 ring-pink-200 ring-offset-1'
+                                                            : 'bg-pink-50 text-pink-800 border sm:border-2 border-pink-200 hover:bg-pink-100'
+                                                            }`}
+                                                    >
+                                                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                        <span>3ª Temporada GCX</span>
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 
