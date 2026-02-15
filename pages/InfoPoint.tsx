@@ -324,9 +324,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
 const InfoPoint: React.FC<InfoPointProps> = (props) => {
     return (
         <AppProvider currentUser={props.currentUser}>
-            <ToastProvider>
-                <InfoPointContent {...props} />
-            </ToastProvider>
+            <InfoPointContent {...props} />
         </AppProvider>
     );
 };

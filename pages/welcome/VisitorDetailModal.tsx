@@ -58,7 +58,9 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
                     experience_rating: formData.experience_rating,
                     wants_growth: formData.wants_growth,
                     interest_areas: formData.interest_areas,
-                    prayer_request: formData.prayer_request
+                    prayer_request: formData.prayer_request,
+                    email: formData.email,
+                    experience_description: formData.experience_description
                 })
                 .eq('id', visitor.id);
 
@@ -91,10 +93,19 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
         }
     };
 
+    const DisplayField = ({ label, value }: { label: string, value: any }) => (
+        <div className="mb-1">
+            <label className="label">{label}</label>
+            <div className={`w-full min-h-[2.5rem] px-3 py-2 border-2 border-black font-bold flex items-center ${value ? 'bg-white' : 'bg-neutral-100 text-neutral-400 italic'}`}>
+                {value || 'Incompleto'}
+            </div>
+        </div>
+    );
+
     return (
         <NeoModal isOpen={isOpen} onClose={onClose} title="Detalle de Visitante" maxWidth="max-w-2xl">
             <div className="space-y-6">
-                {/* 1. DATOS BÁSICOS */}
+                {/* 1. DATOS BÁSICOS (EDITABLE) */}
                 <div className="bg-slate-50 p-4 border-2 border-black">
                     <h3 className="font-black uppercase mb-3 text-sm">Datos Básicos</h3>
                     <div className="grid grid-cols-2 gap-4">
@@ -114,103 +125,68 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
                             <label className="label">Teléfono</label>
                             <input type="tel" className="input-field" value={formData.phone || ''} onChange={e => handleChange('phone', e.target.value)} />
                         </div>
+                        <div className="col-span-2">
+                            <label className="label">Email</label>
+                            <input type="email" className="input-field" value={formData.email || ''} onChange={e => handleChange('email', e.target.value)} />
+                        </div>
                     </div>
                 </div>
 
-                {/* 2. SOBRE TU VISITA */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="label">¿Es primera vez?</label>
-                        <select
-                            className="input-field"
-                            value={formData.is_first_time ? 'yes' : 'no'}
-                            onChange={e => handleChange('is_first_time', e.target.value === 'yes')}
-                        >
-                            <option value="yes">Primera vez</option>
-                            <option value="no">Ya había venido</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="label">Decisión de Fe</label>
-                        <select
-                            className="input-field"
-                            value={formData.accepted_jesus || ''}
-                            onChange={e => handleChange('accepted_jesus', e.target.value)}
-                        >
-                            <option value="">- Seleccionar -</option>
-                            <option value="Si">Sí, acepté hoy</option>
-                            <option value="No, antes">Ya lo había hecho antes</option>
-                        </select>
-                    </div>
-                </div>
+                {/* 2. DATOS DEL FORMULARIO (READ ONLY) */}
+                <div className="bg-neutral-50 p-4 border-2 border-neutral-200">
+                    <h3 className="font-black uppercase mb-3 text-sm text-neutral-400 flex items-center gap-2">
+                        Respuestas del Formulario
+                        {visitor.stage !== 'FILLED_FORM' && <span className="text-[10px] bg-neutral-200 px-2 py-0.5 text-black rounded-full">Lectura</span>}
+                    </h3>
 
-                {/* 3. ORIGEN & CONEXION */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="label">¿Cómo nos conociste?</label>
-                        <select
-                            className="input-field"
-                            value={formData.referral_source || ''}
-                            onChange={e => handleChange('referral_source', e.target.value)}
-                        >
-                            <option value="">- Seleccionar -</option>
-                            <option value="Amigo">Invitado por un amigo</option>
-                            <option value="Redes">Redes Sociales</option>
-                            <option value="Internet">Internet / Web</option>
-                            <option value="Pasé">Pasé por la puerta</option>
-                            <option value="Otro">Otro</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="label">¿Quiere hacer "Crecer"?</label>
-                        <select
-                            className="input-field bg-yellow-50"
-                            value={formData.wants_growth || ''}
-                            onChange={e => handleChange('wants_growth', e.target.value)}
-                        >
-                            <option value="">- Seleccionar -</option>
-                            <option value="Si">Sí, quiero crecer</option>
-                            <option value="No">No por ahora</option>
-                            <option value="Tal vez">Tal vez después</option>
-                        </select>
-                    </div>
-                </div>
-
-                {/* 4. EXPERIENCIA & ORACION */}
-                <div className="space-y-4">
-                    <div>
-                        <label className="label">Experiencia / Comentarios</label>
-                        <textarea
-                            className="input-field h-20 py-2"
-                            value={formData.experience_rating || ''}
-                            onChange={e => handleChange('experience_rating', e.target.value)}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <DisplayField
+                            label="¿Es primera vez?"
+                            value={formData.is_first_time != null ? (formData.is_first_time ? 'Sí, primera vez' : 'No, ya había venido') : null}
+                        />
+                        <DisplayField
+                            label="Decisión de Fe"
+                            value={formData.accepted_jesus}
                         />
                     </div>
-                    <div>
-                        <label className="label">Petición de Oración</label>
-                        <textarea
-                            className="input-field h-20 py-2"
-                            value={formData.prayer_request || ''}
-                            onChange={e => handleChange('prayer_request', e.target.value)}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <DisplayField
+                            label="¿Cómo nos conociste?"
+                            value={formData.referral_source}
+                        />
+                        <DisplayField
+                            label="¿Quiere hacer 'Crecer'?"
+                            value={formData.wants_growth}
                         />
                     </div>
-                </div>
 
-                {/* 5. INTERESES */}
-                <div>
-                    <label className="label mb-2 block">Áreas de Interés</label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {INTEREST_OPTIONS.map(opt => (
-                            <label key={opt} className={`flex items-center gap-2 p-2 border-2 cursor-pointer transition-all ${formData.interest_areas?.includes(opt) ? 'border-black bg-black text-white' : 'border-neutral-200 text-neutral-500 hover:border-black'}`}>
-                                <input
-                                    type="checkbox"
-                                    className="hidden"
-                                    checked={formData.interest_areas?.includes(opt) || false}
-                                    onChange={() => toggleInterest(opt)}
-                                />
-                                <span className="font-bold uppercase text-xs">{opt}</span>
-                            </label>
-                        ))}
+                    <div className="space-y-4 mb-4">
+                        <DisplayField
+                            label="Experiencia / Comentarios"
+                            value={formData.experience_description}
+                        />
+                        <DisplayField
+                            label="Petición de Oración"
+                            value={formData.prayer_request}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="label mb-2 block">Áreas de Interés</label>
+                        <div className="flex flex-wrap gap-2">
+                            {formData.interest_areas && formData.interest_areas.length > 0 ? (
+                                formData.interest_areas.map(interest => (
+                                    <span key={interest} className="px-3 py-1 bg-black text-white text-xs font-bold uppercase tracking-wider">
+                                        {interest}
+                                    </span>
+                                ))
+                            ) : (
+                                <div className="w-full min-h-[2.5rem] px-3 py-2 border-2 border-neutral-200 font-bold bg-neutral-100 flex items-center text-neutral-400 italic">
+                                    Incompleto
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

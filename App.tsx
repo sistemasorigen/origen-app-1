@@ -15,6 +15,7 @@ import HostDashboard from './pages/HostDashboard';
 import UpdatePassword from './pages/UpdatePassword';
 import VerifyEmail from './pages/VerifyEmail';
 import Bienvenida from './pages/welcome/Bienvenida';
+import Formulario from './pages/welcome/Formulario';
 import Coordinators from './pages/coordinators/Coordinators';
 import SystemLoginModal from './components/SystemLoginModal';
 import CompleteProfileModal from './components/CompleteProfileModal';
@@ -24,6 +25,7 @@ import { supabaseService } from './services/supabaseService';
 import { hasRole } from './services/authUtils';
 import { AudioProvider } from './contexts/AudioContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './pages/infopoint/context/ToastContext';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 
 // Loading timeout constant
@@ -194,6 +196,7 @@ const AppContent: React.FC = () => {
 
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/form" element={<Formulario />} />
 
             {/* PROTECTED ROUTES WRAPPED IN LAYOUT */}
             <Route path="*" element={
@@ -276,9 +279,11 @@ const App: React.FC = () => {
         <ErrorBoundary>
             <AudioProvider>
                 <AuthProvider>
-                    <HashRouter>
-                        <AppContent />
-                    </HashRouter>
+                    <ToastProvider>
+                        <HashRouter>
+                            <AppContent />
+                        </HashRouter>
+                    </ToastProvider>
                 </AuthProvider>
             </AudioProvider>
         </ErrorBoundary>

@@ -702,4 +702,8 @@ export interface WelcomeVisitor {
     wants_growth?: string; // 'Si', 'No', 'Tal vez'
     interest_areas?: string[];
     prayer_request?: string;
+
+    // New Fields from Public Form
+    email?: string;
+    experience_description?: string;
 }

@@ -44,7 +44,9 @@ const NewVisitorModal: React.FC<NewVisitorModalProps> = ({ isOpen, onClose, onSu
             const message = `Bienvenido/a a Origen Iglesia
 Gracias por estar hoy con nosotros.
 Creemos que cada persona tiene un propósito y que Dios sigue escribiendo historias nuevas.
-Este formulario es solo para conocerte un poco mejor y poder acompañarte.
+Este formulario es solo para conocerte un poco mejor y poder acompañarte:
+https://app.origeniglesia.org/#/form
+
 Tus respuestas son confidenciales y podés completar solo lo que quieras.
 Gracias por tomarte unos minutos.
 ¡Bienvenido/a a casa!`;
