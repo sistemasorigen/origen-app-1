@@ -3,6 +3,7 @@ import { Clock, MapPin, Users, ArrowRight, CheckCircle2, Lock, ChevronDown, Chev
 import { Group, GroupTag, GroupCategory, User as AppUser, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 
+
 interface GroupCardProps {
     group: Group;
     tags: GroupTag[];
@@ -12,9 +13,10 @@ interface GroupCardProps {
     spanTwo?: boolean;
     userStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
     currentUser?: AppUser | null;
+    id?: string;
 }
 
-const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, onInquiry, userStatus, currentUser }) => {
+const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, onInquiry, userStatus, currentUser, id }) => {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [isTagsExpanded, setIsTagsExpanded] = useState(false);
 
@@ -162,8 +164,10 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
         ? categories.find(cat => cat.id === group.categoryId)?.name || group.categoryId
         : group.categoryId;
 
+
     return (
         <div
+            id={id}
             className="group/card relative bg-white dark:bg-neutral-900 rounded-lg shadow-xl shadow-black/5 dark:shadow-black/30 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer flex flex-col"
             onClick={handleAction}
         >

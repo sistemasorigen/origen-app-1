@@ -60,6 +60,7 @@ export interface User {
     gender?: string; // From public.users
     birthDate?: string; // Exact date of birth (YYYY-MM-DD format)
     assignedCategory?: string; // Category ID for COORDINATOR role filtering
+    tutorial_progress?: Record<string, boolean>; // Tracks onboarding tour progress
 }
 
 // --- LEADER APPLICATION TYPES ---

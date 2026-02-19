@@ -4,6 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { User } from '../types';
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowRight, UserPlus, LogIn, Lock, ArrowLeft, Mail, AlertTriangle, Calendar, MailCheck, RefreshCw } from 'lucide-react';
+// --- TUTORIAL INTEGRATION ---
+import { useTutorial } from '../src/hooks/useTutorial';
+import TutorialController from '../components/TutorialController';
+import TutorialInvitation from '../components/TutorialInvitation';
+import { tours } from '../src/config/tours';
 
 interface AuthScreenProps {
     onLoginSuccess: (user: User) => void;
@@ -12,7 +17,7 @@ interface AuthScreenProps {
 type AuthMode = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD';
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
-    const { signIn, signUp, signInWithGoogle, resetPassword, loading: authLoading } = useAuth();
+    const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
 
     const [mode, setMode] = useState<AuthMode>('LOGIN');
     const [loading, setLoading] = useState(false);
@@ -253,8 +258,31 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     const buttonClass = "w-full py-3 bg-black text-white font-bold uppercase tracking-widest rounded-lg hover:bg-neutral-800 transition-all shadow-lg disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 transform active:scale-[0.98]";
     const googleButtonClass = "w-full py-4 bg-white text-black font-bold uppercase tracking-widest rounded-lg border border-gray-300 hover:bg-gray-50 transition-all shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-3 transform active:scale-[0.98]";
 
+    const {
+        isActive,
+        showInvitation,
+        startTutorial,
+        completeTutorial,
+        declineTemporary,
+        dismissTutorial
+    } = useTutorial('auth');
+
     return (
         <div className="min-h-screen flex flex-col lg:flex-row bg-white font-sans text-black overflow-hidden">
+            {/* Tutorial Components */}
+            <TutorialInvitation
+                isOpen={showInvitation}
+                onStart={startTutorial}
+                onClose={declineTemporary}
+                onDismiss={dismissTutorial}
+                title="Bienvenido a Origen"
+            />
+            <TutorialController
+                steps={tours.auth}
+                run={isActive}
+                onComplete={completeTutorial}
+                onSkip={dismissTutorial}
+            />
 
             {/* LEFT SIDE: BRANDING (Hidden on mobile) */}
             <div className="hidden lg:flex w-1/2 bg-black relative items-center justify-center">
@@ -371,7 +399,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                         <>
                             {/* Toggle Tabs */}
                             {mode !== 'FORGOT_PASSWORD' && (
-                                <div className="flex bg-slate-100 p-1 rounded-xl mb-8 relative">
+                                <div className="auth-toggle flex bg-slate-100 p-1 rounded-xl mb-8 relative">
                                     <div
                                         className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-sm transition-all duration-300 ease-in-out ${mode === 'LOGIN' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
                                     ></div>
@@ -424,7 +452,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                                 </div>
                             )}
 
-                            <form onSubmit={mode === 'LOGIN' ? handleLogin : mode === 'REGISTER' ? handleRegister : handleForgotPasswordSubmit} className="space-y-5">
+                            <form id="auth-form" onSubmit={mode === 'LOGIN' ? handleLogin : mode === 'REGISTER' ? handleRegister : handleForgotPasswordSubmit} className="space-y-5">
 
                                 {mode === 'REGISTER' && (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
@@ -587,6 +615,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                                     {/* Google Button - Icon Only, Next to Login */}
                                     {mode === 'LOGIN' && (
                                         <button
+                                            id="google-login-btn"
                                             type="button"
                                             onClick={handleGoogleLogin}
                                             disabled={loading}

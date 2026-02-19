@@ -18,6 +18,10 @@ import ApplicantsModal from '../components/groups/ApplicantsModal';
 import NeoModal from '../components/NeoModal';
 import AdminDropoutInbox from '../components/groups/AdminDropoutInbox';
 import HostsManagementPanel from '../components/groups/HostsManagementPanel';
+import { useTutorial } from '../src/hooks/useTutorial';
+import TutorialInvitation from '../components/TutorialInvitation';
+import TutorialController from '../components/TutorialController';
+import { tours } from '../src/config/tours';
 
 
 
@@ -257,6 +261,19 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // --- NAVIGATION ---
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+
+    // --- TUTORIAL INTEGRATION ---
+    const {
+        isActive,
+        showInvitation,
+        startTutorial,
+        completeTutorial,
+        declineTemporary,
+        dismissTutorial
+    } = useTutorial('groups');
+
+    // --- HOST TOUR INTEGRATION ---
+
 
     // --- MAIN STATE ---
     const [view, setView] = useState<'public' | 'admin'>('public');
@@ -1162,6 +1179,23 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                 />
             </div>
 
+            {/* Tutorial Components */}
+            <TutorialInvitation
+                isOpen={showInvitation}
+                onStart={startTutorial}
+                onClose={declineTemporary}
+                onDismiss={dismissTutorial}
+                title="Descubre el Explorador de Grupos"
+            />
+            <TutorialController
+                steps={tours.groups}
+                run={isActive}
+                onComplete={completeTutorial}
+                onSkip={dismissTutorial}
+            />
+
+
+
             {view === 'public' ? (
                 <>
                     {/* HERO CAROUSEL - Grupos de Conexión */}
@@ -1181,7 +1215,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             {/* Top Row: Search + Clear Filters */}
                             <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
                                 {/* Search */}
-                                <div className="relative flex-1 max-w-md">
+                                <div id="groups-search-bar" className="relative flex-1 max-w-md">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black" />
                                     <input
                                         type="text"
@@ -1209,7 +1243,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             </div>
 
                             {/* Filter Dropdown Row */}
-                            <div className="flex gap-3 max-w-md">
+                            <div id="groups-filter-bar" className="flex gap-3 max-w-md">
                                 {/* Tag Filter Dropdown */}
                                 <div className="relative flex-1">
                                     <button
@@ -1301,9 +1335,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {filteredGroups.map((group) => (
+                                {filteredGroups.map((group, index) => (
                                     <GroupCard
                                         key={group.id}
+                                        id={index === 0 ? "first-group-card" : undefined}
                                         group={group}
                                         tags={tags}
                                         categories={categories}
@@ -1342,7 +1377,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                         )}
 
                         {/* CTA: Leader Postulation */}
-                        <div className="mt-16 md:mt-24 border-4 border-black rounded-xl p-8 md:p-12 lg:p-16 bg-black text-white">
+                        <div id="leader-postulation-card" className="mt-16 md:mt-24 border-4 border-black rounded-xl p-8 md:p-12 lg:p-16 bg-black text-white">
                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
                                 <div className="flex-1">
                                     <p className="text-xs font-bold italic text-[#118f46] mb-3">// postulaciones abiertas //</p>
@@ -1455,6 +1490,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                             <div className="hidden sm:flex gap-2.5 w-full sm:w-auto pb-3 sm:pb-0 px-1 -mx-1">
                                                 {/* CTA Principal: NUEVO */}
                                                 <button
+                                                    id="create-group-btn"
                                                     onClick={() => setIsCreateModalOpen(true)}
                                                     className="flex items-center gap-2 px-4 py-2.5 bg-black text-white border-2 border-black rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider hover:bg-zinc-800 active:scale-95 transition-all whitespace-nowrap min-h-[40px] shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
                                                 >
@@ -1492,6 +1528,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
                                         {/* Status Pills (Right side) - Always Visible */}
                                         <div
+                                            id="host-stats"
                                             className="flex items-center gap-1.5 sm:gap-2 w-full xl:w-auto overflow-x-auto xl:overflow-visible pb-1 xl:pb-0 justify-start xl:justify-end no-scrollbar"
                                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                                         >
@@ -1961,7 +1998,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
                                             <h4 className="font-bold text-lg uppercase">Hero Banner (Carrusel)</h4>
                                             <button
-                                                onClick={() => { setEditingSlide({ imageUrl: '', title: '', subtitle: '' }); setIsSlideModalOpen(true); }}
+                                                onClick={() => { setEditingSlide({ id: '', imageUrl: '', title: '', subtitle: '' }); setIsSlideModalOpen(true); }}
                                                 className="px-4 py-2 bg-black text-white text-xs font-bold uppercase hover:bg-slate-800 rounded-lg"
                                             >
                                                 + Agregar Banner
@@ -2290,7 +2327,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Género Objetivo</label>
                             <select
                                 value={editingGroup.targetGender || 'Mixto'}
-                                onChange={e => setEditingGroup({ ...editingGroup, targetGender: e.target.value })}
+                                onChange={e => setEditingGroup({ ...editingGroup, targetGender: e.target.value as 'Hombre' | 'Mujer' | 'Mixto' })}
                                 className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-black text-sm bg-white"
                             >
                                 <option value="Mixto">Mixto (Todos)</option>

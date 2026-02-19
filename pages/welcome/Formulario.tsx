@@ -20,8 +20,8 @@ const Formulario: React.FC = () => {
         experience: '',
         is_first_time: null as boolean | null,
         accepted_jesus: '',
-        referral_source: '',
-        wants_growth: '',
+        // referral_source: '', // REMOVED
+        // wants_growth: '',    // REMOVED
         interest_areas: [] as string[],
         prayer_request: ''
     });
@@ -88,8 +88,8 @@ const Formulario: React.FC = () => {
                 // New Fields
                 is_first_time: formData.is_first_time === null ? false : formData.is_first_time,
                 accepted_jesus: formData.accepted_jesus,
-                referral_source: formData.referral_source,
-                wants_growth: formData.wants_growth,
+                // referral_source: formData.referral_source, // REMOVED
+                // wants_growth: formData.wants_growth,       // REMOVED
                 interest_areas: formData.interest_areas,
                 prayer_request: formData.prayer_request
             };
@@ -229,41 +229,7 @@ const Formulario: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 3. ORIGEN & CONEXION */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="label">¿Cómo nos conociste?</label>
-                            <select
-                                className="input-field"
-                                required
-                                value={formData.referral_source}
-                                onChange={e => setFormData({ ...formData, referral_source: e.target.value })}
-                            >
-                                <option value="">- Seleccionar -</option>
-                                <option value="Amigo">Invitado por un amigo</option>
-                                <option value="Redes">Redes Sociales</option>
-                                <option value="Internet">Internet / Web</option>
-                                <option value="Pasé">Pasé por la puerta</option>
-                                <option value="Otro">Otro</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="label">¿Quiere hacer "Crecer"?</label>
-                            <select
-                                className="input-field bg-yellow-50"
-                                required
-                                value={formData.wants_growth}
-                                onChange={e => setFormData({ ...formData, wants_growth: e.target.value })}
-                            >
-                                <option value="">- Seleccionar -</option>
-                                <option value="Si">Sí, quiero crecer</option>
-                                <option value="No">No por ahora</option>
-                                <option value="Tal vez">Tal vez después</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* 4. EXPERIENCIA & ORACION */}
+                    {/* 3. EXPERIENCIA & ORACION */}
                     <div className="space-y-4">
                         <div>
                             <label className="label">Experiencia / Comentarios</label>

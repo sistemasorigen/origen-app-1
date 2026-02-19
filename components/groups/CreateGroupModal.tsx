@@ -7,6 +7,10 @@ import { generateImage } from '../../services/geminiService';
 import { Save, UserPlus, Users, Crown, Search, Check, ChevronDown, Calendar, ArrowRight, Wand2, Sparkles } from 'lucide-react';
 import ImageUpload from '../ImageUpload';
 import { useSpellingAI } from '../../hooks/useSpellingAI';
+import { useTutorial } from '../../src/hooks/useTutorial';
+import TutorialController from '../TutorialController';
+import TutorialInvitation from '../TutorialInvitation';
+import { tours } from '../../src/config/tours';
 
 interface CreateGroupModalProps {
     isOpen: boolean;
@@ -88,6 +92,16 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
     // AI Spelling Guard
     const { isChecking: isCheckingSpelling, isCorrecting, hasErrors: spellingErrors, correctionStatus, checkSpelling, fixText, resetState: resetSpelling } = useSpellingAI();
+
+    // Tutorial Hook
+    const {
+        isActive,
+        showInvitation,
+        startTutorial,
+        completeTutorial,
+        dismissTutorial,
+        declineTemporary
+    } = useTutorial('createGroup');
 
     // Debounced Spelling Check
     useEffect(() => {
@@ -445,12 +459,47 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         }
     };
 
+    const [isModalReady, setIsModalReady] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            const timer = setTimeout(() => setIsModalReady(true), 600);
+            return () => clearTimeout(timer);
+        } else {
+            setIsModalReady(false);
+        }
+    }, [isOpen]);
+
     return (
         <NeoModal
             isOpen={isOpen}
             onClose={onClose}
             title={isReopenRequest ? 'Solicitud de Re-Apertura' : (editingGroup ? 'Editar Grupo' : 'Nuevo Grupo')}
         >
+            {/* Portal the Invitation to body to ensure it sits on top of this modal */}
+            {showInvitation && createPortal(
+                <TutorialInvitation
+                    isOpen={showInvitation}
+                    onStart={startTutorial}
+                    onClose={declineTemporary}
+                    onDismiss={dismissTutorial}
+                    title="Configura tu Nuevo Grupo"
+                    disableScrollLock={true}
+                />,
+                document.body
+            )}
+
+            <TutorialController
+                steps={tours.createGroup}
+                run={isActive && isOpen && isModalReady}
+                onComplete={completeTutorial}
+                onSkip={dismissTutorial}
+                styles={{
+                    options: {
+                        zIndex: 10002, // Ensure it's above the modal (NeoModal usually has high z-index)
+                    }
+                }}
+            />
             <form onSubmit={handleSubmit} className="space-y-6">
 
                 {/* ADMINHOST SELECTOR */}
@@ -497,7 +546,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
                 {/* BASIC INFO */}
                 <div className="space-y-4">
-                    <div className="space-y-1">
+                    <div id="group-name-section" className="space-y-1">
                         <label className="text-xs font-black uppercase tracking-widest block">Nombre del Grupo</label>
                         <input
                             type="text"
@@ -510,7 +559,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
+                        <div id="group-category-section" className="space-y-1">
                             <label className="text-xs font-black uppercase tracking-widest block">Categoría</label>
                             <div className="relative">
                                 <select
@@ -525,7 +574,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
                             </div>
                         </div>
-                        <div className="space-y-1">
+                        <div id="group-location-section" className="space-y-1">
                             <label className="text-xs font-black uppercase tracking-widest block">Barrio</label>
                             <input type="text" name="location" value={form.location} onChange={handleChange} className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold" />
                         </div>
@@ -533,7 +582,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 </div>
 
                 {/* SCHEDULE */}
-                <div className="grid grid-cols-2 gap-4">
+                <div id="group-schedule-section" className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                         <label className="text-xs font-black uppercase tracking-widest block">Día</label>
                         <div className="relative">
@@ -551,7 +600,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
                 {/* SEASON / DATES SECTION */}
                 <div className="space-y-4">
-                    <div className="flex justify-between items-end">
+                    <div id="group-duration-toggle" className="flex justify-between items-end">
                         <label className="text-xs font-black uppercase tracking-widest block">Duración del Grupo</label>
 
                         {/* TOGGLE SWITCH: SEASON VS MANUAL */}
@@ -733,7 +782,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 </div>
 
                 {/* IMAGE SELECTION */}
-                <div className="space-y-4">
+                <div id="group-image-section" className="space-y-4">
                     <label className="text-xs font-black uppercase tracking-widest block">Imagen de Portada</label>
 
                     {/* TOGGLE SWITCH */}

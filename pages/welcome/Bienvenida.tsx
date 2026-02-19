@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../../services/supabaseClient';
 import { WelcomeVisitor, VisitorStage } from '../../types';
 import VisitorCard from './VisitorCard';
@@ -8,6 +9,10 @@ import { ToastProvider } from '../infopoint/context/ToastContext';
 import { Plus, GripHorizontal, RefreshCw } from 'lucide-react';
 
 import HorizontalMagnetMenu from './HorizontalMagnetMenu';
+import { useTutorial } from '../../src/hooks/useTutorial';
+import TutorialInvitation from '../../components/TutorialInvitation';
+import TutorialController from '../../components/TutorialController';
+import { tours } from '../../src/config/tours';
 
 const STAGES: VisitorStage[] = [
     'NEW',
@@ -50,6 +55,16 @@ const Bienvenida: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [activeStage, setActiveStage] = useState<VisitorStage>('NEW');
 
+    // --- TUTORIAL INTEGRATION ---
+    const {
+        isActive,
+        showInvitation,
+        startTutorial,
+        completeTutorial,
+        declineTemporary,
+        dismissTutorial
+    } = useTutorial('welcome');
+
     // Modals
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
     const [selectedVisitor, setSelectedVisitor] = useState<WelcomeVisitor | null>(null);
@@ -61,14 +76,28 @@ const Bienvenida: React.FC = () => {
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (data) setVisitors(data);
+        if (data) {
+            console.log('Fetched visitors:', data);
+            setVisitors(data);
+        }
         if (error) console.error('Error fetching visitors:', error);
         setIsLoading(false);
     };
 
+    const location = useLocation();
+
     useEffect(() => {
         fetchVisitors();
     }, []);
+
+    // Listen for URL changes to switch tabs
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const stageParam = params.get('stage');
+        if (stageParam && STAGES.includes(stageParam as VisitorStage)) {
+            setActiveStage(stageParam as VisitorStage);
+        }
+    }, [location.search]);
 
     const moveVisitor = async (id: string, newStage: VisitorStage) => {
         // Optimistic update
@@ -87,6 +116,19 @@ const Bienvenida: React.FC = () => {
 
     return (
         <ToastProvider>
+            <TutorialInvitation
+                isOpen={showInvitation}
+                onStart={startTutorial}
+                onClose={declineTemporary}
+                onDismiss={dismissTutorial}
+                title="Bienvenido a Recepcción"
+            />
+            <TutorialController
+                steps={tours.welcome}
+                run={isActive}
+                onComplete={completeTutorial}
+                onSkip={dismissTutorial}
+            />
             <div className="h-full flex flex-col space-y-4 animate-fadeIn pb-4">
                 {/* HEADER */}
                 <div className="flex justify-between items-center mb-2 px-1">
@@ -103,6 +145,7 @@ const Bienvenida: React.FC = () => {
                             <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
                         </button>
                         <button
+                            id="btn-new-visitor"
                             onClick={() => setIsNewModalOpen(true)}
                             className="flex items-center gap-2 h-10 px-4 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all"
                         >
@@ -114,7 +157,7 @@ const Bienvenida: React.FC = () => {
 
                 {/* CIRCULAR NAVIGATION */}
                 {/* HORIZONTAL MAGNET NAVIGATION */}
-                <div className="flex-none">
+                <div id="visitor-stages-menu" className="flex-none">
                     <HorizontalMagnetMenu
                         stages={STAGES}
                         activeStage={activeStage}
@@ -135,7 +178,7 @@ const Bienvenida: React.FC = () => {
                             </h3>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div id="visitors-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {visitors.filter(v => v.stage === activeStage).map(visitor => (
                                 <VisitorCard
                                     key={visitor.id}

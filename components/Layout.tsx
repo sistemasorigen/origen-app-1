@@ -167,6 +167,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                         <div className="flex-1 flex items-center gap-2 sm:gap-4">
                             {/* Unified Menu Trigger */}
                             <button
+                                id="hamburger-menu-btn"
                                 onClick={() => setIsMenuOpen(true)}
                                 className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-800 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all group"
                                 aria-label="Abrir menú"

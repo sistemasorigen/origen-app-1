@@ -15,6 +15,7 @@
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "2.39.0",
     "@types/matter-js": "^0.20.2",
+    "@types/react-joyride": "^2.0.2",
     "clsx": "^2.1.0",
     "framer-motion": "^12.26.2",
     "idb": "^8.0.0",
@@ -22,6 +23,7 @@
     "matter-js": "^0.20.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "react-joyride": "^2.9.3",
     "react-router-dom": "^7.10.1",
     "recharts": "^2.15.0",
     "tailwind-merge": "^2.2.1"

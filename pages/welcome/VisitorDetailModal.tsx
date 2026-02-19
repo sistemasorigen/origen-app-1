@@ -54,9 +54,9 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
                     phone: formData.phone,
                     is_first_time: formData.is_first_time,
                     accepted_jesus: formData.accepted_jesus,
-                    referral_source: formData.referral_source,
+                    // referral_source: formData.referral_source, // REMOVED
                     experience_rating: formData.experience_rating,
-                    wants_growth: formData.wants_growth,
+                    // wants_growth: formData.wants_growth,       // REMOVED
                     interest_areas: formData.interest_areas,
                     prayer_request: formData.prayer_request,
                     email: formData.email,
@@ -147,17 +147,6 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
                         <DisplayField
                             label="Decisión de Fe"
                             value={formData.accepted_jesus}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <DisplayField
-                            label="¿Cómo nos conociste?"
-                            value={formData.referral_source}
-                        />
-                        <DisplayField
-                            label="¿Quiere hacer 'Crecer'?"
-                            value={formData.wants_growth}
                         />
                     </div>
 

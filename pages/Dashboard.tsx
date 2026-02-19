@@ -23,9 +23,17 @@ import {
     ClipboardList,
     BarChart3,
     CalendarDays as CalendarCoord,
-    ChevronRight
+    ChevronRight,
+    Book
 } from 'lucide-react';
 import HeroCarousel, { HeroSlideData } from '../components/HeroCarousel';
+
+// --- TUTORIAL INTEGRATION ---
+import { useTutorial } from '../src/hooks/useTutorial';
+import TutorialController from '../components/TutorialController';
+import TutorialInvitation from '../components/TutorialInvitation';
+import TourBeaconOverlay from '../components/TourBeaconOverlay';
+import { tours } from '../src/config/tours';
 
 // Matter.js types (only used when physics is enabled)
 type MatterEngine = any;
@@ -66,6 +74,7 @@ const getModuleIcon = (id: string, defaultIcon: string, isConstruction?: boolean
         case 'welcome-system': return <HeartHandshake className={iconClass} />;
         case 'alabanza': return <Music className={iconClass} />;
         case 'pastores': return <AlertTriangle className={iconClass} />;
+        case 'tutorials': return <Book className={iconClass} />;
         case 'admin': return <Settings className={iconClass} />;
         default: return <span className="text-3xl">{defaultIcon}</span>;
     }
@@ -99,6 +108,16 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
     const [config, setConfig] = useState<AppConfig>(db.getAppConfig());
     const [footerLinks, setFooterLinks] = useState<FooterLinks>({ instagram: '', facebook: '', youtube: '', spotify: '' });
     const [isLoaded, setIsLoaded] = useState(false);
+
+    // --- TUTORIAL INTEGRATION ---
+    const {
+        isActive,
+        showInvitation,
+        startTutorial,
+        completeTutorial,
+        declineTemporary,
+        dismissTutorial
+    } = useTutorial('dashboard');
 
     // ═══════════════════════════════════════════════════════════════════════════
     // PHYSICS ENGINE - SAFETY-FIRST, LAZY-LOAD ARCHITECTURE
@@ -496,9 +515,23 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                     onLogin={handleModalLogin}
                 />
 
+                {/* Tutorial Components */}
+                <TutorialInvitation
+                    isOpen={showInvitation}
+                    onStart={startTutorial}
+                    onClose={declineTemporary}
+                    onDismiss={dismissTutorial}
+                    title="Explora tu Panel Principal"
+                />
+                <TutorialController
+                    steps={tours.dashboard}
+                    run={isActive}
+                    onComplete={completeTutorial}
+                    onSkip={dismissTutorial}
+                />
+
                 {/* === HERO SECTION - DYNAMIC CAROUSEL === */}
-                {/* === HERO SECTION - DYNAMIC CAROUSEL === */}
-                <div className={`${isLoaded ? 'animate-fadeIn' : 'opacity-0'} relative border-y-4 border-black mb-12 md:mb-16`}>
+                <div id="dashboard-hero" className={`${isLoaded ? 'animate-fadeIn' : 'opacity-0'} relative border-y-4 border-black mb-12 md:mb-16`}>
                     <HeroCarousel
                         slides={(config.banner?.slides && config.banner.slides.length > 0)
                             ? config.banner.slides.map(s => ({

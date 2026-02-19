@@ -9,9 +9,10 @@ interface NeoModalProps {
     children: ReactNode;
     persistent?: boolean; // If true, modal cannot be closed by user
     maxWidth?: string; // e.g. 'max-w-2xl', 'max-w-4xl'
+    disableScrollLock?: boolean;
 }
 
-const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, persistent = false, maxWidth = 'max-w-2xl' }) => {
+const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, persistent = false, maxWidth = 'max-w-2xl', disableScrollLock = false }) => {
     // Media Query for Responsive Animations
     const [isMobile, setIsMobile] = useState(false);
 
@@ -24,6 +25,8 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
 
     // Body Scroll Lock & Focus Mode
     useEffect(() => {
+        if (disableScrollLock) return;
+
         if (isOpen) {
             document.body.style.overflow = 'hidden';
             document.body.setAttribute('data-modal-active', 'true');

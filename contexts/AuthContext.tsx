@@ -114,7 +114,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: UserRole.VIEWER, // Default safe role until profile loads
             roles: [UserRole.VIEWER],
             isActive: true, // Optimistic
-            phone: phone
+            phone: phone,
+            tutorial_progress: (sessionUser as any).tutorial_progress || metadata.tutorial_progress || {}
         };
     };
 
@@ -147,6 +148,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         .select('*')
                         .eq('id', sessionUser.id)
                         .maybeSingle();
+
+                    if (!error && data) {
+                        // console.log('[Auth] Profile fetched:', data);
+                    }
 
                     if (data) return { data, error: null };
 
@@ -187,7 +192,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         age: profileData.age,
                         gender: profileData.gender,
                         birthDate: profileData.birth_date,
-                        assignedCategory: profileData.assigned_category || undefined
+                        assignedCategory: profileData.assigned_category || undefined,
+                        tutorial_progress: profileData.tutorial_progress || {}
                     };
 
                     // Update state and cache

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../../../services/supabaseClient';
 import { WelcomeVisitor, VisitorStage } from '../../../types';
 import VisitorCard from './VisitorCard';
 import NewVisitorModal from './NewVisitorModal';
 import VisitorDetailModal from './VisitorDetailModal';
-import { Plus, GripHorizontal, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, GripHorizontal } from 'lucide-react';
+import HorizontalMagnetMenu from './HorizontalMagnetMenu';
 
 const STAGES: VisitorStage[] = [
     'NEW',
@@ -45,6 +47,7 @@ const STAGE_COLORS: Record<VisitorStage, string> = {
 const Bienvenida: React.FC = () => {
     const [visitors, setVisitors] = useState<WelcomeVisitor[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeStage, setActiveStage] = useState<VisitorStage>('NEW');
 
     // Modals
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -62,12 +65,23 @@ const Bienvenida: React.FC = () => {
         setIsLoading(false);
     };
 
+    const location = useLocation();
+
     useEffect(() => {
         fetchVisitors();
     }, []);
 
+    // Listen for URL changes to switch tabs
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const stageParam = params.get('stage');
+        if (stageParam && STAGES.includes(stageParam as VisitorStage)) {
+            setActiveStage(stageParam as VisitorStage);
+        }
+    }, [location.search, visitors]); // Add visitors dep to ensure refs are ready if they depend on render? No, refs attach on mount. but maybe visitors load changes layout.
+
     const moveVisitor = async (id: string, newStage: VisitorStage) => {
-        // Optimistic update
+        // ... existing logic ...
         setVisitors(prev => prev.map(v => v.id === id ? { ...v, stage: newStage } : v));
 
         const { error } = await supabase
@@ -107,37 +121,44 @@ const Bienvenida: React.FC = () => {
                 </div>
             </div>
 
-            {/* KANBAN BOARD */}
-            <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
-                <div className="flex gap-4 h-full min-w-[1200px] px-1">
-                    {STAGES.map(stage => (
-                        <div key={stage} className="flex-1 min-w-[280px] flex flex-col h-full">
-                            {/* COLUMN HEADER */}
-                            <div className={`p-3 border-2 border-black border-b-0 ${STAGE_COLORS[stage]} flex justify-between items-center`}>
-                                <span className="font-black uppercase text-xs tracking-widest">{STAGE_LABELS[stage]}</span>
-                                <span className="font-bold text-xs bg-black text-white px-2 py-0.5 rounded-full">
-                                    {visitors.filter(v => v.stage === stage).length}
-                                </span>
-                            </div>
+            {/* HORIZONTAL MAGNET NAVIGATION */}
+            <div className="flex-none px-4 md:px-0">
+                <HorizontalMagnetMenu
+                    stages={STAGES}
+                    activeStage={activeStage}
+                    stageLabels={STAGE_LABELS}
+                    onSelect={setActiveStage}
+                />
+            </div>
 
-                            {/* COLUMN BODY */}
-                            <div className="flex-1 border-2 border-black bg-slate-50/50 p-2 overflow-y-auto custom-scrollbar">
-                                {visitors.filter(v => v.stage === stage).map(visitor => (
-                                    <VisitorCard
-                                        key={visitor.id}
-                                        visitor={visitor}
-                                        onClick={() => setSelectedVisitor(visitor)}
-                                        onMove={moveVisitor}
-                                    />
-                                ))}
-                                {visitors.filter(v => v.stage === stage).length === 0 && (
-                                    <div className="h-24 flex items-center justify-center opacity-20">
-                                        <GripHorizontal size={24} />
-                                    </div>
-                                )}
+            {/* ACTIVE STAGE VISITORS GRID */}
+            <div className="flex-1 bg-slate-50 border-t-4 border-black p-4 overflow-y-auto pb-48">
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-2xl font-black uppercase tracking-tight">
+                            {STAGE_LABELS[activeStage]}
+                            <span className="ml-3 text-lg bg-black text-white px-3 py-1 rounded-full">
+                                {visitors.filter(v => v.stage === activeStage).length}
+                            </span>
+                        </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {visitors.filter(v => v.stage === activeStage).map(visitor => (
+                            <VisitorCard
+                                key={visitor.id}
+                                visitor={visitor}
+                                onClick={() => setSelectedVisitor(visitor)}
+                                onMove={moveVisitor}
+                            />
+                        ))}
+                        {visitors.filter(v => v.stage === activeStage).length === 0 && (
+                            <div className="col-span-full h-64 flex flex-col items-center justify-center opacity-30 border-4 border-dashed border-black rounded-xl">
+                                <GripHorizontal size={48} className="mb-4" />
+                                <span className="font-black uppercase text-xl">Sin Ingresantes en esta etapa</span>
                             </div>
-                        </div>
-                    ))}
+                        )}
+                    </div>
                 </div>
             </div>
 

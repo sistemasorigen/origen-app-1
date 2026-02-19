@@ -16,6 +16,7 @@ import UpdatePassword from './pages/UpdatePassword';
 import VerifyEmail from './pages/VerifyEmail';
 import Bienvenida from './pages/welcome/Bienvenida';
 import Formulario from './pages/welcome/Formulario';
+import TutorialsPage from './pages/TutorialsPage';
 import Coordinators from './pages/coordinators/Coordinators';
 import SystemLoginModal from './components/SystemLoginModal';
 import CompleteProfileModal from './components/CompleteProfileModal';
@@ -264,6 +265,8 @@ const AppContent: React.FC = () => {
                                     ? <Coordinators currentUser={user} />
                                     : <Navigate to="/" />
                             } />
+
+                            <Route path="/tutorials" element={<TutorialsPage />} />
 
                             <Route path="*" element={<Navigate to="/" />} />
                         </Routes>

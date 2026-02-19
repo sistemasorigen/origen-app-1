@@ -16,7 +16,7 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) => {
     const navigate = useNavigate();
     const { products, baptisms, presentations, events, isLoading } = useStore();
-    const { currentUser: authUser } = useAuth();
+    const { user: authUser } = useAuth();
 
     // Determine which user object to use (prop takes precedence)
     const activeUser = currentUser || authUser;
@@ -66,7 +66,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
         return (
             <div className="space-y-8 animate-fadeIn">
                 <SkeletonLoader width="200px" height="32px" />
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div id="info-stats-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {[1, 2, 3, 4, 5].map((i) => (
                         <div key={i} className="h-32 border-2 border-black bg-neutral-100 animate-pulse shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" />
                     ))}
@@ -87,6 +87,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                 </h2>
                 {canViewReports && (
                     <button
+                        id="reports-btn"
                         onClick={() => navigate('/pastores')}
                         className="hidden md:flex items-center gap-2 px-4 py-2 bg-white text-black border-2 border-black font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none transition-all"
                     >
@@ -97,7 +98,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
             </div>
 
             {/* Top Cards Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+            <div id="stats-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
                 <StatCard
                     title="Stock Remeras"
                     value={stockRemeras}

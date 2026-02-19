@@ -90,10 +90,11 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                     </button>
                 </div>
 
-                <nav className="flex-1 overflow-y-auto p-0 space-y-0">
+                <nav id="neo-sidebar-menu" className="flex-1 overflow-y-auto p-0 space-y-0">
                     {visibleItems.map((item) => (
                         <button
                             key={item.id}
+                            id={`sidebar-item-${item.id}`}
                             onClick={() => {
                                 if (item.id === 'REPORTS') {
                                     navigate('/pastores');

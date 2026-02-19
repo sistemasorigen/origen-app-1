@@ -159,6 +159,26 @@ const MODULES: SystemModule[] = [
         status: 'active'
     },
     {
+        id: 'tutorials',
+        title: 'Tutoriales',
+        subtitle: 'Capacitación',
+        description: 'Aprende a usar todas las herramientas de la plataforma paso a paso.',
+        icon: 'book',
+        route: '/tutorials',
+        allowedRoles: [
+            UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ANFITRION, UserRole.VIEWER, UserRole.USUARIO,
+            UserRole.VOLUNTARIO, UserRole.VOLUNTARIO_GRUPOS, UserRole.ENCARGADO_GRUPOS, UserRole.ENCARGADO_PUNTO,
+            UserRole.COORDINATOR, UserRole.VOLUNTARIO_INFO, UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA,
+            UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ADMIN_PUNTO
+        ],
+        publicAccess: false,
+        useImage: false,
+        gradientFrom: 'cyan-500',
+        gradientTo: 'blue-600',
+        iconColor: 'text-cyan-600',
+        status: 'active'
+    },
+    {
         id: 'admin',
         title: 'Sistemas',
         subtitle: 'Configuración Global',
