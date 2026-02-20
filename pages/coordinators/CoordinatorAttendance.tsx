@@ -41,8 +41,8 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
             // Fallback for leader name if group not found in active list (maybe archived or logic gap)
             const leaderName = group ? `${group.leaderName} ${group.leaderSurname}` : 'Líder no asignado';
 
-            const total = record.allMembers.length || 1; // Prevent div by zero
-            const present = record.presentMembers.length;
+            const total = (record.allMembers || []).length || 1; // Prevent div by zero
+            const present = (record.presentMembers || []).length;
             const percentage = Math.round((present / total) * 100);
 
             let status = 'Moderate';
@@ -65,10 +65,10 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                 rawDate: record.latestDate,
                 percentage,
                 attendedCount: present,
-                totalMembers: record.allMembers.length, // Use actual total
+                totalMembers: (record.allMembers || []).length, // Use actual total
                 status, // 'High', 'Low', 'Moderate', 'Perfect'
-                attendees: record.presentMembers.map((m: any) => m.name),
-                absent: record.absentMembers.map((m: any) => m.name)
+                attendees: (record.presentMembers || []).map((m: any) => m.name),
+                absent: (record.absentMembers || []).map((m: any) => m.name)
             };
         });
     }, [attendanceData, groups]);
@@ -76,8 +76,8 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
     // Filter logic
     const filteredReports = useMemo(() => {
         return formattedReports.filter(report => {
-            const matchesSearch = report.groupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                report.leader.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSearch = (report.groupName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (report.leader || '').toLowerCase().includes(searchTerm.toLowerCase());
 
             let matchesStatus = true;
             if (statusFilter === 'Alta Asistencia') {
@@ -121,46 +121,34 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#f6f8f7] dark:bg-[#112119] overflow-y-auto font-sans">
-            <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <div className="flex flex-col h-full bg-[#fdfdfd] overflow-y-auto font-sans">
+            <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8 w-full">
                 {/* Page Title Section */}
-                <div className="mb-8">
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reportes de Asistencia Recibidos</h1>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Revisa y gestiona la asistencia de los grupos de tu comunidad.</p>
+                <div className="mb-10">
+                    <h1 className="text-4xl md:text-5xl font-black text-black uppercase tracking-tighter leading-none mb-2">Reportes de Asistencia</h1>
+                    <p className="text-sm md:text-base font-bold text-gray-500 uppercase tracking-wide">Gestiona y analiza el compromiso de tu comunidad.</p>
                 </div>
 
                 {/* Filters & Actions Toolbar */}
-                <div className="bg-white dark:bg-[#1a2e24] rounded-xl shadow-sm p-4 mb-8 border border-slate-200 dark:border-slate-700/50 flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
+                <div className="bg-white border-2 border-black p-5 mb-10 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col lg:flex-row gap-5 justify-between items-start lg:items-center">
                     <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-                        {/* Date Picker (Visual only for now as API fetches all latest) */}
-                        <div className="relative group w-full sm:w-auto">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <CalendarIcon className="text-slate-400 w-4 h-4" />
-                            </div>
-                            <input
-                                className="block w-full pl-10 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg leading-5 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#17cf73] focus:border-[#17cf73] sm:text-sm transition duration-150 ease-in-out cursor-not-allowed opacity-60"
-                                placeholder="Última reunión"
-                                disabled
-                                type="text"
-                            />
-                        </div>
                         {/* Group Selector / Search */}
-                        <div className="relative w-full sm:w-64">
+                        <div className="relative w-full sm:w-72">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="text-slate-400 w-4 h-4" />
+                                <Search className="text-black w-4 h-4" strokeWidth={2.5} />
                             </div>
                             <input
-                                className="block w-full pl-10 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg leading-5 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#17cf73] focus:border-[#17cf73] sm:text-sm transition duration-150 ease-in-out"
-                                placeholder="Buscar grupo o líder..."
+                                className="block w-full pl-10 pr-3 py-2.5 border-2 border-black bg-white text-black placeholder-gray-400 focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm font-bold transition-all"
+                                placeholder="BUSCAR GRUPO O LÍDER..."
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         {/* Status Filter */}
-                        <div className="relative w-full sm:w-40">
+                        <div className="relative w-full sm:w-48">
                             <select
-                                className="block w-full pl-3 pr-10 py-2 text-base border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-[#17cf73] focus:border-[#17cf73] sm:text-sm rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                                className="block w-full pl-3 pr-10 py-2.5 text-sm font-bold border-2 border-black focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white text-black appearance-none transition-all uppercase tracking-wide"
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
                             >
@@ -168,14 +156,29 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                                 <option>Alta Asistencia</option>
                                 <option>Baja Asistencia</option>
                             </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-black">
+                                <ChevronDown className="h-4 w-4" strokeWidth={2.5} />
+                            </div>
+                        </div>
+                        {/* Date Picker (Visual only) */}
+                        <div className="relative group w-full sm:w-auto hidden xl:block">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <CalendarIcon className="text-gray-400 w-4 h-4" />
+                            </div>
+                            <input
+                                className="block w-full pl-10 pr-3 py-2.5 border-2 border-gray-200 bg-gray-50 text-gray-400 placeholder-gray-300 focus:outline-none text-sm font-bold cursor-not-allowed uppercase tracking-wide"
+                                placeholder="FECHA RECIENTE"
+                                disabled
+                                type="text"
+                            />
                         </div>
                     </div>
                     <div className="flex gap-3 w-full lg:w-auto">
                         <button
                             onClick={handleExport}
-                            className="inline-flex items-center justify-center px-4 py-2 border border-slate-200 dark:border-slate-700 shadow-sm text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none transition-colors w-full lg:w-auto"
+                            className="inline-flex items-center justify-center px-6 py-2.5 border-2 border-black text-xs font-black uppercase tracking-widest text-black bg-white hover:bg-gray-50 active:translate-y-[2px] active:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all w-full lg:w-auto gap-2"
                         >
-                            <Download className="w-4 h-4 mr-2" />
+                            <Download className="w-4 h-4" strokeWidth={2.5} />
                             Exportar CSV
                         </button>
                     </div>
@@ -183,108 +186,113 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
 
                 {/* Reports Grid */}
                 {filteredReports.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-[#1a2e24] rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
-                        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                            <Search className="text-slate-400 w-8 h-8" />
+                    <div className="flex flex-col items-center justify-center py-20 bg-white border-2 border-dashed border-gray-300 rounded-xl">
+                        <div className="w-20 h-20 bg-gray-100 border-2 border-black rounded-full flex items-center justify-center mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                            <Search className="text-gray-400 w-8 h-8" />
                         </div>
-                        <h3 className="text-lg font-medium text-slate-900 dark:text-white">No se encontraron reportes</h3>
-                        <p className="text-slate-500 dark:text-slate-400 mt-1 max-w-sm text-center">
+                        <h3 className="text-xl font-black text-black uppercase tracking-tight">No se encontraron reportes</h3>
+                        <p className="text-gray-500 font-bold mt-2 max-w-sm text-center">
                             {searchTerm || statusFilter !== 'Todos los estados'
                                 ? 'Intenta ajustar los filtros de búsqueda.'
-                                : 'Aún no hay reportes de asistencia disponibles para tus grupos.'}
+                                : 'Aún no hay reportes de asistencia disponibles.'}
                         </p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredReports.map(report => (
-                            <div key={report.id} className="bg-white dark:bg-[#1a2e24] rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col relative">
+                            <div key={report.id} className="bg-white border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all overflow-hidden flex flex-col relative group">
                                 {/* Decorative Star for Perfect Attendance */}
                                 {report.status === 'Perfect' && (
-                                    <div className="absolute top-0 right-0 -mt-1 -mr-1 w-16 h-16 overflow-hidden z-10">
-                                        <div className="absolute top-0 right-0 w-8 h-8 bg-[#17cf73]/20 rounded-bl-xl backdrop-blur-sm flex items-center justify-center">
-                                            <Star className="text-[#17cf73] w-3 h-3 fill-current" />
+                                    <div className="absolute top-0 right-0 p-2 z-10">
+                                        <div className="bg-emerald-400 border-2 border-black p-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                            <Star className="text-black w-4 h-4 fill-black" strokeWidth={2.5} />
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="p-5 flex-1">
-                                    <div className="flex justify-between items-start mb-4">
+                                <div className="p-6 flex-1">
+                                    <div className="flex justify-between items-start mb-6">
                                         <div>
-                                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white truncate max-w-[180px]" title={report.groupName}>{report.groupName}</h3>
-                                            <div className="flex items-center text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                                <User className="w-3 h-3 mr-1 text-[#17cf73]" />
+                                            <h3 className="text-xl font-black text-black uppercase tracking-tight truncate max-w-[200px] leading-none mb-1" title={report.groupName}>{report.groupName}</h3>
+                                            <div className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-wide">
+                                                <User className="w-3.5 h-3.5 mr-1.5 text-black" strokeWidth={2.5} />
                                                 <span className="truncate max-w-[150px]">{report.leader}</span>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col items-end pl-2">
-                                            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">Fecha</span>
-                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{report.date}</span>
-                                        </div>
                                     </div>
 
-                                    <div className="mb-4">
-                                        <div className="flex justify-between items-end mb-1">
-                                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Participación</span>
-                                            <span className={`text-sm font-bold ${report.percentage >= 80 ? 'text-[#17cf73]' :
-                                                report.percentage >= 50 ? 'text-yellow-600 dark:text-yellow-500' : 'text-rose-600 dark:text-rose-500'
+                                    <div className="mb-6 p-4 bg-gray-50 border-2 border-black relative">
+                                        <div className="flex justify-between items-end mb-2">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Participación</span>
+                                            <span className={`text-2xl font-black ${report.percentage >= 80 ? 'text-emerald-600' :
+                                                report.percentage >= 50 ? 'text-amber-600' : 'text-rose-600'
                                                 }`}>
                                                 {report.percentage}%
                                             </span>
                                         </div>
-                                        <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
+                                        <div className="w-full bg-white border-2 border-black h-3 p-0.5">
                                             <div
-                                                className={`h-2 rounded-full ${report.percentage >= 80 ? 'bg-[#17cf73]' :
-                                                    report.percentage >= 50 ? 'bg-yellow-400' : 'bg-rose-400'
+                                                className={`h-full ${report.percentage >= 80 ? 'bg-emerald-400' :
+                                                    report.percentage >= 50 ? 'bg-amber-400' : 'bg-rose-400'
                                                     }`}
                                                 style={{ width: `${report.percentage}%` }}
                                             ></div>
                                         </div>
+                                        <div className="absolute top-0 right-0 -mt-3 -mr-2 bg-black text-white text-[10px] font-bold px-2 py-0.5 border-2 border-white shadow-sm rotate-3">
+                                            {report.date}
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between mt-2">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${report.percentage >= 80 ? 'bg-[#17cf73]/20 text-[#14b061] border-[#17cf73]/20' :
-                                            report.percentage >= 50 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200'
+                                    <div className="flex items-center justify-between mt-auto">
+                                        <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] ${report.percentage >= 80 ? 'bg-emerald-300 text-black' :
+                                            report.percentage >= 50 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
                                             }`}>
                                             {report.attendedCount}/{report.totalMembers} Asistieron
                                         </span>
                                         <button
-                                            className="text-sm text-slate-500 hover:text-[#17cf73] font-medium flex items-center transition-colors group"
+                                            className="text-xs font-black uppercase tracking-wider text-black hover:text-emerald-600 flex items-center transition-colors group-hover:underline decoration-2 underline-offset-2"
                                             onClick={() => toggleDetails(report.id)}
                                         >
                                             Ver detalles
-                                            <ChevronDown className={`w-4 h-4 ml-1 group-hover:translate-y-0.5 transition-transform ${expandedReportId === report.id ? 'rotate-180' : ''}`} />
+                                            <ChevronDown className={`w-4 h-4 ml-1 transition-transform border-2 border-black bg-white ${expandedReportId === report.id ? 'rotate-180' : ''}`} strokeWidth={2.5} />
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Expandable Details Section */}
                                 {expandedReportId === report.id && (
-                                    <div className="bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700/50 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                    <div className="bg-gray-50 border-t-2 border-black p-5 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                                             <div>
-                                                <p className="text-xs font-semibold text-[#17cf73] uppercase mb-2">Asistieron ({report.attendees.length})</p>
-                                                <ul className="space-y-1 text-slate-600 dark:text-slate-400 max-h-32 overflow-y-auto custom-scrollbar pr-2">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-2 h-2 bg-emerald-500 border border-black transform rotate-45"></div>
+                                                    <p className="text-xs font-black text-black uppercase tracking-widest">Asistieron ({report.attendees.length})</p>
+                                                </div>
+                                                <ul className="space-y-1 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
                                                     {report.attendees.length > 0 ? (
                                                         report.attendees.map((name, i) => (
-                                                            <li key={i} className="flex items-center">
-                                                                <CheckCircle className="w-3 h-3 text-[#17cf73] mr-1.5" />
+                                                            <li key={i} className="flex items-center text-xs font-bold text-gray-600 hover:text-black">
+                                                                <CheckCircle className="w-3 h-3 text-emerald-500 mr-2 shrink-0" strokeWidth={2.5} />
                                                                 {name}
                                                             </li>
                                                         ))
-                                                    ) : <li className="text-xs text-slate-400 italic">Sin datos</li>}
+                                                    ) : <li className="text-xs text-gray-400 italic font-medium">Sin datos</li>}
                                                 </ul>
                                             </div>
                                             <div>
-                                                <p className="text-xs font-semibold text-rose-500 uppercase mb-2">Faltaron ({report.absent.length})</p>
-                                                <ul className="space-y-1 text-slate-600 dark:text-slate-400 max-h-32 overflow-y-auto custom-scrollbar pr-2">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-2 h-2 bg-rose-500 border border-black transform rotate-45"></div>
+                                                    <p className="text-xs font-black text-black uppercase tracking-widest">Faltaron ({report.absent.length})</p>
+                                                </div>
+                                                <ul className="space-y-1 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
                                                     {report.absent.length > 0 ? (
                                                         report.absent.map((name, i) => (
-                                                            <li key={i} className="flex items-center">
-                                                                <XCircle className="w-3 h-3 text-rose-400 mr-1.5" />
+                                                            <li key={i} className="flex items-center text-xs font-bold text-gray-600 hover:text-black">
+                                                                <XCircle className="w-3 h-3 text-rose-500 mr-2 shrink-0" strokeWidth={2.5} />
                                                                 {name}
                                                             </li>
                                                         ))
-                                                    ) : <li className="text-xs text-slate-400 italic">Ninguna falta</li>}
+                                                    ) : <li className="text-xs text-gray-400 italic font-medium">Ninguna falta</li>}
                                                 </ul>
                                             </div>
                                         </div>

@@ -9,7 +9,8 @@ import {
     MapPin,
     User,
     Calendar as CalendarIcon,
-    Video
+    Video,
+    ArrowRight
 } from 'lucide-react';
 import { Group } from '../../types';
 
@@ -24,31 +25,13 @@ const MONTHS_ES = [
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-// Custom Color Constants (from User's Script)
-// Custom Color Constants (from User's Script)
-const COLORS = {
-    primary: '#86efac',
-    primaryHover: '#4ade80',
-    backgroundLight: '#fdfdfd',
-    borderSilver: '#f1f5f9',
-    softMint: '#d1fae5',
-    softMintText: '#065f46',
-    softLavender: '#ede9fe',
-    softLavenderText: '#5b21b6',
-    softSky: '#e0f2fe',
-    softSkyText: '#075985',
-    softRose: '#ffe4e6',
-    softRoseText: '#9f1239',
-    softOrange: '#ffedd5',
-    softOrangeText: '#9a3412',
-};
-
+// Neo-Brutalism Palette
 const PALETTE = [
-    { bg: COLORS.softSky, text: COLORS.softSkyText },
-    { bg: COLORS.softLavender, text: COLORS.softLavenderText },
-    { bg: COLORS.softOrange, text: COLORS.softOrangeText },
-    { bg: COLORS.softMint, text: COLORS.softMintText },
-    { bg: COLORS.softRose, text: COLORS.softRoseText },
+    { bg: '#6ee7b7', text: '#000000', border: '#000000' }, // Emerald
+    { bg: '#fcd34d', text: '#000000', border: '#000000' }, // Amber
+    { bg: '#f9a8d4', text: '#000000', border: '#000000' }, // Pink
+    { bg: '#93c5fd', text: '#000000', border: '#000000' }, // Blue
+    { bg: '#c4b5fd', text: '#000000', border: '#000000' }, // Violet
 ];
 
 const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => {
@@ -65,6 +48,7 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
 
     // Helper to map string day to index (0=Sun, 1=Mon, etc.)
     const getDayIndex = (dayName: string) => {
+        if (!dayName) return -1;
         const lower = dayName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Remove accents
         if (lower.includes('dom')) return 0;
         if (lower.includes('lun')) return 1;
@@ -114,7 +98,7 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
 
                 const groupDayIndex = getDayIndex(group.meetingDay);
                 if (groupDayIndex === dayOfWeek) {
-                    const colorIndex = (group.name.length + index) % PALETTE.length;
+                    const colorIndex = ((group.name || '').length + index) % PALETTE.length;
                     monthEvents.push({
                         id: `${group.id}-${d}`,
                         date: date,
@@ -122,10 +106,11 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
                         title: group.name,
                         time: group.meetingTime,
                         location: group.location,
-                        leader: `${group.leaderName} ${group.leaderSurname}`,
+                        leader: `${group.leaderName || ''} ${group.leaderSurname || ''}`.trim() || 'Sin asignar',
                         category: group.categoryName || 'General',
                         colorBg: PALETTE[colorIndex].bg,
                         colorText: PALETTE[colorIndex].text,
+                        colorBorder: PALETTE[colorIndex].border,
                         groupData: group
                     });
                 }
@@ -163,8 +148,8 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
         for (let i = 0; i < firstDayOfMonth; i++) {
             const dayNum = prevMonthDays - firstDayOfMonth + 1 + i;
             cells.push(
-                <div key={`prev-${i}`} className="min-h-[80px] md:min-h-[120px] p-1 md:p-2 border-b border-r border-[#f1f5f9] bg-slate-50/30">
-                    <span className="text-slate-300 font-medium text-xs md:text-base">{dayNum}</span>
+                <div key={`prev-${i}`} className="min-h-[80px] md:min-h-[120px] p-2 border-b-2 border-r-2 border-black bg-gray-100 opacity-50">
+                    <span className="text-gray-400 font-bold text-lg">{dayNum}</span>
                 </div>
             );
         }
@@ -186,33 +171,42 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
                 <div
                     key={`curr-${d}`}
                     onClick={() => setSelectedDate(new Date(year, month, d))}
-                    className={`min-h-[80px] md:min-h-[120px] p-1 md:p-2 border-b border-r border-[#f1f5f9] transition-colors cursor-pointer group hover:bg-slate-50 relative ${isSelected ? 'bg-green-50/50' : ''}`}
+                    className={`min-h-[80px] md:min-h-[120px] p-2 border-b-2 border-r-2 border-black transition-all cursor-pointer group relative hover:bg-yellow-50 ${isSelected ? 'bg-black text-white' : 'bg-white'
+                        }`}
                 >
                     <div className="flex justify-between items-start">
-                        <span className={`w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full font-medium text-xs md:text-sm transition-all ${isToday
-                            ? 'bg-[#86efac] text-white font-bold shadow-sm'
+                        <span className={`w-8 h-8 flex items-center justify-center font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${isToday
+                            ? 'bg-emerald-400 text-black'
                             : isSelected
-                                ? 'text-[#065f46] font-bold bg-green-100'
-                                : 'text-slate-600 group-hover:text-[#4ade80]'
+                                ? 'bg-white text-black'
+                                : 'bg-white text-black group-hover:bg-black group-hover:text-white'
                             }`}>
                             {d}
                         </span>
                     </div>
 
-                    <div className="mt-1 flex flex-col gap-0.5 md:gap-1">
+                    <div className="mt-1 md:mt-2 flex flex-col gap-0.5 md:gap-1">
                         {dayEvents.slice(0, 3).map((ev: any, idx: number) => (
                             <div
                                 key={idx}
-                                className="text-[9px] md:text-[10px] px-1 md:px-1.5 py-0.5 md:py-1 rounded truncate font-medium"
-                                style={{ backgroundColor: ev.colorBg, color: ev.colorText }}
+                                className={`text-[8px] md:text-[10px] px-1 py-0.5 border border-black font-bold truncate ${isSelected ? 'bg-white text-black' : ''}`}
+                                style={{
+                                    backgroundColor: isSelected ? '#ffffff' : ev.colorBg,
+                                    color: isSelected ? '#000000' : ev.colorText
+                                }}
                             >
-                                <span className="hidden md:inline">{ev.time} - </span>
+                                <span className="hidden lg:inline">{ev.time} - </span>
                                 {ev.title}
                             </div>
                         ))}
                         {dayEvents.length > 3 && (
-                            <div className="text-[9px] md:text-[10px] text-slate-400 pl-1">
+                            <div className={`hidden md:block text-[9px] font-bold pl-1 ${isSelected ? 'text-gray-400' : 'text-gray-500'}`}>
                                 +{dayEvents.length - 3} más
+                            </div>
+                        )}
+                        {dayEvents.length > 3 && (
+                            <div className={`md:hidden text-[8px] font-bold pl-1 ${isSelected ? 'text-gray-400' : 'text-gray-500'}`}>
+                                +{dayEvents.length - 3}
                             </div>
                         )}
                     </div>
@@ -227,46 +221,48 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
         <div className="flex flex-col lg:flex-row h-full lg:h-[calc(100vh-64px)] overflow-y-auto lg:overflow-hidden bg-[#fdfdfd] font-sans">
             {/* Main Calendar Section */}
             <div className="flex-1 flex flex-col min-w-0 lg:h-full lg:overflow-hidden bg-[#fdfdfd]">
-                <header className="flex flex-col sm:flex-row items-center justify-between px-4 py-4 md:px-8 md:py-5 border-b border-[#f1f5f9] bg-white shrink-0 gap-4">
-                    <div className="flex items-center gap-4 md:gap-6 w-full sm:w-auto justify-between">
-                        <h1 className="text-xl md:text-2xl font-bold text-slate-800 capitalize">
-                            {MONTHS_ES[month]} {year}
-                        </h1>
-                        <div className="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-100">
+                <header className="flex flex-col sm:flex-row items-center justify-between px-6 py-6 md:px-10 border-b-2 border-black bg-white shrink-0 gap-6">
+                    <div className="flex items-center gap-6 w-full sm:w-auto justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-black text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
+                                <CalendarIcon className="w-6 h-6" strokeWidth={2.5} />
+                            </div>
+                            <h1 className="text-3xl md:text-3xl font-black text-black uppercase tracking-tighter">
+                                {MONTHS_ES[month]} <span className="text-gray-400">{year}</span>
+                            </h1>
+                        </div>
+
+                        <div className="flex items-center gap-2">
                             <button
                                 onClick={handlePrevMonth}
-                                className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-slate-900 shadow-sm hover:shadow"
+                                className="p-2 border-2 border-black bg-white hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-[2px]"
                             >
-                                <ChevronLeft className="w-5 h-5" />
+                                <ChevronLeft className="w-5 h-5" strokeWidth={3} />
                             </button>
                             <button
                                 onClick={handleToday}
-                                className="px-3 py-1 text-sm font-medium text-slate-700 hover:text-slate-900"
+                                className="px-4 py-2 text-xs font-black uppercase tracking-wider border-2 border-black bg-emerald-400 hover:bg-emerald-300 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-[2px]"
                             >
                                 Hoy
                             </button>
                             <button
                                 onClick={handleNextMonth}
-                                className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-slate-900 shadow-sm hover:shadow"
+                                className="p-2 border-2 border-black bg-white hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-[2px]"
                             >
-                                <ChevronRight className="w-5 h-5" />
+                                <ChevronRight className="w-5 h-5" strokeWidth={3} />
                             </button>
                         </div>
                     </div>
-                    {/* Simplified Search/Add for now */}
-                    <div className="flex items-center gap-4">
-
-                    </div>
                 </header>
 
-                <div className="flex-1 overflow-auto p-4 md:p-6 bg-[#fdfdfd] min-h-[400px]">
-                    <div className="bg-white rounded-xl border border-[#f1f5f9] shadow-sm flex flex-col min-h-[500px]">
-                        <div className="grid grid-cols-7 border-b border-[#e2e8f0]">
+                <div className="flex-1 overflow-auto p-4 md:p-8 bg-[#fdfdfd] min-h-[400px] mb-20 md:mb-0">
+                    <div className="bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col min-h-[400px] md:min-h-[600px]">
+                        <div className="grid grid-cols-7 border-b-2 border-black bg-black text-white">
                             {DAYS_ES.map(day => (
-                                <div key={day} className="py-2 md:py-3 text-center text-xs md:text-sm font-semibold text-slate-400">{day}</div>
+                                <div key={day} className="py-3 text-center text-sm font-black uppercase tracking-widest">{day}</div>
                             ))}
                         </div>
-                        <div className="grid grid-cols-7 flex-1 auto-rows-fr">
+                        <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-white">
                             {renderCalendarGrid()}
                         </div>
                     </div>
@@ -274,53 +270,65 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
             </div>
 
             {/* Right Sidebar - Upcoming Meetings */}
-            <aside className="w-full lg:w-80 bg-white border-t lg:border-t-0 lg:border-l border-[#f1f5f9] flex-shrink-0 flex flex-col h-auto lg:h-full overflow-hidden shadow-sm z-10 order-last">
-                <div className="p-4 md:p-6 border-b border-[#f1f5f9] bg-slate-50/50">
-                    <h2 className="text-lg font-bold text-slate-800">Agenda</h2>
-                    <div className="flex items-center gap-2 mt-2 text-slate-500">
-                        <CalendarIcon className="w-4 h-4 text-[#4ade80]" />
-                        <span className="text-sm font-medium capitalize">
+            <aside className="w-full lg:w-96 bg-white border-t-2 lg:border-t-0 lg:border-l-2 border-black flex-shrink-0 flex flex-col h-auto lg:h-full overflow-hidden z-10 order-last">
+                <div className="p-6 border-b-2 border-black bg-emerald-400">
+                    <h2 className="text-2xl font-black text-black uppercase tracking-tighter flex items-center gap-2">
+                        Agenda
+                        <span className="text-sm bg-black text-white px-2 py-0.5 rounded-none tracking-widest border-2 border-black relative -top-1">HOY</span>
+                    </h2>
+                    <div className="flex items-center gap-2 mt-2 text-black font-bold border-2 border-black bg-white p-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <Clock className="w-5 h-5 text-black" strokeWidth={2.5} />
+                        <span className="text-sm uppercase tracking-wide">
                             {selectedDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
                         </span>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[500px] lg:max-h-none">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#fdfdfd]">
                     {selectedDateEvents.length === 0 ? (
-                        <div className="text-center py-10 text-slate-400">
-                            <p>No hay reuniones programadas para este día.</p>
+                        <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
+                            <CalendarIcon className="w-12 h-12 text-gray-300 mb-3" />
+                            <p className="text-gray-500 font-bold uppercase text-center text-sm">Sin actividades<br />programadas</p>
                         </div>
                     ) : (
                         selectedDateEvents.map((ev: any) => (
-                            <div key={ev.id} className="relative bg-white rounded-xl border border-[#f1f5f9] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-md transition-all group">
-                                <div
-                                    className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full opacity-60"
-                                    style={{ backgroundColor: ev.colorText }}
-                                ></div>
-                                <div className="pl-3">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <span
-                                            className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
-                                            style={{ backgroundColor: ev.colorBg, color: ev.colorText }}
-                                        >
-                                            {ev.date.getDate()}/{ev.date.getMonth() + 1}
+                            <div key={ev.id} className="relative bg-white border-2 border-black p-0 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all group">
+                                <div className="p-4 border-b-2 border-black flex justify-between items-start" style={{ backgroundColor: ev.colorBg }}>
+                                    <div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 mb-2 inline-block">
+                                            {ev.category}
                                         </span>
+                                        <h3 className="font-black text-lg text-black uppercase leading-tight">{ev.title}</h3>
                                     </div>
-                                    <h3 className="text-base font-semibold text-slate-800 mb-1">{ev.title}</h3>
-                                    <div className="space-y-2 mt-3">
-                                        <div className="flex items-center text-sm text-slate-500">
-                                            <Clock className="w-4 h-4 mr-2 text-slate-400" />
-                                            {ev.time}
+                                    <div className="p-1.5 bg-white border-2 border-black rounded-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                        <Video className="w-4 h-4 text-black" strokeWidth={2.5} />
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-white">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-none border-2 border-black flex items-center justify-center bg-gray-100 font-black text-xs">
+                                                <Clock className="w-4 h-4" />
+                                            </div>
+                                            <span className="font-bold text-sm uppercase">{ev.time} HS</span>
                                         </div>
-                                        <div className="flex items-center text-sm text-slate-500">
-                                            <MapPin className="w-4 h-4 mr-2 text-slate-400" />
-                                            {ev.location || 'Sin ubicación'}
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-none border-2 border-black flex items-center justify-center bg-gray-100 font-black text-xs">
+                                                <MapPin className="w-4 h-4" />
+                                            </div>
+                                            <span className="font-bold text-sm uppercase truncate">{ev.location || 'Virtual'}</span>
                                         </div>
-                                        <div className="flex items-center text-sm text-slate-500">
-                                            <User className="w-4 h-4 mr-2 text-slate-400" />
-                                            {ev.leader}
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-none border-2 border-black flex items-center justify-center bg-gray-100 font-black text-xs">
+                                                <User className="w-4 h-4" />
+                                            </div>
+                                            <span className="font-bold text-sm uppercase truncate">{ev.leader}</span>
                                         </div>
                                     </div>
+                                    <button className="w-full mt-5 bg-black text-white py-2 font-black uppercase text-xs tracking-wider border-2 border-transparent hover:bg-emerald-400 hover:text-black hover:border-black transition-colors flex items-center justify-center gap-2">
+                                        Ver Detalles
+                                        <ArrowRight className="w-3 h-3" />
+                                    </button>
                                 </div>
                             </div>
                         ))

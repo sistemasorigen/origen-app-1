@@ -5,20 +5,21 @@ import {
     TrendingUp,
     TrendingDown,
     Search,
-    Bell,
     UserPlus,
     BarChart3,
-    History
+    History,
+    ArrowUpRight
 } from 'lucide-react';
 import { Group, GroupCategory, DropoutRequest } from '../../types';
 import {
-    AreaChart,
-    Area,
+    BarChart,
+    Bar,
     XAxis,
     YAxis,
     CartesianGrid,
     Tooltip,
-    ResponsiveContainer
+    ResponsiveContainer,
+    Cell
 } from 'recharts';
 
 interface CoordinatorDashboardProps {
@@ -37,20 +38,41 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
     onRefresh
 }) => {
     const [chartMode, setChartMode] = useState<'inscriptos' | 'bajas'>('inscriptos');
+    const [activeFilter, setActiveFilter] = useState<'active' | 'finished'>('active');
     const [activitySearch, setActivitySearch] = useState('');
+
+    // --- Helpers ---
+    const isGroupFinished = (g: Group) => {
+        if ((g.status as string) === 'finished') return true;
+        if (!g.endDate) return false;
+        const today = new Date().toISOString().split('T')[0];
+        return g.endDate < today;
+    };
 
     // --- KPIs Calculation ---
 
-    const totalGroups = groups.length;
-    // Use all groups for analysis to avoid hiding data (even if pending)
-    const analyzedGroups = groups;
+    // Base filter for current view (KPIs and Chart)
+    const analyzedGroups = useMemo(() => {
+        let result = groups.filter(g => g.status === 'approved');
+        if (activeFilter === 'finished') {
+            return result.filter(g => isGroupFinished(g));
+        }
+        return result.filter(g => !isGroupFinished(g));
+    }, [groups, activeFilter]);
+
+    const totalGroups = analyzedGroups.length;
 
     const totalMembers = analyzedGroups.reduce((sum, g) => {
-        // Use membersCount if available (more robust), otherwise count registrations
         const count = g.membersCount || (g.registrations || []).filter(r => r.status === 'APPROVED').length || 0;
         return sum + count;
     }, 0);
-    const totalDropouts = dropouts.length;
+
+    const filteredDropouts = useMemo(() => {
+        const analyzedGroupIds = new Set(analyzedGroups.map(g => g.id));
+        return dropouts.filter(d => analyzedGroupIds.has(d.groupId));
+    }, [dropouts, analyzedGroups]);
+
+    const totalDropouts = filteredDropouts.length;
 
     // --- Chart Data ---
     const chartData = useMemo(() => {
@@ -58,8 +80,8 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
             // Sort by member count descending for better visualization
             return [...analyzedGroups]
                 .map(g => ({
-                    name: g.name.length > 15 ? g.name.substring(0, 15) + '...' : g.name,
-                    fullName: g.name,
+                    name: (g.name || '').length > 15 ? (g.name || '').substring(0, 15) + '...' : (g.name || 'Sin nombre'),
+                    fullName: g.name || 'Sin nombre',
                     value: g.membersCount || (g.registrations || []).filter(r => r.status === 'APPROVED').length || 0,
                 }))
                 .sort((a, b) => b.value - a.value)
@@ -73,13 +95,13 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
             });
             return Object.entries(byGroup)
                 .map(([name, value]) => ({
-                    name: name.length > 15 ? name.substring(0, 15) + '...' : name,
-                    fullName: name,
+                    name: (name || '').length > 15 ? (name || '').substring(0, 15) + '...' : (name || 'Sin nombre'),
+                    fullName: name || 'Sin nombre',
                     value
                 }))
                 .sort((a, b) => b.value - a.value);
         }
-    }, [chartMode, analyzedGroups, dropouts]);
+    }, [chartMode, analyzedGroups, filteredDropouts]);
 
     // --- Activity Log ---
     const activityLog = useMemo(() => {
@@ -91,9 +113,9 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
             items.push({
                 id: d.id,
                 memberName: name,
-                initials: name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+                initials: name ? name.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??',
                 action: d.requestType === 'SELF_DROPOUT' ? 'Baja voluntaria' : 'Baja por anfitrión',
-                groupName: d.groupName,
+                groupName: d.groupName || 'Grupo desconocido',
                 date: d.createdAt,
                 type: 'dropout'
             });
@@ -107,9 +129,9 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                     items.push({
                         id: r.id,
                         memberName: name,
-                        initials: name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+                        initials: name ? name.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??',
                         action: 'Nuevo registro',
-                        groupName: g.name,
+                        groupName: g.name || 'Agrupación',
                         date: r.createdAt || '',
                         type: 'registration'
                     });
@@ -129,8 +151,18 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
             );
         }
 
-        return items.slice(0, 50);
+        return items;
     }, [dropouts, analyzedGroups, activitySearch]);
+
+    // --- Pagination ---
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 20;
+
+    const totalPages = Math.ceil(activityLog.length / ITEMS_PER_PAGE);
+    const paginatedActivity = activityLog.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
 
     // Format relative time (approximate)
     const formatRelTime = (dateStr: string) => {
@@ -149,12 +181,12 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-gray-900 text-white p-3 rounded-lg shadow-xl border border-gray-700">
-                    <p className="font-bold text-sm mb-1">{payload[0]?.payload?.fullName || label}</p>
-                    <p className="text-xs text-gray-300">
-                        {chartMode === 'inscriptos' ? 'Miembros activos' : 'Solicitudes de baja'}
+                <div className="bg-black text-white p-4 rounded-none border-2 border-black shadow-[4px_4px_0px_0px_#10b981]">
+                    <p className="font-black text-sm mb-1 uppercase tracking-wider">{payload[0]?.payload?.fullName || label}</p>
+                    <p className="text-xs text-gray-300 uppercase font-bold tracking-widest mb-2">
+                        {chartMode === 'inscriptos' ? 'Miembros Activos' : 'Solicitudes de Baja'}
                     </p>
-                    <p className="text-xl font-bold text-[#13ec92]">
+                    <p className="text-3xl font-black text-[#10b981]">
                         {payload[0]?.value}
                     </p>
                 </div>
@@ -164,230 +196,309 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#f6f8f7] dark:bg-[#10221a] min-h-screen">
+        <div className="flex flex-col h-full bg-[#f8fafc] font-sans">
             {/* Top Header */}
-            <header className="flex items-center justify-between px-4 py-4 md:px-6 md:py-5 bg-white dark:bg-[#10221a] border-b border-gray-100 dark:border-gray-800 sticky top-0 z-10">
-                <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white font-display">Dashboard General</h1>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Resumen de actividad y métricas clave • {categoryName}</p>
+            <header className="flex flex-col md:flex-row md:items-center justify-between px-6 py-6 border-b-2 border-black bg-white sticky top-0 z-20">
+                <div className="mb-4 md:mb-0">
+                    <h1 className="text-3xl md:text-4xl font-black text-black uppercase tracking-tighter leading-none">
+                        Dashboard General
+                    </h1>
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="px-2 py-0.5 bg-black text-white text-[10px] font-bold uppercase tracking-widest">
+                            {categoryName}
+                        </span>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                            • Resumen de Actividad
+                        </span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="relative hidden md:block">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                            <Search className="w-5 h-5" />
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                    <div className="relative w-full md:w-auto group">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-black pointer-events-none group-focus-within:text-emerald-600 transition-colors">
+                            <Search className="w-5 h-5" strokeWidth={2.5} />
                         </span>
                         <input
-                            className="w-64 pl-10 pr-4 py-2 rounded-full border-none bg-gray-50 dark:bg-gray-900 shadow-sm text-sm focus:ring-2 focus:ring-[#13ec92]/50 text-gray-700 dark:text-gray-200 placeholder-gray-400"
-                            placeholder="Buscar en actividad..."
+                            className="w-full md:w-72 pl-10 pr-4 py-2.5 bg-white border-2 border-black rounded-xl text-sm font-bold text-black placeholder-gray-400 focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
+                            placeholder="BUSCAR ACTIVIDAD..."
                             type="text"
                             value={activitySearch}
                             onChange={(e) => setActivitySearch(e.target.value)}
                         />
                     </div>
-                    <button
-                        onClick={onRefresh}
-                        className="relative p-2 rounded-full bg-white dark:bg-gray-900 shadow-sm text-gray-500 hover:text-[#13ec92] transition-colors border border-gray-100 dark:border-gray-800"
-                    >
-                        <Bell className="w-5 h-5" />
-                        <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900"></span>
-                    </button>
+
                 </div>
             </header>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8">
+            <div className="flex-1 overflow-y-auto px-6 pt-8 pb-20">
                 {/* KPI Section */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                     {/* KPI Card 1: Grupos */}
-                    <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-                        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#13ec92]/10 to-transparent"></div>
+                    <div className="bg-white border-2 border-black rounded-xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all group relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Users size={120} strokeWidth={1.5} className="text-black" />
+                        </div>
                         <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="p-2 bg-[#13ec92]/10 rounded-lg text-[#0fb972] dark:text-[#13ec92]">
-                                    <Users className="w-6 h-6" />
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="p-3 bg-emerald-400 border-2 border-black rounded-lg text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                                    <Users className="w-6 h-6" strokeWidth={2.5} />
                                 </div>
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-1 rounded-full">
-                                    <TrendingUp className="w-3 h-3" />
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-black text-white px-3 py-1 rounded-full border-2 border-transparent">
+                                    <TrendingUp className="w-3 h-3 text-emerald-400" />
                                     <span>Activos</span>
                                 </span>
                             </div>
-                            <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wide">Total Grupos</h3>
-                            <div className="mt-1 flex items-baseline gap-2">
-                                <span className="text-3xl font-bold text-gray-900 dark:text-white">{totalGroups}</span>
-                                <span className="text-sm text-gray-400">registrados</span>
+                            <h3 className="text-gray-500 text-xs font-black uppercase tracking-widest mb-1">Total Grupos</h3>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-5xl font-black text-black tracking-tighter">{totalGroups}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* KPI Card 2: Inscriptos */}
-                    <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-                        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#13ec92]/20 to-transparent"></div>
+                    <div className="bg-white border-2 border-black rounded-xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all group relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <UserPlus size={120} strokeWidth={1.5} className="text-emerald-500" />
+                        </div>
                         <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="p-2 bg-[#13ec92]/20 rounded-lg text-[#0fb972] dark:text-[#13ec92]">
-                                    <UserPlus className="w-6 h-6" />
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="p-3 bg-lime-300 border-2 border-black rounded-lg text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                                    <UserPlus className="w-6 h-6" strokeWidth={2.5} />
                                 </div>
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-1 rounded-full">
-                                    <TrendingUp className="w-3 h-3" />
-                                    <span>~{Math.round(totalMembers / (totalGroups || 1))} prom.</span>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-black text-white px-3 py-1 rounded-full border-2 border-transparent">
+                                    <TrendingUp className="w-3 h-3 text-lime-300" />
+                                    <span>Promedio</span>
                                 </span>
                             </div>
-                            <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wide">Total Inscriptos</h3>
-                            <div className="mt-1 flex items-baseline gap-2">
-                                <span className="text-3xl font-bold text-gray-900 dark:text-white">{totalMembers}</span>
-                                <span className="text-sm text-gray-400">personas</span>
+                            <h3 className="text-gray-500 text-xs font-black uppercase tracking-widest mb-1">Total Inscriptos</h3>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-5xl font-black text-black tracking-tighter">{totalMembers}</span>
+                                <span className="text-sm font-bold text-gray-400">~{Math.round(totalMembers / (totalGroups || 1))} / grupo</span>
                             </div>
                         </div>
                     </div>
 
                     {/* KPI Card 3: Bajas */}
-                    <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-                        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-red-50 to-transparent dark:from-red-900/10"></div>
+                    <div className="bg-white border-2 border-black rounded-xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all group relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <UserMinus size={120} strokeWidth={1.5} className="text-red-500" />
+                        </div>
                         <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg text-red-600 dark:text-red-400">
-                                    <UserMinus className="w-6 h-6" />
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="p-3 bg-red-400 border-2 border-black rounded-lg text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                                    <UserMinus className="w-6 h-6" strokeWidth={2.5} />
                                 </div>
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 px-2 py-1 rounded-full">
-                                    <TrendingDown className="w-3 h-3" />
-                                    <span>{((totalDropouts / totalMembers) * 100).toFixed(1)}% tasa</span>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-black text-white px-3 py-1 rounded-full border-2 border-transparent">
+                                    <TrendingDown className="w-3 h-3 text-red-400" />
+                                    <span>{((totalDropouts / totalMembers) * 100).toFixed(1)}% Tasa</span>
                                 </span>
                             </div>
-                            <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wide">Solicitudes de Baja</h3>
-                            <div className="mt-1 flex items-baseline gap-2">
-                                <span className="text-3xl font-bold text-gray-900 dark:text-white">{totalDropouts}</span>
-                                <span className="text-sm text-gray-400">pendientes</span>
+                            <h3 className="text-gray-500 text-xs font-black uppercase tracking-widest mb-1">Solicitudes de Baja</h3>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-5xl font-black text-black tracking-tighter">{totalDropouts}</span>
+                                <span className="text-sm font-bold text-gray-400">pendientes</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Analysis Section with Gradient Chart */}
-                <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-8 min-h-[500px] flex flex-col relative overflow-hidden mb-8">
+                {/* Analysis Section with Chart */}
+                <div className="bg-white border-2 border-black rounded-xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-6 md:p-8 min-h-[400px] md:min-h-[500px] flex flex-col relative overflow-hidden mb-24 md:mb-10">
+                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 via-lime-300 to-black"></div>
+
                     {/* Chart Header & Controls */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 mt-2">
                         <div>
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Análisis de Datos</h2>
-                            <p className="text-sm text-gray-500">
-                                {chartMode === 'inscriptos' ? 'Top grupos con más inscriptos' : 'Grupos con solicitudes de baja'}
+                            <h2 className="text-2xl font-black text-black uppercase tracking-tighter flex items-center gap-2">
+                                Análisis de Datos
+                                <BarChart3 className="w-6 h-6 text-black" strokeWidth={3} />
+                            </h2>
+                            <p className="text-sm font-bold text-gray-500 uppercase tracking-wide mt-1">
+                                {chartMode === 'inscriptos' ? 'Top Grupos / Miembros' : 'Grupos / Solicitudes de Baja'}
                             </p>
                         </div>
-                        {/* Switch / Toggle Group */}
-                        <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg inline-flex items-center relative">
-                            {/* Animated Background Pill */}
-                            <div
-                                className={`absolute inset-y-1 w-[calc(50%-4px)] bg-white dark:bg-gray-700 rounded-md shadow-sm transition-transform duration-300 transform ${chartMode === 'inscriptos' ? 'left-1 translate-x-0' : 'left-1 translate-x-[100%]'}`}
-                            ></div>
-
-                            <button
-                                onClick={() => setChartMode('inscriptos')}
-                                className={`relative z-10 px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${chartMode === 'inscriptos' ? 'text-[#0fb972] dark:text-[#13ec92]' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-                            >
-                                Inscriptos
-                            </button>
-                            <button
-                                onClick={() => setChartMode('bajas')}
-                                className={`relative z-10 px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${chartMode === 'bajas' ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-                            >
-                                Bajas
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Chart Area */}
-                    <div className="flex-1 w-full min-h-[350px]">
-                        {chartData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={chartMode === 'inscriptos' ? '#13ec92' : '#ef4444'} stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor={chartMode === 'inscriptos' ? '#13ec92' : '#ef4444'} stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
-                                    <XAxis
-                                        dataKey="name"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#9ca3af', fontSize: 11 }}
-                                        dy={10}
-                                    />
-                                    <YAxis
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#9ca3af', fontSize: 11 }}
-                                    />
-                                    <Tooltip cursor={{ stroke: '#e5e7eb', strokeWidth: 1 }} content={<CustomTooltip />} />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="value"
-                                        stroke={chartMode === 'inscriptos' ? '#13ec92' : '#ef4444'}
-                                        strokeWidth={3}
-                                        fillOpacity={1}
-                                        fill="url(#colorValue)"
-                                        activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                                <BarChart3 className="w-12 h-12 mb-3 opacity-20" />
-                                <span className="font-medium">No hay datos suficientes para visualizar</span>
+                        {/* Filter Toggles */}
+                        <div className="flex flex-wrap gap-4 items-center">
+                            {/* Activos/Finalizados Filter */}
+                            <div className="flex p-1 bg-gray-100 rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                <button
+                                    onClick={() => setActiveFilter('active')}
+                                    className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all rounded-md ${activeFilter === 'active'
+                                        ? 'bg-black text-white'
+                                        : 'text-gray-500 hover:text-black'
+                                        }`}
+                                >
+                                    Activos
+                                </button>
+                                <button
+                                    onClick={() => setActiveFilter('finished')}
+                                    className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all rounded-md ${activeFilter === 'finished'
+                                        ? 'bg-black text-white'
+                                        : 'text-gray-500 hover:text-black'
+                                        }`}
+                                >
+                                    Finalizados
+                                </button>
                             </div>
-                        )}
+
+                            {/* Inscriptos/Bajas Toggle */}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setChartMode('inscriptos')}
+                                    className={`px-6 py-2.5 rounded-lg text-sm font-black uppercase tracking-wide border-2 border-black transition-all ${chartMode === 'inscriptos'
+                                        ? 'bg-emerald-400 text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px]'
+                                        : 'bg-white text-gray-500 hover:bg-gray-50 hover:text-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                        }`}
+                                >
+                                    Inscriptos
+                                </button>
+                                <button
+                                    onClick={() => setChartMode('bajas')}
+                                    className={`px-6 py-2.5 rounded-lg text-sm font-black uppercase tracking-wide border-2 border-black transition-all ${chartMode === 'bajas'
+                                        ? 'bg-red-400 text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px]'
+                                        : 'bg-white text-gray-500 hover:bg-gray-50 hover:text-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                        }`}
+                                >
+                                    Bajas
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Chart Area */}
+                        <div className="w-full h-[300px] bg-gray-50 border-2 border-black rounded-lg p-4 relative mt-2">
+                            {/* Retro Grid Lines Effect */}
+                            <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+
+                            {chartData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData} margin={{ top: 20, right: 10, left: 0, bottom: 0 }} barGap={0}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                                        <XAxis
+                                            dataKey="name"
+                                            axisLine={{ stroke: '#000', strokeWidth: 2 }}
+                                            tickLine={false}
+                                            tick={{ fill: '#000', fontSize: 10, fontWeight: 800 }}
+                                            tickFormatter={(val) => `${val}`.toUpperCase()}
+                                            dy={10}
+                                        />
+                                        <YAxis
+                                            axisLine={{ stroke: '#000', strokeWidth: 2 }}
+                                            tickLine={false}
+                                            tick={{ fill: '#000', fontSize: 10, fontWeight: 800 }}
+                                        />
+                                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} content={<CustomTooltip />} />
+                                        <Bar
+                                            dataKey="value"
+                                            radius={[4, 4, 0, 0]}
+                                            stroke="#000"
+                                            strokeWidth={2}
+                                        >
+                                            {chartData.map((entry, index) => (
+                                                <Cell
+                                                    key={`cell-${index}`}
+                                                    fill={chartMode === 'inscriptos' ? '#10b981' : '#ef4444'}
+                                                    className="filter drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+                                                />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                                    <BarChart3 className="w-16 h-16 mb-4 opacity-20 text-black" />
+                                    <span className="font-black text-black uppercase tracking-widest text-lg opacity-50">No hay datos suficientes</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
                 {/* Recent Activity Table */}
-                <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-                    <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
-                            <History className="w-4 h-4 text-gray-400" />
-                            Actividad Reciente
+                <div className="bg-white border-2 border-black rounded-xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+                    <div className="px-6 py-5 border-b-2 border-black flex justify-between items-center bg-white">
+                        <h3 className="text-lg font-black text-black uppercase tracking-tighter flex items-center gap-3">
+                            <div className="p-1.5 bg-black text-white rounded shadow-[2px_2px_0px_0px_#10b981]">
+                                <History className="w-4 h-4" strokeWidth={3} />
+                            </div>
+                            Feed de Actividad
                         </h3>
-                        <button className="text-xs text-[#13ec92] font-medium hover:text-[#0fb972] transition-colors">
+                        <button className="text-xs font-black uppercase tracking-wider text-black hover:text-emerald-600 flex items-center gap-1 transition-colors border-b-2 border-black hover:border-emerald-600 pb-0.5">
                             Ver historial completo
+                            <ArrowUpRight className="w-3 h-3" />
                         </button>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    {/* Mobile Activity Cards (Visible on Mobile) */}
+                    <div className="md:hidden divide-y-2 divide-gray-100">
+                        {paginatedActivity.length === 0 ? (
+                            <div className="py-12 text-center text-gray-400 font-bold uppercase tracking-wide">
+                                Sin actividad reciente
+                            </div>
+                        ) : (
+                            paginatedActivity.map(item => (
+                                <div key={item.id} className="p-4 bg-white flex items-start gap-3 relative overflow-hidden">
+                                    {/* Status Stripe */}
+                                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${item.type === 'registration' ? 'bg-emerald-400' : 'bg-orange-400'}`} />
+
+                                    <div className={`h-10 w-10 min-w-[2.5rem] border-2 border-black flex items-center justify-center text-xs font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] rounded-lg ${item.type === 'registration' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'
+                                        }`}>
+                                        {item.initials}
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start">
+                                            <p className="font-bold text-black text-sm truncate pr-2">{item.memberName}</p>
+                                            <span className="text-[10px] font-mono text-gray-400 whitespace-nowrap">{formatRelTime(item.date)}</span>
+                                        </div>
+                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide truncate">{item.action}</p>
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${item.type === 'registration' ? 'bg-emerald-500' : 'bg-orange-500'}`} />
+                                            <p className="text-xs text-black font-medium truncate">{item.groupName}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Desktop Activity Table (Hidden on Mobile) */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-800/50">
+                            <thead className="text-xs text-white uppercase bg-black font-black tracking-wider">
                                 <tr>
-                                    <th className="px-6 py-3 font-medium">Miembro</th>
-                                    <th className="px-6 py-3 font-medium">Acción</th>
-                                    <th className="px-6 py-3 font-medium">Grupo</th>
-                                    <th className="px-6 py-3 font-medium">Fecha</th>
-                                    <th className="px-6 py-3 font-medium text-right">Estado</th>
+                                    <th className="px-6 py-4">Miembro</th>
+                                    <th className="px-6 py-4">Acción</th>
+                                    <th className="px-6 py-4">Grupo</th>
+                                    <th className="px-6 py-4">Fecha</th>
+                                    <th className="px-6 py-4 text-right">Estado</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                {activityLog.length === 0 ? (
+                            <tbody className="divide-y-2 divide-gray-100 dark:divide-gray-800">
+                                {paginatedActivity.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="py-12 text-center text-gray-400">
+                                        <td colSpan={5} className="py-12 text-center text-gray-400 font-bold uppercase tracking-wide">
                                             Sin actividad reciente
                                         </td>
                                     </tr>
                                 ) : (
-                                    activityLog.map(item => (
-                                        <tr key={item.id} className="hover:bg-[#f6f8f7] dark:hover:bg-gray-800/30 transition-colors">
-                                            <td className="px-6 py-4 font-medium text-gray-900 dark:text-white flex items-center gap-3">
-                                                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${item.type === 'registration'
-                                                    ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                                                    : 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                                    paginatedActivity.map(item => (
+                                        <tr key={item.id} className="hover:bg-emerald-50 transition-colors border-b border-gray-100 last:border-0 group">
+                                            <td className="px-6 py-4 font-bold text-black flex items-center gap-4">
+                                                <div className={`h-10 w-10 border-2 border-black flex items-center justify-center text-xs font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${item.type === 'registration'
+                                                    ? 'bg-blue-100 text-blue-800'
+                                                    : 'bg-orange-100 text-orange-800'
                                                     }`}>
                                                     {item.initials}
                                                 </div>
-                                                {item.memberName}
+                                                <span className="group-hover:translate-x-1 transition-transform">{item.memberName}</span>
                                             </td>
-                                            <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{item.action}</td>
-                                            <td className="px-6 py-4 text-gray-900 dark:text-gray-300 font-medium">{item.groupName}</td>
-                                            <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{formatRelTime(item.date)}</td>
+                                            <td className="px-6 py-4 text-gray-500 font-bold uppercase text-xs tracking-wide">{item.action}</td>
+                                            <td className="px-6 py-4 text-black font-bold">{item.groupName}</td>
+                                            <td className="px-6 py-4 text-gray-400 font-mono text-xs">{formatRelTime(item.date)}</td>
                                             <td className="px-6 py-4 text-right">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.type === 'registration'
-                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                                <span className={`inline-flex px-3 py-1 text-[10px] font-black uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)] ${item.type === 'registration'
+                                                    ? 'bg-emerald-300 text-black'
+                                                    : 'bg-yellow-300 text-black'
                                                     }`}>
                                                     {item.type === 'registration' ? 'Completado' : 'Pendiente'}
                                                 </span>
@@ -398,6 +509,29 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="px-6 py-4 border-t-2 border-black bg-white flex items-center justify-between font-bold">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="px-4 py-2 text-xs font-black uppercase tracking-wider border-2 border-black bg-white hover:bg-black hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-[2px]"
+                            >
+                                Anterior
+                            </button>
+                            <span className="text-xs font-black uppercase tracking-widest text-gray-500">
+                                Página {currentPage} de {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="px-4 py-2 text-xs font-black uppercase tracking-wider border-2 border-black bg-white hover:bg-black hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-[2px]"
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

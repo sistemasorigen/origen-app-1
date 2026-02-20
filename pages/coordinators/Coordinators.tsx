@@ -4,11 +4,11 @@ import {
     Users,
     ClipboardCheck,
     Calendar,
-    Menu,
     X,
     LogOut,
     AlertTriangle,
-    ChevronRight
+    ChevronRight,
+    ArrowRight
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, UserRole, Group, GroupCategory, GroupTag, GroupRegistration, DropoutRequest } from '../../types';
@@ -53,7 +53,7 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     const assignedCategory = currentUser.assignedCategory;
 
     // Find category name for display
-    const categoryName = categories.find(c => c.id === assignedCategory)?.name || assignedCategory || '';
+    const categoryName = categories.find(c => c.id === assignedCategory)?.name || (hasRole(currentUser, [UserRole.SUPER_ADMIN]) ? 'Todas las Categorías (Global)' : '') || '';
 
     // Load all data
     useEffect(() => {
@@ -109,14 +109,14 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     // No category assigned alert
     if (!assignedCategory && !hasRole(currentUser, [UserRole.SUPER_ADMIN])) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-                <div className="bg-white border-3 border-black p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] max-w-md text-center">
+            <div className="min-h-screen flex items-center justify-center bg-[#fdfdfd] p-4">
+                <div className="bg-white border-2 border-black p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] max-w-md text-center">
                     <div className="w-16 h-16 bg-amber-100 border-2 border-black rounded-full flex items-center justify-center mx-auto mb-4">
                         <AlertTriangle className="w-8 h-8 text-amber-600" />
                     </div>
-                    <h2 className="text-xl font-black mb-2">Sin Categoría Asignada</h2>
-                    <p className="text-gray-600">
-                        No tienes una categoría de coordinación asignada. Contacta al Administrador para que te asigne una categoría.
+                    <h2 className="text-xl font-black uppercase mb-2">Sin Categoría Asignada</h2>
+                    <p className="text-gray-600 font-medium">
+                        No tienes una categoría de coordinación asignada. Contacta al Administrador.
                     </p>
                 </div>
             </div>
@@ -132,7 +132,7 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
         if (loading) {
             return (
                 <div className="flex items-center justify-center h-64">
-                    <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin" />
+                    <div className="w-12 h-12 border-4 border-black border-t-emerald-500 rounded-full animate-spin" />
                 </div>
             );
         }
@@ -173,7 +173,6 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                 return (
                     <CoordinatorCalendar
                         groups={groups}
-                        attendanceData={attendanceData}
                         categoryName={categoryName}
                     />
                 );
@@ -183,109 +182,138 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     };
 
     return (
-        <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden">
+        <div className="flex h-[calc(100vh-64px)] bg-[#fdfdfd] overflow-hidden font-sans">
             {/* Mobile Backdrop */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/50 md:hidden"
+                    className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm md:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
             <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white border-r-3 border-black
-        transform transition-transform duration-300
-        md:relative md:translate-x-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        flex flex-col
-      `}>
-                {/* Logo */}
-                <div className="p-5 border-b-3 border-black">
+                fixed inset-y-0 left-0 z-50 w-72 bg-white border-r-2 border-black
+                transform transition-transform duration-300 ease-in-out
+                md:relative md:translate-x-0
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+                flex flex-col shadow-[4px_0px_0px_0px_rgba(0,0,0,0.1)] md:shadow-none
+            `}>
+                {/* Logo Area */}
+                <div className="p-6 border-b-2 border-black bg-white">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-emerald-500 border-2 border-black rounded-lg flex items-center justify-center">
-                                <Users className="w-4 h-4 text-white" />
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-emerald-500 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
+                                <Users className="w-6 h-6 text-white text-stroke-black" strokeWidth={2.5} />
                             </div>
-                            <span className="font-black text-emerald-600 text-lg">Coordinadores</span>
+                            <div>
+                                <span className="block font-black text-black text-xl uppercase tracking-tighter leading-none">Coordinadores</span>
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Panel de Control</span>
+                            </div>
                         </div>
-                        <button onClick={() => setSidebarOpen(false)} className="md:hidden p-1">
-                            <X className="w-5 h-5" />
+                        <button
+                            onClick={() => setSidebarOpen(false)}
+                            className="md:hidden p-1 hover:bg-red-100 rounded border-2 border-transparent hover:border-black transition-all"
+                        >
+                            <X className="w-6 h-6" />
                         </button>
                     </div>
                     {categoryName && (
-                        <div className="mt-2 px-2 py-1 bg-emerald-50 border border-emerald-200 rounded text-xs font-bold text-emerald-700 text-center">
+                        <div className="mt-4 px-3 py-1.5 bg-black text-white text-xs font-black uppercase tracking-wider text-center border-2 border-black shadow-[3px_3px_0px_0px_#10b981]">
                             {categoryName}
                         </div>
                     )}
                 </div>
 
                 {/* Nav */}
-                <nav className="flex-1 overflow-y-auto p-3">
+                <nav className="flex-1 overflow-y-auto p-4 space-y-2">
                     {menuItems.map(item => (
                         <button
                             key={item.id}
                             onClick={() => handleTabChange(item.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl mb-1 transition-all ${activeTab === item.id
-                                ? 'bg-emerald-500 text-white border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
-                                : 'text-gray-600 hover:bg-gray-100 border-2 border-transparent'
+                            className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all ${activeTab === item.id
+                                ? 'bg-emerald-500 text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                                : 'text-gray-500 hover:text-black hover:bg-gray-50 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0px_0px_#e5e7eb]'
                                 }`}
                         >
-                            <item.icon className="w-5 h-5" />
+                            <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white' : 'text-gray-400 group-hover:text-black'}`} strokeWidth={2.5} />
                             {item.label}
+                            {activeTab === item.id && <ChevronRight className="w-5 h-5 ml-auto" strokeWidth={3} />}
                         </button>
                     ))}
 
                     {/* Section divider */}
-                    <div className="px-4 py-2 mt-3 mb-1">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Gestión</span>
+                    <div className="my-6 border-t-2 border-black relative">
+                        <span className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black text-black uppercase tracking-widest border-2 border-black">Gestión</span>
                     </div>
 
                     {gestionItems.map(item => (
                         <button
                             key={item.id}
                             onClick={() => handleTabChange(item.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl mb-1 transition-all ${activeTab === item.id
-                                ? 'bg-emerald-500 text-white border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
-                                : 'text-gray-600 hover:bg-gray-100 border-2 border-transparent'
+                            className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all ${activeTab === item.id
+                                ? 'bg-emerald-500 text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                                : 'text-gray-500 hover:text-black hover:bg-gray-50 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0px_0px_#e5e7eb]'
                                 }`}
                         >
-                            <item.icon className="w-5 h-5" />
+                            <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white' : 'text-gray-400 group-hover:text-black'}`} strokeWidth={2.5} />
                             {item.label}
+                            {activeTab === item.id && <ChevronRight className="w-5 h-5 ml-auto" strokeWidth={3} />}
                         </button>
                     ))}
                 </nav>
 
-                {/* Bottom Actions - Removed as global navbar handles it now */}
-
                 {/* User info footer */}
-                <div className="p-4 border-t-3 border-black">
+                <div className="p-4 border-t-2 border-black bg-gray-50">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-emerald-100 border-2 border-black rounded-full flex items-center justify-center font-black text-emerald-700 text-sm">
+                        <div className="w-10 h-10 bg-white border-2 border-black flex items-center justify-center font-black text-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                             {currentUser.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm truncate">{currentUser.name}</p>
-                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Coordinador</p>
+                            <p className="font-bold text-sm truncate text-black">{currentUser.name}</p>
+                            <p className="text-[10px] text-gray-500 uppercase font-black tracking-wider">Coordinador</p>
                         </div>
                     </div>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+            <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-[#fdfdfd]">
                 {/* Top bar (mobile) */}
-                <div className="md:hidden flex items-center p-4 bg-white border-b-3 border-black sticky top-0 z-30 shrink-0">
-                    <button onClick={() => setSidebarOpen(true)} className="p-2 border-2 border-black rounded-lg bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]">
-                        <Menu className="w-5 h-5" />
-                    </button>
+                <div className="md:hidden flex items-center justify-between p-4 bg-white border-b-2 border-black sticky top-0 z-30 shrink-0">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-emerald-500 border-2 border-black flex items-center justify-center">
+                            <Users className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="font-black text-black text-lg uppercase tracking-tight">Coordinadores</span>
+                    </div>
+
                 </div>
 
                 {/* Content - Full width/height, let children handle scrolling */}
-                <div className="flex-1 overflow-hidden relative">
+                <div className="flex-1 overflow-hidden relative pb-20 md:pb-0">
                     {renderContent()}
                 </div>
             </main>
+
+            {/* Mobile Bottom Navigation Bar - Premium App Feel */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-black p-2 pb-safe flex justify-around items-center z-50 shadow-[0px_-4px_10px_rgba(0,0,0,0.05)]">
+                {menuItems.concat(gestionItems).map(item => (
+                    <button
+                        key={item.id}
+                        onClick={() => handleTabChange(item.id)}
+                        className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all w-16 ${activeTab === item.id
+                            ? 'text-black bg-emerald-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] translate-y-[-2px]'
+                            : 'text-gray-400 hover:text-black hover:bg-gray-50'
+                            }`}
+                    >
+                        <item.icon className={`w-5 h-5 mb-1 ${activeTab === item.id ? 'text-black' : 'text-gray-400'}`} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+                        <span className={`text-[9px] font-black uppercase tracking-wide ${activeTab === item.id ? 'text-black' : 'text-gray-400'}`}>
+                            {item.label === 'Dashboard' ? 'Inicio' : item.label}
+                        </span>
+                    </button>
+                ))}
+            </div>
         </div>
     );
 };

@@ -412,6 +412,7 @@ export interface GroupRegistration {
     groupId?: string;
     userId?: string;
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    createdAt?: string; // Added for CoordinatorDashboard
     // Couples registration: partner data stored in same row
     partnerData?: {
         firstName: string;
@@ -427,7 +428,7 @@ export interface DropoutRequest {
     id: string;
     groupId: string;
     hostId: string;
-    requestType: 'USER' | 'GROUP';
+    requestType: 'USER' | 'GROUP' | 'SELF_DROPOUT';
     targetUserId?: string;
     targetRegistrationId?: string;  // Registration ID for user dropouts
     reason: string;
@@ -456,7 +457,7 @@ export interface GroupTag {
 export interface Group {
     id: string;
     name: string;
-    status?: 'pending' | 'approved' | 'rejected'; // Approval workflow status
+    status?: 'pending' | 'approved' | 'rejected' | 'finished'; // Approval workflow status
     leaderName: string;
     leaderSurname: string;
     leaderPhone?: string; // New field for Leader Phone
@@ -483,6 +484,13 @@ export interface Group {
     maxAge?: number;
     targetGender?: 'Hombre' | 'Mujer' | 'Mixto';
     adminNote?: string; // Note from admin when approving/rejecting
+
+    // UI/Display Helpers (Join results)
+    hostName?: string;
+    hostLastName?: string;
+    categoryName?: string;
+    meetingType?: string;
+    maxMembers?: number; // Alias for maxCapacity if needed, or separate field
 }
 
 export interface InquiryMetadata {
