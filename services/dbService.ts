@@ -140,6 +140,24 @@ const MODULES: SystemModule[] = [
         status: 'active'
     },
     {
+        id: 'coordinators',
+        title: 'Coordinadores',
+        subtitle: 'Panel de Gestión',
+        description: 'Gestioná los grupos de tu categoría, revisá la asistencia y métricas.',
+        icon: 'clipboard-list',
+        route: '/coordinators',
+        allowedRoles: [
+            UserRole.COORDINATOR,
+            UserRole.SUPER_ADMIN
+        ],
+        publicAccess: false,
+        useImage: false,
+        gradientFrom: 'teal-500',
+        gradientTo: 'emerald-600',
+        iconColor: 'text-teal-600',
+        status: 'active'
+    },
+    {
         id: 'welcome-system',
         title: 'Bienvenida',
         subtitle: 'Nuevo Ingresante',
@@ -217,10 +235,8 @@ class DBService {
         localStorage.setItem('users', JSON.stringify(users));
 
         if (password) {
-            // Mock storing password
-            const creds = JSON.parse(localStorage.getItem('credentials') || '{}');
-            creds[user.email] = password;
-            localStorage.setItem('credentials', JSON.stringify(creds));
+            // NOTE: Passwords are NOT stored in localStorage.
+            // Real authentication is handled exclusively by Supabase Auth.
         }
     }
 
@@ -229,18 +245,11 @@ class DBService {
         localStorage.setItem('users', JSON.stringify(users));
     }
 
-    verifyCredentials(email: string, pass: string): User | null {
-        const creds = JSON.parse(localStorage.getItem('credentials') || '{}');
-
-        // Add default/hardcoded passwords if missing in local storage for testing
-        if (!creds['admin@origen.com']) creds['admin@origen.com'] = 'nachoq123';
-        if (!creds['pastor@origen.com']) creds['pastor@origen.com'] = 'pastor123';
-
-        localStorage.setItem('credentials', JSON.stringify(creds));
-
-        if (creds[email] === pass) {
-            return this.getUsers().find(u => u.email === email && u.isActive) || null;
-        }
+    verifyCredentials(_email: string, _pass: string): User | null {
+        // SECURITY: Passwords are NOT verified locally.
+        // All authentication must go through Supabase Auth (supabaseService.signInUser).
+        // This mock method is intentionally disabled to prevent credential exposure.
+        console.warn('[dbService] verifyCredentials() is disabled. Use Supabase Auth instead.');
         return null;
     }
 

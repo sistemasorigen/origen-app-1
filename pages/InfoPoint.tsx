@@ -11,10 +11,8 @@ import SystemLoginModal from '../components/SystemLoginModal';
 import { db } from '../services/dbService';
 import { Menu } from 'lucide-react';
 import { ToastProvider, useToast } from './infopoint/context/ToastContext';
-import { useTutorial } from '../src/hooks/useTutorial';
-import TutorialInvitation from '../components/TutorialInvitation';
-import TutorialController from '../components/TutorialController';
-import { tours } from '../src/config/tours';
+
+// Sub Views
 
 // Sub Views
 import PublicHome from './infopoint/PublicHome';
@@ -58,15 +56,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const toast = useToast();
 
-    // --- TUTORIAL INTEGRATION ---
-    const {
-        isActive,
-        showInvitation,
-        startTutorial,
-        completeTutorial,
-        declineTemporary,
-        dismissTutorial
-    } = useTutorial('infopoint');
+
 
     // Local state to track the user authorized for InfoPoint
     // This can be the global currentUser OR a locally logged in user (via modal)
@@ -264,19 +254,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     return (
         <div className="flex flex-col md:flex-row h-screen md:h-[calc(100vh-64px)] bg-slate-50 md:bg-transparent overflow-hidden relative">
 
-            <TutorialInvitation
-                isOpen={showInvitation}
-                onStart={startTutorial}
-                onClose={declineTemporary}
-                onDismiss={dismissTutorial}
-                title="Bienvenido al Panel de Voluntarios"
-            />
-            <TutorialController
-                steps={tours.infopoint}
-                run={isActive}
-                onComplete={completeTutorial}
-                onSkip={dismissTutorial}
-            />
+
 
             {/* --- MOBILE LAYOUT (Stack Navigation) --- */}
             <div className="md:hidden flex flex-col w-full h-[100dvh] bg-white overflow-hidden">

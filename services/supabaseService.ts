@@ -3,108 +3,6 @@ import { supabase } from './supabaseClient';
 import { db } from './dbService';
 import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest } from '../types';
 
-// DEBUG: Global function to test Supabase connection (Development Only)
-// Only enable debug tools when running on localhost
-const isDevelopment = typeof window !== 'undefined' && (
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.hostname.startsWith('192.168.')
-);
-
-if (isDevelopment) {
-  (window as any).testSupabaseGroups = async () => {
-    console.log('=== SUPABASE GROUPS DEBUG ===');
-
-    // 1. Test Auth
-    console.log('1. Checking authentication...');
-    const { data: { user } } = await supabase.auth.getUser();
-    console.log('   User:', user ? user.email : 'NOT AUTHENTICATED');
-
-    // 2. Test SELECT on groups
-    console.log('2. Testing SELECT on groups...');
-    const selectStart = Date.now();
-    const { data: groups, error: selectError } = await supabase
-      .from('groups')
-      .select('*')
-      .limit(5);
-    console.log('   Time:', Date.now() - selectStart, 'ms');
-    console.log('   Data:', groups);
-    console.log('   Error:', selectError);
-
-    // 3. Test SELECT on categories
-    console.log('3. Testing SELECT on categories...');
-    const { data: cats, error: catError } = await supabase
-      .from('group_categories')
-      .select('*');
-    console.log('   Data:', cats);
-    console.log('   Error:', catError);
-
-    // 4. Test INSERT on groups
-    console.log('4. Testing INSERT on groups...');
-    const testGroup = {
-      id: 'test-' + Date.now(),
-      name: 'TEST GROUP',
-      leader_name: 'Test',
-      leader_surname: 'Leader',
-      meeting_day: 'Lunes',
-      meeting_time: '20:00',
-      location: 'Test Location',
-      members_count: 0,
-      max_capacity: 10
-    };
-    const insertStart = Date.now();
-    const { data: inserted, error: insertError } = await supabase
-      .from('groups')
-      .insert(testGroup)
-      .select()
-      .single();
-    console.log('   Time:', Date.now() - insertStart, 'ms');
-    console.log('   Data:', inserted);
-    console.log('   Error:', insertError);
-
-    // 5. Cleanup test
-    if (inserted) {
-      console.log('5. Cleaning up test group...');
-      await supabase.from('groups').delete().eq('id', testGroup.id);
-      console.log('   Cleaned up');
-    }
-
-    console.log('=== DEBUG COMPLETE ===');
-    return { user, groups, selectError, cats, catError, inserted, insertError };
-  };
-  console.log('[DEBUG] Run window.testSupabaseGroups() to diagnose');
-
-  // DIRECT INSERT FUNCTION - bypasses supabaseService object
-  (window as any).insertGroupDirect = async (group: any) => {
-    console.log('[DIRECT] Inserting group:', group);
-    const dbRow = {
-      id: group.id,
-      name: group.name,
-      leader_name: group.leaderName || '',
-      leader_surname: group.leaderSurname || '',
-      leader_phone: group.leaderPhone || '',
-      meeting_day: group.meetingDay || 'Lunes',
-      meeting_time: group.meetingTime || '20:00',
-      start_date: group.startDate || null,
-      location: group.location || '',
-      members_count: group.membersCount || 0,
-      max_capacity: group.maxCapacity || 12,
-      description: group.description || '',
-      image_url: group.imageUrl || '',
-      category_id: group.categoryId || null,
-      tags: group.tags || [],
-      host_id: (group as any).host_id,
-      co_host_id: (group as any).co_host_id,
-      co_host_first_name: group.coHostFirstName || '',
-      co_host_last_name: group.coHostLastName || '',
-      max_age: group.maxAge || 100,
-      target_gender: group.targetGender || 'Mixto'
-    };
-    const { data, error } = await supabase.from('groups').insert(dbRow).select().single();
-    console.log('[DIRECT] Result:', { data, error });
-    return { data, error };
-  };
-}
 
 // EXPORTED standalone function for direct use
 export async function insertGroupDirect(group: Group): Promise<Group | null> {
@@ -2950,12 +2848,55 @@ export const supabaseService = {
    */
   async toggleUserRole(userId: string, roleToAssign: UserRole, assign: boolean): Promise<boolean> {
     try {
-      // Fallback to USUARIO if removing role
-      const newRole = assign ? roleToAssign : UserRole.USUARIO;
+      // 1. Fetch current user to get their existing roles array
+      const { data: user, error: fetchError } = await supabase
+        .from('users')
+        .select('roles, role')
+        .eq('id', userId)
+        .single();
 
+      if (fetchError) {
+        console.error('[User Mgmt] Error fetching user for role toggle:', fetchError);
+        return false;
+      }
+
+      // 2. Calculate new roles array
+      const currentRoles: UserRole[] = (user?.roles || [user?.role || UserRole.VIEWER]) as UserRole[];
+      const roleSet = new Set(currentRoles);
+
+      if (assign) {
+        roleSet.add(roleToAssign);
+      } else {
+        roleSet.delete(roleToAssign);
+      }
+
+      // Ensure at least one role exists (fallback to USER/VIEWER)
+      if (roleSet.size === 0) {
+        roleSet.add(UserRole.VIEWER);
+      }
+
+      const newRoles = Array.from(roleSet);
+
+      // 3. Determine legacy role (Primary role for backward compatibility)
+      // If we are assigning ANFITRION, make it primary.
+      // If removing, revert to first available role.
+      let newLegacyRole = user.role;
+      if (assign) {
+        newLegacyRole = roleToAssign;
+      } else {
+        // If removing the current primary role, pick another one from the list
+        if (user.role === roleToAssign) {
+          newLegacyRole = newRoles[0];
+        }
+      }
+
+      // 4. Update both columns
       const { error } = await supabase
         .from('users')
-        .update({ role: newRole })
+        .update({
+          role: newLegacyRole,
+          roles: newRoles
+        })
         .eq('id', userId);
 
       if (error) {
@@ -3298,6 +3239,56 @@ export const supabaseService = {
     } catch (error) {
       console.error('[DropoutRequest] Exception fetching all:', error);
       return [];
+    }
+  },
+
+  /**
+   * Check if the current user has a pending or approved application
+   * This is a secure method that only returns the user's OWN application
+   */
+  async getUserLeaderApplication(userId?: string, email?: string): Promise<LeaderApplication | null> {
+    try {
+      if (!userId && !email) return null;
+
+      let query = supabase
+        .from('leader_applications')
+        .select('*')
+        .limit(1);
+
+      // Priority: Check by User ID (if authenticated)
+      if (userId) {
+        query = query.eq('applicant_id', userId);
+      } else if (email) {
+        // Fallback: Check by Email
+        query = query.eq('email', email);
+      }
+
+      const { data, error } = await query.maybeSingle();
+
+      if (error) {
+        console.error('[LeaderApps] Error checking user application:', error);
+        return null;
+      }
+
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        completedLeaderCourse: data.completed_leader_course,
+        completedHicisteCrecer: data.completed_hiciste_crecer,
+        completedVolunteerTraining: data.completed_volunteer_training,
+        attendsOrigen: data.attends_origen,
+        applicantId: data.applicant_id,
+        status: data.status,
+        createdAt: data.created_at
+      };
+    } catch (error) {
+      console.error('[LeaderApps] Exception checking user application:', error);
+      return null;
     }
   }
 };

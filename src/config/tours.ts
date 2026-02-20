@@ -4,36 +4,66 @@ export const tourStyles = {
     options: {
         arrowColor: '#fff',
         backgroundColor: '#fff',
-        overlayColor: 'rgba(0, 0, 0, 0.5)',
-        primaryColor: '#6366f1', // Indigo 500
+        overlayColor: 'rgba(0, 0, 0, 0)', // TRANSPARENT OVERLAY (Highlighter Mode)
+        primaryColor: '#000', // Black
         textColor: '#333',
         width: 400,
         zIndex: 10000,
     },
     tooltip: {
         borderRadius: '12px',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        border: '3px solid #000000',
+        boxShadow: '6px 6px 0px 0px rgba(0,0,0,1)',
         padding: '20px',
+        backgroundColor: '#ffffff',
+    },
+    tooltipContainer: {
+        textAlign: 'left',
+    },
+    tooltipTitle: {
+        fontWeight: 900,
+        fontSize: '18px',
+        textTransform: 'uppercase',
+        color: '#000000',
+        marginBottom: '10px',
+        fontFamily: 'inherit', // Inherit system font (Proxima Nova)
+    },
+    tooltipContent: {
+        fontWeight: 500,
+        fontSize: '15px',
+        color: '#333333',
+        fontFamily: 'inherit',
     },
     buttonNext: {
-        backgroundColor: '#4f46e5', // Indigo 600
+        backgroundColor: '#000000',
         borderRadius: '8px',
-        color: '#fff',
+        color: '#ffffff',
         fontSize: '14px',
-        fontWeight: 600,
+        fontWeight: 'bold',
         padding: '10px 20px',
         outline: 'none',
+        border: 'none',
     },
     buttonBack: {
-        color: '#6b7280', // Gray 500
+        color: '#000000',
         fontSize: '14px',
+        fontWeight: 'bold',
         marginRight: '10px',
         outline: 'none',
+        backgroundColor: 'transparent',
     },
     buttonSkip: {
-        color: '#9ca3af', // Gray 400
+        color: '#000000',
         fontSize: '14px',
+        fontWeight: 'bold',
         outline: 'none',
+        backgroundColor: 'transparent',
+    },
+    spotlight: {
+        backgroundColor: 'rgba(250, 204, 21, 0.2)', // Yellow-400 with 20% opacity
+        border: '4px solid #facc15', // Yellow-400 Solid
+        borderRadius: '8px',
+        boxShadow: '6px 6px 0px 0px rgba(0,0,0,1)', // Hard Black Shadow
     },
 };
 
@@ -41,12 +71,14 @@ export const tourStyles = {
 export const authSteps: Step[] = [
     {
         target: '#auth-form',
-        content: 'Aquí puedes crear tu cuenta usando tu correo y contraseña. Si ya tienes una, simplemente inicia sesión.',
+        content: 'Acá podés crear tu cuenta usando tu correo y contraseña. Si ya tenés una, simplemente iniciá sesión.',
         disableBeacon: true,
+        placement: 'right',
     },
     {
         target: '#google-login-btn',
-        content: '¿Prefieres algo más rápido? Usa tu cuenta de Google para acceder en un solo clic.',
+        content: '¿Preferís algo más rápido? Usá tu cuenta de Google para acceder en un solo clic.',
+        placement: 'bottom',
     },
 ];
 
@@ -54,11 +86,13 @@ export const authSteps: Step[] = [
 export const dashboardSteps: Step[] = [
     {
         target: '#hamburger-menu-btn',
-        content: 'Este es tu menú principal. Desde aquí puedes navegar rápidamente a cualquier parte de la aplicación.',
+        content: 'Este es tu menú principal. Desde acá podés navegar rápidamente a cualquier parte de la aplicación.',
+        placement: 'bottom-start',
     },
     {
         target: '#dashboard-hero',
-        content: 'Bienvenido a tu panel principal. Aquí encontrarás notificaciones importantes y accesos directos.',
+        content: 'Bienvenido a tu panel principal. Acá vas a encontrar notificaciones importantes y accesos directos.',
+        placement: 'bottom',
     },
     {
         target: '#systems-grid',
@@ -71,19 +105,22 @@ export const dashboardSteps: Step[] = [
 export const groupsSteps: Step[] = [
     {
         target: '#groups-search-bar',
-        content: 'Usa este buscador para encontrar grupos por nombre, barrio o líder.',
+        content: 'Usá este buscador para encontrar grupos por nombre, barrio o líder.',
+        placement: 'bottom',
     },
     {
         target: '#groups-filter-bar',
-        content: 'Filtra los resultados por categoría, día de reunión o tipo de grupo para encontrar el ideal para ti.',
+        content: 'Filtrá los resultados por categoría, día de reunión o tipo de grupo para encontrar el ideal para vos.',
+        placement: 'bottom',
     },
     {
         target: '#leader-postulation-card',
-        content: '¿Quieres liderar tu propio grupo? Haz clic aquí para postularte como anfitrión.',
+        content: '¿Querés liderar tu propio grupo? Hacé clic acá para postularte como anfitrión.',
+        placement: 'bottom',
     },
     {
         target: '#first-group-card', // We will need to add this class to the first card dynamically or ensure one exists
-        content: 'Aquí verás la información clave del grupo: día, hora, ubicación y si es exclusivo para un género o parejas.',
+        content: 'Acá vas a ver la información clave del grupo: día, hora, ubicación y si es exclusivo para un género o parejas.',
         placement: 'top', // Force top placement to point AT the card below
     },
 ];
@@ -92,70 +129,93 @@ export const groupsSteps: Step[] = [
 export const hostSteps: Step[] = [
     {
         target: '#host-dashboard-header',
-        content: 'Bienvenido a tu Panel de Anfitrión. Aquí podrás gestionar todos tus Grupos de Conexión.',
+        content: 'Bienvenido a tu Panel de Anfitrión. Acá vas a poder gestionar todos tus Grupos de Conexión.',
         disableBeacon: true,
-    },
-    {
-        target: '#btn-create-group',
-        content: 'Desde aquí puedes crear un nuevo grupo. Podrás definir fecha, hora y ubicación.',
-    },
-    {
-        target: '#host-group-card-0',
-        content: 'Aquí verás tus grupos activos. Cada tarjeta muestra la información clave como miembros, horarios y estado.',
         placement: 'bottom',
     },
     {
+        target: '#btn-create-group',
+        content: 'Desde acá podés crear un nuevo grupo. Vas a poder definir fecha, hora y ubicación.',
+        placement: 'bottom',
+    },
+    {
+        target: '#host-group-card-0',
+        content: 'Acá vas a ver tus grupos activos. Cada tarjeta muestra la información clave como miembros, horarios y estado.',
+        placement: 'top',
+    },
+    {
         target: '#btn-host-actions-0', // Target the main action button (Settings/Mobile or Row/Desktop)
-        content: 'Usa este botón para acceder a las herramientas de gestión de tu grupo.',
+        content: 'Usá este botón para acceder a las herramientas de gestión de tu grupo.',
+        placement: 'left',
     },
     {
         target: '#btn-host-attendance-0',
-        content: 'Fundamental: Aquí podrás tomar lista en cada reunión. Es vital para el seguimiento pastoral.',
+        content: 'Fundamental: Acá vas a poder tomar lista en cada reunión. Es vital para el seguimiento pastoral.',
+        placement: 'left',
     },
     {
         target: '#btn-host-applicants-0',
-        content: 'Gestiona las solicitudes de personas que quieren unirse a tu grupo.',
+        content: 'Gestioná las solicitudes de personas que quieren unirse a tu grupo.',
+        placement: 'left',
     },
 ];
 
 // 5. Create Group Modal Tour
 export const createGroupSteps: Step[] = [
     {
-        target: '#group-name-section',
-        content: 'Asigna un nombre único y representativo para tu Grupo de Conexión.',
+        target: '#tour-group-name',
+        content: 'Asigná un nombre único y representativo para tu Grupo de Conexión.',
         disableBeacon: true,
         placement: 'bottom',
-        spotlightPadding: 2,
+        spotlightPadding: 10,
+        disableScrollParentFix: true,
+        disableScrolling: true,
+        floaterProps: { disableAnimation: true, preventFlip: true } as any
     },
     {
-        target: '#group-category-section',
-        content: 'Selecciona la categoría que mejor describa el enfoque de tu grupo (ej. Jóvenes, Matrimonios, etc.).',
+        target: '#tour-group-category',
+        content: 'Seleccioná la categoría que mejor describa el enfoque de tu grupo (ej. Jóvenes, Matrimonios, etc.).',
         placement: 'bottom',
-        spotlightPadding: 2,
+        spotlightPadding: 10,
+        disableScrollParentFix: true,
+        disableScrolling: true,
+        floaterProps: { disableAnimation: true, preventFlip: true } as any
     },
     {
-        target: '#group-location-section',
-        content: 'Indica el barrio o la ubicación aproximada donde se reunirán.',
+        target: '#tour-group-location',
+        content: 'Indicá el barrio o la ubicación aproximada donde se van a reunir.',
         placement: 'bottom',
-        spotlightPadding: 2,
+        spotlightPadding: 10,
+        disableScrollParentFix: true,
+        disableScrolling: true,
+        floaterProps: { disableAnimation: true, preventFlip: true } as any
     },
     {
-        target: '#group-schedule-section',
-        content: 'Define el día y la hora de reunión habitual.',
+        target: '#tour-group-schedule',
+        content: 'Definí el día y la hora de reunión habitual.',
         placement: 'top', // Switch to top to avoid covering lower elements
-        spotlightPadding: 2,
+        spotlightPadding: 10,
+        disableScrollParentFix: true,
+        disableScrolling: true,
+        floaterProps: { disableAnimation: true, preventFlip: true } as any
     },
     {
-        target: '#group-duration-toggle',
-        content: 'Puedes elegir entre seguir las temporadas oficiales de la iglesia o definir fechas manualmente.',
+        target: '#tour-group-duration',
+        content: 'Podés elegir entre seguir las temporadas oficiales de la iglesia o definir fechas manualmente.',
         placement: 'top',
-        spotlightPadding: 2,
+        spotlightPadding: 10,
+        disableScrollParentFix: true,
+        disableScrolling: true,
+        floaterProps: { disableAnimation: true, preventFlip: true } as any
     },
     {
-        target: '#group-image-section',
-        content: 'Sube una foto de portada o utiliza nuestra IA para generar una imagen única basada en tu descripción.',
+        target: '#tour-group-image',
+        content: 'Subí una foto de portada o utilizá nuestra IA para generar una imagen única basada en tu descripción.',
         placement: 'top',
-        spotlightPadding: 2,
+        spotlightPadding: 10,
+        disableScrollParentFix: true,
+        disableScrolling: true,
+        floaterProps: { disableAnimation: true, preventFlip: true } as any
     },
 ];
 
@@ -163,58 +223,16 @@ export const createGroupSteps: Step[] = [
 export const welcomeSteps: Step[] = [
     {
         target: '#btn-new-visitor',
-        content: 'Registra aquí a cada persona que llega por primera vez. Es vital para el seguimiento.',
+        content: 'Registrá acá a cada persona que llega por primera vez. Es vital para el seguimiento.',
     },
     {
         target: '#visitor-stages-menu',
-        content: 'Navega entre las diferentes etapas de integración, desde nuevos visitantes hasta voluntarios.',
+        content: 'Navegá entre las diferentes etapas de integración, desde nuevos visitantes hasta voluntarios.',
     },
     {
         target: '#visitors-grid',
-        content: 'Aquí aparecerán las tarjetas de las personas en la etapa seleccionada. Podrás ver sus datos y moverlos de etapa.',
+        content: 'Acá van a aparecer las tarjetas de las personas en la etapa seleccionada. Vas a poder ver sus datos y moverlos de etapa.',
         placement: 'top',
-    },
-];
-
-// 7. Info Point Tour
-export const infoPointSteps: Step[] = [
-    {
-        target: 'body',
-        content: 'Bienvenido al Panel de Voluntarios. Esta es tu herramienta central para gestionar el área de Info Point.',
-        placement: 'center',
-    },
-    {
-        target: '#stats-grid, #mobile-menu-item-SUMMARY', // Visible on Desktop Dashboard OR Mobile Menu
-        content: 'Aquí verás un resumen en tiempo real del stock crítico, eventos activos y sacramentos pendientes.',
-        placement: 'bottom',
-    },
-    {
-        target: '#sidebar-item-INVENTORY, #mobile-menu-item-INVENTORY',
-        content: 'Inventario: Consulta y gestiona el stock de remeras, buzos y otros artículos.',
-    },
-    {
-        target: '#sidebar-item-MOVEMENTS, #mobile-menu-item-MOVEMENTS',
-        content: 'Movimientos: Registra cada entrada o salida de stock para mantener el inventario actualizado.',
-    },
-    {
-        target: '#sidebar-item-LOANS, #mobile-menu-item-LOANS',
-        content: 'Préstamos: Administra la ropa prestada a servidores y su devolución.',
-    },
-    {
-        target: '#sidebar-item-SEARCH, #mobile-menu-item-SEARCH',
-        content: 'Buscador: Localiza rápidamente cualquier producto por nombre, talle o tipo.',
-    },
-    {
-        target: '#sidebar-item-EVENTS, #mobile-menu-item-EVENTS',
-        content: 'Eventos: Consulta los próximos eventos y gestiona las necesidades del área.',
-    },
-    {
-        target: '#sidebar-item-BAPTISMS, #mobile-menu-item-BAPTISMS',
-        content: 'Sacramentos: Registra nuevos bautismos y presentaciones de niños.',
-    },
-    {
-        target: '#reports-btn, #mobile-menu-item-REPORTES',
-        content: 'Reportes: Accede a estadísticas detalladas para los líderes de área.',
     },
 ];
 
@@ -225,8 +243,8 @@ export const TOUR_IDS = {
     HOST: 'host',
     CREATE_GROUP: 'createGroup',
     WELCOME: 'welcome',
-    INFOPOINT: 'infopoint',
 };
+
 export const tours = {
     auth: authSteps,
     dashboard: dashboardSteps,
@@ -234,5 +252,4 @@ export const tours = {
     host: hostSteps,
     createGroup: createGroupSteps,
     welcome: welcomeSteps,
-    infopoint: infoPointSteps
 };

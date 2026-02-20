@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { db } from '../services/dbService';
 import { supabaseService } from '../services/supabaseService';
-import { User, UserRole, Log, SystemModule, AppConfig, BannerSlide, ValuesSectionConfig, Group, LeaderApplication, FooterLinks } from '../types';
+import { User, UserRole, Log, SystemModule, AppConfig, BannerSlide, ValuesSectionConfig, Group, FooterLinks } from '../types';
 import { Users, Shield, Home, Database, CloudUpload, Save, Search, X, Check, Book, Palette, Globe, Plus, Edit2, Trash2, Info, UserCheck, ClipboardList, CheckCircle, XCircle, Share2, Instagram, Facebook, Youtube, Music, Eye } from 'lucide-react';
 import { migrateToSupabase } from '../services/migrationService';
 import ImageUpload from '../components/ImageUpload';
@@ -77,9 +77,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     // Footer Config State
     const [footerConfig, setFooterConfig] = useState<FooterLinks>({ instagram: '', facebook: '', youtube: '', spotify: '' });
 
-    // --- LEADER APPLICATIONS STATE ---
-    const [applications, setApplications] = useState<LeaderApplication[]>([]);
-    const [viewingApp, setViewingApp] = useState<LeaderApplication | null>(null);
+
 
 
 
@@ -89,7 +87,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     // Deep linking
     useEffect(() => {
         const tab = searchParams.get('tab');
-        if (tab && ['users', 'leaders', 'postulations', 'config', 'logs', 'database'].includes(tab)) {
+        if (tab && ['users', 'leaders', 'config', 'logs', 'database'].includes(tab)) {
             setActiveTab(tab as any);
         }
     }, [searchParams]);
@@ -145,9 +143,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                 setFooterConfig(localConfig.footerLinks || { instagram: '', facebook: '', youtube: '', spotify: '' });
             }
 
-            // Fetch Postulations (only Pending)
-            const apps = await supabaseService.getLeaderApplications();
-            setApplications(apps.filter(a => a.status === 'PENDING'));
+
         };
         init();
     }, [activeTab]);
@@ -297,23 +293,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
         }
     };
 
-    // --- POSTULATION LOGIC ---
-    const handleApproveApplication = async (app: LeaderApplication) => {
-        await supabaseService.updateLeaderApplicationStatus(app.id, 'APPROVED');
-        // Refresh list
-        const apps = await supabaseService.getLeaderApplications();
-        setApplications(apps.filter(a => a.status === 'PENDING'));
-        setViewingApp(null);
-        showToast(`Postulación de ${app.firstName} aprobada. Recuerda asignar el rol manualmente en Usuarios.`);
-    };
 
-    const handleRejectApplication = async (app: LeaderApplication) => {
-        await supabaseService.updateLeaderApplicationStatus(app.id, 'REJECTED');
-        const apps = await supabaseService.getLeaderApplications();
-        setApplications(apps.filter(a => a.status === 'PENDING'));
-        setViewingApp(null);
-        showToast(`Postulación de ${app.firstName} rechazada.`);
-    };
 
     // --- CONFIG MANAGEMENT ---
     const saveConfig = async (newConfig: AppConfig) => {
@@ -618,7 +598,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                     <div className="flex gap-2 overflow-x-auto w-full md:w-auto scrollbar-hide">
                         {[
                             { id: 'users', icon: Users, label: 'Usuarios' },
-                            { id: 'postulations', icon: ClipboardList, label: 'Postulaciones' },
+
                             { id: 'config', icon: Home, label: 'Config' },
                             { id: 'logs', icon: Shield, label: 'Logs' },
                         ].map(tab => (
@@ -632,9 +612,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             >
                                 <tab.icon className="w-4 h-4" />
                                 <span className="hidden sm:inline">{tab.label}</span>
-                                {tab.id === 'postulations' && applications.length > 0 && (
-                                    <span className="bg-red-600 text-white text-[9px] px-1.5 py-0.5 border border-red-800">{applications.length}</span>
-                                )}
+
                             </button>
                         ))}
                     </div>
@@ -1100,86 +1078,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                     </div>
                 )}
 
-                {/* --- POSTULATIONS TAB --- */}
-                {activeTab === 'postulations' && (
-                    <div className="space-y-4 md:space-y-6 animate-fadeIn">
-                        <div className="mb-4 md:mb-6">
-                            <h2 className="text-lg md:text-xl font-black uppercase tracking-tight">Postulaciones</h2>
-                        </div>
 
-                        {/* Mobile: Cards */}
-                        <div className="md:hidden space-y-3">
-                            {applications.map(app => (
-                                <div key={app.id} className="bg-white border border-slate-200 rounded-xl p-3">
-                                    <div className="flex items-start justify-between mb-2">
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-xs text-slate-900 uppercase">{app.firstName} {app.lastName}</p>
-                                            <p className="text-[10px] text-slate-500 truncate">{app.email}</p>
-                                            <p className="text-[10px] text-slate-500">{app.phone}</p>
-                                        </div>
-                                        <span className="text-[9px] text-slate-400 font-mono">{new Date(app.createdAt).toLocaleDateString()}</span>
-                                    </div>
-                                    {app.applicantId && <span className="inline-block text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded mb-2">Registrado</span>}
-                                    <div className="flex gap-2 pt-2 border-t border-slate-100">
-                                        <button onClick={() => setViewingApp(app)} className="flex-1 px-2 py-1.5 border border-slate-200 rounded text-[10px] font-bold uppercase hover:bg-slate-100">
-                                            Detalles
-                                        </button>
-                                        <button onClick={() => handleApproveApplication(app)} className="p-2 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200"><CheckCircle className="w-4 h-4" /></button>
-                                        <button onClick={() => handleRejectApplication(app)} className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200"><XCircle className="w-4 h-4" /></button>
-                                    </div>
-                                </div>
-                            ))}
-                            {applications.length === 0 && (
-                                <p className="p-8 text-center text-slate-400 text-xs">No hay postulaciones pendientes.</p>
-                            )}
-                        </div>
-
-                        {/* Desktop: Table */}
-                        <div className="hidden md:block bg-off-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
-                                    <tr>
-                                        <th className="p-4">Postulante</th>
-                                        <th className="p-4">Contacto</th>
-                                        <th className="p-4">Fecha</th>
-                                        <th className="p-4 text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {applications.map(app => (
-                                        <tr key={app.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="p-4">
-                                                <p className="font-bold text-sm text-slate-900 uppercase">{app.firstName} {app.lastName}</p>
-                                                {app.applicantId && <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100">Usuario Registrado</span>}
-                                            </td>
-                                            <td className="p-4 text-xs text-slate-600">
-                                                <div className="flex flex-col gap-1">
-                                                    <span>{app.email}</span>
-                                                    <span>{app.phone}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-4 text-xs font-mono text-slate-500">
-                                                {new Date(app.createdAt).toLocaleDateString()}
-                                            </td>
-                                            <td className="p-4 text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <button onClick={() => setViewingApp(app)} className="px-3 py-1.5 border border-slate-200 rounded text-[10px] font-bold uppercase hover:bg-slate-100">
-                                                        Ver Detalles
-                                                    </button>
-                                                    <button onClick={() => handleApproveApplication(app)} className="p-2 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200" title="Aprobar"><CheckCircle className="w-4 h-4" /></button>
-                                                    <button onClick={() => handleRejectApplication(app)} className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200" title="Rechazar"><XCircle className="w-4 h-4" /></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {applications.length === 0 && (
-                                        <tr><td colSpan={4} className="p-12 text-center text-slate-400 text-sm">No hay solicitudes pendientes.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
 
                 {/* --- CONTENT MANAGEMENT TAB (CONFIG) --- */}
                 {activeTab === 'config' && (
@@ -1534,58 +1433,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                     </NeoModal>
                 )}
 
-                {/* VIEW POSTULATION MODAL - BRUTALIST */}
-                {viewingApp && (
-                    <NeoModal
-                        isOpen={!!viewingApp}
-                        onClose={() => setViewingApp(null)}
-                        title="Detalle Postulación"
-                    >
-                        <div className="flex flex-col gap-6">
-                            <div className="flex items-center gap-4 border-b-2 border-dashed border-neutral-300 pb-4">
-                                <div className="w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center font-black text-neutral-500 text-xl border-2 border-black">
-                                    {viewingApp.firstName.charAt(0)}
-                                </div>
-                                <div>
-                                    <h4 className="font-black text-xl uppercase">{viewingApp.firstName} {viewingApp.lastName}</h4>
-                                    <p className="text-sm font-bold text-neutral-500">{viewingApp.email} • {viewingApp.phone}</p>
-                                </div>
-                            </div>
 
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center p-3 bg-neutral-50 border-2 border-black">
-                                    <span className="text-xs font-black uppercase text-neutral-700">¿Asiste a Origen?</span>
-                                    {viewingApp.attendsOrigen
-                                        ? <span className="bg-emerald-100 text-emerald-700 border-2 border-emerald-600 px-2 py-1 text-[10px] font-black uppercase">SÍ</span>
-                                        : <span className="bg-neutral-200 text-neutral-500 border-2 border-neutral-400 px-2 py-1 text-[10px] font-black uppercase">NO</span>}
-                                </div>
-                                <div className="flex justify-between items-center p-3 bg-neutral-50 border-2 border-black">
-                                    <span className="text-xs font-black uppercase text-neutral-700">¿Hizo Crecer?</span>
-                                    {viewingApp.completedHicisteCrecer
-                                        ? <span className="bg-emerald-100 text-emerald-700 border-2 border-emerald-600 px-2 py-1 text-[10px] font-black uppercase">SÍ</span>
-                                        : <span className="bg-neutral-200 text-neutral-500 border-2 border-neutral-400 px-2 py-1 text-[10px] font-black uppercase">NO</span>}
-                                </div>
-                                <div className="flex justify-between items-center p-3 bg-neutral-50 border-2 border-black">
-                                    <span className="text-xs font-black uppercase text-neutral-700">¿Entrenamiento Voluntarios?</span>
-                                    {viewingApp.completedVolunteerTraining
-                                        ? <span className="bg-emerald-100 text-emerald-700 border-2 border-emerald-600 px-2 py-1 text-[10px] font-black uppercase">SÍ</span>
-                                        : <span className="bg-neutral-200 text-neutral-500 border-2 border-neutral-400 px-2 py-1 text-[10px] font-black uppercase">NO</span>}
-                                </div>
-                                <div className="flex justify-between items-center p-3 bg-neutral-50 border-2 border-black">
-                                    <span className="text-xs font-black uppercase text-neutral-700">¿Curso de Líder?</span>
-                                    {viewingApp.completedLeaderCourse
-                                        ? <span className="bg-emerald-100 text-emerald-700 border-2 border-emerald-600 px-2 py-1 text-[10px] font-black uppercase">SÍ</span>
-                                        : <span className="bg-neutral-200 text-neutral-500 border-2 border-neutral-400 px-2 py-1 text-[10px] font-black uppercase">NO</span>}
-                                </div>
-                            </div>
-
-                            <div className="flex gap-4 pt-4 border-t-2 border-black mt-2">
-                                <button onClick={() => handleRejectApplication(viewingApp)} className="flex-1 py-3 border-2 border-black text-red-600 bg-red-50 font-black uppercase text-xs hover:bg-red-100 hover:shadow-[3px_3px_0px_0px_rgba(220,38,38,1)] transition-all">Rechazar</button>
-                                <button onClick={() => handleApproveApplication(viewingApp)} className="flex-1 py-3 bg-black text-white font-black uppercase text-xs hover:bg-neutral-800 border-2 border-black shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all">Aprobar</button>
-                            </div>
-                        </div>
-                    </NeoModal>
-                )}
 
             </div>
         </div>

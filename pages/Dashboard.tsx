@@ -76,6 +76,7 @@ const getModuleIcon = (id: string, defaultIcon: string, isConstruction?: boolean
         case 'pastores': return <AlertTriangle className={iconClass} />;
         case 'tutorials': return <Book className={iconClass} />;
         case 'admin': return <Settings className={iconClass} />;
+        case 'coordinators': return <ClipboardList className={iconClass} />;
         default: return <span className="text-3xl">{defaultIcon}</span>;
     }
 };
@@ -730,83 +731,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                 </section>
 
                 {/* === COORDINATOR PRESENTATION CARD === */}
-                {currentUser && hasRole(currentUser, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN]) && (
-                    <section className={`relative z-10 pb-16 px-4 sm:px-6 lg:px-8 max-w-[95%] mx-auto w-full ${isLoaded ? 'animate-slideUp stagger-3' : 'opacity-0'}`}>
-                        <div
-                            onClick={() => navigate('/coordinators')}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/coordinators'); } }}
-                            className="group relative cursor-pointer overflow-hidden border-[3px] border-black dark:border-teal-400 bg-gradient-to-br from-teal-50 via-white to-emerald-50 dark:from-teal-950/40 dark:via-black dark:to-emerald-950/30 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(20,184,166,0.3)] dark:hover:shadow-[12px_12px_0px_0px_rgba(20,184,166,0.4)] hover:-translate-y-[3px] hover:-translate-x-[3px] active:translate-y-0 active:translate-x-0 active:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-200"
-                        >
-                            {/* Decorative background elements */}
-                            <div className="absolute -right-16 -top-16 w-64 h-64 bg-teal-200/30 dark:bg-teal-700/10 rounded-full blur-sm pointer-events-none" />
-                            <div className="absolute -left-8 -bottom-8 w-40 h-40 bg-emerald-200/40 dark:bg-emerald-700/10 rounded-full blur-sm pointer-events-none" />
-                            <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-teal-400 via-emerald-500 to-teal-600" />
 
-                            <div className="relative z-10 p-6 sm:p-8 md:p-10">
-                                <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
-
-                                    {/* Left: Icon + Info */}
-                                    <div className="flex-1">
-                                        <div className="flex items-start gap-4 mb-5">
-                                            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white dark:bg-black border-[3px] border-black dark:border-teal-400 flex items-center justify-center flex-shrink-0 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(20,184,166,0.3)]">
-                                                <ClipboardList className="w-8 h-8 md:w-9 md:h-9 text-teal-600 dark:text-teal-400" />
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="bg-teal-600 dark:bg-teal-500 text-white text-[10px] font-black px-2.5 py-1 uppercase tracking-widest">
-                                                        Coordinador
-                                                    </span>
-                                                    {currentUser.assignedCategory && (
-                                                        <span className="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold px-2 py-1 border border-emerald-300 dark:border-emerald-700">
-                                                            Categoría asignada
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs font-mono font-bold tracking-widest uppercase text-gray-500 dark:text-teal-200/60">
-                                                    Panel de Gestión
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <h3 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tighter text-black dark:text-white mb-3 leading-none">
-                                            Coordinadores
-                                        </h3>
-                                        <p className="text-sm sm:text-base text-gray-600 dark:text-neutral-400 font-medium leading-relaxed max-w-xl">
-                                            Gestioná los grupos de tu categoría, revisá la asistencia, analizá métricas y mantené el calendario organizado desde un solo lugar.
-                                        </p>
-                                    </div>
-
-                                    {/* Right: Feature highlights + CTA */}
-                                    <div className="flex flex-col gap-4 md:min-w-[240px]">
-                                        {/* Mini feature cards */}
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <div className="bg-white/80 dark:bg-black/60 border-2 border-black/20 dark:border-teal-400/30 p-3 text-center">
-                                                <Users className="w-5 h-5 mx-auto mb-1 text-teal-600 dark:text-teal-400" />
-                                                <span className="text-[10px] font-black uppercase text-gray-600 dark:text-neutral-400">Grupos</span>
-                                            </div>
-                                            <div className="bg-white/80 dark:bg-black/60 border-2 border-black/20 dark:border-teal-400/30 p-3 text-center">
-                                                <BarChart3 className="w-5 h-5 mx-auto mb-1 text-emerald-600 dark:text-emerald-400" />
-                                                <span className="text-[10px] font-black uppercase text-gray-600 dark:text-neutral-400">Métricas</span>
-                                            </div>
-                                            <div className="bg-white/80 dark:bg-black/60 border-2 border-black/20 dark:border-teal-400/30 p-3 text-center">
-                                                <CalendarCoord className="w-5 h-5 mx-auto mb-1 text-blue-600 dark:text-blue-400" />
-                                                <span className="text-[10px] font-black uppercase text-gray-600 dark:text-neutral-400">Calendario</span>
-                                            </div>
-                                        </div>
-
-                                        {/* CTA button */}
-                                        <button className="w-full inline-flex items-center justify-center gap-3 px-8 py-3.5 bg-black dark:bg-teal-500 text-white font-black text-sm uppercase tracking-wider border-[3px] border-black dark:border-teal-400 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] group-hover:shadow-none group-hover:translate-x-[4px] group-hover:translate-y-[4px] transition-all duration-200">
-                                            INGRESAR AL PANEL
-                                            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                )}
 
                 {/* === FOOTER - NEO-BRUTALIST === */}
                 <footer className={`relative z-10 bg-neutral-50 dark:bg-neutral-950 border-t-2 sm:border-t-4 border-black dark:border-white py-8 sm:py-12 md:py-16 px-4 md:px-6 mt-auto ${isLoaded ? 'animate-slideUp stagger-4' : 'opacity-0'}`}>

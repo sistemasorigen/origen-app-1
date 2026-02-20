@@ -102,7 +102,7 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: 
                 {menuItems.map((item) => (
                     <button
                         key={item.id}
-                        id={`mobile-menu-item-${item.id}`}
+                        id={`tour-infopoint-${item.id.toLowerCase()}`}
                         onClick={() => handleItemClick(item)}
                         className="flex flex-col items-center justify-center p-6 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:shadow-none transition-all active:scale-95"
                     >

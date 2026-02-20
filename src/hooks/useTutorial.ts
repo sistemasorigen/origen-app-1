@@ -6,6 +6,7 @@ interface UseTutorialReturn {
     isActive: boolean;
     showInvitation: boolean;
     hasSeen: boolean;
+    tourSessionId: number;
     startTutorial: () => void;
     completeTutorial: () => Promise<void>;
     dismissTutorial: () => Promise<void>; // "No volver a mostrar"
@@ -19,12 +20,15 @@ export const useTutorial = (tourId: string): UseTutorialReturn => {
     const [showInvitation, setShowInvitation] = useState(false);
     const [hasSeen, setHasSeen] = useState(true); // Default to true to prevent flash
 
+    const [tourSessionId, setTourSessionId] = useState(0);
+
     // Check URL override for restarting tutorial
     useEffect(() => {
         const searchParams = new URLSearchParams(window.location.search);
         if (searchParams.get('restartTutorial') === 'true') {
             setIsActive(true);
             setHasSeen(false);
+            setTourSessionId(Date.now());
             // Clean URL
             const newUrl = window.location.pathname;
             window.history.replaceState({}, '', newUrl);
@@ -95,6 +99,7 @@ export const useTutorial = (tourId: string): UseTutorialReturn => {
     const startTutorial = useCallback(() => {
         setShowInvitation(false);
         setIsActive(true);
+        setTourSessionId(Date.now());
     }, []);
 
     const completeTutorial = useCallback(async () => {
@@ -134,6 +139,7 @@ export const useTutorial = (tourId: string): UseTutorialReturn => {
 
             setHasSeen(false);
             setIsActive(true); // Auto-start
+            setTourSessionId(Date.now());
 
             // Refresh session to reflect reset
             await refreshSession();
@@ -146,6 +152,7 @@ export const useTutorial = (tourId: string): UseTutorialReturn => {
         isActive,
         showInvitation,
         hasSeen,
+        tourSessionId,
         startTutorial,
         completeTutorial,
         dismissTutorial,

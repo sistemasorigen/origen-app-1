@@ -94,7 +94,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                     {visibleItems.map((item) => (
                         <button
                             key={item.id}
-                            id={`sidebar-item-${item.id}`}
+                            id={`tour-infopoint-${item.id.toLowerCase()}-sidebar`}
                             onClick={() => {
                                 if (item.id === 'REPORTS') {
                                     navigate('/pastores');

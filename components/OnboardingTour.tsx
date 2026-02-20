@@ -16,28 +16,28 @@ interface OnboardingTourProps {
 const TOUR_STEPS: TourStep[] = [
     {
         title: '¡Bienvenido a Origen!',
-        description: 'Esta es tu plataforma de gestión integral para la iglesia. Te guiaremos por las principales funcionalidades.',
+        description: 'Esta es tu plataforma de gestión integral para la iglesia. Te vamos a guiar por las principales funcionalidades.',
         position: 'center'
     },
     {
         title: 'Áreas de Servicio',
-        description: 'Accede a los diferentes módulos: Grupos de Conexión, Punto de Info, Reportes y más. Haz clic en cualquier tarjeta para ingresar.',
+        description: 'Accedé a los diferentes módulos: Grupos de Conexión, Punto de Info, Reportes y más. Hacé clic en cualquier tarjeta para ingresar.',
         targetSelector: '#systems-grid',
         position: 'top'
     },
     {
         title: 'Cambiar Tema',
-        description: 'Puedes cambiar entre modo claro y oscuro usando el botón de sol/luna en la barra superior.',
+        description: 'Podés cambiar entre modo claro y oscuro usando el botón de sol/luna en la barra superior.',
         position: 'center'
     },
     {
         title: 'Tu Sesión',
-        description: 'En la esquina superior derecha verás tu rol actual y el botón para cerrar sesión.',
+        description: 'En la esquina superior derecha vas a ver tu rol actual y el botón para cerrar sesión.',
         position: 'center'
     },
     {
         title: '¡Listo para empezar!',
-        description: 'Ya conoces lo básico. Explora los módulos y descubre todas las herramientas disponibles.',
+        description: 'Ya conocés lo básico. Explorá los módulos y descubrí todas las herramientas disponibles.',
         position: 'center'
     }
 ];

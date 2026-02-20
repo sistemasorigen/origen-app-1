@@ -47,15 +47,9 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
     };
 
     const modalVariants = {
-        hidden: isMobile
-            ? { y: "100%" } // Mobile: Slide down
-            : { opacity: 0, scale: 0.95 }, // Desktop: Fade
-        visible: isMobile
-            ? { y: 0, opacity: 1 }
-            : { opacity: 1, scale: 1 },
-        exit: isMobile
-            ? { y: "100%" }
-            : { opacity: 0, scale: 0.95 }
+        hidden: { opacity: 0 },
+        visible: { opacity: 1 },
+        exit: { opacity: 0 }
     };
 
     // Drag Logic (Mobile Only)
@@ -71,7 +65,7 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                 <>
                     {/* BACKDROP */}
                     <motion.div
-                        className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4"
+                        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" // Flexbox alignment
                         variants={backdropVariants}
                         initial="hidden"
                         animate="visible"
@@ -83,25 +77,23 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                         <motion.div
                             className={`
                                 relative w-full md:w-auto md:min-w-[500px] ${maxWidth}
-                                bg-white !bg-white z-[100] flex flex-col isolate
+                                bg-white !bg-white flex flex-col my-auto
                                 ${isMobile
-                                    ? 'rounded-t-2xl max-h-[90vh]' // Mobile Sheet
-                                    : 'rounded-xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[90vh]' // Desktop Card
+                                    ? 'rounded-t-2xl max-h-[90vh]'
+                                    : 'rounded-xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[90vh]'
                                 }
                             `}
-                            style={{ backgroundColor: 'white', opacity: 1, isolation: 'isolate', maxHeight: '90vh' }}
+                            style={{ backgroundColor: 'white', opacity: 1 }} // Removed isolation: isolate
                             variants={modalVariants}
                             initial="hidden"
                             animate="visible"
                             exit="exit"
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking content
-
-
-                            // Gestures (Mobile Only)
-                            drag={!persistent && isMobile ? "y" : false}
+                            transition={{ duration: 0.2 }} // Simple fade, no springs to avoid transforms
+                            onClick={(e) => e.stopPropagation()}
+                            // Removed Drag on Desktop to guarantee no transforms
+                            drag={isMobile && !persistent ? "y" : false}
                             dragConstraints={{ top: 0, bottom: 0 }}
-                            dragElastic={{ top: 0, bottom: 0.2 }}
+                            dragElastic={0.1}
                             onDragEnd={handleDragEnd}
                         >
                             {/* MOBILE DRAG HANDLE */}
@@ -129,7 +121,7 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                             </div>
 
                             {/* BODY */}
-                            <div className={`flex-1 overflow-y-auto overflow-x-hidden ${isMobile ? 'px-6 pb-8' : 'px-6 pb-6'}`}>
+                            <div id="neo-modal-scroll-container" className={`flex-1 overflow-y-auto overflow-x-hidden ${isMobile ? 'px-6 pb-8' : 'px-6 pb-6'}`}>
                                 {children}
                             </div>
                         </motion.div>

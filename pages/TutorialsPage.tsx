@@ -50,15 +50,7 @@ const TUTORIALS = [
         color: 'bg-yellow-500',
         roles: [UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA, UserRole.SUPER_ADMIN]
     },
-    {
-        id: 'infopoint',
-        title: 'Punto de Info',
-        description: 'Inventario, ventas, préstamos y eventos especiales.',
-        icon: Info,
-        path: '/info-point?view=PANEL&restartTutorial=true',
-        color: 'bg-teal-500',
-        roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO]
-    }
+
 ];
 
 const TutorialCard: React.FC<{ tutorial: typeof TUTORIALS[0], delay: string }> = ({ tutorial, delay }) => {

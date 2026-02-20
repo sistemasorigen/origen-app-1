@@ -22,6 +22,8 @@ import { useTutorial } from '../src/hooks/useTutorial';
 import TutorialInvitation from '../components/TutorialInvitation';
 import TutorialController from '../components/TutorialController';
 import { tours } from '../src/config/tours';
+import GroupsAdminToolbar from '../components/groups/GroupsAdminToolbar';
+import GroupsAdminList from '../components/groups/GroupsAdminList';
 
 
 
@@ -304,9 +306,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
     const [isInquiryModalOpen, setInquiryModalOpen] = useState(false);
     // inquiryForm moved to JoinGroupModal
-    const [notification, setNotification] = useState<{ show: boolean, message: string, type: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
+    const [notification, setNotification] = useState<{ show: boolean, message: string, type: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'success' });
 
     // --- LEADER POSTULATION STATE ---
+    const [userApplicationStatus, setUserApplicationStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | null>(null);
     const [isPostulationModalOpen, setIsPostulationModalOpen] = useState(false);
     const [postulationForm, setPostulationForm] = useState({
         firstName: '', lastName: '', email: '', phone: '',
@@ -481,6 +484,24 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         fetchApplications();
     }, [isPostulationModalOpen, currentUser]);
 
+    // Check for existing application on load
+    useEffect(() => {
+        if (currentUser) {
+            supabaseService.getUserLeaderApplication(currentUser.id, currentUser.email).then(app => {
+                if (app) setUserApplicationStatus(app.status);
+            });
+        }
+    }, [currentUser]);
+
+    // Check for existing application on load
+    useEffect(() => {
+        if (currentUser) {
+            supabaseService.getUserLeaderApplication(currentUser.id, currentUser.email).then(app => {
+                if (app) setUserApplicationStatus(app.status);
+            });
+        }
+    }, [currentUser]);
+
     // Fetch User Registrations for Join Logic
     const fetchUserRegistrations = async () => {
         if (currentUser) {
@@ -534,7 +555,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const isGroupsAdmin = currentUser ? hasRole(currentUser, UserRole.ADMIN_GROUPS) : false;
     const isEncargadoGroups = currentUser ? hasRole(currentUser, UserRole.ENCARGADO_GRUPOS) : false;
     const hasGroupsPrivilege = currentUser?.linkedGroupId === 'GROUPS' || (currentUser?.volunteerRoles && currentUser.volunteerRoles.includes('GROUPS'));
-    const isAnfitrion = currentUser ? (hasRole(currentUser, UserRole.ANFITRION) && !!currentUser.linkedGroupId && !['PUNTO', 'STORE', 'GROUPS', 'ALABANZA'].includes(currentUser.linkedGroupId)) : false;
+    const isAnfitrion = currentUser ? (hasRole(currentUser, UserRole.ANFITRION)) : false;
     const canAccessAdmin = isSuperAdmin || isGroupsAdmin || hasGroupsPrivilege || isEncargadoGroups;
     const canSeeConfig = isSuperAdmin || isGroupsAdmin;
 
@@ -619,9 +640,9 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         setConfig(db.getAppConfig());
     }, [view, currentUser, adminSubTab]);
 
-    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
         setNotification({ show: true, message, type });
-        setTimeout(() => setNotification({ ...notification, show: false }), 3000);
+        setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
     };
 
     // --- APPROVAL WORKFLOW HANDLERS ---
@@ -1024,10 +1045,32 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     };
 
     const renderLeaderDashboard = () => {
-        if (!currentUser?.linkedGroupId) return <div className="p-8 text-center text-red-500">Error: No tienes un grupo asignado.</div>;
+        // Handle unassigned hosts gracefully
+        if (!currentUser?.linkedGroupId) {
+            return (
+                <div className="max-w-4xl mx-auto p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-2xl font-black uppercase text-slate-900 mb-2">¡Felicitaciones!</h3>
+                    <p className="text-lg font-bold text-slate-700 mb-4">Tu postulación ha sido aprobada.</p>
+                    <p className="text-slate-500 max-w-lg mx-auto">
+                        Ya eres oficialmente un Anfitrión de Origen. En breve, el equipo de coordinación te asignará tu Grupo de Conexión para que puedas comenzar a gestionarlo desde este panel.
+                    </p>
+                </div>
+            );
+        }
 
         const myGroup = groups.find(g => g.id === currentUser.linkedGroupId);
-        if (!myGroup) return <div className="p-8 text-center text-red-500">Error: Tu grupo asignado no se encuentra o fue eliminado.</div>;
+        if (!myGroup) {
+            return (
+                <div className="p-8 text-center border-2 border-dashed border-red-200 rounded-xl bg-red-50 text-red-700">
+                    <Info className="w-8 h-8 mx-auto mb-2" />
+                    <p className="font-bold">No se encontró tu grupo asignado.</p>
+                    <p className="text-sm">Por favor contacta a tu coordinador.</p>
+                </div>
+            );
+        }
 
         const status = myGroup.membersCount >= myGroup.maxCapacity ? 'LLENO' : 'DISPONIBLE';
 
@@ -1389,7 +1432,21 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                     </p>
                                 </div>
                                 <button
-                                    onClick={() => setIsPostulationModalOpen(true)}
+                                    onClick={() => {
+                                        if (isAnfitrion) {
+                                            showToast("Ya eres anfitrión", 'info');
+                                            return;
+                                        }
+                                        if (userApplicationStatus === 'PENDING') {
+                                            showToast("Ya tienes una postulación en revisión", 'info');
+                                            return;
+                                        }
+                                        if (userApplicationStatus === 'APPROVED') {
+                                            showToast("Tu postulación ya fue aprobada", 'success');
+                                            return;
+                                        }
+                                        setIsPostulationModalOpen(true);
+                                    }}
                                     className="px-8 py-4 bg-[#118f46] text-white font-bold uppercase tracking-wide text-sm border-2 border-[#118f46] rounded-lg hover:bg-white hover:text-black hover:border-white transition-all flex items-center gap-3 group"
                                 >
                                     POSTULARME
@@ -1410,411 +1467,38 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                         <>
 
                             {adminSubTab === 'GROUPS' && (
-                                <div>
-                                    {/* Header with info */}
-                                    {/* Header with info and Actions */}
-                                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6 relative">
-                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 w-full xl:w-auto relative">
-                                            <div className="shrink-0 flex justify-between w-full sm:w-auto items-center">
-                                                <div>
-                                                    <h3 className="text-base sm:text-lg font-black uppercase tracking-tight text-slate-900">Moderación de Grupos</h3>
-                                                    <p className="text-[11px] sm:text-xs text-slate-500">Revisa y aprueba grupos pendientes</p>
-                                                </div>
+                                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <GroupsAdminToolbar
+                                        searchTerm={adminSearchTerm}
+                                        setSearchTerm={setAdminSearchTerm}
+                                        filterMode={adminFilterMode}
+                                        setFilterMode={setAdminFilterMode}
+                                        statusFilter={adminStatusFilter}
+                                        setStatusFilter={setAdminStatusFilter}
+                                        seasonFilter={adminSeasonFilter}
+                                        setSeasonFilter={setAdminSeasonFilter}
+                                        pendingDropoutCount={pendingDropoutCount}
+                                        adminGroups={adminGroups}
+                                        onCreateGroup={() => setIsCreateModalOpen(true)}
+                                        onAddMember={() => setIsAddMemberModalOpen(true)}
+                                        onDropoutInbox={() => setIsDropoutInboxOpen(true)}
+                                        isMobileMenuOpen={isMobileMenuOpen}
+                                        setIsMobileMenuOpen={setIsMobileMenuOpen}
+                                    />
 
-                                                {/* Search Bar */}
-                                                <div className="relative w-full sm:w-64">
-                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Buscar grupo, líder..."
-                                                        value={adminSearchTerm}
-                                                        onChange={(e) => setAdminSearchTerm(e.target.value)}
-                                                        className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-black transition-all placeholder:font-medium"
-                                                    />
-                                                    {adminSearchTerm && (
-                                                        <button
-                                                            onClick={() => setAdminSearchTerm('')}
-                                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full"
-                                                        >
-                                                            <X className="w-3 h-3 text-slate-400" />
-                                                        </button>
-                                                    )}
-                                                </div>
-
-                                                {/* Mobile Actions Menu (3 dots) */}
-                                                <div className="relative sm:hidden z-20">
-                                                    <button
-                                                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                                        className="p-2 text-slate-400 hover:text-black hover:bg-slate-100 rounded-lg transition-colors"
-                                                    >
-                                                        <MoreVertical className="w-5 h-5" />
-                                                    </button>
-
-                                                    {isMobileMenuOpen && (
-                                                        <div className="absolute top-full right-0 mt-2 z-50 w-64 bg-white border-2 border-slate-900 rounded-xl shadow-xl p-2 flex flex-col gap-2">
-                                                            <button
-                                                                onClick={() => { setIsCreateModalOpen(true); setIsMobileMenuOpen(false); }}
-                                                                className="flex items-center gap-3 px-4 py-3 bg-black text-white rounded-lg text-xs font-black uppercase tracking-wider hover:bg-zinc-800 transition-all"
-                                                            >
-                                                                <Plus className="w-4 h-4 shrink-0" />
-                                                                CREAR GRUPO
-                                                            </button>
-                                                            <button
-                                                                onClick={() => { setIsAddMemberModalOpen(true); setIsMobileMenuOpen(false); }}
-                                                                className="flex items-center gap-3 px-4 py-3 bg-slate-50 text-slate-900 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-slate-100 transition-all"
-                                                            >
-                                                                <UserPlus className="w-4 h-4 shrink-0" />
-                                                                AGREGAR PARTICIPANTE
-                                                            </button>
-
-                                                            <button
-                                                                onClick={() => { setIsDropoutInboxOpen(true); setIsMobileMenuOpen(false); }}
-                                                                className="flex items-center gap-3 px-4 py-3 bg-slate-50 text-slate-900 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-slate-100 transition-all justify-between"
-                                                            >
-                                                                <div className="flex items-center gap-3">
-                                                                    <MailMinus className="w-4 h-4 shrink-0" />
-                                                                    SOLICITUDES DE BAJA
-                                                                </div>
-                                                                {pendingDropoutCount > 0 && (
-                                                                    <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                                                        {pendingDropoutCount}
-                                                                    </span>
-                                                                )}
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Admin Toolbar - Action Buttons (Desktop Only) */}
-                                            <div className="hidden sm:flex gap-2.5 w-full sm:w-auto pb-3 sm:pb-0 px-1 -mx-1">
-                                                {/* CTA Principal: NUEVO */}
-                                                <button
-                                                    id="create-group-btn"
-                                                    onClick={() => setIsCreateModalOpen(true)}
-                                                    className="flex items-center gap-2 px-4 py-2.5 bg-black text-white border-2 border-black rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider hover:bg-zinc-800 active:scale-95 transition-all whitespace-nowrap min-h-[40px] shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
-                                                >
-                                                    <Plus className="w-4 h-4 shrink-0" />
-                                                    <span className="hidden sm:inline">CREAR GRUPO</span>
-                                                </button>
-
-                                                {/* Agregar Participante */}
-                                                <button
-                                                    onClick={() => setIsAddMemberModalOpen(true)}
-                                                    className="flex items-center gap-2 px-4 py-2.5 bg-white text-black border-2 border-black rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider hover:bg-slate-100 active:scale-95 transition-all whitespace-nowrap min-h-[40px]"
-                                                >
-                                                    <UserPlus className="w-4 h-4 shrink-0" />
-                                                    <span className="hidden sm:inline">AGREGAR PARTICIPANTE</span>
-                                                </button>
-
-                                                {/* Reportes Bypass */}
-
-
-                                                {/* Bajas con Badge */}
-                                                <button
-                                                    onClick={() => setIsDropoutInboxOpen(true)}
-                                                    className="relative flex items-center gap-2 px-4 py-2.5 bg-orange-500 text-white border-2 border-black rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider hover:bg-orange-600 active:scale-95 transition-all whitespace-nowrap min-h-[40px]"
-                                                >
-                                                    <MailMinus className="w-4 h-4 shrink-0" />
-                                                    <span className="hidden sm:inline">SOLICITUDES DE BAJA</span>
-                                                    {pendingDropoutCount > 0 && (
-                                                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
-                                                            {pendingDropoutCount > 9 ? '9+' : pendingDropoutCount}
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Status Pills (Right side) - Always Visible */}
-                                        <div
-                                            id="host-stats"
-                                            className="flex items-center gap-1.5 sm:gap-2 w-full xl:w-auto overflow-x-auto xl:overflow-visible pb-1 xl:pb-0 justify-start xl:justify-end no-scrollbar"
-                                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                                        >
-                                            {/* Filter Mode Toggle */}
-                                            <div className="flex items-center bg-slate-100 rounded-lg p-1 mr-2 border border-slate-200">
-                                                <button
-                                                    onClick={() => setAdminFilterMode('MANUAL')}
-                                                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${adminFilterMode === 'MANUAL'
-                                                        ? 'bg-white text-black shadow-sm'
-                                                        : 'text-slate-500 hover:text-slate-800'
-                                                        }`}
-                                                >
-                                                    Manual
-                                                </button>
-                                                <button
-                                                    onClick={() => setAdminFilterMode('SEASONS')}
-                                                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${adminFilterMode === 'SEASONS'
-                                                        ? 'bg-white text-black shadow-sm'
-                                                        : 'text-slate-500 hover:text-slate-800'
-                                                        }`}
-                                                >
-                                                    Temporadas
-                                                </button>
-                                            </div>
-
-                                            {adminFilterMode === 'MANUAL' ? (
-                                                <>
-                                                    <button
-                                                        onClick={() => setAdminStatusFilter(prev => prev === 'APPROVED' ? 'ALL' : 'APPROVED')}
-                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'APPROVED'
-                                                            ? 'bg-emerald-200 text-emerald-900 border-2 border-emerald-500 ring-2 ring-emerald-200 ring-offset-1'
-                                                            : 'bg-emerald-100 text-emerald-800 border sm:border-2 border-emerald-300 hover:bg-emerald-200'
-                                                            } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'APPROVED' ? 'opacity-50 grayscale' : ''}`}
-                                                    >
-                                                        <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                        {adminGroups.filter(g => g.status === 'approved' && !isGroupFinished(g)).length}
-                                                        <span>Aprobados</span>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => setAdminStatusFilter(prev => prev === 'FINALIZED' ? 'ALL' : 'FINALIZED')}
-                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'FINALIZED'
-                                                            ? 'bg-neutral-300 text-neutral-800 border-2 border-neutral-500 ring-2 ring-neutral-200 ring-offset-1'
-                                                            : 'bg-neutral-200 text-neutral-600 border sm:border-2 border-neutral-400 hover:bg-neutral-300'
-                                                            } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'FINALIZED' ? 'opacity-50 grayscale' : ''}`}
-                                                    >
-                                                        <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                        {adminGroups.filter(g => g.status === 'approved' && isGroupFinished(g)).length}
-                                                        <span>Finalizados</span>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => setAdminStatusFilter(prev => prev === 'PENDING' ? 'ALL' : 'PENDING')}
-                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminStatusFilter === 'PENDING'
-                                                            ? 'bg-yellow-200 text-yellow-900 border-2 border-yellow-500 ring-2 ring-yellow-200 ring-offset-1'
-                                                            : 'bg-yellow-100 text-yellow-800 border sm:border-2 border-yellow-300 hover:bg-yellow-200'
-                                                            } ${adminStatusFilter !== 'ALL' && adminStatusFilter !== 'PENDING' ? 'opacity-50 grayscale' : ''}`}
-                                                    >
-                                                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                        {adminGroups.filter(g => g.status === 'pending' || !g.status).length}
-                                                        <span>Pendientes</span>
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        onClick={() => setAdminSeasonFilter('S1')}
-                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminSeasonFilter === 'S1'
-                                                            ? 'bg-blue-200 text-blue-900 border-2 border-blue-500 ring-2 ring-blue-200 ring-offset-1'
-                                                            : 'bg-blue-50 text-blue-800 border sm:border-2 border-blue-200 hover:bg-blue-100'
-                                                            }`}
-                                                    >
-                                                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                        <span>1ª Temporada</span>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => setAdminSeasonFilter('S2')}
-                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminSeasonFilter === 'S2'
-                                                            ? 'bg-purple-200 text-purple-900 border-2 border-purple-500 ring-2 ring-purple-200 ring-offset-1'
-                                                            : 'bg-purple-50 text-purple-800 border sm:border-2 border-purple-200 hover:bg-purple-100'
-                                                            }`}
-                                                    >
-                                                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                        <span>2ª Temporada GCX</span>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => setAdminSeasonFilter('S3')}
-                                                        className={`px-2.5 py-1.5 sm:px-3 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 transition-all ${adminSeasonFilter === 'S3'
-                                                            ? 'bg-pink-200 text-pink-900 border-2 border-pink-500 ring-2 ring-pink-200 ring-offset-1'
-                                                            : 'bg-pink-50 text-pink-800 border sm:border-2 border-pink-200 hover:bg-pink-100'
-                                                            }`}
-                                                    >
-                                                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                        <span>3ª Temporada GCX</span>
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Mobile Card View for Admin */}
-                                    <div className="md:hidden space-y-4">
-                                        {filteredAdminGroups.map(group => (
-                                            <div key={group.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative">
-                                                {/* Kebab Menu Button - Top Right */}
-                                                <div className="absolute top-4 right-4">
-                                                    <button
-                                                        onClick={() => setOpenMenuGroupId(openMenuGroupId === group.id ? null : group.id)}
-                                                        className="p-2 text-slate-400 hover:text-black hover:bg-slate-100 rounded-lg transition-colors"
-                                                        aria-label="Acciones"
-                                                    >
-                                                        <MoreVertical className="w-5 h-5" />
-                                                    </button>
-
-                                                    {/* Dropdown Menu - Antigravity Style */}
-                                                    {openMenuGroupId === group.id && (
-                                                        <>
-                                                            {/* Backdrop */}
-                                                            <div
-                                                                className="fixed inset-0 z-40"
-                                                                onClick={() => setOpenMenuGroupId(null)}
-                                                            />
-                                                            {/* Menu Panel */}
-                                                            <div className="absolute top-full right-0 mt-2 z-50 w-56 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] py-1">
-                                                                {/* REVISAR - Only if pending */}
-                                                                {(group.status === 'pending' || !group.status) && (
-                                                                    <button
-                                                                        onClick={() => { setReviewingGroup(group); setOpenMenuGroupId(null); }}
-                                                                        className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase text-amber-700 hover:bg-amber-50 transition-colors text-left border-b border-slate-200"
-                                                                    >
-                                                                        <ClipboardCheck className="w-4 h-4 shrink-0" />
-                                                                        REVISAR
-                                                                    </button>
-                                                                )}
-                                                                {/* RE-ABRIR - Only if rejected or finished */}
-                                                                {(group.status === 'rejected' || (group.endDate && group.endDate < new Date().toISOString().split('T')[0])) && (
-                                                                    <button
-                                                                        onClick={() => { handleReopenGroup(group.id); setOpenMenuGroupId(null); }}
-                                                                        className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase text-blue-700 hover:bg-blue-50 transition-colors text-left border-b border-slate-200"
-                                                                    >
-                                                                        <RotateCcw className="w-4 h-4 shrink-0" />
-                                                                        RE-ABRIR
-                                                                    </button>
-                                                                )}
-                                                                {/* VER */}
-                                                                <button
-                                                                    onClick={() => { setViewingGroupRegistrations(group); setOpenMenuGroupId(null); }}
-                                                                    className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase text-indigo-700 hover:bg-indigo-50 transition-colors text-left border-b border-slate-200"
-                                                                >
-                                                                    <Eye className="w-4 h-4 shrink-0" />
-                                                                    VER
-                                                                </button>
-                                                                {/* EDITAR */}
-                                                                <button
-                                                                    onClick={() => { openEditModal(group); setOpenMenuGroupId(null); }}
-                                                                    className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-200"
-                                                                >
-                                                                    <Edit2 className="w-4 h-4 shrink-0" />
-                                                                    EDITAR
-                                                                </button>
-                                                                {/* BORRAR - Red */}
-                                                                <button
-                                                                    onClick={() => { handleDeleteGroup(group.id); setOpenMenuGroupId(null); }}
-                                                                    className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase text-red-700 hover:bg-red-50 transition-colors text-left"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4 shrink-0" />
-                                                                    BORRAR
-                                                                </button>
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex justify-between items-start mb-2 pr-8">
-                                                    <div>
-                                                        <h4 className="font-bold text-slate-900">{group.name}</h4>
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            {group.endDate && group.endDate < new Date().toISOString().split('T')[0] ? (
-                                                                <span className="bg-neutral-200 text-neutral-600 border border-neutral-400 font-bold uppercase text-[10px] px-2 py-1 rounded-full">FINALIZADO</span>
-                                                            ) : (
-                                                                getStatusBadge(group.status)
-                                                            )}
-                                                            <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase font-bold">{categories.find(c => c.id === group.categoryId)?.name || 'General'}</span>
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-xs font-bold text-slate-400">
-                                                        {(() => {
-                                                            const cat = categories.find(c => c.id === group.categoryId);
-                                                            const isCouples = (cat?.name?.toLowerCase() === 'parejas' || group.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas')) && group.targetGender === 'Mixto';
-                                                            const regCount = group.registrations?.length || 0;
-                                                            return isCouples ? regCount * 2 : regCount;
-                                                        })()}/{group.maxCapacity}
-                                                    </span>
-                                                </div>
-                                                <div className="text-xs text-slate-500 space-y-1">
-                                                    <p className="flex items-center gap-2"><Users className="w-3 h-3" /> {group.leaderName} {group.leaderSurname}</p>
-                                                    <p className="flex items-center gap-2"><Calendar className="w-3 h-3" /> {group.meetingDay} {group.meetingTime}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* Desktop Table View */}
-                                    <div className="hidden md:block border border-slate-200 overflow-hidden bg-off-white shadow-sm rounded-lg">
-                                        <table className="w-full text-left">
-                                            <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-bold text-slate-500">
-                                                <tr>
-                                                    <th className="p-4">Estado</th>
-                                                    <th className="p-4">Grupo</th>
-                                                    <th className="p-4">Anfitrión</th>
-                                                    <th className="p-4">Co-anfitrión</th>
-                                                    <th className="p-4">Horario</th>
-                                                    <th className="p-4">Fecha Arranque</th>
-                                                    <th className="p-4">Fecha Fin</th>
-                                                    <th className="p-4">Capacidad</th>
-                                                    <th className="p-4 max-w-[200px]">Descripción</th>
-                                                    <th className="p-4 text-right">Acciones</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {filteredAdminGroups.map((group) => (
-                                                    <tr key={group.id} className={`hover:bg-slate-50 transition-colors ${group.status === 'pending' || !group.status ? 'bg-yellow-50/50' : ''}`}>
-                                                        <td className="p-4">
-                                                            {group.endDate && group.endDate < new Date().toISOString().split('T')[0] ? (
-                                                                <span className="bg-neutral-200 text-neutral-600 border border-neutral-400 font-bold uppercase text-[10px] px-2 py-1 rounded-full">FINALIZADO</span>
-                                                            ) : (
-                                                                getStatusBadge(group.status)
-                                                            )}
-                                                        </td>
-                                                        <td className="p-4">
-                                                            <p className="font-bold text-sm text-slate-900 uppercase">{group.name}</p>
-                                                            <span className="text-[10px] text-slate-400 font-bold uppercase">{categories.find(c => c.id === group.categoryId)?.name || 'General'}</span>
-                                                        </td>
-                                                        <td className="p-4 text-sm font-medium text-slate-700">{group.leaderName} {group.leaderSurname}</td>
-                                                        <td className="p-4 text-sm text-slate-600">
-                                                            {group.coHostFirstName ? `${group.coHostFirstName} ${group.coHostLastName || ''}`.trim() : '-'}
-                                                        </td>
-                                                        <td className="p-4 text-sm text-slate-600">{group.meetingDay} {group.meetingTime}</td>
-                                                        <td className="p-4 text-sm text-slate-600">
-                                                            {group.startDate ? new Date(group.startDate + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                                                        </td>
-                                                        <td className="p-4 text-sm text-slate-600">
-                                                            {group.endDate ? new Date(group.endDate + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                                                        </td>
-                                                        <td className="p-4 text-sm font-bold">
-                                                            {(() => {
-                                                                const cat = categories.find(c => c.id === group.categoryId);
-                                                                const isCouples = (cat?.name?.toLowerCase() === 'parejas' || group.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas')) && group.targetGender === 'Mixto';
-                                                                const regCount = group.registrations?.length || 0;
-                                                                return isCouples ? regCount * 2 : regCount;
-                                                            })()}/{group.maxCapacity}
-                                                        </td>
-                                                        <td className="p-4 max-w-[200px]">
-                                                            <div className="max-h-12 overflow-y-auto text-xs text-slate-500">
-                                                                {group.description || '-'}
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-4 text-right">
-                                                            <div className="flex justify-end gap-2">
-                                                                {(group.status === 'pending' || !group.status) && (
-                                                                    <button onClick={() => setReviewingGroup(group)} className="px-3 py-1.5 text-xs font-bold uppercase bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg flex items-center gap-1" title="Revisar grupo"><ClipboardCheck className="w-3 h-3" /> Revisar</button>
-                                                                )}
-                                                                {/* Re-open button for rejected or finished groups */}
-                                                                {(group.status === 'rejected' || (group.endDate && group.endDate < new Date().toISOString().split('T')[0])) && (
-                                                                    <button onClick={() => handleReopenGroup(group.id)} className="px-3 py-1.5 text-xs font-bold uppercase bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg flex items-center gap-1" title="Re-abrir grupo"><RotateCcw className="w-3 h-3" /> Re-abrir</button>
-                                                                )}
-                                                                <button onClick={() => setViewingGroupRegistrations(group)} className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full" title="Ver inscriptos"><Eye className="w-4 h-4" /></button>
-                                                                <button onClick={() => openEditModal(group)} className="p-2 text-slate-500 hover:text-black hover:bg-slate-200 rounded-full" title="Editar"><Edit2 className="w-4 h-4" /></button>
-                                                                <button onClick={() => handleDeleteGroup(group.id)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-full" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* Empty State */}
-                                    {adminGroups.length === 0 && !isLoading && (
-                                        <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-xl">
-                                            <Users className="w-12 h-12 mx-auto text-slate-300 mb-4" />
-                                            <p className="text-slate-500 font-bold">No hay grupos para moderar</p>
-                                        </div>
-                                    )}
+                                    <GroupsAdminList
+                                        groups={filteredAdminGroups}
+                                        categories={categories}
+                                        tags={tags}
+                                        onReview={setReviewingGroup}
+                                        onReopen={handleReopenGroup}
+                                        onViewRegistrations={setViewingGroupRegistrations}
+                                        onEdit={openEditModal}
+                                        onDelete={handleDeleteGroup}
+                                        openMenuGroupId={openMenuGroupId}
+                                        setOpenMenuGroupId={setOpenMenuGroupId}
+                                        isLoading={isLoading}
+                                    />
                                 </div>
                             )}
 
@@ -2034,7 +1718,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             {/* HOSTS MANAGEMENT TAB */}
                             {adminSubTab === 'HOSTS' && (
                                 <div className="max-w-7xl">
-                                    <HostsManagementPanel groups={adminGroups} onUpdate={fetchAdminGroups} />
+                                    <HostsManagementPanel groups={adminGroups} onUpdate={fetchAdminGroups} showToast={showToast} />
                                 </div>
                             )}
                         </>
@@ -2583,6 +2267,14 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                 }}
             />
 
+            {/* Toast Notification */}
+            {notification.show && (
+                <div className={`fixed bottom-4 right-4 z-50 px-6 py-3 rounded-lg shadow-xl text-white font-bold uppercase tracking-wide animate-fade-in-up ${notification.type === 'error' ? 'bg-red-600' :
+                    notification.type === 'info' ? 'bg-blue-600' : 'bg-[#118f46]'
+                    }`}>
+                    {notification.message}
+                </div>
+            )}
         </div>
     );
 };

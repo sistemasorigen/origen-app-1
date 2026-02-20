@@ -1,8 +1,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Credentials provided
-const PROJECT_URL = 'https://oqtumgalnozppqnnjjdb.supabase.co';
-const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xdHVtZ2Fsbm96cHBxbm5qamRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1NDY2OTYsImV4cCI6MjA4MDEyMjY5Nn0.Vlfh2iZcrDr14dPGaWZ8rBARWfd0AngtAY_msumBkiI';
+const PROJECT_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+if (!PROJECT_URL || !ANON_KEY) {
+    throw new Error(
+        '[supabaseClient] Faltan variables de entorno requeridas: ' +
+        'VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY deben estar definidas en .env.local'
+    );
+}
 
 export const supabase = createClient(PROJECT_URL, ANON_KEY);
