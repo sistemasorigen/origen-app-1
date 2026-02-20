@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Origen | Plataforma</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Proxima Nova"', 'system-ui', 'sans-serif'],
+            serif: ['"Proxima Nova"', 'sans-serif'],
+            hand: ['"Caveat"', 'cursive'],
+            groups: ['"Plus Jakarta Sans"', 'sans-serif'], /* Preserved for Groups.tsx */
+          },
+          colors: {
+            primary: '#000000',
+            'off-white': '#F9FAFB',
+            brand: {
+              50: '#f9f9f9',
+              100: '#e5e5e5',
+              500: '#737373',
+              600: '#525252',
+              700: '#404040',
+              900: '#171717',
+              950: '#0a0a0a',
+            }
+          },
+          boxShadow: {
+            'glow': '0 0 20px rgba(255, 255, 255, 0.15)',
+            'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            'neon': '0 0 10px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.1)'
+          },
+          animation: {
+            fadeIn: 'fadeIn 0.5s ease-out',
+            slideIn: 'slideIn 0.3s ease-out',
+            fadeInUp: 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            skeleton: 'skeleton 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0', transform: 'translateY(10px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            slideIn: {
+              '0%': { transform: 'translateY(100%)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            },
+            fadeInUp: {
+              '0%': { opacity: '0', transform: 'translateY(30px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            skeleton: {
+              '0%, 100%': { opacity: '1' },
+              '50%': { opacity: '.5' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts for fallback fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Caveat:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    /* Proxima Nova Font Face Declarations */
+    @font-face {
+      font-family: 'Proxima Nova';
+      src: url('/assets/ProximaNova-Light-DYX16ifH.otf') format('opentype');
+      font-weight: 300;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Proxima Nova';
+      src: url('/assets/ProximaNova-LightItalic-9Iei1arF.otf') format('opentype');
+      font-weight: 300;
+      font-style: italic;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Proxima Nova';
+      src: url('/assets/ProximaNova-Regular-6iL5fLYO.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Proxima Nova';
+      src: url('/assets/ProximaNova-RegularItalic-BVYmuOJu.otf') format('opentype');
+      font-weight: 400;
+      font-style: italic;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Proxima Nova';
+      src: url('/assets/ProximaNova-Semibold-BI3UiExG.otf') format('opentype');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Proxima Nova';
+      src: url('/assets/ProximaNova-SemiboldItalic-DNcqXEGw.otf') format('opentype');
+      font-weight: 600;
+      font-style: italic;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Proxima Nova';
+      src: url('/assets/ProximaNova-Bold-5rWCmH0T.otf') format('opentype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Proxima Nova';
+      src: url('/assets/ProximaNova-BoldIt-3Xyp5wZE.otf') format('opentype');
+      font-weight: 700;
+      font-style: italic;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Proxima Nova';
+      src: url('/assets/ProximaNova-Extrabold-B8tqofOX.otf') format('opentype');
+      font-weight: 800;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Proxima Nova';
+      src: url('/assets/ProximaNova-Black-100ogFdy.otf') format('opentype');
+      font-weight: 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    /* Global Font Styles */
+    body {
+      font-family: 'Proxima Nova', system-ui, sans-serif;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Proxima Nova', system-ui, sans-serif;
+      font-weight: 700;
+    }
+
+    /* Groups.tsx Exception - Preserve original fonts */
+    .groups-original-fonts,
+    .groups-original-fonts * {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+    .groups-original-fonts h1,
+    .groups-original-fonts h2,
+    .groups-original-fonts h3,
+    .groups-original-fonts h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    /* Base transitions */
+    body,
+    div,
+    span,
+    button,
+    input,
+    textarea,
+    select {
+      transition-property: background-color, border-color, color, fill, stroke;
+      transition-duration: 300ms;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Animation Delays */
+    .animation-delay-200 {
+      animation-delay: 200ms;
+    }
+
+    .animation-delay-400 {
+      animation-delay: 400ms;
+    }
+
+    .animation-delay-600 {
+      animation-delay: 600ms;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+    }
+
+    .dark .glass-card {
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(10px);
+    }
+
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+    }
+
+    .dark .glass-panel {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(12px);
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* GLOBAL INPUT OVERRIDES - HIGH READABILITY */
+    /* Targets standard data entry fields while excluding buttons and toggles */
+    input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="image"]),
+    textarea,
+    select {
+      background-color: #ffffff !important;
+      color: #000000 !important;
+      border: 1px solid #cbd5e1 !important;
+      /* Slate-300 for visible structure */
+      border-radius: 0.5rem;
+      /* Slight rounded corners for modern look */
+    }
+
+    /* Dark Mode Specific Overrides - Enforce White Input Fields */
+    .dark input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="image"]),
+    .dark textarea,
+    .dark select {
+      background-color: #ffffff !important;
+      color: #000000 !important;
+      border-color: #94a3b8 !important;
+      /* Slate-400 for contrast against dark bg */
+    }
+
+    /* Placeholder Visibility */
+    ::placeholder {
+      color: #64748b !important;
+      /* Slate-500 - Readable Gray */
+      opacity: 1;
+    }
+
+    /* Focus States for Accessibility */
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: 2px solid #2563eb !important;
+      /* Blue-600 */
+      border-color: #2563eb !important;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+
+    /* New Style: Hazard Tape for Restricted Modules */
+    .hazard-tape-bg {
+      background-image: repeating-linear-gradient(45deg,
+          #facc15,
+          /* Amber-400 (Amarillo) */
+          #facc15 12px,
+          #000000 12px,
+          /* Black */
+          #000000 24px);
+      background-size: 100% 100%;
+    }
+
+    /* Print styles */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+
+      body {
+        background: white !important;
+        color: black !important;
+      }
+
+      .glass-panel,
+      .glass-card {
+        background: none !important;
+        box-shadow: none !important;
+        border: 1px solid #ddd;
+      }
+    }
+
+    /* Accessibility: Skip to main content link */
+    .skip-link {
+      position: absolute;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      background: #000;
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      border-radius: 0 0 8px 8px;
+      z-index: 9999;
+      transition: top 0.3s ease;
+    }
+
+    .skip-link:focus {
+      top: 0;
+    }
+
+    /* Accessibility: Enhanced focus-visible for keyboard navigation */
+    *:focus-visible {
+      outline: 2px solid #3b82f6 !important;
+      outline-offset: 2px;
+    }
+
+    /* Smooth theme transition on html element */
+    html {
+      transition: background-color 0.5s ease, color 0.5s ease;
+    }
+  </style>
+
+  <!-- Theme Pre-Load Script: Prevents flash of wrong theme -->
+  <script>
+      (function () {
+        try {
+          // Check localStorage for saved theme preference
+          const savedConfig = localStorage.getItem('app_config');
+          if (savedConfig) {
+            const config = JSON.parse(savedConfig);
+            if (config.themeMode === 'dark') {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
+          } else {
+            // Default to light mode if no preference saved
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {
+          // Fallback to light mode on error
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+  </script>
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.2.1",
+        "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.1/client",
+        "react-dom": "https://aistudiocdn.com/react-dom@^19.2.1/",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
+        "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.10.1",
+        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+        "recharts": "https://aistudiocdn.com/recharts@^2.15.0",
+        "idb": "https://aistudiocdn.com/idb@^8.0.0",
+        "clsx": "https://aistudiocdn.com/clsx@^2.1.0",
+        "tailwind-merge": "https://aistudiocdn.com/tailwind-merge@^2.2.1",
+        "react/": "https://aistudiocdn.com/react@^19.2.1/",
+        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.0"
+      }
+    }
+    </script>
+  <script type="module" crossorigin src="/assets/index-DGu01SEu.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-zg8Q45qT.css">
+</head>
+
+<body class="bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-200 transition-colors duration-500">
+  <!-- Accessibility: Skip to main content link -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <div id="root"></div>
+</body>
+
+</html>
