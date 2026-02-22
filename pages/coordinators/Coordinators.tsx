@@ -49,7 +49,7 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     const [attendanceData, setAttendanceData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-// Coordinator's variant -> category mapping
+    // Coordinator's variant -> category mapping
     const categoryFilter = coordinatorVariantToCategory(currentUser.coordinatorVariant);
 
     // Find category name for display
@@ -75,22 +75,22 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
             setCategories(categoriesData);
             setTags(tagsData);
 
-// Filter by coordinator's variant -> category
+            // Filter by coordinator's variant -> category
             if (categoryFilter) {
                 // 1. Encontrar el UUID real de la categoría basándonos en el nombre
                 const matchedCategory = categoriesData.find(
                     c => c.name.toLowerCase().trim() === categoryFilter.toLowerCase().trim()
                 );
-                
+
                 // Usar el ID encontrado, o el string original como respaldo de seguridad
                 const targetCategoryId = matchedCategory ? matchedCategory.id : categoryFilter;
-                
+
                 // 2. Filtrar usando el UUID
-                const filtered = groupsData.filter(g => 
-                    g.categoryId === targetCategoryId || 
+                const filtered = groupsData.filter(g =>
+                    g.categoryId === targetCategoryId ||
                     (g.categoryName && g.categoryName.toLowerCase().trim() === categoryFilter.toLowerCase().trim())
                 );
-                
+
                 setGroups(filtered);
                 const filteredGroupIds = new Set(filtered.map(g => g.id));
                 setDropouts(dropoutsData.filter(d => filteredGroupIds.has(d.groupId)));
@@ -118,7 +118,7 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
         { id: 'calendar', label: 'Calendario', icon: Calendar },
     ];
 
-// No variant assigned alert
+    // No variant assigned alert
     if (!categoryFilter && !hasRole(currentUser, [UserRole.SUPER_ADMIN])) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#fdfdfd] p-4">
