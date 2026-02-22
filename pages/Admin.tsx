@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { db } from '../services/dbService';
 import { supabaseService } from '../services/supabaseService';
-import { User, UserRole, Log, SystemModule, AppConfig, BannerSlide, ValuesSectionConfig, Group, FooterLinks } from '../types';
+import { User, UserRole, Log, SystemModule, AppConfig, BannerSlide, ValuesSectionConfig, Group, FooterLinks, CoordinatorVariant } from '../types';
 import { Users, Shield, Home, Database, CloudUpload, Save, Search, X, Check, Book, Palette, Globe, Plus, Edit2, Trash2, Info, UserCheck, ClipboardList, CheckCircle, XCircle, Share2, Instagram, Facebook, Youtube, Music, Eye } from 'lucide-react';
 import { migrateToSupabase } from '../services/migrationService';
 import ImageUpload from '../components/ImageUpload';
@@ -55,6 +55,9 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     const [systemScope, setSystemScope] = useState<SystemScope>('GROUPS'); // Kept for legacy system ID assignment logic if needed, but mainly we use roles now
     // Additional Volunteer Access
     const [additionalVolunteerRoles, setAdditionalVolunteerRoles] = useState<string[]>([]);
+    
+    // Coordinator Variant State
+    const [coordinatorVariant, setCoordinatorVariant] = useState<CoordinatorVariant | undefined>(undefined);
 
     // Module States
     const [modules, setModules] = useState<SystemModule[]>([]);
@@ -150,11 +153,10 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
 
     // Sync UI state when editing a user
     useEffect(() => {
-        if (currentUserData.id) { // Only if user exists (editing mode)
-            // Reset additional roles first
+        if (currentUserData.id) {
             setAdditionalVolunteerRoles(currentUserData.volunteerRoles || []);
+            setCoordinatorVariant(currentUserData.coordinatorVariant);
 
-            // Load roles using the new array or fallback to single role
             const rolesToLoad = new Set<UserRole>();
             if (currentUserData.roles && currentUserData.roles.length > 0) {
                 currentUserData.roles.forEach(r => rolesToLoad.add(r));
@@ -165,7 +167,8 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             }
             setSelectedRoles(rolesToLoad);
         } else {
-            // New user defaults are handled in handleNewUserClick
+            // New user defaults
+            setCoordinatorVariant(undefined);
         }
     }, [currentUserData]);
 
@@ -176,7 +179,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
         setLastName('');
         setNewUserPassword('');
         setAdditionalVolunteerRoles([]);
-        // Default to just Viewer
+        setCoordinatorVariant(undefined);
         setSelectedRoles(new Set([UserRole.VIEWER]));
         setSystemScope('GROUPS');
     };
@@ -256,11 +259,12 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             id: currentUserData.id || safeUUID(),
             name: fullName,
             email: currentUserData.email!,
-            role: primaryLegacyRole, // Backward compat
-            roles: finalRolesArray,  // NEW Multi-role
+            role: primaryLegacyRole,
+            roles: finalRolesArray,
             isActive: currentUserData.isActive ?? true,
             linkedGroupId: linkedGroupId,
-            volunteerRoles: additionalVolunteerRoles
+            volunteerRoles: additionalVolunteerRoles,
+            coordinatorVariant: finalRolesArray.includes(UserRole.COORDINATOR) ? coordinatorVariant : undefined
         };
 
 
@@ -708,7 +712,33 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                             <span className="block text-[10px] md:text-xs font-black uppercase">S. ADMIN</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Control total</span>
                                         </div>
+                                        
+                                        {/* Coordinator Role */}
+                                        <div onClick={() => toggleRole(UserRole.COORDINATOR)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.COORDINATOR) ? 'border-emerald-600 bg-emerald-600 text-white shadow-none' : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:shadow-[3px_3px_0px_0px_rgba(5,150,105,0.5)]'}`}>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">COORDINADOR</span>
+                                            <span className="hidden md:block text-[10px] opacity-70">Departamento</span>
+                                        </div>
                                     </div>
+
+                                    {/* Coordinator Variant Selector */}
+                                    {selectedRoles.has(UserRole.COORDINATOR) && (
+                                        <div className="space-y-3 bg-emerald-50 p-4 border-2 border-emerald-300 animate-fadeIn">
+                                            <label className="text-xs font-black uppercase text-emerald-700">Departamento de Coordinación</label>
+                                            <select
+                                                value={coordinatorVariant || ''}
+                                                onChange={e => setCoordinatorVariant(e.target.value as CoordinatorVariant || undefined)}
+                                                className="w-full p-3 border-2 border-black bg-white text-sm font-black uppercase focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:ring-0 outline-none"
+                                            >
+                                                <option value="">Seleccionar departamento...</option>
+                                                {Object.values(CoordinatorVariant).map(v => (
+                                                    <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+                                                ))}
+                                            </select>
+                                            <p className="text-[10px] text-emerald-600 leading-tight">
+                                                Selecciona el departamento específico que coordina este usuario.
+                                            </p>
+                                        </div>
+                                    )}
 
                                     {(selectedRoles.has(UserRole.VOLUNTEER)) && (
                                         <div className="space-y-3 bg-neutral-50 p-4 border-2 border-black animate-fadeIn">

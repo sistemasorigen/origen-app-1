@@ -1,24 +1,23 @@
 import { useAuth } from '../contexts/AuthContext';
-import { UserRole } from '../types';
+import { UserRole, CoordinatorVariant } from '../types';
 
-/**
- * Hook to check user role capabilities.
- * Anfitrión = Regular user with exclusive privilege to create groups.
- */
 export const useRole = () => {
-    const { currentUser } = useAuth();
+    const { user } = useAuth();
 
-    const isAnfitrion = currentUser?.role === UserRole.ANFITRION;
-    const isSuperAdmin = currentUser?.role === UserRole.SUPER_ADMIN;
-    const isGroupsAdmin = currentUser?.role === UserRole.ADMIN_GROUPS;
+    const isAnfitrion = user?.role === UserRole.ANFITRION;
+    const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
+    const isGroupsAdmin = user?.role === UserRole.ADMIN_GROUPS;
     const isAdmin = isSuperAdmin || isGroupsAdmin;
+    const isCoordinator = user?.roles?.includes(UserRole.COORDINATOR) ?? false;
 
-    // Can create groups: Anfitrión, Admin Groups, or Super Admin
+    const isCoordinatorOf = (variant: CoordinatorVariant): boolean => {
+        if (!user) return false;
+        return isCoordinator && user.coordinatorVariant === variant;
+    };
+
     const canCreateGroup = isAnfitrion || isAdmin;
-
-    // Regular user capabilities (shared by Anfitrión and Viewer)
     const canBrowseGroups = true;
-    const canJoinGroups = !!currentUser;
+    const canJoinGroups = !!user;
     const canViewGroupDetails = true;
 
     return {
@@ -26,11 +25,13 @@ export const useRole = () => {
         isSuperAdmin,
         isGroupsAdmin,
         isAdmin,
+        isCoordinator,
+        isCoordinatorOf,
         canCreateGroup,
         canBrowseGroups,
         canJoinGroups,
         canViewGroupDetails,
-        currentUser
+        user
     };
 };
 

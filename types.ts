@@ -27,6 +27,20 @@ export enum UserRole {
     COORDINATOR = 'COORDINATOR'
 }
 
+export enum CoordinatorVariant {
+    FAMILIA = 'FAMILIA',
+    CENTRO_TRANSFORMACION = 'CENTRO_TRANSFORMACION',
+    NINEZ_INFLUOS = 'NINEZ_INFLUOS',
+    INUSUAL = 'INUSUAL',
+    LA_FEMME = 'LA_FEMME',
+    HOMBRIA = 'HOMBRIA',
+    FINANZAS = 'FINANZAS',
+    BIBLIA = 'BIBLIA',
+    TERCERA_EDAD = 'TERCERA_EDAD',
+    SOCIAL = 'SOCIAL',
+    AREAS_SERVICIO = 'AREAS_SERVICIO'
+}
+
 export enum ImageAspectRatio {
     SQUARE_1_1 = "1:1",
     PORTRAIT_3_4 = "3:4",
@@ -60,6 +74,7 @@ export interface User {
     gender?: string; // From public.users
     birthDate?: string; // Exact date of birth (YYYY-MM-DD format)
     assignedCategory?: string; // Category ID for COORDINATOR role filtering
+    coordinatorVariant?: CoordinatorVariant; // Specific department for coordinators
     tutorial_progress?: Record<string, boolean>; // Tracks onboarding tour progress
 }
 

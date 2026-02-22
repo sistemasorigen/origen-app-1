@@ -1,0 +1,39 @@
+# ==========================================
+# ESCUDO DE TOKENS PARA IA (ANTIGRAVITY)
+# ==========================================
+
+# 1. Dependencias y Bloqueos (Agujeros negros de tokens)
+node_modules/
+package-lock.json
+
+# 2. Archivos de Compilación y Logs
+dist/
+build/
+build_log.txt
+
+# 3. Archivos Binarios y Multimedia (La IA no lee píxeles aquí)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.svg
+test_image.jpg
+public/auth-bg.jpg
+public/origen-logo.png
+public/origen-logo-full.png
+
+# 4. Fuentes Tipográficas (Archivos ilegibles para la IA)
+fonts/
+*.otf
+*.ttf
+*.woff
+*.woff2
+
+# 5. Temporales de Supabase
+supabase/.temp/
+
+# 6. Archivos de entorno (Seguridad)
+.env
+.env.local
+.env.*

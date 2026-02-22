@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { supabaseService } from '../services/supabaseService';
-import { User, UserRole } from '../types';
+import { User, UserRole, CoordinatorVariant } from '../types';
 
 interface AuthContextType {
     user: User | null;
@@ -179,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (mounted.current) {
                 if (profileData) {
                     console.log(`[Auth] Full profile found (Role: ${profileData.role}), updating user.`);
-                    const fullUser: User = {
+const fullUser: User = {
                         id: profileData.id,
                         name: profileData.name,
                         email: profileData.email,
@@ -193,6 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         gender: profileData.gender,
                         birthDate: profileData.birth_date,
                         assignedCategory: profileData.assigned_category || undefined,
+                        coordinatorVariant: profileData.coordinator_variant as CoordinatorVariant | undefined,
                         tutorial_progress: profileData.tutorial_progress || {}
                     };
 

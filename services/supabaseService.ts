@@ -1,7 +1,7 @@
 
 import { supabase } from './supabaseClient';
 import { db } from './dbService';
-import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest } from '../types';
+import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant } from '../types';
 
 
 // EXPORTED standalone function for direct use
@@ -312,7 +312,8 @@ export const supabaseService = {
         age: user.age,
         gender: user.gender,
         birthDate: user.birth_date,
-        assignedCategory: user.assigned_category || undefined
+        assignedCategory: user.assigned_category || undefined,
+        coordinatorVariant: user.coordinator_variant as CoordinatorVariant | undefined
       };
 
       return { user: appUser };
@@ -418,7 +419,6 @@ export const supabaseService = {
         name: u.name,
         email: u.email,
         role: u.role as UserRole,
-        // FIX: Empty array [] is truthy, so we need to check length too
         roles: (u.roles && u.roles.length > 0 ? u.roles : [u.role]) as UserRole[],
         isActive: u.is_active,
         linkedGroupId: u.linked_group_id,
@@ -426,7 +426,8 @@ export const supabaseService = {
         phone: u.phone,
         age: u.age,
         gender: u.gender,
-        birthDate: u.birth_date
+        birthDate: u.birth_date,
+        coordinatorVariant: u.coordinator_variant as CoordinatorVariant | undefined
       }));
     } catch (error) {
       console.warn('Supabase Error (getAllUsers) - Using Local Fallback:', JSON.stringify(error));
@@ -469,7 +470,6 @@ export const supabaseService = {
   },
 
   async updateUser(user: User, _password?: string): Promise<boolean> {
-    // Note: Passwords are managed by Supabase Auth (auth.users), not public.users
     const updates = {
       name: user.name,
       email: user.email,
@@ -477,7 +477,8 @@ export const supabaseService = {
       roles: user.roles,
       is_active: user.isActive,
       linked_group_id: user.linkedGroupId,
-      volunteer_roles: user.volunteerRoles
+      volunteer_roles: user.volunteerRoles,
+      coordinator_variant: user.coordinatorVariant
     };
 
     const { error } = await supabase
