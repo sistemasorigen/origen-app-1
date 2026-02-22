@@ -77,12 +77,21 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
 
 // Filter by coordinator's variant -> category
             if (categoryFilter) {
-                const filtered = groupsData.filter(g => 
-                    g.categoryId === categoryFilter || 
-                    g.categoryName === categoryFilter
+                // 1. Encontrar el UUID real de la categoría basándonos en el nombre
+                const matchedCategory = categoriesData.find(
+                    c => c.name.toLowerCase().trim() === categoryFilter.toLowerCase().trim()
                 );
+                
+                // Usar el ID encontrado, o el string original como respaldo de seguridad
+                const targetCategoryId = matchedCategory ? matchedCategory.id : categoryFilter;
+                
+                // 2. Filtrar usando el UUID
+                const filtered = groupsData.filter(g => 
+                    g.categoryId === targetCategoryId || 
+                    (g.categoryName && g.categoryName.toLowerCase().trim() === categoryFilter.toLowerCase().trim())
+                );
+                
                 setGroups(filtered);
-
                 const filteredGroupIds = new Set(filtered.map(g => g.id));
                 setDropouts(dropoutsData.filter(d => filteredGroupIds.has(d.groupId)));
                 setAttendanceData(attendanceReport.filter(a => filteredGroupIds.has(a.groupId)));
