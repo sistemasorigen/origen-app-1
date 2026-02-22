@@ -11,7 +11,7 @@ import {
     ArrowRight
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { User, UserRole, Group, GroupCategory, GroupTag, GroupRegistration, DropoutRequest } from '../../types';
+import { User, UserRole, Group, GroupCategory, GroupTag, GroupRegistration, DropoutRequest, coordinatorVariantToCategory } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 
@@ -49,11 +49,11 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     const [attendanceData, setAttendanceData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Coordinator's assigned category
-    const assignedCategory = currentUser.assignedCategory;
+// Coordinator's variant -> category mapping
+    const categoryFilter = coordinatorVariantToCategory(currentUser.coordinatorVariant);
 
     // Find category name for display
-    const categoryName = categories.find(c => c.id === assignedCategory)?.name || (hasRole(currentUser, [UserRole.SUPER_ADMIN]) ? 'Todas las Categorías (Global)' : '') || '';
+    const categoryName = categoryFilter || (hasRole(currentUser, [UserRole.SUPER_ADMIN]) ? 'Todas las Categorías (Global)' : '') || '';
 
     // Load all data
     useEffect(() => {
@@ -75,9 +75,12 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
             setCategories(categoriesData);
             setTags(tagsData);
 
-            // Filter by coordinator's assigned category
-            if (assignedCategory) {
-                const filtered = groupsData.filter(g => g.categoryId === assignedCategory);
+// Filter by coordinator's variant -> category
+            if (categoryFilter) {
+                const filtered = groupsData.filter(g => 
+                    g.categoryId === categoryFilter || 
+                    g.categoryName === categoryFilter
+                );
                 setGroups(filtered);
 
                 const filteredGroupIds = new Set(filtered.map(g => g.id));
@@ -106,8 +109,8 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
         { id: 'calendar', label: 'Calendario', icon: Calendar },
     ];
 
-    // No category assigned alert
-    if (!assignedCategory && !hasRole(currentUser, [UserRole.SUPER_ADMIN])) {
+// No variant assigned alert
+    if (!categoryFilter && !hasRole(currentUser, [UserRole.SUPER_ADMIN])) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#fdfdfd] p-4">
                 <div className="bg-white border-2 border-black p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] max-w-md text-center">

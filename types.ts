@@ -41,6 +41,25 @@ export enum CoordinatorVariant {
     AREAS_SERVICIO = 'AREAS_SERVICIO'
 }
 
+export const COORDINATOR_VARIANT_TO_CATEGORY: Record<CoordinatorVariant, string> = {
+    [CoordinatorVariant.FAMILIA]: 'Familia',
+    [CoordinatorVariant.CENTRO_TRANSFORMACION]: 'Centro de transformación',
+    [CoordinatorVariant.NINEZ_INFLUOS]: 'Niñez y borders/influos',
+    [CoordinatorVariant.INUSUAL]: 'Inusual',
+    [CoordinatorVariant.LA_FEMME]: 'La Femme',
+    [CoordinatorVariant.HOMBRIA]: 'Hombría',
+    [CoordinatorVariant.FINANZAS]: 'Finanzas',
+    [CoordinatorVariant.BIBLIA]: 'Biblia',
+    [CoordinatorVariant.TERCERA_EDAD]: 'Tercera Edad',
+    [CoordinatorVariant.SOCIAL]: 'Social',
+    [CoordinatorVariant.AREAS_SERVICIO]: 'Áreas de servicio origen'
+}
+
+export function coordinatorVariantToCategory(variant: CoordinatorVariant | undefined): string | undefined {
+    if (!variant) return undefined;
+    return COORDINATOR_VARIANT_TO_CATEGORY[variant];
+}
+
 export enum ImageAspectRatio {
     SQUARE_1_1 = "1:1",
     PORTRAIT_3_4 = "3:4",
