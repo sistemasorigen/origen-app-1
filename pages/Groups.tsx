@@ -18,6 +18,7 @@ import ApplicantsModal from '../components/groups/ApplicantsModal';
 import NeoModal from '../components/NeoModal';
 import AdminDropoutInbox from '../components/groups/AdminDropoutInbox';
 import HostsManagementPanel from '../components/groups/HostsManagementPanel';
+import CoordinatorsManagementPanel from '../components/groups/CoordinatorsManagementPanel';
 import { useTutorial } from '../src/hooks/useTutorial';
 import TutorialInvitation from '../components/TutorialInvitation';
 import TutorialController from '../components/TutorialController';
@@ -99,8 +100,8 @@ interface GroupsNavbarProps {
     isGroupLeader: boolean;
     isSuperAdmin: boolean;
     // Admin Navigation Props
-    activeSubTab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS';
-    setSubTab: (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS') => void;
+    activeSubTab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS';
+    setSubTab: (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS') => void;
     canSeeConfig: boolean;
 }
 
@@ -123,10 +124,11 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
         'CATEGORIES': 'Categorías',
         'TAGS': 'Etiquetas',
         'CONFIG': 'Config',
-        'HOSTS': 'Anfitriones'
+        'HOSTS': 'Anfitriones',
+        'COORDINATORS': 'Coordinadores'
     };
 
-    const handleTabClick = (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS') => {
+    const handleTabClick = (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS') => {
         setSubTab(tab);
         setIsMenuOpen(false);
     };
@@ -204,6 +206,16 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
                                                     CATEGORÍAS
                                                 </button>
                                                 <button
+                                                    onClick={() => handleTabClick('COORDINATORS')}
+                                                    className={`flex items-center gap-3 p-4 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeSubTab === 'COORDINATORS'
+                                                        ? 'bg-black text-white'
+                                                        : 'bg-slate-50 text-black hover:bg-slate-100 border border-slate-200'
+                                                        }`}
+                                                >
+                                                    <Users className="w-5 h-5 shrink-0" />
+                                                    COORDINADORES
+                                                </button>
+                                                <button
                                                     onClick={() => handleTabClick('TAGS')}
                                                     className={`flex items-center gap-3 p-4 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeSubTab === 'TAGS'
                                                         ? 'bg-black text-white'
@@ -279,12 +291,12 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
     // --- MAIN STATE ---
     const [view, setView] = useState<'public' | 'admin'>('public');
-    const [adminSubTab, setAdminSubTab] = useState<'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS'>('GROUPS');
+    const [adminSubTab, setAdminSubTab] = useState<'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS'>('GROUPS');
 
     // Deep linking for admin tabs
     useEffect(() => {
         const tab = searchParams.get('tab');
-        if (tab && ['GROUPS', 'CATEGORIES', 'TAGS', 'CONFIG', 'HOSTS'].includes(tab)) {
+        if (tab && ['GROUPS', 'CATEGORIES', 'TAGS', 'CONFIG', 'HOSTS', 'COORDINATORS'].includes(tab)) {
             setAdminSubTab(tab as any);
             setView('admin'); // Auto-switch to admin view if a tab is requested
         }
@@ -309,6 +321,8 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const [notification, setNotification] = useState<{ show: boolean, message: string, type: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'success' });
 
     // --- LEADER POSTULATION STATE ---
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [successModalMessage, setSuccessModalMessage] = useState('');
     const [userApplicationStatus, setUserApplicationStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | null>(null);
     const [isPostulationModalOpen, setIsPostulationModalOpen] = useState(false);
     const [postulationForm, setPostulationForm] = useState({
@@ -889,7 +903,8 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                 completedVolunteerTraining: false,
                 attendsOrigen: false
             });
-            showToast('Tu postulación ha sido enviada y será revisada por el equipo.');
+            setSuccessModalMessage('Recibirás un aviso por email cuando seas aprobado como anfitrión.');
+            setIsSuccessModalOpen(true);
         } else {
             showToast('Hubo un error al enviar tu postulación. Intenta nuevamente.', 'error');
         }
@@ -1721,6 +1736,13 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                     <HostsManagementPanel groups={adminGroups} onUpdate={fetchAdminGroups} showToast={showToast} />
                                 </div>
                             )}
+
+                            {/* COORDINATORS MANAGEMENT TAB */}
+                            {adminSubTab === 'COORDINATORS' && (
+                                <div className="max-w-7xl">
+                                    <CoordinatorsManagementPanel showToast={showToast} />
+                                </div>
+                            )}
                         </>
                     )}
 
@@ -2266,6 +2288,31 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     fetchAdminGroups();
                 }}
             />
+
+            {/* Success Modal */}
+            <NeoModal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                maxWidth="max-w-md"
+            >
+                <div className="flex flex-col items-center justify-center p-6 text-center space-y-6">
+                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center shadow-inner">
+                        <Check className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-2xl font-black uppercase tracking-tight text-black dark:text-white">
+                        ¡Postulación Enviada!
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                        {successModalMessage}
+                    </p>
+                    <button
+                        onClick={() => setIsSuccessModalOpen(false)}
+                        className="mt-4 w-full py-4 bg-[#118f46] text-white font-black uppercase tracking-widest rounded-xl hover:bg-[#0d7036] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1"
+                    >
+                        Entendido
+                    </button>
+                </div>
+            </NeoModal>
 
             {/* Toast Notification */}
             {notification.show && (

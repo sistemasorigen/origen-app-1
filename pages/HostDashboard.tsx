@@ -3,11 +3,12 @@ import { useLocation } from 'react-router-dom';
 import { User, UserRole, Group } from '../types';
 import { hasRole } from '../services/authUtils';
 import { supabaseService } from '../services/supabaseService';
-import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus } from 'lucide-react';
+import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus, Check } from 'lucide-react';
 import CreateGroupModal from '../components/groups/CreateGroupModal';
 import ApplicantsModal from '../components/groups/ApplicantsModal';
 import AttendanceModal from '../components/groups/AttendanceModal';
 import DropoutRequestModal from '../components/groups/DropoutRequestModal';
+import NeoModal from '../components/NeoModal';
 import { useTutorial } from '../src/hooks/useTutorial';
 import { useIsMobile } from '../src/hooks/useIsMobile';
 import TutorialInvitation from '../components/TutorialInvitation';
@@ -32,6 +33,8 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
     const [isDropoutModalOpen, setIsDropoutModalOpen] = useState(false);
     const [selectedGroupForDropout, setSelectedGroupForDropout] = useState<Group | null>(null);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [successModalMessage, setSuccessModalMessage] = useState('');
     const isMobile = useIsMobile();
 
     // Tutorial Hook
@@ -121,9 +124,14 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     const handleGroupSaved = async (savedGroup?: Group) => {
         if (isReopenRequest && savedGroup?.id) {
             await supabaseService.clearGroupParticipants(savedGroup.id);
-            alert('Solicitud de re-apertura enviada. El grupo se ha reiniciado (cupos liberados) y estará pendiente de aprobación.');
+            setSuccessModalMessage('Solicitud de re-apertura enviada. El grupo se ha reiniciado (cupos liberados) y estará pendiente de aprobación.');
+            setIsSuccessModalOpen(true);
         } else if (isReopenRequest) {
-            alert('Solicitud de re-apertura enviada. El administrador revisará tu grupo.');
+            setSuccessModalMessage('Solicitud de re-apertura enviada. El administrador revisará tu grupo.');
+            setIsSuccessModalOpen(true);
+        } else if (!editingGroup) {
+            setSuccessModalMessage('Recibirás un aviso por email cuando tu Grupo de Conexión esté aprobado o rechazado junto a la razón.');
+            setIsSuccessModalOpen(true);
         }
 
         await fetchMyGroups();
@@ -601,6 +609,31 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                     onSuccess={() => fetchMyGroups()}
                 />
             )}
+
+            {/* Success Modal */}
+            <NeoModal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                maxWidth="max-w-md"
+            >
+                <div className="flex flex-col items-center justify-center p-6 text-center space-y-6">
+                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center shadow-inner">
+                        <Check className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-2xl font-black uppercase tracking-tight text-black dark:text-white">
+                        {successModalMessage.includes('creado') ? '¡Grupo Creado!' : '¡Solicitud Enviada!'}
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                        {successModalMessage}
+                    </p>
+                    <button
+                        onClick={() => setIsSuccessModalOpen(false)}
+                        className="mt-4 w-full py-4 bg-[#118f46] text-white font-black uppercase tracking-widest rounded-xl hover:bg-[#0d7036] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1"
+                    >
+                        Entendido
+                    </button>
+                </div>
+            </NeoModal>
         </div>
     );
 };

@@ -15,7 +15,6 @@ import {
     Mail,
     TrendingUp,
     UserMinus,
-    Plus,
     X
 } from 'lucide-react';
 import { Group, GroupCategory, GroupTag, User, GroupRegistration } from '../../types';
@@ -190,16 +189,6 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                 </span>
                             </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <button className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-black bg-white hover:bg-gray-50 active:translate-y-[2px] active:shadow-none transition-all font-black uppercase text-xs tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                <Users className="w-4 h-4" strokeWidth={2.5} />
-                                Editar
-                            </button>
-                            <button className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-black bg-emerald-400 hover:bg-emerald-300 active:translate-y-[2px] active:shadow-none transition-all font-black uppercase text-xs tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black">
-                                <Mail className="w-4 h-4" strokeWidth={2.5} />
-                                Mensaje
-                            </button>
-                        </div>
                     </div>
                 </header>
 
@@ -221,7 +210,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                             <div className="w-full bg-gray-100 h-2 border border-black mt-2">
                                 <div
                                     className="bg-emerald-400 h-full border-r border-black"
-                                    style={{ width: `${Math.min(((approvedMembers.length) / (selectedGroup.maxMembers || 20)) * 100, 100)}%` }}
+                                    style={{ width: `${Math.min(((approvedMembers.length) / (selectedGroup.maxCapacity || selectedGroup.maxMembers || 20)) * 100, 100)}%` }}
                                 ></div>
                             </div>
                         </div>
@@ -233,7 +222,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                     <CheckCircle className="w-6 h-6 text-black" strokeWidth={2.5} />
                                 </div>
                                 <div className="text-right">
-                                    <h3 className="text-4xl font-black text-black">{selectedGroup.maxMembers || '∞'}</h3>
+                                    <h3 className="text-4xl font-black text-black">{selectedGroup.maxCapacity || selectedGroup.maxMembers || '∞'}</h3>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Capacidad Máx</p>
                                 </div>
                             </div>
@@ -257,11 +246,6 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Bajas Totales</p>
                                 </div>
                             </div>
-                            <div className="w-full flex justify-end">
-                                <span className="text-xs font-bold bg-black text-white px-2 py-1 uppercase">
-                                    -5% vs mes ant.
-                                </span>
-                            </div>
                         </div>
                     </section>
 
@@ -284,81 +268,131 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                         onChange={e => setMemberSearch(e.target.value)}
                                     />
                                 </div>
-                                <button className="flex items-center justify-center gap-2 px-5 py-2 bg-black text-white hover:bg-gray-800 border-2 border-transparent hover:border-black transition-all font-black uppercase text-xs tracking-wider shadow-[4px_4px_0px_0px_#10b981]">
-                                    <Plus className="w-4 h-4" strokeWidth={3} />
-                                    Añadir
-                                </button>
                             </div>
                         </div>
 
                         {/* Member Grid/List */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-black text-white">
-                                    <tr>
-                                        <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Miembro</th>
-                                        <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Contacto</th>
-                                        <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Rol</th>
-                                        <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Estado</th>
-                                        <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y-2 divide-gray-100">
-                                    {filteredMembers.map(m => (
-                                        <tr key={m.id} className="hover:bg-emerald-50 transition-colors group">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 border-2 border-black flex items-center justify-center font-black text-sm bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                                                        {(m.firstName || '?').substring(0, 1)}{(m.lastName || '?').substring(0, 1)}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold text-black uppercase">{m.firstName} {m.lastName}</div>
-                                                        <div className="text-xs text-gray-500 font-bold">Unido: {new Date(m.timestamp).toLocaleDateString()}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-medium text-gray-600">
-                                                <div className="flex flex-col gap-1">
-                                                    {m.email && <span className="flex items-center gap-2"><Mail className="w-3 h-3" /> {m.email}</span>}
-                                                    {m.phone && <span className="flex items-center gap-2"><Phone className="w-3 h-3" /> {m.phone}</span>}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-xs font-bold uppercase tracking-wider bg-gray-100 px-2 py-1 border border-gray-200 text-gray-600">
-                                                    Participante
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {m.status === 'APPROVED' ? (
-                                                    <span className="inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-emerald-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
-                                                        Activo
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
-                                                        Pendiente
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={() => handleDeleteMember(m)}
-                                                    disabled={deletingMember === m.id}
-                                                    className="p-2 border-2 border-transparent hover:border-black hover:bg-red-50 hover:shadow-[2px_2px_0px_0px_#ef4444] transition-all text-gray-400 hover:text-red-500"
-                                                >
-                                                    <Trash2 className="w-5 h-5" strokeWidth={2.5} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {filteredMembers.length === 0 && (
+                        <div className="w-full">
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-black text-white">
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold uppercase">
-                                                No se encontraron resultados
-                                            </td>
+                                            <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Miembro</th>
+                                            <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Contacto</th>
+                                            <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Rol</th>
+                                            <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Estado</th>
+                                            <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-right">Acciones</th>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y-2 divide-gray-100">
+                                        {filteredMembers.map(m => (
+                                            <tr key={m.id} className="hover:bg-emerald-50 transition-colors group">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 border-2 border-black flex items-center justify-center font-black text-sm bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                            {(m.firstName || '?').substring(0, 1)}{(m.lastName || '?').substring(0, 1)}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-black uppercase">{m.firstName} {m.lastName}</div>
+                                                            <div className="text-xs text-gray-500 font-bold">Unido: {new Date(m.timestamp).toLocaleDateString()}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm font-medium text-gray-600">
+                                                    <div className="flex flex-col gap-1">
+                                                        {m.email && <span className="flex items-center gap-2"><Mail className="w-3 h-3" /> {m.email}</span>}
+                                                        {m.phone && <span className="flex items-center gap-2"><Phone className="w-3 h-3" /> {m.phone}</span>}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-xs font-bold uppercase tracking-wider bg-gray-100 px-2 py-1 border border-gray-200 text-gray-600">
+                                                        Participante
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {m.status === 'APPROVED' ? (
+                                                        <span className="inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-emerald-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
+                                                            Activo
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
+                                                            Pendiente
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => handleDeleteMember(m)}
+                                                        disabled={deletingMember === m.id}
+                                                        className="p-2 min-h-[44px] border-2 border-transparent hover:border-black hover:bg-red-50 hover:shadow-[2px_2px_0px_0px_#ef4444] transition-all text-gray-400 hover:text-red-500"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" strokeWidth={2.5} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {filteredMembers.length === 0 && (
+                                            <tr>
+                                                <td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold uppercase">
+                                                    No se encontraron resultados
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Cards Alternative */}
+                            <div className="md:hidden flex flex-col gap-4 p-4 bg-[#fdfdfd]">
+                                {filteredMembers.map(m => (
+                                    <div key={m.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col relative w-full">
+                                        <div className="flex items-start justify-between mb-3 w-full">
+                                            <div className="flex items-center gap-3 w-full">
+                                                <div className="w-12 h-12 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-bold text-gray-700 text-lg shadow-sm">
+                                                    {(m.firstName || '?').substring(0, 1)}{(m.lastName || '?').substring(0, 1)}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-lg font-bold text-gray-900 uppercase truncate">{m.firstName} {m.lastName}</div>
+                                                    <div className="text-xs text-gray-400">Unido: {new Date(m.timestamp).toLocaleDateString()}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-2 text-sm text-gray-500 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            {m.email && <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-gray-400" /> <span className="truncate">{m.email}</span></span>}
+                                            {m.phone && <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400" /> <span className="truncate">{m.phone}</span></span>}
+                                        </div>
+
+                                        <div className="flex items-center justify-between mb-4 mt-auto w-full">
+                                            <span className="text-xs font-bold uppercase tracking-wider bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                                Participante
+                                            </span>
+                                            {m.status === 'APPROVED' ? (
+                                                <span className="inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded-full">
+                                                    Activo
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 rounded-full">
+                                                    Pendiente
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <button
+                                            onClick={() => handleDeleteMember(m)}
+                                            disabled={deletingMember === m.id}
+                                            className="w-full py-2 px-4 min-h-[44px] bg-white text-red-600 font-bold rounded-lg border border-red-200 hover:bg-red-50 flex items-center justify-center gap-2 transition-colors mt-2"
+                                        >
+                                            <Trash2 className="w-4 h-4" /> Eliminar
+                                        </button>
+                                    </div>
+                                ))}
+                                {filteredMembers.length === 0 && (
+                                    <div className="py-12 text-center text-gray-400 font-bold uppercase">
+                                        No se encontraron resultados
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -370,7 +404,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
     return (
         <div className="flex flex-col h-full bg-[#fdfdfd] relative overflow-y-auto font-sans">
             {/* Header Section */}
-            <div className="px-6 py-8 md:px-10 border-b-2 border-black bg-white">
+            <div className="p-4 md:px-10 md:py-8 border-b-2 border-black bg-white">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
@@ -422,7 +456,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 px-6 md:px-10 py-10 bg-[#fdfdfd]">
+            <div className="flex-1 p-4 md:px-10 md:py-10 bg-[#fdfdfd]">
                 {filteredGroups.length === 0 ? (
                     <div className="text-center py-20 border-2 border-dashed border-gray-300 rounded-xl">
                         <div className="w-20 h-20 bg-gray-100 border-2 border-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
@@ -435,7 +469,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                     <div className={`grid gap-8 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
                         {filteredGroups.map(group => {
                             const approvedCount = (group.registrations || []).filter(r => r.status === 'APPROVED').length;
-                            const isFull = group.maxMembers && approvedCount >= group.maxMembers;
+                            const isFull = (group.maxCapacity || group.maxMembers) ? approvedCount >= (group.maxCapacity || group.maxMembers!) : false;
                             const category = categories.find(c => c.id === group.categoryId)?.name || 'General';
                             const tagsList = getTagNames(group);
 
@@ -454,7 +488,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                         </div>
                                         <div className="flex flex-row md:gap-8 gap-4 text-sm font-bold text-black uppercase tracking-wide w-full md:w-auto justify-between md:justify-start">
                                             <span className="flex items-center gap-2"><CalendarIcon className="w-4 h-4" /> {group.meetingDay}</span>
-                                            <span className="flex items-center gap-2"><Users className="w-4 h-4" /> {approvedCount}/{group.maxMembers || '∞'}</span>
+                                            <span className="flex items-center gap-2"><Users className="w-4 h-4" /> {approvedCount}/{group.maxCapacity || group.maxMembers || '∞'}</span>
                                         </div>
                                         <div className="hidden md:block p-2 border-2 border-black bg-black text-white group-hover:bg-emerald-500 group-hover:text-black transition-colors">
                                             <ArrowRight className="w-5 h-5" strokeWidth={3} />

@@ -1,0 +1,32 @@
+﻿App.tsx(220,84): error TS2322: Type '() => void' is not assignable to type '(email: string, pass: string) => Promise<boolean>'.
+  Type 'void' is not assignable to type 'Promise<boolean>'.
+App.tsx(222,87): error TS2322: Type '() => void' is not assignable to type '(email: string, pass: string) => Promise<boolean>'.
+  Type 'void' is not assignable to type 'Promise<boolean>'.
+App.tsx(231,91): error TS2322: Type '() => void' is not assignable to type '(email: string, pass: string) => Promise<boolean>'.
+  Type 'void' is not assignable to type 'Promise<boolean>'.
+components/groups/CreateGroupModal.tsx(511,17): error TS2322: Type '"pending" | "approved" | "rejected" | "finished"' is not assignable to type '"pending" | "approved" | "rejected"'.
+  Type '"finished"' is not assignable to type '"pending" | "approved" | "rejected"'.
+components/SmartImageInput.tsx(9,10): error TS2305: Module '"../services/geminiService"' has no exported member 'generateGroupCover'.
+pages/infopoint/AdminPanel.tsx(8,13): error TS2339: Property 'toast' does not exist on type '{ success: (message: string) => void; error: (message: string) => void; neutral: (message: string) => void; }'.
+pages/infopoint/ChildPresentations.tsx(29,35): error TS2345: Argument of type '{ isPending: number; status: PendingStatus.PENDING; childName: string; childSurname: string; motherName: string; motherSurname: string; fatherName: string; fatherSurname: string; email: string; phone: string; id: string; }' is not assignable to parameter of type 'ChildPresentation'.
+  Property 'scheduledDate' is missing in type '{ isPending: number; status: PendingStatus.PENDING; childName: string; childSurname: string; motherName: string; motherSurname: string; fatherName: string; fatherSurname: string; email: string; phone: string; id: string; }' but required in type 'ChildPresentation'.
+pages/infopoint/NewProduct.tsx(9,13): error TS2339: Property 'toast' does not exist on type '{ success: (message: string) => void; error: (message: string) => void; neutral: (message: string) => void; }'.
+pages/infopoint/welcome/Bienvenida.tsx(5,25): error TS2307: Cannot find module './VisitorCard' or its corresponding type declarations.
+pages/infopoint/welcome/Bienvenida.tsx(6,29): error TS2307: Cannot find module './NewVisitorModal' or its corresponding type declarations.
+pages/infopoint/welcome/Bienvenida.tsx(7,32): error TS2307: Cannot find module './VisitorDetailModal' or its corresponding type declarations.
+pages/infopoint/welcome/Bienvenida.tsx(9,34): error TS2307: Cannot find module './HorizontalMagnetMenu' or its corresponding type declarations.
+pages/Store.tsx(614,17): error TS2367: This comparison appears to be unintentional because the types '"Cancelado" | "Procesando"' and '"Pagado"' have no overlap.
+pages/Store.tsx(614,43): error TS2367: This comparison appears to be unintentional because the types '"Cancelado" | "Procesando"' and '"Enviado"' have no overlap.
+pages/Store.tsx(614,70): error TS2367: This comparison appears to be unintentional because the types '"Cancelado" | "Procesando"' and '"Entregado"' have no overlap.
+pages/Store.tsx(790,92): error TS2353: Object literal may only specify known properties, and 'stock' does not exist in type 'SetStateAction<Partial<StoreProduct>>'.
+src/pages/Store.tsx(3,175): error TS2307: Cannot find module '../types' or its corresponding type declarations.
+src/pages/Store.tsx(4,20): error TS2307: Cannot find module '../services/dbService' or its corresponding type declarations.
+src/pages/Store.tsx(5,33): error TS2307: Cannot find module '../services/supabaseService' or its corresponding type declarations.
+src/pages/Store.tsx(6,45): error TS2307: Cannot find module '../components/HeroCarousel' or its corresponding type declarations.
+supabase/functions/generate-image/index.ts(2,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
+supabase/functions/send-group-confirmation/index.ts(4,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
+supabase/functions/send-group-confirmation/index.ts(5,30): error TS2307: Cannot find module 'https://esm.sh/@supabase/supabase-js@2.39.0' or its corresponding type declarations.
+supabase/functions/send-group-confirmation/index.ts(7,24): error TS2304: Cannot find name 'Deno'.
+supabase/functions/send-group-confirmation/index.ts(8,22): error TS2304: Cannot find name 'Deno'.
+supabase/functions/send-group-confirmation/index.ts(9,35): error TS2304: Cannot find name 'Deno'.
+supabase/functions/send-whatsapp/index.ts(2,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.

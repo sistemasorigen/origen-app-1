@@ -6,10 +6,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("ORIGEN_SERVICE_ROLE_KEY");
 
 // Email sender - update this to your verified domain email
-const FROM_EMAIL = "Origen App <team@app.origeniglesia.org>";
+const FROM_EMAIL = "'Origen' <team@app.origeniglesia.org>";
 
 interface GroupRegistrationRecord {
   id: string;
@@ -458,4 +458,3 @@ serve(async (req: Request) => {
     );
   }
 });
-

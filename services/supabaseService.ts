@@ -2811,31 +2811,15 @@ export const supabaseService = {
   },
 
   /**
-   * Get all users with a specific role (ANFITRION or CO_ANFITRION)
+   * Get all users with a specific role
    */
   async getUsersByRole(role: UserRole): Promise<User[]> {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', role)
-        .order('name');
-
-      if (error) {
-        console.error(`[User Mgmt] Error fetching ${role}:`, error);
-        return [];
-      }
-
-      return (data || []).map((u: any) => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        role: u.role as UserRole,
-        roles: (u.roles || [u.role]) as UserRole[],
-        isActive: u.is_active,
-        linkedGroupId: u.linked_group_id,
-        volunteerRoles: u.volunteer_roles || []
-      }));
+      // Fetch all users and use our robust mapping logic.
+      // This prevents Postgres 'invalid input value for enum' errors 
+      // when querying new roles (like COORDINATOR) against the legacy role column.
+      const allUsers = await this.getAllUsers();
+      return allUsers.filter(u => u.roles.includes(role) || u.role === role);
     } catch (error) {
       console.error(`[User Mgmt] Exception fetching ${role}:`, error);
       return [];

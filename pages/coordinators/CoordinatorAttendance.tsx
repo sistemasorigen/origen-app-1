@@ -198,14 +198,14 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="flex flex-col gap-4 p-4 md:p-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 bg-[#fdfdfd]">
                         {filteredReports.map(report => (
-                            <div key={report.id} className="bg-white border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all overflow-hidden flex flex-col relative group">
+                            <div key={report.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-0 flex flex-col relative w-full overflow-hidden">
                                 {/* Decorative Star for Perfect Attendance */}
                                 {report.status === 'Perfect' && (
-                                    <div className="absolute top-0 right-0 p-2 z-10">
-                                        <div className="bg-emerald-400 border-2 border-black p-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                                            <Star className="text-black w-4 h-4 fill-black" strokeWidth={2.5} />
+                                    <div className="absolute top-0 right-0 p-3 z-10">
+                                        <div className="bg-emerald-100 text-emerald-600 rounded-full p-2 shadow-sm border border-emerald-200">
+                                            <Star className="w-4 h-4 fill-emerald-600" strokeWidth={2.5} />
                                         </div>
                                     </div>
                                 )}
@@ -243,27 +243,27 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between mt-auto">
-                                        <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] ${report.percentage >= 80 ? 'bg-emerald-300 text-black' :
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between mt-auto gap-4">
+                                        <span className={`inline-flex items-center justify-center px-4 py-2 min-h-[44px] text-xs font-bold uppercase tracking-wider rounded-lg border border-gray-100 shadow-sm w-full md:w-auto ${report.percentage >= 80 ? 'bg-emerald-100 text-emerald-800' :
                                             report.percentage >= 50 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
                                             }`}>
                                             {report.attendedCount}/{report.totalMembers} Asistieron
                                         </span>
                                         <button
-                                            className="text-xs font-black uppercase tracking-wider text-black hover:text-emerald-600 flex items-center transition-colors group-hover:underline decoration-2 underline-offset-2"
+                                            className="w-full md:w-auto py-2 px-4 min-h-[44px] text-sm font-bold bg-white text-gray-900 border border-gray-200 rounded-lg flex items-center justify-center transition-colors hover:bg-gray-50 shadow-sm"
                                             onClick={() => toggleDetails(report.id)}
                                         >
                                             Ver detalles
-                                            <ChevronDown className={`w-4 h-4 ml-1 transition-transform border-2 border-black bg-white ${expandedReportId === report.id ? 'rotate-180' : ''}`} strokeWidth={2.5} />
+                                            <ChevronDown className={`w-4 h-4 ml-2 transition-transform text-gray-500 ${expandedReportId === report.id ? 'rotate-180' : ''}`} strokeWidth={2.5} />
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Expandable Details Section */}
                                 {expandedReportId === report.id && (
-                                    <div className="bg-gray-50 border-t-2 border-black p-5 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
-                                            <div>
+                                    <div className="bg-gray-50 border-t border-gray-100 p-5 mt-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="flex flex-col sm:flex-row gap-6 text-sm">
+                                            <div className="w-full">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <div className="w-2 h-2 bg-emerald-500 border border-black transform rotate-45"></div>
                                                     <p className="text-xs font-black text-black uppercase tracking-widest">Asistieron ({report.attendees.length})</p>
@@ -279,7 +279,7 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                                                     ) : <li className="text-xs text-gray-400 italic font-medium">Sin datos</li>}
                                                 </ul>
                                             </div>
-                                            <div>
+                                            <div className="w-full">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <div className="w-2 h-2 bg-rose-500 border border-black transform rotate-45"></div>
                                                     <p className="text-xs font-black text-black uppercase tracking-widest">Faltaron ({report.absent.length})</p>

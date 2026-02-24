@@ -235,21 +235,21 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={handlePrevMonth}
-                                className="p-2 border-2 border-black bg-white hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-[2px]"
+                                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white hover:bg-gray-50 border border-gray-200 transition-all text-gray-600"
                             >
-                                <ChevronLeft className="w-5 h-5" strokeWidth={3} />
+                                <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
                             </button>
                             <button
                                 onClick={handleToday}
-                                className="px-4 py-2 text-xs font-black uppercase tracking-wider border-2 border-black bg-emerald-400 hover:bg-emerald-300 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-[2px]"
+                                className="px-4 py-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-xs font-bold uppercase tracking-wider rounded-lg bg-gray-100 hover:bg-gray-200 transition-all text-gray-800"
                             >
                                 Hoy
                             </button>
                             <button
                                 onClick={handleNextMonth}
-                                className="p-2 border-2 border-black bg-white hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-[2px]"
+                                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white hover:bg-gray-50 border border-gray-200 transition-all text-gray-600"
                             >
-                                <ChevronRight className="w-5 h-5" strokeWidth={3} />
+                                <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
                             </button>
                         </div>
                     </div>
@@ -292,8 +292,8 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
                         </div>
                     ) : (
                         selectedDateEvents.map((ev: any) => (
-                            <div key={ev.id} className="relative bg-white border-2 border-black p-0 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all group">
-                                <div className="p-4 border-b-2 border-black flex justify-between items-start" style={{ backgroundColor: ev.colorBg }}>
+                            <div key={ev.id} className="relative bg-white border border-gray-100 p-0 shadow-sm rounded-xl overflow-hidden group w-full mb-4">
+                                <div className="p-4 flex justify-between items-start" style={{ backgroundColor: ev.colorBg }}>
                                     <div>
                                         <span className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 mb-2 inline-block">
                                             {ev.category}
@@ -325,9 +325,9 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
                                             <span className="font-bold text-sm uppercase truncate">{ev.leader}</span>
                                         </div>
                                     </div>
-                                    <button className="w-full mt-5 bg-black text-white py-2 font-black uppercase text-xs tracking-wider border-2 border-transparent hover:bg-emerald-400 hover:text-black hover:border-black transition-colors flex items-center justify-center gap-2">
+                                    <button className="w-full mt-5 py-3 px-4 min-h-[44px] bg-black text-white font-bold uppercase text-xs tracking-wider border border-black hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 rounded-lg shadow-sm">
                                         Ver Detalles
-                                        <ArrowRight className="w-3 h-3" />
+                                        <ArrowRight className="w-4 h-4 ml-1" />
                                     </button>
                                 </div>
                             </div>

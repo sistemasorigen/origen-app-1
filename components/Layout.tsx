@@ -158,8 +158,8 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
 
             {renderModuleBackground()}
 
-            {/* Navbar - Transparent Visual Style */}
-            <nav className="sticky top-0 z-50 w-full bg-transparent transition-colors duration-300">
+            {/* Navbar - Sticky White Style */}
+            <nav className="sticky top-0 z-50 w-full bg-white/95 dark:bg-black/95 backdrop-blur-sm border-b border-slate-200 dark:border-zinc-800 transition-colors duration-300">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
 

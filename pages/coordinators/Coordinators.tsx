@@ -275,31 +275,21 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                     ))}
                 </nav>
 
-                {/* User info footer */}
-                <div className="p-4 border-t-2 border-black bg-gray-50">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white border-2 border-black flex items-center justify-center font-black text-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                            {currentUser.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm truncate text-black">{currentUser.name}</p>
-                            <p className="text-[10px] text-gray-500 uppercase font-black tracking-wider">Coordinador</p>
-                        </div>
-                    </div>
-                </div>
             </aside>
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-[#fdfdfd]">
                 {/* Top bar (mobile) */}
                 <div className="md:hidden flex items-center justify-between p-4 bg-white border-b-2 border-black sticky top-0 z-30 shrink-0">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-emerald-500 border-2 border-black flex items-center justify-center">
-                            <Users className="w-4 h-4 text-white" />
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-emerald-500 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
+                            <Users className="w-6 h-6 text-white text-stroke-black" strokeWidth={2.5} />
                         </div>
-                        <span className="font-black text-black text-lg uppercase tracking-tight">Coordinadores</span>
+                        <div className="flex flex-col">
+                            <span className="block font-black text-black text-xl uppercase tracking-tighter leading-none">Coordinadores</span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Panel de Control</span>
+                        </div>
                     </div>
-
                 </div>
 
                 {/* Content - Full width/height, let children handle scrolling */}
@@ -309,18 +299,18 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
             </main>
 
             {/* Mobile Bottom Navigation Bar - Premium App Feel */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-black p-2 pb-safe flex justify-around items-center z-50 shadow-[0px_-4px_10px_rgba(0,0,0,0.05)]">
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-2 pb-safe flex justify-around items-center z-50 shadow-[0px_-4px_10px_rgba(0,0,0,0.05)]">
                 {menuItems.concat(gestionItems).map(item => (
                     <button
                         key={item.id}
                         onClick={() => handleTabChange(item.id)}
-                        className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all w-16 ${activeTab === item.id
-                            ? 'text-black bg-emerald-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] translate-y-[-2px]'
-                            : 'text-gray-400 hover:text-black hover:bg-gray-50'
+                        className={`flex flex-col items-center justify-center py-2 px-1 min-h-[56px] rounded-xl transition-all flex-1 ${activeTab === item.id
+                            ? 'text-emerald-700 bg-emerald-50 shadow-sm'
+                            : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'
                             }`}
                     >
-                        <item.icon className={`w-5 h-5 mb-1 ${activeTab === item.id ? 'text-black' : 'text-gray-400'}`} strokeWidth={activeTab === item.id ? 2.5 : 2} />
-                        <span className={`text-[9px] font-black uppercase tracking-wide ${activeTab === item.id ? 'text-black' : 'text-gray-400'}`}>
+                        <item.icon className={`w-5 h-5 mb-1 ${activeTab === item.id ? 'text-emerald-600' : 'text-gray-400'}`} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+                        <span className={`text-[9px] font-bold uppercase tracking-wide ${activeTab === item.id ? 'text-emerald-700' : 'text-gray-400'}`}>
                             {item.label === 'Dashboard' ? 'Inicio' : item.label}
                         </span>
                     </button>
