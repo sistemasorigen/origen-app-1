@@ -1,59 +1,68 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store';
 import {
-    LogIn, ArrowRight, ChevronRight, ChevronLeft, Clock,
-    Share2, X, Copy, Check, QrCode, Instagram, Facebook, Youtube, Music,
-    ExternalLink, Calendar, ArrowUpRight
+    X, Copy, Check, QrCode, Share2,
+    Instagram, Facebook, Youtube, Music,
+    ArrowRight, Megaphone, Calendar, Clock
 } from 'lucide-react';
-import { AppEvent, AppConfig } from '../../types';
-import HeroCarousel, { HeroSlideData } from '../../components/HeroCarousel';
+import { AppEvent, AppConfig, Announcement } from '../../types';
 import { db } from '../../services/dbService';
+import InfoPointCalendar from './InfoPointCalendar';
 
-// Logo URL
 const LOGO_URL = '/origen-logo.png';
 
+// Pastel post-it colors cycling by card index
+const POSTIT_COLORS = [
+    'bg-yellow-200',
+    'bg-pink-200',
+    'bg-sky-200',
+    'bg-green-200',
+    'bg-purple-200',
+    'bg-orange-200',
+];
+
+// Slight rotations cycling per card
+const POSTIT_ROTATIONS = [
+    'rotate-1',
+    '-rotate-2',
+    'rotate-2',
+    '-rotate-1',
+    'rotate-[1.5deg]',
+    '-rotate-[1.5deg]',
+];
+
 interface PublicHomeProps {
-    onEnterPanel: () => void;
+    viewMode: 'PUBLIC' | 'INTERNAL';
+    onGoInternal: () => void;
+    onGoPublic: () => void;
     canAccessPanel: boolean;
 }
 
-const PublicHome: React.FC<PublicHomeProps> = ({ onEnterPanel, canAccessPanel }) => {
-    const { events } = useStore();
+const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPublic, canAccessPanel }) => {
+    const { events, announcements } = useStore();
     const [appConfig, setAppConfig] = useState<AppConfig>(db.getAppConfig());
-    const agendaRef = useRef<HTMLDivElement>(null);
-
-    // --- SHARE MODAL STATE ---
     const [sharingEvent, setSharingEvent] = useState<AppEvent | null>(null);
     const [isCopied, setIsCopied] = useState(false);
-
-    // Animated entrance state
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
         setAppConfig(db.getAppConfig());
-        // Trigger entrance animation
         setTimeout(() => setIsLoaded(true), 100);
     }, []);
 
-    // Filter and Sort Events for the Agenda List
-    const upcomingEvents = events
-        .filter(e => new Date(e.date) >= new Date(new Date().setHours(0, 0, 0, 0)))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // Active announcements: manual override if present, else today is between startDate and endDate (inclusive)
+    const today = new Date().toISOString().slice(0, 10);
+    const activeAnnouncements: Announcement[] = announcements.filter(
+        a => a.isActive !== undefined ? a.isActive : (a.startDate <= today && a.endDate >= today)
+    );
 
-    // Helper for date formatting
+    // --- DATE HELPERS ---
     const parseLocalDate = (dateStr: string) => {
         if (!dateStr) return new Date();
         const parts = dateStr.split('-');
-        const year = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const day = parseInt(parts[2], 10);
-        return new Date(year, month, day);
+        return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
     };
-
-    const getDayNumber = (dateStr: string) => parseLocalDate(dateStr).getDate();
-    const getMonthName = (dateStr: string) => parseLocalDate(dateStr).toLocaleDateString('es-ES', { month: 'short' }).toUpperCase();
-    const getDayName = (dateStr: string) => parseLocalDate(dateStr).toLocaleDateString('es-ES', { weekday: 'long' });
 
     // --- SHARE ACTIONS ---
     const handleCopyLink = (text: string) => {
@@ -69,75 +78,40 @@ const PublicHome: React.FC<PublicHomeProps> = ({ onEnterPanel, canAccessPanel })
             text: `Te invito a: ${event.name} el ${dateObj.toLocaleDateString()}`,
             url: event.link || window.location.href
         };
-
         if (navigator.share) {
-            try {
-                await navigator.share(shareData);
-            } catch (err) {
-                console.log('Error al compartir', err);
-            }
+            try { await navigator.share(shareData); } catch { handleCopyLink(shareData.url); }
         } else {
             handleCopyLink(shareData.url);
         }
     };
 
     const getQrUrl = (text: string) => {
-        // Use quickchart.io QR API (actively maintained and reliable)
         const data = text || 'https://origen.church';
-        const encoded = encodeURIComponent(data);
-        return `https://quickchart.io/qr?text=${encoded}&size=300&margin=1`;
+        return `https://quickchart.io/qr?text=${encodeURIComponent(data)}&size=300&margin=1`;
     };
-
-    // Horizontal scroll for agenda
-    const scrollAgenda = (direction: 'left' | 'right') => {
-        if (agendaRef.current) {
-            const scrollAmount = 380;
-            agendaRef.current.scrollBy({
-                left: direction === 'left' ? -scrollAmount : scrollAmount,
-                behavior: 'smooth'
-            });
-        }
-    };
-
-    // Transform Banners for HeroCarousel from Config
-    const banners = appConfig.infoPointConfig?.banners || [];
-    const heroSlides: HeroSlideData[] = banners.map(b => ({
-        id: b.id,
-        imageUrl: b.imageUrl,
-        titlePrefix: b.titlePrefix,
-        titleHighlight: b.titleHighlight,
-        description: b.description,
-        overlayColor: b.overlayColor || 'bg-gradient-to-t from-white via-white/50 to-transparent'
-    }));
-
-    // CTA Button config
-    const heroCtaText = appConfig.infoPointConfig?.heroCtaText;
-    const heroCtaLink = appConfig.infoPointConfig?.heroCtaLink;
-    const showCta = heroCtaText && heroCtaText.trim() && heroCtaLink && heroCtaLink.trim();
 
     const footerLinks = appConfig.footerLinks;
+    const showCta = appConfig.infoPointConfig?.heroCtaText?.trim() && appConfig.infoPointConfig?.heroCtaLink?.trim();
 
-    // CSS Keyframes injected via style tag
+    // CSS Animations
     const animationStyles = `
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideInLeft {
-            from { opacity: 0; transform: translateX(-30px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes scaleIn {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes pinDrop { from { opacity: 0; transform: translateY(-20px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-slideUp { animation: slideUp 0.6s ease-out forwards; }
+        .animate-scaleIn { animation: scaleIn 0.5s ease-out forwards; }
+        .animate-pinDrop { animation: pinDrop 0.5s ease-out forwards; }
+        .stagger-1 { animation-delay: 0.1s; opacity: 0; }
+        .stagger-2 { animation-delay: 0.2s; opacity: 0; }
+        .stagger-3 { animation-delay: 0.3s; opacity: 0; }
+        .stagger-4 { animation-delay: 0.4s; opacity: 0; }
+        .stagger-5 { animation-delay: 0.5s; opacity: 0; }
+        .border-animated::before {
+            content: ''; position: absolute; inset: 0;
+            border: 3px solid black;
+            animation: borderDance 4s linear infinite;
         }
         @keyframes borderDance {
             0%, 100% { clip-path: inset(0 0 98% 0); }
@@ -145,92 +119,48 @@ const PublicHome: React.FC<PublicHomeProps> = ({ onEnterPanel, canAccessPanel })
             50% { clip-path: inset(98% 0 0 0); }
             75% { clip-path: inset(0 0 0 98%); }
         }
-        .animate-float { animation: float 3s ease-in-out infinite; }
-        .animate-slideUp { animation: slideUp 0.6s ease-out forwards; }
-        .animate-slideInLeft { animation: slideInLeft 0.6s ease-out forwards; }
-        .animate-scaleIn { animation: scaleIn 0.5s ease-out forwards; }
-        .animate-shimmer { 
-            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent);
-            background-size: 200% 100%;
-            animation: shimmer 2s infinite;
-        }
-        .stagger-1 { animation-delay: 0.1s; opacity: 0; }
-        .stagger-2 { animation-delay: 0.2s; opacity: 0; }
-        .stagger-3 { animation-delay: 0.3s; opacity: 0; }
-        .stagger-4 { animation-delay: 0.4s; opacity: 0; }
-        .stagger-5 { animation-delay: 0.5s; opacity: 0; }
-        .hover-lift { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .hover-lift:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
-        .border-animated::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border: 3px solid black;
-            animation: borderDance 4s linear infinite;
-        }
     `;
 
     return (
         <>
             <style>{animationStyles}</style>
 
-            <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white relative overflow-hidden">
+            <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white">
 
-                {/* --- SHARE MODAL (PREMIUM WHITE) --- */}
+                {/* --- SHARE MODAL --- */}
                 {sharingEvent && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/95 backdrop-blur-xl">
                         <div className="relative bg-white border-4 border-black w-full max-w-sm overflow-hidden animate-scaleIn shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                            {/* Animated border accent */}
                             <div className="absolute inset-0 border-animated pointer-events-none" />
-
                             <button
                                 onClick={() => setSharingEvent(null)}
-                                className="absolute top-4 right-4 p-2 border-2 border-black hover:bg-black hover:text-white transition-all duration-300 z-10"
+                                className="absolute top-4 right-4 p-2 border-2 border-black hover:bg-black hover:text-white transition-all z-10"
                             >
                                 <X className="w-5 h-5" />
                             </button>
-
                             <div className="p-8 flex flex-col items-center text-center">
-                                {/* Logo */}
-                                <img
-                                    src={LOGO_URL}
-                                    alt="Logo"
-                                    className="h-16 w-auto object-contain mb-4 animate-float"
-                                />
-
-                                <h3 className="text-2xl font-black uppercase tracking-tight mb-1">
-                                    {sharingEvent.name}
-                                </h3>
+                                <img src={LOGO_URL} alt="Logo" className="h-16 w-auto object-contain mb-4 animate-float" />
+                                <h3 className="text-2xl font-black uppercase tracking-tight mb-1">{sharingEvent.name}</h3>
                                 <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-6">
                                     {parseLocalDate(sharingEvent.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                                 </p>
-
-                                {/* QR Section */}
-                                <div className="bg-white border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover-lift">
-                                    <img
-                                        src={getQrUrl(sharingEvent.link || `${sharingEvent.name} - ${sharingEvent.date}`)}
-                                        alt="QR Code"
-                                        className="w-44 h-44 object-contain"
-                                    />
+                                <div className="bg-white border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                    <img src={getQrUrl(sharingEvent.link || `${sharingEvent.name} - ${sharingEvent.date}`)} alt="QR" className="w-44 h-44 object-contain" />
                                 </div>
-
-                                {/* Actions */}
                                 <div className="w-full space-y-3">
                                     <button
                                         onClick={() => handleCopyLink(sharingEvent.link || window.location.href)}
-                                        className="w-full py-4 px-6 border-3 border-black font-black uppercase text-sm tracking-widest hover:bg-neutral-100 transition-all duration-300 flex items-center justify-center gap-3 group"
-                                        style={{ borderWidth: '3px' }}
+                                        className="w-full py-4 px-6 border-4 border-black font-black uppercase text-sm tracking-widest hover:bg-neutral-100 transition-all flex items-center justify-center gap-3"
                                     >
-                                        {isCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
+                                        {isCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                                         {isCopied ? '¡Copiado!' : 'Copiar Link'}
                                     </button>
-
                                     {navigator.share && (
                                         <button
                                             onClick={() => handleWebShare(sharingEvent)}
-                                            className="w-full py-4 px-6 bg-black text-white font-black uppercase text-sm tracking-widest hover:bg-neutral-800 transition-all duration-300 flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 group"
+                                            className="w-full py-4 px-6 bg-black text-white font-black uppercase text-sm tracking-widest hover:bg-neutral-800 transition-all flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]"
                                         >
-                                            <Share2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                            <Share2 className="w-5 h-5" />
                                             Compartir
                                         </button>
                                     )}
@@ -240,94 +170,116 @@ const PublicHome: React.FC<PublicHomeProps> = ({ onEnterPanel, canAccessPanel })
                     </div>
                 )}
 
-                {/* --- NAVBAR (CENTERED TITLE - GROUPS STYLE) --- */}
-                <nav className={`sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 transition-all duration-700 h-16 md:h-20 ${isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}>
-                    <div className="w-full px-4 md:px-6 lg:px-12 h-full flex items-center justify-center relative max-w-[1920px] mx-auto">
+                {/* --- NAVBAR --- */}
+                <nav className={`sticky top-16 md:top-20 z-40 bg-white transition-all duration-700 border-b-4 border-black md:h-20 ${isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}>
+                    <div className="w-full flex flex-col md:flex-row md:items-center justify-center h-full relative max-w-[1920px] mx-auto">
 
-                        {/* CENTER: Title - Always centered */}
-                        <h1 className="text-base md:text-xl font-black tracking-tight uppercase text-black text-center">
-                            Punto de Información
-                        </h1>
+                        {/* CENTER: Title (Mobile: top bar, Desktop: absolute center) */}
+                        <div className="w-full md:w-auto h-14 md:h-full flex items-center justify-center border-b-4 border-black md:border-none md:absolute md:left-1/2 md:-translate-x-1/2 bg-white md:bg-transparent z-10">
+                            <h1 className="text-base md:text-xl font-black tracking-tight uppercase text-black text-center">
+                                Punto de Información
+                            </h1>
+                        </div>
 
-                        {/* RIGHT SECTION: Panel Button - Absolute positioned */}
-                        {canAccessPanel && (
-                            <div className="absolute right-4 md:right-6 lg:right-12">
+                        {/* RIGHT: Neo-Brutalist View Switch (Mobile: bottom bar, Desktop: absolute right) */}
+                        <div className="w-full md:w-auto h-16 md:h-full flex items-center justify-center bg-white md:bg-transparent md:absolute md:right-4 lg:right-12">
+                            <div className="inline-flex border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden" role="group">
                                 <button
-                                    onClick={onEnterPanel}
-                                    className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap border border-slate-200 text-slate-600 hover:border-black hover:text-black hover:bg-black hover:text-white group"
+                                    onClick={onGoPublic}
+                                    className={`px-6 md:px-4 py-2.5 md:py-2 text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all duration-200 border-r-4 border-black ${viewMode === 'PUBLIC'
+                                        ? 'bg-black text-white'
+                                        : 'bg-white text-black hover:bg-slate-100'
+                                        }`}
                                 >
-                                    <LogIn className="w-3.5 h-3.5" />
-                                    <span>Panel</span>
+                                    Público
+                                </button>
+                                <button
+                                    onClick={onGoInternal}
+                                    className={`px-6 md:px-4 py-2.5 md:py-2 text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all duration-200 ${viewMode === 'INTERNAL'
+                                        ? 'bg-black text-white'
+                                        : 'bg-white text-black hover:bg-slate-100'
+                                        }`}
+                                >
+                                    {canAccessPanel ? 'Panel' : '🔒 Panel'}
                                 </button>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </nav>
 
-                {/* --- HERO BANNER (FULL WIDTH - EXPANDED 50%) --- */}
-                <section className={`relative w-full transition-all duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-                    <div className="w-full">
-                        <div className="relative overflow-hidden h-[38vh] min-h-[240px] max-h-[420px]">
-                            {heroSlides.length > 0 ? (
-                                <div className="relative w-full h-full">
-                                    <HeroCarousel slides={heroSlides} theme="infopoint" heightClass="h-full" />
-
-                                    {/* Gradient Overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent pointer-events-none" />
+                {/* --- BULLETIN BOARD SECTION --- */}
+                <section className={`relative py-12 md:py-16 bg-neutral-50 border-b-4 border-black transition-all duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                    <div className="max-w-7xl mx-auto px-4 md:px-8">
+                        {/* Section Header */}
+                        <div className={`mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 ${isLoaded ? 'animate-slideUp stagger-1' : 'opacity-0'}`}>
+                            <div>
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="p-2 border-4 border-black bg-yellow-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                        <Megaphone className="w-5 h-5 text-black" />
+                                    </div>
+                                    <span className="text-sm font-black text-neutral-400 uppercase tracking-[0.2em]">Tablero</span>
                                 </div>
-                            ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-50 animate-shimmer">
-                                    <img
-                                        src={LOGO_URL}
-                                        alt="Logo"
-                                        className="h-24 w-auto object-contain mb-4 animate-float opacity-30"
-                                    />
-                                    <p className="text-neutral-400 font-bold uppercase tracking-widest text-sm">Sin banners</p>
-                                </div>
-                            )}
+                                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight">
+                                    Anuncios <span className="relative inline-block">
+                                        Activos
+                                        <span className="absolute -bottom-2 left-0 w-full h-2 bg-black" />
+                                    </span>
+                                </h2>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* CTA Buttons Container - Always Below the Banner */}
-                    <div className="w-full bg-white py-6 flex justify-center animate-slideUp stagger-3">
-                        <div className="flex flex-col sm:flex-row items-center gap-3">
-                            {/* Primary CTA - Scroll to Agenda */}
-                            <button
-                                onClick={() => {
-                                    const agendaSection = document.getElementById('agenda-section');
-                                    agendaSection?.scrollIntoView({ behavior: 'smooth' });
-                                }}
-                                className="inline-flex items-center gap-3 px-8 py-4 bg-black text-white font-black text-sm uppercase tracking-widest hover:bg-white hover:text-black border-4 border-black transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 group"
-                            >
-                                <Calendar className="w-5 h-5" />
-                                Nuestra Agenda
-                                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </button>
+                        {/* Post-it Cards Grid */}
+                        {activeAnnouncements.length === 0 ? (
+                            <div className={`py-20 text-center border-4 border-black border-dashed bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${isLoaded ? 'animate-slideUp stagger-2' : 'opacity-0'}`}>
+                                <Megaphone className="w-16 h-16 mx-auto mb-4 text-neutral-200" />
+                                <p className="text-neutral-400 font-black uppercase tracking-widest text-sm">Sin anuncios activos por ahora</p>
+                                <p className="text-neutral-300 font-bold text-xs mt-1 uppercase tracking-wide">Los anuncios pueden gestionarse desde el Panel Interno</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
+                                {activeAnnouncements.map((ann, idx) => {
+                                    const color = POSTIT_COLORS[idx % POSTIT_COLORS.length];
+                                    const rotation = POSTIT_ROTATIONS[idx % POSTIT_ROTATIONS.length];
+                                    return (
+                                        <div
+                                            key={ann.id}
+                                            className={`relative border-4 border-black shadow-[6px_6px_0px_0px_#000] ${color} ${rotation} hover:rotate-0 hover:-translate-y-2 transition-all duration-300 cursor-default animate-pinDrop`}
+                                            style={{ animationDelay: `${0.1 + idx * 0.08}s`, opacity: 0 }}
+                                        >
+                                            {/* Pin decorative element */}
+                                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-red-500 border-4 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10" />
 
-                            {/* Secondary CTA - Configurable External Link */}
-                            {showCta && (
-                                <a
-                                    href={heroCtaLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-3 px-6 py-3 bg-white text-black font-bold text-sm uppercase tracking-widest hover:bg-black hover:text-white border-3 border-black transition-all duration-300 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 group"
-                                    style={{ borderWidth: '3px' }}
-                                >
-                                    {heroCtaText}
-                                    <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                                </a>
-                            )}
-                        </div>
+                                            <div className="p-6 pt-8">
+                                                <h3 className="text-xl font-black uppercase tracking-tight mb-3 leading-tight">
+                                                    {ann.title}
+                                                </h3>
+                                                {ann.description && (
+                                                    <p className="text-sm font-semibold text-black/70 leading-relaxed mb-4 line-clamp-4">
+                                                        {ann.description}
+                                                    </p>
+                                                )}
+                                                <div className="flex items-center gap-1 pt-3 border-t-2 border-black/20">
+                                                    <Calendar className="w-3.5 h-3.5 text-black/50" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-black/50">
+                                                        Hasta: {new Date(ann.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </section>
 
-                {/* --- AGENDA (PREMIUM CARDS WITH BLACK FRAMES) --- */}
-                <section id="agenda-section" className="relative py-16 md:py-20 bg-neutral-50 border-y-4 border-black">
-                    {/* Section Header */}
-                    <div className={`max-w-7xl mx-auto px-4 md:px-8 mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 ${isLoaded ? 'animate-slideUp stagger-1' : 'opacity-0'}`}>
-                        <div>
+                {/* --- CALENDAR SECTION --- */}
+                <section id="agenda-section" className={`py-12 md:py-16 bg-white border-b-4 border-black transition-all duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                    <div className="max-w-7xl mx-auto px-4 md:px-8">
+                        {/* Section Header */}
+                        <div className={`mb-8 ${isLoaded ? 'animate-slideUp stagger-3' : 'opacity-0'}`}>
                             <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2 border-3 border-black bg-black text-white" style={{ borderWidth: '3px' }}>
+                                <div className="p-2 border-4 border-black bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
                                     <Calendar className="w-5 h-5" />
                                 </div>
                                 <span className="text-sm font-black text-neutral-400 uppercase tracking-[0.2em]">Próximos Eventos</span>
@@ -340,140 +292,45 @@ const PublicHome: React.FC<PublicHomeProps> = ({ onEnterPanel, canAccessPanel })
                             </h2>
                         </div>
 
-                        {/* Scroll Controls */}
-                        {upcomingEvents.length > 2 && (
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => scrollAgenda('left')}
-                                    className="p-4 border-3 border-black bg-white hover:bg-black hover:text-white transition-all duration-300 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                                    style={{ borderWidth: '3px' }}
+                        {/* CTA to go internal */}
+                        {showCta && (
+                            <div className="mb-6">
+                                <a
+                                    href={appConfig.infoPointConfig?.heroCtaLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 px-5 py-3 bg-white font-black text-sm uppercase tracking-widest border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all"
                                 >
-                                    <ChevronLeft className="w-6 h-6" />
-                                </button>
-                                <button
-                                    onClick={() => scrollAgenda('right')}
-                                    className="p-4 border-3 border-black bg-white hover:bg-black hover:text-white transition-all duration-300 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                                    style={{ borderWidth: '3px' }}
-                                >
-                                    <ChevronRight className="w-6 h-6" />
-                                </button>
+                                    {appConfig.infoPointConfig?.heroCtaText}
+                                    <ArrowRight className="w-4 h-4" />
+                                </a>
                             </div>
                         )}
+
+                        {/* Embedded Calendar */}
+                        <InfoPointCalendar />
                     </div>
-
-                    {/* Events Scroll Container */}
-                    {upcomingEvents.length === 0 ? (
-                        <div className="max-w-7xl mx-auto px-4 md:px-8">
-                            <div className="py-20 text-center border-4 border-black border-dashed bg-white">
-                                <Calendar className="w-16 h-16 mx-auto mb-4 text-neutral-300" />
-                                <p className="text-neutral-400 font-bold uppercase tracking-widest">No hay eventos programados</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div
-                            ref={agendaRef}
-                            className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-4 md:px-8 pb-4"
-                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                        >
-                            {/* Spacer for max-w-7xl alignment */}
-                            <div className="hidden lg:block flex-shrink-0 w-[calc((100vw-1280px)/2-32px)]" />
-
-                            {upcomingEvents.map((ev, index) => (
-                                <div
-                                    key={ev.id}
-                                    className={`flex-shrink-0 w-[320px] md:w-[360px] snap-start ${isLoaded ? 'animate-slideUp' : 'opacity-0'}`}
-                                    style={{ animationDelay: `${0.1 + index * 0.1}s`, opacity: 0 }}
-                                >
-                                    <div className="relative h-full bg-white border-4 border-black overflow-hidden hover-lift shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group">
-                                        {/* Date Header */}
-                                        <div className="flex items-center justify-between px-5 py-4 bg-black text-white border-b-4 border-black">
-                                            <div className="flex items-baseline gap-3">
-                                                <span className="text-4xl font-black leading-none">
-                                                    {getDayNumber(ev.date)}
-                                                </span>
-                                                <span className="text-sm font-bold uppercase tracking-wider opacity-80">
-                                                    {getMonthName(ev.date)}
-                                                </span>
-                                            </div>
-                                            <span className="text-xs font-bold uppercase opacity-60 capitalize">
-                                                {getDayName(ev.date)}
-                                            </span>
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="p-5">
-                                            {/* Time Badge */}
-                                            {(ev.startTime || ev.endTime) && (
-                                                <div className="inline-flex items-center gap-2 px-3 py-2 border-2 border-black mb-4 text-sm font-bold">
-                                                    <Clock className="w-4 h-4" />
-                                                    <span>{ev.startTime}{ev.endTime ? ` - ${ev.endTime}` : ''}</span>
-                                                </div>
-                                            )}
-
-                                            {/* Event Title */}
-                                            <h3 className="text-xl font-black uppercase tracking-tight mb-2 line-clamp-2 group-hover:underline decoration-4 underline-offset-4 transition-all">
-                                                {ev.name}
-                                            </h3>
-
-                                            {/* Event Description */}
-                                            {ev.description && (
-                                                <p className="text-sm text-neutral-500 leading-relaxed mb-3 line-clamp-3">
-                                                    {ev.description}
-                                                </p>
-                                            )}
-
-                                            {/* Event Type */}
-                                            {ev.type && (
-                                                <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-4">
-                                                    {ev.type}
-                                                </p>
-                                            )}
-
-                                            {/* Share Button */}
-                                            <button
-                                                onClick={() => setSharingEvent(ev)}
-                                                className="w-full mt-2 py-4 px-4 border-3 border-black font-black text-sm uppercase tracking-widest hover:bg-black hover:text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none group/btn"
-                                                style={{ borderWidth: '3px' }}
-                                            >
-                                                <QrCode className="w-5 h-5 group-hover/btn:rotate-12 transition-transform" />
-                                                <span>Compartir</span>
-                                                <ArrowRight className="w-4 h-4 opacity-0 group-hover/btn:opacity-100 transition-all" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {/* Spacer for max-w-7xl alignment */}
-                            <div className="hidden lg:block flex-shrink-0 w-[calc((100vw-1280px)/2-32px)]" />
-                        </div>
-                    )}
                 </section>
 
-                {/* --- FOOTER (BOLD & STRUCTURED) --- */}
+                {/* --- FOOTER --- */}
                 <footer className={`bg-white border-t-4 border-black ${isLoaded ? 'animate-slideUp stagger-4' : 'opacity-0'}`}>
                     <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
                         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                            {/* Left: Branding */}
+                            {/* Branding */}
                             <div className="flex items-center gap-4">
-                                <img
-                                    src={LOGO_URL}
-                                    alt="Logo"
-                                    className="h-14 w-auto object-contain hover:rotate-12 transition-transform duration-300"
-                                />
+                                <img src={LOGO_URL} alt="Logo" className="h-14 w-auto object-contain hover:rotate-12 transition-transform duration-300" />
                                 <div>
                                     <h3 className="text-xl font-black uppercase tracking-tight">Punto de Info</h3>
                                     <p className="text-sm font-bold text-neutral-400 uppercase tracking-wider">Sistema Origen</p>
                                 </div>
                             </div>
 
-                            {/* Center: Social Icons */}
+                            {/* Social Icons */}
                             <div className="flex items-center gap-3">
                                 {footerLinks?.instagram && (
                                     <button
                                         onClick={() => window.open(footerLinks.instagram, '_blank')}
-                                        className="w-14 h-14 border-3 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all duration-300 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:rotate-3 active:translate-y-0 active:shadow-none"
-                                        style={{ borderWidth: '3px' }}
+                                        className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 hover:rotate-3"
                                         title="Instagram"
                                     >
                                         <Instagram className="w-6 h-6" />
@@ -482,8 +339,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ onEnterPanel, canAccessPanel })
                                 {footerLinks?.facebook && (
                                     <button
                                         onClick={() => window.open(footerLinks.facebook, '_blank')}
-                                        className="w-14 h-14 border-3 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all duration-300 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:-rotate-3 active:translate-y-0 active:shadow-none"
-                                        style={{ borderWidth: '3px' }}
+                                        className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 hover:-rotate-3"
                                         title="Facebook"
                                     >
                                         <Facebook className="w-6 h-6" />
@@ -492,8 +348,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ onEnterPanel, canAccessPanel })
                                 {footerLinks?.youtube && (
                                     <button
                                         onClick={() => window.open(footerLinks.youtube, '_blank')}
-                                        className="w-14 h-14 border-3 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all duration-300 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:rotate-3 active:translate-y-0 active:shadow-none"
-                                        style={{ borderWidth: '3px' }}
+                                        className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 hover:rotate-3"
                                         title="YouTube"
                                     >
                                         <Youtube className="w-6 h-6" />
@@ -502,8 +357,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ onEnterPanel, canAccessPanel })
                                 {footerLinks?.spotify && (
                                     <button
                                         onClick={() => window.open(footerLinks.spotify, '_blank')}
-                                        className="w-14 h-14 border-3 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all duration-300 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:-rotate-3 active:translate-y-0 active:shadow-none"
-                                        style={{ borderWidth: '3px' }}
+                                        className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 hover:-rotate-3"
                                         title="Spotify"
                                     >
                                         <Music className="w-6 h-6" />
@@ -511,7 +365,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ onEnterPanel, canAccessPanel })
                                 )}
                             </div>
 
-                            {/* Right: Copyright */}
+                            {/* Copyright */}
                             <div className="text-center md:text-right">
                                 <p className="text-sm font-bold text-neutral-500 uppercase tracking-wider">
                                     © {new Date().getFullYear()} Sistema Origen

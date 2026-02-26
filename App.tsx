@@ -18,6 +18,8 @@ import Bienvenida from './pages/welcome/Bienvenida';
 import Formulario from './pages/welcome/Formulario';
 import TutorialsPage from './pages/TutorialsPage';
 import Coordinators from './pages/coordinators/Coordinators';
+import PastoralCareForm from './pages/pastoral/PastoralCareForm';
+import PastoralCareDashboard from './pages/pastoral/PastoralCareDashboard';
 import SystemLoginModal from './components/SystemLoginModal';
 import CompleteProfileModal from './components/CompleteProfileModal';
 import { User, UserRole, AppConfig } from './types';
@@ -267,6 +269,18 @@ const AppContent: React.FC = () => {
                             } />
 
                             <Route path="/tutorials" element={<TutorialsPage />} />
+
+                            <Route path="/pastoral-care" element={
+                                (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR]))
+                                    ? <PastoralCareDashboard currentUser={user} />
+                                    : <Navigate to="/" />
+                            } />
+
+                            <Route path="/pastoral-care/new" element={
+                                (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR]))
+                                    ? <PastoralCareForm currentUser={user} />
+                                    : <Navigate to="/" />
+                            } />
 
                             <Route path="*" element={<Navigate to="/" />} />
                         </Routes>

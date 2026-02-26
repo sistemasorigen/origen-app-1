@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ViewState, UserRole, User as UserType } from '../../types';
-import { Package, CalendarRange, ArrowLeftRight, Search, PlusCircle, Baby, User, Settings, Layers, Tag, FileText } from 'lucide-react';
+import { Package, CalendarRange, ArrowLeftRight, Search, PlusCircle, Baby, User, Settings, Layers, Tag, FileText, Megaphone } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasRole } from '../../services/authUtils';
 
@@ -17,19 +17,18 @@ interface MenuItem {
     icon: React.ElementType;
     color: string;
     externalRoute?: string;
-    roles?: UserRole[]; // Optional: if defined, restricts access to these roles
+    roles?: UserRole[];
 }
 
 const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: propUser }) => {
     const navigate = useNavigate();
     const { user: globalUser } = useAuth();
 
-    // Use prop user (local auth) or global user
     const userToUse = propUser || globalUser;
 
-    // Menu Config
     const allMenuItems: MenuItem[] = [
         { id: 'SUMMARY', label: 'Resumen', icon: Layers, color: 'bg-indigo-100' },
+        { id: 'ANNOUNCEMENTS', label: 'Anuncios', icon: Megaphone, color: 'bg-yellow-100' },
         { id: 'INVENTORY', label: 'Inventario', icon: Package, color: 'bg-emerald-100' },
         { id: 'MOVEMENTS', label: 'Movimientos', icon: ArrowLeftRight, color: 'bg-blue-100' },
         { id: 'LOANS', label: 'Préstamos', icon: Tag, color: 'bg-orange-100' },
@@ -38,7 +37,6 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: 
         { id: 'SEARCH', label: 'Buscar', icon: Search, color: 'bg-slate-100' },
         { id: 'BAPTISMS', label: 'Bautismos', icon: User, color: 'bg-cyan-100' },
         { id: 'PRESENTATIONS', label: 'Presentaciones', icon: Baby, color: 'bg-purple-100' },
-        // Admin / Reports Section
         {
             id: 'REPORTES',
             label: 'Reportes',
@@ -46,13 +44,8 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: 
             color: 'bg-teal-100',
             externalRoute: '/pastores',
             roles: [
-                UserRole.SUPER_ADMIN,
-                UserRole.ADMIN_PUNTO,
-                UserRole.ENCARGADO_PUNTO,
-                UserRole.REPORTES,
-                UserRole.PASTOR,
-                UserRole.ENCARGADO_GRUPOS,
-                UserRole.ADMIN_GROUPS
+                UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO,
+                UserRole.REPORTES, UserRole.PASTOR, UserRole.ENCARGADO_GRUPOS, UserRole.ADMIN_GROUPS
             ]
         },
         {

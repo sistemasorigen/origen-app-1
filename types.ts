@@ -277,6 +277,16 @@ export interface AppEvent {
     color?: string;
 }
 
+export interface Announcement {
+    id: string;
+    title: string;
+    description: string;
+    startDate: string; // ISO Date (YYYY-MM-DD)
+    endDate: string;   // ISO Date (YYYY-MM-DD)
+    createdAt: string; // ISO Timestamp
+    isActive?: boolean; // Manual override
+}
+
 export interface AppSettings {
     id?: string;
     appName: string;
@@ -298,7 +308,8 @@ export type ViewState =
     | 'SUMMARY'
     | 'WELCOME'
     | 'REPORTES'
-    | 'ADMIN_PANEL';
+    | 'ADMIN_PANEL'
+    | 'ANNOUNCEMENTS';
 
 
 // --- END INFO POINT TYPES ---
@@ -749,4 +760,47 @@ export interface WelcomeVisitor {
     // New Fields from Public Form
     email?: string;
     experience_description?: string;
+}
+
+// --- PASTORAL CARE TYPES ---
+
+export interface ServiceStatistic {
+    id?: string;
+    name?: string;           // Nombre (Opcional)
+    service_date: string;    // Fecha del servicio (ISO Date, requerido)
+    service_time?: 'AM' | 'PM'; // Horario del servicio
+
+    // Categoría: Voluntarios
+    conecta: number;
+    store: number;
+    host_prevencion: number;
+    punto_info: number;
+    produccion: number;
+    equipo_ministracion: number;
+    atmosfera: number;
+    visuales: number;
+    redes: number;
+    sala_bienvenida: number;
+    sonido: number;
+    ea: number;
+    streaming: number;
+    camaras: number;
+    fotos: number;
+    profes_ninez: number;
+    auditorio: number;
+
+    // Categoría: Niñez
+    ninos_3_6: number;
+    ninos_7_10: number;
+    ninos_hd: number;
+    borders: number;
+
+    // Categoría: Otros
+    online: number;
+    voluntarios_repetidos: number;
+    aceptaron: number;
+    asistieron_primera_vez: number;
+    reconciliaron: number;
+    podcast: number;
+    oracion: number;
 }

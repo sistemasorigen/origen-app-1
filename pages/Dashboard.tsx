@@ -77,6 +77,7 @@ const getModuleIcon = (id: string, defaultIcon: string, isConstruction?: boolean
         case 'tutorials': return <Book className={iconClass} />;
         case 'admin': return <Settings className={iconClass} />;
         case 'coordinators': return <ClipboardList className={iconClass} />;
+        case 'pastoral': return <HeartHandshake className={iconClass} />;
         default: return <span className="text-3xl">{defaultIcon}</span>;
     }
 };
@@ -730,7 +731,6 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                     </div>
                 </section>
 
-                {/* === COORDINATOR PRESENTATION CARD === */}
 
 
                 {/* === FOOTER - NEO-BRUTALIST === */}

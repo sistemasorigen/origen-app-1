@@ -1,9 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { dbAPI } from './services/db';
-import { db } from './services/dbService'; // Import global DB for logs
-import { InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, AppSettings, ProductType, User } from './types';
+import { InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, AppSettings, ProductType, User, Announcement } from './types';
 import { safeUUID } from './services/uuidUtils';
+import { db } from './services/dbService';
+import { dbAPI } from './services/db';
 
 interface NotificationState {
     show: boolean;
@@ -18,6 +18,7 @@ interface AppContextType {
     presentations: ChildPresentation[];
     loans: Loan[];
     events: AppEvent[];
+    announcements: Announcement[];
     settings: AppSettings;
     isLoading: boolean;
     notification: NotificationState;
@@ -40,6 +41,10 @@ interface AppContextType {
     addLoan: (l: Loan) => Promise<void>;
     updateLoan: (l: Loan) => Promise<void>;
     deleteLoan: (id: string) => Promise<void>;
+    addAnnouncement: (a: Announcement) => void;
+    updateAnnouncement: (a: Announcement) => void;
+    deleteAnnouncement: (id: string) => void;
+
     addEvent: (e: AppEvent) => Promise<void>;
     updateEvent: (e: AppEvent) => Promise<void>;
     deleteEvent: (id: string) => Promise<void>;
@@ -61,6 +66,7 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
     const [presentations, setPresentations] = useState<ChildPresentation[]>([]);
     const [loans, setLoans] = useState<Loan[]>([]);
     const [events, setEvents] = useState<AppEvent[]>([]);
+    const [announcements, setAnnouncements] = useState<Announcement[]>(() => db.getAnnouncements());
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -114,6 +120,8 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
             setPresentations(pres || []);
             setLoans(l || []);
             setEvents(e || []);
+            // Reload announcements from localStorage on every refresh
+            setAnnouncements(db.getAnnouncements());
 
             if (s) {
                 setSettings(s);
@@ -259,6 +267,22 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
         await refreshData();
     };
 
+    // --- ANNOUNCEMENTS CRUD (localStorage-only, synchronous) ---
+    const addAnnouncement = (a: Announcement) => {
+        db.saveAnnouncement(a);
+        setAnnouncements(db.getAnnouncements());
+    };
+
+    const updateAnnouncement = (a: Announcement) => {
+        db.saveAnnouncement(a);
+        setAnnouncements(db.getAnnouncements());
+    };
+
+    const deleteAnnouncement = (id: string) => {
+        db.deleteAnnouncement(id);
+        setAnnouncements(prev => prev.filter(a => a.id !== id));
+    };
+
     const updateEvent = async (e: AppEvent) => {
         setEvents(prev => prev.map(item => item.id === e.id ? e : item));
         await dbAPI.updateEvent(e);
@@ -285,14 +309,15 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
 
     return (
         <AppContext.Provider value={{
-            products, movements, baptisms, presentations, loans, events, settings, isLoading, notification,
+            products, movements, baptisms, presentations, loans, events, announcements, settings, isLoading, notification,
             refreshData, updateSettings, showNotification,
             addProduct, deleteProduct,
             addMovement, deleteMovement,
             addBaptism, updateBaptism, deleteBaptism,
             addPresentation, updatePresentation, deletePresentation,
             addLoan, updateLoan, deleteLoan,
-            addEvent, updateEvent, deleteEvent
+            addEvent, updateEvent, deleteEvent,
+            addAnnouncement, updateAnnouncement, deleteAnnouncement
         }}>
             {children}
         </AppContext.Provider>

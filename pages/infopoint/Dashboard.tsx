@@ -81,19 +81,21 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
     return (
         <div className="space-y-8 animate-fadeIn p-1">
             {/* Header con título y botón de Reportes (solo desktop) */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col gap-3">
                 <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-black">
                     Resumen General
                 </h2>
                 {canViewReports && (
-                    <button
-                        id="reports-btn"
-                        onClick={() => navigate('/pastores')}
-                        className="hidden md:flex items-center gap-2 px-4 py-2 bg-white text-black border-2 border-black font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none transition-all"
-                    >
-                        <BarChart3 size={18} />
-                        REPORTES
-                    </button>
+                    <div>
+                        <button
+                            id="reports-btn"
+                            onClick={() => navigate('/pastores')}
+                            className="hidden md:flex items-center gap-2 px-4 py-2 bg-white text-black border-2 border-black font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none transition-all"
+                        >
+                            <BarChart3 size={18} />
+                            REPORTES
+                        </button>
+                    </div>
                 )}
             </div>
 

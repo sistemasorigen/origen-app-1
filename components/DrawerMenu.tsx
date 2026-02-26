@@ -10,6 +10,7 @@ import {
     Settings,
     FileText,
     Heart,
+    HeartHandshake,
     ChevronDown,
     ChevronRight,
     LogOut,
@@ -161,6 +162,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 { label: 'Préstamos', path: '/info-point?view=LOANS' },
                 { label: 'Bautismos', path: '/info-point?view=BAPTISMS' },
                 { label: 'Presentaciones', path: '/info-point?view=PRESENTATIONS' },
+                { label: 'Anuncios', path: '/info-point?view=ANNOUNCEMENTS' },
                 { label: 'Configuración', path: '/info-point?view=ADMIN_PANEL', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
             ]
         },
@@ -218,6 +220,12 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 { label: 'Voluntarios', path: '/welcome?stage=VOLUNTEERS' },
                 { label: 'No Respondió', path: '/welcome?stage=NO_RESPONSE' }
             ]
+        },
+        {
+            label: 'Cuidado Pastoral',
+            icon: HeartHandshake,
+            path: '/pastoral-care',
+            roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR]
         },
         {
             label: 'Tutoriales',

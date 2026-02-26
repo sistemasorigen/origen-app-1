@@ -1,6 +1,6 @@
 
 
-import { User, UserRole, Log, SystemModule, AppConfig, SystemNotification, GroupCategory, GroupTag, Group, Product, LeaderApplication, FooterLinks, NotificationPreferences, DEFAULT_NOTIFICATION_PREFERENCES } from '../types';
+import { User, UserRole, Log, SystemModule, AppConfig, SystemNotification, GroupCategory, GroupTag, Group, Product, LeaderApplication, FooterLinks, NotificationPreferences, DEFAULT_NOTIFICATION_PREFERENCES, Announcement } from '../types';
 import { safeUUID } from './uuidUtils';
 
 // Default Data - STRICTLY ADMINS ONLY. Volunteers must be created via Admin Panel.
@@ -194,6 +194,24 @@ const MODULES: SystemModule[] = [
         gradientFrom: 'cyan-500',
         gradientTo: 'blue-600',
         iconColor: 'text-cyan-600',
+        status: 'active'
+    },
+    {
+        id: 'pastoral',
+        title: 'Cuidado Pastoral',
+        subtitle: 'Módulo Pastoral',
+        description: 'Registrá las estadísticas del servicio: voluntarios, niñez y seguimiento.',
+        icon: 'heart-handshake',
+        route: '/pastoral-care',
+        allowedRoles: [
+            UserRole.SUPER_ADMIN,
+            UserRole.PASTOR
+        ],
+        publicAccess: false,
+        useImage: false,
+        gradientFrom: 'violet-700',
+        gradientTo: 'violet-900',
+        iconColor: 'text-violet-900',
         status: 'active'
     },
     {
@@ -477,6 +495,27 @@ class DBService {
 
     getProducts(): Product[] {
         return [];
+    }
+
+    // --- ANNOUNCEMENTS ---
+    getAnnouncements(): Announcement[] {
+        return JSON.parse(localStorage.getItem('infopoint_announcements') || '[]');
+    }
+
+    saveAnnouncement(announcement: Announcement): void {
+        const list = this.getAnnouncements();
+        const index = list.findIndex(a => a.id === announcement.id);
+        if (index >= 0) {
+            list[index] = announcement;
+        } else {
+            list.unshift(announcement);
+        }
+        localStorage.setItem('infopoint_announcements', JSON.stringify(list));
+    }
+
+    deleteAnnouncement(id: string): void {
+        const list = this.getAnnouncements().filter(a => a.id !== id);
+        localStorage.setItem('infopoint_announcements', JSON.stringify(list));
     }
 }
 

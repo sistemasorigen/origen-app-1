@@ -1,18 +1,15 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import { AppProvider, useStore } from '../store';
 import { ViewState, User, UserRole } from '../types';
 import { hasRole } from '../services/authUtils';
 import NeoSidebar from './infopoint/NeoSidebar';
 import SystemLoginModal from '../components/SystemLoginModal';
 import { db } from '../services/dbService';
-import { Menu } from 'lucide-react';
-import { ToastProvider, useToast } from './infopoint/context/ToastContext';
-
-// Sub Views
+import { useToast } from './infopoint/context/ToastContext';
 
 // Sub Views
 import PublicHome from './infopoint/PublicHome';
@@ -28,10 +25,44 @@ import Search from './infopoint/Search';
 import AdminPanel from './infopoint/AdminPanel';
 import MobileHeader from './infopoint/MobileHeader';
 import InfoPointMenu from './infopoint/InfoPointMenu';
+import Announcements from './infopoint/Announcements';
 
 interface InfoPointProps {
     currentUser: User | null;
 }
+
+// --- NEO-BRUTALIST SWITCH TOGGLE ---
+interface ViewSwitchProps {
+    viewMode: 'PUBLIC' | 'INTERNAL';
+    canEnterPanel: boolean;
+    onGoPublic: () => void;
+    onGoInternal: () => void;
+}
+
+const ViewSwitch: React.FC<ViewSwitchProps> = ({ viewMode, canEnterPanel, onGoPublic, onGoInternal }) => {
+    return (
+        <div className="inline-flex border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden" role="group">
+            <button
+                onClick={onGoPublic}
+                className={`px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-200 border-r-2 border-black ${viewMode === 'PUBLIC'
+                    ? 'bg-black text-white'
+                    : 'bg-white text-black hover:bg-slate-100'
+                    }`}
+            >
+                Público
+            </button>
+            <button
+                onClick={onGoInternal}
+                className={`px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-200 ${viewMode === 'INTERNAL'
+                    ? 'bg-black text-white'
+                    : 'bg-white text-black hover:bg-slate-100'
+                    }`}
+            >
+                {canEnterPanel ? 'Panel' : '🔒 Panel'}
+            </button>
+        </div>
+    );
+};
 
 const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const { settings, isLoading, notification } = useStore();
@@ -44,33 +75,24 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         const view = searchParams.get('view');
         if (view) {
             setCurrentView(view as ViewState);
-
-            // If user is logged in, always switch to INTERNAL mode when a view is requested via URL
-            // This allows direct access to Dashboard (PANEL) and Search (SEARCH) from the menu
             if (currentUser && viewMode === 'PUBLIC') {
                 setViewMode('INTERNAL');
             }
         }
     }, [searchParams, currentUser]);
+
     const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const toast = useToast();
 
-
-
-    // Local state to track the user authorized for InfoPoint
-    // This can be the global currentUser OR a locally logged in user (via modal)
     const [authorizedUser, setAuthorizedUser] = useState<User | null>(currentUser);
 
-    // Sync with global user changes
     useEffect(() => {
         if (currentUser) {
             setAuthorizedUser(currentUser);
         }
     }, [currentUser]);
 
-    // Determines if user has enough privilege to enter the internal panel
-    // Admins and Encargados have full access, Volunteers need VOLUNTARIO_INFO role
     const canEnterPanel = !!authorizedUser && (
         hasRole(authorizedUser, [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO]) ||
         (hasRole(authorizedUser, UserRole.ANFITRION) && (
@@ -79,25 +101,25 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         ))
     );
 
-    // Check if user can access Admin Panel (Configuration)
     const canAccessAdminPanel = !!authorizedUser && hasRole(authorizedUser, [
         UserRole.SUPER_ADMIN,
         UserRole.ADMIN_PUNTO,
         UserRole.ENCARGADO_PUNTO
     ]);
 
-    const handleEnterPanel = () => {
-        // If user is already logged in with correct role, go to internal
+    const handleGoInternal = () => {
         if (canEnterPanel) {
             setViewMode('INTERNAL');
         } else {
-            // Otherwise show login
             setLoginModalOpen(true);
         }
     };
 
+    const handleGoPublic = () => {
+        setViewMode('PUBLIC');
+    };
+
     const handleLoginSuccess = async (email: string, pass: string) => {
-        // We use the global DB verifier here since this is a local modal
         const user = db.verifyCredentials(email, pass);
         if (user && (
             hasRole(user, [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO]) ||
@@ -106,7 +128,6 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 user.volunteerRoles?.includes('PUNTO')
             ))
         )) {
-            // In a real app we'd update global state, but here we just grant access to the view
             setAuthorizedUser(user);
             setViewMode('INTERNAL');
             return true;
@@ -114,69 +135,29 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         return false;
     };
 
-    // Portal for Navbar Button (Desktop)
-    const NavbarPortalButton = ({ onClick }: { onClick: () => void }) => {
-        const [mounted, setMounted] = useState(false);
-        const target = document.getElementById('navbar-portal');
-
-        useEffect(() => {
-            setMounted(true);
-            return () => setMounted(false);
-        }, []);
-
-        if (!mounted || !target) return null;
-
-        return createPortal(
-            <button
-                onClick={onClick}
-                className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-300 hover:text-black dark:hover:text-white transition-all px-4 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 group ml-2"
-                title="Salir del Panel Voluntarios"
-            >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                Salir Vista Pública
-            </button>,
-            target
-        );
-    };
-
     // --- AUTO LOGOUT LOGIC (MOBILE 5 MIN) ---
     useEffect(() => {
-        // Only active if in INTERNAL mode
         if (viewMode !== 'INTERNAL') return;
 
         let logoutTimer: NodeJS.Timeout;
-        const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+        const TIMEOUT_MS = 5 * 60 * 1000;
 
         const resetTimer = () => {
             clearTimeout(logoutTimer);
             logoutTimer = setTimeout(() => {
-                // Perform logout
-                console.log('Auto-logout due to inactivity');
                 setViewMode('PUBLIC');
-                setCurrentView('PANEL'); // Reset to root view
-                // Optionally reset authorized user if it was a local login, but keeping it for now might be better UX
+                setCurrentView('PANEL');
             }, TIMEOUT_MS);
         };
 
-        // Events to detect activity
         const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-
-        // Attach listeners
         const handleActivity = () => resetTimer();
-
-        events.forEach(event => {
-            document.addEventListener(event, handleActivity, true); // Capture phase to ensure we catch it
-        });
-
-        // Initialize timer
+        events.forEach(event => document.addEventListener(event, handleActivity, true));
         resetTimer();
 
-        // Cleanup
         return () => {
             clearTimeout(logoutTimer);
-            events.forEach(event => {
-                document.removeEventListener(event, handleActivity, true);
-            });
+            events.forEach(event => document.removeEventListener(event, handleActivity, true));
         };
     }, [viewMode]);
 
@@ -193,7 +174,9 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         return (
             <>
                 <PublicHome
-                    onEnterPanel={handleEnterPanel}
+                    viewMode={viewMode}
+                    onGoInternal={handleGoInternal}
+                    onGoPublic={handleGoPublic}
                     canAccessPanel={canEnterPanel}
                 />
                 <SystemLoginModal
@@ -220,11 +203,11 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             case 'PRESENTATIONS': return 'Presentaciones';
             case 'SEARCH': return 'Buscar';
             case 'ADMIN_PANEL': return 'Configuración';
+            case 'ANNOUNCEMENTS': return 'Anuncios';
             default: return 'Punto de Info';
         }
     };
 
-    // INTERNAL VIEW (VOLUNTEER PANEL)
     const renderView = () => {
         switch (currentView) {
             case 'PANEL': return <Dashboard />;
@@ -237,10 +220,9 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             case 'LOANS': return <Loans />;
             case 'BAPTISMS': return <Baptisms />;
             case 'PRESENTATIONS': return <ChildPresentations />;
+            case 'ANNOUNCEMENTS': return <Announcements />;
             case 'ADMIN_PANEL': {
-                // Role-based protection: Only SUPER_ADMIN, ADMIN_PUNTO, and ENCARGADO_PUNTO can access
                 if (!canAccessAdminPanel) {
-                    // Redirect to dashboard and show error message
                     toast.error('No tienes permisos para acceder a Configuración');
                     setTimeout(() => setCurrentView('PANEL'), 0);
                     return <Dashboard />;
@@ -251,24 +233,34 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         }
     };
 
+    // The switch shown in the internal panel header
+    const switchEl = (
+        <ViewSwitch
+            viewMode={viewMode}
+            canEnterPanel={canEnterPanel}
+            onGoPublic={handleGoPublic}
+            onGoInternal={handleGoInternal}
+        />
+    );
+
     return (
         <div className="flex flex-col md:flex-row h-screen md:h-[calc(100vh-64px)] bg-slate-50 md:bg-transparent overflow-hidden relative">
 
-
-
-            {/* --- MOBILE LAYOUT (Stack Navigation) --- */}
-            <div className="md:hidden flex flex-col w-full h-[100dvh] bg-white overflow-hidden">
-                {/* 1. Mobile Header (Fixed Shell) */}
-                <header className="flex-none z-50 bg-white border-b-4 border-black">
+            {/* --- MOBILE LAYOUT --- */}
+            <div className="md:hidden flex flex-col w-full h-[calc(100dvh-64px)] bg-white overflow-hidden">
+                <header className="flex-none z-40 bg-white border-b-4 border-black">
                     <MobileHeader
                         title={currentView === 'PANEL' ? 'PUNTO DE INFORMACIÓN' : getViewTitle(currentView)}
                         isRoot={currentView === 'PANEL'}
                         onOpenSidebar={() => setIsSidebarOpen(true)}
                         onBack={() => setCurrentView('PANEL')}
                     />
+                    {/* Switch in mobile top bar */}
+                    <div className="flex justify-center pb-2 pt-1">
+                        {switchEl}
+                    </div>
                 </header>
 
-                {/* 2. Content Stack (Scrollable) */}
                 <main className="flex-1 overflow-y-auto overscroll-contain bg-white">
                     {currentView === 'PANEL' ? (
                         <InfoPointMenu onNavigate={setCurrentView} currentUser={authorizedUser} />
@@ -279,7 +271,6 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                     )}
                 </main>
 
-                {/* Mobile Global Sidebar (Overlay) */}
                 <NeoSidebar
                     currentView={currentView}
                     setView={setCurrentView}
@@ -290,21 +281,23 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 />
             </div>
 
-            {/* --- DESKTOP LAYOUT (Classic Sidebar + Content) --- */}
+            {/* --- DESKTOP LAYOUT --- */}
             <div className="hidden md:flex flex-1 h-full overflow-hidden relative">
-                {/* Portal Button to Navbar (Desktop) */}
-                <NavbarPortalButton onClick={() => setViewMode('PUBLIC')} />
-
                 <NeoSidebar
                     currentView={currentView}
                     setView={setCurrentView}
                     settings={settings}
-                    isOpen={isSidebarOpen} // Always managed by state, but desktop sidebar is usually persistent/responsive
+                    isOpen={isSidebarOpen}
                     onClose={() => setIsSidebarOpen(false)}
                     currentUser={authorizedUser}
                 />
 
                 <main className="flex-1 overflow-y-auto p-8 relative">
+                    {/* Desktop: switch at top-right of content header */}
+                    <div className="absolute top-6 right-8 z-20">
+                        {switchEl}
+                    </div>
+
                     {renderView()}
 
                     {/* Global Notification Toast */}

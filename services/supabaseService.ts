@@ -3240,11 +3240,9 @@ export const supabaseService = {
         .select('*')
         .limit(1);
 
-      // Priority: Check by User ID (if authenticated)
       if (userId) {
         query = query.eq('applicant_id', userId);
       } else if (email) {
-        // Fallback: Check by Email
         query = query.eq('email', email);
       }
 
@@ -3275,5 +3273,211 @@ export const supabaseService = {
       console.error('[LeaderApps] Exception checking user application:', error);
       return null;
     }
-  }
+  },
+
+  // ============================================
+  // PASTORAL CARE – service_statistics table
+  // ============================================
+
+  async getServiceStatistics(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('service_statistics')
+        .select('*')
+        .order('service_date', { ascending: false });
+
+      if (error) {
+        console.error('[PastoralCare] Error fetching statistics:', error);
+        return [];
+      }
+      return (data || []).map(row => ({
+        id: row.id,
+        name: row.name,
+        service_date: row.service_date,
+        conecta: row.vol_conecta,
+        store: row.vol_store,
+        host_prevencion: row.vol_host_prevencion,
+        punto_info: row.vol_info_point,
+        produccion: row.vol_produccion,
+        equipo_ministracion: row.vol_ministracion,
+        atmosfera: row.vol_atmosfera,
+        visuales: row.vol_visuales,
+        redes: row.vol_redes,
+        sala_bienvenida: row.vol_bienvenida,
+        sonido: row.vol_sonido,
+        ea: row.vol_ea,
+        streaming: row.vol_streaming,
+        camaras: row.vol_camaras,
+        fotos: row.vol_fotos,
+        profes_ninez: row.vol_profes_ninez,
+        auditorio: row.auditorio,
+        ninos_3_6: row.kids_3_6,
+        ninos_7_10: row.kids_7_10,
+        ninos_hd: row.kids_hd,
+        borders: row.kids_borders,
+        online: row.other_online,
+        voluntarios_repetidos: row.other_repeated_vol,
+        aceptaron: row.other_accepted,
+        asistieron_primera_vez: row.other_first_time,
+        reconciliaron: row.other_reconciled,
+        podcast: row.other_podcast,
+        oracion: row.other_prayer
+      }));
+    } catch (error) {
+      console.error('[PastoralCare] Exception fetching statistics:', error);
+      return [];
+    }
+  },
+
+  async upsertServiceStatistic(record: any): Promise<{ data: any | null; error: string | null }> {
+    try {
+      const payload: any = {
+        name: record.name || null,
+        service_date: record.service_date,
+        vol_conecta: record.conecta ?? 0,
+        vol_store: record.store ?? 0,
+        vol_host_prevencion: record.host_prevencion ?? 0,
+        vol_info_point: record.punto_info ?? 0,
+        vol_produccion: record.produccion ?? 0,
+        vol_ministracion: record.equipo_ministracion ?? 0,
+        vol_atmosfera: record.atmosfera ?? 0,
+        vol_visuales: record.visuales ?? 0,
+        vol_redes: record.redes ?? 0,
+        vol_bienvenida: record.sala_bienvenida ?? 0,
+        vol_sonido: record.sonido ?? 0,
+        vol_ea: record.ea ?? 0,
+        vol_streaming: record.streaming ?? 0,
+        vol_camaras: record.camaras ?? 0,
+        vol_fotos: record.fotos ?? 0,
+        vol_profes_ninez: record.profes_ninez ?? 0,
+        auditorio: record.auditorio ?? 0,
+        kids_3_6: record.ninos_3_6 ?? 0,
+        kids_7_10: record.ninos_7_10 ?? 0,
+        kids_hd: record.ninos_hd ?? 0,
+        kids_borders: record.borders ?? 0,
+        other_online: record.online ?? 0,
+        other_repeated_vol: record.voluntarios_repetidos ?? 0,
+        other_accepted: record.aceptaron ?? 0,
+        other_first_time: record.asistieron_primera_vez ?? 0,
+        other_reconciled: record.reconciliaron ?? 0,
+        other_podcast: record.podcast ?? 0,
+        other_prayer: record.oracion ?? 0,
+      };
+
+      if (record.id) {
+        payload.id = record.id;
+      }
+
+      const { data, error } = await supabase
+        .from('service_statistics')
+        .upsert(payload, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[PastoralCare] Error upserting statistic:', error);
+        return { data: null, error: error.message };
+      }
+      return { data, error: null };
+    } catch (error: any) {
+      console.error('[PastoralCare] Exception upserting statistic:', error);
+      return { data: null, error: error?.message || 'Unknown error' };
+    }
+  },
+
+  async deleteServiceStatistic(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('service_statistics')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('[PastoralCare] Error deleting statistic:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('[PastoralCare] Exception deleting statistic:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Finds a comparable record from the same month in a previous year.
+   * Tries previous year first, then year before that.
+   */
+  async getYoYRecord(serviceDate: string, currentId: string): Promise<any | null> {
+    try {
+      const d = new Date(serviceDate);
+      const month = d.getMonth() + 1; // 1-12
+      const currentYear = d.getFullYear();
+
+      for (const yearOffset of [1, 2]) {
+        const targetYear = currentYear - yearOffset;
+
+        // Build date range for target month in target year
+        const monthStr = String(month).padStart(2, '0');
+        const rangeStart = `${targetYear}-${monthStr}-01`;
+        const lastDay = new Date(targetYear, month, 0).getDate();
+        const rangeEnd = `${targetYear}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+
+        const { data, error } = await supabase
+          .from('service_statistics')
+          .select('*')
+          .neq('id', currentId)
+          .gte('service_date', rangeStart)
+          .lte('service_date', rangeEnd)
+          .order('service_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error('[PastoralCare] Error fetching YoY record:', error);
+          continue;
+        }
+
+        if (data) {
+          return {
+            id: data.id,
+            name: data.name,
+            service_date: data.service_date,
+            conecta: data.vol_conecta,
+            store: data.vol_store,
+            host_prevencion: data.vol_host_prevencion,
+            punto_info: data.vol_info_point,
+            produccion: data.vol_produccion,
+            equipo_ministracion: data.vol_ministracion,
+            atmosfera: data.vol_atmosfera,
+            visuales: data.vol_visuales,
+            redes: data.vol_redes,
+            sala_bienvenida: data.vol_bienvenida,
+            sonido: data.vol_sonido,
+            ea: data.vol_ea,
+            streaming: data.vol_streaming,
+            camaras: data.vol_camaras,
+            fotos: data.vol_fotos,
+            profes_ninez: data.vol_profes_ninez,
+            auditorio: data.auditorio,
+            ninos_3_6: data.kids_3_6,
+            ninos_7_10: data.kids_7_10,
+            ninos_hd: data.kids_hd,
+            borders: data.kids_borders,
+            online: data.other_online,
+            voluntarios_repetidos: data.other_repeated_vol,
+            aceptaron: data.other_accepted,
+            asistieron_primera_vez: data.other_first_time,
+            reconciliaron: data.other_reconciled,
+            podcast: data.other_podcast,
+            oracion: data.other_prayer
+          };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[PastoralCare] Exception fetching YoY record:', error);
+      return null;
+    }
+  },
 };
