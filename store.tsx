@@ -41,9 +41,9 @@ interface AppContextType {
     addLoan: (l: Loan) => Promise<void>;
     updateLoan: (l: Loan) => Promise<void>;
     deleteLoan: (id: string) => Promise<void>;
-    addAnnouncement: (a: Announcement) => void;
-    updateAnnouncement: (a: Announcement) => void;
-    deleteAnnouncement: (id: string) => void;
+    addAnnouncement: (a: Announcement) => Promise<void>;
+    updateAnnouncement: (a: Announcement) => Promise<void>;
+    deleteAnnouncement: (id: string) => Promise<void>;
 
     addEvent: (e: AppEvent) => Promise<void>;
     updateEvent: (e: AppEvent) => Promise<void>;
@@ -66,7 +66,7 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
     const [presentations, setPresentations] = useState<ChildPresentation[]>([]);
     const [loans, setLoans] = useState<Loan[]>([]);
     const [events, setEvents] = useState<AppEvent[]>([]);
-    const [announcements, setAnnouncements] = useState<Announcement[]>(() => db.getAnnouncements());
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -104,13 +104,14 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
         setIsRefreshing(true);
 
         try {
-            const [p, m, b, pres, l, e, s] = await Promise.all([
+            const [p, m, b, pres, l, e, ann, s] = await Promise.all([
                 dbAPI.getAllProducts().catch(() => []),
                 dbAPI.getAllMovements().catch(() => []),
                 dbAPI.getAllBaptisms().catch(() => []),
                 dbAPI.getAllPresentations().catch(() => []),
                 dbAPI.getAllLoans().catch(() => []),
                 dbAPI.getAllEvents().catch(() => []),
+                dbAPI.getAllAnnouncements().catch(() => []),
                 dbAPI.getSettings().catch(() => undefined)
             ]);
 
@@ -120,8 +121,7 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
             setPresentations(pres || []);
             setLoans(l || []);
             setEvents(e || []);
-            // Reload announcements from localStorage on every refresh
-            setAnnouncements(db.getAnnouncements());
+            setAnnouncements(ann || []);
 
             if (s) {
                 setSettings(s);
@@ -267,20 +267,27 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
         await refreshData();
     };
 
-    // --- ANNOUNCEMENTS CRUD (localStorage-only, synchronous) ---
-    const addAnnouncement = (a: Announcement) => {
-        db.saveAnnouncement(a);
-        setAnnouncements(db.getAnnouncements());
+    // --- ANNOUNCEMENTS CRUD (Supabase) ---
+    const addAnnouncement = async (a: Announcement) => {
+        setAnnouncements(prev => [...prev, a]); // optimistic update
+        await dbAPI.saveAnnouncement(a);
+        await refreshData();
     };
 
-    const updateAnnouncement = (a: Announcement) => {
-        db.saveAnnouncement(a);
-        setAnnouncements(db.getAnnouncements());
+    const updateAnnouncement = async (a: Announcement) => {
+        setAnnouncements(prev => prev.map(item => item.id === a.id ? a : item)); // optimistic update
+        await dbAPI.saveAnnouncement(a);
+        await refreshData();
     };
 
-    const deleteAnnouncement = (id: string) => {
-        db.deleteAnnouncement(id);
-        setAnnouncements(prev => prev.filter(a => a.id !== id));
+    const deleteAnnouncement = async (id: string) => {
+        setAnnouncements(prev => prev.filter(a => a.id !== id)); // optimistic update
+        try {
+            await dbAPI.deleteAnnouncement(id);
+        } catch (e) {
+            console.error(e);
+            await refreshData();
+        }
     };
 
     const updateEvent = async (e: AppEvent) => {

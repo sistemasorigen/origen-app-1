@@ -3480,4 +3480,61 @@ export const supabaseService = {
       return null;
     }
   },
+
+  // --- ANNOUNCEMENTS (SUPABASE) ---
+
+  async getAnnouncements(): Promise<import('../types').Announcement[]> {
+    const { data, error } = await supabase
+      .from('announcements')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[supabaseService] Error fetching announcements:', error);
+      return [];
+    }
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description || '',
+      startDate: row.start_date,
+      endDate: row.end_date,
+      isActive: row.is_active,
+      createdAt: row.created_at,
+    }));
+  },
+
+  async saveAnnouncement(announcement: import('../types').Announcement): Promise<void> {
+    const payload = {
+      id: announcement.id,
+      title: announcement.title,
+      description: announcement.description || '',
+      start_date: announcement.startDate,
+      end_date: announcement.endDate,
+      is_active: announcement.isActive ?? true,
+      created_at: announcement.createdAt,
+    };
+
+    const { error } = await supabase
+      .from('announcements')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      console.error('[supabaseService] Error saving announcement:', error);
+      throw error;
+    }
+  },
+
+  async deleteAnnouncement(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('announcements')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('[supabaseService] Error deleting announcement:', error);
+      throw error;
+    }
+  },
 };

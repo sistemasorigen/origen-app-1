@@ -41,7 +41,7 @@ export const dbAPI = {
   async addBaptism(baptism: Baptism): Promise<void> {
     await supabaseService.saveBaptism(baptism);
   },
-  
+
   async updateBaptism(baptism: Baptism): Promise<void> {
     await supabaseService.saveBaptism(baptism);
   },
@@ -59,7 +59,7 @@ export const dbAPI = {
   },
 
   async updatePresentation(presentation: ChildPresentation): Promise<void> {
-      await supabaseService.savePresentation(presentation);
+    await supabaseService.savePresentation(presentation);
   },
 
   async deletePresentation(id: string): Promise<void> {
@@ -73,9 +73,9 @@ export const dbAPI = {
   async addLoan(loan: Loan): Promise<void> {
     await supabaseService.saveLoan(loan);
   },
-  
+
   async updateLoan(loan: Loan): Promise<void> {
-      await supabaseService.saveLoan(loan);
+    await supabaseService.saveLoan(loan);
   },
 
   async deleteLoan(id: string): Promise<void> {
@@ -91,11 +91,25 @@ export const dbAPI = {
   },
 
   async updateEvent(event: AppEvent): Promise<void> {
-      await supabaseService.saveEvent(event);
+    await supabaseService.saveEvent(event);
   },
 
   async deleteEvent(id: string): Promise<void> {
     await supabaseService.deleteEvent(id);
+  },
+
+  // --- ANNOUNCEMENTS (SUPABASE) ---
+
+  async getAllAnnouncements(): Promise<import('../types').Announcement[]> {
+    return await supabaseService.getAnnouncements();
+  },
+
+  async saveAnnouncement(announcement: import('../types').Announcement): Promise<void> {
+    await supabaseService.saveAnnouncement(announcement);
+  },
+
+  async deleteAnnouncement(id: string): Promise<void> {
+    await supabaseService.deleteAnnouncement(id);
   },
 
   async getSettings(): Promise<AppSettings | undefined> {
