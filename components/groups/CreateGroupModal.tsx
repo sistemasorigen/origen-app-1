@@ -654,7 +654,10 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                         />
                     )}
 
-                    <label className="text-xs font-black uppercase tracking-widest block">Imagen de Portada</label>
+                    <label className="text-xs font-black uppercase tracking-widest block flex items-center gap-2">
+                        Imagen de Portada
+                        <span className="bg-neutral-200 text-neutral-600 px-2 py-0.5 font-bold uppercase text-[10px]">Recomendado: 1280x720 (16:9)</span>
+                    </label>
 
                     {/* TOGGLE SWITCH */}
                     <div className="flex border-2 border-black p-1 bg-neutral-100 gap-1 rounded-none">

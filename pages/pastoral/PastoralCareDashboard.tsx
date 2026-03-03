@@ -7,6 +7,7 @@ import {
     TrendingUp, TrendingDown, Minus, ChevronUp, ChevronDown,
     X, AlertTriangle, ChevronRight, Calendar
 } from 'lucide-react';
+import NeoModal from '../../components/NeoModal';
 
 interface PastoralCareDashboardProps { currentUser: User | null; }
 
@@ -37,23 +38,6 @@ const calcStats = (r: any) => {
 
 
 // ─── Shared UI atoms ──────────────────────────────────────────────────────
-
-const Modal: React.FC<{ title: string; onClose?: () => void; children: React.ReactNode; wide?: boolean; noClose?: boolean }> =
-    ({ title, onClose, children, wide, noClose }) => (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className={`bg-white dark:bg-neutral-900 border-2 border-black dark:border-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[90vh] flex flex-col`}>
-                <div className="flex items-center justify-between p-4 border-b-2 border-black dark:border-white flex-shrink-0">
-                    <h2 className="font-black uppercase tracking-tighter text-lg">{title}</h2>
-                    {!noClose && onClose && (
-                        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors">
-                            <X className="w-4 h-4" />
-                        </button>
-                    )}
-                </div>
-                <div className="overflow-y-auto flex-1 p-5">{children}</div>
-            </div>
-        </div>
-    );
 
 const StatRow: React.FC<{ label: string; value: string | number; highlight?: boolean }> = ({ label, value, highlight }) => (
     <div className={`flex items-center justify-between py-2.5 border-b border-neutral-100 dark:border-neutral-800 ${highlight ? 'bg-violet-50 dark:bg-violet-950/30 -mx-3 px-3 rounded' : ''}`}>
@@ -93,7 +77,7 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
     const fmt = (n: number) => n.toLocaleString('es-AR');
 
     return (
-        <Modal title="Detalle del Servicio" onClose={onClose}>
+        <NeoModal isOpen={true} onClose={onClose} title="Detalle del Servicio" maxWidth="max-w-lg">
             <div className="mb-4">
                 <p className="text-xs font-mono text-neutral-400 uppercase tracking-widest">
                     {record.name || '—'} · {new Date(record.service_date + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}{record.service_time ? ` (${record.service_time})` : ''}
@@ -158,7 +142,7 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
                     ))}
                 </div>
             </div>
-        </Modal>
+        </NeoModal>
     );
 };
 
@@ -184,7 +168,7 @@ const YoYModal: React.FC<{ record: any; onClose: () => void }> = ({ record, onCl
     const currDateLabel = new Date(record.service_date + 'T12:00:00').toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
 
     return (
-        <Modal title="Comparativa Año a Año (YoY)" onClose={onClose} wide>
+        <NeoModal isOpen={true} onClose={onClose} title="Comparativa Año a Año (YoY)" maxWidth="max-w-3xl">
             {loading && <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-black dark:border-white border-t-transparent rounded-full animate-spin" /></div>}
             {!loading && !yoyRecord && (
                 <div className="text-center py-10">
@@ -209,20 +193,20 @@ const YoYModal: React.FC<{ record: any; onClose: () => void }> = ({ record, onCl
                     <p className="text-[10px] text-neutral-400 mt-5 text-center font-mono">Comparado con: {yoyRecord.name || yoyRecord.service_date}{yoyRecord.service_time ? ` (${yoyRecord.service_time})` : ''}</p>
                 </>
             )}
-        </Modal>
+        </NeoModal>
     );
 };
 
 // ─── Confirm Delete Modal ─────────────────────────────────────────────────
 
 const ConfirmModal: React.FC<{ onConfirm: () => void; onClose: () => void; loading: boolean }> = ({ onConfirm, onClose, loading }) => (
-    <Modal title="Eliminar Registro" onClose={onClose}>
+    <NeoModal isOpen={true} onClose={onClose} title="Eliminar Registro" maxWidth="max-w-md">
         <p className="text-neutral-600 dark:text-neutral-300 mb-6">¿Estás seguro que querés eliminar este registro? Esta acción no se puede deshacer.</p>
         <div className="flex gap-3">
             <button onClick={onClose} className="flex-1 py-3 border-2 border-black dark:border-white font-bold text-sm uppercase hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">Cancelar</button>
             <button onClick={onConfirm} disabled={loading} className="flex-1 py-3 bg-red-600 text-white font-bold text-sm uppercase hover:bg-red-700 transition-colors disabled:opacity-50">{loading ? 'Eliminando...' : 'Eliminar'}</button>
         </div>
-    </Modal>
+    </NeoModal>
 );
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────
