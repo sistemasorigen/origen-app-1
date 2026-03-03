@@ -285,6 +285,9 @@ export interface Announcement {
     endDate: string;   // ISO Date (YYYY-MM-DD)
     createdAt: string; // ISO Timestamp
     isActive?: boolean; // Manual override
+    isPermanent?: boolean; // NEW: Permanent mode
+    link?: string; // Links for announcements
+    qrCodeUrl?: string; // Generated qr code url
 }
 
 export interface AppSettings {

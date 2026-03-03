@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User, ServiceStatistic } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
@@ -21,7 +21,7 @@ const EMPTY_FORM: FormData = {
     asistieron_primera_vez: 0, reconciliaron: 0, podcast: 0, oracion: 0,
 };
 
-interface FieldDef { key: keyof FormData; label: string; type?: 'text' | 'date' | 'number'; required?: boolean; }
+interface FieldDef { key: keyof FormData; label: string; }
 
 const STEP1_METRICS: FieldDef[] = [
     { key: 'conecta', label: 'Conecta' }, { key: 'store', label: 'Store' },
@@ -53,15 +53,17 @@ const STEPS = [
     { title: 'Seguimiento', subtitle: 'Métricas generales', icon: Calendar },
 ];
 
+const inputCls = 'w-full p-3 bg-white border-2 border-black rounded-lg outline-none font-bold placeholder-neutral-400 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all text-black text-base appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
+
 const NumericInput: React.FC<{ label: string; value: number; onChange: (v: number) => void }> = ({ label, value, onChange }) => (
     <div>
-        <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5">{label}</label>
+        <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">{label}</label>
         <input
             type="number" min={0}
             value={value === 0 ? '' : value}
             placeholder="0"
             onChange={(e) => { const n = parseInt(e.target.value, 10); onChange(isNaN(n) ? 0 : Math.max(0, n)); }}
-            className="w-full bg-white dark:bg-neutral-900 border-2 border-neutral-200 dark:border-neutral-700 focus:border-black dark:focus:border-white text-black dark:text-white font-bold text-sm px-3 py-2.5 outline-none transition-colors placeholder:text-neutral-300 dark:placeholder:text-neutral-600 appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className={inputCls}
         />
     </div>
 );
@@ -135,29 +137,29 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
 
     if (submitted) {
         return (
-            <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center px-4">
-                <div className="text-center max-w-sm">
-                    <div className="w-20 h-20 bg-black dark:bg-white flex items-center justify-center mx-auto mb-6 border-4 border-black dark:border-white shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)]">
-                        <Check className="w-10 h-10 text-white dark:text-black" />
+            <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+                <div className="text-center max-w-sm w-full">
+                    <div className="w-20 h-20 bg-black flex items-center justify-center mx-auto mb-6 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                        <Check className="w-10 h-10 text-white" />
                     </div>
-                    <h2 className="text-3xl font-black uppercase tracking-tighter mb-3">
+                    <h2 className="text-3xl font-black uppercase tracking-tight mb-3">
                         {isEdit ? '¡Registro actualizado!' : '¡Registro guardado!'}
                     </h2>
-                    <p className="text-neutral-500 dark:text-neutral-400 text-sm font-medium mb-8">
+                    <p className="text-neutral-600 text-sm font-bold mb-8">
                         Las estadísticas del servicio fueron {isEdit ? 'actualizadas' : 'registradas'} correctamente.
                     </p>
-                    <div className="flex gap-3 justify-center">
+                    <div className="flex flex-col gap-3 w-full">
                         {!isEdit && (
                             <button
                                 onClick={() => { setForm({ ...EMPTY_FORM }); setStep(0); setSubmitted(false); }}
-                                className="px-6 py-3 border-2 border-black dark:border-white font-bold text-sm uppercase hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
+                                className="w-full py-4 bg-white text-black font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all"
                             >
                                 Nuevo Registro
                             </button>
                         )}
                         <button
                             onClick={() => navigate('/pastoral-care')}
-                            className="px-6 py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-sm uppercase hover:opacity-80 transition-opacity"
+                            className="w-full py-4 bg-black text-white font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all"
                         >
                             Ver Panel
                         </button>
@@ -170,23 +172,23 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
     const StepIcon = STEPS[step].icon;
 
     return (
-        <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 pb-16">
+        <div className="min-h-screen bg-neutral-50 pb-28 animate-fadeIn">
 
             {/* Header */}
-            <div className="bg-white dark:bg-black border-b-4 border-black dark:border-white">
+            <div className="bg-white border-b-4 border-black sticky top-0 z-10">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
                     <button
                         onClick={() => navigate('/pastoral-care')}
-                        className="w-9 h-9 flex items-center justify-center border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
+                        className="w-10 h-10 flex items-center justify-center border-2 border-black bg-white hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all flex-shrink-0"
                         aria-label="Volver"
                     >
                         <ArrowLeft className="w-4 h-4" />
                     </button>
                     <div>
-                        <h1 className="text-xl font-black uppercase tracking-tighter leading-none">
+                        <h1 className="text-xl font-black uppercase tracking-tight leading-none text-black">
                             {isEdit ? 'Editar Registro' : 'Nuevo Registro'}
                         </h1>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono font-bold uppercase tracking-widest">Cuidado Pastoral</p>
+                        <p className="text-xs text-neutral-500 font-black uppercase tracking-widest">Cuidado Pastoral</p>
                     </div>
                 </div>
 
@@ -196,18 +198,16 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         {STEPS.map((s, idx) => (
                             <React.Fragment key={s.title}>
                                 <div className={`flex items-center gap-2 transition-all ${idx === step ? 'opacity-100' : 'opacity-40'}`}>
-                                    <div className={`w-7 h-7 flex items-center justify-center border-2 text-xs font-black transition-colors
-                                        ${idx < step ? 'bg-black dark:bg-white border-black dark:border-white text-white dark:text-black'
-                                            : idx === step ? 'bg-black dark:bg-white border-black dark:border-white text-white dark:text-black'
-                                                : 'border-neutral-300 dark:border-neutral-700 text-neutral-400'}`}>
+                                    <div className={`w-7 h-7 flex items-center justify-center border-2 border-black text-xs font-black transition-colors
+                                        ${idx <= step ? 'bg-black text-white' : 'bg-white text-neutral-400'}`}>
                                         {idx < step ? <Check className="w-3.5 h-3.5" /> : idx + 1}
                                     </div>
-                                    <span className="hidden sm:block text-xs font-bold uppercase tracking-wider text-black dark:text-white whitespace-nowrap">
+                                    <span className="hidden sm:block text-xs font-black uppercase tracking-wider text-black whitespace-nowrap">
                                         {s.title}
                                     </span>
                                 </div>
                                 {idx < STEPS.length - 1 && (
-                                    <div className={`flex-1 h-0.5 transition-colors ${idx < step ? 'bg-black dark:bg-white' : 'bg-neutral-200 dark:bg-neutral-700'}`} />
+                                    <div className={`flex-1 h-0.5 transition-colors ${idx < step ? 'bg-black' : 'bg-neutral-300'}`} />
                                 )}
                             </React.Fragment>
                         ))}
@@ -216,136 +216,163 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
             </div>
 
             {/* Body */}
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-8">
-                <div className="bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.15)] p-6 sm:p-8">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 space-y-4">
 
-                    {/* Step header */}
-                    <div className="flex items-center gap-3 mb-8 pb-6 border-b-2 border-black dark:border-neutral-800">
-                        <div className="w-10 h-10 bg-black dark:bg-white flex items-center justify-center flex-shrink-0">
-                            <StepIcon className="w-5 h-5 text-white dark:text-black" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-mono font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                                Paso {step + 1} de {STEPS.length}
-                            </p>
-                            <h2 className="text-xl font-black uppercase tracking-tighter">{STEPS[step].title}</h2>
-                        </div>
+                {/* Step header card */}
+                <div className="bg-white p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3">
+                    <div className="w-10 h-10 bg-black flex items-center justify-center flex-shrink-0">
+                        <StepIcon className="w-5 h-5 text-white" />
                     </div>
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-widest text-neutral-500">
+                            Paso {step + 1} de {STEPS.length}
+                        </p>
+                        <h2 className="text-xl font-black uppercase tracking-tight text-black">{STEPS[step].title}</h2>
+                    </div>
+                </div>
 
-                    {/* Step 1 */}
-                    {step === 0 && (
-                        <div className="space-y-8">
+                {/* Step 1 */}
+                {step === 0 && (
+                    <>
+                        {/* Info del servicio */}
+                        <div className="bg-white p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                            <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
+                                Información del Servicio
+                            </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
-                                        Nombre <span className="text-neutral-300">(Opcional)</span>
+                                    <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">
+                                        Nombre <span className="text-neutral-400 normal-case font-bold">(Opcional)</span>
                                     </label>
                                     <input
                                         type="text"
                                         value={form.name ?? ''}
                                         placeholder="Ej: Servicio Domingo"
                                         onChange={(e) => setField('name', e.target.value)}
-                                        className="w-full bg-white dark:bg-neutral-900 border-2 border-neutral-200 dark:border-neutral-700 focus:border-black dark:focus:border-white text-black dark:text-white font-medium text-sm px-3 py-2.5 outline-none transition-colors placeholder:text-neutral-300 dark:placeholder:text-neutral-600"
+                                        className={inputCls}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
+                                    <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">
                                         Fecha <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="date"
                                         value={form.service_date}
                                         onChange={(e) => setField('service_date', e.target.value)}
-                                        className={`w-full h-[44px] bg-white dark:bg-neutral-900 border-2 focus:border-black dark:focus:border-white text-black dark:text-white font-medium text-sm px-3 py-2 outline-none transition-colors ${dateError ? 'border-red-500' : 'border-neutral-200 dark:border-neutral-700'}`}
+                                        className={`${inputCls} ${dateError ? 'border-red-500 shadow-[4px_4px_0px_0px_rgba(239,68,68,1)]' : ''}`}
                                     />
                                     {dateError && <p className="text-red-500 text-xs font-bold mt-1">{dateError}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
+                                    <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">
                                         Horario <span className="text-red-500">*</span>
                                     </label>
-                                    <div className="flex gap-2 h-[44px]">
+                                    <div className="flex gap-2">
                                         <button
                                             type="button"
                                             onClick={() => setField('service_time', 'AM')}
-                                            className={`flex-1 font-bold text-sm uppercase transition-colors border-2 ${form.service_time === 'AM' ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]' : 'bg-white text-black dark:bg-neutral-900 dark:text-white border-neutral-200 dark:border-neutral-700 hover:border-black dark:hover:border-white'}`}
+                                            className={`flex-1 py-3 font-black text-sm uppercase tracking-wider border-2 border-black transition-all
+                                                ${form.service_time === 'AM'
+                                                    ? 'bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                                                    : 'bg-white text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'}`}
                                         >
                                             AM
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setField('service_time', 'PM')}
-                                            className={`flex-1 font-bold text-sm uppercase transition-colors border-2 ${form.service_time === 'PM' ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]' : 'bg-white text-black dark:bg-neutral-900 dark:text-white border-neutral-200 dark:border-neutral-700 hover:border-black dark:hover:border-white'}`}
+                                            className={`flex-1 py-3 font-black text-sm uppercase tracking-wider border-2 border-black transition-all
+                                                ${form.service_time === 'PM'
+                                                    ? 'bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                                                    : 'bg-white text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'}`}
                                         >
                                             PM
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                            <div>
-                                <p className="text-xs font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-600 mb-4">Áreas de Voluntarios</p>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                                    {STEP1_METRICS.map((f) => (
-                                        <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
-                                    ))}
-                                </div>
-                            </div>
                         </div>
-                    )}
 
-                    {/* Step 2 */}
-                    {step === 1 && (
-                        <div>
-                            <p className="text-xs font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-600 mb-6">Asistencia por grupo de edad</p>
-                            <div className="grid grid-cols-2 gap-4">
-                                {STEP2_FIELDS.map((f) => (
+                        {/* Voluntarios */}
+                        <div className="bg-white p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                            <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
+                                Áreas de Voluntarios
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {STEP1_METRICS.map((f) => (
                                     <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
                                 ))}
                             </div>
                         </div>
-                    )}
+                    </>
+                )}
 
-                    {/* Step 3 */}
-                    {step === 2 && (
-                        <div>
-                            <p className="text-xs font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-600 mb-6">Métricas generales del servicio</p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                {STEP3_FIELDS.map((f) => (
-                                    <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
-                                ))}
-                            </div>
-                            {saveError && (
-                                <div className="mt-4 p-3 border-2 border-red-400 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 text-xs font-bold">
-                                    {saveError}
-                                </div>
-                            )}
+                {/* Step 2 */}
+                {step === 1 && (
+                    <div className="bg-white p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
+                            Asistencia por grupo de edad
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {STEP2_FIELDS.map((f) => (
+                                <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
+                            ))}
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
 
-                {/* Navigation */}
-                <div className="flex items-center justify-between mt-6 gap-3">
+                {/* Step 3 */}
+                {step === 2 && (
+                    <div className="bg-white p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
+                            Métricas generales del servicio
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {STEP3_FIELDS.map((f) => (
+                                <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
+                            ))}
+                        </div>
+                        {saveError && (
+                            <div className="mt-4 p-3 border-2 border-red-500 bg-red-50 text-red-700 text-xs font-bold shadow-[2px_2px_0px_0px_rgba(239,68,68,1)]">
+                                {saveError}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Navigation — Fixed bottom bar */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black z-20 px-4 py-3">
+                <div className="max-w-3xl mx-auto flex items-center gap-3">
                     <button
                         onClick={prevStep}
                         disabled={step === 0}
-                        className="flex items-center gap-2 px-6 py-3 border-2 border-black dark:border-white font-bold text-sm uppercase transition-all hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black disabled:opacity-30 disabled:pointer-events-none"
+                        className="flex items-center justify-center gap-1.5 px-5 py-3.5 bg-white text-black font-black text-sm uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 disabled:opacity-30 disabled:pointer-events-none transition-all flex-shrink-0"
                     >
                         <ChevronLeft className="w-4 h-4" />
-                        Atrás
+                        <span className="hidden sm:inline">Atrás</span>
                     </button>
 
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-1.5 flex-1 justify-center">
                         {STEPS.map((_, idx) => (
-                            <div key={idx} className={`w-2 h-2 transition-all ${idx === step ? 'bg-black dark:bg-white w-5' : 'bg-neutral-300 dark:bg-neutral-700'}`} />
+                            <div key={idx} className={`h-2 transition-all rounded-full ${idx === step ? 'bg-black w-6' : 'bg-neutral-300 w-2'}`} />
                         ))}
                     </div>
 
                     {step < 2 ? (
-                        <button onClick={nextStep} className="flex items-center gap-2 px-6 py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-sm uppercase hover:opacity-80 transition-opacity shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
+                        <button
+                            onClick={nextStep}
+                            className="flex items-center justify-center gap-1.5 flex-1 py-3.5 bg-black text-white font-black text-sm uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all"
+                        >
                             Siguiente <ChevronRight className="w-4 h-4" />
                         </button>
                     ) : (
-                        <button onClick={handleSubmit} disabled={saving} className="flex items-center gap-2 px-8 py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-sm uppercase hover:opacity-80 transition-opacity shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] disabled:opacity-50">
+                        <button
+                            onClick={handleSubmit}
+                            disabled={saving}
+                            className="flex items-center justify-center gap-1.5 flex-1 py-3.5 bg-black text-white font-black text-sm uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                        >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                             {saving ? 'Guardando...' : 'Guardar'}
                         </button>

@@ -3294,6 +3294,7 @@ export const supabaseService = {
         id: row.id,
         name: row.name,
         service_date: row.service_date,
+        service_time: row.service_time ?? null,
         conecta: row.vol_conecta,
         store: row.vol_store,
         host_prevencion: row.vol_host_prevencion,
@@ -3334,6 +3335,7 @@ export const supabaseService = {
       const payload: any = {
         name: record.name || null,
         service_date: record.service_date,
+        service_time: record.service_time ?? null,
         vol_conecta: record.conecta ?? 0,
         vol_store: record.store ?? 0,
         vol_host_prevencion: record.host_prevencion ?? 0,
@@ -3442,6 +3444,7 @@ export const supabaseService = {
             id: data.id,
             name: data.name,
             service_date: data.service_date,
+            service_time: data.service_time ?? null,
             conecta: data.vol_conecta,
             store: data.vol_store,
             host_prevencion: data.vol_host_prevencion,
@@ -3501,6 +3504,9 @@ export const supabaseService = {
       startDate: row.start_date,
       endDate: row.end_date,
       isActive: row.is_active,
+      isPermanent: row.is_permanent,
+      link: row.link,
+      qrCodeUrl: row.qr_code_url,
       createdAt: row.created_at,
     }));
   },
@@ -3513,6 +3519,9 @@ export const supabaseService = {
       start_date: announcement.startDate,
       end_date: announcement.endDate,
       is_active: announcement.isActive ?? true,
+      is_permanent: announcement.isPermanent ?? false,
+      link: announcement.link,
+      qr_code_url: announcement.qrCodeUrl,
       created_at: announcement.createdAt,
     };
 

@@ -2,8 +2,9 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store';
 import { Announcement } from '../../types';
-import { Megaphone, Plus, Pencil, Trash2, X, Save, CheckCircle, AlertCircle } from 'lucide-react';
+import { Megaphone, Plus, Pencil, Trash2, X, Save, CheckCircle, AlertCircle, QrCode, Link as LinkIcon } from 'lucide-react';
 import { safeUUID } from '../../services/uuidUtils';
+import QRCodeModal from '../../components/QRCodeModal';
 
 const EMPTY_FORM: Omit<Announcement, 'id' | 'createdAt'> = {
     title: '',
@@ -11,6 +12,8 @@ const EMPTY_FORM: Omit<Announcement, 'id' | 'createdAt'> = {
     startDate: '',
     endDate: '',
     isActive: true,
+    isPermanent: false,
+    link: '',
 };
 
 const Announcements: React.FC = () => {
@@ -19,12 +22,12 @@ const Announcements: React.FC = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saved, setSaved] = useState(false);
+    const [qrModal, setQrModal] = useState<{ open: boolean, title: string, url: string }>({ open: false, title: '', url: '' });
 
     const today = new Date().toISOString().slice(0, 10);
 
     const isAnnouncementActive = (a: Announcement) => {
-        if (a.isActive !== undefined) return a.isActive;
-        return a.startDate <= today && a.endDate >= today;
+        return a.isActive !== false;
     };
 
     const handleToggleActive = (a: Announcement) => {
@@ -36,9 +39,11 @@ const Announcements: React.FC = () => {
         const errs: Record<string, string> = {};
         if (!form.title.trim()) errs.title = 'El título es requerido.';
         if (!form.startDate) errs.startDate = 'Fecha de inicio requerida.';
-        if (!form.endDate) errs.endDate = 'Fecha de fin requerida.';
-        if (form.startDate && form.endDate && form.endDate < form.startDate) {
-            errs.endDate = 'La fecha de fin no puede ser anterior a la de inicio.';
+        if (!form.isPermanent) {
+            if (!form.endDate) errs.endDate = 'Fecha de fin requerida.';
+            if (form.startDate && form.endDate && form.endDate < form.startDate) {
+                errs.endDate = 'La fecha de fin no puede ser anterior a la de inicio.';
+            }
         }
         return errs;
     };
@@ -51,10 +56,19 @@ const Announcements: React.FC = () => {
         }
         setErrors({});
 
+        // Generate QR Code URL using quickchart.io
+        const qrData = form.link ? form.link : `${form.title} - ${form.startDate}`;
+        const encodedData = encodeURIComponent(qrData || 'https://origen.church');
+        const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&margin=1`;
+
         if (editingId) {
             const existing = announcements.find(a => a.id === editingId);
             if (existing) {
-                updateAnnouncement({ ...existing, ...form });
+                updateAnnouncement({
+                    ...existing,
+                    ...form,
+                    qrCodeUrl: qrUrl
+                });
             }
             setEditingId(null);
         } else {
@@ -62,6 +76,7 @@ const Announcements: React.FC = () => {
                 id: safeUUID(),
                 createdAt: new Date().toISOString(),
                 ...form,
+                qrCodeUrl: qrUrl
             };
             addAnnouncement(newAnn);
         }
@@ -77,7 +92,9 @@ const Announcements: React.FC = () => {
             description: a.description,
             startDate: a.startDate,
             endDate: a.endDate,
-            isActive: a.isActive ?? (a.startDate <= today && a.endDate >= today),
+            isActive: a.isActive ?? (a.isPermanent || (a.startDate <= today && a.endDate >= today)),
+            isPermanent: a.isPermanent || false,
+            link: a.link || '',
         });
         setErrors({});
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -97,6 +114,13 @@ const Announcements: React.FC = () => {
 
     return (
         <div className="space-y-6">
+            <QRCodeModal
+                isOpen={qrModal.open}
+                onClose={() => setQrModal({ ...qrModal, open: false })}
+                title={qrModal.title}
+                qrUrl={qrModal.url}
+            />
+
             {/* --- HEADER --- */}
             <div className="flex items-center gap-3 pb-4 border-b-4 border-black">
                 <div className="p-3 bg-yellow-100 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
@@ -138,8 +162,24 @@ const Announcements: React.FC = () => {
                     {errors.title && <p className="text-red-600 text-xs font-bold mt-1">{errors.title}</p>}
                 </div>
 
+                {/* Type Selection */}
+                <div className="flex gap-4 p-1 bg-slate-100 border-4 border-black">
+                    <button
+                        onClick={() => setForm(f => ({ ...f, isPermanent: false }))}
+                        className={`flex-1 py-2 text-xs font-black uppercase tracking-widest transition-all ${!form.isPermanent ? 'bg-black text-white' : 'text-black hover:bg-slate-200'}`}
+                    >
+                        Modo Manual
+                    </button>
+                    <button
+                        onClick={() => setForm(f => ({ ...f, isPermanent: true }))}
+                        className={`flex-1 py-2 text-xs font-black uppercase tracking-widest transition-all ${form.isPermanent ? 'bg-black text-white' : 'text-black hover:bg-slate-200'}`}
+                    >
+                        Modo Fijo (Fijo)
+                    </button>
+                </div>
+
                 {/* Dates */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid ${form.isPermanent ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                     <div>
                         <label className="block text-xs font-black uppercase tracking-widest mb-1">Fecha de Inicio *</label>
                         <input
@@ -150,16 +190,18 @@ const Announcements: React.FC = () => {
                         />
                         {errors.startDate && <p className="text-red-600 text-xs font-bold mt-1">{errors.startDate}</p>}
                     </div>
-                    <div>
-                        <label className="block text-xs font-black uppercase tracking-widest mb-1">Fecha de Fin *</label>
-                        <input
-                            type="date"
-                            value={form.endDate}
-                            onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
-                            className={`w-full px-4 py-3 border-4 font-bold text-black bg-white focus:outline-none ${errors.endDate ? 'border-red-500' : 'border-black'}`}
-                        />
-                        {errors.endDate && <p className="text-red-600 text-xs font-bold mt-1">{errors.endDate}</p>}
-                    </div>
+                    {!form.isPermanent && (
+                        <div>
+                            <label className="block text-xs font-black uppercase tracking-widest mb-1">Fecha de Fin *</label>
+                            <input
+                                type="date"
+                                value={form.endDate}
+                                onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
+                                className={`w-full px-4 py-3 border-4 font-bold text-black bg-white focus:outline-none ${errors.endDate ? 'border-red-500' : 'border-black'}`}
+                            />
+                            {errors.endDate && <p className="text-red-600 text-xs font-bold mt-1">{errors.endDate}</p>}
+                        </div>
+                    )}
                 </div>
 
                 {/* Description */}
@@ -172,6 +214,22 @@ const Announcements: React.FC = () => {
                         rows={3}
                         className="w-full px-4 py-3 border-4 border-black font-bold text-black bg-white focus:outline-none resize-none placeholder:text-slate-300"
                     />
+                </div>
+
+                {/* Link */}
+                <div className="space-y-1">
+                    <label className="text-xs font-black uppercase tracking-widest border-b-2 border-black mb-1 inline-block">Link (Para QR)</label>
+                    <div className="relative">
+                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
+                        <input
+                            type="text"
+                            value={form.link}
+                            onChange={e => setForm({ ...form, link: e.target.value })}
+                            className="w-full pl-10 px-4 py-3 border-4 border-black font-bold text-black bg-white focus:outline-none placeholder:text-slate-300"
+                            placeholder="https://formulario..."
+                        />
+                    </div>
+                    <p className="text-[10px] font-bold text-neutral-500 uppercase mt-1">Si vacío, QR = Título + Fecha</p>
                 </div>
 
                 {/* Save Button */}
@@ -201,72 +259,149 @@ const Announcements: React.FC = () => {
                         </p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b-4 border-black bg-slate-50">
-                                    <th className="text-left px-6 py-3 text-xs font-black uppercase tracking-widest">Título</th>
-                                    <th className="text-left px-4 py-3 text-xs font-black uppercase tracking-widest">Inicio</th>
-                                    <th className="text-left px-4 py-3 text-xs font-black uppercase tracking-widest">Fin</th>
-                                    <th className="text-left px-4 py-3 text-xs font-black uppercase tracking-widest">Estado</th>
-                                    <th className="text-center px-4 py-3 text-xs font-black uppercase tracking-widest">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {announcements.map((a, idx) => (
-                                    <tr key={a.id} className={`border-b-2 border-black ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-yellow-50 transition-colors`}>
-                                        <td className="px-6 py-4 font-black text-sm uppercase tracking-tight max-w-[200px] truncate">
-                                            {a.title}
-                                        </td>
-                                        <td className="px-4 py-4 text-sm font-bold text-slate-600">
-                                            {new Date(a.startDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
-                                        </td>
-                                        <td className="px-4 py-4 text-sm font-bold text-slate-600">
-                                            {new Date(a.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
-                                        </td>
-                                        <td className="px-4 py-4">
+                    <>
+                        {/* --- MOBILE CARD LIST (visible on sm, hidden on md+) --- */}
+                        <div className="md:hidden divide-y-2 divide-black">
+                            {announcements.map((a) => {
+                                const active = isAnnouncementActive(a);
+                                return (
+                                    <div key={a.id} className={`p-4 space-y-3 ${active ? 'bg-white' : 'bg-slate-50'}`}>
+                                        {/* Title + Status badge */}
+                                        <div className="flex items-start justify-between gap-2">
+                                            <h3 className="font-black uppercase tracking-tight text-sm leading-tight flex-1">{a.title}</h3>
                                             <button
                                                 onClick={() => handleToggleActive(a)}
-                                                className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 border-2 border-black text-xs font-black uppercase transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none ${isAnnouncementActive(a) ? 'bg-emerald-300 text-black hover:bg-emerald-400' : 'bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-black'
-                                                    }`}
-                                                title={isAnnouncementActive(a) ? 'Click para desactivar' : 'Click para activar'}
+                                                className={`flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 border-2 border-black text-[10px] font-black uppercase transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-0.5 ${active ? 'bg-emerald-300 text-black' : 'bg-slate-200 text-slate-500'}`}
+                                                title={active ? 'Click para desactivar' : 'Click para activar'}
                                             >
-                                                {isAnnouncementActive(a) ? (
-                                                    <>
-                                                        <CheckCircle className="w-3.5 h-3.5" />
-                                                        Activo
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <AlertCircle className="w-3.5 h-3.5" />
-                                                        Inactivo
-                                                    </>
-                                                )}
+                                                {active ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                                                {active ? 'Activo' : 'Inactivo'}
                                             </button>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex items-center justify-center gap-2">
+                                        </div>
+
+                                        {/* Dates row */}
+                                        <div className="flex items-center gap-3 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                            <span>
+                                                Inicio: {new Date(a.startDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
+                                            </span>
+                                            {a.isPermanent ? (
+                                                <span className="inline-flex items-center gap-0.5 text-emerald-700 bg-emerald-100 px-2 py-0.5 border border-emerald-300 font-black">∞ Permanente</span>
+                                            ) : (
+                                                <span>Fin: {new Date(a.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}</span>
+                                            )}
+                                        </div>
+
+                                        {/* Action buttons */}
+                                        <div className="flex items-center gap-2 pt-1">
+                                            {a.qrCodeUrl && (
                                                 <button
-                                                    onClick={() => handleEdit(a)}
-                                                    className="p-2 border-2 border-black hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none active:translate-y-0.5"
-                                                    title="Editar"
+                                                    onClick={() => setQrModal({ open: true, title: a.title, url: a.qrCodeUrl! })}
+                                                    className="flex items-center gap-1.5 px-3 py-2 border-2 border-black bg-white text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all active:shadow-none"
                                                 >
-                                                    <Pencil className="w-4 h-4" />
+                                                    <QrCode className="w-3.5 h-3.5" /> QR
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDelete(a.id)}
-                                                    className="p-2 border-2 border-black hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none active:translate-y-0.5"
-                                                    title="Eliminar"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
+                                            )}
+                                            <button
+                                                onClick={() => handleEdit(a)}
+                                                className="flex items-center gap-1.5 px-3 py-2 border-2 border-black bg-white text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all active:shadow-none"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" /> Editar
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(a.id)}
+                                                className="flex items-center gap-1.5 px-3 py-2 border-2 border-black bg-white text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-red-600 hover:text-white hover:border-red-600 transition-all active:shadow-none"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* --- DESKTOP TABLE (hidden on sm, visible on md+) --- */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b-4 border-black bg-slate-50">
+                                        <th className="text-left px-6 py-3 text-xs font-black uppercase tracking-widest">Título</th>
+                                        <th className="text-left px-4 py-3 text-xs font-black uppercase tracking-widest">Inicio</th>
+                                        <th className="text-left px-4 py-3 text-xs font-black uppercase tracking-widest">Fin</th>
+                                        <th className="text-left px-4 py-3 text-xs font-black uppercase tracking-widest">Estado</th>
+                                        <th className="text-center px-4 py-3 text-xs font-black uppercase tracking-widest">Acciones</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {announcements.map((a, idx) => (
+                                        <tr key={a.id} className={`border-b-2 border-black ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-yellow-50 transition-colors`}>
+                                            <td className="px-6 py-4 font-black text-sm uppercase tracking-tight max-w-[200px] truncate">
+                                                {a.title}
+                                            </td>
+                                            <td className="px-4 py-4 text-sm font-bold text-slate-600">
+                                                {new Date(a.startDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
+                                            </td>
+                                            <td className="px-4 py-4 text-sm font-bold text-slate-600">
+                                                {a.isPermanent ? (
+                                                    <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 border border-emerald-200">
+                                                        ∞ Permanente
+                                                    </span>
+                                                ) : (
+                                                    new Date(a.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <button
+                                                    onClick={() => handleToggleActive(a)}
+                                                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 border-2 border-black text-xs font-black uppercase transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none ${isAnnouncementActive(a) ? 'bg-emerald-300 text-black hover:bg-emerald-400' : 'bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-black'
+                                                        }`}
+                                                    title={isAnnouncementActive(a) ? 'Click para desactivar' : 'Click para activar'}
+                                                >
+                                                    {isAnnouncementActive(a) ? (
+                                                        <>
+                                                            <CheckCircle className="w-3.5 h-3.5" />
+                                                            Activo
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <AlertCircle className="w-3.5 h-3.5" />
+                                                            Inactivo
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {a.qrCodeUrl && (
+                                                        <button
+                                                            onClick={() => setQrModal({ open: true, title: a.title, url: a.qrCodeUrl! })}
+                                                            className="p-2 border-2 border-black hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none active:translate-y-0.5"
+                                                            title="Ver QR"
+                                                        >
+                                                            <QrCode className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleEdit(a)}
+                                                        className="p-2 border-2 border-black hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none active:translate-y-0.5"
+                                                        title="Editar"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(a.id)}
+                                                        className="p-2 border-2 border-black hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none active:translate-y-0.5"
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
             </div>
         </div>

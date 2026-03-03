@@ -248,20 +248,44 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
 
             {/* --- MOBILE LAYOUT --- */}
             <div className="md:hidden flex flex-col w-full h-[calc(100dvh-64px)] bg-white overflow-hidden">
-                <header className="flex-none z-40 bg-white border-b-4 border-black">
-                    <MobileHeader
-                        title={currentView === 'PANEL' ? 'PUNTO DE INFORMACIÓN' : getViewTitle(currentView)}
-                        isRoot={currentView === 'PANEL'}
-                        onOpenSidebar={() => setIsSidebarOpen(true)}
-                        onBack={() => setCurrentView('PANEL')}
-                    />
-                    {/* Switch in mobile top bar */}
-                    <div className="flex justify-center pb-2 pt-1">
-                        {switchEl}
+                <header className="flex-none z-40 bg-white border-b-4 border-black sticky top-16">
+                    {/* Header bar only when NOT at root for back button, otherwise title is in the subnav div */}
+                    {currentView !== 'PANEL' && (
+                        <MobileHeader
+                            title={getViewTitle(currentView)}
+                            isRoot={false}
+                            onOpenSidebar={() => setIsSidebarOpen(true)}
+                            onBack={() => setCurrentView('PANEL')}
+                        />
+                    )}
+
+                    {/* SUBNAV design matching PublicHome screenshot */}
+                    <div className="flex flex-col w-full">
+                        {/* Title (Only shown at root or together with switch) */}
+                        <div className="h-10 flex items-center justify-center border-b-4 border-black">
+                            <h1 className="text-sm font-black tracking-widest uppercase text-black">
+                                Punto de Información
+                            </h1>
+                        </div>
+                        {/* Switch Buttons */}
+                        <div className="flex w-full h-11">
+                            <button
+                                onClick={handleGoPublic}
+                                className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all border-r-4 border-black ${(viewMode as string) === 'PUBLIC' ? 'bg-black text-white' : 'bg-white text-black'}`}
+                            >
+                                <span className={(viewMode as string) === 'PUBLIC' ? 'text-white' : 'text-blue-500'}>🌐</span> WEB
+                            </button>
+                            <button
+                                onClick={handleGoInternal}
+                                className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all ${(viewMode as string) === 'INTERNAL' ? 'bg-black text-white' : 'bg-white text-black'}`}
+                            >
+                                <span className={(viewMode as string) === 'INTERNAL' ? 'text-white' : 'text-slate-400'}>⚙️</span> PANEL
+                            </button>
+                        </div>
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto overscroll-contain bg-white">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-white">
                     {currentView === 'PANEL' ? (
                         <InfoPointMenu onNavigate={setCurrentView} currentUser={authorizedUser} />
                     ) : (

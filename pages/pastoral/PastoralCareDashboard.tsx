@@ -40,7 +40,7 @@ const calcStats = (r: any) => {
 
 const Modal: React.FC<{ title: string; onClose?: () => void; children: React.ReactNode; wide?: boolean; noClose?: boolean }> =
     ({ title, onClose, children, wide, noClose }) => (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className={`bg-white dark:bg-neutral-900 border-2 border-black dark:border-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[90vh] flex flex-col`}>
                 <div className="flex items-center justify-between p-4 border-b-2 border-black dark:border-white flex-shrink-0">
                     <h2 className="font-black uppercase tracking-tighter text-lg">{title}</h2>
@@ -239,6 +239,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>('service_date');
     const [sortAsc, setSortAsc] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -254,7 +255,14 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
         else { setSortKey(key); setSortAsc(true); }
     };
 
-    const sorted = [...records].sort((a, b) => {
+    const sorted = [...records].filter(rec => {
+        const term = searchTerm.toLowerCase();
+        return (
+            rec.name?.toLowerCase().includes(term) ||
+            rec.service_date?.includes(term) ||
+            rec.service_time?.toLowerCase().includes(term)
+        );
+    }).sort((a, b) => {
         const va = a[sortKey] ?? '';
         const vb = b[sortKey] ?? '';
         if (va < vb) return sortAsc ? -1 : 1;
@@ -326,7 +334,75 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                 )}
 
                 {!loading && records.length > 0 && (
-                    <div className="bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)] overflow-x-auto">
+                    <div className="mb-4">
+                        <input
+                            type="text"
+                            placeholder="Buscar por fecha, nombre o horario (AM/PM)..."
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-black font-medium placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all text-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                )}
+
+                {/* ── Mobile: Card list (Groups.tsx style) ── */}
+                {!loading && records.length > 0 && (
+                    <div className="md:hidden space-y-3">
+                        {sorted.map((rec) => {
+                            const s = calcStats(rec);
+                            return (
+                                <div key={rec.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                                    {/* Top row: badge + actions */}
+                                    <div className="flex items-start justify-between mb-3">
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide
+                                            ${rec.service_time === 'PM' ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'}`}>
+                                            {rec.service_time || '—'}
+                                        </span>
+                                        {/* Kebab-style inline action buttons */}
+                                        <div className="flex items-center gap-1.5">
+                                            <button onClick={() => setDetailRecord(rec)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-slate-400 hover:text-black transition-all" title="Ver detalles">
+                                                <Eye className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button onClick={() => setYoyRecord(rec)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-violet-400 hover:text-violet-600 transition-all" title="Comparativa YoY">
+                                                <GitCompareArrows className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button onClick={() => navigate('/pastoral-care/new', { state: { record: rec } })} className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 transition-all" title="Editar">
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button onClick={() => setDeleteTarget(rec)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-red-400 hover:text-red-600 transition-all" title="Eliminar">
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Name */}
+                                    <h3 className="text-base font-black uppercase tracking-tight text-black leading-tight mb-3">
+                                        {rec.name || <span className="text-slate-400 normal-case font-medium">Sin nombre</span>}
+                                    </h3>
+
+                                    {/* Meta grid */}
+                                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 border-t border-slate-100 pt-3">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Fecha</p>
+                                            <p className="text-sm font-bold text-black tabular-nums">{fmtDate(rec.service_date)}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Total Voluntarios</p>
+                                            <p className="text-sm font-black text-violet-600 tabular-nums">{s.totalVol.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        <p className="text-xs text-slate-400 font-mono px-1 pt-1">
+                            {sorted.length} registro{sorted.length !== 1 ? 's' : ''}
+                        </p>
+                    </div>
+                )}
+
+                {/* ── Desktop: Table ── */}
+                {!loading && records.length > 0 && (
+                    <div className="hidden md:block bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)] overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b-2 border-black dark:border-white bg-neutral-50 dark:bg-neutral-900">
@@ -334,10 +410,10 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                         <span className="flex items-center gap-1.5">Fecha <SortIcon col="service_date" /></span>
                                     </th>
                                     <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none" onClick={() => handleSort('name')}>
-                                        <span className="flex items-center gap-1.5">Nombre <SortIcon col="name" /></span>
+                                        <span className="flex items-center gap-1.5">Nombre de servicio <SortIcon col="name" /></span>
                                     </th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest hidden sm:table-cell">Auditorio c/Vol</th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest hidden md:table-cell">Voluntarios</th>
+                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest">Horario</th>
+                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest">Total Voluntarios</th>
                                     <th className="text-right px-4 py-3 font-black uppercase text-xs tracking-widest">Acciones</th>
                                 </tr>
                             </thead>
@@ -346,10 +422,10 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                     const s = calcStats(rec);
                                     return (
                                         <tr key={rec.id} className={`border-b border-neutral-100 dark:border-neutral-900 hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors ${idx % 2 === 0 ? '' : 'bg-neutral-50/50 dark:bg-neutral-900/30'}`}>
-                                            <td className="px-4 py-3 font-mono text-sm font-bold tabular-nums whitespace-nowrap">{fmtDate(rec.service_date)}{rec.service_time ? ` (${rec.service_time})` : ''}</td>
-                                            <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">{rec.name || <span className="text-neutral-300 dark:text-neutral-600">—</span>}</td>
-                                            <td className="px-4 py-3 font-bold tabular-nums hidden sm:table-cell">{s.auditorioConVol.toLocaleString()}</td>
-                                            <td className="px-4 py-3 font-bold tabular-nums hidden md:table-cell">{s.totalVol.toLocaleString()}</td>
+                                            <td className="px-4 py-3 font-mono text-sm font-bold tabular-nums whitespace-nowrap">{fmtDate(rec.service_date)}</td>
+                                            <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300 font-bold uppercase tracking-tight">{rec.name || <span className="text-neutral-300 dark:text-neutral-600">—</span>}</td>
+                                            <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500">{rec.service_time || "—"}</td>
+                                            <td className="px-4 py-3 font-black tabular-nums text-violet-600 dark:text-violet-400">{s.totalVol.toLocaleString()}</td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <button onClick={() => setDetailRecord(rec)} title="Ver detalles" className="w-8 h-8 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-black dark:hover:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">

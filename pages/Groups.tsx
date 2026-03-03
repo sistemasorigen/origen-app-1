@@ -472,7 +472,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         const fetchApplications = async () => {
             if (isPostulationModalOpen) {
                 const apps = await supabaseService.getLeaderApplications();
-                setExistingApplications(apps.map(a => ({
+                setExistingApplications(apps.filter(a => a.status === 'PENDING').map(a => ({
                     email: a.email.toLowerCase().trim(),
                     phone: a.phone.trim(),
                     firstName: a.firstName.toLowerCase().trim(),

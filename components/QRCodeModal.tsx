@@ -1,6 +1,6 @@
 import React from 'react';
 import NeoModal from './NeoModal';
-import { Download, QrCode } from 'lucide-react';
+import { QrCode } from 'lucide-react';
 
 interface QRCodeModalProps {
   isOpen: boolean;
@@ -21,16 +21,6 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, title, qrUrl
         <div className="bg-white border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform">
           <img src={qrUrl} alt="QR Code" className="w-48 h-48 object-contain" />
         </div>
-
-        {/* Download Button */}
-        <a
-          href={qrUrl}
-          download={`QR-${title}.png`}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-black text-white border-2 border-black font-black uppercase tracking-widest hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all"
-        >
-          <Download className="w-5 h-5" />
-          <span>Descargar Imagen</span>
-        </a>
 
         <p className="mt-4 text-[10px] font-bold uppercase text-neutral-400 text-center">
           Escanea este código para acceder directamente.
