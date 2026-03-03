@@ -261,12 +261,14 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
 
                     {/* SUBNAV design matching PublicHome screenshot */}
                     <div className="flex flex-col w-full">
-                        {/* Title */}
-                        <div className="h-10 flex items-center justify-center border-b-4 border-black">
-                            <h1 className="text-sm font-black tracking-widest uppercase text-black">
-                                Punto de Información
-                            </h1>
-                        </div>
+                        {/* Title (Only shown for PUBLIC view to match desired design, removed for Admin Panel as requested) */}
+                        {viewMode as string === 'PUBLIC' && (
+                            <div className="h-10 flex items-center justify-center border-b-4 border-black">
+                                <h1 className="text-sm font-black tracking-widest uppercase text-black">
+                                    Punto de Información
+                                </h1>
+                            </div>
+                        )}
                         {/* Switch Buttons */}
                         <div className="flex w-full h-11">
                             <button

@@ -179,27 +179,21 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
 
                 {/* --- SUBNAV --- */}
                 <nav className="sticky top-16 z-50 bg-white border-b-4 border-black">
-                    {/* MOBILE: Title + Two buttons layout */}
+                    {/* MOBILE: Two buttons layout (Title is provided by parent InfoPoint.tsx) */}
                     <div className="flex flex-col md:hidden w-full">
-                        {/* Title */}
-                        <div className="h-10 flex items-center justify-center border-b-4 border-black">
-                            <h1 className="text-sm font-black tracking-widest uppercase text-black">
-                                Punto de Información
-                            </h1>
-                        </div>
                         {/* Buttons */}
                         <div className="flex w-full h-11">
                             <button
                                 onClick={onGoPublic}
-                                className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all border-r-4 border-black ${viewMode === 'PUBLIC' ? 'bg-black text-white' : 'bg-white text-black'}`}
+                                className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all border-r-4 border-black ${(viewMode as string) === 'PUBLIC' ? 'bg-black text-white' : 'bg-white text-black'}`}
                             >
-                                <span className={viewMode === 'PUBLIC' ? 'text-white' : 'text-blue-500'}>🌐</span> WEB
+                                <span className={(viewMode as string) === 'PUBLIC' ? 'text-white' : 'text-blue-500'}>🌐</span> WEB
                             </button>
                             <button
                                 onClick={onGoInternal}
-                                className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'INTERNAL' ? 'bg-black text-white' : 'bg-white text-black'}`}
+                                className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all ${(viewMode as string) === 'INTERNAL' ? 'bg-black text-white' : 'bg-white text-black'}`}
                             >
-                                <span className={viewMode === 'INTERNAL' ? 'text-white' : 'text-slate-400'}>⚙️</span> PANEL
+                                <span className={(viewMode as string) === 'INTERNAL' ? 'text-white' : 'text-slate-400'}>⚙️</span> PANEL
                             </button>
                         </div>
                     </div>
