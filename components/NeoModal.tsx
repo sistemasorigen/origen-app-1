@@ -29,13 +29,16 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
 
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
             document.body.setAttribute('data-modal-active', 'true');
         } else {
-            document.body.style.overflow = 'unset';
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
             document.body.removeAttribute('data-modal-active');
         }
         return () => {
-            document.body.style.overflow = 'unset';
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
             document.body.removeAttribute('data-modal-active');
         };
     }, [isOpen]);
@@ -121,7 +124,7 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                             </div>
 
                             {/* BODY */}
-                            <div id="neo-modal-scroll-container" className={`flex-1 overflow-y-auto overflow-x-hidden ${isMobile ? 'px-6 pb-8' : 'px-6 pb-6'}`}>
+                            <div id="neo-modal-scroll-container" className={`flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain ${isMobile ? 'px-6 pb-8' : 'px-6 pb-6'}`}>
                                 {children}
                             </div>
                         </motion.div>
