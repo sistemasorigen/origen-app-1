@@ -248,7 +248,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
 
             {/* --- MOBILE LAYOUT --- */}
             <div className="md:hidden flex flex-col w-full h-[calc(100dvh-64px)] bg-white overflow-hidden">
-                <header className="flex-none z-40 bg-white border-b-4 border-black sticky top-16">
+                <header className="flex-none z-40 bg-white border-b-4 border-black select-none" style={{ touchAction: 'none' }}>
                     {/* Header bar only when NOT at root for back button, otherwise title is in the subnav div */}
                     {currentView !== 'PANEL' && (
                         <MobileHeader
@@ -261,7 +261,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
 
                     {/* SUBNAV design matching PublicHome screenshot */}
                     <div className="flex flex-col w-full">
-                        {/* Title (Only shown at root or together with switch) */}
+                        {/* Title */}
                         <div className="h-10 flex items-center justify-center border-b-4 border-black">
                             <h1 className="text-sm font-black tracking-widest uppercase text-black">
                                 Punto de Información
@@ -289,7 +289,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                     {currentView === 'PANEL' ? (
                         <InfoPointMenu onNavigate={setCurrentView} currentUser={authorizedUser} />
                     ) : (
-                        <div className="pb-20 px-6 pt-6">
+                        <div className="pb-20 px-4 pt-4">
                             {renderView()}
                         </div>
                     )}
