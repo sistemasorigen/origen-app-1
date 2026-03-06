@@ -183,7 +183,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
             />
 
             {/* Header */}
-            <div id="host-dashboard-header" className="max-w-6xl mx-auto">
+            <div id="host-dashboard-header" className="w-full px-4 md:px-8 lg:px-12">
                 <div className="text-center mb-12">
                     <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-black dark:text-white">
                         Mis Grupos de Conexión

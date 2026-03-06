@@ -211,101 +211,96 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block border border-slate-200 overflow-hidden bg-white shadow-sm rounded-xl">
-                <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-bold text-slate-500">
-                        <tr>
-                            <th className="p-4 pl-6 w-32">Estado</th>
-                            <th className="p-4 w-1/4">Grupo</th>
-                            <th className="p-4">Anfitrión</th>
-                            <th className="p-4">Horario</th>
-                            <th className="p-4">Fechas</th>
-                            <th className="p-4">Capacidad</th>
-                            <th className="p-4 w-1/4">Descripción</th>
-                            <th className="p-4 pr-6 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {groups.map((group) => (
-                            <tr key={group.id} className={`hover:bg-slate-50 transition-colors group ${group.status === 'pending' || !group.status ? 'bg-yellow-50/30' : ''}`}>
-                                <td className="p-4 pl-6 align-top pt-5">
-                                    {getStatusBadge(group.status, group)}
-                                </td>
-                                <td className="p-4 align-top pt-5">
-                                    <p className="font-bold text-sm text-slate-900 uppercase leading-snug">{group.name}</p>
-                                    <span className="inline-block mt-1 text-[10px] text-slate-500 font-bold uppercase tracking-wide bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                                        {categories.find(c => c.id === group.categoryId)?.name || 'General'}
-                                    </span>
-                                </td>
-                                <td className="p-4 align-top pt-5">
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-slate-700">{group.leaderName} {group.leaderSurname}</span>
-                                        {group.coHostFirstName && (
-                                            <span className="text-[11px] text-slate-400 mt-0.5 font-medium">
-                                                Co: {group.coHostFirstName} {group.coHostLastName}
-                                            </span>
-                                        )}
-                                    </div>
-                                </td>
-                                <td className="p-4 align-top pt-5">
-                                    <div className="flex items-center gap-1.5 text-sm font-medium text-slate-600">
-                                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                        {group.meetingDay} {group.meetingTime}
-                                    </div>
-                                </td>
-                                <td className="p-4 align-top pt-5">
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-[10px] uppercase font-bold text-slate-400">Inicio</span>
-                                        <span className="text-xs font-medium text-slate-700">
-                                            {group.startDate ? new Date(group.startDate + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) : '-'}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td className="p-4 align-top pt-5">
-                                    <div className="flex items-center gap-1.5">
-                                        <Users className="w-3.5 h-3.5 text-slate-400" />
-                                        <span className="text-sm font-bold text-slate-700">
-                                            {(() => {
-                                                const cat = categories.find(c => c.id === group.categoryId);
-                                                const isCouples = (cat?.name?.toLowerCase() === 'parejas' || group.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas')) && group.targetGender === 'Mixto';
-                                                const regCount = group.registrations?.length || 0;
-                                                return isCouples ? regCount * 2 : regCount;
-                                            })()}/{group.maxCapacity}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td className="p-4 align-top pt-5">
-                                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                                        {group.description || '-'}
-                                    </p>
-                                </td>
-                                <td className="p-4 pr-6 align-top pt-5 text-right">
-                                    <div className="flex justify-end gap-1">
-                                        {(group.status === 'pending' || !group.status) && (
-                                            <button onClick={() => onReview(group)} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200" title="Revisar">
-                                                <ClipboardCheck className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                        {(group.status === 'rejected' || isGroupFinished(group)) && (
-                                            <button onClick={() => onReopen(group.id)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200" title="Re-abrir">
-                                                <RotateCcw className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                        <button onClick={() => onViewRegistrations(group)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200" title="Ver inscriptos">
-                                            <Eye className="w-4 h-4" />
-                                        </button>
-                                        <button onClick={() => onEdit(group)} className="p-2 text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200" title="Editar">
-                                            <Edit2 className="w-4 h-4" />
-                                        </button>
-                                        <button onClick={() => onDelete(group.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200" title="Eliminar">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </td>
+            <div className="hidden md:block overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-bold text-slate-500">
+                            <tr>
+                                <th className="p-4 pl-6 w-32">Estado</th>
+                                <th className="p-4 w-1/4">Grupo</th>
+                                <th className="p-4">Anfitrión</th>
+                                <th className="p-4">Horario</th>
+
+                                <th className="p-4">Capacidad</th>
+                                <th className="p-4 w-1/4">Descripción</th>
+                                <th className="p-4 pr-6 text-right">Acciones</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {groups.map((group) => (
+                                <tr key={group.id} className={`hover:bg-slate-50 transition-colors group ${group.status === 'pending' || !group.status ? 'bg-yellow-50/30' : ''}`}>
+                                    <td className="p-4 pl-6 align-top pt-5">
+                                        {getStatusBadge(group.status, group)}
+                                    </td>
+                                    <td className="p-4 align-top pt-5">
+                                        <p className="font-bold text-sm text-slate-900 uppercase leading-snug">{group.name}</p>
+                                        <span className="inline-block mt-1 text-[10px] text-slate-500 font-bold uppercase tracking-wide bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                                            {categories.find(c => c.id === group.categoryId)?.name || 'General'}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 align-top pt-5">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-slate-700">{group.leaderName} {group.leaderSurname}</span>
+                                            {group.coHostFirstName && (
+                                                <span className="text-[11px] text-slate-400 mt-0.5 font-medium">
+                                                    Co: {group.coHostFirstName} {group.coHostLastName}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="p-4 align-top pt-5">
+                                        <div className="flex items-center gap-1.5 text-sm font-medium text-slate-600">
+                                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                            {group.meetingDay} {group.meetingTime}
+                                        </div>
+                                    </td>
+
+                                    <td className="p-4 align-top pt-5">
+                                        <div className="flex items-center gap-1.5">
+                                            <Users className="w-3.5 h-3.5 text-slate-400" />
+                                            <span className="text-sm font-bold text-slate-700">
+                                                {(() => {
+                                                    const cat = categories.find(c => c.id === group.categoryId);
+                                                    const isCouples = (cat?.name?.toLowerCase() === 'parejas' || group.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas')) && group.targetGender === 'Mixto';
+                                                    const regCount = group.registrations?.length || 0;
+                                                    return isCouples ? regCount * 2 : regCount;
+                                                })()}/{group.maxCapacity}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="p-4 align-top pt-5">
+                                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                                            {group.description || '-'}
+                                        </p>
+                                    </td>
+                                    <td className="p-4 pr-6 align-top pt-5 text-right">
+                                        <div className="flex justify-end gap-1">
+                                            {(group.status === 'pending' || !group.status) && (
+                                                <button onClick={() => onReview(group)} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200" title="Revisar">
+                                                    <ClipboardCheck className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            {(group.status === 'rejected' || isGroupFinished(group)) && (
+                                                <button onClick={() => onReopen(group.id)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200" title="Re-abrir">
+                                                    <RotateCcw className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            <button onClick={() => onViewRegistrations(group)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200" title="Ver inscriptos">
+                                                <Eye className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={() => onEdit(group)} className="p-2 text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200" title="Editar">
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={() => onDelete(group.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200" title="Eliminar">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

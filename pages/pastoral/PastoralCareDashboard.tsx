@@ -275,7 +275,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
 
             {/* Header */}
             <div className="bg-white dark:bg-black border-b-4 border-black dark:border-white">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="w-full px-4 sm:px-8 lg:px-12 py-4 flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
                         <button onClick={() => navigate('/')} className="w-9 h-9 flex items-center justify-center border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors">
                             <ArrowLeft className="w-4 h-4" />
@@ -298,7 +298,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
             </div>
 
             {/* Content */}
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8">
+            <div className="w-full px-4 sm:px-8 lg:px-12 pt-8">
                 {loading && (
                     <div className="flex justify-center py-24">
                         <div className="w-10 h-10 border-4 border-black dark:border-white border-t-transparent rounded-full animate-spin" />

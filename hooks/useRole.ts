@@ -7,7 +7,9 @@ export const useRole = () => {
     const isAnfitrion = user?.role === UserRole.ANFITRION;
     const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
     const isGroupsAdmin = user?.role === UserRole.ADMIN_GROUPS;
+    const isEncargadoGroups = user?.role === UserRole.ENCARGADO_GRUPOS;
     const isAdmin = isSuperAdmin || isGroupsAdmin;
+    const canManageGroups = isAdmin || isEncargadoGroups;
     const isCoordinator = user?.roles?.includes(UserRole.COORDINATOR) ?? false;
 
     const isCoordinatorOf = (variant: CoordinatorVariant): boolean => {
@@ -24,7 +26,9 @@ export const useRole = () => {
         isAnfitrion,
         isSuperAdmin,
         isGroupsAdmin,
+        isEncargadoGroups,
         isAdmin,
+        canManageGroups,
         isCoordinator,
         isCoordinatorOf,
         canCreateGroup,

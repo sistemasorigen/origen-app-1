@@ -641,7 +641,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
     useEffect(() => {
         // Fetch based on current view
-        if (view === 'admin' && (isSuperAdmin || isGroupsAdmin)) {
+        if (view === 'admin' && (isSuperAdmin || isGroupsAdmin || isEncargadoGroups)) {
             fetchAdminGroups(); // Fetch ALL groups for admin
             // Fetch pending dropout count for badge
             supabaseService.countPendingDropoutRequests().then(count => {
@@ -921,7 +921,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // --- GROUPS CRUD ---
     const openEditModal = (group?: Group) => {
         // Admins can edit any group, regular hosts can only edit their own
-        if (isAnfitrion && !isSuperAdmin && !isGroupsAdmin) {
+        if (isAnfitrion && !isSuperAdmin && !isGroupsAdmin && !isEncargadoGroups) {
             if (!group) return;
             if (group.id !== currentUser?.linkedGroupId) {
                 showToast('Acceso denegado: Solo puedes editar tu grupo.', 'error');
@@ -1481,10 +1481,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     </div>
                 </>
             ) : (
-                <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 xl:px-20 py-8 lg:py-10 animate-fadeIn">
+                <div className="w-full py-8 lg:py-10 animate-fadeIn">
 
                     {/* Only show Leader Dashboard for Anfitriones who are NOT also Admins */}
-                    {(isAnfitrion && !isSuperAdmin && !isGroupsAdmin) ? (
+                    {(isAnfitrion && !isSuperAdmin && !isGroupsAdmin && !isEncargadoGroups) ? (
                         renderLeaderDashboard()
                     ) : (
                         <>

@@ -334,7 +334,7 @@ const Announcements: React.FC = () => {
                                 <tbody>
                                     {announcements.map((a, idx) => (
                                         <tr key={a.id} className={`border-b-2 border-black ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-yellow-50 transition-colors`}>
-                                            <td className="px-6 py-4 font-black text-sm uppercase tracking-tight max-w-[200px] truncate">
+                                            <td className="px-6 py-4 font-black text-sm uppercase tracking-tight min-w-[160px]">
                                                 {a.title}
                                             </td>
                                             <td className="px-4 py-4 text-sm font-bold text-slate-600">
