@@ -651,7 +651,15 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
             fetchGroups(); // Fetch only approved for public
         }
         fetchCategoriesAndTags();
-        setConfig(db.getAppConfig());
+        // Fetch config from Supabase (source of truth), with localStorage fallback
+        supabaseService.getAppConfig().then(remoteConfig => {
+            if (remoteConfig) {
+                db.saveAppConfig(remoteConfig); // Sync to localStorage for offline use
+                setConfig(remoteConfig);
+            } else {
+                setConfig(db.getAppConfig()); // Fallback to localStorage
+            }
+        });
     }, [view, currentUser, adminSubTab]);
 
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {

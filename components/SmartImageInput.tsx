@@ -6,12 +6,10 @@
 
 import React, { useState } from 'react';
 import { supabaseService } from '../services/supabaseService';
-import { generateGroupCover } from '../services/geminiService';
 import { ImageAspectRatio } from '../types';
 import {
     Link,
     UploadCloud,
-    Sparkles,
     Image as ImageIcon,
     Loader2,
     CheckCircle,
@@ -26,7 +24,7 @@ interface SmartImageInputProps {
     placeholder?: string;
 }
 
-type InputMode = 'URL' | 'UPLOAD' | 'AI';
+type InputMode = 'URL' | 'UPLOAD';
 
 const SmartImageInput: React.FC<SmartImageInputProps> = ({
     value,
@@ -57,34 +55,6 @@ const SmartImageInput: React.FC<SmartImageInputProps> = ({
             alert('Error al subir imagen. Verifique configuración.');
         }
         setLoading(false);
-    };
-
-    // 2. AI Generator Handler
-    const handleGenerate = async () => {
-        if (!prompt.trim()) return;
-        setLoading(true);
-
-        try {
-            // Generate Base64
-            const base64Image = await generateGroupCover(prompt, aspectRatio);
-            if (base64Image) {
-                // Upload to Supabase to get permanent URL
-                const url = await supabaseService.uploadBase64Image(base64Image);
-                if (url) {
-                    onChange(url);
-                    setImgError(false);
-                } else {
-                    alert('Error guardando imagen generada.');
-                }
-            } else {
-                alert('No se pudo generar la imagen. Intenta otro prompt.');
-            }
-        } catch (error) {
-            console.error(error);
-            alert('Error en generación IA.');
-        } finally {
-            setLoading(false);
-        }
     };
 
     // Drag & Drop Visuals
@@ -130,13 +100,6 @@ const SmartImageInput: React.FC<SmartImageInputProps> = ({
                         title="Subir Archivo"
                     >
                         <UploadCloud className="w-3 h-3" /> Subir
-                    </button>
-                    <button
-                        onClick={() => setMode('AI')}
-                        className={`p-2 rounded flex items-center gap-2 text-[10px] font-bold uppercase transition-all ${mode === 'AI' ? 'bg-white shadow text-indigo-600' : 'text-neutral-400 hover:text-neutral-600'}`}
-                        title="Generar con IA"
-                    >
-                        <Sparkles className="w-3 h-3" /> Magic
                     </button>
                 </div>
             </div>
@@ -184,24 +147,6 @@ const SmartImageInput: React.FC<SmartImageInputProps> = ({
                         </div>
                     )}
 
-                    {mode === 'AI' && (
-                        <div className="space-y-2 animate-fadeIn">
-                            <textarea
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                className="w-full p-3 bg-white border border-neutral-200 rounded-xl outline-none text-sm font-medium focus:border-indigo-500 transition-colors placeholder-neutral-300 h-20 resize-none"
-                                placeholder="Describe la imagen (ej: Un grupo de jóvenes orando en un parque al atardecer...)"
-                            />
-                            <button
-                                onClick={handleGenerate}
-                                disabled={loading || !prompt.trim()}
-                                className="w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                                {loading ? 'Creando...' : 'Generar Imagen'}
-                            </button>
-                        </div>
-                    )}
                 </div>
 
                 {/* Preview Thumbnail */}

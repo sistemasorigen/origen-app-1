@@ -80,24 +80,37 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
     const handleApproveApplication = async (app: LeaderApplication) => {
         if (!confirm(`¿Aprobar postulación de ${app.firstName}?`)) return;
 
-        // 1. Assign Role if applicantId exists
-        if (app.applicantId) {
-            const success = await supabaseService.toggleUserRole(app.applicantId, UserRole.ANFITRION, true);
+        // 1. Resolve the userId to assign the role to
+        let targetUserId = app.applicantId;
+
+        if (!targetUserId) {
+            // Fallback: try to find the user by email
+            console.warn('[Approval] No applicantId found, searching by email:', app.email);
+            const userByEmail = await supabaseService.getUserByEmail(app.email);
+            targetUserId = userByEmail?.id;
+        }
+
+        if (targetUserId) {
+            // 2. Assign Role
+            const success = await supabaseService.toggleUserRole(targetUserId, UserRole.ANFITRION, true);
             if (!success) {
                 showToast('Error al asignar el rol de Anfitrión.', 'error');
                 return;
             }
         } else {
-            console.warn('No applicantId found for application:', app);
+            // No user account found — inform admin but still approve the application
+            showToast(`⚠️ Usuario no encontrado en el sistema. El rol no fue asignado automáticamente. Aprueba manualmente cuando el usuario cree su cuenta.`, 'error');
         }
 
-        // 2. Update Application Status
+        // 3. Update Application Status
         await supabaseService.updateLeaderApplicationStatus(app.id, 'APPROVED');
 
         // Refresh
         fetchRoleUsers();
         setViewingApp(null);
-        showToast(`Postulación aprobada y rol de Anfitrión asignado.`);
+        if (targetUserId) {
+            showToast(`✅ Postulación aprobada y rol de Anfitrión asignado a ${app.firstName}.`);
+        }
     };
 
     const handleRejectApplication = async (app: LeaderApplication) => {
