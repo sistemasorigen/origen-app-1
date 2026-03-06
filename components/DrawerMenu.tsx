@@ -379,54 +379,57 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     })}
                 </div>
 
-                {/* Footer Actions */}
-                <div className="p-6 border-t border-gray-100/50 space-y-3 bg-gray-50/50">
-                    {onToggleTheme && (
-                        <button
-                            onClick={onToggleTheme}
-                            className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white hover:shadow-sm transition-all text-gray-600 font-bold"
-                        >
-                            {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                            <span>{isDarkMode ? 'Modo Claro' : 'Modo Oscuro'}</span>
-                        </button>
-                    )}
+                {/* Footer Actions & Profile */}
+                <div className="p-4 sm:p-5 border-t border-gray-100/50 bg-gray-50/50 flex flex-col gap-3">
 
-                    {currentUser ? (
-                        <button
-                            onClick={() => {
-                                onLogout();
-                                onClose();
-                            }}
-                            className="w-full flex items-center gap-4 p-3 rounded-xl text-red-600 hover:bg-red-50 hover:shadow-sm transition-all font-bold"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            <span>Cerrar Sesión</span>
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => {
-                                handleNavigation('/login');
-                                onClose();
-                            }}
-                            className="w-full flex items-center gap-4 p-3 rounded-xl bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-xl transition-all font-bold justify-center"
-                        >
-                            <span>Iniciar Sesión</span>
-                        </button>
-                    )}
-
+                    {/* User Profile Block */}
                     {currentUser && (
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                            <div className="flex items-center gap-3 px-2">
-                                <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-black text-sm">
-                                    {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-bold text-gray-900 truncate">{currentUser.name}</p>
-                                    <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
-                                </div>
+                        <div className="flex items-center gap-3 px-2 mb-1">
+                            <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm border border-black/10">
+                                {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-gray-900 truncate leading-tight">{currentUser.name}</p>
+                                <p className="text-[11px] text-gray-500 truncate font-medium mt-0.5">{currentUser.email}</p>
                             </div>
                         </div>
                     )}
+
+                    {/* Action Buttons */}
+                    <div className="space-y-1">
+                        {onToggleTheme && (
+                            <button
+                                onClick={onToggleTheme}
+                                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all text-gray-600 font-bold text-sm"
+                            >
+                                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                                <span>{isDarkMode ? 'Modo Claro' : 'Modo Oscuro'}</span>
+                            </button>
+                        )}
+
+                        {currentUser ? (
+                            <button
+                                onClick={() => {
+                                    onLogout();
+                                    onClose();
+                                }}
+                                className="w-full flex items-center gap-3 p-3 rounded-xl text-red-600 hover:bg-red-50 hover:shadow-[0_2px_8px_rgba(239,68,68,0.06)] transition-all font-bold text-sm"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                <span>Cerrar Sesión</span>
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => {
+                                    handleNavigation('/login');
+                                    onClose();
+                                }}
+                                className="w-full flex items-center justify-center gap-2 p-3 mt-2 rounded-xl bg-black text-white hover:bg-gray-800 shadow-md hover:shadow-lg transition-all font-bold text-sm"
+                            >
+                                <span>Iniciar Sesión</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
