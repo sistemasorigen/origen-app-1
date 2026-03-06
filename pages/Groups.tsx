@@ -1275,13 +1275,13 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     </section>
 
                     {/* BENTO GRID */}
-                    <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 py-12 md:py-16 font-['Helvetica_Neue',sans-serif]">
+                    <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 xl:px-20 py-12 md:py-16 lg:py-20 font-['Helvetica_Neue',sans-serif]">
                         {/* Search and Filter Bar - Organic Neo-Brutalism */}
-                        <div className="mb-8 md:mb-10 space-y-4">
+                        <div className="mb-8 md:mb-10 lg:mb-12 space-y-4">
                             {/* Top Row: Search + Clear Filters */}
-                            <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+                            <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between lg:gap-6">
                                 {/* Search */}
-                                <div id="groups-search-bar" className="relative flex-1 max-w-md">
+                                <div id="groups-search-bar" className="relative flex-1 md:max-w-md lg:max-w-lg">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black" />
                                     <input
                                         type="text"
@@ -1309,7 +1309,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             </div>
 
                             {/* Filter Dropdown Row */}
-                            <div id="groups-filter-bar" className="flex gap-3 max-w-md">
+                            <div id="groups-filter-bar" className="flex gap-3 md:max-w-md lg:max-w-lg">
                                 {/* Tag Filter Dropdown */}
                                 <div className="relative flex-1">
                                     <button
@@ -1386,11 +1386,11 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
                         {/* Section Header */}
                         <div className="mb-8 md:mb-12 pb-4 border-b-4 border-black">
-                            <p className="text-sm font-medium italic text-[#118f46] mb-2">// grupos de conexión //</p>
-                            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold uppercase tracking-tight text-black">
+                            <p className="text-sm lg:text-base font-medium italic text-[#118f46] mb-2">// grupos de conexión //</p>
+                            <h2 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold uppercase tracking-tight text-black">
                                 ENCONTRÁ TU GRUPO
                             </h2>
-                            <p className="text-sm font-medium uppercase tracking-wide mt-2 text-black/50">
+                            <p className="text-sm lg:text-base font-medium uppercase tracking-wide mt-2 text-black/50">
                                 {filteredGroups.length} grupos disponibles
                             </p>
                         </div>
@@ -1400,7 +1400,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                 <Loader2 className="w-12 h-12 animate-spin text-black/20" />
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 {filteredGroups.map((group, index) => (
                                     <GroupCard
                                         key={group.id}
@@ -1443,7 +1443,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                         )}
 
                         {/* CTA: Leader Postulation */}
-                        <div id="leader-postulation-card" className="mt-16 md:mt-24 border-4 border-black rounded-xl p-8 md:p-12 lg:p-16 bg-black text-white">
+                        <div id="leader-postulation-card" className="mt-16 md:mt-24 border-4 border-black rounded-xl p-8 md:p-12 lg:p-16 xl:p-20 bg-black text-white">
                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
                                 <div className="flex-1">
                                     <p className="text-xs font-bold italic text-[#118f46] mb-3">// postulaciones abiertas //</p>
@@ -1481,7 +1481,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     </div>
                 </>
             ) : (
-                <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 py-8 animate-fadeIn">
+                <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 xl:px-20 py-8 lg:py-10 animate-fadeIn">
 
                     {/* Only show Leader Dashboard for Anfitriones who are NOT also Admins */}
                     {(isAnfitrion && !isSuperAdmin && !isGroupsAdmin) ? (
@@ -1527,9 +1527,9 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
                             {/* CATEGORIES MANAGEMENT TAB */}
                             {adminSubTab === 'CATEGORIES' && (
-                                <div className="max-w-4xl">
+                                <div className="max-w-5xl">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-xl font-black uppercase tracking-tight">Categorías de Grupo</h3>
+                                        <h3 className="text-xl md:text-2xl lg:text-3xl font-black uppercase tracking-tight">Categorías de Grupo</h3>
                                     </div>
 
                                     {/* Create Form */}
@@ -1621,9 +1621,9 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
                             {/* TAGS MANAGEMENT TAB */}
                             {adminSubTab === 'TAGS' && (
-                                <div className="max-w-4xl">
+                                <div className="max-w-5xl">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-xl font-black uppercase tracking-tight">Etiquetas (Tags)</h3>
+                                        <h3 className="text-xl md:text-2xl lg:text-3xl font-black uppercase tracking-tight">Etiquetas (Tags)</h3>
                                     </div>
 
                                     {/* Create Form */}
@@ -1698,8 +1698,8 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             )}
 
                             {adminSubTab === 'CONFIG' && (
-                                <div className="max-w-5xl">
-                                    <h3 className="text-2xl font-black uppercase tracking-tighter mb-6">Configuración Global</h3>
+                                <div className="max-w-6xl">
+                                    <h3 className="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tighter mb-6">Configuración Global</h3>
 
                                     <div className="bg-white p-8 border border-slate-200 shadow-lg mb-8 rounded-lg">
                                         <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
@@ -1838,29 +1838,31 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             return null;
                         })()}
 
-                        <button
-                            type="submit"
-                            disabled={(() => {
-                                const emailMatch = postulationForm.email?.toLowerCase().trim() && existingApplications.some(a => a.email === postulationForm.email?.toLowerCase().trim());
-                                const phoneMatch = postulationForm.phone?.trim() && existingApplications.some(a => a.phone === postulationForm.phone?.trim());
-                                const nameMatch = postulationForm.firstName?.trim() && postulationForm.lastName?.trim() && existingApplications.some(a =>
-                                    a.firstName === postulationForm.firstName?.toLowerCase().trim() &&
-                                    a.lastName === postulationForm.lastName?.toLowerCase().trim()
-                                );
-                                return emailMatch || phoneMatch || nameMatch;
-                            })()}
-                            className={`w-full py-4 font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg ${(() => {
-                                const emailMatch = postulationForm.email?.toLowerCase().trim() && existingApplications.some(a => a.email === postulationForm.email?.toLowerCase().trim());
-                                const phoneMatch = postulationForm.phone?.trim() && existingApplications.some(a => a.phone === postulationForm.phone?.trim());
-                                const nameMatch = postulationForm.firstName?.trim() && postulationForm.lastName?.trim() && existingApplications.some(a =>
-                                    a.firstName === postulationForm.firstName?.toLowerCase().trim() &&
-                                    a.lastName === postulationForm.lastName?.toLowerCase().trim()
-                                );
-                                return (emailMatch || phoneMatch || nameMatch) ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-black text-white hover:bg-slate-800';
-                            })()}`}
-                        >
-                            Enviar Postulación
-                        </button>
+                        <div className="flex md:justify-end">
+                            <button
+                                type="submit"
+                                disabled={(() => {
+                                    const emailMatch = postulationForm.email?.toLowerCase().trim() && existingApplications.some(a => a.email === postulationForm.email?.toLowerCase().trim());
+                                    const phoneMatch = postulationForm.phone?.trim() && existingApplications.some(a => a.phone === postulationForm.phone?.trim());
+                                    const nameMatch = postulationForm.firstName?.trim() && postulationForm.lastName?.trim() && existingApplications.some(a =>
+                                        a.firstName === postulationForm.firstName?.toLowerCase().trim() &&
+                                        a.lastName === postulationForm.lastName?.toLowerCase().trim()
+                                    );
+                                    return emailMatch || phoneMatch || nameMatch;
+                                })()}
+                                className={`w-full md:w-auto md:px-10 py-4 font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg ${(() => {
+                                    const emailMatch = postulationForm.email?.toLowerCase().trim() && existingApplications.some(a => a.email === postulationForm.email?.toLowerCase().trim());
+                                    const phoneMatch = postulationForm.phone?.trim() && existingApplications.some(a => a.phone === postulationForm.phone?.trim());
+                                    const nameMatch = postulationForm.firstName?.trim() && postulationForm.lastName?.trim() && existingApplications.some(a =>
+                                        a.firstName === postulationForm.firstName?.toLowerCase().trim() &&
+                                        a.lastName === postulationForm.lastName?.toLowerCase().trim()
+                                    );
+                                    return (emailMatch || phoneMatch || nameMatch) ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-black text-white hover:bg-slate-800';
+                                })()}`}
+                            >
+                                Enviar Postulación
+                            </button>
+                        </div>
                     </form>
                 </NeoModal>
             )}
@@ -1875,7 +1877,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     title={editingGroup.id ? 'Editar Grupo' : 'Nuevo Grupo'}
                 >
                     <form onSubmit={handleSaveGroup} className="space-y-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
                             <div><label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Nombre del Grupo</label><input type="text" value={editingGroup.name || ''} onChange={e => setEditingGroup({ ...editingGroup, name: e.target.value })} className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-black text-sm font-bold" /></div>
                             <div>
                                 <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Categoría</label>
@@ -1955,7 +1957,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                             <div><label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Día</label><select value={editingGroup.meetingDay || 'Lunes'} onChange={e => setEditingGroup({ ...editingGroup, meetingDay: e.target.value })} className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-black text-sm bg-white"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select></div>
                             <div><label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Hora</label><input type="time" value={editingGroup.meetingTime || ''} onChange={e => setEditingGroup({ ...editingGroup, meetingTime: e.target.value })} className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-black text-sm" /></div>
                             <div><label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Capacidad Max</label><input type="number" value={editingGroup.maxCapacity || 12} onChange={e => setEditingGroup({ ...editingGroup, maxCapacity: parseInt(e.target.value) })} className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-black text-sm" /></div>

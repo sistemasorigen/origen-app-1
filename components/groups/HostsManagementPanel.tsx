@@ -289,7 +289,7 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
 
     // --- RENDER ---
     return (
-        <div className="flex flex-col xl:flex-row gap-6 items-start">
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
 
             {/* --- LEFT COLUMN: HOSTS PANEL --- */}
             <div className="flex-1 w-full min-w-0 bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
@@ -298,13 +298,13 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                 <div className="p-4 border-b-2 border-black bg-slate-50 flex flex-col md:flex-row gap-4 justify-between items-center">
                     <div className="flex items-center gap-2">
                         <Shield className="w-6 h-6" />
-                        <h2 className="text-lg font-black uppercase tracking-tight">Gestión de Anfitriones</h2>
+                        <h2 className="text-lg md:text-xl font-black uppercase tracking-tight">Gestión de Anfitriónes</h2>
                         <span className="bg-black text-white px-2 py-0.5 text-xs rounded-full font-bold">{allHosts.length}</span>
                     </div>
 
                     <div className="flex flex-wrap gap-2 w-full md:w-auto">
                         {/* SEARCH */}
-                        <div className="relative flex-1 md:w-64">
+                        <div className="relative flex-1 md:w-52 lg:w-64">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"
@@ -357,7 +357,7 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                 </div>
 
                 {/* TABLE BODY / MOBILE PRO CARDS */}
-                <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
+                <div className="divide-y divide-slate-100 max-h-[600px] lg:max-h-[700px] xl:max-h-[800px] overflow-y-auto">
                     {isLoading ? (
                         <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>
                     ) : filteredHosts.length === 0 ? (
@@ -565,7 +565,7 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
 
             {/* --- RIGHT COLUMN: APPLICATIONS SIDEBAR --- */}
             {/* Hidden if no applications? No, user wants it there. Maybe show empty state. */}
-            <div className="w-full xl:w-96 shrink-0 space-y-4">
+            <div className="w-full lg:w-80 xl:w-96 shrink-0 space-y-4">
                 <div className="bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
                     <div className="bg-yellow-100 p-4 border-b-2 border-black flex justify-between items-center">
                         <div className="flex items-center gap-2">
@@ -575,7 +575,7 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                         <span className="bg-black text-white px-2 py-0.5 text-xs rounded-full font-bold">{applications.length}</span>
                     </div>
 
-                    <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-100">
+                    <div className="max-h-[600px] lg:max-h-[700px] xl:max-h-[800px] overflow-y-auto divide-y divide-slate-100">
                         {applications.length === 0 ? (
                             <div className="p-8 text-center text-slate-400 text-xs font-medium italic">
                                 No hay nuevas solicitudes.
@@ -805,7 +805,7 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                             </div>
                         </div>
 
-                        <div className="flex gap-4 pt-4 border-t-2 border-black mt-2">
+                        <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t-2 border-black mt-2">
                             <button onClick={() => handleRejectApplication(viewingApp)} className="flex-1 py-3 border-2 border-black text-red-600 bg-red-50 font-black uppercase text-xs hover:bg-red-100 hover:shadow-[3px_3px_0px_0px_rgba(220,38,38,1)] transition-all">Rechazar</button>
                             <button onClick={() => handleApproveApplication(viewingApp)} className="flex-1 py-3 bg-black text-white font-black uppercase text-xs hover:bg-neutral-800 border-2 border-black shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all">Aprobar</button>
                         </div>

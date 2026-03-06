@@ -155,6 +155,7 @@ const AdminAddMemberModal: React.FC<AdminAddMemberModalProps> = ({ isOpen, onClo
             isOpen={isOpen}
             onClose={onClose}
             title={couplesMode ? 'Agregar Pareja' : 'Agregar Miembro'}
+            maxWidth="max-w-2xl md:max-w-2xl lg:max-w-3xl"
         >
             <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -197,8 +198,8 @@ const AdminAddMemberModal: React.FC<AdminAddMemberModalProps> = ({ isOpen, onClo
                                 onBlur={handleEmailBlur}
                                 placeholder="ejemplo@email.com"
                                 className={`w-full p-4 border-2 font-bold outline-none pr-10 transition-colors ${userFoundState === 'found' ? 'border-green-600 bg-green-50' :
-                                        userFoundState === 'not-found' ? 'border-yellow-600 bg-yellow-50' :
-                                            'border-black bg-white'
+                                    userFoundState === 'not-found' ? 'border-yellow-600 bg-yellow-50' :
+                                        'border-black bg-white'
                                     }`}
                                 required
                             />
@@ -239,16 +240,19 @@ const AdminAddMemberModal: React.FC<AdminAddMemberModalProps> = ({ isOpen, onClo
                         </div>
                     </div>
 
-                    <div>
-                        <label className="text-[10px] font-bold uppercase block">Teléfono</label>
-                        <input
-                            type="tel"
-                            value={phone}
-                            onChange={e => setPhone(e.target.value)}
-                            className="w-full p-2 border-2 border-black font-bold"
-                            placeholder="+54 9 11 ..."
-                            required
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                        <div>
+                            <label className="text-[10px] font-bold uppercase block">Teléfono</label>
+                            <input
+                                type="tel"
+                                value={phone}
+                                onChange={e => setPhone(e.target.value)}
+                                className="w-full p-2 border-2 border-black font-bold"
+                                placeholder="+54 9 11 ..."
+                                required
+                            />
+                        </div>
+                        <div /> {/* spacer on desktop */}
                     </div>
                 </div>
 
@@ -269,8 +273,8 @@ const AdminAddMemberModal: React.FC<AdminAddMemberModalProps> = ({ isOpen, onClo
                                     onBlur={handlePartnerEmailBlur}
                                     placeholder="pareja@email.com"
                                     className={`w-full p-4 border-2 font-bold outline-none pr-10 transition-colors ${partnerUserFoundState === 'found' ? 'border-green-600 bg-green-50' :
-                                            partnerUserFoundState === 'not-found' ? 'border-yellow-600 bg-yellow-50' :
-                                                'border-pink-200 bg-pink-50'
+                                        partnerUserFoundState === 'not-found' ? 'border-yellow-600 bg-yellow-50' :
+                                            'border-pink-200 bg-pink-50'
                                         }`}
                                     required
                                 />
@@ -307,15 +311,18 @@ const AdminAddMemberModal: React.FC<AdminAddMemberModalProps> = ({ isOpen, onClo
                             </div>
                         </div>
 
-                        <div>
-                            <label className="text-[10px] font-bold uppercase text-pink-600 block">Teléfono</label>
-                            <input
-                                type="tel"
-                                value={partnerPhone}
-                                onChange={e => setPartnerPhone(e.target.value)}
-                                className="w-full p-2 border-2 border-pink-200 bg-pink-50 font-bold outline-pink-500"
-                                required
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                            <div>
+                                <label className="text-[10px] font-bold uppercase text-pink-600 block">Teléfono</label>
+                                <input
+                                    type="tel"
+                                    value={partnerPhone}
+                                    onChange={e => setPartnerPhone(e.target.value)}
+                                    className="w-full p-2 border-2 border-pink-200 bg-pink-50 font-bold outline-pink-500"
+                                    required
+                                />
+                            </div>
+                            <div /> {/* spacer on desktop */}
                         </div>
                     </div>
                 )}
@@ -342,7 +349,7 @@ const AdminAddMemberModal: React.FC<AdminAddMemberModalProps> = ({ isOpen, onClo
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className={`flex-1 py-4 text-white font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2 ${couplesMode ? 'bg-pink-600' : 'bg-black'}`}
+                        className={`flex-1 md:flex-none md:px-10 py-4 text-white font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2 ${couplesMode ? 'bg-pink-600' : 'bg-black'}`}
                     >
                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                         {isSubmitting ? 'Guardando...' : couplesMode ? 'Agregar Pareja' : 'Agregar Miembro'}

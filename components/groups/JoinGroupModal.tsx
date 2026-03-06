@@ -210,7 +210,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
     // Success View via NeoModal content replacement
     if (successView) {
         return (
-            <NeoModal isOpen={isOpen} onClose={onClose} title="¡Solicitud Enviada!">
+            <NeoModal isOpen={isOpen} onClose={onClose} title="¡Solicitud Enviada!" maxWidth="md:max-w-md lg:max-w-lg">
                 <div className="flex flex-col items-center text-center pb-4">
                     <div className="w-20 h-20 bg-green-400 border-4 border-black flex items-center justify-center mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                         <CheckCircle2 className="w-10 h-10 text-black" />
@@ -237,7 +237,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                 {/* Header Info */}
                 <div className="bg-neutral-100 border-l-4 border-black p-4">
                     <p className="text-xs font-bold uppercase text-neutral-500">Conectando con</p>
-                    <p className="font-black text-lg uppercase">{group.name}</p>
+                    <p className="font-black text-lg md:text-xl lg:text-2xl uppercase">{group.name}</p>
                 </div>
 
                 {isCouplesGroup && (
@@ -270,8 +270,10 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                             <FormInput label="Nombre" value={formData.firstName} onChange={(v) => setFormData({ ...formData, firstName: v })} placeholder="Tu nombre" />
                             <FormInput label="Apellido" value={formData.lastName} onChange={(v) => setFormData({ ...formData, lastName: v })} placeholder="Tu apellido" />
                         </div>
-                        <FormInput label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} type="email" placeholder="Tu email" />
-                        <FormInput label="Teléfono" value={formData.phone} onChange={(v) => setFormData({ ...formData, phone: v })} type="tel" placeholder="Tu teléfono" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormInput label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} type="email" placeholder="Tu email" />
+                            <FormInput label="Teléfono" value={formData.phone} onChange={(v) => setFormData({ ...formData, phone: v })} type="tel" placeholder="Tu teléfono" />
+                        </div>
                     </div>
 
                     {/* Partner Section */}
@@ -289,21 +291,13 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                                 )}
                             </div>
 
-                            <div className="space-y-4">
-                                <FormInput
-                                    label="Email de tu Pareja"
-                                    value={partnerData.email}
-                                    onChange={(v) => setPartnerData({ ...partnerData, email: v })}
-                                    type="email"
-                                    placeholder="Email para vincular"
-                                    onBlur={handlePartnerEmailBlur}
-                                    isValid={!!partnerAccount}
-                                />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormInput label="Nombre" value={partnerData.firstName} onChange={(v) => setPartnerData({ ...partnerData, firstName: v })} placeholder="Nombre" />
-                                    <FormInput label="Apellido" value={partnerData.lastName} onChange={(v) => setPartnerData({ ...partnerData, lastName: v })} placeholder="Apellido" />
-                                </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormInput label="Email de tu Pareja" value={partnerData.email} onChange={(v) => setPartnerData({ ...partnerData, email: v })} type="email" placeholder="Email para vincular" onBlur={handlePartnerEmailBlur} isValid={!!partnerAccount} />
                                 <FormInput label="Teléfono" value={partnerData.phone} onChange={(v) => setPartnerData({ ...partnerData, phone: v })} type="tel" placeholder="Teléfono" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormInput label="Nombre" value={partnerData.firstName} onChange={(v) => setPartnerData({ ...partnerData, firstName: v })} placeholder="Nombre" />
+                                <FormInput label="Apellido" value={partnerData.lastName} onChange={(v) => setPartnerData({ ...partnerData, lastName: v })} placeholder="Apellido" />
                             </div>
                         </div>
                     )}
@@ -315,18 +309,20 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                     </div>
                 )}
 
-                <button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="w-full py-4 bg-black text-white font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
-                >
-                    {isSubmitting ? 'Enviando...' : (
-                        <>
-                            {isCouplesGroup ? 'INSCRIBIR PAREJA' : 'ENVIAR SOLICITUD'}
-                            <ArrowRight className="w-5 h-5" />
-                        </>
-                    )}
-                </button>
+                <div className="flex md:justify-end mt-4">
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="w-full md:w-auto md:px-10 py-4 bg-black text-white font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        {isSubmitting ? 'Enviando...' : (
+                            <>
+                                {isCouplesGroup ? 'INSCRIBIR PAREJA' : 'ENVIAR SOLICITUD'}
+                                <ArrowRight className="w-5 h-5" />
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
         </NeoModal>
     );

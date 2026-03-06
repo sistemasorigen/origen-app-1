@@ -210,6 +210,7 @@ const AdminCreateGroupModal: React.FC<AdminCreateGroupModalProps> = ({
             isOpen={isOpen}
             onClose={onClose}
             title="Asignar Nuevo Grupo (Admin)"
+            maxWidth="max-w-2xl md:max-w-3xl lg:max-w-4xl"
         >
             <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -299,12 +300,12 @@ const AdminCreateGroupModal: React.FC<AdminCreateGroupModalProps> = ({
                             name="name"
                             value={form.name}
                             onChange={handleChange}
-                            className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold text-lg focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                            className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold text-lg md:text-xl focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
                             required
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="space-y-1">
                             <label className="text-xs font-black uppercase tracking-widest block">Categoría</label>
                             <div className="relative">
@@ -445,7 +446,7 @@ const AdminCreateGroupModal: React.FC<AdminCreateGroupModalProps> = ({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     <div className="space-y-1">
                         <label className="text-xs font-black uppercase tracking-widest block">Día</label>
                         <select name="meetingDay" value={form.meetingDay} onChange={handleChange} className="w-full h-12 px-3 border-2 border-black font-bold bg-white">
@@ -483,16 +484,20 @@ const AdminCreateGroupModal: React.FC<AdminCreateGroupModalProps> = ({
 
                 {/* ADVANCED */}
                 <div className="border-t-2 border-black pt-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
                             <label className="text-[10px] font-bold uppercase block">Género</label>
                             <select name="targetGender" value={form.targetGender} onChange={handleChange} className="w-full p-2 border-2 border-black font-bold bg-white">
                                 {TARGET_GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
                             </select>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div><label className="text-[10px] font-bold uppercase block">Min Edad</label><input type="number" name="minAge" value={form.minAge} onChange={handleChange} className="w-full p-2 border-2 border-black font-bold" /></div>
-                            <div><label className="text-[10px] font-bold uppercase block">Max Edad</label><input type="number" name="maxAge" value={form.maxAge} onChange={handleChange} className="w-full p-2 border-2 border-black font-bold" /></div>
+                        <div>
+                            <label className="text-[10px] font-bold uppercase block">Min Edad</label>
+                            <input type="number" name="minAge" value={form.minAge} onChange={handleChange} className="w-full p-2 border-2 border-black font-bold" />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold uppercase block">Max Edad</label>
+                            <input type="number" name="maxAge" value={form.maxAge} onChange={handleChange} className="w-full p-2 border-2 border-black font-bold" />
                         </div>
                     </div>
 
@@ -516,13 +521,15 @@ const AdminCreateGroupModal: React.FC<AdminCreateGroupModalProps> = ({
                     </div>
                 </div>
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-4 bg-black text-white font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2"
-                >
-                    {loading ? 'Guardando...' : <><Save className="w-5 h-5" /> Crear Grupo</>}
-                </button>
+                <div className="flex md:justify-end">
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full md:w-auto md:px-10 py-4 bg-black text-white font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2"
+                    >
+                        {loading ? 'Guardando...' : <><Save className="w-5 h-5" /> Crear Grupo</>}
+                    </button>
+                </div>
 
             </form>
         </NeoModal>
