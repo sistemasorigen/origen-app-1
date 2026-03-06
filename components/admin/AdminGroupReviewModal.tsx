@@ -38,6 +38,24 @@ const AdminGroupReviewModal: React.FC<AdminGroupReviewModalProps> = ({
     isLoading = false
 }) => {
     const [adminNote, setAdminNote] = useState('');
+    const [coHostDetails, setCoHostDetails] = useState<{ name: string; email: string } | null>(null);
+
+    React.useEffect(() => {
+        if (group.co_host_id && !group.coHostFirstName && !group.coHostLastName) {
+            import('../../services/supabaseClient').then(({ supabase }) => {
+                supabase
+                    .from('users')
+                    .select('name, email')
+                    .eq('id', group.co_host_id)
+                    .single()
+                    .then(({ data, error }) => {
+                        if (!error && data) {
+                            setCoHostDetails(data);
+                        }
+                    });
+            });
+        }
+    }, [group.co_host_id, group.coHostFirstName, group.coHostLastName]);
 
     const category = categories.find(c => c.id === group.categoryId);
     const groupTags = (group.tags || []).map(tagId => tags.find(t => t.id === tagId)).filter(Boolean);
@@ -121,13 +139,19 @@ const AdminGroupReviewModal: React.FC<AdminGroupReviewModalProps> = ({
                         </div>
 
                         {/* Co-Host */}
-                        {(group.coHostFirstName || group.coHostLastName) && (
+                        {(group.coHostFirstName || group.coHostLastName || group.co_host_id) && (
                             <div className="p-4 bg-slate-50 rounded-xl">
                                 <div className="flex items-center gap-2 mb-1">
                                     <UserCheck className="w-4 h-4 text-slate-400" />
                                     <span className="text-xs font-bold uppercase text-slate-400">Co-Anfitrión</span>
                                 </div>
-                                <p className="font-bold text-slate-900">{group.coHostFirstName} {group.coHostLastName}</p>
+                                <p className="font-bold text-slate-900">
+                                    {group.coHostFirstName || group.coHostLastName
+                                        ? `${group.coHostFirstName} ${group.coHostLastName}`
+                                        : coHostDetails
+                                            ? coHostDetails.name
+                                            : 'Cargando...'}
+                                </p>
                             </div>
                         )}
 

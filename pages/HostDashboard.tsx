@@ -145,6 +145,12 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
         UserRole.SUPER_ADMIN
     ]);
 
+    const canCreateGroup = currentUser && hasRole(currentUser, [
+        UserRole.ANFITRION,
+        UserRole.ADMIN_GROUPS,
+        UserRole.SUPER_ADMIN
+    ]);
+
     if (!isAnfitrion) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
@@ -188,16 +194,18 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                 </div>
 
                 {/* Create Button */}
-                <div className="flex justify-center mb-10">
-                    <button
-                        id="btn-create-group"
-                        onClick={handleCreateGroup}
-                        className="flex items-center gap-3 px-8 py-4 bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-wider text-sm rounded-full shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Crear Nuevo Grupo
-                    </button>
-                </div>
+                {canCreateGroup && (
+                    <div className="flex justify-center mb-10">
+                        <button
+                            id="btn-create-group"
+                            onClick={handleCreateGroup}
+                            className="flex items-center gap-3 px-8 py-4 bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-wider text-sm rounded-full shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Crear Nuevo Grupo
+                        </button>
+                    </div>
+                )}
 
                 {/* Content */}
                 <div id="host-content-area">
@@ -386,8 +394,8 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                                 </>
                                                             )}
 
-                                                            {/* Edit - Visible for Approved (if not finished) and Rejected */}
-                                                            {!((group.endDate && group.endDate < new Date().toISOString().split('T')[0])) && (group.status === 'approved' || group.status === 'rejected') && (
+                                                            {/* Edit - Visible for Approved (if not finished), Rejected, and ONLY for the main Host */}
+                                                            {!((group.endDate && group.endDate < new Date().toISOString().split('T')[0])) && (group.status === 'approved' || group.status === 'rejected') && (group as any).co_host_id !== currentUser?.id && (
                                                                 <button
                                                                     id={isMobile ? `btn-host-edit-${index}` : undefined}
                                                                     onClick={() => handleEditGroup(group)}
@@ -530,8 +538,8 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                                 </>
                                                             )}
 
-                                                            {/* Edit - Visible for Approved (if not finished) and Rejected */}
-                                                            {!((group.endDate && group.endDate < new Date().toISOString().split('T')[0])) && (group.status === 'approved' || group.status === 'rejected') && (
+                                                            {/* Edit - Visible for Approved (if not finished), Rejected, and ONLY for the main Host */}
+                                                            {!((group.endDate && group.endDate < new Date().toISOString().split('T')[0])) && (group.status === 'approved' || group.status === 'rejected') && (group as any).co_host_id !== currentUser?.id && (
                                                                 <button
                                                                     id={!isMobile ? `btn-host-edit-${index}` : undefined}
                                                                     onClick={() => handleEditGroup(group)}

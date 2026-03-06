@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import NeoModal from '../NeoModal';
 import { Group, User, GroupTag } from '../../types';
 import { supabaseService, insertGroupDirect, updateGroupDirect } from '../../services/supabaseService';
-import { Save, UserPlus, Users, Crown, Search, Check, ChevronDown, Calendar, ArrowRight, Wand2 } from 'lucide-react';
+import { supabase } from '../../services/supabaseClient';
+import { Save, UserPlus, Users, Crown, Search, Check, ChevronDown, Calendar, ArrowRight, Wand2, X } from 'lucide-react';
 import ImageUpload from '../ImageUpload';
 import { useSpellingAI } from '../../hooks/useSpellingAI';
 import { useTutorial } from '../../src/hooks/useTutorial';
@@ -136,6 +137,15 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     const [isHostSelectOpen, setIsHostSelectOpen] = useState(false);
     const [isSeasonMode, setIsSeasonMode] = useState(true);
 
+    // Co-Host Mode State
+    const [coHostMode, setCoHostMode] = useState<'manual' | 'search'>('manual');
+    const [coHostSearchTerm, setCoHostSearchTerm] = useState('');
+    const [coHostId, setCoHostId] = useState<string | null>(null);
+    const [coHostResults, setCoHostResults] = useState<User[]>([]);
+    const [isSearchingCoHost, setIsSearchingCoHost] = useState(false);
+    const [isCoHostDropdownOpen, setIsCoHostDropdownOpen] = useState(false);
+    const coHostDropdownRef = useRef<HTMLDivElement>(null);
+
     // Form State
     const [form, setForm] = useState({
         name: '',
@@ -238,6 +248,41 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         }
     }, [isOpen]);
 
+    // CO-HOST SEARCH
+    useEffect(() => {
+        if (coHostMode !== 'search' || !coHostSearchTerm.trim()) {
+            setCoHostResults([]);
+            setIsCoHostDropdownOpen(false);
+            return;
+        }
+        const timer = setTimeout(async () => {
+            setIsSearchingCoHost(true);
+            try {
+                const { data } = await supabase
+                    .from('users')
+                    .select('id, name, email, role')
+                    .or(`name.ilike.%${coHostSearchTerm}%,email.ilike.%${coHostSearchTerm}%`)
+                    .eq('is_active', true)
+                    .limit(8);
+                setCoHostResults((data as any[]) || []);
+                setIsCoHostDropdownOpen(true);
+            } catch { setCoHostResults([]); }
+            finally { setIsSearchingCoHost(false); }
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [coHostSearchTerm, coHostMode]);
+
+    // Close co-host dropdown on outside click
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (coHostDropdownRef.current && !coHostDropdownRef.current.contains(e.target as Node)) {
+                setIsCoHostDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
+
     // SEARCH POTENTIAL HOSTS
     useEffect(() => {
         if (!isOpen || !isAdminView) return;
@@ -299,6 +344,11 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             setHostSearchTerm('');
             setIsHostSelectOpen(false);
             setShowSpellingWarning(false);
+            setCoHostMode('manual');
+            setCoHostSearchTerm('');
+            setCoHostId(null);
+            setCoHostResults([]);
+            setIsCoHostDropdownOpen(false);
         }
     }, [isOpen, editingGroup, isAdminView]);
 
@@ -499,8 +549,9 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 membersCount: editingGroup?.membersCount || 0,
                 tags: form.tags,
                 host_id: finalHostId,
-                coHostFirstName: form.coHostFirstName,
-                coHostLastName: form.coHostLastName,
+                co_host_id: coHostMode === 'search' ? coHostId : null,
+                coHostFirstName: coHostMode === 'manual' ? form.coHostFirstName : '',
+                coHostLastName: coHostMode === 'manual' ? form.coHostLastName : '',
                 minAge: Number(form.minAge),
                 maxAge: Number(form.maxAge),
                 targetGender: form.targetGender as any,
@@ -1049,32 +1100,103 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 </div>
 
                 {/* CO-HOST INFO */}
-                <div className="space-y-4 border-t-2 border-black pt-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-neutral-400">Co-Anfitrión (Opcional)</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold uppercase block">Nombre</label>
-                            <input
-                                type="text"
-                                name="coHostFirstName"
-                                value={form.coHostFirstName}
-                                onChange={handleChange}
-                                className="w-full h-10 px-3 border-2 border-black rounded-none outline-none font-bold"
-                                placeholder="Nombre"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold uppercase block">Apellido</label>
-                            <input
-                                type="text"
-                                name="coHostLastName"
-                                value={form.coHostLastName}
-                                onChange={handleChange}
-                                className="w-full h-10 px-3 border-2 border-black rounded-none outline-none font-bold"
-                                placeholder="Apellido"
-                            />
+                <div className="space-y-3 border-t-2 border-black pt-4">
+                    <div className="flex items-center justify-between">
+                        <p className="text-xs font-black uppercase tracking-widest text-neutral-400">Co-Anfitrión <span className="font-medium normal-case text-neutral-300">(Opcional)</span></p>
+                        {/* Mode Toggle */}
+                        <div className="flex bg-neutral-100 p-1 rounded-full border border-neutral-200">
+                            <button
+                                type="button"
+                                onClick={() => { setCoHostMode('manual'); setCoHostId(null); setCoHostSearchTerm(''); }}
+                                className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${coHostMode === 'manual' ? 'bg-black text-white shadow-md' : 'text-neutral-500 hover:text-black'
+                                    }`}
+                            >Manual</button>
+                            <button
+                                type="button"
+                                onClick={() => { setCoHostMode('search'); setForm(prev => ({ ...prev, coHostFirstName: '', coHostLastName: '' })); }}
+                                className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${coHostMode === 'search' ? 'bg-black text-white shadow-md' : 'text-neutral-500 hover:text-black'
+                                    }`}
+                            >Buscar Usuario</button>
                         </div>
                     </div>
+
+                    {coHostMode === 'manual' ? (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase block">Nombre</label>
+                                <input type="text" name="coHostFirstName" value={form.coHostFirstName} onChange={handleChange}
+                                    className="w-full h-10 px-3 border-2 border-black rounded-none outline-none font-bold" placeholder="Nombre" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase block">Apellido</label>
+                                <input type="text" name="coHostLastName" value={form.coHostLastName} onChange={handleChange}
+                                    className="w-full h-10 px-3 border-2 border-black rounded-none outline-none font-bold" placeholder="Apellido" />
+                            </div>
+                        </div>
+                    ) : (
+                        <div ref={coHostDropdownRef} className="relative">
+                            {/* Selected User Chip */}
+                            {coHostId ? (
+                                <div className="flex items-center justify-between h-10 px-3 border-2 border-[#118f46] bg-[#118f46]/5 font-bold">
+                                    <span className="text-sm font-black text-[#118f46] flex items-center gap-2">
+                                        <Check className="w-4 h-4" />
+                                        {coHostSearchTerm}
+                                    </span>
+                                    <button type="button" onClick={() => { setCoHostId(null); setCoHostSearchTerm(''); }}
+                                        className="text-neutral-400 hover:text-black transition-colors">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                                    <input
+                                        type="text"
+                                        value={coHostSearchTerm}
+                                        onChange={e => { setCoHostSearchTerm(e.target.value); setCoHostId(null); }}
+                                        onFocus={() => coHostResults.length > 0 && setIsCoHostDropdownOpen(true)}
+                                        placeholder="Buscar por nombre o email..."
+                                        className="w-full h-10 pl-10 pr-3 border-2 border-black outline-none font-bold placeholder:font-normal"
+                                    />
+                                    {isSearchingCoHost && (
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-neutral-400 animate-pulse">Buscando...</span>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Results Dropdown */}
+                            {isCoHostDropdownOpen && !coHostId && coHostResults.length > 0 && (
+                                <div className="absolute top-full left-0 right-0 bg-white border-2 border-black mt-1 max-h-52 overflow-y-auto z-[200] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                    {coHostResults.map(u => (
+                                        <button
+                                            key={u.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setCoHostId(u.id);
+                                                setCoHostSearchTerm(u.name);
+                                                setIsCoHostDropdownOpen(false);
+                                            }}
+                                            className="w-full flex items-center gap-3 p-3 text-left border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-black text-xs shrink-0">
+                                                {u.name.substring(0, 2).toUpperCase()}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="font-black text-sm truncate">{u.name}</p>
+                                                <p className="text-[10px] text-neutral-400 truncate">{u.email}</p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {isCoHostDropdownOpen && !coHostId && coHostResults.length === 0 && !isSearchingCoHost && coHostSearchTerm.trim() && (
+                                <div className="absolute top-full left-0 right-0 bg-white border-2 border-black mt-1 p-4 text-center z-[200] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                    <p className="text-sm font-bold text-neutral-400">Sin resultados para "{coHostSearchTerm}"</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* ADVANCED */}

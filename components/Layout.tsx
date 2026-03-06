@@ -59,7 +59,7 @@ interface SidebarItem {
 
 const sidebarData: SidebarItem[] = [
     { label: 'Inicio', icon: Home, path: '/', roles: [] },
-    { label: 'Mis grupos', icon: Users, path: '/host-dashboard', roles: [UserRole.ANFITRION] },
+    { label: 'Mis grupos', icon: Users, path: '/host-dashboard', roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION] },
     {
         label: 'Coordinadores', icon: Users, path: '/coordinators',
         roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR],
@@ -168,6 +168,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
             if (currentUser.roles.includes(UserRole.VOLUNTEER)) return roleTranslations[UserRole.VOLUNTEER];
             if (currentUser.roles.includes(UserRole.VOLUNTARIO)) return roleTranslations[UserRole.VOLUNTARIO];
             if (currentUser.roles.includes(UserRole.ANFITRION)) return roleTranslations[UserRole.ANFITRION];
+            if (currentUser.roles.includes(UserRole.CO_ANFITRION)) return roleTranslations[UserRole.CO_ANFITRION];
         }
         if (userRole === UserRole.ANFITRION && currentUser) {
             if (currentUser.volunteerRoles?.includes('STORE') || currentUser.linkedGroupId === 'STORE') return 'VOLUNTARIO (STORE)';
@@ -237,7 +238,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                         <img
                             src="/origen-logo.png"
                             alt="Origen"
-                            className="h-8 w-auto object-contain dark:invert"
+                            className="h-10 w-auto object-contain dark:invert"
                         />
                     </Link>
                 </div>

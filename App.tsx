@@ -257,7 +257,7 @@ const AppContent: React.FC = () => {
                             } />
 
                             <Route path="/host-dashboard" element={
-                                (user && hasRole(user, [UserRole.ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]))
+                                (user && hasRole(user, [UserRole.ANFITRION, UserRole.CO_ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]))
                                     ? <HostDashboard currentUser={user} />
                                     : <Navigate to="/" />
                             } />

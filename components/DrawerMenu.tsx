@@ -111,7 +111,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Mis grupos',
             icon: Users,
             path: '/host-dashboard',
-            roles: [UserRole.ANFITRION]
+            roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]
         },
         {
             label: 'Coordinadores',
@@ -264,7 +264,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             >
                 {/* Header */}
                 <div className="p-6 flex items-center justify-between border-b border-gray-100/50">
-                    <h2 className="text-2xl font-black text-black tracking-tighter">MENÚ</h2>
+                    <img src="/origen-logo.png" alt="Origen" className="h-8 w-auto object-contain dark:invert" />
                     <button
                         onClick={onClose}
                         className="p-2 rounded-full hover:bg-black/5 transition-colors group"
