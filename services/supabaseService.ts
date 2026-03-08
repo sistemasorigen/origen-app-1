@@ -2957,11 +2957,11 @@ export const supabaseService = {
 
   /**
    * Resend group confirmation emails to selected registrations
-   * Invokes the send-group-confirmation Edge Function directly
+   * Invokes the send-gcx-welcome Edge Function directly
    */
   async resendGroupConfirmationEmails(registrationIds: string[]): Promise<{ success: boolean; message: string; sent?: number; failed?: number }> {
     try {
-      const { data, error } = await supabase.functions.invoke('send-group-confirmation', {
+      const { data, error } = await supabase.functions.invoke('send-gcx-welcome', {
         body: { registration_ids: registrationIds }
       });
 

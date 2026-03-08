@@ -31,16 +31,16 @@ async function testWhatsapp() {
 }
 
 async function testGroupConfirmation() {
-    console.log('--- Testing send-group-confirmation ---');
+    console.log('--- Testing send-gcx-welcome ---');
     try {
-        const res = await fetch(`${url}/send-group-confirmation`, {
+        const res = await fetch(`${url}/send-gcx-welcome`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             // Direct invocation payload
             body: JSON.stringify({ registration_ids: ['invalid-id-for-testing'] })
         });
-        console.log('send-group-confirmation status:', res.status);
-        console.log('send-group-confirmation body:', await res.text());
+        console.log('send-gcx-welcome status:', res.status);
+        console.log('send-gcx-welcome body:', await res.text());
     } catch (e) {
         console.error(e);
     }
