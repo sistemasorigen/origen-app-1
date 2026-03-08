@@ -66,7 +66,7 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
             {/* Top Row: Title & Mobile Actions */}
             <div className="flex justify-between items-start">
                 {/* Title */}
-                <div>
+                <div className="ml-1">
                     <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight text-slate-900 leading-none">Moderación</h3>
                     <p className="text-xs text-slate-500 font-medium mt-0.5">Gestión de Grupos</p>
                 </div>
@@ -122,7 +122,7 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
 
                 {/* Search Bar */}
-                <div className="relative flex-1">
+                <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                         type="text"
@@ -258,7 +258,7 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
                 </div>
 
                 {/* Desktop Action Buttons */}
-                <div className="hidden sm:flex items-center gap-2.5 shrink-0 ml-auto">
+                <div className="hidden sm:flex items-center gap-2.5 shrink-0">
                     <button
                         onClick={onCreateGroup}
                         className="flex items-center gap-2 px-5 py-2.5 bg-black text-white border-2 border-black rounded-full text-xs font-black uppercase tracking-wider hover:bg-zinc-800 active:scale-95 transition-all whitespace-nowrap min-h-[40px] shadow-sm hover:shadow-md"

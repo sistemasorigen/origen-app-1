@@ -42,8 +42,9 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
 
     // Extract members
     const members: Member[] = (group.registrations || [])
+        .filter((r: any) => r.status === 'APPROVED')
         .map((r: any) => ({
-            id: r.user_id || r.userId || r.id,
+            id: r.user_id || r.userId || r.id, // Fallback chain just in case
             name: `${r.first_name || r.firstName || ''} ${r.last_name || r.lastName || ''}`.trim() || 'Sin nombre',
             email: r.email || ''
         }));

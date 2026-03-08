@@ -28,31 +28,43 @@ export enum UserRole {
 }
 
 export enum CoordinatorVariant {
-    FAMILIA = 'FAMILIA',
-    CENTRO_TRANSFORMACION = 'CENTRO_TRANSFORMACION',
-    NINEZ_INFLUOS = 'NINEZ_INFLUOS',
-    INUSUAL = 'INUSUAL',
-    LA_FEMME = 'LA_FEMME',
-    HOMBRIA = 'HOMBRIA',
     FINANZAS = 'FINANZAS',
-    BIBLIA = 'BIBLIA',
+    PAREJAS = 'PAREJAS',
+    CENTRO_TRANSFORMACION = 'CENTRO_TRANSFORMACION',
     TERCERA_EDAD = 'TERCERA_EDAD',
-    SOCIAL = 'SOCIAL',
-    AREAS_SERVICIO = 'AREAS_SERVICIO'
+    BIBLIA = 'BIBLIA',
+    INUSUAL = 'INUSUAL',
+    PRE_ADOLESCENTES = 'PRE_ADOLESCENTES',
+    ADOLESCENTES = 'ADOLESCENTES',
+    FAMILIA = 'FAMILIA',
+    RELACIONAL = 'RELACIONAL',
+    VOLUNTARIOS = 'VOLUNTARIOS',
+    NINEZ = 'NINEZ',
+    JOVENES_26_35 = 'JOVENES_26_35',
+    MUJERES = 'MUJERES',
+    ORIGEN_SOCIAL = 'ORIGEN_SOCIAL',
+    HOMBRES = 'HOMBRES',
+    JOVENES_18_25 = 'JOVENES_18_25'
 }
 
 export const COORDINATOR_VARIANT_TO_CATEGORY: Record<CoordinatorVariant, string> = {
-    [CoordinatorVariant.FAMILIA]: 'Familia',
-    [CoordinatorVariant.CENTRO_TRANSFORMACION]: 'Centro de transformación',
-    [CoordinatorVariant.NINEZ_INFLUOS]: 'Niñez y borders/influos',
-    [CoordinatorVariant.INUSUAL]: 'Inusual',
-    [CoordinatorVariant.LA_FEMME]: 'La Femme',
-    [CoordinatorVariant.HOMBRIA]: 'Hombría',
     [CoordinatorVariant.FINANZAS]: 'Finanzas',
+    [CoordinatorVariant.PAREJAS]: 'Parejas',
+    [CoordinatorVariant.CENTRO_TRANSFORMACION]: 'Centro de transformación',
+    [CoordinatorVariant.TERCERA_EDAD]: 'Tercera edad',
     [CoordinatorVariant.BIBLIA]: 'Biblia',
-    [CoordinatorVariant.TERCERA_EDAD]: 'Tercera Edad',
-    [CoordinatorVariant.SOCIAL]: 'Social',
-    [CoordinatorVariant.AREAS_SERVICIO]: 'Áreas de servicio origen'
+    [CoordinatorVariant.INUSUAL]: 'Inusual',
+    [CoordinatorVariant.PRE_ADOLESCENTES]: 'Pre - Adolescentes',
+    [CoordinatorVariant.ADOLESCENTES]: 'Adolescentes',
+    [CoordinatorVariant.FAMILIA]: 'Familia',
+    [CoordinatorVariant.RELACIONAL]: 'Relacional',
+    [CoordinatorVariant.VOLUNTARIOS]: 'Voluntarios',
+    [CoordinatorVariant.NINEZ]: 'Niñez',
+    [CoordinatorVariant.JOVENES_26_35]: 'Jovenes 26 a 35 años',
+    [CoordinatorVariant.MUJERES]: 'Mujeres',
+    [CoordinatorVariant.ORIGEN_SOCIAL]: 'Origen Social',
+    [CoordinatorVariant.HOMBRES]: 'Hombres',
+    [CoordinatorVariant.JOVENES_18_25]: 'Jovenes 18 a 25 años'
 }
 
 export function coordinatorVariantToCategory(variant: CoordinatorVariant | undefined): string | undefined {

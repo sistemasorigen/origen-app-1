@@ -78,7 +78,9 @@ function buildEmailHtml(
                 Hola <strong style="color: #000000;">${userName}</strong>,
               </p>
               <p style="margin: 16px 0 0 0; font-size: 16px; color: #555555; line-height: 1.6;">
-                ¡Felicitaciones! Has sido aceptado en el grupo de conexión. Aquí tienes todos los detalles:
+                Estamos muy felices de que podamos hacer comunidad juntos. Estamos convencidos de que será un tiempo de mayor libertad, crecimiento y conexión con otros. <br><br>
+                Dentro de las 48 hs antes de que comience tu GCX, un anfitrión te sumará a un grupo de WhatsApp donde podrás tener más información y conexión durante estas 8 semanas.<br><br>
+                Tu participación y compromiso son clave para que en esta temporada podamos ser iglesia juntos.
               </p>
             </td>
           </tr>
