@@ -390,15 +390,15 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b-2 border-black dark:border-white bg-neutral-50 dark:bg-neutral-900">
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none" onClick={() => handleSort('service_date')}>
+                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none min-w-[120px]" onClick={() => handleSort('service_date')}>
                                         <span className="flex items-center gap-1.5">Fecha <SortIcon col="service_date" /></span>
                                     </th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none" onClick={() => handleSort('name')}>
+                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none min-w-[200px]" onClick={() => handleSort('name')}>
                                         <span className="flex items-center gap-1.5">Nombre de servicio <SortIcon col="name" /></span>
                                     </th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest">Horario</th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest">Total Voluntarios</th>
-                                    <th className="text-right px-4 py-3 font-black uppercase text-xs tracking-widest">Acciones</th>
+                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[100px]">Horario</th>
+                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[140px]">Total Voluntarios</th>
+                                    <th className="text-right px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[140px]">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -406,10 +406,10 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                     const s = calcStats(rec);
                                     return (
                                         <tr key={rec.id} className={`border-b border-neutral-100 dark:border-neutral-900 hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors ${idx % 2 === 0 ? '' : 'bg-neutral-50/50 dark:bg-neutral-900/30'}`}>
-                                            <td className="px-4 py-3 font-mono text-sm font-bold tabular-nums whitespace-nowrap">{fmtDate(rec.service_date)}</td>
-                                            <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300 font-bold uppercase tracking-tight">{rec.name || <span className="text-neutral-300 dark:text-neutral-600">—</span>}</td>
-                                            <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500">{rec.service_time || "—"}</td>
-                                            <td className="px-4 py-3 font-black tabular-nums text-violet-600 dark:text-violet-400">{s.totalVol.toLocaleString()}</td>
+                                            <td className="px-4 py-3 font-mono text-sm font-bold tabular-nums whitespace-nowrap min-w-[120px]">{fmtDate(rec.service_date)}</td>
+                                            <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300 font-bold uppercase tracking-tight min-w-[200px]">{rec.name || <span className="text-neutral-300 dark:text-neutral-600">—</span>}</td>
+                                            <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500 min-w-[100px]">{rec.service_time || "—"}</td>
+                                            <td className="px-4 py-3 font-black tabular-nums text-violet-600 dark:text-violet-400 min-w-[140px]">{s.totalVol.toLocaleString()}</td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <button onClick={() => setDetailRecord(rec)} title="Ver detalles" className="w-8 h-8 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-black dark:hover:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">

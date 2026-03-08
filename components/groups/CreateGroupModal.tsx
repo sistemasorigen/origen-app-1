@@ -1166,12 +1166,13 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
                             {/* Results Dropdown */}
                             {isCoHostDropdownOpen && !coHostId && coHostResults.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 bg-white border-2 border-black mt-1 max-h-52 overflow-y-auto z-[200] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                <div className="absolute top-full left-0 right-0 bg-white border-2 border-black mt-1 max-h-48 overflow-y-auto z-[99999] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                                     {coHostResults.map(u => (
                                         <button
                                             key={u.id}
                                             type="button"
-                                            onClick={() => {
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
                                                 setCoHostId(u.id);
                                                 setCoHostSearchTerm(u.name);
                                                 setIsCoHostDropdownOpen(false);
@@ -1191,7 +1192,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                             )}
 
                             {isCoHostDropdownOpen && !coHostId && coHostResults.length === 0 && !isSearchingCoHost && coHostSearchTerm.trim() && (
-                                <div className="absolute top-full left-0 right-0 bg-white border-2 border-black mt-1 p-4 text-center z-[200] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                <div className="absolute top-full left-0 right-0 bg-white border-2 border-black mt-1 p-4 text-center z-[99999] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                                     <p className="text-sm font-bold text-neutral-400">Sin resultados para "{coHostSearchTerm}"</p>
                                 </div>
                             )}
