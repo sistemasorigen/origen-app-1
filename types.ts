@@ -818,4 +818,7 @@ export interface ServiceStatistic {
     reconciliaron: number;
     podcast: number;
     oracion: number;
+
+    // Categoría: Conferencias (Dynamic Sessions)
+    conference_sessions?: { name: string; attendees: number; }[];
 }

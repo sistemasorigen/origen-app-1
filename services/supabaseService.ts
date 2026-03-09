@@ -3322,7 +3322,8 @@ export const supabaseService = {
         asistieron_primera_vez: row.other_first_time,
         reconciliaron: row.other_reconciled,
         podcast: row.other_podcast,
-        oracion: row.other_prayer
+        oracion: row.other_prayer,
+        conference_sessions: row.conference_sessions || []
       }));
     } catch (error) {
       console.error('[PastoralCare] Exception fetching statistics:', error);
@@ -3364,6 +3365,7 @@ export const supabaseService = {
         other_reconciled: record.reconciliaron ?? 0,
         other_podcast: record.podcast ?? 0,
         other_prayer: record.oracion ?? 0,
+        conference_sessions: record.conference_sessions || []
       };
 
       if (record.id) {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User, ServiceStatistic } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import { ChevronLeft, ChevronRight, Check, ArrowLeft, Calendar, User as UserIcon, Heart, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, ArrowLeft, Calendar, User as UserIcon, Heart, Loader2, Plus, Trash2 } from 'lucide-react';
 
 interface PastoralCareFormProps { currentUser: User | null; }
 
@@ -19,6 +19,7 @@ const EMPTY_FORM: FormData = {
     ninos_3_6: 0, ninos_7_10: 0, ninos_hd: 0, borders: 0,
     online: 0, voluntarios_repetidos: 0, aceptaron: 0,
     asistieron_primera_vez: 0, reconciliaron: 0, podcast: 0, oracion: 0,
+    conference_sessions: [],
 };
 
 interface FieldDef { key: keyof FormData; label: string; }
@@ -97,6 +98,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                 aceptaron: editRecord.aceptaron ?? 0, asistieron_primera_vez: editRecord.asistieron_primera_vez ?? 0,
                 reconciliaron: editRecord.reconciliaron ?? 0, podcast: editRecord.podcast ?? 0,
                 oracion: editRecord.oracion ?? 0,
+                conference_sessions: editRecord.conference_sessions ?? [],
             };
         }
         return { ...EMPTY_FORM };
@@ -106,10 +108,33 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
     const [saveError, setSaveError] = useState('');
     const [dateError, setDateError] = useState('');
 
-    const setField = (key: keyof FormData, value: string | number) => {
+    const setField = (key: keyof FormData, value: string | number | any[]) => {
         setForm(prev => ({ ...prev, [key]: value }));
         if (key === 'service_date') setDateError('');
     };
+
+    const addConferenceSession = () => {
+        setForm(prev => ({
+            ...prev,
+            conference_sessions: [...(prev.conference_sessions || []), { name: '', attendees: 0 }]
+        }));
+    };
+
+    const updateConferenceSession = (index: number, field: 'name' | 'attendees', value: string | number) => {
+        setForm(prev => {
+            const newSessions = [...(prev.conference_sessions || [])];
+            newSessions[index] = { ...newSessions[index], [field]: value };
+            return { ...prev, conference_sessions: newSessions };
+        });
+    };
+
+    const removeConferenceSession = (index: number) => {
+        setForm(prev => ({
+            ...prev,
+            conference_sessions: (prev.conference_sessions || []).filter((_, i) => i !== index)
+        }));
+    };
+
 
     const validateStep = (): boolean => {
         if (step === 0 && !form.service_date) {
@@ -333,6 +358,57 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                 <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
                             ))}
                         </div>
+                        <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 mt-8 text-black flex justify-between items-center">
+                            <span>Sesiones Especiales</span>
+                            <button
+                                type="button"
+                                onClick={addConferenceSession}
+                                className="text-xs font-bold uppercase flex items-center gap-1 text-black hover:text-neutral-600 transition-colors"
+                            >
+                                <Plus className="w-4 h-4" /> Añadir Sesión
+                            </button>
+                        </h3>
+                        {(!form.conference_sessions || form.conference_sessions.length === 0) ? (
+                            <div className="p-4 border-2 border-dashed border-neutral-300 text-center text-neutral-500 font-bold text-sm">
+                                No hay sesiones registradas.
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {form.conference_sessions.map((session, index) => (
+                                    <div key={index} className="flex gap-3 items-end bg-neutral-50 p-3 border-2 border-black">
+                                        <div className="flex-1">
+                                            <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">Nombre Sesión</label>
+                                            <input
+                                                type="text"
+                                                value={session.name}
+                                                onChange={(e) => updateConferenceSession(index, 'name', e.target.value)}
+                                                className={inputCls}
+                                                placeholder="Ej: Leo"
+                                            />
+                                        </div>
+                                        <div className="w-32">
+                                            <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">Auditorio</label>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                value={session.attendees === 0 ? '' : session.attendees}
+                                                onChange={(e) => updateConferenceSession(index, 'attendees', parseInt(e.target.value) || 0)}
+                                                className={inputCls}
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeConferenceSession(index)}
+                                            className="h-[52px] w-[52px] flex items-center justify-center border-2 border-black hover:bg-black hover:text-white transition-all bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex-shrink-0 text-red-500"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
                         {saveError && (
                             <div className="mt-4 p-3 border-2 border-red-500 bg-red-50 text-red-700 text-xs font-bold shadow-[2px_2px_0px_0px_rgba(239,68,68,1)]">
                                 {saveError}

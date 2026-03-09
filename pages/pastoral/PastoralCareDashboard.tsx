@@ -5,11 +5,75 @@ import { supabaseService } from '../../services/supabaseService';
 import {
     Plus, Eye, GitCompareArrows, Pencil, Trash2, ArrowLeft,
     TrendingUp, TrendingDown, Minus, ChevronUp, ChevronDown,
-    X, AlertTriangle, ChevronRight, Calendar
+    X, AlertTriangle, ChevronRight, Calendar, Search, SlidersHorizontal, Clock, CalendarDays
 } from 'lucide-react';
 import NeoModal from '../../components/NeoModal';
 
 interface PastoralCareDashboardProps { currentUser: User | null; }
+
+// ─── FilterChip ────────────────────────────────────────────────────────────
+
+interface FilterChipOption { label: string; value: string; }
+
+const FilterChip: React.FC<{
+    label: string;
+    value: string;
+    options: FilterChipOption[];
+    onChange: (v: string) => void;
+    activeColor?: string; // tailwind bg+border classes when active
+}> = ({ label, value, options, onChange, activeColor = 'bg-black border-black text-white' }) => {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    const active = value !== '';
+    const selectedLabel = active ? options.find(o => o.value === value)?.label ?? label : label;
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                className={`w-full flex items-center justify-between gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all
+                    ${active
+                        ? `${activeColor} shadow-sm`
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:shadow-sm'
+                    }`}
+            >
+                <span className="truncate">{selectedLabel}</span>
+                {active
+                    ? <X className="w-3.5 h-3.5 shrink-0 opacity-70" onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(false); }} />
+                    : <ChevronDown className={`w-3.5 h-3.5 shrink-0 opacity-50 transition-transform ${open ? 'rotate-180' : ''}`} />
+                }
+            </button>
+
+            {open && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-xl shadow-lg overflow-hidden">
+                    {options.map(opt => (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => { onChange(opt.value); setOpen(false); }}
+                            className={`w-full text-left px-3 py-2.5 text-xs font-semibold transition-colors
+                                ${value === opt.value
+                                    ? 'bg-slate-900 text-white'
+                                    : 'text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-800'
+                                }`}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 // ─── Calculation helpers ───────────────────────────────────────────────────
 
@@ -46,24 +110,69 @@ const StatRow: React.FC<{ label: string; value: string | number; highlight?: boo
     </div>
 );
 
-const Delta: React.FC<{ curr: number; prev: number; label: string }> = ({ curr, prev, label }) => {
+const Delta: React.FC<{ curr: number; prev: number; label: string; icon?: string }> = ({ curr, prev, label, icon }) => {
     const diff = curr - prev;
     const pct = prev !== 0 ? ((diff / prev) * 100).toFixed(1) : null;
     const up = diff > 0;
     const same = diff === 0;
+    const max = Math.max(curr, prev, 1);
+    const currPct = (curr / max) * 100;
+    const prevPct = (prev / max) * 100;
+
     return (
-        <div className="border-2 border-black dark:border-neutral-700 p-4 flex flex-col gap-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 dark:text-neutral-400">{label}</p>
-            <div className="flex items-end justify-between gap-2 mt-1">
-                <div>
-                    <p className="text-2xl font-black tabular-nums">{curr.toLocaleString()}</p>
-                    <p className="text-xs text-neutral-400">vs {prev.toLocaleString()}</p>
-                </div>
-                <div className={`flex items-center gap-1 px-2 py-1 text-sm font-black border-2 ${same ? 'border-neutral-300 text-neutral-400' : up ? 'border-green-500 text-green-600 bg-green-50 dark:bg-green-950/30' : 'border-red-500 text-red-600 bg-red-50 dark:bg-red-950/30'}`}>
-                    {same ? <Minus className="w-3.5 h-3.5" /> : up ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-100 dark:border-neutral-800 p-4 shadow-sm">
+            {/* Label row */}
+            <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wider leading-tight">{label}</p>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black
+                    ${same
+                        ? 'bg-slate-100 text-slate-500 dark:bg-neutral-800 dark:text-neutral-400'
+                        : up
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                            : 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'
+                    }`}>
+                    {same ? <Minus className="w-3 h-3" /> : up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                     {pct ? `${up ? '+' : ''}${pct}%` : '—'}
+                </span>
+            </div>
+
+            {/* Visual bar comparison */}
+            <div className="space-y-2 mb-3">
+                {/* Current bar */}
+                <div>
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Actual</span>
+                        <span className="text-base font-black tabular-nums text-black dark:text-white">{curr.toLocaleString()}</span>
+                    </div>
+                    <div className="h-2 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                        <div
+                            className={`h-full rounded-full transition-all duration-500 ${same ? 'bg-slate-400' : up ? 'bg-emerald-500' : 'bg-red-500'
+                                }`}
+                            style={{ width: `${currPct}%` }}
+                        />
+                    </div>
+                </div>
+                {/* Previous bar */}
+                <div>
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Anterior</span>
+                        <span className="text-sm font-bold tabular-nums text-slate-500 dark:text-neutral-400">{prev.toLocaleString()}</span>
+                    </div>
+                    <div className="h-2 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                        <div
+                            className="h-full rounded-full bg-slate-300 dark:bg-neutral-600 transition-all duration-500"
+                            style={{ width: `${prevPct}%` }}
+                        />
+                    </div>
                 </div>
             </div>
+
+            {/* Diff pill */}
+            {!same && (
+                <p className={`text-[11px] font-bold ${up ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {up ? '▲' : '▼'} {Math.abs(diff).toLocaleString()} {up ? 'más' : 'menos'} que el año anterior
+                </p>
+            )}
         </div>
     );
 };
@@ -142,6 +251,21 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
                     ))}
                 </div>
             </div>
+
+            {record.conference_sessions && record.conference_sessions.length > 0 && (
+                <div className="mt-6">
+                    <p className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Sesiones Especiales</p>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
+                        {record.conference_sessions.map((session: { name: string, attendees: number }, idx: number) => (
+                            <div key={idx} className="flex justify-between border-b border-neutral-100 dark:border-neutral-800 py-1.5">
+                                <span className="text-neutral-500 text-xs">{session.name}</span>
+                                <span className="font-bold text-xs tabular-nums">{session.attendees}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
         </NeoModal>
     );
 };
@@ -162,35 +286,67 @@ const YoYModal: React.FC<{ record: any; onClose: () => void }> = ({ record, onCl
 
     const curr = calcStats(record);
     const prev = yoyRecord ? calcStats(yoyRecord) : null;
-    const prevDateLabel = yoyRecord
-        ? new Date(yoyRecord.service_date + 'T12:00:00').toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
-        : null;
-    const currDateLabel = new Date(record.service_date + 'T12:00:00').toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+
+    const formatDateLabel = (dateStr: string) =>
+        new Date(dateStr + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
 
     return (
-        <NeoModal isOpen={true} onClose={onClose} title="Comparativa Año a Año (YoY)" maxWidth="max-w-3xl">
-            {loading && <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-black dark:border-white border-t-transparent rounded-full animate-spin" /></div>}
-            {!loading && !yoyRecord && (
-                <div className="text-center py-10">
-                    <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-amber-500" />
-                    <p className="font-bold text-neutral-600 dark:text-neutral-300">No se encontró un registro comparable del año anterior.</p>
-                    <p className="text-sm text-neutral-400 mt-1">Buscamos en el mismo mes del año pasado y el anterior.</p>
+        <NeoModal isOpen={true} onClose={onClose} title="Comparativa Año a Año" maxWidth="max-w-xl">
+            {loading && (
+                <div className="flex flex-col items-center justify-center py-14 gap-3">
+                    <div className="w-8 h-8 border-4 border-black dark:border-white border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm text-slate-400 font-medium">Buscando registro anterior...</p>
                 </div>
             )}
+
+            {!loading && !yoyRecord && (
+                <div className="text-center py-12">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center mx-auto mb-4">
+                        <AlertTriangle className="w-8 h-8 text-amber-500" />
+                    </div>
+                    <p className="font-bold text-neutral-700 dark:text-neutral-200 text-base mb-1">Sin datos para comparar</p>
+                    <p className="text-sm text-neutral-400">No encontramos un registro del mismo mes en el año anterior.</p>
+                </div>
+            )}
+
             {!loading && yoyRecord && prev && (
                 <>
-                    <div className="flex items-center justify-between mb-5 text-xs font-mono uppercase tracking-widest text-neutral-500">
-                        <span>{prevDateLabel} (anterior)</span>
-                        <ChevronRight className="w-4 h-4" />
-                        <span>{currDateLabel} (actual)</span>
+                    {/* Timeline header */}
+                    <div className="flex items-stretch gap-2 mb-6">
+                        <div className="flex-1 bg-slate-50 dark:bg-neutral-800 rounded-2xl p-3 text-center border border-slate-100 dark:border-neutral-700">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Año anterior</p>
+                            <p className="text-sm font-bold text-black dark:text-white leading-tight">{formatDateLabel(yoyRecord.service_date)}</p>
+                            {yoyRecord.service_time && (
+                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-slate-200 dark:bg-neutral-700 text-[10px] font-bold text-slate-500 dark:text-neutral-400">{yoyRecord.service_time}</span>
+                            )}
+                        </div>
+                        <div className="flex items-center justify-center w-8 shrink-0">
+                            <div className="flex flex-col items-center gap-0.5">
+                                <div className="w-px h-3 bg-slate-200 dark:bg-neutral-700" />
+                                <ChevronRight className="w-5 h-5 text-slate-400" />
+                                <div className="w-px h-3 bg-slate-200 dark:bg-neutral-700" />
+                            </div>
+                        </div>
+                        <div className="flex-1 bg-black dark:bg-white rounded-2xl p-3 text-center">
+                            <p className="text-[10px] font-black text-white/60 dark:text-black/60 uppercase tracking-widest mb-1">Actual</p>
+                            <p className="text-sm font-bold text-white dark:text-black leading-tight">{formatDateLabel(record.service_date)}</p>
+                            {record.service_time && (
+                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-white/20 dark:bg-black/20 text-[10px] font-bold text-white dark:text-black">{record.service_time}</span>
+                            )}
+                        </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                    {/* Metric cards */}
+                    <div className="space-y-3">
                         <Delta label="Auditorio (con voluntarios)" curr={curr.auditorioConVol} prev={prev.auditorioConVol} />
                         <Delta label="Total Voluntarios" curr={curr.totalVol} prev={prev.totalVol} />
                         <Delta label="Auditorio (sin voluntarios)" curr={curr.auditorioSinVol} prev={prev.auditorioSinVol} />
                         <Delta label="Auditorio + Niños (sin profes)" curr={curr.audNinezSinProfes} prev={prev.audNinezSinProfes} />
                     </div>
-                    <p className="text-[10px] text-neutral-400 mt-5 text-center font-mono">Comparado con: {yoyRecord.name || yoyRecord.service_date}{yoyRecord.service_time ? ` (${yoyRecord.service_time})` : ''}</p>
+
+                    <p className="text-[10px] text-slate-400 mt-5 text-center font-mono">
+                        Comparado con: {yoyRecord.name || yoyRecord.service_date}{yoyRecord.service_time ? ` (${yoyRecord.service_time})` : ''}
+                    </p>
                 </>
             )}
         </NeoModal>
@@ -224,6 +380,11 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
     const [sortKey, setSortKey] = useState<SortKey>('service_date');
     const [sortAsc, setSortAsc] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterYear, setFilterYear] = useState('');
+    const [filterMonth, setFilterMonth] = useState('');
+    const [filterTime, setFilterTime] = useState('');
+
+    const availableYears = Array.from(new Set(records.map(r => r.service_date?.substring(0, 4)).filter(Boolean))).sort().reverse();
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -241,11 +402,24 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
 
     const sorted = [...records].filter(rec => {
         const term = searchTerm.toLowerCase();
-        return (
+        const matchesSearch = (
             rec.name?.toLowerCase().includes(term) ||
             rec.service_date?.includes(term) ||
             rec.service_time?.toLowerCase().includes(term)
         );
+
+        if (!matchesSearch) return false;
+
+        if (filterYear && !rec.service_date?.startsWith(filterYear)) return false;
+
+        if (filterMonth) {
+            const monthPart = rec.service_date?.split('-')[1];
+            if (monthPart !== filterMonth) return false;
+        }
+
+        if (filterTime && rec.service_time !== filterTime) return false;
+
+        return true;
     }).sort((a, b) => {
         const va = a[sortKey] ?? '';
         const vb = b[sortKey] ?? '';
@@ -318,14 +492,87 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                 )}
 
                 {!loading && records.length > 0 && (
-                    <div className="mb-4">
-                        <input
-                            type="text"
-                            placeholder="Buscar por fecha, nombre o horario (AM/PM)..."
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-black font-medium placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all text-sm"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                    <div className="mb-5 space-y-3">
+                        {/* Search bar */}
+                        <div className="relative">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                            <input
+                                type="text"
+                                placeholder="Buscar por fecha, nombre o horario..."
+                                className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 bg-white text-black font-medium placeholder:text-slate-400 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/5 transition-all text-sm shadow-sm"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 transition-colors"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Filter chips — 3 equal columns, custom dropdowns */}
+                        <div className="grid grid-cols-3 gap-2">
+                            <FilterChip
+                                label="Año"
+                                value={filterYear}
+                                onChange={setFilterYear}
+                                activeColor="bg-slate-900 border-slate-900 text-white"
+                                options={[
+                                    { label: 'Todos los años', value: '' },
+                                    ...availableYears.map(y => ({ label: y, value: y }))
+                                ]}
+                            />
+                            <FilterChip
+                                label="Mes"
+                                value={filterMonth}
+                                onChange={setFilterMonth}
+                                activeColor="bg-violet-600 border-violet-600 text-white"
+                                options={[
+                                    { label: 'Todos los meses', value: '' },
+                                    { label: 'Enero', value: '01' },
+                                    { label: 'Febrero', value: '02' },
+                                    { label: 'Marzo', value: '03' },
+                                    { label: 'Abril', value: '04' },
+                                    { label: 'Mayo', value: '05' },
+                                    { label: 'Junio', value: '06' },
+                                    { label: 'Julio', value: '07' },
+                                    { label: 'Agosto', value: '08' },
+                                    { label: 'Septiembre', value: '09' },
+                                    { label: 'Octubre', value: '10' },
+                                    { label: 'Noviembre', value: '11' },
+                                    { label: 'Diciembre', value: '12' },
+                                ]}
+                            />
+                            <FilterChip
+                                label="Horario"
+                                value={filterTime}
+                                onChange={setFilterTime}
+                                activeColor="bg-amber-500 border-amber-500 text-white"
+                                options={[
+                                    { label: 'Todos', value: '' },
+                                    { label: 'AM', value: 'AM' },
+                                    { label: 'PM', value: 'PM' },
+                                ]}
+                            />
+                        </div>
+
+                        {/* Results count & clear all */}
+                        <div className="flex items-center justify-between px-1">
+                            <p className="text-xs text-slate-400 font-mono">
+                                {sorted.length} de {records.length} registros
+                            </p>
+                            {(filterYear || filterMonth || filterTime || searchTerm) && (
+                                <button
+                                    onClick={() => { setFilterYear(''); setFilterMonth(''); setFilterTime(''); setSearchTerm(''); }}
+                                    className="text-xs font-bold text-violet-600 hover:text-violet-800 underline underline-offset-2 transition-colors"
+                                >
+                                    Limpiar filtros
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
 
