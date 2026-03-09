@@ -107,16 +107,16 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                             )}
 
                             {/* HEADER */}
-                            <div className={`flex items-center justify-between shrink-0 ${isMobile ? 'px-6 pt-2 pb-4' : 'px-6 md:px-8 lg:px-10 pt-6 pb-4'}`}>
+                            <div className={`flex items-start justify-between shrink-0 ${isMobile ? 'px-6 pt-2 pb-2' : 'px-6 md:px-8 lg:px-10 pt-6 pb-2'}`}>
                                 {title && (
-                                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-black">
+                                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-black pr-4">
                                         {title}
                                     </h2>
                                 )}
                                 {!persistent && (
                                     <button
                                         onClick={onClose}
-                                        className="p-1 hover:bg-black hover:text-white rounded-md transition-colors"
+                                        className="p-1 hover:bg-slate-100 rounded-md transition-colors shrink-0"
                                     >
                                         <X className="w-6 h-6" />
                                     </button>
@@ -124,7 +124,10 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                             </div>
 
                             {/* BODY */}
-                            <div id="neo-modal-scroll-container" className={`flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain ${isMobile ? 'px-6 pb-8' : 'px-6 md:px-8 lg:px-10 pb-6 md:pb-8'}`}>
+                            <div
+                                id="neo-modal-scroll-container"
+                                className={`flex-1 overflow-y-auto overflow-x-hidden overscroll-behavior-contain touch-pan-y ${isMobile ? 'px-6 pb-8' : 'px-6 md:px-8 lg:px-10 pb-6 md:pb-8'}`}
+                            >
                                 {children}
                             </div>
                         </motion.div>

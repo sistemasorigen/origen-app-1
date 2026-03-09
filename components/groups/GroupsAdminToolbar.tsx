@@ -61,12 +61,12 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
             : null;
 
     return (
-        <div className="flex flex-col gap-4 mb-6 relative">
+        <div className="flex flex-col gap-2 sm:gap-4 mb-4 sm:mb-6 relative ml-4">
 
             {/* Top Row: Title & Mobile Actions */}
             <div className="flex justify-between items-start">
                 {/* Title */}
-                <div className="ml-1">
+                <div>
                     <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight text-slate-900 leading-none">Moderación</h3>
                     <p className="text-xs text-slate-500 font-medium mt-0.5">Gestión de Grupos</p>
                 </div>

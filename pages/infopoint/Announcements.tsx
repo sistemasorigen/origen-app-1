@@ -38,8 +38,8 @@ const Announcements: React.FC = () => {
     const validate = () => {
         const errs: Record<string, string> = {};
         if (!form.title.trim()) errs.title = 'El título es requerido.';
-        if (!form.startDate) errs.startDate = 'Fecha de inicio requerida.';
         if (!form.isPermanent) {
+            if (!form.startDate) errs.startDate = 'Fecha de inicio requerida.';
             if (!form.endDate) errs.endDate = 'Fecha de fin requerida.';
             if (form.startDate && form.endDate && form.endDate < form.startDate) {
                 errs.endDate = 'La fecha de fin no puede ser anterior a la de inicio.';
@@ -57,7 +57,7 @@ const Announcements: React.FC = () => {
         setErrors({});
 
         // Generate QR Code URL using quickchart.io
-        const qrData = form.link ? form.link : `${form.title} - ${form.startDate}`;
+        const qrData = form.link ? form.link : `${form.title}${form.startDate ? ` - ${form.startDate}` : ''}`;
         const encodedData = encodeURIComponent(qrData || 'https://origen.church');
         const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&margin=1`;
 
@@ -87,12 +87,14 @@ const Announcements: React.FC = () => {
 
     const handleEdit = (a: Announcement) => {
         setEditingId(a.id);
+        const hasValidDates = a.startDate && a.endDate;
+        const isActiveDefault = a.isPermanent || (hasValidDates && a.startDate <= today && a.endDate >= today);
         setForm({
             title: a.title,
             description: a.description,
-            startDate: a.startDate,
-            endDate: a.endDate,
-            isActive: a.isActive ?? (a.isPermanent || (a.startDate <= today && a.endDate >= today)),
+            startDate: a.startDate || '',
+            endDate: a.endDate || '',
+            isActive: a.isActive ?? isActiveDefault,
             isPermanent: a.isPermanent || false,
             link: a.link || '',
         });
@@ -179,18 +181,18 @@ const Announcements: React.FC = () => {
                 </div>
 
                 {/* Dates */}
-                <div className={`grid ${form.isPermanent ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
-                    <div>
-                        <label className="block text-xs font-black uppercase tracking-widest mb-1">Fecha de Inicio *</label>
-                        <input
-                            type="date"
-                            value={form.startDate}
-                            onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
-                            className={`w-full px-4 py-3 border-4 font-bold text-black bg-white focus:outline-none ${errors.startDate ? 'border-red-500' : 'border-black'}`}
-                        />
-                        {errors.startDate && <p className="text-red-600 text-xs font-bold mt-1">{errors.startDate}</p>}
-                    </div>
-                    {!form.isPermanent && (
+                {!form.isPermanent && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-black uppercase tracking-widest mb-1">Fecha de Inicio *</label>
+                            <input
+                                type="date"
+                                value={form.startDate}
+                                onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
+                                className={`w-full px-4 py-3 border-4 font-bold text-black bg-white focus:outline-none ${errors.startDate ? 'border-red-500' : 'border-black'}`}
+                            />
+                            {errors.startDate && <p className="text-red-600 text-xs font-bold mt-1">{errors.startDate}</p>}
+                        </div>
                         <div>
                             <label className="block text-xs font-black uppercase tracking-widest mb-1">Fecha de Fin *</label>
                             <input
@@ -201,8 +203,8 @@ const Announcements: React.FC = () => {
                             />
                             {errors.endDate && <p className="text-red-600 text-xs font-bold mt-1">{errors.endDate}</p>}
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
 
                 {/* Description */}
                 <div>
@@ -281,13 +283,15 @@ const Announcements: React.FC = () => {
 
                                         {/* Dates row */}
                                         <div className="flex items-center gap-3 text-xs font-bold text-slate-500 uppercase tracking-wide">
-                                            <span>
-                                                Inicio: {new Date(a.startDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
-                                            </span>
                                             {a.isPermanent ? (
                                                 <span className="inline-flex items-center gap-0.5 text-emerald-700 bg-emerald-100 px-2 py-0.5 border border-emerald-300 font-black">∞ Permanente</span>
                                             ) : (
-                                                <span>Fin: {new Date(a.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}</span>
+                                                <>
+                                                    <span>
+                                                        Inicio: {a.startDate ? new Date(a.startDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' }) : '-'}
+                                                    </span>
+                                                    <span>Fin: {a.endDate ? new Date(a.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' }) : '-'}</span>
+                                                </>
                                             )}
                                         </div>
 
@@ -338,7 +342,7 @@ const Announcements: React.FC = () => {
                                                 {a.title}
                                             </td>
                                             <td className="px-4 py-4 text-sm font-bold text-slate-600">
-                                                {new Date(a.startDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
+                                                {!a.isPermanent && a.startDate ? new Date(a.startDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' }) : '-'}
                                             </td>
                                             <td className="px-4 py-4 text-sm font-bold text-slate-600">
                                                 {a.isPermanent ? (
@@ -346,7 +350,7 @@ const Announcements: React.FC = () => {
                                                         ∞ Permanente
                                                     </span>
                                                 ) : (
-                                                    new Date(a.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })
+                                                    a.endDate ? new Date(a.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' }) : '-'
                                                 )}
                                             </td>
                                             <td className="px-4 py-4">

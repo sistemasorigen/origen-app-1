@@ -64,7 +64,7 @@ const InfoPointCalendar: React.FC = () => {
             const date = parseLocalDate(ev.date);
             if (!date) return;
             if (date.getFullYear() !== year || date.getMonth() !== month) return;
-            
+
             const colorIndex = (ev.name.length + idx) % PALETTE.length;
             items.push({
                 ...ev,
@@ -79,8 +79,8 @@ const InfoPointCalendar: React.FC = () => {
         });
 
         // 2. Process active announcements
-        const activeAnnouncements = announcements.filter(a => 
-            a.isActive !== undefined ? a.isActive : (a.startDate <= todayStr && a.endDate >= todayStr)
+        const activeAnnouncements = announcements.filter(a =>
+            !a.isPermanent && (a.isActive !== undefined ? a.isActive : (a.startDate <= todayStr && a.endDate >= todayStr))
         );
 
         activeAnnouncements.forEach((ann, idx) => {
@@ -156,8 +156,8 @@ const InfoPointCalendar: React.FC = () => {
                 >
                     <div className="flex justify-between items-start">
                         <span className={`w-7 h-7 flex items-center justify-center font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${isToday ? 'bg-emerald-400 text-black' :
-                                isSelected ? 'bg-white text-black' :
-                                    'bg-white text-black group-hover:bg-black group-hover:text-white'
+                            isSelected ? 'bg-white text-black' :
+                                'bg-white text-black group-hover:bg-black group-hover:text-white'
                             }`}>
                             {d}
                         </span>
@@ -168,9 +168,9 @@ const InfoPointCalendar: React.FC = () => {
                             <div
                                 key={idx}
                                 className="text-[8px] md:text-[10px] px-1 py-0.5 border border-black font-bold truncate flex items-center gap-1"
-                                style={{ 
-                                    backgroundColor: isSelected ? '#ffffff' : item.colorBg, 
-                                    color: isSelected ? '#000000' : item.colorText 
+                                style={{
+                                    backgroundColor: isSelected ? '#ffffff' : item.colorBg,
+                                    color: isSelected ? '#000000' : item.colorText
                                 }}
                             >
                                 {item.isAnnouncement && <Megaphone className="w-2 h-2" />}

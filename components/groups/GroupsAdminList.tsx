@@ -118,7 +118,7 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                 {detailGroup && (
                     <div className="space-y-6">
                         {/* Badges Sub-header */}
-                        <div className="flex items-center gap-2 -mt-2 pb-4 border-b border-slate-100">
+                        <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
                             {getStatusBadge(detailGroup.status, detailGroup)}
                             {detailGroup.categoryId && (
                                 <span className="inline-block text-[10px] bg-slate-100 px-2 py-0.5 rounded font-bold uppercase tracking-wide text-slate-500 border border-slate-200">
