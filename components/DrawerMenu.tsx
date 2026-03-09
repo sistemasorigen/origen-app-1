@@ -246,7 +246,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Cuidado Pastoral',
             icon: HeartHandshake,
             path: '/pastoral-care',
-            roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR]
+            roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]
         },
         {
             label: 'Tutoriales',

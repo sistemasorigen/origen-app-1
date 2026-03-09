@@ -55,7 +55,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     const [systemScope, setSystemScope] = useState<SystemScope>('GROUPS'); // Kept for legacy system ID assignment logic if needed, but mainly we use roles now
     // Additional Volunteer Access
     const [additionalVolunteerRoles, setAdditionalVolunteerRoles] = useState<string[]>([]);
-    
+
     // Coordinator Variant State
     const [coordinatorVariant, setCoordinatorVariant] = useState<CoordinatorVariant | undefined>(undefined);
 
@@ -245,7 +245,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
         const safeRoles = [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_PUNTO, UserRole.ADMIN_GROUPS,
         UserRole.ADMIN_STORE, UserRole.ADMIN_ALABANZA, UserRole.ANFITRION, UserRole.CO_ANFITRION, UserRole.VIEWER,
         UserRole.VOLUNTARIO_INFO, UserRole.VOLUNTARIO_GRUPOS, UserRole.ENCARGADO_PUNTO, UserRole.ENCARGADO_GRUPOS,
-        UserRole.VOLUNTEER, UserRole.VOLUNTARIO];
+        UserRole.VOLUNTEER, UserRole.VOLUNTARIO, UserRole.ADMIN_CUIDADO_PASTORAL];
         const primaryLegacyRole = finalRolesArray.find(r => safeRoles.includes(r)) || UserRole.VIEWER;
 
         // Determine Legacy Linked Group ID (for backward compat if needed)
@@ -701,6 +701,10 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                             <span className="block text-[10px] md:text-xs font-black uppercase">ENCARGADO BIENVENIDA</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Gestión Bienvenida</span>
                                         </div>
+                                        <div onClick={() => toggleRole(UserRole.ADMIN_CUIDADO_PASTORAL)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_CUIDADO_PASTORAL) ? 'border-amber-600 bg-amber-600 text-white shadow-none' : 'border-amber-300 bg-amber-50 text-amber-700 hover:shadow-[3px_3px_0px_0px_rgba(217,119,6,0.5)]'}`}>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">CUIDADO PASTORAL</span>
+                                            <span className="hidden md:block text-[10px] opacity-70">Gestión Pastoral</span>
+                                        </div>
 
                                         {/* Level 5 */}
                                         <div onClick={() => toggleRole(UserRole.PASTOR)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.PASTOR) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
@@ -712,7 +716,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                             <span className="block text-[10px] md:text-xs font-black uppercase">S. ADMIN</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Control total</span>
                                         </div>
-                                        
+
                                         {/* Coordinator Role */}
                                         <div onClick={() => toggleRole(UserRole.COORDINATOR)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.COORDINATOR) ? 'border-emerald-600 bg-emerald-600 text-white shadow-none' : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:shadow-[3px_3px_0px_0px_rgba(5,150,105,0.5)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-black uppercase">COORDINADOR</span>
