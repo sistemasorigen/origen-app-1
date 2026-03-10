@@ -791,7 +791,7 @@ export const supabaseService = {
         if (!agg[groupName]) {
           agg[groupName] = { count: 0, endDate: groupInfo.endDate };
         }
-        agg[groupName].count += 1;
+        agg[groupName].count += (reg.partner_data ? 2 : 1);
       });
 
       const result = Object.entries(agg)
@@ -848,7 +848,7 @@ export const supabaseService = {
       // Get registrations within date range
       const { data: registrations, error: regError } = await supabase
         .from('group_registrations')
-        .select('group_id')
+        .select('group_id, partner_data')
         .gte('timestamp', startDate)
         .lte('timestamp', endDate);
 
@@ -870,7 +870,7 @@ export const supabaseService = {
           if (!categoryCount[catId]) {
             categoryCount[catId] = { name: catName, color: catColor, count: 0 };
           }
-          categoryCount[catId].count += 1;
+          categoryCount[catId].count += (reg.partner_data ? 2 : 1);
         }
       });
 
@@ -930,7 +930,7 @@ export const supabaseService = {
       // Get registrations within date range
       const { data: registrations, error: regError } = await supabase
         .from('group_registrations')
-        .select('group_id')
+        .select('group_id, partner_data')
         .gte('timestamp', startDate)
         .lte('timestamp', endDate);
 
@@ -946,7 +946,7 @@ export const supabaseService = {
         const group = filteredGroups.find((g: any) => g.id === reg.group_id);
         if (group && group.tags && Array.isArray(group.tags)) {
           group.tags.forEach((tag: string) => {
-            tagCount[tag] = (tagCount[tag] || 0) + 1;
+            tagCount[tag] = (tagCount[tag] || 0) + (reg.partner_data ? 2 : 1);
           });
         }
       });
@@ -1013,7 +1013,7 @@ export const supabaseService = {
       // Get registrations within date range
       const { data: registrations, error: regError } = await supabase
         .from('group_registrations')
-        .select('group_id')
+        .select('group_id, partner_data')
         .gte('timestamp', startDate)
         .lte('timestamp', endDate);
 
@@ -1037,7 +1037,7 @@ export const supabaseService = {
             if (!categoryCount[catId]) {
               categoryCount[catId] = { name: catName, count: 0, dates: [] };
             }
-            categoryCount[catId].count += 1;
+            categoryCount[catId].count += (reg.partner_data ? 2 : 1);
             if (group.start_date) {
               categoryCount[catId].dates.push(group.start_date);
             }
@@ -1070,7 +1070,7 @@ export const supabaseService = {
               if (!tagCount[tag]) {
                 tagCount[tag] = { count: 0, dates: [] };
               }
-              tagCount[tag].count += 1;
+              tagCount[tag].count += (reg.partner_data ? 2 : 1);
               if (group.start_date) {
                 tagCount[tag].dates.push(group.start_date);
               }
@@ -3482,6 +3482,89 @@ export const supabaseService = {
       return null;
     } catch (error) {
       console.error('[PastoralCare] Exception fetching YoY record:', error);
+      return null;
+    }
+  },
+
+  // --- METRICS (GROUPS) ---
+  async getGroupRegistrationAnalytics(filter: 'ACTIVOS' | 'FINALIZADOS' | 'ALL' = 'ALL'): Promise<{
+    totalRegistrations: number;
+    uniquePeople: number;
+    distribution: Record<string, number>;
+  } | null> {
+    try {
+      const { data: registrations, error: regError } = await supabase
+        .from('group_registrations')
+        .select('user_id, email, group_id, partner_data, partner_user_id');
+
+      if (regError) {
+        console.error('[supabaseService] Error fetching group registrations:', regError);
+        return null;
+      }
+
+      if (!registrations) return null;
+
+      let validGroupIds = new Set<string>();
+
+      if (filter !== 'ALL') {
+        const { data: groups, error: groupsError } = await supabase
+          .from('groups')
+          .select('id, end_date');
+
+        if (groupsError) {
+          console.error('[supabaseService] Error fetching groups for analytics:', groupsError);
+          return null;
+        }
+
+        const now = new Date();
+        groups?.forEach((g: any) => {
+          const isActive = !g.end_date || new Date(g.end_date) >= now;
+          if (filter === 'ACTIVOS' && isActive) {
+            validGroupIds.add(g.id);
+          } else if (filter === 'FINALIZADOS' && !isActive) {
+            validGroupIds.add(g.id);
+          }
+        });
+      }
+
+      const filteredRegs = filter === 'ALL'
+        ? registrations
+        : registrations.filter(r => r.group_id && validGroupIds.has(r.group_id));
+
+      let totalRegistrations = 0;
+      const userCounts: Record<string, number> = {};
+
+      filteredRegs.forEach(row => {
+        // Base registration
+        totalRegistrations += 1;
+        const mainId = row.user_id || row.email || `reg-${Math.random()}`;
+        userCounts[mainId] = (userCounts[mainId] || 0) + 1;
+
+        // Partner registration
+        if (row.partner_data) {
+          totalRegistrations += 1;
+          const pd = row.partner_data as any; // JSONB
+          const partnerId = row.partner_user_id || pd?.email || pd?.firstName + pd?.lastName || `partner-${Math.random()}`;
+          userCounts[partnerId] = (userCounts[partnerId] || 0) + 1;
+        }
+      });
+
+      const uniquePeople = Object.keys(userCounts).length;
+      const distribution: Record<string, number> = {
+        '1': 0,
+        '2': 0,
+        '3+': 0
+      };
+
+      Object.values(userCounts).forEach(count => {
+        if (count === 1) distribution['1']++;
+        else if (count === 2) distribution['2']++;
+        else if (count >= 3) distribution['3+']++;
+      });
+
+      return { totalRegistrations, uniquePeople, distribution };
+    } catch (err) {
+      console.error('[supabaseService] Exception calculating group registration analytics:', err);
       return null;
     }
   },

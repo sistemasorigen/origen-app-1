@@ -82,6 +82,13 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
     // Dropout Report State
     const [dropoutRequests, setDropoutRequests] = useState<DropoutRequest[]>([]);
 
+    // Analytics state
+    const [registrationAnalytics, setRegistrationAnalytics] = useState<{
+        totalRegistrations: number;
+        uniquePeople: number;
+        distribution: Record<string, number>;
+    } | null>(null);
+
     // Security Check
     // Security Check
     // Security Check
@@ -116,12 +123,14 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                     setGroupsData(groups);
 
                     // Also fetch attendance and dropout data
-                    const [attendance, dropouts] = await Promise.all([
+                    const [attendance, dropouts, analytics] = await Promise.all([
                         supabaseService.getGlobalAttendanceReport(),
-                        supabaseService.getAllDropoutRequests()
+                        supabaseService.getAllDropoutRequests(),
+                        supabaseService.getGroupRegistrationAnalytics(groupsFilter)
                     ]);
                     setAttendanceReport(attendance);
                     setDropoutRequests(dropouts);
+                    setRegistrationAnalytics(analytics);
                 }
             } catch (e) {
                 console.error("Error loading dashboard", e);
@@ -131,7 +140,23 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
         };
 
         fetchData();
+        // Ignoring groupsFilter in dependencies to avoid full refetch on toggle, since the second useEffect handles toggle
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [canAccess, activeTab, startDate, endDate]);
+
+    // Re-fetch analytics when filter changes
+    useEffect(() => {
+        if (!canAccess || activeTab !== 'GROUPS') return;
+        const fetchAnalytics = async () => {
+            try {
+                const analytics = await supabaseService.getGroupRegistrationAnalytics(groupsFilter);
+                setRegistrationAnalytics(analytics);
+            } catch (error) {
+                console.error("Error fetching filtered analytics", error);
+            }
+        };
+        fetchAnalytics();
+    }, [groupsFilter, canAccess, activeTab]);
 
     if (!canAccess) {
         return (
@@ -472,95 +497,128 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
 
                                 {/* METRICS Sub-Tab - Original Chart */}
                                 {groupsSubTab === 'METRICS' && (
-                                    <div className="bg-white p-4 md:p-8 border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-8">
-                                            <div>
-                                                <h3 className="text-sm md:text-lg font-black text-black uppercase tracking-tight">Inscripciones por Grupo</h3>
-                                                <p className="text-[10px] md:text-xs text-neutral-500 font-bold uppercase">Total Histórico</p>
+                                    <>
+                                        {/* Participation Metrics */}
+                                        {registrationAnalytics && (
+                                            <div className="bg-white p-4 md:p-8 border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] mb-4 md:mb-6">
+                                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                                                    <div>
+                                                        <h3 className="text-sm md:text-lg font-black text-black uppercase tracking-tight">Datos de Participación</h3>
+                                                        <p className="text-[10px] md:text-xs text-neutral-500 font-bold uppercase">Métricas Generales</p>
+                                                    </div>
+                                                    {/* Filter Toggle */}
+                                                    <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                                                        <button
+                                                            onClick={() => setGroupsFilter('ACTIVOS')}
+                                                            className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'ACTIVOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'
+                                                                }`}
+                                                        >
+                                                            Activos
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setGroupsFilter('FINALIZADOS')}
+                                                            className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'FINALIZADOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'
+                                                                }`}
+                                                        >
+                                                            Finalizados
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-amber-50">
+                                                        <p className="text-[10px] md:text-xs font-black uppercase text-amber-600 mb-1">Personas Únicas</p>
+                                                        <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.uniquePeople}</p>
+                                                        <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Usuarios distintos inscriptos</p>
+                                                    </div>
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-blue-50">
+                                                        <p className="text-[10px] md:text-xs font-black uppercase text-blue-600 mb-1">Inscripciones Totales</p>
+                                                        <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalRegistrations}</p>
+                                                        <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Suma de todas las inscripciones</p>
+                                                    </div>
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-emerald-50">
+                                                        <p className="text-[10px] md:text-xs font-black uppercase text-emerald-600 mb-2">Distribución (Participación)</p>
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between items-center bg-white border border-emerald-200 px-2 py-1 rounded text-xs font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[2px_2px_0px_0px_rgba(6,78,59,0.3)]"><span>1 grupo:</span> <span>{registrationAnalytics.distribution['1'] || 0} p.</span></div>
+                                                            <div className="flex justify-between items-center bg-white border border-emerald-200 px-2 py-1 rounded text-xs font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[2px_2px_0px_0px_rgba(6,78,59,0.3)]"><span>2 grupos:</span> <span>{registrationAnalytics.distribution['2'] || 0} p.</span></div>
+                                                            <div className="flex justify-between items-center bg-white border border-emerald-200 px-2 py-1 rounded text-xs font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[2px_2px_0px_0px_rgba(6,78,59,0.3)]"><span>3+ grupos:</span> <span>{registrationAnalytics.distribution['3+'] || 0} p.</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                {/* Filter Toggle */}
-                                                <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                                        )}
+                                        <div className="bg-white p-4 md:p-8 border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-8">
+                                                <div>
+                                                    <h3 className="text-sm md:text-lg font-black text-black uppercase tracking-tight">Inscripciones por Grupo</h3>
+                                                    <p className="text-[10px] md:text-xs text-neutral-500 font-bold uppercase">Total Histórico</p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
                                                     <button
-                                                        onClick={() => setGroupsFilter('ACTIVOS')}
-                                                        className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'ACTIVOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'
-                                                            }`}
+                                                        onClick={handleExportGroupsCSV}
+                                                        className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white text-black border-2 border-black text-[10px] md:text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"
                                                     >
-                                                        Activos
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setGroupsFilter('FINALIZADOS')}
-                                                        className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'FINALIZADOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'
-                                                            }`}
-                                                    >
-                                                        Finalizados
+                                                        <Download className="w-3.5 h-3.5 md:w-4 md:h-4" /> CSV
                                                     </button>
                                                 </div>
-                                                <button
-                                                    onClick={handleExportGroupsCSV}
-                                                    className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white text-black border-2 border-black text-[10px] md:text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"
-                                                >
-                                                    <Download className="w-3.5 h-3.5 md:w-4 md:h-4" /> CSV
-                                                </button>
                                             </div>
-                                        </div>
 
-                                        {(() => {
-                                            // Filter groups based on active/finalized status
-                                            const now = new Date();
-                                            const filteredGroups = groupsData.filter(item => {
-                                                // We need to check endDate from the actual group data
-                                                // Since groupsData only has name and value, we need to enhance this
-                                                // For now, we'll assume the service provides endDate info
-                                                // This might need adjustment based on actual data structure
-                                                if (groupsFilter === 'ACTIVOS') {
-                                                    // Active groups: no endDate or endDate is in the future
-                                                    return !item.endDate || new Date(item.endDate) >= now;
-                                                } else {
-                                                    // Finalized groups: endDate is in the past
-                                                    return item.endDate && new Date(item.endDate) < now;
+                                            {(() => {
+                                                // Filter groups based on active/finalized status
+                                                const now = new Date();
+                                                const filteredGroups = groupsData.filter(item => {
+                                                    // We need to check endDate from the actual group data
+                                                    // Since groupsData only has name and value, we need to enhance this
+                                                    // For now, we'll assume the service provides endDate info
+                                                    // This might need adjustment based on actual data structure
+                                                    if (groupsFilter === 'ACTIVOS') {
+                                                        // Active groups: no endDate or endDate is in the future
+                                                        return !item.endDate || new Date(item.endDate) >= now;
+                                                    } else {
+                                                        // Finalized groups: endDate is in the past
+                                                        return item.endDate && new Date(item.endDate) < now;
+                                                    }
+                                                });
+
+                                                if (filteredGroups.length === 0) {
+                                                    return (
+                                                        <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg">
+                                                            <Layers className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                                            <p className="text-slate-500 font-bold">No hay grupos {groupsFilter.toLowerCase()}</p>
+                                                        </div>
+                                                    );
                                                 }
-                                            });
 
-                                            if (filteredGroups.length === 0) {
                                                 return (
-                                                    <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg">
-                                                        <Layers className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                                                        <p className="text-slate-500 font-bold">No hay grupos {groupsFilter.toLowerCase()}</p>
-                                                    </div>
+                                                    <>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-8">
+                                                            {filteredGroups.map((item, idx) => (
+                                                                <div key={idx} className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-white hover:bg-amber-50 transition-colors">
+                                                                    <span className="font-bold text-xs md:text-sm text-black truncate mr-2 md:mr-4">{item.name}</span>
+                                                                    <span className="font-black text-lg md:text-xl text-amber-600 shrink-0">{item.value}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+
+                                                        <div className="block h-[500px] md:h-[600px] mt-4">
+                                                            <ResponsiveContainer width="100%" height="100%">
+                                                                <BarChart data={filteredGroups} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
+                                                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e5e5" />
+                                                                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: 'bold' }} allowDecimals={false} />
+                                                                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: 'bold' }} width={100} />
+                                                                    <Tooltip
+                                                                        contentStyle={{ backgroundColor: '#000', border: '2px solid #000', color: '#fff', fontWeight: 'bold' }}
+                                                                        cursor={{ fill: '#fef3c7' }}
+                                                                        formatter={(value: number) => [`${value} inscriptos`, 'Total']}
+                                                                    />
+                                                                    <Bar dataKey="value" name="Inscriptos" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20} label={{ position: 'right', fill: '#000', fontWeight: 'bold', fontSize: 10 }} />
+                                                                </BarChart>
+                                                            </ResponsiveContainer>
+                                                        </div>
+                                                    </>
                                                 );
-                                            }
-
-                                            return (
-                                                <>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-8">
-                                                        {filteredGroups.map((item, idx) => (
-                                                            <div key={idx} className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-white hover:bg-amber-50 transition-colors">
-                                                                <span className="font-bold text-xs md:text-sm text-black truncate mr-2 md:mr-4">{item.name}</span>
-                                                                <span className="font-black text-lg md:text-xl text-amber-600 shrink-0">{item.value}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-
-                                                    <div className="block h-[500px] md:h-[600px] mt-4">
-                                                        <ResponsiveContainer width="100%" height="100%">
-                                                            <BarChart data={filteredGroups} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
-                                                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e5e5" />
-                                                                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: 'bold' }} allowDecimals={false} />
-                                                                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: 'bold' }} width={100} />
-                                                                <Tooltip
-                                                                    contentStyle={{ backgroundColor: '#000', border: '2px solid #000', color: '#fff', fontWeight: 'bold' }}
-                                                                    cursor={{ fill: '#fef3c7' }}
-                                                                    formatter={(value: number) => [`${value} inscriptos`, 'Total']}
-                                                                />
-                                                                <Bar dataKey="value" name="Inscriptos" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20} label={{ position: 'right', fill: '#000', fontWeight: 'bold', fontSize: 10 }} />
-                                                            </BarChart>
-                                                        </ResponsiveContainer>
-                                                    </div>
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
+                                            })()}
+                                        </div>
+                                    </>
                                 )}
 
                                 {/* ASISTENCIAS Sub-Tab */}
