@@ -84,6 +84,9 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
 
     // Analytics state
     const [registrationAnalytics, setRegistrationAnalytics] = useState<{
+        totalGroups: number;
+        totalHosts: number;
+        totalCoHosts: number;
         totalRegistrations: number;
         uniquePeople: number;
         distribution: Record<string, number>;
@@ -524,23 +527,47 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div className="border-2 border-black p-4 rounded-lg bg-amber-50">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                                    {/* Card 1: Grupos */}
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                        <p className="text-[10px] md:text-xs font-black uppercase text-slate-600 mb-1">
+                                                            Grupos {groupsFilter === 'ACTIVOS' ? 'Activos' : 'Finalizados'}
+                                                        </p>
+                                                        <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalGroups}</p>
+                                                        <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Total de grupos</p>
+                                                    </div>
+
+                                                    {/* Card 2: Anfitriones */}
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-orange-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                        <p className="text-[10px] md:text-xs font-black uppercase text-orange-600 mb-1">Anfitriones</p>
+                                                        <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalHosts}</p>
+                                                        <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Líderes principales únicos</p>
+                                                    </div>
+
+                                                    {/* Card 2.5: Co-Anfitriones */}
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-yellow-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                        <p className="text-[10px] md:text-xs font-black uppercase text-yellow-600 mb-1">Co-Anfitriones</p>
+                                                        <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalCoHosts}</p>
+                                                        <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Líderes de apoyo únicos</p>
+                                                    </div>
+
+                                                    {/* Card 3: Personas Únicas */}
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-amber-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                                                         <p className="text-[10px] md:text-xs font-black uppercase text-amber-600 mb-1">Personas Únicas</p>
                                                         <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.uniquePeople}</p>
                                                         <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Usuarios distintos inscriptos</p>
                                                     </div>
-                                                    <div className="border-2 border-black p-4 rounded-lg bg-blue-50">
-                                                        <p className="text-[10px] md:text-xs font-black uppercase text-blue-600 mb-1">Inscripciones Totales</p>
-                                                        <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalRegistrations}</p>
-                                                        <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Suma de todas las inscripciones</p>
-                                                    </div>
-                                                    <div className="border-2 border-black p-4 rounded-lg bg-emerald-50">
-                                                        <p className="text-[10px] md:text-xs font-black uppercase text-emerald-600 mb-2">Distribución (Participación)</p>
-                                                        <div className="space-y-1">
-                                                            <div className="flex justify-between items-center bg-white border border-emerald-200 px-2 py-1 rounded text-xs font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[2px_2px_0px_0px_rgba(6,78,59,0.3)]"><span>1 grupo:</span> <span>{registrationAnalytics.distribution['1'] || 0} p.</span></div>
-                                                            <div className="flex justify-between items-center bg-white border border-emerald-200 px-2 py-1 rounded text-xs font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[2px_2px_0px_0px_rgba(6,78,59,0.3)]"><span>2 grupos:</span> <span>{registrationAnalytics.distribution['2'] || 0} p.</span></div>
-                                                            <div className="flex justify-between items-center bg-white border border-emerald-200 px-2 py-1 rounded text-xs font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[2px_2px_0px_0px_rgba(6,78,59,0.3)]"><span>3+ grupos:</span> <span>{registrationAnalytics.distribution['3+'] || 0} p.</span></div>
+
+                                                    {/* Card 4: Inscripciones. merged with distribution. */}
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-emerald-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
+                                                        <div>
+                                                            <p className="text-[10px] md:text-xs font-black uppercase text-emerald-600 mb-1">Inscripciones Totales</p>
+                                                            <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalRegistrations}</p>
+                                                        </div>
+                                                        <div className="space-y-1 mt-3">
+                                                            <div className="flex justify-between items-center bg-white px-2 py-0.5 rounded text-[10px] font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[1px_1px_0px_0px_rgba(6,78,59,0.3)]"><span>1 grupo:</span> <span>{registrationAnalytics.distribution['1'] || 0}</span></div>
+                                                            <div className="flex justify-between items-center bg-white px-2 py-0.5 rounded text-[10px] font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[1px_1px_0px_0px_rgba(6,78,59,0.3)]"><span>2 grupos:</span> <span>{registrationAnalytics.distribution['2'] || 0}</span></div>
+                                                            <div className="flex justify-between items-center bg-white px-2 py-0.5 rounded text-[10px] font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[1px_1px_0px_0px_rgba(6,78,59,0.3)]"><span>3+ grupos:</span> <span>{registrationAnalytics.distribution['3+'] || 0}</span></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -566,16 +593,15 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                 // Filter groups based on active/finalized status
                                                 const now = new Date();
                                                 const filteredGroups = groupsData.filter(item => {
-                                                    // We need to check endDate from the actual group data
-                                                    // Since groupsData only has name and value, we need to enhance this
-                                                    // For now, we'll assume the service provides endDate info
                                                     // This might need adjustment based on actual data structure
+                                                    const isFinished = item.status === 'finished' || (item.endDate && new Date(item.endDate) < now);
+
                                                     if (groupsFilter === 'ACTIVOS') {
-                                                        // Active groups: no endDate or endDate is in the future
-                                                        return !item.endDate || new Date(item.endDate) >= now;
+                                                        // Active groups: must be exactly 'approved' and not past endDate
+                                                        return item.status === 'approved' && !isFinished;
                                                     } else {
-                                                        // Finalized groups: endDate is in the past
-                                                        return item.endDate && new Date(item.endDate) < now;
+                                                        // Finalized groups: endDate is in the past or explicitly finished/rejected
+                                                        return isFinished;
                                                     }
                                                 });
 

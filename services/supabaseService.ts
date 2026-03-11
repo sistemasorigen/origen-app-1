@@ -2833,64 +2833,22 @@ export const supabaseService = {
    */
   async toggleUserRole(userId: string, roleToAssign: UserRole, assign: boolean): Promise<boolean> {
     try {
-      // 1. Fetch current user to get their existing roles array
-      const { data: user, error: fetchError } = await supabase
-        .from('users')
-        .select('roles, role')
-        .eq('id', userId)
-        .single();
-
-      if (fetchError) {
-        console.error('[User Mgmt] Error fetching user for role toggle:', fetchError);
-        return false;
-      }
-
-      // 2. Calculate new roles array
-      const currentRoles: UserRole[] = (user?.roles || [user?.role || UserRole.VIEWER]) as UserRole[];
-      const roleSet = new Set(currentRoles);
-
-      if (assign) {
-        roleSet.add(roleToAssign);
-      } else {
-        roleSet.delete(roleToAssign);
-      }
-
-      // Ensure at least one role exists (fallback to USER/VIEWER)
-      if (roleSet.size === 0) {
-        roleSet.add(UserRole.VIEWER);
-      }
-
-      const newRoles = Array.from(roleSet);
-
-      // 3. Determine legacy role (Primary role for backward compatibility)
-      // If we are assigning ANFITRION, make it primary.
-      // If removing, revert to first available role.
-      let newLegacyRole = user.role;
-      if (assign) {
-        newLegacyRole = roleToAssign;
-      } else {
-        // If removing the current primary role, pick another one from the list
-        if (user.role === roleToAssign) {
-          newLegacyRole = newRoles[0];
-        }
-      }
-
-      // 4. Update both columns
-      const { error } = await supabase
-        .from('users')
-        .update({
-          role: newLegacyRole,
-          roles: newRoles
-        })
-        .eq('id', userId);
+      // Usar la nueva RPC para bypasear RLS si el usuario es Admin
+      const { data, error } = await supabase.rpc('admin_toggle_user_role', {
+        target_user_id: userId,
+        role_to_assign: roleToAssign as string,
+        assign: assign
+      });
 
       if (error) {
-        console.error('[User Mgmt] Error updating role:', error);
+        console.error('[User Mgmt] Error from RPC changing role:', JSON.stringify(error, null, 2), error.message);
         return false;
       }
-      return true;
+
+      // Asegurar que devuelve True explícitamente cuando data es True
+      return data === true;
     } catch (error) {
-      console.error('[User Mgmt] Exception updating role:', error);
+      console.error('[User Mgmt] Exception updating role via RPC:', error);
       return false;
     }
   },
@@ -3488,48 +3446,68 @@ export const supabaseService = {
 
   // --- METRICS (GROUPS) ---
   async getGroupRegistrationAnalytics(filter: 'ACTIVOS' | 'FINALIZADOS' | 'ALL' = 'ALL'): Promise<{
+    totalGroups: number;
+    totalHosts: number;
+    totalCoHosts: number;
     totalRegistrations: number;
     uniquePeople: number;
     distribution: Record<string, number>;
   } | null> {
     try {
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select('id, status, end_date, host_id, co_host_id');
+
+      if (groupsError) {
+        console.error('[supabaseService] Error fetching groups for analytics:', groupsError);
+        return null;
+      }
+
+      const now = new Date();
+      let validGroups = groups || [];
+
+      if (filter !== 'ALL') {
+        validGroups = validGroups.filter((g: any) => {
+          const isFinished = g.status === 'finished' || (g.end_date && new Date(g.end_date) < now);
+
+          if (filter === 'ACTIVOS') {
+            return g.status === 'approved' && !isFinished;
+          } else {
+            // FINALIZADOS
+            // Consider finished if status is explicitly 'finished' OR endDate is past. 
+            // Also include explicitly rejected or anything that doesn't qualify as active pending
+            return isFinished;
+          }
+        });
+      }
+
+      const validGroupIds = new Set(validGroups.map(g => g.id));
+      const totalGroups = validGroups.length;
+
+      const hostSet = new Set<string>();
+      const coHostSet = new Set<string>();
+      validGroups.forEach(g => {
+        if (g.host_id) hostSet.add(g.host_id);
+        if (g.co_host_id) coHostSet.add(g.co_host_id);
+      });
+      const totalHosts = hostSet.size;
+      const totalCoHosts = coHostSet.size;
+
+      if (validGroupIds.size === 0) {
+        return { totalGroups, totalHosts, totalCoHosts, totalRegistrations: 0, uniquePeople: 0, distribution: { '1': 0, '2': 0, '3+': 0 } };
+      }
+
       const { data: registrations, error: regError } = await supabase
         .from('group_registrations')
-        .select('user_id, email, group_id, partner_data, partner_user_id');
+        .select('user_id, email, group_id, partner_data, partner_user_id')
+        .in('group_id', Array.from(validGroupIds));
 
       if (regError) {
         console.error('[supabaseService] Error fetching group registrations:', regError);
         return null;
       }
 
-      if (!registrations) return null;
-
-      let validGroupIds = new Set<string>();
-
-      if (filter !== 'ALL') {
-        const { data: groups, error: groupsError } = await supabase
-          .from('groups')
-          .select('id, end_date');
-
-        if (groupsError) {
-          console.error('[supabaseService] Error fetching groups for analytics:', groupsError);
-          return null;
-        }
-
-        const now = new Date();
-        groups?.forEach((g: any) => {
-          const isActive = !g.end_date || new Date(g.end_date) >= now;
-          if (filter === 'ACTIVOS' && isActive) {
-            validGroupIds.add(g.id);
-          } else if (filter === 'FINALIZADOS' && !isActive) {
-            validGroupIds.add(g.id);
-          }
-        });
-      }
-
-      const filteredRegs = filter === 'ALL'
-        ? registrations
-        : registrations.filter(r => r.group_id && validGroupIds.has(r.group_id));
+      const filteredRegs = registrations || [];
 
       let totalRegistrations = 0;
       const userCounts: Record<string, number> = {};
@@ -3562,7 +3540,7 @@ export const supabaseService = {
         else if (count >= 3) distribution['3+']++;
       });
 
-      return { totalRegistrations, uniquePeople, distribution };
+      return { totalGroups, totalHosts, totalCoHosts, totalRegistrations, uniquePeople, distribution };
     } catch (err) {
       console.error('[supabaseService] Exception calculating group registration analytics:', err);
       return null;
