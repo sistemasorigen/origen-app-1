@@ -743,7 +743,7 @@ export const supabaseService = {
   },
 
   // 4. Group Registration Chart Data
-  async getGroupRegistrationChartData(start: string, end: string): Promise<{ name: string; value: number; endDate?: string }[]> {
+  async getGroupRegistrationChartData(start: string, end: string): Promise<{ name: string; value: number; endDate?: string; status?: string }[]> {
     try {
       console.log('[Reports] Fetching group registration data...');
 
@@ -766,7 +766,7 @@ export const supabaseService = {
       // Step 2: Get all groups with endDate
       const { data: groups, error: groupsError } = await supabase
         .from('groups')
-        .select('id, name, end_date');
+        .select('id, name, end_date, status');
 
       if (groupsError) {
         console.error('[Reports] Error fetching groups:', groupsError);
@@ -776,26 +776,26 @@ export const supabaseService = {
       console.log('[Reports] Groups found:', groups?.length || 0);
 
       // Create a map of group_id -> group info
-      const groupMap: Record<string, { name: string; endDate?: string }> = {};
+      const groupMap: Record<string, { name: string; endDate?: string; status?: string }> = {};
       (groups || []).forEach(g => {
-        groupMap[g.id] = { name: g.name, endDate: g.end_date };
+        groupMap[g.id] = { name: g.name, endDate: g.end_date, status: g.status };
       });
 
       // Aggregate by group
-      const agg: Record<string, { count: number; endDate?: string }> = {};
+      const agg: Record<string, { count: number; endDate?: string; status?: string }> = {};
 
       registrations.forEach((reg: any) => {
-        const groupInfo = groupMap[reg.group_id] || { name: 'Desconocido', endDate: undefined };
+        const groupInfo = groupMap[reg.group_id] || { name: 'Desconocido', endDate: undefined, status: undefined };
         const groupName = groupInfo.name;
 
         if (!agg[groupName]) {
-          agg[groupName] = { count: 0, endDate: groupInfo.endDate };
+          agg[groupName] = { count: 0, endDate: groupInfo.endDate, status: groupInfo.status };
         }
         agg[groupName].count += (reg.partner_data ? 2 : 1);
       });
 
       const result = Object.entries(agg)
-        .map(([name, data]) => ({ name, value: data.count, endDate: data.endDate }))
+        .map(([name, data]) => ({ name, value: data.count, endDate: data.endDate, status: data.status }))
         .sort((a, b) => b.value - a.value);
 
       console.log('[Reports] Final chart data:', result);
@@ -3535,9 +3535,9 @@ export const supabaseService = {
       };
 
       Object.values(userCounts).forEach(count => {
-        if (count === 1) distribution['1']++;
-        else if (count === 2) distribution['2']++;
-        else if (count >= 3) distribution['3+']++;
+        if (count === 1) distribution['1'] += 1;
+        else if (count === 2) distribution['2'] += 2;
+        else if (count >= 3) distribution['3+'] += count;
       });
 
       return { totalGroups, totalHosts, totalCoHosts, totalRegistrations, uniquePeople, distribution };
