@@ -351,7 +351,7 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                     }`}>
 
                     {/* TOOLBAR */}
-                    <div className="p-4 border-b-2 border-black bg-slate-50 flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <div className="p-4 border-b-2 border-black bg-slate-50 flex flex-col md:flex-row gap-4 justify-between items-center rounded-t-xl">
                         <div className="flex items-center gap-2">
                             <Shield className="w-6 h-6" />
                             <h2 className="text-lg md:text-xl font-black uppercase tracking-tight">Gestión de Anfitriónes</h2>
@@ -413,7 +413,7 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                     </div>
 
                     {/* TABLE BODY / MOBILE PRO CARDS */}
-                    <div className="divide-y divide-slate-100 max-h-[600px] lg:max-h-[700px] xl:max-h-[800px] overflow-y-auto">
+                    <div className="divide-y divide-slate-100 max-h-[600px] lg:max-h-[700px] xl:max-h-[800px] overflow-y-auto min-h-[400px] pb-32">
                         {isLoading ? (
                             <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>
                         ) : filteredHosts.length === 0 ? (
@@ -464,7 +464,10 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                                                     {isMenuOpen && (
                                                         <>
                                                             <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
-                                                            <div className={`absolute right-0 ${isLastItem ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'} w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
+                                                            {/* Mobile: Always open downwards unless explicitly at the very bottom with enough items to justify flip. 
+                                                                Actually, simple downward is better for mobile unless it hits the screen edge, but here we'll just force downward 
+                                                                on mobile card layout to avoid the "search result flip" issue. */}
+                                                            <div className={`absolute right-0 top-full mt-1 origin-top-right w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
                                                                 <button onClick={() => { openAssignmentModal(user, isHost ? 'HOST' : 'CO_HOST'); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2">
                                                                     <Edit2 className="w-3.5 h-3.5" />
                                                                     Editar Asignación

@@ -16,6 +16,7 @@ SET search_path = public
 AS $$
 DECLARE
     caller_id UUID := auth.uid();
+    caller_role_current public.user_role;
     caller_roles public.user_role[];
     target_role_current public.user_role;
     target_roles_current public.user_role[];
@@ -28,7 +29,10 @@ BEGIN
     role_to_assign_enum := role_to_assign::public.user_role;
 
     -- 1. Obtener los roles del usuario que ejecuta la función
-    SELECT roles INTO caller_roles FROM public.users WHERE id = caller_id;
+    SELECT role, roles INTO caller_role_current, caller_roles FROM public.users WHERE id = caller_id;
+    IF caller_roles IS NULL OR array_length(caller_roles, 1) = 0 THEN
+        caller_roles := ARRAY[COALESCE(caller_role_current, 'VIEWER'::public.user_role)];
+    END IF;
     
     -- 2. Verificar autorización (Debe ser al menos ENCARGADO_GRUPOS u otro admin)
     IF 'SUPER_ADMIN'::public.user_role = ANY(caller_roles) 
@@ -75,15 +79,8 @@ BEGIN
     END IF;
 
     -- 5. Calcular nuevo rol legacy (el campo 'role' simple)
-    IF assign THEN
-        new_legacy_role := role_to_assign_enum; -- El nuevo rol toma precedencia temporal en legacy
-    ELSE
-        IF target_role_current = role_to_assign_enum THEN
-            new_legacy_role := new_roles[1]; -- Si le quitamos su rol primario, toma el primero que quede
-        ELSE
-            new_legacy_role := target_role_current; -- Mantiene su primario actual
-        END IF;
-    END IF;
+    -- Siempre tomar el primer elemento del array resultante para evitar roles zombie
+    new_legacy_role := new_roles[1];
 
     -- 6. Actualizar al usuario
     UPDATE public.users 

@@ -75,6 +75,20 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
     const editRecord: any | undefined = (location.state as any)?.record;
     const isEdit = !!editRecord;
 
+    const [totalAuditorioInput, setTotalAuditorioInput] = useState<number>(() => {
+        if (editRecord) {
+            const volunteerKeys = [
+                'conecta', 'store', 'host_prevencion', 'punto_info',
+                'produccion', 'equipo_ministracion', 'atmosfera', 'visuales',
+                'redes', 'sala_bienvenida', 'sonido', 'ea',
+                'streaming', 'camaras', 'fotos', 'profes_ninez'
+            ];
+            const totalVols = volunteerKeys.reduce((acc, k) => acc + (Number(editRecord[k]) || 0), 0);
+            return (Number(editRecord.auditorio) || 0) + totalVols;
+        }
+        return 0;
+    });
+
     const [step, setStep] = useState(0);
     const [form, setForm] = useState<FormData>(() => {
         if (editRecord) {
@@ -151,7 +165,19 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
         if (!validateStep()) return;
         setSaving(true);
         setSaveError('');
-        const { data, error } = await supabaseService.upsertServiceStatistic(form);
+
+        const volunteerKeys: (keyof FormData)[] = [
+            'conecta', 'store', 'host_prevencion', 'punto_info',
+            'produccion', 'equipo_ministracion', 'atmosfera', 'visuales',
+            'redes', 'sala_bienvenida', 'sonido', 'ea',
+            'streaming', 'camaras', 'fotos', 'profes_ninez'
+        ];
+        const totalVols = volunteerKeys.reduce((acc, k) => acc + (Number(form[k]) || 0), 0);
+        const auditorioCalculado = Math.max(0, totalAuditorioInput - totalVols);
+
+        const payloadToSave = { ...form, auditorio: auditorioCalculado };
+
+        const { data, error } = await supabaseService.upsertServiceStatistic(payloadToSave);
         setSaving(false);
         if (error || !data) {
             setSaveError(error || 'Error al guardar. Verificá que la tabla service_statistics exista en Supabase.');
@@ -176,7 +202,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                     <div className="flex flex-col gap-3 w-full">
                         {!isEdit && (
                             <button
-                                onClick={() => { setForm({ ...EMPTY_FORM }); setStep(0); setSubmitted(false); }}
+                                onClick={() => { setForm({ ...EMPTY_FORM }); setTotalAuditorioInput(0); setStep(0); setSubmitted(false); }}
                                 className="w-full py-4 bg-white text-black font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all"
                             >
                                 Nuevo Registro
@@ -325,9 +351,19 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                 Áreas de Voluntarios
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {STEP1_METRICS.map((f) => (
-                                    <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
-                                ))}
+                                {STEP1_METRICS.map((f) => {
+                                    if (f.key === 'auditorio') {
+                                        return (
+                                            <NumericInput 
+                                                key="auditorio" 
+                                                label="Total Auditorio (Con Voluntarios)" 
+                                                value={totalAuditorioInput} 
+                                                onChange={setTotalAuditorioInput} 
+                                            />
+                                        );
+                                    }
+                                    return <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />;
+                                })}
                             </div>
                         </div>
                     </>
