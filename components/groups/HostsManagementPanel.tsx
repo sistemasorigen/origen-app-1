@@ -205,8 +205,15 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
             const group = groups.find(g => g.id === groupId);
             if (group) {
                 const updatePayload = { ...group };
-                if (roleType === 'HOST') (updatePayload as any).host_id = null;
-                else (updatePayload as any).co_host_id = null;
+                if (roleType === 'HOST') {
+                    (updatePayload as any).host_id = null;
+                    updatePayload.leaderName = '';
+                    updatePayload.leaderSurname = '';
+                } else {
+                    (updatePayload as any).co_host_id = null;
+                    updatePayload.coHostFirstName = '';
+                    updatePayload.coHostLastName = '';
+                }
                 await updateGroupDirect(updatePayload);
                 onUpdate(); // refresh groups
             }
@@ -228,8 +235,17 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
             // without removing them from previous groups.
             if (targetGroupId && groupToUpdate) {
                 const updatePayload = { ...groupToUpdate };
-                if (assignmentRole === 'HOST') (updatePayload as any).host_id = selectedUser.id;
-                else (updatePayload as any).co_host_id = selectedUser.id;
+                if (assignmentRole === 'HOST') {
+                    (updatePayload as any).host_id = selectedUser.id;
+                    const nameParts = selectedUser.name.split(' ');
+                    updatePayload.leaderName = nameParts[0] || '';
+                    updatePayload.leaderSurname = nameParts.slice(1).join(' ') || '';
+                } else {
+                    (updatePayload as any).co_host_id = selectedUser.id;
+                    const nameParts = selectedUser.name.split(' ');
+                    updatePayload.coHostFirstName = nameParts[0] || '';
+                    updatePayload.coHostLastName = nameParts.slice(1).join(' ') || '';
+                }
                 await updateGroupDirect(updatePayload);
             }
 
