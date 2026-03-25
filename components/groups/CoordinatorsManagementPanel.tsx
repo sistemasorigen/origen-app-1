@@ -92,25 +92,16 @@ const CoordinatorsManagementPanel: React.FC<CoordinatorsManagementPanelProps> = 
 
         setIsLoading(true);
         try {
-            // Apply new roles block logic similar to Admin.tsx
-            const currentRoles = editingUser.roles || [editingUser.role];
-            const finalRolesArray = Array.from(new Set([...currentRoles, UserRole.COORDINATOR]));
+            const result = await supabaseService.updateUserRole(editingUser.id, UserRole.COORDINATOR, editingVariant);
 
-            const newUser: User = {
-                ...editingUser,
-                roles: finalRolesArray,
-                coordinatorVariant: editingVariant
-            };
-
-            const success = await supabaseService.updateUser(newUser);
-            if (success) {
+            if (result.success) {
                 showToast('Coordinador guardado exitosamente', 'success');
                 setIsEditModalOpen(false);
                 setEditingUser(null);
                 setEditingVariant(undefined);
                 fetchCoordinators();
             } else {
-                showToast('Error al actualizar el usuario', 'error');
+                showToast(result.error || 'Error al actualizar el usuario', 'error');
             }
         } catch (error) {
             console.error('Save coordinator error:', error);
@@ -126,23 +117,12 @@ const CoordinatorsManagementPanel: React.FC<CoordinatorsManagementPanelProps> = 
 
         setIsLoading(true);
         try {
-            const currentRoles = user.roles || [user.role];
-            const finalRolesArray = currentRoles.filter(r => r !== UserRole.COORDINATOR);
-            // Default back to VIEWER if somehow they have zero roles
-            if (finalRolesArray.length === 0) finalRolesArray.push(UserRole.VIEWER);
-
-            const newUser: User = {
-                ...user,
-                roles: finalRolesArray,
-                coordinatorVariant: undefined
-            };
-
-            const success = await supabaseService.updateUser(newUser);
-            if (success) {
+            const result = await supabaseService.removeUserRole(user.id, UserRole.COORDINATOR);
+            if (result.success) {
                 showToast('Rol removido exitosamente', 'success');
                 fetchCoordinators();
             } else {
-                showToast('Error al remover el rol', 'error');
+                showToast(result.error || 'Error al remover el rol', 'error');
             }
         } catch (error) {
             console.error('Remove role error:', error);

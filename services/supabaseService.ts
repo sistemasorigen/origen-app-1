@@ -493,6 +493,33 @@ export const supabaseService = {
     return true;
   },
 
+  async updateUserRole(userId: string, role: string, variant?: string): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase.rpc('admin_assign_role', {
+      target_user_id: userId,
+      new_role: role,
+      new_variant: variant || null
+    });
+
+    if (error) {
+      console.error('RPC Error:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  },
+
+  async removeUserRole(userId: string, roleToRemove: string): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase.rpc('admin_remove_role', {
+      target_user_id: userId,
+      role_to_remove: roleToRemove
+    });
+
+    if (error) {
+      console.error('RPC Error on remove:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  },
+
   // Update user profile fields (phone, age, gender, birthDate) - used for OAuth profile completion
   async updateUserProfile(userId: string, profileData: { phone?: string; age?: number; gender?: string; birthDate?: string }): Promise<boolean> {
     // We use upsert here because for Google Sign In users, the public.users row might not exist yet
