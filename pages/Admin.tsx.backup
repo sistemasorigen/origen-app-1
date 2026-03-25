@@ -472,32 +472,32 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                         }
                     }
                     return (
-                        <div key={user.id} className="bg-white border border-slate-200 p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                        <div key={user.id} className="bg-white border-2 border-black p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
                             <div className="flex justify-between items-start gap-3">
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-sm text-black uppercase truncate">{user.name}</p>
+                                    <p className="font-black text-sm text-black uppercase truncate">{user.name}</p>
                                     <p className="text-[11px] text-neutral-500 truncate">{user.email}</p>
                                 </div>
-                                <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 border-2 text-[9px] font-bold uppercase ${user.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-400' : 'bg-red-50 text-red-700 border-red-400'}`}>
+                                <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 border-2 text-[9px] font-black uppercase ${user.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-400' : 'bg-red-50 text-red-700 border-red-400'}`}>
                                     <span className={`w-1.5 h-1.5 ${user.isActive ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
                                     {user.isActive ? 'Activo' : 'Inact.'}
                                 </span>
                             </div>
                             <div className="flex flex-wrap gap-1 mt-2">
                                 {(user.roles && user.roles.length > 0 ? user.roles : [user.role]).map(r => (
-                                    <span key={r} className="inline-block px-2 py-0.5 bg-black text-white text-[9px] font-bold uppercase">
+                                    <span key={r} className="inline-block px-2 py-0.5 bg-black text-white text-[9px] font-black uppercase">
                                         {r.replace('ADMIN_', '')}
                                     </span>
                                 ))}
                                 {displayLink && (
-                                    <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-300 text-[9px] font-bold uppercase">
+                                    <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-300 text-[9px] font-black uppercase">
                                         {displayLink}
                                     </span>
                                 )}
                             </div>
                             <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-black/10">
                                 <button onClick={() => setViewingUser(user)} className="p-2.5 min-h-[44px] min-w-[44px] border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center" title="Ver detalles"><Eye className="w-4 h-4" /></button>
-                                <button onClick={() => handleEditUser(user)} className="p-2.5 min-h-[44px] min-w-[44px] border border-slate-200 text-black hover:bg-black hover:text-white transition-all flex items-center justify-center" title="Editar"><Edit2 className="w-4 h-4" /></button>
+                                <button onClick={() => handleEditUser(user)} className="p-2.5 min-h-[44px] min-w-[44px] border-2 border-black text-black hover:bg-black hover:text-white transition-all flex items-center justify-center" title="Editar"><Edit2 className="w-4 h-4" /></button>
                                 {user.role !== UserRole.SUPER_ADMIN && (
                                     <button onClick={() => handleDeleteUser(user.id)} className="p-2.5 min-h-[44px] min-w-[44px] border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white transition-all flex items-center justify-center" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
                                 )}
@@ -511,9 +511,9 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             </div>
 
             {/* DESKTOP: Table View */}
-            <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-md">
+            <div className="hidden md:block bg-white border-2 border-black rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                 <table className="w-full text-left">
-                    <thead className="bg-black text-white text-xs font-bold text-slate-700">
+                    <thead className="bg-black text-white text-xs font-black uppercase tracking-widest">
                         <tr>
                             <th className="p-4">Usuario</th>
                             <th className="p-4">Rol</th>
@@ -536,21 +536,21 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             return (
                                 <tr key={user.id} className="hover:bg-neutral-50 transition-colors">
                                     <td className="p-4">
-                                        <p className="font-bold text-sm text-black uppercase">{user.name}</p>
+                                        <p className="font-black text-sm text-black uppercase">{user.name}</p>
                                         <p className="text-xs text-neutral-500">{user.email}</p>
                                     </td>
                                     <td className="p-4">
                                         <div className="flex flex-wrap gap-1">
                                             {(user.roles && user.roles.length > 0 ? user.roles : [user.role]).map(r => (
-                                                <span key={r} className="inline-block px-2 py-1 bg-white text-black border border-slate-200 text-[10px] font-bold uppercase">{r}</span>
+                                                <span key={r} className="inline-block px-2 py-1 bg-white text-black border-2 border-black text-[10px] font-black uppercase">{r}</span>
                                             ))}
                                         </div>
                                         {user.linkedGroupId && (
-                                            <span className="ml-2 inline-block px-2 py-1 bg-blue-50 text-blue-800 border-2 border-blue-300 text-[10px] font-bold uppercase">{displayLink}</span>
+                                            <span className="ml-2 inline-block px-2 py-1 bg-blue-50 text-blue-800 border-2 border-blue-300 text-[10px] font-black uppercase">{displayLink}</span>
                                         )}
                                     </td>
                                     <td className="p-4">
-                                        <span className={`inline-flex items-center gap-1 px-2 py-1 border-2 text-[10px] font-bold uppercase ${user.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-400' : 'bg-red-50 text-red-700 border-red-400'}`}>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-1 border-2 text-[10px] font-black uppercase ${user.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-400' : 'bg-red-50 text-red-700 border-red-400'}`}>
                                             <span className={`w-2 h-2 ${user.isActive ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
                                             {user.isActive ? 'Activo' : 'Inact.'}
                                         </span>
@@ -558,7 +558,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     <td className="p-4 text-right">
                                         <div className="flex justify-end gap-2">
                                             <button onClick={() => setViewingUser(user)} className="p-2 border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all" title="Ver detalles"><Eye className="w-4 h-4" /></button>
-                                            <button onClick={() => handleEditUser(user)} className="p-2 border border-slate-200 text-black hover:bg-black hover:text-white transition-all" title="Editar"><Edit2 className="w-4 h-4" /></button>
+                                            <button onClick={() => handleEditUser(user)} className="p-2 border-2 border-black text-black hover:bg-black hover:text-white transition-all" title="Editar"><Edit2 className="w-4 h-4" /></button>
                                             {user.role !== UserRole.SUPER_ADMIN && (
                                                 <button onClick={() => handleDeleteUser(user.id)} className="p-2 border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white transition-all" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
                                             )}
@@ -591,14 +591,14 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             {/* Toast - Brutalist */}
             {toast.show && (
                 <div className={`fixed top-24 right-8 z-[100] px-6 py-4 border-3 flex items-center gap-3 animate-slideIn ${toast.type === 'success' ? 'bg-black text-white border-black shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]' : 'bg-red-600 text-white border-red-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]'}`} style={{ borderWidth: '3px' }}>
-                    <span className="font-bold text-sm text-slate-700">{toast.message}</span>
+                    <span className="font-black text-sm uppercase tracking-widest">{toast.message}</span>
                 </div>
             )}
 
             {/* Header - Brutalist */}
             <div className="bg-white border-b-4 border-black sticky top-16 z-30">
                 <div className="max-w-[1920px] mx-auto px-4 md:px-6 py-4 md:py-0 md:h-20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0">
-                    <h1 className="text-xl md:text-3xl font-bold text-black tracking-tighter">Panel Administración</h1>
+                    <h1 className="text-xl md:text-3xl font-black text-black uppercase tracking-tighter">Panel Administración</h1>
                     <div className="flex gap-2 overflow-x-auto w-full md:w-auto scrollbar-hide">
                         {[
                             { id: 'users', icon: Users, label: 'Usuarios' },
@@ -609,9 +609,9 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 border border-slate-200 text-[10px] md:text-xs font-bold uppercase transition-all whitespace-nowrap ${activeTab === tab.id
+                                className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 border-2 border-black text-[10px] md:text-xs font-black uppercase transition-all whitespace-nowrap ${activeTab === tab.id
                                     ? 'bg-black text-white shadow-none translate-y-[2px]'
-                                    : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-md'
+                                    : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
                                     }`}
                             >
                                 <tab.icon className="w-4 h-4" />
@@ -637,89 +637,89 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12">
                                 {/* Left: Personal Data */}
                                 <div className="space-y-4">
-                                    <h4 className="text-xs font-bold text-neutral-500 text-slate-700 border-b-2 border-neutral-200 pb-2">Datos Personales</h4>
+                                    <h4 className="text-xs font-black text-neutral-500 uppercase tracking-widest border-b-2 border-neutral-200 pb-2">Datos Personales</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                                        <div><label className="text-xs font-bold uppercase text-neutral-500">Nombre</label><input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full p-3 border border-slate-200 text-sm font-bold uppercase focus:shadow-md focus:ring-0 outline-none" /></div>
-                                        <div><label className="text-xs font-bold uppercase text-neutral-500">Apellido</label><input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full p-3 border border-slate-200 text-sm font-bold uppercase focus:shadow-md focus:ring-0 outline-none" /></div>
+                                        <div><label className="text-xs font-black uppercase text-neutral-500">Nombre</label><input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full p-3 border-2 border-black text-sm font-black uppercase focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:ring-0 outline-none" /></div>
+                                        <div><label className="text-xs font-black uppercase text-neutral-500">Apellido</label><input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full p-3 border-2 border-black text-sm font-black uppercase focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:ring-0 outline-none" /></div>
                                     </div>
-                                    <div><label className="text-xs font-bold uppercase text-neutral-500">Email</label><input type="email" value={currentUserData.email || ''} onChange={e => setCurrentUserData({ ...currentUserData, email: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-medium focus:shadow-md focus:ring-0 outline-none" /></div>
+                                    <div><label className="text-xs font-black uppercase text-neutral-500">Email</label><input type="email" value={currentUserData.email || ''} onChange={e => setCurrentUserData({ ...currentUserData, email: e.target.value })} className="w-full p-3 border-2 border-black text-sm font-medium focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:ring-0 outline-none" /></div>
                                     <div>
-                                        <label className="text-xs font-bold uppercase text-neutral-500">Contraseña {currentUserData.id && '(Dejar vacío para no cambiar)'}</label>
-                                        <input type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} className="w-full p-3 border border-slate-200 text-sm font-medium focus:shadow-md focus:ring-0 outline-none" placeholder="••••••" />
+                                        <label className="text-xs font-black uppercase text-neutral-500">Contraseña {currentUserData.id && '(Dejar vacío para no cambiar)'}</label>
+                                        <input type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} className="w-full p-3 border-2 border-black text-sm font-medium focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:ring-0 outline-none" placeholder="••••••" />
                                     </div>
                                     <div className="flex items-center gap-3 pt-2">
-                                        <div onClick={() => setCurrentUserData({ ...currentUserData, isActive: !currentUserData.isActive })} className={`w-12 h-6 cursor-pointer transition-colors relative border border-slate-200 ${currentUserData.isActive ? 'bg-emerald-500' : 'bg-neutral-300'}`}>
+                                        <div onClick={() => setCurrentUserData({ ...currentUserData, isActive: !currentUserData.isActive })} className={`w-12 h-6 cursor-pointer transition-colors relative border-2 border-black ${currentUserData.isActive ? 'bg-emerald-500' : 'bg-neutral-300'}`}>
                                             <div className={`w-4 h-4 bg-white border border-black absolute top-0.5 transition-all ${currentUserData.isActive ? 'left-6' : 'left-0.5'}`}></div>
                                         </div>
-                                        <span className="text-sm font-bold uppercase text-neutral-600">Usuario Activo</span>
+                                        <span className="text-sm font-black uppercase text-neutral-600">Usuario Activo</span>
                                     </div>
                                 </div>
 
                                 <div className="space-y-6">
-                                    <h4 className="text-xs font-bold text-neutral-500 text-slate-700 border-b-2 border-neutral-200 pb-2">Nivel de Acceso (Selección Múltiple)</h4>
+                                    <h4 className="text-xs font-black text-neutral-500 uppercase tracking-widest border-b-2 border-neutral-200 pb-2">Nivel de Acceso (Selección Múltiple)</h4>
 
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-4">
                                         {/* Level 1 */}
                                         <div onClick={() => toggleRole(UserRole.VIEWER)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.VIEWER) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">USUARIO</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">USUARIO</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Acceso básico</span>
                                         </div>
                                         {/* Level 2 - Anfitrión: Can create their own group */}
                                         <div onClick={() => toggleRole(UserRole.ANFITRION)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ANFITRION) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">ANFITRIÓN</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">ANFITRIÓN</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Crear grupos</span>
                                         </div>
                                         {/* Level 2b - Co-Anfitrión: Can manage assigned groups */}
                                         <div onClick={() => toggleRole(UserRole.CO_ANFITRION)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.CO_ANFITRION) ? 'border-purple-600 bg-purple-600 text-white shadow-none' : 'border-purple-300 bg-purple-50 text-purple-700 hover:shadow-[3px_3px_0px_0px_rgba(147,51,234,0.5)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">CO-ANFITRIÓN</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">CO-ANFITRIÓN</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Co-líder grupos</span>
                                         </div>
                                         {/* Level 3 - Voluntario */}
                                         <div onClick={() => toggleRole(UserRole.VOLUNTEER)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.VOLUNTEER) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">VOLUNTARIO</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">VOLUNTARIO</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Colaborador</span>
                                         </div>
 
                                         {/* Level 4 - Admins */}
                                         <div onClick={() => toggleRole(UserRole.ADMIN_PUNTO)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_PUNTO) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">ENCARGADO PUNTO</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">ENCARGADO PUNTO</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Gestión Punto</span>
                                         </div>
                                         <div onClick={() => toggleRole(UserRole.ADMIN_GROUPS)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_GROUPS) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">ENCARGADO GRUPOS</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">ENCARGADO GRUPOS</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Gestión Grupos</span>
                                         </div>
                                         <div onClick={() => toggleRole(UserRole.ADMIN_STORE)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_STORE) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">ENCARGADO STORE</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">ENCARGADO STORE</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Gestión Tienda</span>
                                         </div>
                                         <div onClick={() => toggleRole(UserRole.ADMIN_ALABANZA)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_ALABANZA) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">ENCARGADO ALABANZA</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">ENCARGADO ALABANZA</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Gestión Alabanza</span>
                                         </div>
                                         <div onClick={() => toggleRole(UserRole.ENCARGADO_BIENVENIDA)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ENCARGADO_BIENVENIDA) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">ENCARGADO BIENVENIDA</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">ENCARGADO BIENVENIDA</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Gestión Bienvenida</span>
                                         </div>
                                         <div onClick={() => toggleRole(UserRole.ADMIN_CUIDADO_PASTORAL)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_CUIDADO_PASTORAL) ? 'border-amber-600 bg-amber-600 text-white shadow-none' : 'border-amber-300 bg-amber-50 text-amber-700 hover:shadow-[3px_3px_0px_0px_rgba(217,119,6,0.5)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">CUIDADO PASTORAL</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">CUIDADO PASTORAL</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Gestión Pastoral</span>
                                         </div>
 
                                         {/* Level 5 */}
                                         <div onClick={() => toggleRole(UserRole.PASTOR)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.PASTOR) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">REPORTES</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">REPORTES</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Pastor</span>
                                         </div>
                                         {/* Level 6 */}
                                         <div onClick={() => toggleRole(UserRole.SUPER_ADMIN)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.SUPER_ADMIN) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">S. ADMIN</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">S. ADMIN</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Control total</span>
                                         </div>
 
                                         {/* Coordinator Role */}
                                         <div onClick={() => toggleRole(UserRole.COORDINATOR)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.COORDINATOR) ? 'border-emerald-600 bg-emerald-600 text-white shadow-none' : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:shadow-[3px_3px_0px_0px_rgba(5,150,105,0.5)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">COORDINADOR</span>
+                                            <span className="block text-[10px] md:text-xs font-black uppercase">COORDINADOR</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Departamento</span>
                                         </div>
                                     </div>
@@ -727,11 +727,11 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     {/* Coordinator Variant Selector */}
                                     {selectedRoles.has(UserRole.COORDINATOR) && (
                                         <div className="space-y-3 bg-emerald-50 p-4 border-2 border-emerald-300 animate-fadeIn">
-                                            <label className="text-xs font-bold uppercase text-emerald-700">Departamento de Coordinación</label>
+                                            <label className="text-xs font-black uppercase text-emerald-700">Departamento de Coordinación</label>
                                             <select
                                                 value={coordinatorVariant || ''}
                                                 onChange={e => setCoordinatorVariant(e.target.value as CoordinatorVariant || undefined)}
-                                                className="w-full p-3 border border-slate-200 bg-white text-sm font-bold uppercase focus:shadow-md focus:ring-0 outline-none"
+                                                className="w-full p-3 border-2 border-black bg-white text-sm font-black uppercase focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:ring-0 outline-none"
                                             >
                                                 <option value="">Seleccionar departamento...</option>
                                                 {Object.values(CoordinatorVariant).map(v => (
@@ -745,12 +745,12 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     )}
 
                                     {(selectedRoles.has(UserRole.VOLUNTEER)) && (
-                                        <div className="space-y-3 bg-neutral-50 p-4 border border-slate-200 animate-fadeIn">
-                                            <label className="text-xs font-bold uppercase text-neutral-500">Área de Sistema (Voluntariado)</label>
+                                        <div className="space-y-3 bg-neutral-50 p-4 border-2 border-black animate-fadeIn">
+                                            <label className="text-xs font-black uppercase text-neutral-500">Área de Sistema (Voluntariado)</label>
                                             <select
                                                 value={systemScope}
                                                 onChange={e => setSystemScope(e.target.value as SystemScope)}
-                                                className="w-full p-3 border border-slate-200 bg-white text-sm font-bold uppercase focus:shadow-md focus:ring-0 outline-none"
+                                                className="w-full p-3 border-2 border-black bg-white text-sm font-black uppercase focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:ring-0 outline-none"
                                             >
                                                 <option value="GROUPS">Ninguno (Líder Grupo)</option>
                                                 <option value="GROUPS_VOL">Voluntario: Grupos de Conexión</option>
@@ -769,12 +769,12 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     {/* Current Roles Display - Removable Chips */}
                                     {selectedRoles.size > 0 && (
                                         <div className="space-y-3 bg-blue-50 p-4 border-2 border-blue-300 animate-fadeIn">
-                                            <label className="text-xs font-bold uppercase text-blue-700">Roles Actuales ({selectedRoles.size})</label>
+                                            <label className="text-xs font-black uppercase text-blue-700">Roles Actuales ({selectedRoles.size})</label>
                                             <div className="flex flex-wrap gap-2">
                                                 {Array.from(selectedRoles).map(role => (
                                                     <div
                                                         key={role}
-                                                        className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 text-[10px] font-bold uppercase group hover:bg-red-50 hover:border-red-500 transition-colors"
+                                                        className="flex items-center gap-1 px-3 py-1.5 bg-white border-2 border-black text-[10px] font-black uppercase group hover:bg-red-50 hover:border-red-500 transition-colors"
                                                     >
                                                         <span>{(role as string).replace('ADMIN_', '').replace('_', ' ')}</span>
                                                         <button
@@ -804,8 +804,8 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                 </div>
                             </div>
                             <div className="mt-6 md:mt-8 pt-4 md:pt-6 border-t-2 border-black flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-                                <button onClick={() => setIsEditing(false)} className="px-6 py-3 text-xs font-bold uppercase border border-slate-200 hover:bg-neutral-100">Cancelar</button>
-                                <button onClick={handleSaveUser} className="px-6 md:px-8 py-3 bg-black text-white text-xs font-bold text-slate-700 border border-slate-200 shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all">Guardar</button>
+                                <button onClick={() => setIsEditing(false)} className="px-6 py-3 text-xs font-black uppercase border-2 border-black hover:bg-neutral-100">Cancelar</button>
+                                <button onClick={handleSaveUser} className="px-6 md:px-8 py-3 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all">Guardar</button>
                             </div>
                         </div>
                     </NeoModal>
@@ -820,37 +820,37 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                     >
                         <div className="flex flex-col gap-6">
                             <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 bg-black text-white flex items-center justify-center text-2xl font-bold uppercase border border-slate-200 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
+                                <div className="w-16 h-16 bg-black text-white flex items-center justify-center text-2xl font-black uppercase border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
                                     {viewingUser.name.charAt(0)}
                                 </div>
                                 <div>
-                                    <h3 className="text-xl md:text-2xl font-bold tracking-tight leading-none">{viewingUser.name}</h3>
+                                    <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight leading-none">{viewingUser.name}</h3>
                                     <p className="text-sm font-bold text-neutral-500 uppercase mt-1">ID: <span className="font-mono text-xs">{viewingUser.id.slice(0, 8)}...</span></p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Email */}
-                                <div className="bg-neutral-50 p-4 border border-slate-200">
-                                    <label className="text-[10px] font-bold uppercase text-neutral-500 tracking-widest">Email</label>
+                                <div className="bg-neutral-50 p-4 border-2 border-black">
+                                    <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Email</label>
                                     <p className="text-sm font-medium text-black mt-1 break-all">{viewingUser.email || '-'}</p>
                                 </div>
 
                                 {/* Two columns for Phone and Age */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-neutral-50 p-4 border border-slate-200">
-                                        <label className="text-[10px] font-bold uppercase text-neutral-500 tracking-widest">Teléfono</label>
+                                    <div className="bg-neutral-50 p-4 border-2 border-black">
+                                        <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Teléfono</label>
                                         <p className="text-sm font-bold text-black mt-1">{viewingUser.phone || 'No registrado'}</p>
                                     </div>
-                                    <div className="bg-neutral-50 p-4 border border-slate-200">
-                                        <label className="text-[10px] font-bold uppercase text-neutral-500 tracking-widest">Edad</label>
+                                    <div className="bg-neutral-50 p-4 border-2 border-black">
+                                        <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Edad</label>
                                         <p className="text-sm font-bold text-black mt-1">{viewingUser.age ? `${viewingUser.age} años` : 'No registrada'}</p>
                                     </div>
                                 </div>
 
                                 {/* Birth Date */}
-                                <div className="bg-neutral-50 p-4 border border-slate-200">
-                                    <label className="text-[10px] font-bold uppercase text-neutral-500 tracking-widest">Fecha de Cumpleaños</label>
+                                <div className="bg-neutral-50 p-4 border-2 border-black">
+                                    <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Fecha de Cumpleaños</label>
                                     <p className="text-sm font-bold text-black mt-1">
                                         {viewingUser.birthDate
                                             ? new Date(viewingUser.birthDate + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -859,24 +859,24 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                 </div>
 
                                 {/* Gender */}
-                                <div className="bg-neutral-50 p-4 border border-slate-200">
-                                    <label className="text-[10px] font-bold uppercase text-neutral-500 tracking-widest">Sexo</label>
+                                <div className="bg-neutral-50 p-4 border-2 border-black">
+                                    <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Sexo</label>
                                     <p className="text-sm font-bold text-black mt-1 uppercase">{viewingUser.gender || 'No registrado'}</p>
                                 </div>
 
                                 {/* Role & Status */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-neutral-50 p-4 border border-slate-200">
-                                        <label className="text-[10px] font-bold uppercase text-neutral-500 tracking-widest">Rol(es)</label>
+                                    <div className="bg-neutral-50 p-4 border-2 border-black">
+                                        <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Rol(es)</label>
                                         <div className="flex flex-wrap gap-1 mt-2">
                                             {(viewingUser.roles && viewingUser.roles.length > 0 ? viewingUser.roles : [viewingUser.role]).map(r => (
-                                                <span key={r} className="inline-block px-2 py-1 bg-black text-white text-[9px] font-bold uppercase">{r}</span>
+                                                <span key={r} className="inline-block px-2 py-1 bg-black text-white text-[9px] font-black uppercase">{r}</span>
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="bg-neutral-50 p-4 border border-slate-200">
-                                        <label className="text-[10px] font-bold uppercase text-neutral-500 tracking-widest">Estado</label>
-                                        <p className={`text-sm font-bold mt-1 uppercase ${viewingUser.isActive ? 'text-emerald-600' : 'text-red-600'}`}>
+                                    <div className="bg-neutral-50 p-4 border-2 border-black">
+                                        <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Estado</label>
+                                        <p className={`text-sm font-black mt-1 uppercase ${viewingUser.isActive ? 'text-emerald-600' : 'text-red-600'}`}>
                                             {viewingUser.isActive ? '● Activo' : '○ Inactivo'}
                                         </p>
                                     </div>
@@ -885,7 +885,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
 
                             {/* Footer */}
                             <div className="mt-2 pt-4 border-t-2 border-black flex justify-end">
-                                <button onClick={() => setViewingUser(null)} className="px-6 py-3 bg-black text-white text-xs font-bold text-slate-700 border border-slate-200 shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all">Cerrar</button>
+                                <button onClick={() => setViewingUser(null)} className="px-6 py-3 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all">Cerrar</button>
                             </div>
                         </div>
                     </NeoModal>
@@ -902,7 +902,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                 placeholder="Buscar usuario por nombre o email..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-slate-200 text-sm font-bold uppercase placeholder:text-neutral-400 focus:shadow-md outline-none transition-all rounded-none"
+                                className="w-full pl-10 pr-4 py-3 border-2 border-black text-sm font-bold uppercase placeholder:text-neutral-400 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] outline-none transition-all rounded-none"
                             />
                         </div>
 
@@ -920,13 +920,13 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     <button
                                         key={sub.id}
                                         onClick={() => setUserSubTab(sub.id as any)}
-                                        className={`px-3 py-2 text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all border border-slate-200 whitespace-nowrap ${userSubTab === sub.id ? 'bg-black text-white' : 'bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}
+                                        className={`px-3 py-2 text-[10px] md:text-xs font-black uppercase tracking-wider transition-all border-2 border-black whitespace-nowrap ${userSubTab === sub.id ? 'bg-black text-white' : 'bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}
                                     >
                                         {sub.label} <span className="ml-1">{sub.count}</span>
                                     </button>
                                 ))}
                             </div>
-                            <button onClick={() => handleNewUserClick()} className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 bg-black text-white text-[10px] md:text-xs font-bold text-slate-700 border border-slate-200 shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all whitespace-nowrap">
+                            <button onClick={() => handleNewUserClick()} className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 bg-black text-white text-[10px] md:text-xs font-black uppercase tracking-widest border-2 border-black shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all whitespace-nowrap">
                                 <Plus className="w-3 md:w-4 h-3 md:h-4" /> Nuevo
                             </button>
                         </div>
@@ -945,10 +945,10 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                 {activeTab === 'leaders' && (
                     <div className="space-y-4 md:space-y-6 animate-fadeIn">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
-                            <h2 className="text-lg md:text-xl font-bold tracking-tight">Directorio</h2>
+                            <h2 className="text-lg md:text-xl font-black uppercase tracking-tight">Directorio</h2>
                             <button
                                 onClick={() => handleNewUserClick()}
-                                className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 bg-black text-white text-[10px] md:text-xs font-semibold text-slate-600 hover:bg-slate-800 rounded-lg shadow-lg whitespace-nowrap"
+                                className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 bg-black text-white text-[10px] md:text-xs font-bold uppercase tracking-widest hover:bg-slate-800 rounded-lg shadow-lg whitespace-nowrap"
                             >
                                 <Plus className="w-3 md:w-4 h-3 md:h-4" /> Nuevo Líder
                             </button>
@@ -1138,7 +1138,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
 
                         {configSubTab === 'IDENTITY' && (
                             <div className="bg-off-white p-4 md:p-8 rounded-xl md:rounded-2xl shadow-lg border border-slate-200 max-w-4xl">
-                                <h3 className="text-base md:text-xl font-bold uppercase mb-4 md:mb-6 flex items-center gap-2"><Globe className="w-4 md:w-5 h-4 md:h-5" /> Config General</h3>
+                                <h3 className="text-base md:text-xl font-black uppercase mb-4 md:mb-6 flex items-center gap-2"><Globe className="w-4 md:w-5 h-4 md:h-5" /> Config General</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                                     <div className="space-y-3 md:space-y-4">
                                         <div>
@@ -1168,7 +1168,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     </div>
                                 </div>
                                 <div className="mt-6 md:mt-8 flex justify-end">
-                                    <button onClick={handleSaveIdentity} className="px-4 md:px-8 py-2.5 md:py-3 bg-slate-900 text-white font-medium uppercase text-[10px] md:text-xs tracking-widest rounded-lg hover:bg-slate-800 flex items-center gap-2">
+                                    <button onClick={handleSaveIdentity} className="px-4 md:px-8 py-2.5 md:py-3 bg-black text-white font-bold uppercase text-[10px] md:text-xs tracking-widest rounded-lg hover:bg-slate-800 flex items-center gap-2">
                                         <Save className="w-3.5 md:w-4 h-3.5 md:h-4" /> Guardar
                                     </button>
                                 </div>
@@ -1178,7 +1178,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                         {(configSubTab === 'BANNERS' || configSubTab === 'INFO_POINT') && (
                             <div className="space-y-4 md:space-y-6">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                    <h3 className="text-base md:text-xl font-bold uppercase">
+                                    <h3 className="text-base md:text-xl font-black uppercase">
                                         {configSubTab === 'BANNERS' ? 'Slides Principal' : 'Banners Punto'}
                                     </h3>
                                     <button
@@ -1215,7 +1215,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
 
                         {configSubTab === 'VALUES' && (
                             <div className="bg-off-white p-8 rounded-2xl shadow-lg border border-slate-200 max-w-4xl">
-                                <h3 className="text-xl font-bold uppercase mb-6">Sección "Nuestros Valores"</h3>
+                                <h3 className="text-xl font-black uppercase mb-6">Sección "Nuestros Valores"</h3>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                     <div className="space-y-4">
                                         <div><label className="text-xs font-bold uppercase text-slate-500">Título Sección</label><input type="text" value={valuesConfig.title} onChange={e => setValuesConfig({ ...valuesConfig, title: e.target.value })} className="w-full p-3 border border-slate-200 rounded-lg outline-none text-sm font-bold uppercase focus:border-black" /></div>
@@ -1247,7 +1247,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     </div>
                                 </div>
                                 <div className="mt-8 flex justify-end">
-                                    <button onClick={handleSaveValuesConfig} className="px-8 py-3 bg-slate-900 text-white font-medium uppercase text-xs tracking-widest rounded-lg hover:bg-slate-800 flex items-center gap-2">
+                                    <button onClick={handleSaveValuesConfig} className="px-8 py-3 bg-black text-white font-bold uppercase text-xs tracking-widest rounded-lg hover:bg-slate-800 flex items-center gap-2">
                                         <Save className="w-4 h-4" /> Guardar Cambios
                                     </button>
                                 </div>
@@ -1257,7 +1257,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                         {configSubTab === 'VERSES' && (
                             <div className="max-w-4xl space-y-8">
                                 <div className="bg-off-white p-8 rounded-2xl shadow-lg border border-slate-200">
-                                    <h3 className="text-xl font-bold uppercase mb-6 flex items-center gap-2"><Book className="w-5 h-5" /> Versículos del Día</h3>
+                                    <h3 className="text-xl font-black uppercase mb-6 flex items-center gap-2"><Book className="w-5 h-5" /> Versículos del Día</h3>
 
                                     <div className="flex gap-4 mb-8 items-end bg-slate-50 p-4 rounded-xl border border-slate-200">
                                         <div className="flex-1">
@@ -1268,7 +1268,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                             <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Referencia</label>
                                             <input type="text" value={newVerse.ref} onChange={e => setNewVerse({ ...newVerse, ref: e.target.value })} placeholder="Juan 3:16" className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold uppercase outline-none focus:border-black" />
                                         </div>
-                                        <button onClick={handleAddVerse} className="px-6 py-3 bg-slate-900 text-white font-medium uppercase text-xs rounded-lg hover:bg-slate-800 h-full">Agregar</button>
+                                        <button onClick={handleAddVerse} className="px-6 py-3 bg-black text-white font-bold uppercase text-xs rounded-lg hover:bg-slate-800 h-full">Agregar</button>
                                     </div>
 
                                     <div className="space-y-3">
@@ -1294,7 +1294,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                         {configSubTab === 'FOOTER' && (
                             <div className="max-w-4xl space-y-8 animate-fadeIn">
                                 <div className="bg-off-white p-8 rounded-2xl shadow-lg border border-slate-200">
-                                    <h3 className="text-xl font-bold uppercase mb-6 flex items-center gap-2"><Share2 className="w-5 h-5" /> Redes Sociales & Pie de Página</h3>
+                                    <h3 className="text-xl font-black uppercase mb-6 flex items-center gap-2"><Share2 className="w-5 h-5" /> Redes Sociales & Pie de Página</h3>
                                     <p className="text-sm text-slate-500 mb-8">Configura los enlaces que aparecerán en el Hero Banner final de la página principal.</p>
 
                                     <div className="space-y-4">
@@ -1364,7 +1364,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     </div>
 
                                     <div className="mt-8 flex justify-end">
-                                        <button onClick={handleSaveFooterLinks} className="px-8 py-3 bg-slate-900 text-white font-medium uppercase text-xs tracking-widest rounded-lg hover:bg-slate-800 flex items-center gap-2">
+                                        <button onClick={handleSaveFooterLinks} className="px-8 py-3 bg-black text-white font-bold uppercase text-xs tracking-widest rounded-lg hover:bg-slate-800 flex items-center gap-2">
                                             <Save className="w-4 h-4" /> Guardar Enlaces
                                         </button>
                                     </div>
@@ -1383,7 +1383,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     <CloudUpload className="w-5 md:w-8 h-5 md:h-8" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg md:text-2xl font-bold text-slate-900 tracking-tight">Migración DB</h3>
+                                    <h3 className="text-lg md:text-2xl font-black text-slate-900 uppercase tracking-tight">Migración DB</h3>
                                     <p className="text-slate-500 text-[10px] md:text-sm">Transfiere datos locales a Supabase Cloud.</p>
                                 </div>
                             </div>
@@ -1406,7 +1406,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                 <button
                                     onClick={handleMigration}
                                     disabled={isMigrating}
-                                    className={`w-full py-4 rounded-xl font-bold text-slate-700 text-sm shadow-lg transition-all flex items-center justify-center gap-3 ${isMigrating ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-[1.01]'}`}
+                                    className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-lg transition-all flex items-center justify-center gap-3 ${isMigrating ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-[1.01]'}`}
                                 >
                                     {isMigrating ? (
                                         <>
@@ -1444,7 +1444,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                     >
                         <div className="flex flex-col gap-6">
                             <div>
-                                <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">Imagen del Slide</label>
+                                <label className="text-xs font-black uppercase text-neutral-500 mb-2 block">Imagen del Slide</label>
                                 <ImageUpload
                                     currentImage={editingSlide.imageUrl || ''}
                                     folder="banners"
@@ -1453,15 +1453,15 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                 />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Texto Principal</label><input type="text" value={editingSlide.titlePrefix || ''} onChange={e => setEditingSlide({ ...editingSlide, titlePrefix: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-bold uppercase focus:shadow-md outline-none" placeholder="Ej: PLATAFORMA" /></div>
-                                <div><label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Texto del Medio (Destacado)</label><input type="text" value={editingSlide.titleHighlight || ''} onChange={e => setEditingSlide({ ...editingSlide, titleHighlight: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-bold uppercase focus:shadow-md outline-none" placeholder="Ej: ORIGEN" /></div>
+                                <div><label className="text-xs font-black uppercase text-neutral-500 mb-1 block">Texto Principal</label><input type="text" value={editingSlide.titlePrefix || ''} onChange={e => setEditingSlide({ ...editingSlide, titlePrefix: e.target.value })} className="w-full p-3 border-2 border-black text-sm font-bold uppercase focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] outline-none" placeholder="Ej: PLATAFORMA" /></div>
+                                <div><label className="text-xs font-black uppercase text-neutral-500 mb-1 block">Texto del Medio (Destacado)</label><input type="text" value={editingSlide.titleHighlight || ''} onChange={e => setEditingSlide({ ...editingSlide, titleHighlight: e.target.value })} className="w-full p-3 border-2 border-black text-sm font-bold uppercase focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] outline-none" placeholder="Ej: ORIGEN" /></div>
                             </div>
-                            <div><label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Descripción (Subtítulo)</label><textarea value={editingSlide.description || ''} onChange={e => setEditingSlide({ ...editingSlide, description: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-medium h-24 focus:shadow-md outline-none resize-none" placeholder="Breve descripción..." /></div>
-                            <div><label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Texto Botón (CTA)</label><input type="text" value={editingSlide.buttonText || ''} onChange={e => setEditingSlide({ ...editingSlide, buttonText: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-bold uppercase focus:shadow-md outline-none" placeholder="Ej: VER MÓDULOS" /></div>
+                            <div><label className="text-xs font-black uppercase text-neutral-500 mb-1 block">Descripción (Subtítulo)</label><textarea value={editingSlide.description || ''} onChange={e => setEditingSlide({ ...editingSlide, description: e.target.value })} className="w-full p-3 border-2 border-black text-sm font-medium h-24 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] outline-none resize-none" placeholder="Breve descripción..." /></div>
+                            <div><label className="text-xs font-black uppercase text-neutral-500 mb-1 block">Texto Botón (CTA)</label><input type="text" value={editingSlide.buttonText || ''} onChange={e => setEditingSlide({ ...editingSlide, buttonText: e.target.value })} className="w-full p-3 border-2 border-black text-sm font-bold uppercase focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] outline-none" placeholder="Ej: VER MÓDULOS" /></div>
 
                             <div className="pt-4 border-t-2 border-black flex justify-end gap-3 bg-white">
-                                <button onClick={() => { setIsSlideModalOpen(false); setEditingSlide(null); }} className="px-6 py-3 text-xs font-bold uppercase border border-slate-200 hover:bg-neutral-100">Cancelar</button>
-                                <button onClick={handleSaveSlide} className="px-6 py-3 bg-black text-white text-xs font-bold uppercase border border-slate-200 shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all">Guardar Slide</button>
+                                <button onClick={() => { setIsSlideModalOpen(false); setEditingSlide(null); }} className="px-6 py-3 text-xs font-black uppercase border-2 border-black hover:bg-neutral-100">Cancelar</button>
+                                <button onClick={handleSaveSlide} className="px-6 py-3 bg-black text-white text-xs font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all">Guardar Slide</button>
                             </div>
                         </div>
                     </NeoModal>

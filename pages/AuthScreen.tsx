@@ -9,6 +9,7 @@ import { useTutorial } from '../src/hooks/useTutorial';
 import TutorialController from '../components/TutorialController';
 import TutorialInvitation from '../components/TutorialInvitation';
 import { tours } from '../src/config/tours';
+import NeoModal from '../components/NeoModal';
 
 interface AuthScreenProps {
     onLoginSuccess: (user: User) => void;
@@ -35,6 +36,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     // Feedback
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+
+    // Error Modal State
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [modalErrorTitle, setModalErrorTitle] = useState("");
+    const [modalErrorMessage, setModalErrorMessage] = useState("");
 
     // Form Data
     const [formData, setFormData] = useState({
@@ -123,7 +129,28 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             // Let's simulate standard behavior.
             onLoginSuccess({ id: 'auth-user', name: 'User', email: formData.email, role: 'VIEWER', isActive: true } as User);
         } else {
-            setError(result.error || "Error al iniciar sesión.");
+            console.log("LOGIN FAILED WITH:", result.error);
+            // Detectar error 400 de Supabase (credenciales inválidas)
+            const errorMsg = result.error?.toLowerCase() || '';
+            const isInvalidCredentials =
+                errorMsg.includes('400') ||
+                errorMsg.includes('bad request') ||
+                errorMsg.includes('invalid login credentials') ||
+                errorMsg.includes('credenciales') ||
+                errorMsg.includes('password') ||
+                errorMsg.includes('contraseña');
+
+            console.log("isInvalidCredentials evaluated to:", isInvalidCredentials);
+
+            if (isInvalidCredentials) {
+                console.log("Attempting to show error modal...");
+                setModalErrorTitle("Datos Incorrectos");
+                setModalErrorMessage("El correo electrónico o la contraseña ingresados son incorrectos. Por favor, verifica tus datos e inténtalo de nuevo.");
+                setShowErrorModal(true);
+            } else {
+                console.log("Setting inline error instead");
+                setError(result.error || "Error al iniciar sesión.");
+            }
         }
         setLoading(false);
     };
@@ -268,6 +295,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     } = useTutorial('auth');
 
     return (
+        <>
         <div className="min-h-screen flex flex-col lg:flex-row bg-white font-sans text-black overflow-hidden">
             {/* Tutorial Components */}
             <TutorialInvitation
@@ -649,6 +677,30 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 </div>
             </div>
         </div>
+
+        {/* Invalid Credentials Modal */}
+        <NeoModal
+            isOpen={showErrorModal}
+            onClose={() => setShowErrorModal(false)}
+            title={modalErrorTitle}
+            maxWidth="max-w-sm"
+        >
+            <div className="flex flex-col items-center justify-center text-center p-4">
+                <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6 border-4 border-red-200">
+                    <AlertTriangle className="w-8 h-8" />
+                </div>
+                <p className="text-slate-600 font-medium mb-8">
+                    {modalErrorMessage}
+                </p>
+                <button
+                    onClick={() => setShowErrorModal(false)}
+                    className="w-full py-3 bg-black text-white font-bold uppercase tracking-widest rounded-lg hover:bg-neutral-800 transition-all border-2 border-black flex justify-center items-center"
+                >
+                    Entendido
+                </button>
+            </div>
+        </NeoModal>
+        </>
     );
 };
 

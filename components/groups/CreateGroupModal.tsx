@@ -410,7 +410,10 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
         // Validate dates are not in the past
         const today = new Date().toISOString().split('T')[0];
-        if (form.startDate && form.startDate < today) {
+        const year = new Date().getFullYear();
+        const isPrimeraTemporada = form.startDate === `${year}-03-23` && form.endDate === `${year}-05-17`;
+
+        if (!isPrimeraTemporada && form.startDate && form.startDate < today) {
             return alert('La fecha de arranque no puede ser anterior a hoy.');
         }
         if (form.endDate && form.endDate < today) {

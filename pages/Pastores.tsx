@@ -7,7 +7,7 @@ import {
     LineChart, Line
 } from 'recharts';
 import {
-    AlertTriangle, ArrowLeft, Download, Church, Layers, Info, Eye, Users, UserMinus, CheckCircle, XCircle
+    AlertTriangle, ArrowLeft, Download, Church, Layers, Info, Eye, Users, UserMinus, CheckCircle, XCircle, Search
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import NeoModal from '../components/NeoModal';
@@ -67,6 +67,8 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
     const [groupsFilter, setGroupsFilter] = useState<'ACTIVOS' | 'FINALIZADOS'>('ACTIVOS');
 
     // Attendance Report State
+    const [attendanceSearchQuery, setAttendanceSearchQuery] = useState('');
+    const [attendanceFilter, setAttendanceFilter] = useState<'ACTIVOS' | 'FINALIZADOS'>('ACTIVOS');
     const [attendanceReport, setAttendanceReport] = useState<{
         groupId: string;
         groupName: string;
@@ -74,6 +76,9 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
         presentMembers: { id: string; name: string }[];
         absentMembers: { id: string; name: string }[];
         allMembers: { id: string; name: string }[];
+        status: string;
+        endDate: string | null;
+        leaderName: string;
     }[]>([]);
     const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
     const [attendanceModalType, setAttendanceModalType] = useState<'present' | 'absent'>('present');
@@ -657,9 +662,59 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                             </div>
                                         </div>
 
-                                        {/* Mobile Card View */}
-                                        <div className="md:hidden space-y-3">
-                                            {attendanceReport.map((row) => (
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                                            <div className="relative w-full sm:max-w-xs">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Buscar grupo o anfitrión..."
+                                                    value={attendanceSearchQuery}
+                                                    onChange={(e) => setAttendanceSearchQuery(e.target.value)}
+                                                    className="w-full pl-9 pr-4 py-2 border-2 border-black rounded-lg text-xs font-bold focus:outline-none focus:ring-0 uppercase placeholder:normal-case"
+                                                />
+                                            </div>
+                                            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-full sm:w-auto">
+                                                <button
+                                                    onClick={() => setAttendanceFilter('ACTIVOS')}
+                                                    className={`flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${attendanceFilter === 'ACTIVOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'}`}
+                                                >
+                                                    Activos
+                                                </button>
+                                                <button
+                                                    onClick={() => setAttendanceFilter('FINALIZADOS')}
+                                                    className={`flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${attendanceFilter === 'FINALIZADOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'}`}
+                                                >
+                                                    Finalizados
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {(() => {
+                                            const filteredAttendanceReport = attendanceReport.filter(row => {
+                                                const matchesSearch = row.groupName.toLowerCase().includes(attendanceSearchQuery.toLowerCase()) || 
+                                                                    (row.leaderName || '').toLowerCase().includes(attendanceSearchQuery.toLowerCase());
+                                                
+                                                const now = new Date();
+                                                const isFinished = row.status === 'finished' || (row.endDate && new Date(row.endDate) < now);
+                                                
+                                                if (attendanceFilter === 'ACTIVOS') return matchesSearch && !isFinished;
+                                                return matchesSearch && isFinished;
+                                            });
+
+                                            if (filteredAttendanceReport.length === 0) {
+                                                return (
+                                                    <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg">
+                                                        <Layers className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                                        <p className="text-slate-500 font-bold">No hay reportes {attendanceFilter.toLowerCase()} que coincidan</p>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <>
+                                                    {/* Mobile Card View */}
+                                                    <div className="md:hidden space-y-3">
+                                                        {filteredAttendanceReport.map((row) => (
                                                 <div key={row.groupId} className="border-2 border-black rounded-lg p-4 bg-white">
                                                     <p className="font-black text-sm uppercase mb-3">{row.groupName}</p>
                                                     <div className="flex flex-wrap gap-2">
@@ -700,7 +755,7 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {attendanceReport.map((row) => (
+                                                    {filteredAttendanceReport.map((row) => (
                                                         <tr key={row.groupId} className="border-b border-slate-200 hover:bg-slate-50">
                                                             <td className="px-4 py-3 font-bold text-sm">{row.groupName}</td>
                                                             <td className="px-4 py-3 text-center">
@@ -752,6 +807,9 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                 </tbody>
                                             </table>
                                         </div>
+                                        </>
+                                        );
+                                        })()}
                                     </div>
                                 )}
 

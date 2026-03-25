@@ -1161,6 +1161,7 @@ export const supabaseService = {
       adminNote: row.admin_note || '', // Admin review note
       registrations: (row.registrations || []).map((r: any) => ({
         id: r.id,
+        user_id: r.user_id || null,
         firstName: r.first_name || '',
         lastName: r.last_name || '',
         email: r.email || '',
@@ -3072,6 +3073,9 @@ export const supabaseService = {
     presentMembers: { id: string; name: string }[];
     absentMembers: { id: string; name: string }[];
     allMembers: { id: string; name: string }[];
+    status: string;
+    endDate: string | null;
+    leaderName: string;
   }[]> {
     try {
       // 1. Fetch all approved groups with their registrations
@@ -3080,6 +3084,10 @@ export const supabaseService = {
         .select(`
           id,
           name,
+          status,
+          end_date,
+          leader_name,
+          leader_surname,
           group_registrations (
             id,
             first_name,
@@ -3088,7 +3096,7 @@ export const supabaseService = {
             status
           )
         `)
-        .eq('status', 'approved');
+        .in('status', ['approved', 'finished']);
 
       if (groupsError) {
         console.error('[GlobalAttendance] Error fetching groups:', groupsError);
@@ -3100,7 +3108,7 @@ export const supabaseService = {
         // Get approved members only
         const approvedRegs = (group.group_registrations || []).filter((r: any) => r.status === 'APPROVED');
         const allMembers = approvedRegs.map((r: any) => ({
-          id: r.user_id || r.id,
+          id: r.id,
           name: `${r.first_name} ${r.last_name}`
         }));
 
@@ -3120,7 +3128,10 @@ export const supabaseService = {
             latestDate: null,
             presentMembers: [],
             absentMembers: [],
-            allMembers
+            allMembers,
+            status: group.status,
+            endDate: group.end_date,
+            leaderName: `${group.leader_name || ''} ${group.leader_surname || ''}`.trim()
           };
         }
 
@@ -3134,7 +3145,10 @@ export const supabaseService = {
           latestDate: attendance.date,
           presentMembers,
           absentMembers,
-          allMembers
+          allMembers,
+          status: group.status,
+          endDate: group.end_date,
+          leaderName: `${group.leader_name || ''} ${group.leader_surname || ''}`.trim()
         };
       }));
 

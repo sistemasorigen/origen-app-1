@@ -284,7 +284,7 @@ const fullUser: User = {
     }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
 
     const signIn = async (email: string, pass: string) => {
-        setIsLoadingSession(true); // Block UI during login attempt (optional, but good UX)
+        // setIsLoadingSession(true); // Block UI during login attempt (optional, but good UX)
         try {
             const result = await withTimeout(
                 supabaseService.signInUser(email, pass),
@@ -300,10 +300,10 @@ const fullUser: User = {
                 setError(null);
                 return { success: true };
             }
-            setIsLoadingSession(false); // Unblock if failed
+            // setIsLoadingSession(false); // Unblock if failed
             return { success: false, error: result.error };
         } catch (e: any) {
-            setIsLoadingSession(false);
+            // setIsLoadingSession(false);
             return { success: false, error: e.message };
         }
     };
