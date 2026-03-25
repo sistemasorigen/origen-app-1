@@ -27,13 +27,17 @@ interface CoordinatorGroupsProps {
     currentUser: User;
     categoryName: string;
     onRefresh: () => void;
+    preselectedGroupId?: string | null;
+    onClearPreselection?: () => void;
 }
 
 const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
     groups,
     tags,
     categories,
-    categoryName
+    categoryName,
+    preselectedGroupId,
+    onClearPreselection
 }) => {
     const [search, setSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -41,6 +45,17 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
     const [deletingMember, setDeletingMember] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState<'active' | 'finished'>('active');
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+
+    // Handle preselected group from calendar navigation
+    React.useEffect(() => {
+        if (preselectedGroupId) {
+            const group = groups.find(g => g.id === preselectedGroupId);
+            if (group) {
+                setSelectedGroup(group);
+                if (onClearPreselection) onClearPreselection();
+            }
+        }
+    }, [preselectedGroupId, groups, onClearPreselection]);
 
     // --- Helpers ---
     const isGroupFinished = (g: Group) => {
@@ -564,7 +579,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                                     {(group.hostName || group.leaderName || '?').substring(0, 2).toUpperCase()}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-[9px] uppercase text-gray-500 font-black tracking-widest">Líder</span>
+                                                    <span className="text-[9px] uppercase text-gray-500 font-black tracking-widest">Anfitrión</span>
                                                     <span className="text-xs font-bold text-black uppercase truncate max-w-[100px]">{group.leaderName}</span>
                                                 </div>
                                             </div>

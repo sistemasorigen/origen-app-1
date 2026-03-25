@@ -17,6 +17,7 @@ import { Group } from '../../types';
 interface CoordinatorCalendarProps {
     groups: Group[];
     categoryName: string;
+    onGroupSelect?: (groupId: string) => void;
 }
 
 const DAYS_ES = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
@@ -34,7 +35,7 @@ const PALETTE = [
     { bg: '#c4b5fd', text: '#000000', border: '#000000' }, // Violet
 ];
 
-const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => {
+const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups, onGroupSelect }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -325,7 +326,14 @@ const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups }) => 
                                             <span className="font-bold text-sm uppercase truncate">{ev.leader}</span>
                                         </div>
                                     </div>
-                                    <button className="w-full mt-5 py-3 px-4 min-h-[44px] bg-black text-white font-bold uppercase text-xs tracking-wider border border-black hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 rounded-lg shadow-sm">
+                                    <button
+                                        onClick={() => {
+                                            if (onGroupSelect && ev.groupData?.id) {
+                                                onGroupSelect(ev.groupData.id);
+                                            }
+                                        }}
+                                        className="w-full mt-5 py-3 px-4 min-h-[44px] bg-black text-white font-bold uppercase text-xs tracking-wider border border-black hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 rounded-lg shadow-sm"
+                                    >
                                         Ver Detalles
                                         <ArrowRight className="w-4 h-4 ml-1" />
                                     </button>

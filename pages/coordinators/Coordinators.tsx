@@ -31,6 +31,7 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<CoordinatorTab>('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [preselectedGroupId, setPreselectedGroupId] = useState<string | null>(null);
 
     // Deep linking for tabs
     useEffect(() => {
@@ -140,6 +141,16 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
         setSidebarOpen(false);
     };
 
+    const handleGroupSelectFromCalendar = (groupId: string) => {
+        setPreselectedGroupId(groupId);
+        setActiveTab('groups');
+        setSidebarOpen(false);
+    };
+
+    const handleClearPreselection = () => {
+        setPreselectedGroupId(null);
+    };
+
     const renderContent = () => {
         if (loading) {
             return (
@@ -170,6 +181,8 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                         currentUser={currentUser}
                         categoryName={categoryName}
                         onRefresh={loadData}
+                        preselectedGroupId={preselectedGroupId}
+                        onClearPreselection={handleClearPreselection}
                     />
                 );
             case 'attendance':
@@ -186,6 +199,7 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                     <CoordinatorCalendar
                         groups={groups}
                         categoryName={categoryName}
+                        onGroupSelect={handleGroupSelectFromCalendar}
                     />
                 );
             default:

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node modernize-admin.cjs)"
+      "Bash(node modernize-admin.cjs)",
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

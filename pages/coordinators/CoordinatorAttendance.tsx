@@ -33,6 +33,7 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
     const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('Todos los estados');
+    const [groupStatusFilter, setGroupStatusFilter] = useState<'active' | 'finished'>('active');
 
     // Transform Data
     const formattedReports = useMemo(() => {
@@ -57,6 +58,17 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                 dateStr = d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
             }
 
+            // Determine if group is finished
+            let isFinished = false;
+            if (group) {
+                if ((group.status as string) === 'finished') {
+                    isFinished = true;
+                } else if (group.endDate) {
+                    const today = new Date().toISOString().split('T')[0];
+                    if (group.endDate < today) isFinished = true;
+                }
+            }
+
             return {
                 id: record.groupId,
                 groupName: record.groupName,
@@ -68,7 +80,8 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                 totalMembers: (record.allMembers || []).length, // Use actual total
                 status, // 'High', 'Low', 'Moderate', 'Perfect'
                 attendees: (record.presentMembers || []).map((m: any) => m.name),
-                absent: (record.absentMembers || []).map((m: any) => m.name)
+                absent: (record.absentMembers || []).map((m: any) => m.name),
+                isFinished
             };
         });
     }, [attendanceData, groups]);
@@ -76,6 +89,10 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
     // Filter logic
     const filteredReports = useMemo(() => {
         return formattedReports.filter(report => {
+            // Group status filter
+            if (groupStatusFilter === 'active' && report.isFinished) return false;
+            if (groupStatusFilter === 'finished' && !report.isFinished) return false;
+
             const matchesSearch = (report.groupName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (report.leader || '').toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -88,7 +105,7 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
 
             return matchesSearch && matchesStatus;
         });
-    }, [formattedReports, searchTerm, statusFilter]);
+    }, [formattedReports, searchTerm, statusFilter, groupStatusFilter]);
 
     const toggleDetails = (id: string) => {
         setExpandedReportId(expandedReportId === id ? null : id);
@@ -127,6 +144,28 @@ const CoordinatorAttendance: React.FC<CoordinatorAttendanceProps> = ({
                 <div className="mb-10">
                     <h1 className="text-4xl md:text-5xl font-black text-black uppercase tracking-tighter leading-none mb-2">Reportes de Asistencia</h1>
                     <p className="text-sm md:text-base font-bold text-gray-500 uppercase tracking-wide">Gestiona y analiza el compromiso de tu comunidad.</p>
+                </div>
+
+                {/* Group Status Filter */}
+                <div className="flex p-1 bg-gray-100 rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] self-start mb-6 inline-flex">
+                    <button
+                        onClick={() => setGroupStatusFilter('active')}
+                        className={`px-6 py-2 text-sm font-black uppercase tracking-wider transition-all rounded-md ${groupStatusFilter === 'active'
+                            ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]'
+                            : 'text-gray-500 hover:text-black'
+                            }`}
+                    >
+                        Activos
+                    </button>
+                    <button
+                        onClick={() => setGroupStatusFilter('finished')}
+                        className={`px-6 py-2 text-sm font-black uppercase tracking-wider transition-all rounded-md ${groupStatusFilter === 'finished'
+                            ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]'
+                            : 'text-gray-500 hover:text-black'
+                            }`}
+                    >
+                        Finalizados
+                    </button>
                 </div>
 
                 {/* Filters & Actions Toolbar */}
