@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import NeoModal from '../NeoModal';
 import { User, Calendar, History, Save, Check, Loader2, Users } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Member {
     id: string;
@@ -27,6 +28,7 @@ interface AttendanceModalProps {
 }
 
 const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, group }) => {
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
     const [selectedDate, setSelectedDate] = useState(() => {
         const today = new Date();
@@ -63,7 +65,37 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
         const data = await supabaseService.getAttendanceHistory(group.id);
         setHistory(data);
         setLoadingHistory(false);
+        return data; // Return data for internal use
     };
+
+    // Load attendance for the selected date
+    useEffect(() => {
+        const fetchDateAttendance = async () => {
+            // First check if we have it in history to avoid extra network calls
+            let record = history.find(r => r.date === selectedDate);
+            
+            if (!record && activeTab === 'new') {
+                // If not in local history, and it's the "new" tab, try to fetch it
+                // We don't want to load whole history just for one date usually, 
+                // but since getAttendanceHistory is used, we'll check history first.
+                // If history is empty, maybe load it once.
+                if (history.length === 0) {
+                    const latestHistory = await loadHistory();
+                    record = latestHistory.find(r => r.date === selectedDate);
+                }
+            }
+
+            if (record) {
+                setSelectedMembers(new Set(record.presentMembers));
+            } else {
+                setSelectedMembers(new Set());
+            }
+        };
+
+        if (isOpen && activeTab === 'new') {
+            fetchDateAttendance();
+        }
+    }, [selectedDate, isOpen, activeTab]);
 
     const toggleMember = (memberId: string) => {
         const newSet = new Set(selectedMembers);
@@ -90,6 +122,21 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
         if (success) {
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
+            
+            // Refresh history after save
+            loadHistory();
+
+            // Send confirmation notification to the host
+            if (user?.id) {
+                const formattedDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long' });
+                await supabaseService.createAppNotification(
+                    user.id,
+                    '✅ Asistencia registrada',
+                    `Registraste ${selectedMembers.size} presente(s) en ${group.name} el ${formattedDate}. ¡Seguí así!`,
+                    'ATTENDANCE',
+                    '/host-dashboard'
+                );
+            }
         }
     };
 
@@ -132,28 +179,33 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
                             <div>
                                 <label className="text-[10px] font-black uppercase text-neutral-500 block mb-1">Fecha de Reunión</label>
                                 <div
-                                    className="relative cursor-pointer"
+                                    className="relative"
                                     onClick={() => {
-                                        const input = document.querySelector('input[type="date"]') as HTMLInputElement;
+                                        const input = document.getElementById(`attendance-date-${group.id}`) as HTMLInputElement;
                                         if (input) {
-                                            try {
-                                                input.showPicker?.();
-                                            } catch {
+                                            if ('showPicker' in HTMLInputElement.prototype) {
+                                                try {
+                                                    input.showPicker();
+                                                } catch (e) {
+                                                    input.click();
+                                                }
+                                            } else {
                                                 input.focus();
                                                 input.click();
                                             }
                                         }
                                     }}
                                 >
-                                    <div className="w-full px-3 py-2 border-2 border-black font-bold flex items-center justify-between bg-white">
-                                        <span>{formatDate(selectedDate)}</span>
+                                    <div className="w-full px-3 py-2 border-2 border-black font-bold flex items-center justify-between bg-white hover:bg-neutral-50 cursor-pointer transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                        <span className="text-sm">{formatDate(selectedDate)}</span>
                                         <Calendar className="w-4 h-4 text-neutral-400" />
                                     </div>
                                     <input
+                                        id={`attendance-date-${group.id}`}
                                         type="date"
                                         value={selectedDate}
                                         onChange={(e) => setSelectedDate(e.target.value)}
-                                        className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                     />
                                 </div>
                             </div>
@@ -211,14 +263,24 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
                             ) : (
                                 history.map((record) => (
                                     <div key={record.id} className="flex justify-between items-center p-3 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white">
-                                        <div className="flex items-center gap-2">
-                                            <Calendar className="w-4 h-4 text-neutral-500" />
-                                            <span className="font-bold">{formatDate(record.date)}</span>
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="w-4 h-4 text-neutral-500" />
+                                                <span className="font-bold">{formatDate(record.date)}</span>
+                                            </div>
+                                            <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1">
+                                                {record.count} Presentes
+                                            </p>
                                         </div>
-                                        <div className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-sm border border-green-200">
-                                            <Users className="w-3 h-3" />
-                                            <span className="text-xs font-black uppercase">{record.count} Presentes</span>
-                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedDate(record.date);
+                                                setActiveTab('new');
+                                            }}
+                                            className="px-3 py-1 bg-black text-white text-[10px] font-black uppercase tracking-tighter hover:bg-neutral-800 transition-colors"
+                                        >
+                                            Editar
+                                        </button>
                                     </div>
                                 ))
                             )}

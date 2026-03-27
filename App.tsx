@@ -19,6 +19,7 @@ import Formulario from './pages/welcome/Formulario';
 import TutorialsPage from './pages/TutorialsPage';
 import Coordinators from './pages/coordinators/Coordinators';
 import PastoralCareForm from './pages/pastoral/PastoralCareForm';
+import Notifications from './pages/Notifications';
 import PastoralCareDashboard from './pages/pastoral/PastoralCareDashboard';
 import SystemLoginModal from './components/SystemLoginModal';
 import CompleteProfileModal from './components/CompleteProfileModal';
@@ -28,6 +29,7 @@ import { supabaseService } from './services/supabaseService';
 import { hasRole } from './services/authUtils';
 import { AudioProvider } from './contexts/AudioContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { ToastProvider } from './pages/infopoint/context/ToastContext';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 
@@ -282,6 +284,8 @@ const AppContent: React.FC = () => {
                                     : <Navigate to="/" />
                             } />
 
+                            <Route path="/notificaciones" element={<Notifications />} />
+
                             <Route path="*" element={<Navigate to="/" />} />
                         </Routes>
                     </Layout>
@@ -296,11 +300,13 @@ const App: React.FC = () => {
         <ErrorBoundary>
             <AudioProvider>
                 <AuthProvider>
-                    <ToastProvider>
-                        <HashRouter>
-                            <AppContent />
-                        </HashRouter>
-                    </ToastProvider>
+                    <NotificationProvider>
+                        <ToastProvider>
+                            <HashRouter>
+                                <AppContent />
+                            </HashRouter>
+                        </ToastProvider>
+                    </NotificationProvider>
                 </AuthProvider>
             </AudioProvider>
         </ErrorBoundary>

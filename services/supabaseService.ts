@@ -182,6 +182,36 @@ function transformDbRowToGroup(data: any): Group {
 
 
 export const supabaseService = {
+  // --- NOTIFICATIONS ---
+  async createAppNotification(userId: string, title: string, message: string, type: string, actionUrl: string | null = null, metadata: any = null): Promise<boolean> {
+    try {
+      if (!userId) {
+        console.warn('[Notifications] Cannot create notification without user_id');
+        return false;
+      }
+      
+      const { error } = await supabase
+        .from('app_notifications')
+        .insert({
+          user_id: userId,
+          title,
+          message,
+          type,
+          action_url: actionUrl,
+          metadata
+        });
+
+      if (error) {
+        console.error('[Notifications] Error creating notification:', error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('[Notifications] Exception creating notification:', err);
+      return false;
+    }
+  },
+
   // --- AUTHENTICATION & USERS (REAL SUPABASE AUTH) ---
 
   // A. Sign Up
@@ -1312,17 +1342,43 @@ export const supabaseService = {
         updateData.admin_note = adminNote || null;
       }
 
-      const { error } = await supabase
+      // Update status and fetch metadata for notifications in one atomic operation
+      const { data: groupData, error: updateError } = await supabase
         .from('groups')
         .update(updateData)
-        .eq('id', groupId);
+        .eq('id', groupId)
+        .select('name, host_id, co_host_id, meeting_day')
+        .single();
 
-      if (error) {
-        console.error('[Groups] Error updating status:', error);
+      if (updateError) {
+        console.error('[Groups] Error updating status:', updateError);
         return false;
       }
 
       console.log('[Groups] Status updated:', groupId, '->', status, adminNote ? '(with note)' : '');
+
+      // Send in-app notifications to host/co-host
+      if (status === 'approved' || status === 'rejected') {
+        if (groupData) {
+          const isApproved = status === 'approved';
+          const title = isApproved ? '¡Tu grupo fue aprobado! 🎉' : 'Actualización sobre tu grupo';
+          const message = isApproved
+            ? `Tu grupo "${groupData.name}" ha sido aprobado. Recuerda registrar asistencia cada ${groupData.meeting_day || 'reunión'}.`
+            : `Tu grupo "${groupData.name}" no ha podido ser aprobado en este momento.${adminNote ? ` Motivo: ${adminNote}` : ''}`;
+          const type = isApproved ? 'GROUP_APPROVED' : 'GROUP_REJECTED';
+          const actionUrl = '/host-dashboard';
+
+          if (groupData.host_id) {
+            await supabaseService.createAppNotification(groupData.host_id, title, message, type, actionUrl);
+          }
+          if (groupData.co_host_id) {
+            await supabaseService.createAppNotification(groupData.co_host_id, title, message, type, actionUrl);
+          }
+        } else {
+          console.warn('[Groups] Could not send notification: Group data missing after update');
+        }
+      }
+
       return true;
     } catch (error) {
       console.error('[Groups] Exception updating status:', error);
@@ -1991,6 +2047,17 @@ export const supabaseService = {
     try {
       console.log('[Groups] Calling RPC manage_group_registration_v3 with:', { id, status });
 
+      // Fetch user info for notification
+      const { data: regInfo } = await supabase
+        .from('group_registrations')
+        .select(`
+          user_id,
+          partner_user_id,
+          groups ( name )
+        `)
+        .eq('id', id)
+        .single();
+
       // Directly call RPC - it handles all logic including permission checks
       const { data, error } = await supabase
         .rpc('manage_group_registration_v3', {
@@ -2015,6 +2082,26 @@ export const supabaseService = {
           })
           .eq('id', id);
         console.log('[Groups] Cleared partner data for rejected registration');
+      }
+
+      // Send notifications
+      if (data === true && regInfo) {
+        const groupData: any = regInfo.groups;
+        const groupName = groupData?.name || 'un grupo';
+        
+        const notifTitle = status === 'APPROVED' ? 'Solicitud Aprobada' : 'Solicitud Rechazada';
+        const notifMessage = status === 'APPROVED' 
+            ? `Tu solicitud para unirte a ${groupName} ha sido aprobada.` 
+            : `Tu solicitud para unirte a ${groupName} no ha podido ser aceptada en este momento.`;
+        const type = status === 'APPROVED' ? 'REGISTRATION_APPROVED' : 'REGISTRATION_REJECTED';
+        const actionUrl = '/';
+
+        if (regInfo.user_id) {
+          await supabaseService.createAppNotification(regInfo.user_id, notifTitle, notifMessage, type, actionUrl);
+        }
+        if (regInfo.partner_user_id) {
+          await supabaseService.createAppNotification(regInfo.partner_user_id, notifTitle, notifMessage, type, actionUrl);
+        }
       }
 
       // RPC returns true on success, false on failure

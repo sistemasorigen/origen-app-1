@@ -8,6 +8,8 @@ import GlobalPlayer from './GlobalPlayer';
 import DrawerMenu, { HamburgerButton } from './DrawerMenu';
 import { useAudio } from '../contexts/AudioContext';
 import { Sun, Moon } from 'lucide-react';
+import { NotificationBell, NotificationDrawer } from './NotificationsUI';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -20,10 +22,12 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogout, onToggleTheme }) => {
+    useAutoRefresh();
     const location = useLocation();
     const { currentSong } = useAudio();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+    const [isNotifDrawerOpen, setIsNotifDrawerOpen] = useState(false);
 
     const isDashboard = location.pathname === '/';
     const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/groups' || location.pathname === '/info-point' || location.pathname === '/alabanza' || location.pathname.startsWith('/coordinators');
@@ -135,6 +139,9 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                                     <Moon className="h-5 w-5 hidden dark:block" />
                                 </button>
                             )}
+                            {currentUser && (
+                                <NotificationBell onToggleDrawer={() => setIsNotifDrawerOpen(true)} />
+                            )}
                             <div className="flex items-center">
                                 {!currentUser && (
                                     <div className="hidden md:flex items-center gap-2">
@@ -162,6 +169,11 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
 
                 <GlobalPlayer />
             </div>
+
+            <NotificationDrawer
+                isOpen={isNotifDrawerOpen}
+                onClose={() => setIsNotifDrawerOpen(false)}
+            />
         </div>
     );
 };

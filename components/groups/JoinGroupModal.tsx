@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import NeoModal from '../NeoModal';
-import { ArrowRight, Info, CheckCircle2, Heart, Users, Check } from 'lucide-react';
-import { Group, User, GroupRegistration, SystemNotification, UserRole, GroupCategory, GroupTag } from '../../types';
+import { ArrowRight, CheckCircle2, Heart, Users, Check } from 'lucide-react';
+import { Group, User, GroupRegistration, GroupCategory, GroupTag } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import { db } from '../../services/dbService';
 
 interface JoinGroupModalProps {
     isOpen: boolean;
@@ -176,21 +175,32 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                     ? `${formData.firstName} ${formData.lastName} y ${partnerData.firstName} ${partnerData.lastName} se inscribieron como pareja en ${group.name}.`
                     : `${formData.firstName} ${formData.lastName} se unió a ${group.name}.`;
 
-                const notif: SystemNotification = {
-                    id: generateUUID(),
-                    title: isCouplesGroup ? 'Nueva Pareja Inscrita' : 'Nuevo Miembro Inscrito',
-                    message: notifMessage,
-                    details: `Tel: ${formData.phone}. Email: ${formData.email}${isCouplesGroup ? ` | Pareja: ${partnerData.firstName} (${partnerData.email})` : ''}`,
-                    timestamp: new Date().toISOString(),
-                    read: false,
-                    targetRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ANFITRION],
-                    type: 'REGISTRATION',
-                    metadata: { groupId: group.id, ...formData }
-                };
+                const notifTitle = isCouplesGroup ? `Nueva solicitud de pareja` : `Nueva solicitud de miembro`;
+                const actionUrl = `/admin/groups?groupId=${group.id}`;
 
-                const list = db.getNotifications();
-                list.unshift(notif);
-                localStorage.setItem('notifications', JSON.stringify(list));
+                // Notify host
+                if ((group as any).host_id) {
+                    await supabaseService.createAppNotification(
+                        (group as any).host_id,
+                        notifTitle,
+                        notifMessage,
+                        'REGISTRATION',
+                        actionUrl,
+                        { groupId: group.id, ...formData }
+                    );
+                }
+
+                // Notify co-host
+                if ((group as any).co_host_id) {
+                    await supabaseService.createAppNotification(
+                        (group as any).co_host_id,
+                        notifTitle,
+                        notifMessage,
+                        'REGISTRATION',
+                        actionUrl,
+                        { groupId: group.id, ...formData }
+                    );
+                }
 
                 if (onSuccess) onSuccess();
                 setSuccessView(true);
