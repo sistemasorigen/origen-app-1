@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User, ServiceStatistic } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import { ChevronLeft, ChevronRight, Check, ArrowLeft, Calendar, User as UserIcon, Heart, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, ArrowLeft, Calendar, User as UserIcon, Heart, Loader2 } from 'lucide-react';
 
 interface PastoralCareFormProps { currentUser: User | null; }
 
@@ -12,6 +12,10 @@ const EMPTY_FORM: FormData = {
     name: '',
     service_date: '',
     service_time: 'AM',
+    service_hour: '',
+    category: '',
+    service_type: '',
+    observations: '',
     conecta: 0, store: 0, host_prevencion: 0, punto_info: 0, produccion: 0,
     equipo_ministracion: 0, atmosfera: 0, visuales: 0, redes: 0,
     sala_bienvenida: 0, sonido: 0, ea: 0, streaming: 0, camaras: 0,
@@ -19,7 +23,6 @@ const EMPTY_FORM: FormData = {
     ninos_3_6: 0, ninos_7_10: 0, ninos_hd: 0, borders: 0,
     online: 0, voluntarios_repetidos: 0, aceptaron: 0,
     asistieron_primera_vez: 0, reconciliaron: 0, podcast: 0, oracion: 0,
-    conference_sessions: [],
 };
 
 interface FieldDef { key: keyof FormData; label: string; }
@@ -54,18 +57,51 @@ const STEPS = [
     { title: 'Seguimiento', subtitle: 'Métricas generales', icon: Calendar },
 ];
 
-const inputCls = 'w-full p-3 bg-white border-2 border-black rounded-lg outline-none font-bold placeholder-neutral-400 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all text-black text-base appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
+const CATEGORIES = ['Servicio de Domingo', 'CXV', 'Evento', 'Conferencia'];
 
-const NumericInput: React.FC<{ label: string; value: number; onChange: (v: number) => void }> = ({ label, value, onChange }) => (
+const SUNDAY_SERVICE_TYPES = [
+    'Tradicional',
+    'Invitado',
+    'Día de la Madre',
+    'Día del Padre',
+    'Día del Niño',
+    'Bautismos',
+    'Semana Santa',
+    'Servicio de Milagros',
+    'Navidad',
+    'Año Nuevo',
+    'Acción de Gracias',
+];
+
+const inputCls = 'w-full p-3 bg-white border-2 border-black rounded-lg outline-none font-bold placeholder-neutral-400 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all text-black text-base appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
+
+const selectCls = 'w-full p-3 bg-white border-2 border-black rounded-lg outline-none font-bold text-black text-base focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all cursor-pointer';
+
+const NumericInput: React.FC<{
+    label: string;
+    value: number;
+    onChange: (v: number) => void;
+    max?: number;
+    error?: string;
+}> = ({ label, value, onChange, max, error }) => (
     <div>
-        <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">{label}</label>
+        <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+            {label}
+        </label>
         <input
-            type="number" min={0}
+            type="number"
+            min={0}
+            max={max}
             value={value === 0 ? '' : value}
             placeholder="0"
-            onChange={(e) => { const n = parseInt(e.target.value, 10); onChange(isNaN(n) ? 0 : Math.max(0, n)); }}
-            className={inputCls}
+            onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                const clamped = max ? Math.min(max, Math.max(0, isNaN(n) ? 0 : n)) : Math.max(0, isNaN(n) ? 0 : n);
+                onChange(clamped);
+            }}
+            className={`${inputCls} ${error ? 'border-red-500 shadow-[4px_4px_0px_0px_rgba(239,68,68,1)]' : ''}`}
         />
+        {error && <p className="text-red-600 text-xs font-bold mt-1">{error}</p>}
     </div>
 );
 
@@ -97,6 +133,10 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                 name: editRecord.name ?? '',
                 service_date: editRecord.service_date ?? '',
                 service_time: editRecord.service_time ?? 'AM',
+                service_hour: editRecord.service_hour ?? '',
+                category: editRecord.category ?? '',
+                service_type: editRecord.service_type ?? '',
+                observations: editRecord.observations ?? '',
                 conecta: editRecord.conecta ?? 0, store: editRecord.store ?? 0,
                 host_prevencion: editRecord.host_prevencion ?? 0, punto_info: editRecord.punto_info ?? 0,
                 produccion: editRecord.produccion ?? 0, equipo_ministracion: editRecord.equipo_ministracion ?? 0,
@@ -112,7 +152,6 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                 aceptaron: editRecord.aceptaron ?? 0, asistieron_primera_vez: editRecord.asistieron_primera_vez ?? 0,
                 reconciliaron: editRecord.reconciliaron ?? 0, podcast: editRecord.podcast ?? 0,
                 oracion: editRecord.oracion ?? 0,
-                conference_sessions: editRecord.conference_sessions ?? [],
             };
         }
         return { ...EMPTY_FORM };
@@ -122,32 +161,22 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
     const [saveError, setSaveError] = useState('');
     const [dateError, setDateError] = useState('');
 
+    // --- LÓGICA CRÍTICA: resetear service_type si la categoría cambia a algo distinto de "Servicio de Domingo" ---
+    useEffect(() => {
+        if (form.category !== 'Servicio de Domingo') {
+            setForm(prev => ({ ...prev, service_type: '' }));
+        }
+    }, [form.category]);
+
     const setField = (key: keyof FormData, value: string | number | any[]) => {
         setForm(prev => ({ ...prev, [key]: value }));
         if (key === 'service_date') setDateError('');
     };
 
-    const addConferenceSession = () => {
-        setForm(prev => ({
-            ...prev,
-            conference_sessions: [...(prev.conference_sessions || []), { name: '', attendees: 0 }]
-        }));
-    };
-
-    const updateConferenceSession = (index: number, field: 'name' | 'attendees', value: string | number) => {
-        setForm(prev => {
-            const newSessions = [...(prev.conference_sessions || [])];
-            newSessions[index] = { ...newSessions[index], [field]: value };
-            return { ...prev, conference_sessions: newSessions };
-        });
-    };
-
-    const removeConferenceSession = (index: number) => {
-        setForm(prev => ({
-            ...prev,
-            conference_sessions: (prev.conference_sessions || []).filter((_, i) => i !== index)
-        }));
-    };
+    // Limpiar error de fecha cuando se completa el campo
+    useEffect(() => {
+        if (form.service_date) setDateError('');
+    }, [form.service_date]);
 
 
     const validateStep = (): boolean => {
@@ -203,14 +232,14 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         {!isEdit && (
                             <button
                                 onClick={() => { setForm({ ...EMPTY_FORM }); setTotalAuditorioInput(0); setStep(0); setSubmitted(false); }}
-                                className="w-full py-4 bg-white text-black font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all"
+                                className="w-full py-4 bg-white text-black font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                             >
                                 Nuevo Registro
                             </button>
                         )}
                         <button
                             onClick={() => navigate('/pastoral-care')}
-                            className="w-full py-4 bg-black text-white font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all"
+                            className="w-full py-4 bg-black text-white font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             Ver Panel
                         </button>
@@ -230,7 +259,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
                     <button
                         onClick={() => navigate('/pastoral-care')}
-                        className="w-10 h-10 flex items-center justify-center border-2 border-black bg-white hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all flex-shrink-0"
+                        className="w-10 h-10 flex items-center justify-center border-2 border-black bg-white hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         aria-label="Volver"
                     >
                         <ArrowLeft className="w-4 h-4" />
@@ -248,12 +277,12 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                     <div className="flex items-center gap-2">
                         {STEPS.map((s, idx) => (
                             <React.Fragment key={s.title}>
-                                <div className={`flex items-center gap-2 transition-all ${idx === step ? 'opacity-100' : 'opacity-40'}`}>
-                                    <div className={`w-7 h-7 flex items-center justify-center border-2 border-black text-xs font-black transition-colors
+                                <div className={`flex items-center gap-2 transition-all ${idx === step ? 'opacity-100' : 'opacity-50'}`}>
+                                    <div className={`w-8 h-8 flex items-center justify-center border-2 border-black text-xs font-bold transition-colors
                                         ${idx <= step ? 'bg-black text-white' : 'bg-white text-neutral-400'}`}>
-                                        {idx < step ? <Check className="w-3.5 h-3.5" /> : idx + 1}
+                                        {idx < step ? <Check className="w-4 h-4" /> : idx + 1}
                                     </div>
-                                    <span className="hidden sm:block text-xs font-black uppercase tracking-wider text-black whitespace-nowrap">
+                                    <span className="hidden sm:block text-[11px] font-bold uppercase tracking-wider text-black whitespace-nowrap">
                                         {s.title}
                                     </span>
                                 </div>
@@ -275,10 +304,10 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         <StepIcon className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <p className="text-xs font-black uppercase tracking-widest text-neutral-500">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">
                             Paso {step + 1} de {STEPS.length}
                         </p>
-                        <h2 className="text-xl font-black uppercase tracking-tight text-black">{STEPS[step].title}</h2>
+                        <h2 className="text-lg font-black uppercase tracking-tight text-black">{STEPS[step].title}</h2>
                     </div>
                 </div>
 
@@ -290,10 +319,11 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                             <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
                                 Información del Servicio
                             </h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                {/* Nombre */}
                                 <div>
-                                    <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">
-                                        Nombre <span className="text-neutral-400 normal-case font-bold">(Opcional)</span>
+                                    <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                                        Nombre <span className="text-neutral-500 normal-case font-medium">(Opcional)</span>
                                     </label>
                                     <input
                                         type="text"
@@ -303,8 +333,9 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                         className={inputCls}
                                     />
                                 </div>
+                                {/* Fecha */}
                                 <div>
-                                    <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">
+                                    <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
                                         Fecha <span className="text-red-500">*</span>
                                     </label>
                                     <input
@@ -313,17 +344,29 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                         onChange={(e) => setField('service_date', e.target.value)}
                                         className={`${inputCls} ${dateError ? 'border-red-500 shadow-[4px_4px_0px_0px_rgba(239,68,68,1)]' : ''}`}
                                     />
-                                    {dateError && <p className="text-red-500 text-xs font-bold mt-1">{dateError}</p>}
+                                    {dateError && <p className="text-red-600 text-xs font-bold mt-1">{dateError}</p>}
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">
-                                        Horario <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="flex gap-2">
+                            </div>
+
+                            {/* Horario: time picker + AM/PM */}
+                            <div className="mb-4">
+                                <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                                    Horario <span className="text-red-500">*</span>
+                                </label>
+                                <div className="flex gap-3 items-center">
+                                    {/* Input hora:minuto */}
+                                    <input
+                                        type="time"
+                                        value={form.service_hour ?? ''}
+                                        onChange={(e) => setField('service_hour', e.target.value)}
+                                        className={`${inputCls} w-40 flex-shrink-0`}
+                                    />
+                                    {/* Botones AM/PM */}
+                                    <div className="flex gap-2 flex-1">
                                         <button
                                             type="button"
                                             onClick={() => setField('service_time', 'AM')}
-                                            className={`flex-1 py-3 font-black text-sm uppercase tracking-wider border-2 border-black transition-all
+                                            className={`flex-1 py-3 font-bold text-sm uppercase tracking-wider border-2 border-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
                                                 ${form.service_time === 'AM'
                                                     ? 'bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
                                                     : 'bg-white text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'}`}
@@ -333,7 +376,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                         <button
                                             type="button"
                                             onClick={() => setField('service_time', 'PM')}
-                                            className={`flex-1 py-3 font-black text-sm uppercase tracking-wider border-2 border-black transition-all
+                                            className={`flex-1 py-3 font-bold text-sm uppercase tracking-wider border-2 border-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
                                                 ${form.service_time === 'PM'
                                                     ? 'bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
                                                     : 'bg-white text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'}`}
@@ -343,6 +386,42 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Categoría */}
+                            <div className="mb-4">
+                                <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                                    Categoría <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    value={form.category ?? ''}
+                                    onChange={(e) => setField('category', e.target.value)}
+                                    className={selectCls}
+                                >
+                                    <option value="">— Seleccioná una categoría —</option>
+                                    {CATEGORIES.map((cat) => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Tipo de Servicio — solo visible si categoría = "Servicio de Domingo" */}
+                            {form.category === 'Servicio de Domingo' && (
+                                <div className="mb-4">
+                                    <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                                        Tipo de Servicio
+                                    </label>
+                                    <select
+                                        value={form.service_type ?? ''}
+                                        onChange={(e) => setField('service_type', e.target.value)}
+                                        className={selectCls}
+                                    >
+                                        <option value="">— Seleccioná un tipo —</option>
+                                        {SUNDAY_SERVICE_TYPES.map((tipo) => (
+                                            <option key={tipo} value={tipo}>{tipo}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
 
                         {/* Voluntarios */}
@@ -350,15 +429,15 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                             <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
                                 Áreas de Voluntarios
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {STEP1_METRICS.map((f) => {
                                     if (f.key === 'auditorio') {
                                         return (
-                                            <NumericInput 
-                                                key="auditorio" 
-                                                label="Total Auditorio (Con Voluntarios)" 
-                                                value={totalAuditorioInput} 
-                                                onChange={setTotalAuditorioInput} 
+                                            <NumericInput
+                                                key="auditorio"
+                                                label="Total Auditorio (Con Voluntarios)"
+                                                value={totalAuditorioInput}
+                                                onChange={setTotalAuditorioInput}
                                             />
                                         );
                                     }
@@ -375,7 +454,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
                             Asistencia por grupo de edad
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {STEP2_FIELDS.map((f) => (
                                 <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
                             ))}
@@ -389,61 +468,26 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
                             Métricas generales del servicio
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {STEP3_FIELDS.map((f) => (
                                 <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
                             ))}
                         </div>
-                        <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 mt-8 text-black flex justify-between items-center">
-                            <span>Sesiones Especiales</span>
-                            <button
-                                type="button"
-                                onClick={addConferenceSession}
-                                className="text-xs font-bold uppercase flex items-center gap-1 text-black hover:text-neutral-600 transition-colors"
-                            >
-                                <Plus className="w-4 h-4" /> Añadir Sesión
-                            </button>
-                        </h3>
-                        {(!form.conference_sessions || form.conference_sessions.length === 0) ? (
-                            <div className="p-4 border-2 border-dashed border-neutral-300 text-center text-neutral-500 font-bold text-sm">
-                                No hay sesiones registradas.
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {form.conference_sessions.map((session, index) => (
-                                    <div key={index} className="flex gap-3 items-end bg-neutral-50 p-3 border-2 border-black">
-                                        <div className="flex-1">
-                                            <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">Nombre Sesión</label>
-                                            <input
-                                                type="text"
-                                                value={session.name}
-                                                onChange={(e) => updateConferenceSession(index, 'name', e.target.value)}
-                                                className={inputCls}
-                                                placeholder="Ej: Leo"
-                                            />
-                                        </div>
-                                        <div className="w-32">
-                                            <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">Auditorio</label>
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                value={session.attendees === 0 ? '' : session.attendees}
-                                                onChange={(e) => updateConferenceSession(index, 'attendees', parseInt(e.target.value) || 0)}
-                                                className={inputCls}
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => removeConferenceSession(index)}
-                                            className="h-[52px] w-[52px] flex items-center justify-center border-2 border-black hover:bg-black hover:text-white transition-all bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex-shrink-0 text-red-500"
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+
+
+                        {/* Observaciones */}
+                        <div className="mt-8">
+                            <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">
+                                Observaciones
+                            </label>
+                            <textarea
+                                value={form.observations ?? ''}
+                                onChange={(e) => setField('observations', e.target.value)}
+                                placeholder="Anotá cualquier detalle relevante del servicio..."
+                                rows={4}
+                                className="w-full p-3 bg-white border-2 border-black rounded-lg outline-none font-bold placeholder-neutral-400 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all text-black text-base resize-none"
+                            />
+                        </div>
 
                         {saveError && (
                             <div className="mt-4 p-3 border-2 border-red-500 bg-red-50 text-red-700 text-xs font-bold shadow-[2px_2px_0px_0px_rgba(239,68,68,1)]">
@@ -454,13 +498,23 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                 )}
             </div>
 
+            {/* Loading overlay */}
+            {saving && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
+                        <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-black" />
+                        <p className="font-bold text-sm uppercase tracking-widest">Guardando...</p>
+                    </div>
+                </div>
+            )}
+
             {/* Navigation — Fixed bottom bar */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black z-20 px-4 py-3">
-                <div className="max-w-3xl mx-auto flex items-center gap-3">
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black z-20 px-3 py-2 sm:px-4 sm:py-3">
+                <div className="max-w-3xl mx-auto flex items-center gap-2 sm:gap-3">
                     <button
                         onClick={prevStep}
                         disabled={step === 0}
-                        className="flex items-center justify-center gap-1.5 px-5 py-3.5 bg-white text-black font-black text-sm uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 disabled:opacity-30 disabled:pointer-events-none transition-all flex-shrink-0"
+                        className="flex items-center justify-center gap-1 px-3 sm:px-5 py-2.5 sm:py-3.5 bg-white text-black font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 disabled:opacity-30 disabled:pointer-events-none transition-all flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                     >
                         <ChevronLeft className="w-4 h-4" />
                         <span className="hidden sm:inline">Atrás</span>
@@ -468,14 +522,14 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
 
                     <div className="flex gap-1.5 flex-1 justify-center">
                         {STEPS.map((_, idx) => (
-                            <div key={idx} className={`h-2 transition-all rounded-full ${idx === step ? 'bg-black w-6' : 'bg-neutral-300 w-2'}`} />
+                            <div key={idx} className={`h-1.5 sm:h-2 transition-all rounded-full ${idx === step ? 'bg-black w-5 sm:w-6' : 'bg-neutral-300 w-1.5 sm:w-2'}`} />
                         ))}
                     </div>
 
                     {step < 2 ? (
                         <button
                             onClick={nextStep}
-                            className="flex items-center justify-center gap-1.5 flex-1 py-3.5 bg-black text-white font-black text-sm uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all"
+                            className="flex items-center justify-center gap-1.5 flex-1 py-2.5 sm:py-3.5 bg-black text-white font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             Siguiente <ChevronRight className="w-4 h-4" />
                         </button>
@@ -483,7 +537,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         <button
                             onClick={handleSubmit}
                             disabled={saving}
-                            className="flex items-center justify-center gap-1.5 flex-1 py-3.5 bg-black text-white font-black text-sm uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                            className="flex items-center justify-center gap-1.5 flex-1 py-2.5 sm:py-3.5 bg-black text-white font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                             {saving ? 'Guardando...' : 'Guardar'}

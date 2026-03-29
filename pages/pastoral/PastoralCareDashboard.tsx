@@ -4,7 +4,7 @@ import { User } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import {
     Plus, Eye, GitCompareArrows, Pencil, Trash2, ArrowLeft,
-    TrendingUp, TrendingDown, Minus, ChevronUp, ChevronDown,
+    TrendingUp, TrendingDown, Minus, ChevronUp, ChevronDown, Check,
     X, AlertTriangle, ChevronRight, Calendar, Search, SlidersHorizontal, Clock, CalendarDays
 } from 'lucide-react';
 import NeoModal from '../../components/NeoModal';
@@ -40,10 +40,11 @@ const FilterChip: React.FC<{
             <button
                 type="button"
                 onClick={() => setOpen(o => !o)}
-                className={`w-full flex items-center justify-between gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all
+                className={`w-full flex items-center justify-between gap-1.5 px-3 py-2.5 rounded-lg border-2 border-black text-xs font-bold transition-all
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
                     ${active
-                        ? `${activeColor} shadow-sm`
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:shadow-sm'
+                        ? `${activeColor} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`
+                        : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5'
                     }`}
             >
                 <span className="truncate">{selectedLabel}</span>
@@ -54,16 +55,16 @@ const FilterChip: React.FC<{
             </button>
 
             {open && (
-                <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
                     {options.map(opt => (
                         <button
                             key={opt.value}
                             type="button"
                             onClick={() => { onChange(opt.value); setOpen(false); }}
-                            className={`w-full text-left px-3 py-2.5 text-xs font-semibold transition-colors
+                            className={`w-full text-left px-3 py-2.5 text-xs font-bold transition-colors
                                 ${value === opt.value
-                                    ? 'bg-slate-900 text-white'
-                                    : 'text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-800'
+                                    ? 'bg-black text-white'
+                                    : 'text-black hover:bg-neutral-100'
                                 }`}
                         >
                             {opt.label}
@@ -76,6 +77,18 @@ const FilterChip: React.FC<{
 };
 
 // ─── Calculation helpers ───────────────────────────────────────────────────
+
+const getWeekOfMonth = (dateString: string | Date): number => {
+    const date = new Date(dateString);
+    return Math.ceil(date.getDate() / 7);
+};
+
+const generateYoYKey = (dateString: string | Date): string => {
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const weekIndex = getWeekOfMonth(date);
+    return `${month}-${weekIndex}`;
+};
 
 const calcStats = (r: any) => {
     const volFields = [
@@ -272,17 +285,26 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
 
 // ─── YoY Modal ────────────────────────────────────────────────────────────
 
-const YoYModal: React.FC<{ record: any; onClose: () => void }> = ({ record, onClose }) => {
+const YoYModal: React.FC<{ record: any; allRecords: any[]; onClose: () => void }> = ({ record, allRecords, onClose }) => {
     const [yoyRecord, setYoyRecord] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        (async () => {
-            const prev = await supabaseService.getYoYRecord(record.service_date, record.id);
-            setYoyRecord(prev);
-            setLoading(false);
-        })();
-    }, [record]);
+        const currentKey = generateYoYKey(record.service_date);
+        const currentYear = new Date(record.service_date).getFullYear();
+        
+        // Find a record from a previous year that matches the same month and week index
+        const match = allRecords.find(r => {
+            if (r.id === record.id) return false;
+            const rYear = new Date(r.service_date).getFullYear();
+            if (rYear >= currentYear) return false; // Only previous years
+            
+            return generateYoYKey(r.service_date) === currentKey;
+        });
+
+        setYoyRecord(match || null);
+        setLoading(false);
+    }, [record, allRecords]);
 
     const curr = calcStats(record);
     const prev = yoyRecord ? calcStats(yoyRecord) : null;
@@ -377,6 +399,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
     const [yoyRecord, setYoyRecord] = useState<any | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteSuccess, setDeleteSuccess] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>('service_date');
     const [sortAsc, setSortAsc] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -433,7 +456,12 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
         setDeleteLoading(true);
         const ok = await supabaseService.deleteServiceStatistic(deleteTarget.id);
         setDeleteLoading(false);
-        if (ok) { setDeleteTarget(null); load(); }
+        if (ok) {
+            setDeleteTarget(null);
+            load();
+            setDeleteSuccess(true);
+            setTimeout(() => setDeleteSuccess(false), 3000);
+        }
     };
 
     const SortIcon = ({ col }: { col: SortKey }) => {
@@ -451,18 +479,18 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
             <div className="bg-white dark:bg-black border-b-4 border-black dark:border-white">
                 <div className="w-full px-4 sm:px-8 lg:px-12 py-4 flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => navigate('/')} className="w-9 h-9 flex items-center justify-center border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors">
+                        <button onClick={() => navigate('/')} className="w-10 h-10 flex items-center justify-center border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
                             <ArrowLeft className="w-4 h-4" />
                         </button>
                         <div>
-                            <h1 className="text-xl font-black uppercase tracking-tighter leading-none">Cuidado Pastoral</h1>
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono uppercase tracking-widest">Estadísticas de Servicios</p>
+                            <h1 className="text-xl font-black uppercase tracking-tighter leading-none">Audiencia Servicios</h1>
+                            <p className="text-[10px] text-neutral-600 dark:text-neutral-400 font-mono uppercase tracking-wider">Estadísticas de Servicios</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         <button
                             onClick={() => navigate('/pastoral-care/new')}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-black dark:bg-white text-white dark:text-black font-bold text-xs uppercase hover:opacity-80 transition-opacity border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,0.2)]"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-black dark:bg-white text-white dark:text-black font-bold text-xs uppercase border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.3)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             <Plus className="w-4 h-4" />
                             Nuevo Registro
@@ -474,20 +502,67 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
             {/* Content */}
             <div className="w-full px-4 sm:px-8 lg:px-12 pt-8">
                 {loading && (
-                    <div className="flex justify-center py-24">
-                        <div className="w-10 h-10 border-4 border-black dark:border-white border-t-transparent rounded-full animate-spin" />
-                    </div>
+                    <>
+                        {/* Skeleton filters */}
+                        <div className="mb-5 space-y-3">
+                            <div className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
+                                <div className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
+                                <div className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
+                            </div>
+                        </div>
+                        {/* Skeleton cards for mobile */}
+                        <div className="md:hidden space-y-3">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="bg-white border-2 border-black rounded-xl p-4 animate-pulse">
+                                    <div className="flex justify-between mb-3">
+                                        <div className="h-6 w-16 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
+                                        <div className="flex gap-1.5">
+                                            {[1, 2, 3, 4].map((j) => (
+                                                <div key={j} className="w-11 h-11 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="h-6 w-3/4 bg-neutral-200 dark:bg-neutral-800 rounded mb-3" />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded" />
+                                        <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Skeleton table for desktop */}
+                        <div className="hidden md:block bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-x-auto">
+                            <div className="p-4 space-y-3">
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                    <div key={i} className="flex gap-4">
+                                        <div className="h-4 w-24 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+                                        <div className="h-4 w-48 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+                                        <div className="h-4 w-16 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+                                        <div className="h-4 w-20 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </>
                 )}
 
                 {!loading && records.length === 0 && (
-                    <div className="text-center py-24 border-2 border-dashed border-neutral-300 dark:border-neutral-700">
-                        <Calendar className="w-12 h-12 mx-auto mb-4 text-neutral-300 dark:text-neutral-700" />
-                        <p className="font-bold text-neutral-500 dark:text-neutral-400 mb-4">Todavía no hay registros.</p>
-                        <div className="flex gap-3 justify-center">
-                            <button onClick={() => navigate('/pastoral-care/new')} className="px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black font-bold text-sm uppercase">
-                                Crear el primero
-                            </button>
+                    <div className="text-center py-16 px-4">
+                        <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-900 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-black dark:border-white">
+                            <Calendar className="w-10 h-10 text-neutral-400 dark:text-neutral-500" />
                         </div>
+                        <h3 className="text-lg font-black uppercase tracking-tight mb-2">Sin registros aún</h3>
+                        <p className="text-neutral-600 dark:text-neutral-400 text-sm mb-6 max-w-sm mx-auto">
+                            Comenzá a registrar las estadísticas de los servicios para visualizar métricas y comparativas.
+                        </p>
+                        <button onClick={() => navigate('/pastoral-care/new')}
+                            className="inline-flex items-center gap-2 px-5 py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-sm uppercase
+                            border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
+                            <Plus className="w-4 h-4" />
+                            Crear primer registro
+                        </button>
                     </div>
                 )}
 
@@ -582,50 +657,50 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                         {sorted.map((rec) => {
                             const s = calcStats(rec);
                             return (
-                                <div key={rec.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                                <div key={rec.id} className="bg-white border-2 border-black rounded-xl p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
                                     {/* Top row: badge + actions */}
                                     <div className="flex items-start justify-between mb-3">
-                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border-2 border-black text-[11px] font-bold uppercase tracking-wide
                                             ${rec.service_time === 'PM' ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'}`}>
-                                            {rec.service_time || '—'}
+                                            {rec.service_hour ? `${rec.service_hour} ${rec.service_time || ''}` : rec.service_time || '—'}
                                         </span>
-                                        {/* Kebab-style inline action buttons */}
+                                        {/* Kebab-style inline action buttons - 44px minimum touch target */}
                                         <div className="flex items-center gap-1.5">
-                                            <button onClick={() => setDetailRecord(rec)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-slate-400 hover:text-black transition-all" title="Ver detalles">
-                                                <Eye className="w-3.5 h-3.5" />
+                                            <button onClick={() => setDetailRecord(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-black hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2" title="Ver detalles" aria-label="Ver detalles">
+                                                <Eye className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => setYoyRecord(rec)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-violet-400 hover:text-violet-600 transition-all" title="Comparativa YoY">
-                                                <GitCompareArrows className="w-3.5 h-3.5" />
+                                            <button onClick={() => setYoyRecord(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-violet-600 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2" title="Comparativa YoY" aria-label="Comparativa año a año">
+                                                <GitCompareArrows className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => navigate('/pastoral-care/new', { state: { record: rec } })} className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 transition-all" title="Editar">
-                                                <Pencil className="w-3.5 h-3.5" />
+                                            <button onClick={() => navigate('/pastoral-care/new', { state: { record: rec } })} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-amber-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2" title="Editar" aria-label="Editar registro">
+                                                <Pencil className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => setDeleteTarget(rec)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-red-400 hover:text-red-600 transition-all" title="Eliminar">
-                                                <Trash2 className="w-3.5 h-3.5" />
+                                            <button onClick={() => setDeleteTarget(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-red-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2" title="Eliminar" aria-label="Eliminar registro">
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
 
                                     {/* Name */}
                                     <h3 className="text-base font-black uppercase tracking-tight text-black leading-tight mb-3">
-                                        {rec.name || <span className="text-slate-400 normal-case font-medium">Sin nombre</span>}
+                                        {rec.name || <span className="text-neutral-400 normal-case font-medium">Sin nombre</span>}
                                     </h3>
 
                                     {/* Meta grid */}
-                                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 border-t border-slate-100 pt-3">
+                                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 border-t-2 border-black pt-3">
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Fecha</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-0.5">Fecha</p>
                                             <p className="text-sm font-bold text-black tabular-nums">{fmtDate(rec.service_date)}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Total Voluntarios</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-0.5">Total Voluntarios</p>
                                             <p className="text-sm font-black text-violet-600 tabular-nums">{s.totalVol.toLocaleString()}</p>
                                         </div>
                                     </div>
                                 </div>
                             );
                         })}
-                        <p className="text-xs text-slate-400 font-mono px-1 pt-1">
+                        <p className="text-xs text-neutral-500 font-mono px-1 pt-1">
                             {sorted.length} registro{sorted.length !== 1 ? 's' : ''}
                         </p>
                     </div>
@@ -640,12 +715,17 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                     <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none min-w-[120px]" onClick={() => handleSort('service_date')}>
                                         <span className="flex items-center gap-1.5">Fecha <SortIcon col="service_date" /></span>
                                     </th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none min-w-[200px]" onClick={() => handleSort('name')}>
+                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none min-w-[160px]" onClick={() => handleSort('name')}>
                                         <span className="flex items-center gap-1.5">Nombre de servicio <SortIcon col="name" /></span>
                                     </th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[100px]">Horario</th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[140px]">Total Voluntarios</th>
-                                    <th className="text-right px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[140px]">Acciones</th>
+                                    <th className="text-center px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[100px]">Horario</th>
+                                    <th className="text-center px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[130px]">Total Asistencia</th>
+                                    <th className="text-center px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[120px]">Total Voluntarios</th>
+                                    <th className="text-center px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[90px]">% Vol</th>
+                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[110px]">Observaciones</th>
+                                    <th className="px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[220px]">
+                                        <div className="flex justify-center">Acciones</div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -654,22 +734,34 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                     return (
                                         <tr key={rec.id} className={`border-b border-neutral-100 dark:border-neutral-900 hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors ${idx % 2 === 0 ? '' : 'bg-neutral-50/50 dark:bg-neutral-900/30'}`}>
                                             <td className="px-4 py-3 font-mono text-sm font-bold tabular-nums whitespace-nowrap min-w-[120px]">{fmtDate(rec.service_date)}</td>
-                                            <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300 font-bold uppercase tracking-tight min-w-[200px]">{rec.name || <span className="text-neutral-300 dark:text-neutral-600">—</span>}</td>
-                                            <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500 min-w-[100px]">{rec.service_time || "—"}</td>
-                                            <td className="px-4 py-3 font-black tabular-nums text-violet-600 dark:text-violet-400 min-w-[140px]">{s.totalVol.toLocaleString()}</td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center justify-end gap-1.5">
-                                                    <button onClick={() => setDetailRecord(rec)} title="Ver detalles" className="w-8 h-8 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-black dark:hover:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
-                                                        <Eye className="w-3.5 h-3.5" />
+                                            <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300 font-bold uppercase tracking-tight min-w-[160px]">{rec.name || <span className="text-neutral-300 dark:text-neutral-600">—</span>}</td>
+                                            <td className="px-4 py-3 font-mono text-[11px] font-bold text-neutral-500 text-center min-w-[100px]">
+                                                {rec.service_hour ? (
+                                                    <span className="flex flex-col items-center">
+                                                        <span className="text-black dark:text-white leading-none mb-0.5">{rec.service_hour}</span>
+                                                        <span className="text-[9px] uppercase opacity-60 tracking-tighter">{rec.service_time}</span>
+                                                    </span>
+                                                ) : rec.service_time || "—"}
+                                            </td>
+                                            <td className="px-4 py-3 font-black tabular-nums text-black dark:text-white text-center min-w-[130px]">{s.totalFinal.toLocaleString('es-AR')}</td>
+                                            <td className="px-4 py-3 font-black tabular-nums text-violet-600 dark:text-violet-400 text-center min-w-[120px]">{s.totalVol.toLocaleString('es-AR')}</td>
+                                            <td className="px-4 py-3 font-bold tabular-nums text-neutral-500 text-center min-w-[90px]">{s.pctVol.toFixed(1)}%</td>
+                                            <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400 text-xs italic min-w-[110px] max-w-[150px]">
+                                                <span className="line-clamp-1 block">{rec.observations || <span className="text-neutral-300 dark:text-neutral-600 not-italic">—</span>}</span>
+                                            </td>
+                                            <td className="px-4 py-3 text-center min-w-[220px]">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <button onClick={() => setDetailRecord(rec)} title="Ver detalles" aria-label="Ver detalles" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-black dark:hover:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
+                                                        <Eye className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => setYoyRecord(rec)} title="Comparativa YoY" className="w-8 h-8 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-violet-600 hover:bg-violet-600 hover:text-white transition-all">
-                                                        <GitCompareArrows className="w-3.5 h-3.5" />
+                                                    <button onClick={() => setYoyRecord(rec)} title="Comparativa YoY" aria-label="Comparativa año a año" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-violet-600 hover:bg-violet-600 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
+                                                        <GitCompareArrows className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => navigate('/pastoral-care/new', { state: { record: rec } })} title="Editar" className="w-8 h-8 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-500 hover:text-white transition-all">
-                                                        <Pencil className="w-3.5 h-3.5" />
+                                                    <button onClick={() => navigate('/pastoral-care/new', { state: { record: rec } })} title="Editar" aria-label="Editar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
+                                                        <Pencil className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => setDeleteTarget(rec)} title="Eliminar" className="w-8 h-8 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-red-500 hover:bg-red-500 hover:text-white transition-all">
-                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    <button onClick={() => setDeleteTarget(rec)} title="Eliminar" aria-label="Eliminar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-red-500 hover:bg-red-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2">
+                                                        <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             </td>
@@ -687,8 +779,16 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
 
             {/* Modals */}
             {detailRecord && <DetailModal record={detailRecord} onClose={() => setDetailRecord(null)} />}
-            {yoyRecord && <YoYModal record={yoyRecord} onClose={() => setYoyRecord(null)} />}
+            {yoyRecord && <YoYModal record={yoyRecord} allRecords={records} onClose={() => setYoyRecord(null)} />}
             {deleteTarget && <ConfirmModal onConfirm={handleDelete} onClose={() => setDeleteTarget(null)} loading={deleteLoading} />}
+
+            {/* Toast notification */}
+            {deleteSuccess && (
+                <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 bg-black text-white px-4 py-3 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-50 flex items-center gap-2 animate-fadeIn">
+                    <Check className="w-4 h-4" />
+                    <span className="font-bold text-sm uppercase">Registro eliminado</span>
+                </div>
+            )}
         </div>
     );
 };

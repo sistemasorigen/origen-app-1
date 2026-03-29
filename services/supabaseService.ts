@@ -3409,7 +3409,12 @@ export const supabaseService = {
         reconciliaron: row.other_reconciled,
         podcast: row.other_podcast,
         oracion: row.other_prayer,
-        conference_sessions: row.conference_sessions || []
+        conference_sessions: row.conference_sessions || [],
+        // New columns (2026-03-29)
+        service_hour: row.service_hour || null,
+        observations: row.observations || null,
+        category: row.category || null,
+        service_type: row.service_type || null
       }));
     } catch (error) {
       console.error('[PastoralCare] Exception fetching statistics:', error);
@@ -3451,7 +3456,12 @@ export const supabaseService = {
         other_reconciled: record.reconciliaron ?? 0,
         other_podcast: record.podcast ?? 0,
         other_prayer: record.oracion ?? 0,
-        conference_sessions: record.conference_sessions || []
+        conference_sessions: record.conference_sessions || [],
+        // New columns (2026-03-29)
+        service_hour: record.service_hour || null,
+        observations: record.observations || null,
+        category: record.category || null,
+        service_type: record.service_type || null
       };
 
       if (record.id) {

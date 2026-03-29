@@ -822,4 +822,10 @@ export interface ServiceStatistic {
 
     // Categoría: Conferencias (Dynamic Sessions)
     conference_sessions?: { name: string; attendees: number; }[];
+
+    // Nuevas columnas (2026-03-29)
+    service_hour?: string;      // Hora y minutos del servicio (HH:MM)
+    observations?: string;      // Observaciones libres
+    category?: string;          // Categoría del servicio
+    service_type?: string;      // Tipo de Servicio / Subcategoría
 }

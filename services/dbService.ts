@@ -198,7 +198,7 @@ const MODULES: SystemModule[] = [
     },
     {
         id: 'pastoral',
-        title: 'Cuidado Pastoral',
+        title: 'Audiencia Servicios',
         subtitle: 'Módulo Pastoral',
         description: 'Registrá las estadísticas del servicio: voluntarios, niñez y seguimiento.',
         icon: 'heart-handshake',
