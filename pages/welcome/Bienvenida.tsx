@@ -39,15 +39,15 @@ const STAGE_LABELS: Record<VisitorStage, string> = {
 };
 
 const STAGE_COLORS: Record<VisitorStage, string> = {
-    'NEW': 'bg-yellow-100',
-    'FILLED_FORM': 'bg-blue-50',
-    'SECOND_CONTACT': 'bg-blue-100',
-    'THIRD_CONTACT': 'bg-indigo-100',
-    'INTERESTED_GROWTH': 'bg-purple-100',
-    'DOING_GROWTH': 'bg-purple-200',
-    'DOING_TRAINING': 'bg-pink-100',
-    'VOLUNTEERS': 'bg-emerald-100',
-    'NO_RESPONSE': 'bg-gray-200'
+    'NEW': 'bg-yellow-300',  // Better contrast
+    'FILLED_FORM': 'bg-blue-200',
+    'SECOND_CONTACT': 'bg-blue-300',
+    'THIRD_CONTACT': 'bg-indigo-300',
+    'INTERESTED_GROWTH': 'bg-purple-300',
+    'DOING_GROWTH': 'bg-purple-400',
+    'DOING_TRAINING': 'bg-pink-300',
+    'VOLUNTEERS': 'bg-emerald-300',
+    'NO_RESPONSE': 'bg-gray-300'
 };
 
 const Bienvenida: React.FC = () => {

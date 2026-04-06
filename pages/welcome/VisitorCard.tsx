@@ -68,26 +68,31 @@ const VisitorCard: React.FC<VisitorCardProps> = ({ visitor, onClick, onMove }) =
                     <button
                         ref={buttonRef}
                         onClick={toggleMenu}
-                        className="p-1 hover:bg-neutral-100 rounded-sm"
+                        aria-label={`Opciones para ${visitor.first_name} ${visitor.last_name}`}
+                        aria-expanded={showMenu}
+                        aria-haspopup="menu"
+                        className="p-3 h-10 w-10 flex items-center justify-center hover:bg-neutral-100 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     >
-                        <MoreHorizontal size={16} />
+                        <MoreHorizontal size={18} />
                     </button>
 
                     {/* Move Menu (Absolute) */}
                     {showMenu && (
                         <div
+                            role="menu"
                             className="absolute right-0 top-full mt-1 z-[9999] w-48 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] py-1 animate-fadeIn"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="px-3 py-1 border-b-2 border-black bg-neutral-100 text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                            <div className="px-3 py-1 border-b-2 border-black bg-neutral-100 text-xs font-black uppercase tracking-widest text-neutral-700">
                                 Mover a...
                             </div>
                             <div className="max-h-[300px] overflow-y-auto">
                                 {STAGES.filter(s => s !== visitor.stage).map(stage => (
                                     <button
                                         key={stage}
+                                        role="menuitem"
                                         onClick={(e) => handleMove(e, stage)}
-                                        className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-black hover:text-white transition-colors uppercase"
+                                        className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-black hover:text-white transition-colors uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                         {STAGE_LABELS[stage] || stage.replace('_', ' ')}
                                     </button>
@@ -99,19 +104,19 @@ const VisitorCard: React.FC<VisitorCardProps> = ({ visitor, onClick, onMove }) =
             </div>
 
             <div className="space-y-1">
-                <div className="flex items-center gap-2 text-xs font-bold text-neutral-600">
-                    <UserIcon size={12} className="text-black" />
+                <div className="flex items-center gap-2 text-xs font-bold text-neutral-700">
+                    <UserIcon size={14} className="text-black" />
                     <span>{visitor.age ? `${visitor.age} Años` : '-'}</span>
                 </div>
                 {visitor.phone && (
-                    <div className="flex items-center gap-2 text-xs font-bold text-neutral-600 truncate">
-                        <Phone size={12} className="text-black" />
+                    <div className="flex items-center gap-2 text-xs font-bold text-neutral-700 truncate">
+                        <Phone size={14} className="text-black" />
                         <span>{visitor.phone}</span>
                     </div>
                 )}
                 {visitor.created_at && (
-                    <div className="flex items-center gap-2 text-xs font-bold text-neutral-600 truncate">
-                        <Calendar size={12} className="text-black" />
+                    <div className="flex items-center gap-2 text-xs font-bold text-neutral-700 truncate">
+                        <Calendar size={14} className="text-black" />
                         <span>{new Date(visitor.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                     </div>
                 )}

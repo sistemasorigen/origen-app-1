@@ -11,6 +11,7 @@ import { migrateToSupabase } from '../services/migrationService';
 import ImageUpload from '../components/ImageUpload';
 import AdminAuditLogs from '../components/AdminAuditLogs';
 import NeoModal from '../components/NeoModal';
+import AdminDropdown from '../components/AdminDropdown';
 
 
 interface AdminProps {
@@ -599,26 +600,40 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             <div className="bg-white border-b-4 border-black sticky top-16 z-30">
                 <div className="max-w-[1920px] mx-auto px-4 md:px-6 py-4 md:py-0 md:h-20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0">
                     <h1 className="text-xl md:text-3xl font-bold text-black tracking-tighter">Panel Administración</h1>
-                    <div className="flex gap-2 overflow-x-auto w-full md:w-auto scrollbar-hide">
-                        {[
-                            { id: 'users', icon: Users, label: 'Usuarios' },
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                        {/* Mobile: Dropdown */}
+                        <div className="block md:hidden w-full">
+                            <AdminDropdown
+                                tabs={[
+                                    { id: 'users', icon: Users, label: 'Usuarios' },
+                                    { id: 'config', icon: Home, label: 'Config' },
+                                    { id: 'logs', icon: Shield, label: 'Logs' },
+                                ]}
+                                activeTab={activeTab}
+                                onTabChange={(tabId) => setActiveTab(tabId as any)}
+                            />
+                        </div>
 
-                            { id: 'config', icon: Home, label: 'Config' },
-                            { id: 'logs', icon: Shield, label: 'Logs' },
-                        ].map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 border border-slate-200 text-[10px] md:text-xs font-bold uppercase transition-all whitespace-nowrap ${activeTab === tab.id
-                                    ? 'bg-black text-white shadow-none translate-y-[2px]'
-                                    : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-md'
-                                    }`}
-                            >
-                                <tab.icon className="w-4 h-4" />
-                                <span className="hidden sm:inline">{tab.label}</span>
-
-                            </button>
-                        ))}
+                        {/* Desktop: Inline tabs */}
+                        <div className="hidden md:flex gap-2">
+                            {[
+                                { id: 'users', icon: Users, label: 'Usuarios' },
+                                { id: 'config', icon: Home, label: 'Config' },
+                                { id: 'logs', icon: Shield, label: 'Logs' },
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id as any)}
+                                    className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 border border-slate-200 text-[10px] md:text-xs font-bold uppercase transition-all whitespace-nowrap ${activeTab === tab.id
+                                        ? 'bg-black text-white shadow-none translate-y-[2px]'
+                                        : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-md'
+                                        }`}
+                                >
+                                    <tab.icon className="w-4 h-4" />
+                                    <span className="hidden sm:inline">{tab.label}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

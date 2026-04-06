@@ -254,8 +254,10 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                         <MobileHeader
                             title={getViewTitle(currentView)}
                             isRoot={false}
-                            onOpenSidebar={() => setIsSidebarOpen(true)}
                             onBack={() => setCurrentView('PANEL')}
+                            currentView={currentView}
+                            onNavigate={setCurrentView}
+                            currentUser={authorizedUser}
                         />
                     )}
 

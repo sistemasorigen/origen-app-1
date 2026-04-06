@@ -25,3 +25,6 @@ dist-ssr
 
 # Nested repository
 Origen-app/
+
+# Claude
+.claude/

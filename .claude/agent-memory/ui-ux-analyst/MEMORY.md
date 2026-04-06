@@ -1,1 +1,0 @@
-- [Neo-brutalismo Style Guide](neobrutalism_style.md) — Patrones de diseño neo-brutalista en Origen App

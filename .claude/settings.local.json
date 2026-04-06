@@ -1,9 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node modernize-admin.cjs)",
-      "Bash(npm run:*)",
-      "Bash(npx tsc:*)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(cp -r \"C:\\\\Users\\\\nacho\\\\.claude\\\\plugins\\\\marketplaces\\\\anthropic-agent-skills\\\\skills\\\\superpowers\" \"C:\\\\Users\\\\nacho\\\\OneDrive\\\\Desktop\\\\Origen App\\\\origen-app\\\\origen-app\\\\.claude\\\\skills\\\\\" && cp -r \"C:\\\\Users\\\\nacho\\\\.claude\\\\plugins\\\\marketplaces\\\\anthropic-agent-skills\\\\skills\\\\context-optimizer\" \"C:\\\\Users\\\\nacho\\\\OneDrive\\\\Desktop\\\\Origen App\\\\origen-app\\\\origen-app\\\\.claude\\\\skills\\\\\")",
+      "Bash(cp -r \"C:\\\\Users\\\\nacho\\\\.claude\\\\plugins\\\\marketplaces\\\\anthropic-agent-skills\\\\skills\\\\ui-design-master\" \"C:\\\\Users\\\\nacho\\\\OneDrive\\\\Desktop\\\\Origen App\\\\origen-app\\\\origen-app\\\\.claude\\\\skills\\\\\" && cp -r \"C:\\\\Users\\\\nacho\\\\.claude\\\\plugins\\\\marketplaces\\\\anthropic-agent-skills\\\\skills\\\\systematic-debugger\" \"C:\\\\Users\\\\nacho\\\\OneDrive\\\\Desktop\\\\Origen App\\\\origen-app\\\\origen-app\\\\.claude\\\\skills\\\\\")",
+      "Bash(cp:*)",
+      "Bash(cp -r \"/c/Users/nacho/.claude/plugins/marketplaces/anthropic-agent-skills/skills/context-optimizer\" \"/c/Users/nacho/OneDrive/Desktop/Origen App/origen-app/origen-app/.claude/skills/\")",
+      "Bash(cp -r \"/c/Users/nacho/.claude/plugins/marketplaces/anthropic-agent-skills/skills/ui-design-master\" \"/c/Users/nacho/OneDrive/Desktop/Origen App/origen-app/origen-app/.claude/skills/\")",
+      "Bash(cp -r \"/c/Users/nacho/.claude/plugins/marketplaces/anthropic-agent-skills/skills/systematic-debugger\" \"/c/Users/nacho/OneDrive/Desktop/Origen App/origen-app/origen-app/.claude/skills/\")",
+      "Bash(npm run:*)"
     ]
   }
 }

@@ -1,16 +1,21 @@
 
 import React from 'react';
-import { Menu, ChevronLeft } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useStore } from '../../store';
+import SidebarDropdown from '../../components/SidebarDropdown';
+import { ViewState, User } from '../../types';
 
 interface MobileHeaderProps {
     title: string;
     isRoot: boolean;
     onBack?: () => void;
     onOpenSidebar?: () => void;
+    currentView?: ViewState;
+    onNavigate?: (view: ViewState) => void;
+    currentUser?: User | null;
 }
 
-const MobileHeader: React.FC<MobileHeaderProps> = ({ title, isRoot, onBack, onOpenSidebar }) => {
+const MobileHeader: React.FC<MobileHeaderProps> = ({ title, isRoot, onBack, onOpenSidebar, currentView, onNavigate, currentUser }) => {
     return (
         <div className="flex items-center justify-between w-full h-12 px-4 py-2 bg-white border-b-2 border-black shadow-sm lg:hidden">
             {/* Left Slot */}
@@ -32,8 +37,16 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({ title, isRoot, onBack, onOp
                 </h1>
             </div>
 
-            {/* Right Slot - Placeholder for future actions */}
-            <div className="w-10"></div>
+            {/* Right Slot - Navigation Dropdown */}
+            <div className="flex items-center justify-end w-10">
+                {currentView && onNavigate ? (
+                    <SidebarDropdown
+                        currentView={currentView}
+                        onNavigate={onNavigate}
+                        currentUser={currentUser}
+                    />
+                ) : null}
+            </div>
         </div>
     );
 };

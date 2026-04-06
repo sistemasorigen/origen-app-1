@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { VisitorStage } from '../../types';
 
 interface CircularStageMenuProps {
@@ -9,6 +9,19 @@ interface CircularStageMenuProps {
 }
 
 const CircularStageMenu: React.FC<CircularStageMenuProps> = ({ stages, activeStage, stageLabels, onSelect }) => {
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+        setPrefersReducedMotion(mediaQuery.matches);
+
+        const handleChange = (e: MediaQueryListEvent) => {
+            setPrefersReducedMotion(e.matches);
+        };
+
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, []);
     // Determine the angle for each item
     // We want the Active item to be at -90deg (Top) or 0deg (Right)? 
     // Let's place Active at Top (-90 degrees in CSS logic usually starts from right=0)
@@ -32,58 +45,57 @@ const CircularStageMenu: React.FC<CircularStageMenuProps> = ({ stages, activeSta
 
     const rotation = -(activeIndex * anglePerItem);
 
+    const wheelSize = Math.min(600, window.innerWidth * 0.85);
+    const radius = wheelSize / 2;
+
     return (
-        <div className="relative w-full max-w-3xl mx-auto h-[400px] flex items-center justify-center overflow-visible my-8">
+        <div className="relative w-full max-w-3xl mx-auto flex items-center justify-center overflow-visible my-8 px-4" style={{ height: `${wheelSize + 80}px` }}>
             {/* Center Display (Static relative to screen, inside the wheel) */}
-            <div className="absolute z-20 flex flex-col items-center justify-center w-48 h-48 bg-white border-[6px] border-black rounded-full shadow-[0px_0px_20px_rgba(0,0,0,0.1)]">
-                <span className="text-xs font-black uppercase text-neutral-400 tracking-widest mb-1">ETAPA ACTUAL</span>
-                <h3 className="text-xl font-black uppercase text-center leading-tight px-2">
+            <div className="absolute z-20 flex flex-col items-center justify-center w-40 h-40 sm:w-48 sm:h-48 bg-white border-[6px] border-black rounded-full shadow-[0px_0px_20px_rgba(0,0,0,0.1)]">
+                <span className="text-xs font-black uppercase text-neutral-500 tracking-widest mb-1">ETAPA ACTUAL</span>
+                <h3 className="text-lg sm:text-xl font-black uppercase text-center leading-tight px-2">
                     {stageLabels[activeStage]}
                 </h3>
             </div>
 
             {/* The Wheel Container */}
             <div
-                className="absolute w-[600px] h-[600px] rounded-full border-2 border-dashed border-neutral-300 transition-transform duration-500 ease-out"
+                className="absolute rounded-full border-2 border-dashed border-neutral-300"
                 style={{
-                    transform: `rotate(${rotation}deg)`
+                    width: `${wheelSize}px`,
+                    height: `${wheelSize}px`,
+                    transform: prefersReducedMotion ? 'none' : `rotate(${rotation}deg)`,
+                    transition: prefersReducedMotion ? 'none' : 'transform 300ms ease-out'
                 }}
             >
                 {stages.map((stage, index) => {
                     const angle = index * anglePerItem;
                     const isActive = stage === activeStage;
 
-                    // Position items on the rim of the 600px circle (radius 300px)
-                    // We want index 0 at Top (-90 deg)
-                    // x = r * cos(theta)
-                    // y = r * sin(theta)
-                    // theta needs to be in radians. 
-                    // -90 deg is -PI/2 radians.
+                    // Position items on the rim of the wheel
                     const thetaRad = (angle - 90) * (Math.PI / 180);
-                    const radius = 300; // Half of width
                     const x = radius * Math.cos(thetaRad);
                     const y = radius * Math.sin(thetaRad);
 
-                    // We need to counter-rotate the items so they stay upright
-                    const counterRotation = -rotation;
-
                     return (
-                        <div
+                        <button
                             key={stage}
                             onClick={() => onSelect(stage)}
+                            aria-label={`${stageLabels[stage]}${isActive ? ' (actual)' : ''}`}
+                            aria-current={isActive ? 'page' : undefined}
                             className={`
-                                absolute top-1/2 left-1/2 -ml-16 -mt-8 
-                                w-32 h-16 
-                                flex items-center justify-center 
+                                absolute top-1/2 left-1/2 -ml-16 -mt-8
+                                w-32 h-16
+                                flex items-center justify-center
                                 cursor-pointer transition-all duration-300
-                                ${isActive ? 'z-10 scale-110' : 'z-0 scale-90 opacity-60 hover:opacity-100'}
+                                focus:outline-none focus:ring-2 focus:ring-blue-500
+                                ${isActive ? 'z-10 scale-110' : 'z-0 scale-95 opacity-75 hover:opacity-100'}
                             `}
                             style={{
-                                transform: `translate(${x}px, ${y}px) rotate(${90 + angle}deg)`,
-                                // For text readability, maybe we don't want them rotated? 
-                                // User asked for "circular menu". Usually text follows the curve or stays upright.
-                                // Let's try having them "spoke" outwards primarily, it looks cleaner for a wheel.
-                                // "rotate(${90 + angle}deg)" makes them point outwards from center.
+                                transform: prefersReducedMotion
+                                    ? `translate(${x}px, ${y}px) rotate(${90 + angle}deg) scale(${isActive ? 1.1 : 0.95})`
+                                    : `translate(${x}px, ${y}px) rotate(${90 + angle}deg)`,
+                                transition: prefersReducedMotion ? 'none' : 'all 300ms ease-out'
                             }}
                         >
                             <div className={`
@@ -97,7 +109,7 @@ const CircularStageMenu: React.FC<CircularStageMenuProps> = ({ stages, activeSta
                             `}>
                                 {stageLabels[stage]}
                             </div>
-                        </div>
+                        </button>
                     );
                 })}
             </div>
