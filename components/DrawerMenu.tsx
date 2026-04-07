@@ -364,8 +364,18 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             <div className={`p-4 border-t border-gray-100 dark:border-zinc-800 space-y-3 ${isCollapsed ? 'flex flex-col items-center px-2' : ''}`}>
                 {currentUser && (
                     <div className={`flex items-center gap-3 px-1 ${isCollapsed ? 'justify-center cursor-pointer' : ''}`} title={isCollapsed ? currentUser.name : undefined}>
-                        <div className="w-8 h-8 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-xs shrink-0">
-                            {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
+                        <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-black dark:border-white shrink-0">
+                            {currentUser.avatarUrl ? (
+                                <img
+                                    src={currentUser.avatarUrl}
+                                    alt={currentUser.name || 'Avatar'}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-xs">
+                                    {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
+                                </div>
+                            )}
                         </div>
                         {!isCollapsed && (
                             <div className="flex-1 min-w-0">

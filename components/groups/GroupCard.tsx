@@ -19,56 +19,6 @@ interface GroupCardProps {
 const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, onInquiry, userStatus, currentUser, id }) => {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [isTagsExpanded, setIsTagsExpanded] = useState(false);
-    const [isCopied, setIsCopied] = useState(false);
-
-    const handleCopyGroupLink = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
-
-        // Si se define un host específico de producción, se usa. Si no, window.location.origin.
-        const origin = window.location.hostname.includes('localhost') || window.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/) 
-            ? 'https://app.origeniglesia.org' 
-            : window.location.origin;
-        const url = `${origin}/#/groups?groupId=${group.id}`;
-
-        const fallbackCopy = () => {
-            const textArea = document.createElement("textarea");
-            textArea.value = url;
-            // Prevent scrolling to bottom of page in MS Edge.
-            textArea.style.position = "fixed";
-            textArea.style.top = "0";
-            textArea.style.left = "0";
-            textArea.style.width = "2em";
-            textArea.style.height = "2em";
-            textArea.style.padding = "0";
-            textArea.style.border = "none";
-            textArea.style.outline = "none";
-            textArea.style.boxShadow = "none";
-            textArea.style.background = "transparent";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    setIsCopied(true);
-                    setTimeout(() => setIsCopied(false), 2000);
-                }
-            } catch (err) {
-                console.error('Fallback: Oops, unable to copy', err);
-            }
-            document.body.removeChild(textArea);
-        };
-
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(url).then(() => {
-                setIsCopied(true);
-                setTimeout(() => setIsCopied(false), 2000);
-            }).catch(() => fallbackCopy());
-        } else {
-            fallbackCopy();
-        }
-    };
 
     // --- BUSINESS LOGIC (unchanged) ---
 
@@ -371,21 +321,8 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                     </div>
                 </div>
 
-                {/* Acciones: botón copiar + botón CTA */}
+                {/* Acciones: botón CTA */}
                 <div className="flex items-center gap-2 shrink-0">
-                    <button
-                        onClick={handleCopyGroupLink}
-                        title="Copiar link de inscripción"
-                        className={`p-2 rounded-lg border-2 transition-all ${isCopied
-                            ? 'border-[#28a946] bg-[#28a946]/10 text-[#28a946]'
-                            : 'border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'
-                        }`}
-                    >
-                        {isCopied
-                            ? <Check className="w-4 h-4" />
-                            : <Link className="w-4 h-4" />
-                        }
-                    </button>
                     <button
                         disabled={btnState.disabled}
                         className={`shrink-0 px-5 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2 transition-all ${btnState.baseClass}`}

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { User, UserRole, Group } from '../types';
 import { hasRole } from '../services/authUtils';
 import { supabaseService } from '../services/supabaseService';
-import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus, Check } from 'lucide-react';
+import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus, Check, Link } from 'lucide-react';
 import CreateGroupModal from '../components/groups/CreateGroupModal';
 import ApplicantsModal from '../components/groups/ApplicantsModal';
 import AttendanceModal from '../components/groups/AttendanceModal';
@@ -35,6 +35,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     const [selectedGroupForDropout, setSelectedGroupForDropout] = useState<Group | null>(null);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalMessage, setSuccessModalMessage] = useState('');
+    const [copiedGroupId, setCopiedGroupId] = useState<string | null>(null);
     const isMobile = useIsMobile();
 
     // Tutorial Hook
@@ -46,6 +47,52 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
         dismissTutorial,
         declineTemporary
     } = useTutorial('host');
+
+    const handleCopyGroupLink = (e: React.MouseEvent, groupId: string) => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        const origin = window.location.hostname.includes('localhost') || window.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/) 
+            ? 'https://app.origeniglesia.org' 
+            : window.location.origin;
+        const url = `${origin}/#/groups?groupId=${groupId}`;
+
+        const fallbackCopy = () => {
+            const textArea = document.createElement("textarea");
+            textArea.value = url;
+            textArea.style.position = "fixed";
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.width = "2em";
+            textArea.style.height = "2em";
+            textArea.style.padding = "0";
+            textArea.style.border = "none";
+            textArea.style.outline = "none";
+            textArea.style.boxShadow = "none";
+            textArea.style.background = "transparent";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                if (document.execCommand('copy')) {
+                    setCopiedGroupId(groupId);
+                    setTimeout(() => setCopiedGroupId(null), 2000);
+                }
+            } catch (err) {
+                console.error('Fallback copy failed', err);
+            }
+            document.body.removeChild(textArea);
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url).then(() => {
+                setCopiedGroupId(groupId);
+                setTimeout(() => setCopiedGroupId(null), 2000);
+            }).catch(() => fallbackCopy());
+        } else {
+            fallbackCopy();
+        }
+    };
 
     const handleOpenApplicants = (group: Group) => {
         setSelectedGroupForApplicants(group);
@@ -368,6 +415,17 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                             {group.status === 'approved' && (
                                                                 <>
                                                                     <button
+                                                                        onClick={(e) => handleCopyGroupLink(e, group.id)}
+                                                                        className={`flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 transition-all rounded-lg text-xs font-bold uppercase ${
+                                                                            copiedGroupId === group.id 
+                                                                            ? 'border-[#28a946] bg-[#28a946]/10 text-[#28a946]' 
+                                                                            : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                                        }`}
+                                                                    >
+                                                                        {copiedGroupId === group.id ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
+                                                                        {copiedGroupId === group.id ? '¡Copiado!' : 'Copiar Enlace'}
+                                                                    </button>
+                                                                    <button
                                                                         id={isMobile ? `btn-host-applicants-${index}` : undefined}
                                                                         onClick={() => handleOpenApplicants(group)}
                                                                         className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase"
@@ -511,6 +569,17 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                         <div id={!isMobile ? `btn-host-actions-${index}` : undefined} className="flex justify-end gap-2"> {/* Added ID to container */}
                                                             {group.status === 'approved' && (
                                                                 <>
+                                                                    <button
+                                                                        onClick={(e) => handleCopyGroupLink(e, group.id)}
+                                                                        className={`p-2 border-2 transition-all rounded-lg ${
+                                                                            copiedGroupId === group.id
+                                                                            ? 'border-[#28a946] bg-[#28a946]/10 text-[#28a946]'
+                                                                            : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                                        }`}
+                                                                        title="Copiar enlace"
+                                                                    >
+                                                                        {copiedGroupId === group.id ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
+                                                                    </button>
                                                                     <button
                                                                         id={!isMobile ? `btn-host-applicants-${index}` : undefined}
                                                                         onClick={() => handleOpenApplicants(group)}

@@ -19,6 +19,7 @@ interface AuthContextType {
     updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
     completeProfile: (data: { phone: string; age: number; gender: string; birthDate: string }) => Promise<boolean>;
     refreshSession: () => Promise<void>;
+    updateAvatar: (url: string) => void;
     retryAuth: () => void;
     clearRecoveryMode: () => void;
 }
@@ -194,7 +195,8 @@ const fullUser: User = {
                         birthDate: profileData.birth_date,
                         assignedCategory: profileData.assigned_category || undefined,
                         coordinatorVariant: profileData.coordinator_variant as CoordinatorVariant | undefined,
-                        tutorial_progress: profileData.tutorial_progress || {}
+                        tutorial_progress: profileData.tutorial_progress || {},
+                        avatarUrl: profileData.avatar_url || undefined,
                     };
 
                     // Update state and cache
@@ -381,6 +383,15 @@ const fullUser: User = {
         }
     };
 
+    const updateAvatar = (url: string) => {
+        if (!user) return;
+        const updated = { ...user, avatarUrl: url };
+        setUser(updated);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        } catch (e) { /* silenciar */ }
+    };
+
     const retryAuth = () => {
         setIsLoadingSession(true);
         setError(null);
@@ -431,6 +442,7 @@ const fullUser: User = {
             updatePassword,
             completeProfile,
             refreshSession,
+            updateAvatar,
             retryAuth,
             clearRecoveryMode
         }}>

@@ -108,6 +108,7 @@ export interface User {
     assignedCategory?: string; // Category ID for COORDINATOR role filtering
     coordinatorVariant?: CoordinatorVariant; // Specific department for coordinators
     tutorial_progress?: Record<string, boolean>; // Tracks onboarding tour progress
+    avatarUrl?: string; // URL pública de la foto de perfil
 }
 
 // --- LEADER APPLICATION TYPES ---

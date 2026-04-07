@@ -130,7 +130,12 @@ const AppContent: React.FC = () => {
 
     // Handlers
     const handleAuthScreenLogin = () => {
-        navigate('/');
+        const from = location.state?.from;
+        if (from && from.pathname) {
+            navigate(`${from.pathname}${from.search || ''}${from.hash || ''}`);
+        } else {
+            navigate('/');
+        }
     };
 
     const onLogoutClick = async () => {
@@ -206,7 +211,7 @@ const AppContent: React.FC = () => {
 
             {/* PROTECTED ROUTES WRAPPED IN LAYOUT */}
             <Route path="*" element={
-                !user ? <Navigate to="/auth" replace /> : (
+                !user ? <Navigate to="/auth" state={{ from: location }} replace /> : (
                     <Layout
                         userRole={user?.role || null}
                         currentUser={user}

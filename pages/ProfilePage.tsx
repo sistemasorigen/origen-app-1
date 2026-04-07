@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { supabaseService } from '../services/supabaseService';
 import { getRoleDisplayNames } from '../services/authUtils';
+import AvatarUpload from '../components/AvatarUpload';
 
 const inputClass = "w-full p-4 bg-white border border-slate-300 rounded-lg outline-none text-black font-medium focus:border-black focus:ring-1 focus:ring-black transition-all placeholder-slate-400";
 const labelClass = "block text-xs font-bold text-slate-500 uppercase mb-1 ml-1";
@@ -32,7 +33,7 @@ const formatDateForDisplay = (dateStr: string): string => {
 
 const ProfilePage: React.FC = () => {
     const navigate = useNavigate();
-    const { user, refreshSession } = useAuth();
+    const { user, refreshSession, updateAvatar } = useAuth();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -130,10 +131,19 @@ const ProfilePage: React.FC = () => {
             {/* Content */}
             <div className="max-w-2xl mx-auto px-4 sm:px-8 pt-8 space-y-6">
                 {/* Avatar + Display Name */}
-                <div className="flex items-center gap-4 p-6 bg-white dark:bg-zinc-900 border-2 border-black dark:border-zinc-700 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-                    <div className="w-16 h-16 rounded-full bg-black dark:bg-white flex items-center justify-center shrink-0">
-                        <span className="text-white dark:text-black font-black text-xl">{initials}</span>
-                    </div>
+                <div className="flex items-center gap-6 p-6 bg-white dark:bg-zinc-900 border-2 border-black dark:border-zinc-700 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+                    <AvatarUpload
+                        currentAvatarUrl={user?.avatarUrl}
+                        userName={user?.name || 'Usuario'}
+                        userId={user?.id || ''}
+                        size="lg"
+                        onUploadComplete={async (url) => {
+                            await supabaseService.updateUserProfile(user!.id, { avatarUrl: url });
+                            updateAvatar(url);
+                            setSaveStatus('success');
+                            setTimeout(() => setSaveStatus('idle'), 3000);
+                        }}
+                    />
                     <div className="flex-1">
                         <p className="text-xl font-black text-black dark:text-white">{user?.name}</p>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">{user?.email}</p>

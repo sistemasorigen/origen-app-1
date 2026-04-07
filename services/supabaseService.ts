@@ -551,7 +551,7 @@ export const supabaseService = {
   },
 
   // Update user profile fields (phone, age, gender, birthDate) - used for OAuth profile completion
-  async updateUserProfile(userId: string, profileData: { phone?: string; age?: number; gender?: string; birthDate?: string }): Promise<boolean> {
+  async updateUserProfile(userId: string, profileData: { phone?: string; age?: number; gender?: string; birthDate?: string; avatarUrl?: string }): Promise<boolean> {
     // We use upsert here because for Google Sign In users, the public.users row might not exist yet
     // if the trigger failed or hasn't fired. We need to Ensure it exists.
 
@@ -568,6 +568,7 @@ export const supabaseService = {
         age: profileData.age,
         gender: profileData.gender,
         birth_date: profileData.birthDate,
+        ...(profileData.avatarUrl !== undefined && { avatar_url: profileData.avatarUrl }),
         is_active: true // Activate them if they are completing profile
       })
       .eq('id', userId)
