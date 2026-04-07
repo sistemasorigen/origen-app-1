@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import {
     Plus, Eye, GitCompareArrows, Pencil, Trash2, ArrowLeft,
     TrendingUp, TrendingDown, Minus, ChevronUp, ChevronDown, Check,
-    X, AlertTriangle, ChevronRight, Calendar, Search, SlidersHorizontal, Clock, CalendarDays
+    X, AlertTriangle, ChevronRight, Calendar, Search, SlidersHorizontal, Clock, CalendarDays,
+    BarChart3
 } from 'lucide-react';
+import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import NeoModal from '../../components/NeoModal';
 
 interface PastoralCareDashboardProps { currentUser: User | null; }
@@ -387,6 +389,225 @@ const ConfirmModal: React.FC<{ onConfirm: () => void; onClose: () => void; loadi
     </NeoModal>
 );
 
+// ─── Summary Panel ────────────────────────────────────────────────────────
+
+interface SummaryPanelProps {
+    sorted: any[];
+    allRecords: any[];
+}
+
+const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
+    const stats = useMemo(() => {
+        if (sorted.length === 0) return null;
+
+        const last8 = [...sorted]
+            .slice(0, 8)
+            .reverse()
+            .map(r => ({
+                label: new Date(r.service_date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+                total: calcStats(r).totalFinal,
+                id: r.id,
+            }));
+
+        const last4 = sorted.slice(0, 4);
+        const avgLast4 = last4.length > 0
+            ? Math.round(last4.reduce((sum, r) => sum + calcStats(r).totalFinal, 0) / last4.length)
+            : 0;
+
+        const yoyMatches: number[] = [];
+        last4.forEach(rec => {
+            const key = generateYoYKey(rec.service_date);
+            const recYear = new Date(rec.service_date).getFullYear();
+            const match = allRecords.find(r => {
+                if (r.id === rec.id) return false;
+                const rYear = new Date(r.service_date).getFullYear();
+                if (rYear >= recYear) return false;
+                return generateYoYKey(r.service_date) === key;
+            });
+            if (match) yoyMatches.push(calcStats(match).totalFinal);
+        });
+        const avgYoY = yoyMatches.length > 0
+            ? Math.round(yoyMatches.reduce((a, b) => a + b, 0) / yoyMatches.length)
+            : null;
+
+        const withTotals = sorted.map(r => ({ ...r, _total: calcStats(r).totalFinal }));
+        const best = withTotals.reduce((a, b) => b._total > a._total ? b : a, withTotals[0]);
+        const worst = withTotals.reduce((a, b) => b._total < a._total ? b : a, withTotals[0]);
+
+        const sparkTrend = last8.length >= 2 ? last8[last8.length - 1].total - last8[0].total : 0;
+
+        return {
+            last8, avgLast4, avgYoY, best, worst, sparkTrend,
+            hasYoY: avgYoY !== null,
+            yoyDiff: avgYoY !== null ? avgLast4 - avgYoY : 0,
+            yoyPct: avgYoY !== null && avgYoY > 0
+                ? (((avgLast4 - avgYoY) / avgYoY) * 100).toFixed(1)
+                : null,
+        };
+    }, [sorted, allRecords]);
+
+    if (!stats) return null;
+
+    const fmtDate = (d: string) =>
+        new Date(d + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    const sparkColor = stats.sparkTrend > 0 ? '#10b981' : stats.sparkTrend < 0 ? '#ef4444' : '#8b5cf6';
+
+    return (
+        <div className="mb-6 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-700 rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)]">
+            <button
+                type="button"
+                onClick={() => setIsCollapsed(c => !c)}
+                className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-inset"
+            >
+                <div className="flex items-center gap-2.5">
+                    <BarChart3 className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
+                    <span className="text-sm font-black uppercase tracking-wider text-black dark:text-white">
+                        Resumen del período
+                    </span>
+                    <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 font-mono normal-case">
+                        {sorted.length} servicio{sorted.length !== 1 ? 's' : ''}
+                    </span>
+                </div>
+                {isCollapsed
+                    ? <ChevronDown className="w-4 h-4 text-neutral-400" />
+                    : <ChevronUp className="w-4 h-4 text-neutral-400" />
+                }
+            </button>
+
+            {!isCollapsed && (
+                <div className="border-t-2 border-black dark:border-neutral-700 px-5 py-5">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+                        {/* Promedio últimas 4 */}
+                        <div className="bg-violet-50 dark:bg-violet-950/30 rounded-xl p-4 border border-violet-100 dark:border-violet-900/50">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-violet-500 dark:text-violet-400 mb-1">
+                                Prom. últimas 4
+                            </p>
+                            <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">
+                                {stats.avgLast4.toLocaleString('es-AR')}
+                            </p>
+                            <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium mt-1">
+                                personas por servicio
+                            </p>
+                        </div>
+
+                        {/* YoY */}
+                        <div className={`rounded-xl p-4 border ${
+                            !stats.hasYoY
+                                ? 'bg-neutral-50 dark:bg-neutral-800/50 border-neutral-100 dark:border-neutral-700/50'
+                                : stats.yoyDiff >= 0
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-100 dark:border-emerald-900/50'
+                                    : 'bg-red-50 dark:bg-red-950/30 border-red-100 dark:border-red-900/50'
+                        }`}>
+                            <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-neutral-500 dark:text-neutral-400">
+                                vs año anterior
+                            </p>
+                            {stats.hasYoY ? (
+                                <>
+                                    <p className={`text-3xl font-black tabular-nums leading-none ${
+                                        stats.yoyDiff >= 0
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-red-600 dark:text-red-400'
+                                    }`}>
+                                        {stats.yoyDiff >= 0 ? '+' : ''}{stats.yoyDiff.toLocaleString('es-AR')}
+                                    </p>
+                                    <p className="text-[10px] font-bold mt-1 text-neutral-400 dark:text-neutral-500 flex items-center gap-0.5">
+                                        {stats.yoyDiff >= 0
+                                            ? <TrendingUp className="inline w-3 h-3" />
+                                            : <TrendingDown className="inline w-3 h-3" />
+                                        }
+                                        {stats.yoyPct}% vs prom. anterior
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-xl font-black text-neutral-300 dark:text-neutral-600 leading-none">—</p>
+                                    <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium mt-1">
+                                        sin datos comparables
+                                    </p>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Mejor servicio */}
+                        <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-4 border border-amber-100 dark:border-amber-900/40">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-500 mb-1">
+                                Mejor servicio
+                            </p>
+                            <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">
+                                {calcStats(stats.best).totalFinal.toLocaleString('es-AR')}
+                            </p>
+                            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium mt-1 truncate">
+                                {stats.best.name || fmtDate(stats.best.service_date)}
+                            </p>
+                        </div>
+
+                        {/* Menor servicio */}
+                        <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700/50">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1">
+                                Menor servicio
+                            </p>
+                            <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">
+                                {calcStats(stats.worst).totalFinal.toLocaleString('es-AR')}
+                            </p>
+                            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium mt-1 truncate">
+                                {stats.worst.name || fmtDate(stats.worst.service_date)}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Sparkline */}
+                    {stats.last8.length >= 2 && (
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
+                                Últimos {stats.last8.length} servicios — Total final
+                            </p>
+                            <div className="h-28">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={stats.last8} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                                        <Tooltip
+                                            contentStyle={{
+                                                backgroundColor: '#000', border: '2px solid #000',
+                                                color: '#fff', fontWeight: 'bold', fontSize: '11px', borderRadius: '8px'
+                                            }}
+                                            formatter={(value: number) => [value.toLocaleString('es-AR'), 'Total']}
+                                            labelStyle={{ color: '#ccc', fontSize: '10px' }}
+                                        />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="total"
+                                            stroke={sparkColor}
+                                            strokeWidth={2.5}
+                                            dot={{ r: 4, fill: sparkColor, strokeWidth: 2, stroke: '#fff' }}
+                                            activeDot={{ r: 6, strokeWidth: 2, stroke: '#000' }}
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="flex justify-between mt-1 px-2">
+                                <span className="text-[9px] font-bold text-neutral-400 dark:text-neutral-600 font-mono">
+                                    {stats.last8[0]?.label}
+                                </span>
+                                <span className="text-[9px] font-bold text-neutral-400 dark:text-neutral-600 font-mono">
+                                    {stats.last8[stats.last8.length - 1]?.label}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {stats.last8.length < 2 && (
+                        <p className="text-xs text-neutral-400 dark:text-neutral-500 font-medium text-center py-4 border border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl">
+                            Se necesitan al menos 2 servicios para mostrar la tendencia gráfica.
+                        </p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────
 
 type SortKey = 'service_date' | 'name';
@@ -564,6 +785,11 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                             Crear primer registro
                         </button>
                     </div>
+                )}
+
+                {/* ── RESUMEN DEL PERÍODO ── */}
+                {!loading && records.length > 0 && (
+                    <SummaryPanel sorted={sorted} allRecords={records} />
                 )}
 
                 {!loading && records.length > 0 && (
