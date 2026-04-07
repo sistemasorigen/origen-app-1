@@ -21,6 +21,7 @@ import Coordinators from './pages/coordinators/Coordinators';
 import PastoralCareForm from './pages/pastoral/PastoralCareForm';
 import Notifications from './pages/Notifications';
 import PastoralCareDashboard from './pages/pastoral/PastoralCareDashboard';
+import ProfilePage from './pages/ProfilePage';
 import SystemLoginModal from './components/SystemLoginModal';
 import CompleteProfileModal from './components/CompleteProfileModal';
 import { User, UserRole, AppConfig } from './types';
@@ -285,6 +286,7 @@ const AppContent: React.FC = () => {
                             } />
 
                             <Route path="/notificaciones" element={<Notifications />} />
+                            <Route path="/perfil" element={<ProfilePage />} />
 
                             <Route path="*" element={<Navigate to="/" />} />
                         </Routes>

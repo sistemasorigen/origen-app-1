@@ -10,6 +10,9 @@ import { useAudio } from '../contexts/AudioContext';
 import { Sun, Moon } from 'lucide-react';
 import { NotificationBell, NotificationDrawer } from './NotificationsUI';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { useAttendanceReminder } from '../hooks/useAttendanceReminder';
+import PushPermissionBanner from './PushPermissionBanner';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -23,8 +26,10 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogout, onToggleTheme }) => {
     useAutoRefresh();
+    useAttendanceReminder();
     const location = useLocation();
     const { currentSong } = useAudio();
+    const { shouldShowBanner, requestPermission, dismissBanner } = usePushNotifications();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
     const [isNotifDrawerOpen, setIsNotifDrawerOpen] = useState(false);
@@ -98,6 +103,13 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
             <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
 
                 {renderModuleBackground()}
+
+                {shouldShowBanner && (
+                    <PushPermissionBanner
+                        onAllow={requestPermission}
+                        onDismiss={dismissBanner}
+                    />
+                )}
 
                 {/* Navbar */}
                 <header className="sticky top-0 z-30 flex-shrink-0 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-b border-slate-200 dark:border-zinc-800 h-16">

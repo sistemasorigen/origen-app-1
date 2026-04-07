@@ -16,7 +16,8 @@ import {
     ChevronRight,
     LogOut,
     Sun,
-    Moon
+    Moon,
+    UserCircle
 } from 'lucide-react';
 import { User, UserRole } from '../types';
 import { hasRole } from '../services/authUtils';
@@ -386,6 +387,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                             </div>
                             {!isCollapsed && <span>{isDarkMode ? 'Modo Claro' : 'Modo Oscuro'}</span>}
+                        </button>
+                    )}
+                    {currentUser && (
+                        <button
+                            onClick={() => { handleNavigation('/perfil'); }}
+                            className={`w-full flex items-center gap-3 rounded-xl transition-all text-gray-600 dark:text-zinc-400 font-bold text-xs ${isCollapsed ? 'justify-center p-2' : 'px-3 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800'}`}
+                            title={isCollapsed ? 'Mi Perfil' : undefined}
+                        >
+                            <UserCircle className="w-4 h-4 shrink-0" />
+                            {!isCollapsed && <span>Mi Perfil</span>}
                         </button>
                     )}
                     {currentUser ? (

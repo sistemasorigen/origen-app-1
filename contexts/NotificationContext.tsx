@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../services/supabaseClient';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 export interface AppNotification {
     id: string;
@@ -33,6 +34,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [unreadCount, setUnreadCount] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(false);
+    const { sendPush } = usePushNotifications();
 
     const fetchNotifications = useCallback(async () => {
         if (!user?.id) return;
@@ -81,6 +83,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 (payload) => {
                     console.log('[NotificationContext] Realtime update:', payload);
                     fetchNotifications();
+
+                    // Push nativo solo en INSERT de nuevas notificaciones
+                    if (payload.eventType === 'INSERT' && payload.new) {
+                        const n = payload.new as AppNotification;
+                        sendPush(n.title, n.message, n.action_url);
+                    }
                 }
             )
             .subscribe((status) => {

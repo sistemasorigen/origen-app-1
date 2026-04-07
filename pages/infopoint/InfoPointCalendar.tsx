@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     ChevronLeft,
     ChevronRight,
@@ -7,6 +7,8 @@ import {
     Calendar as CalendarIcon,
     Tag,
     Megaphone,
+    Link,
+    Check,
 } from 'lucide-react';
 import { useStore } from '../../store';
 import { AppEvent, Announcement } from '../../types';
@@ -46,6 +48,32 @@ const InfoPointCalendar: React.FC = () => {
     const { events, announcements } = useStore();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [copiedEventId, setCopiedEventId] = useState<string | null>(null);
+
+    const handleCopyEventLink = (eventId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const url = `${window.location.origin}/#/info-point?eventId=${eventId}`;
+        navigator.clipboard.writeText(url).then(() => {
+            setCopiedEventId(eventId);
+            setTimeout(() => setCopiedEventId(null), 2000);
+        }).catch(() => {
+            const input = document.createElement('input');
+            input.value = url;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            setCopiedEventId(eventId);
+            setTimeout(() => setCopiedEventId(null), 2000);
+        });
+    };
+
+    const searchParams = new URLSearchParams(
+        window.location.hash.includes('?')
+            ? window.location.hash.split('?')[1]
+            : ''
+    );
+    const targetEventId = searchParams.get('eventId');
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -114,6 +142,18 @@ const InfoPointCalendar: React.FC = () => {
             e.parsedDate.getFullYear() === selectedDate.getFullYear()
         );
     }, [calendarEvents, selectedDate]);
+
+    useEffect(() => {
+        if (!targetEventId || calendarEvents.length === 0) return;
+        const target = calendarEvents.find(e => e.id === targetEventId);
+        if (!target) return;
+        setCurrentDate(new Date(
+            target.parsedDate.getFullYear(),
+            target.parsedDate.getMonth(),
+            1
+        ));
+        setSelectedDate(target.parsedDate);
+    }, [targetEventId, calendarEvents.length]);
 
     const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
     const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
@@ -305,6 +345,20 @@ const InfoPointCalendar: React.FC = () => {
                                             </div>
                                             <span className="text-xs font-bold text-slate-600 leading-relaxed">{item.description}</span>
                                         </div>
+                                    )}
+                                    {!item.isAnnouncement && (
+                                        <button
+                                            onClick={(e) => handleCopyEventLink(item.id, e)}
+                                            className={`w-full mt-2 py-2 flex items-center justify-center gap-2 border-2 border-black text-xs font-black uppercase tracking-widest transition-all ${copiedEventId === item.id
+                                                ? 'bg-black text-white'
+                                                : 'bg-white text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none'
+                                            }`}
+                                        >
+                                            {copiedEventId === item.id
+                                                ? <><Check className="w-3.5 h-3.5" /> ¡Link copiado!</>
+                                                : <><Link className="w-3.5 h-3.5" /> Compartir evento</>
+                                            }
+                                        </button>
                                     )}
                                 </div>
                             </div>

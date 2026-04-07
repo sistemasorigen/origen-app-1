@@ -301,6 +301,8 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
             setView('admin'); // Auto-switch to admin view if a tab is requested
         }
     }, [searchParams]);
+
+
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [groups, setGroups] = useState<Group[]>([]);
     const [categories, setCategories] = useState<GroupCategory[]>([]);
@@ -410,6 +412,28 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
     // State for existing leader applications (for duplicate checking)
     const [existingApplications, setExistingApplications] = useState<{ email: string, phone: string, firstName: string, lastName: string }[]>([]);
+
+    // Deep link: abrir grupo específico por ?groupId=
+    useEffect(() => {
+        const targetId = searchParams.get('groupId');
+        if (!targetId || groups.length === 0) return;
+
+        const target = groups.find(g => g.id === targetId);
+        if (!target) return;
+
+        setTimeout(() => {
+            const el = document.getElementById(`group-card-${targetId}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('ring-4', 'ring-black', 'ring-offset-2');
+                setTimeout(() => {
+                    el.classList.remove('ring-4', 'ring-black', 'ring-offset-2');
+                }, 2000);
+            }
+            setSelectedGroup(target);
+            setInquiryModalOpen(true);
+        }, 300);
+    }, [searchParams, groups]);
 
     // Helper to check if a group is finished
     const isGroupFinished = (group: Group) => {
@@ -1404,7 +1428,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                 {filteredGroups.map((group, index) => (
                                     <GroupCard
                                         key={group.id}
-                                        id={index === 0 ? "first-group-card" : undefined}
+                                        id={`group-card-${group.id}`}
                                         group={group}
                                         tags={tags}
                                         categories={categories}

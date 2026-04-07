@@ -829,3 +829,5 @@ export interface ServiceStatistic {
     category?: string;          // Categoría del servicio
     service_type?: string;      // Tipo de Servicio / Subcategoría
 }
+// --- PUSH NOTIFICATIONS ---
+export type PushPermissionStatus = 'default' | 'granted' | 'denied';
