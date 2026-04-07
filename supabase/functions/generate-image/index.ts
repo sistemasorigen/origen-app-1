@@ -1,8 +1,10 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://tu-dominio.com';
+
 const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -19,7 +21,10 @@ serve(async (req) => {
         console.log('Generando imagen (GOOGLE IMAGEN 4.0 - HARDCODED KEY) para:', cleanPrompt);
 
         // API KEY
-        const apiKey = "AIzaSyDrevR_K1HjaGYCvjoCkxnLdvTqSpdPWq4";
+        const apiKey = Deno.env.get('GOOGLE_IMAGEN_KEY');
+        if (!apiKey) {
+            throw new Error('GOOGLE_IMAGEN_KEY is not set in the Edge Function environment.');
+        }
 
         const targetModel = 'imagen-4.0-fast-generate-001';
         // const targetModel = 'imagen-3.0-generate-001'; // Fallback if 4.0 fails?

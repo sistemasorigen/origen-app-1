@@ -28,3 +28,17 @@ Origen-app/
 
 # Claude
 .claude/
+
+# Scripts and tests
+test_*.js
+debug_*.js
+tmp_*.js
+*.py
+*.backup
+
+# Sensitive
+.env
+.env.*
+!.env.example
+supabase/.temp/
+sql/grant_superadmin.sql

@@ -1418,22 +1418,28 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             </div>
 
                             <div className="space-y-4">
-                                <button
-                                    onClick={handleMigration}
-                                    disabled={isMigrating}
-                                    className={`w-full py-4 rounded-xl font-bold text-slate-700 text-sm shadow-lg transition-all flex items-center justify-center gap-3 ${isMigrating ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-[1.01]'}`}
-                                >
-                                    {isMigrating ? (
-                                        <>
-                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-400 border-t-transparent"></div>
-                                            Migrando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CloudUpload className="w-5 h-5" /> Iniciar Migración a Supabase
-                                        </>
-                                    )}
-                                </button>
+                                {import.meta.env.VITE_ENABLE_MIGRATION === 'true' ? (
+                                    <button
+                                        onClick={handleMigration}
+                                        disabled={isMigrating}
+                                        className={`w-full py-4 rounded-xl font-bold text-slate-700 text-sm shadow-lg transition-all flex items-center justify-center gap-3 ${isMigrating ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-[1.01]'}`}
+                                    >
+                                        {isMigrating ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-400 border-t-transparent"></div>
+                                                Migrando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CloudUpload className="w-5 h-5" /> Iniciar Migración a Supabase
+                                            </>
+                                        )}
+                                    </button>
+                                ) : (
+                                    <p className="text-red-600 font-bold p-4 text-center border-2 border-red-200 bg-red-50 rounded-xl">
+                                        Migración deshabilitada en entorno actual.
+                                    </p>
+                                )}
 
                                 {/* Log Console */}
                                 <div className="bg-black rounded-xl p-4 font-mono text-xs text-green-400 h-64 overflow-y-auto shadow-inner border border-slate-700">

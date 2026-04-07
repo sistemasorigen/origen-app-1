@@ -88,47 +88,44 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         }
     };
 
+    const MAX_ATTEMPTS = 5;
+    const LOCKOUT_MS = 30_000; // 30 segundos
+
+    const getRateLimit = () => {
+        try {
+            return JSON.parse(
+                sessionStorage.getItem('login_rl') || 
+                '{"attempts":0,"lockedUntil":0}'
+            );
+        } catch { return { attempts: 0, lockedUntil: 0 }; }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        const rl = getRateLimit();
+        
+        if (Date.now() < rl.lockedUntil) {
+            const secs = Math.ceil((rl.lockedUntil - Date.now()) / 1000);
+            setError(`Demasiados intentos. Esperá ${secs} segundos.`);
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
         const result = await signIn(formData.email, formData.password);
 
         if (result.success) {
-            // onLoginSuccess will be triggered by App.tsx observing user state or we can call it here if needed
-            // But since App.tsx passes this prop, we called it there. 
-            // Actually, context updates state, but for the callback prop:
-            // The user object is in context now. We might not have it *immediately* returned from signIn 
-            // if we didn't refetch it, but our signIn returns { user } if reusing service logic inside context.
-            // Let's assume successful sign in triggers the redirect in App.tsx via state change or we call the prop.
-
-            // However, the prop expects a User object.
-            // Our context signIn returns { success, error }.
-            // We should rely on the App.tsx loop primarily, but for the prop interface:
-            // We can just pass a dummy or specific logic if needed, but wait, 'onLoginSuccess' was used to setUser in App.tsx
-            // Now App.tsx uses useAuth. So this prop might be redundant or used for navigation/logging only.
-            // Let's pass a dummy user or just nothing if the parent handles it.
-            // Looking at App.tsx, handleAuthScreenLogin just navigates.
-            // So we can fetch the user from context after? 
-            // Actually App.tsx logic for handleAuthScreenLogin says: setUser(loggedInUser) -> navigate.
-            // But now App.tsx logic for handleAuthScreenLogin says: db.log -> navigate.
-            // So we need to trigger it.
-            // But wait, the user is already set in context.
-            // We can pass the user if we have it.
-
-            // To be precise, our Context.signIn calls Service.signIn which returns { user, error }.
-            // So if we update Context to return user, we can pass it.
-            // In my previous step (AuthContext), signIn returned { success: true } but set the user internally.
-            // Let's just trust the flow or pass a minimal object if needed, 
-            // or better, just call it with the current user from context (which might be null due to async batching)
-            // or just trigger it.
-
-            // Let's modify behavior: we successfully logged in.
-            // We can reload window or just navigate.
-            // Let's simulate standard behavior.
+            sessionStorage.removeItem('login_rl');
             onLoginSuccess({ id: 'auth-user', name: 'User', email: formData.email, role: 'VIEWER', isActive: true } as User);
         } else {
+            const newAttempts = rl.attempts + 1;
+            sessionStorage.setItem('login_rl', JSON.stringify({
+                attempts: newAttempts,
+                lockedUntil: newAttempts >= MAX_ATTEMPTS 
+                    ? Date.now() + LOCKOUT_MS : 0
+            }));
+
             console.log("LOGIN FAILED WITH:", result.error);
             // Detectar error 400 de Supabase (credenciales inválidas)
             const errorMsg = result.error?.toLowerCase() || '';

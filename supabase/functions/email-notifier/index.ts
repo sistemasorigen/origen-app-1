@@ -3,7 +3,12 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { templates } from './emailTemplates.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const adminEmails = (Deno.env.get('ADMIN_NOTIFICATION_EMAILS') || 'johanasute@gmail.com,nachoqueipo27@gmail.com').split(',');
+const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://tu-dominio.com';
+const adminEmailsRaw = Deno.env.get('ADMIN_NOTIFICATION_EMAILS');
+if (!adminEmailsRaw) {
+    console.warn('ADMIN_NOTIFICATION_EMAILS not set.');
+}
+const adminEmails = (adminEmailsRaw || '').split(',').map(e => e.trim()).filter(Boolean);
 
 // Initialize Supabase Service Role client to bypass RLS and fetch user emails
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
@@ -23,7 +28,7 @@ serve(async (req) => {
         if (req.method === "OPTIONS") {
             return new Response("ok", {
                 headers: {
-                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
                     "Access-Control-Allow-Methods": "POST, OPTIONS",
                     "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey, x-supabase-api-key",
                 },

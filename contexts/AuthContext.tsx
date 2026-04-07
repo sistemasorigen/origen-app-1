@@ -86,13 +86,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const STORAGE_KEY = 'origen_user_profile';
     const saveProfileToCache = (user: User) => {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+            const cached = {
+                user,
+                expiresAt: Date.now() + 60 * 60 * 1000, // Valid for 1 hour
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cached));
         } catch (e) { console.error('[Auth] Cache write error', e); }
     };
+
     const getProfileFromCache = (): User | null => {
         try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            return data ? JSON.parse(data) : null;
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return null;
+            const cached = JSON.parse(raw);
+            if (cached.expiresAt && Date.now() > cached.expiresAt) {
+                localStorage.removeItem(STORAGE_KEY);
+                return null;
+            }
+            return cached.user ?? null;
         } catch (e) { return null; }
     };
 

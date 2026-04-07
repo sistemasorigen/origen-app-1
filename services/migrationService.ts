@@ -26,17 +26,24 @@ export const migrateToSupabase = async (onProgress: (msg: string) => void) => {
             if (storedCreds) credentials = JSON.parse(storedCreds);
         } catch (e) { console.warn("No se pudieron leer credenciales locales"); }
 
-        const usersPayload = users.map(u => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            role: u.role,
-            isActive: u.isActive,
-            linkedGroupId: u.linkedGroupId,
-            volunteerRoles: u.volunteerRoles,
-            // Usar la contraseña guardada localmente o un fallback
-            password: credentials[u.email] || '123456' 
-        }));
+        const usersPayload = users.reduce((acc, u) => {
+            // NUNCA usar contraseña default
+            if (!credentials[u.email]) {
+                console.warn(`Usuario ${u.email} omitido: sin credencial local`);
+                return acc;
+            }
+            acc.push({
+                id: u.id,
+                name: u.name,
+                email: u.email,
+                role: u.role,
+                isActive: u.isActive,
+                linkedGroupId: u.linkedGroupId,
+                volunteerRoles: u.volunteerRoles,
+                password: credentials[u.email] 
+            });
+            return acc;
+        }, [] as any[]);
 
         const { error: usersError } = await supabase.from('users').upsert(usersPayload);
         if (usersError) throw usersError;
