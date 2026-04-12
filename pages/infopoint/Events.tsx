@@ -35,10 +35,10 @@ const Events: React.FC = () => {
             return;
         }
 
-        // Generate QR Code URL using quickchart.io (actively maintained and reliable)
+        // Generate QR Code URL using qrserver
         const qrData = form.link ? form.link : `${form.name} - ${form.date} ${form.startTime}`;
         const encodedData = encodeURIComponent(qrData || 'https://origen.church');
-        const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&margin=1`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
 
         if (editingId) {
             // Update existing event
@@ -101,6 +101,22 @@ const Events: React.FC = () => {
 
     // Sort events by date (newest first)
     const sortedEvents = [...events].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const getSafeQrUrl = (url: string | undefined, name: string, link: string | undefined) => {
+        const fallbackText = link || name || 'https://origen.church';
+        const defaultRender = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(fallbackText)}`;
+        
+        if (!url) return defaultRender;
+        
+        if (url.includes('quickchart.io')) {
+            const match = url.match(/[?&]text=([^&]+)/);
+            if (match && match[1]) {
+                return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${match[1]}`;
+            }
+            return defaultRender;
+        }
+        return url;
+    };
 
     return (
         <div className="space-y-8 animate-fadeIn p-1">
@@ -249,12 +265,12 @@ const Events: React.FC = () => {
                         {sortedEvents.map(ev => (
                             <div
                                 key={ev.id}
-                                onClick={() => setQrModal({ open: true, title: ev.name, url: ev.qrCodeUrl })}
+                                onClick={() => setQrModal({ open: true, title: ev.name, url: getSafeQrUrl(ev.qrCodeUrl, ev.name, ev.link) })}
                                 className={`bg-white p-5 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all cursor-pointer group flex items-start gap-4 relative ${editingId === ev.id ? 'bg-neutral-50 border-dashed' : ''}`}
                             >
                                 {/* QR Preview */}
                                 <div className="w-24 h-24 bg-white border-2 border-black flex-shrink-0 p-1">
-                                    <img src={ev.qrCodeUrl} alt="QR" className="w-full h-full object-contain" />
+                                    <img src={getSafeQrUrl(ev.qrCodeUrl, ev.name, ev.link)} alt="QR" className="w-full h-full object-contain" />
                                 </div>
 
                                 {/* Info */}

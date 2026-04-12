@@ -26,6 +26,22 @@ const Announcements: React.FC = () => {
 
     const today = new Date().toISOString().slice(0, 10);
 
+    const getSafeQrUrl = (url: string | undefined, title: string, link: string | undefined) => {
+        const fallbackText = link || title || 'https://origen.church';
+        const defaultRender = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(fallbackText)}`;
+        
+        if (!url) return defaultRender;
+        
+        if (url.includes('quickchart.io')) {
+            const match = url.match(/[?&]text=([^&]+)/);
+            if (match && match[1]) {
+                return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${match[1]}`;
+            }
+            return defaultRender;
+        }
+        return url;
+    };
+
     const isAnnouncementActive = (a: Announcement) => {
         return a.isActive !== false;
     };
@@ -56,10 +72,10 @@ const Announcements: React.FC = () => {
         }
         setErrors({});
 
-        // Generate QR Code URL using quickchart.io
+        // Generate QR Code URL using qrserver
         const qrData = form.link ? form.link : `${form.title}${form.startDate ? ` - ${form.startDate}` : ''}`;
         const encodedData = encodeURIComponent(qrData || 'https://origen.church');
-        const qrUrl = `https://quickchart.io/qr?text=${encodedData}&size=300&margin=1`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
 
         if (editingId) {
             const existing = announcements.find(a => a.id === editingId);
@@ -299,7 +315,7 @@ const Announcements: React.FC = () => {
                                         <div className="flex items-center gap-2 pt-1">
                                             {a.qrCodeUrl && (
                                                 <button
-                                                    onClick={() => setQrModal({ open: true, title: a.title, url: a.qrCodeUrl! })}
+                                                    onClick={() => setQrModal({ open: true, title: a.title, url: getSafeQrUrl(a.qrCodeUrl, a.title, a.link) })}
                                                     className="flex items-center gap-1.5 px-3 py-2 border-2 border-black bg-white text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all active:shadow-none"
                                                 >
                                                     <QrCode className="w-3.5 h-3.5" /> QR
@@ -377,7 +393,7 @@ const Announcements: React.FC = () => {
                                                 <div className="flex items-center justify-center gap-2">
                                                     {a.qrCodeUrl && (
                                                         <button
-                                                            onClick={() => setQrModal({ open: true, title: a.title, url: a.qrCodeUrl! })}
+                                                            onClick={() => setQrModal({ open: true, title: a.title, url: getSafeQrUrl(a.qrCodeUrl, a.title, a.link) })}
                                                             className="p-2 border-2 border-black hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none active:translate-y-0.5"
                                                             title="Ver QR"
                                                         >

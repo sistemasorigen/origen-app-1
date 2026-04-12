@@ -4,7 +4,7 @@ import { useStore } from '../../store';
 import {
     X, Copy, Check, QrCode, Share2,
     Instagram, Facebook, Youtube, Music,
-    ArrowRight, Megaphone, Calendar, Clock
+    ArrowRight, Megaphone, Calendar, Clock, MapPin, ExternalLink
 } from 'lucide-react';
 import { AppEvent, AppConfig, Announcement } from '../../types';
 import { db } from '../../services/dbService';
@@ -57,6 +57,14 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
     const today = new Date().toISOString().slice(0, 10);
     const activeAnnouncements: Announcement[] = announcements.filter(a => a.isActive !== false);
 
+    // Upcoming events: sorted ascending by date, show all
+    const upcomingEvents = [...events].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const getEventQrUrl = (event: AppEvent) => {
+        const data = event.qrCodeUrl || event.link || `${event.name} - ${event.date}`;
+        return getQrUrl(data);
+    };
+
     // --- DATE HELPERS ---
     const parseLocalDate = (dateStr: string) => {
         if (!dateStr) return new Date();
@@ -85,9 +93,21 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
         }
     };
 
-    const getQrUrl = (text: string) => {
-        const data = text || 'https://origen.church';
-        return `https://quickchart.io/qr?text=${encodeURIComponent(data)}&size=300&margin=1`;
+    const getQrUrl = (textOrUrl: string) => {
+        if (!textOrUrl) return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Forigen.church`;
+        
+        if (textOrUrl.includes('quickchart.io')) {
+            const match = textOrUrl.match(/[?&]text=([^&]+)/);
+            if (match && match[1]) {
+                return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${match[1]}`;
+            }
+        }
+        
+        if (textOrUrl.includes('api.qrserver.com')) {
+            return textOrUrl;
+        }
+
+        return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(textOrUrl)}`;
     };
 
     const footerLinks = appConfig.footerLinks;
@@ -285,13 +305,125 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                                 {ann.qrCodeUrl && (
                                                     <div className={`mt-4 pt-3 ${!ann.isPermanent ? 'border-t-2 border-black/20' : ''}`}>
                                                         <button
-                                                            onClick={() => setQrModal({ open: true, title: ann.title, url: ann.qrCodeUrl! })}
+                                                            onClick={() => setQrModal({ open: true, title: ann.title, url: getQrUrl(ann.qrCodeUrl!) })}
                                                             className="flex items-center justify-center gap-2 w-full py-2 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
                                                         >
                                                             <QrCode className="w-4 h-4" /> Mostrar QR
                                                         </button>
                                                     </div>
                                                 )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* --- EVENTS SECTION --- */}
+                <section className={`py-12 md:py-16 bg-black text-white border-b-4 border-black transition-all duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                    <div className="max-w-7xl mx-auto px-4 md:px-8">
+                        {/* Section Header */}
+                        <div className={`mb-8 ${isLoaded ? 'animate-slideUp stagger-3' : 'opacity-0'}`}>
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 border-4 border-white bg-white text-black shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]">
+                                    <Calendar className="w-5 h-5" />
+                                </div>
+                                <span className="text-sm font-black text-white/50 uppercase tracking-[0.2em]">Agenda</span>
+                            </div>
+                            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight">
+                                Próximos <span className="relative inline-block">
+                                    Eventos
+                                    <span className="absolute -bottom-2 left-0 w-full h-2 bg-yellow-400" />
+                                </span>
+                            </h2>
+                        </div>
+
+                        {/* Events List or Empty State */}
+                        {upcomingEvents.length === 0 ? (
+                            <div className="py-20 text-center border-4 border-white/20 border-dashed">
+                                <Calendar className="w-16 h-16 mx-auto mb-4 text-white/20" />
+                                <p className="text-white/40 font-black uppercase tracking-widest text-sm">Sin eventos próximos</p>
+                                <p className="text-white/20 font-bold text-xs mt-1 uppercase tracking-wide">Los eventos pueden gestionarse desde el Panel Interno</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {upcomingEvents.map((ev, idx) => {
+                                    const dateObj = parseLocalDate(ev.date);
+                                    const dayName = dateObj.toLocaleDateString('es-AR', { weekday: 'long' });
+                                    const dayNum = dateObj.toLocaleDateString('es-AR', { day: '2-digit' });
+                                    const monthName = dateObj.toLocaleDateString('es-AR', { month: 'long' });
+                                    const accentColors = ['bg-yellow-400', 'bg-pink-400', 'bg-sky-400', 'bg-green-400', 'bg-purple-400', 'bg-orange-400'];
+                                    const accent = accentColors[idx % accentColors.length];
+                                    return (
+                                        <div
+                                            key={ev.id}
+                                            className="border-4 border-white bg-white/5 hover:bg-white/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_0_0_rgba(255,255,255,0.2)] animate-slideUp"
+                                            style={{ animationDelay: `${0.1 + idx * 0.07}s`, opacity: 0 }}
+                                        >
+                                            {/* Color accent bar */}
+                                            <div className={`h-2 w-full ${accent}`} />
+
+                                            <div className="p-5">
+                                                {/* Date badge */}
+                                                <div className="flex items-start justify-between gap-3 mb-4">
+                                                    <div className="flex-none text-center border-4 border-white/30 px-3 py-2 min-w-[56px]">
+                                                        <p className="text-xs font-black uppercase tracking-widest text-white/50">{dayName.slice(0, 3)}</p>
+                                                        <p className="text-3xl font-black leading-none">{dayNum}</p>
+                                                        <p className="text-xs font-black uppercase tracking-wider text-white/70 mt-0.5">{monthName.slice(0, 3)}</p>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="text-lg font-black uppercase tracking-tight leading-tight line-clamp-2">{ev.name}</h3>
+                                                        {ev.type && (
+                                                            <span className="inline-block mt-1 text-[10px] font-black uppercase tracking-widest text-white/40 border border-white/20 px-2 py-0.5">
+                                                                {ev.type}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {ev.description && (
+                                                    <p className="text-sm text-white/60 font-semibold leading-relaxed mb-4 line-clamp-3">{ev.description}</p>
+                                                )}
+
+                                                {/* Meta row: time */}
+                                                {(ev.startTime || ev.endTime) && (
+                                                    <div className="flex items-center gap-1.5 mb-3">
+                                                        <Clock className="w-3.5 h-3.5 text-white/40 flex-none" />
+                                                        <span className="text-xs font-black text-white/60 uppercase tracking-widest">
+                                                            {ev.startTime}{ev.endTime ? ` — ${ev.endTime}` : ''}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {/* Actions */}
+                                                <div className="flex gap-2 mt-4 pt-4 border-t-2 border-white/10">
+                                                    {ev.link && (
+                                                        <a
+                                                            href={ev.link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 border-2 border-white/30 text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all"
+                                                        >
+                                                            <ExternalLink className="w-3.5 h-3.5" /> Ver más
+                                                        </a>
+                                                    )}
+                                                    {(ev.qrCodeUrl || ev.link) && (
+                                                        <button
+                                                            onClick={() => setQrModal({ open: true, title: ev.name, url: getEventQrUrl(ev) })}
+                                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-white text-black border-2 border-white text-xs font-black uppercase tracking-widest hover:bg-yellow-400 hover:border-yellow-400 transition-all"
+                                                        >
+                                                            <QrCode className="w-3.5 h-3.5" /> QR
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => setSharingEvent(ev)}
+                                                        className="flex items-center justify-center gap-1.5 py-2 px-3 border-2 border-white/30 text-xs font-black uppercase hover:bg-white hover:text-black transition-all"
+                                                    >
+                                                        <Share2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -310,7 +442,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                 <div className="p-2 border-4 border-black bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
                                     <Calendar className="w-5 h-5" />
                                 </div>
-                                <span className="text-sm font-black text-neutral-400 uppercase tracking-[0.2em]">Próximos Eventos</span>
+                                <span className="text-sm font-black text-neutral-400 uppercase tracking-[0.2em]">Calendario</span>
                             </div>
                             <h2 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight">
                                 Nuestra <span className="relative inline-block">
