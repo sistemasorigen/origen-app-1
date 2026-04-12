@@ -23,6 +23,7 @@ const Announcements: React.FC = () => {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saved, setSaved] = useState(false);
     const [qrModal, setQrModal] = useState<{ open: boolean, title: string, url: string }>({ open: false, title: '', url: '' });
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
     const today = new Date().toISOString().slice(0, 10);
 
@@ -125,8 +126,13 @@ const Announcements: React.FC = () => {
     };
 
     const handleDelete = (id: string) => {
-        if (window.confirm('¿Eliminar este anuncio?')) {
-            deleteAnnouncement(id);
+        setDeleteConfirmId(id);
+    };
+
+    const confirmDelete = () => {
+        if (deleteConfirmId) {
+            deleteAnnouncement(deleteConfirmId);
+            setDeleteConfirmId(null);
         }
     };
 
@@ -138,6 +144,33 @@ const Announcements: React.FC = () => {
                 title={qrModal.title}
                 qrUrl={qrModal.url}
             />
+
+            {/* --- DELETE CONFIRM MODAL --- */}
+            {deleteConfirmId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 w-full max-w-sm mx-4">
+                        <div className="flex items-center gap-3 mb-4">
+                            <Trash2 className="w-6 h-6 text-red-600 flex-shrink-0" />
+                            <h2 className="text-lg font-black uppercase tracking-tighter">Eliminar anuncio</h2>
+                        </div>
+                        <p className="text-sm font-bold text-slate-600 mb-6">¿Seguro que querés eliminar este anuncio? Esta acción no se puede deshacer.</p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setDeleteConfirmId(null)}
+                                className="flex-1 py-3 border-4 border-black font-black uppercase text-sm hover:bg-slate-100 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="flex-1 py-3 bg-red-600 text-white border-4 border-black font-black uppercase text-sm hover:bg-red-700 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                            >
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* --- HEADER --- */}
             <div className="flex items-center gap-3 pb-4 border-b-4 border-black">

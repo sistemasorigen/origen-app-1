@@ -280,7 +280,7 @@ const Events: React.FC = () => {
                                     <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-2 text-sm font-bold text-neutral-600">
                                             <Calendar className="w-4 h-4 text-black" />
-                                            <span>{new Date(ev.date).toLocaleDateString()}</span>
+                                            <span>{new Date(ev.date + 'T00:00:00').toLocaleDateString()}</span>
                                         </div>
                                         {(ev.startTime || ev.endTime) && (
                                             <div className="flex items-center gap-2 text-sm font-bold text-black bg-yellow-300 inline-flex self-start px-1 border border-black">

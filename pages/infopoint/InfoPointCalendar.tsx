@@ -53,10 +53,7 @@ const InfoPointCalendar: React.FC = () => {
     const handleCopyEventLink = (eventId: string, e: React.MouseEvent) => {
         e.stopPropagation();
         const url = `${window.location.origin}/#/info-point?eventId=${eventId}`;
-        navigator.clipboard.writeText(url).then(() => {
-            setCopiedEventId(eventId);
-            setTimeout(() => setCopiedEventId(null), 2000);
-        }).catch(() => {
+        const fallbackCopy = () => {
             const input = document.createElement('input');
             input.value = url;
             document.body.appendChild(input);
@@ -65,7 +62,15 @@ const InfoPointCalendar: React.FC = () => {
             document.body.removeChild(input);
             setCopiedEventId(eventId);
             setTimeout(() => setCopiedEventId(null), 2000);
-        });
+        };
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(url).then(() => {
+                setCopiedEventId(eventId);
+                setTimeout(() => setCopiedEventId(null), 2000);
+            }).catch(fallbackCopy);
+        } else {
+            fallbackCopy();
+        }
     };
 
     const searchParams = new URLSearchParams(

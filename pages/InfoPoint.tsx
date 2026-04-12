@@ -247,8 +247,8 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         <div className="flex flex-col md:flex-row h-screen md:h-[calc(100vh-64px)] bg-slate-50 md:bg-transparent overflow-hidden relative">
 
             {/* --- MOBILE LAYOUT --- */}
-            <div className="md:hidden flex flex-col w-full h-[calc(100dvh-64px)] bg-white overflow-hidden">
-                <header className="flex-none z-40 bg-white border-b-4 border-black select-none" style={{ touchAction: 'none' }}>
+            <div className="md:hidden fixed inset-x-0 top-16 bottom-0 z-30 flex flex-col bg-white overflow-hidden">
+                <header className="flex-none z-40 bg-white border-b-4 border-black select-none overflow-hidden" style={{ touchAction: 'none' }}>
                     {/* Header bar only when NOT at root for back button, otherwise title is in the subnav div */}
                     {currentView !== 'PANEL' && (
                         <MobileHeader
@@ -262,7 +262,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                     )}
 
                     {/* SUBNAV design matching PublicHome screenshot */}
-                    <div className="flex flex-col w-full">
+                    <div className="flex flex-col w-full overflow-hidden" style={{ touchAction: 'none' }}>
                         {/* Title (Only shown for PUBLIC view to match desired design, removed for Admin Panel as requested) */}
                         {viewMode as string === 'PUBLIC' && (
                             <div className="h-10 flex items-center justify-center border-b-4 border-black">
@@ -272,7 +272,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                             </div>
                         )}
                         {/* Switch Buttons */}
-                        <div className="flex w-full h-11">
+                        <div className="flex w-full h-11 overflow-hidden" style={{ touchAction: 'none' }}>
                             <button
                                 onClick={handleGoPublic}
                                 className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all border-r-4 border-black ${(viewMode as string) === 'PUBLIC' ? 'bg-black text-white' : 'bg-white text-black'}`}

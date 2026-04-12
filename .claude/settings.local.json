@@ -11,7 +11,8 @@
       "Bash(cp -r \"/c/Users/nacho/.claude/plugins/marketplaces/anthropic-agent-skills/skills/context-optimizer\" \"/c/Users/nacho/OneDrive/Desktop/Origen App/origen-app/origen-app/.claude/skills/\")",
       "Bash(cp -r \"/c/Users/nacho/.claude/plugins/marketplaces/anthropic-agent-skills/skills/ui-design-master\" \"/c/Users/nacho/OneDrive/Desktop/Origen App/origen-app/origen-app/.claude/skills/\")",
       "Bash(cp -r \"/c/Users/nacho/.claude/plugins/marketplaces/anthropic-agent-skills/skills/systematic-debugger\" \"/c/Users/nacho/OneDrive/Desktop/Origen App/origen-app/origen-app/.claude/skills/\")",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

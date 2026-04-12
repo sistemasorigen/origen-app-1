@@ -13,25 +13,8 @@ import QRCodeModal from '../../components/QRCodeModal';
 
 const LOGO_URL = '/origen-logo.png';
 
-// Pastel post-it colors cycling by card index
-const POSTIT_COLORS = [
-    'bg-yellow-200',
-    'bg-pink-200',
-    'bg-sky-200',
-    'bg-green-200',
-    'bg-purple-200',
-    'bg-orange-200',
-];
-
-// Slight rotations cycling per card
-const POSTIT_ROTATIONS = [
-    'rotate-1',
-    '-rotate-2',
-    'rotate-2',
-    '-rotate-1',
-    'rotate-[1.5deg]',
-    '-rotate-[1.5deg]',
-];
+// Neo-brutalist accent colors for announcement cards
+const ACCENT_COLORS = ['#FACC15', '#F87171', '#60A5FA', '#34D399', '#C084FC', '#FB923C'];
 
 interface PublicHomeProps {
     viewMode: 'PUBLIC' | 'INTERNAL';
@@ -198,11 +181,11 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                 )}
 
                 {/* --- SUBNAV --- */}
-                <nav className="sticky top-16 z-50 bg-white border-b-4 border-black">
+                <nav className="sticky top-16 z-50 bg-white border-b-4 border-black overflow-hidden select-none" style={{ touchAction: 'none' }}>
                     {/* MOBILE: Two buttons layout (Title is provided by parent InfoPoint.tsx) */}
-                    <div className="flex flex-col md:hidden w-full">
+                    <div className="flex flex-col md:hidden w-full overflow-hidden">
                         {/* Buttons */}
-                        <div className="flex w-full h-11">
+                        <div className="flex w-full h-11 overflow-hidden">
                             <button
                                 onClick={onGoPublic}
                                 className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all border-r-4 border-black ${(viewMode as string) === 'PUBLIC' ? 'bg-black text-white' : 'bg-white text-black'}`}
@@ -264,7 +247,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                             </div>
                         </div>
 
-                        {/* Post-it Cards Grid */}
+                        {/* Neo-Brutalist Cards Grid */}
                         {activeAnnouncements.length === 0 ? (
                             <div className={`py-20 text-center border-4 border-black border-dashed bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${isLoaded ? 'animate-slideUp stagger-2' : 'opacity-0'}`}>
                                 <Megaphone className="w-16 h-16 mx-auto mb-4 text-neutral-200" />
@@ -272,46 +255,61 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                 <p className="text-neutral-300 font-bold text-xs mt-1 uppercase tracking-wide">Los anuncios pueden gestionarse desde el Panel Interno</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                                 {activeAnnouncements.map((ann, idx) => {
-                                    const color = POSTIT_COLORS[idx % POSTIT_COLORS.length];
-                                    const rotation = POSTIT_ROTATIONS[idx % POSTIT_ROTATIONS.length];
+                                    const accent = ACCENT_COLORS[idx % ACCENT_COLORS.length];
                                     return (
                                         <div
                                             key={ann.id}
-                                            className={`relative z-0 border-4 border-black shadow-[6px_6px_0px_0px_#000] ${color} ${rotation} hover:rotate-0 hover:-translate-y-2 transition-all duration-300 cursor-default animate-pinDrop`}
-                                            style={{ animationDelay: `${0.1 + idx * 0.08}s`, opacity: 0 }}
+                                            className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] transition-all duration-200 animate-slideUp flex flex-col"
+                                            style={{ animationDelay: `${0.1 + idx * 0.07}s`, opacity: 0 }}
                                         >
-                                            {/* Pin decorative element */}
-                                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-red-500 border-4 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10" />
+                                            {/* Accent bar top */}
+                                            <div className="h-2 w-full flex-shrink-0" style={{ backgroundColor: accent }} />
 
-                                            <div className="p-6 pt-8">
-                                                <h3 className="text-xl font-black uppercase tracking-tight mb-3 leading-tight">
-                                                    {ann.title}
-                                                </h3>
+                                            <div className="p-6 flex flex-col flex-1">
+                                                {/* Index badge + title */}
+                                                <div className="flex items-start gap-3 mb-4">
+                                                    <span
+                                                        className="flex-shrink-0 w-8 h-8 flex items-center justify-center border-2 border-black text-xs font-black"
+                                                        style={{ backgroundColor: accent }}
+                                                    >
+                                                        {String(idx + 1).padStart(2, '0')}
+                                                    </span>
+                                                    <h3 className="text-lg font-black uppercase tracking-tight leading-tight">
+                                                        {ann.title}
+                                                    </h3>
+                                                </div>
+
                                                 {ann.description && (
-                                                    <p className="text-sm font-semibold text-black/70 leading-relaxed mb-4 line-clamp-4">
+                                                    <p className="text-sm font-medium text-neutral-600 leading-relaxed mb-4 flex-1 border-l-4 border-black/10 pl-3">
                                                         {ann.description}
                                                     </p>
                                                 )}
-                                                {!ann.isPermanent && (
-                                                    <div className="flex items-center gap-1 pt-3 border-t-2 border-black/20">
-                                                        <Calendar className="w-3.5 h-3.5 text-black/50" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-black/50">
-                                                            Hasta: {new Date(ann.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+
+                                                {/* Footer */}
+                                                <div className="mt-auto pt-4 border-t-2 border-black flex items-center justify-between gap-3 flex-wrap">
+                                                    {ann.isPermanent ? (
+                                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2 py-1 border-2 border-black bg-black text-white">
+                                                            ∞ Permanente
                                                         </span>
-                                                    </div>
-                                                )}
-                                                {ann.qrCodeUrl && (
-                                                    <div className={`mt-4 pt-3 ${!ann.isPermanent ? 'border-t-2 border-black/20' : ''}`}>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Calendar className="w-3.5 h-3.5 text-black" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                                                Hasta {new Date(ann.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {ann.qrCodeUrl && (
                                                         <button
                                                             onClick={() => setQrModal({ open: true, title: ann.title, url: getQrUrl(ann.qrCodeUrl!) })}
-                                                            className="flex items-center justify-center gap-2 w-full py-2 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-[10px] font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none"
                                                         >
-                                                            <QrCode className="w-4 h-4" /> Mostrar QR
+                                                            <QrCode className="w-3.5 h-3.5" /> QR
                                                         </button>
-                                                    </div>
-                                                )}
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     );
