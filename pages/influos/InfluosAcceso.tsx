@@ -504,12 +504,7 @@ const InfluosAcceso: React.FC = () => {
                                 Intentar de nuevo
                             </button>
 
-                            <button
-                                onClick={() => navigate('/auth')}
-                                className="text-xs font-bold uppercase tracking-widest text-neutral-600 hover:text-neutral-400 transition-colors py-2"
-                            >
-                                ¿Ya estás registrado? Ir al ingreso →
-                            </button>
+
                         </motion.div>
                     </motion.div>
                 )}
