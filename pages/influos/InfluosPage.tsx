@@ -189,7 +189,7 @@ const InfluosContent: React.FC = () => {
                                         <th className="px-4 py-3 text-left text-xs font-black uppercase">Edad</th>
                                         <th className="px-4 py-3 text-left text-xs font-black uppercase">Celular</th>
                                         <th className="px-4 py-3 text-left text-xs font-black uppercase">Tribu</th>
-                                        <th className="px-4 py-3 text-left text-xs font-black uppercase">¿Primera vez?</th>
+                                        <th className="px-4 py-3 text-left text-xs font-black uppercase">¿Asiste a Influos?</th>
                                         <th className="px-4 py-3 text-left text-xs font-black uppercase">Acciones</th>
                                     </tr>
                                 </thead>
@@ -274,11 +274,14 @@ const InfluosContent: React.FC = () => {
                                                     <p className="text-xs font-black uppercase text-orange-600 mt-0.5">🟠 Naranja</p>
                                                 )}
                                             </div>
-                                            <span className={`px-2 py-1 text-[10px] font-black uppercase rounded ${attendee.is_first_time
-                                                ? 'bg-violet-100 text-violet-700'
-                                                : 'bg-neutral-100 text-neutral-500'}`}>
-                                                {attendee.is_first_time ? 'Sí' : 'No'}
-                                            </span>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 leading-none">¿Asiste a Influos?</p>
+                                                <span className={`px-2 py-1 text-[10px] font-black uppercase rounded inline-block ${attendee.is_first_time
+                                                    ? 'bg-violet-100 text-violet-700'
+                                                    : 'bg-neutral-100 text-neutral-500'}`}>
+                                                    {attendee.is_first_time ? 'Sí' : 'No'}
+                                                </span>
+                                            </div>
                                         </div>
                                         <p className="text-xs font-bold text-gray-600 dark:text-zinc-400 mb-3">Edad: {attendee.age} años</p>
                                         <div className="flex gap-2">
