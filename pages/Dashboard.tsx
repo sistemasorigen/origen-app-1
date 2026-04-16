@@ -24,7 +24,8 @@ import {
     BarChart3,
     CalendarDays as CalendarCoord,
     ChevronRight,
-    Book
+    Book,
+    Star
 } from 'lucide-react';
 import HeroCarousel, { HeroSlideData } from '../components/HeroCarousel';
 
@@ -78,6 +79,7 @@ const getModuleIcon = (id: string, defaultIcon: string, isConstruction?: boolean
         case 'admin': return <Settings className={iconClass} />;
         case 'coordinators': return <ClipboardList className={iconClass} />;
         case 'pastoral': return <HeartHandshake className={iconClass} />;
+        case 'influos': return <Star className={iconClass} />;
         default: return <span className="text-3xl">{defaultIcon}</span>;
     }
 };

@@ -177,6 +177,25 @@ const MODULES: SystemModule[] = [
         status: 'active'
     },
     {
+        id: 'influos',
+        title: 'Influos',
+        subtitle: 'Evento de Jóvenes',
+        description: 'Gestión de asistentes al evento Influos. Registro de menores con sus datos y primera visita.',
+        icon: 'star',
+        route: '/influos',
+        allowedRoles: [
+            UserRole.INFLUOS,
+            UserRole.SUPER_ADMIN,
+            UserRole.PASTOR
+        ],
+        publicAccess: false,
+        useImage: false,
+        gradientFrom: 'violet-500',
+        gradientTo: 'purple-700',
+        iconColor: 'text-violet-600',
+        status: 'active'
+    },
+    {
         id: 'tutorials',
         title: 'Tutoriales',
         subtitle: 'Capacitación',

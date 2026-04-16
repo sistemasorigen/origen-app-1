@@ -246,7 +246,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
         const safeRoles = [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_PUNTO, UserRole.ADMIN_GROUPS,
         UserRole.ADMIN_STORE, UserRole.ADMIN_ALABANZA, UserRole.ANFITRION, UserRole.CO_ANFITRION, UserRole.VIEWER,
         UserRole.VOLUNTARIO_INFO, UserRole.VOLUNTARIO_GRUPOS, UserRole.ENCARGADO_PUNTO, UserRole.ENCARGADO_GRUPOS,
-        UserRole.VOLUNTEER, UserRole.VOLUNTARIO, UserRole.ADMIN_CUIDADO_PASTORAL];
+        UserRole.VOLUNTEER, UserRole.VOLUNTARIO, UserRole.ADMIN_CUIDADO_PASTORAL, UserRole.INFLUOS];
         const primaryLegacyRole = finalRolesArray.find(r => safeRoles.includes(r)) || UserRole.VIEWER;
 
         // Determine Legacy Linked Group ID (for backward compat if needed)
@@ -719,6 +719,10 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                         <div onClick={() => toggleRole(UserRole.ADMIN_CUIDADO_PASTORAL)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_CUIDADO_PASTORAL) ? 'border-amber-600 bg-amber-600 text-white shadow-none' : 'border-amber-300 bg-amber-50 text-amber-700 hover:shadow-[3px_3px_0px_0px_rgba(217,119,6,0.5)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">CUIDADO PASTORAL</span>
                                             <span className="hidden md:block text-[10px] opacity-70">Gestión Pastoral</span>
+                                        </div>
+                                        <div onClick={() => toggleRole(UserRole.INFLUOS)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.INFLUOS) ? 'border-violet-600 bg-violet-600 text-white shadow-none' : 'border-violet-300 bg-violet-50 text-violet-700 hover:shadow-[3px_3px_0px_0px_rgba(139,92,246,0.5)]'}`}>
+                                            <span className="block text-[10px] md:text-xs font-bold uppercase">INFLUOS</span>
+                                            <span className="hidden md:block text-[10px] opacity-70">Gestión de Menores</span>
                                         </div>
 
                                         {/* Level 5 */}

@@ -15,6 +15,8 @@ import HostDashboard from './pages/HostDashboard';
 import UpdatePassword from './pages/UpdatePassword';
 import VerifyEmail from './pages/VerifyEmail';
 import Bienvenida from './pages/welcome/Bienvenida';
+import InfluosPage from './pages/influos/InfluosPage';
+import InfluosAcceso from './pages/influos/InfluosAcceso';
 import Formulario from './pages/welcome/Formulario';
 import TutorialsPage from './pages/TutorialsPage';
 import Coordinators from './pages/coordinators/Coordinators';
@@ -208,6 +210,7 @@ const AppContent: React.FC = () => {
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/form" element={<Formulario />} />
+            <Route path="/influos-acceso" element={<InfluosAcceso />} />
 
             {/* PROTECTED ROUTES WRAPPED IN LAYOUT */}
             <Route path="*" element={
@@ -261,6 +264,16 @@ const AppContent: React.FC = () => {
                                     UserRole.VOLUNTARIO_BIENVENIDA
                                 ]))
                                     ? <Bienvenida />
+                                    : <Navigate to="/" />
+                            } />
+
+                            <Route path="/influos" element={
+                                (user && hasRole(user, [
+                                    UserRole.INFLUOS,
+                                    UserRole.SUPER_ADMIN,
+                                    UserRole.PASTOR
+                                ]))
+                                    ? <InfluosPage />
                                     : <Navigate to="/" />
                             } />
 

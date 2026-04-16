@@ -17,7 +17,8 @@ import {
     LogOut,
     Sun,
     Moon,
-    UserCircle
+    UserCircle,
+    Star
 } from 'lucide-react';
 import { User, UserRole } from '../types';
 import { hasRole } from '../services/authUtils';
@@ -244,7 +245,13 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             ]
         },
         {
-            label: 'Cuidado Pastoral',
+            label: 'Influos',
+            icon: Star,
+            path: '/influos',
+            roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR]
+        },
+        {
+            label: 'Audiencia Servicios',
             icon: HeartHandshake,
             path: '/pastoral-care',
             roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]

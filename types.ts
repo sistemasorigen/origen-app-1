@@ -25,7 +25,8 @@ export enum UserRole {
     ENCARGADO_BIENVENIDA = 'ENCARGADO_BIENVENIDA',
     VOLUNTARIO_BIENVENIDA = 'VOLUNTARIO_BIENVENIDA',
     ADMIN_CUIDADO_PASTORAL = 'ADMIN_CUIDADO_PASTORAL', // NEW ROLE for Pastoral Care
-    COORDINATOR = 'COORDINATOR'
+    COORDINATOR = 'COORDINATOR',
+    INFLUOS = 'INFLUOS', // Módulo de gestión de menores
 }
 
 export enum CoordinatorVariant {
@@ -832,3 +833,16 @@ export interface ServiceStatistic {
 }
 // --- PUSH NOTIFICATIONS ---
 export type PushPermissionStatus = 'default' | 'granted' | 'denied';
+
+// --- INFLUOS SYSTEM ---
+export interface InfluosAttendee {
+    id: string;
+    created_at: string;
+    first_name: string;
+    last_name: string;
+    age: number;
+    phone: string;
+    is_first_time: boolean;
+    tribe?: string;
+    tribu?: string;
+}
