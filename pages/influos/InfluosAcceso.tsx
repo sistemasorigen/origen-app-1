@@ -175,7 +175,7 @@ const InfluosAcceso: React.FC = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.35 }}
-                        className="min-h-screen bg-black flex flex-col items-center justify-center p-6 overflow-hidden relative"
+                        className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-6 overflow-hidden relative"
                     >
                         {/* Partículas decorativas de fondo */}
                         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -253,7 +253,7 @@ const InfluosAcceso: React.FC = () => {
                             stiffness: 260,
                             damping: 22
                         }}
-                        className="min-h-screen bg-black flex flex-col items-center justify-center p-6"
+                        className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-6"
                     >
                         {/* Partículas de fondo */}
                         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -361,7 +361,7 @@ const InfluosAcceso: React.FC = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
-                        className={`min-h-screen flex flex-col items-center justify-center p-6 text-center relative overflow-hidden ${theme.bg}`}
+                        className={`w-full min-h-screen flex flex-col items-center justify-center p-6 text-center relative overflow-hidden ${theme.bg}`}
                     >
                         {/* Fondo con gradiente sutil */}
                         <div className="absolute inset-0 bg-black/10 pointer-events-none" />
@@ -458,7 +458,7 @@ const InfluosAcceso: React.FC = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.35 }}
-                        className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center"
+                        className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center"
                     >
                         <motion.div
                             initial={{ scale: 0 }}

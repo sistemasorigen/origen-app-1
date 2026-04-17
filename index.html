@@ -345,6 +345,19 @@
     html {
       transition: background-color 0.5s ease, color 0.5s ease;
     }
+
+    /* Ensure root div always occupies full viewport */
+    html, body {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #root {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
   </style>
 
   <!-- Theme Pre-Load Script: Prevents flash of wrong theme -->
