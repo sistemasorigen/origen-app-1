@@ -466,14 +466,27 @@ export const supabaseService = {
   },
 
   async adminCreateUser(user: User, _password?: string): Promise<User | null> {
-    // Note: Passwords are managed by Supabase Auth (auth.users), not public.users
+    // Call Edge Function to create auth.users record (which triggers public.users creation)
+    const { data: edgeData, error: edgeError } = await supabase.functions.invoke('admin-manage-user', {
+      body: { action: 'CREATE', email: user.email, password: _password, name: user.name }
+    });
+
+    if (edgeError || !edgeData?.success) {
+      console.error('Error creating auth user:', edgeError || edgeData?.error);
+      return null;
+    }
+
+    const newUserId = edgeData.data.id;
+
+    // Upsert into public.users to ensure roles and other specific admin data are saved
     const { data, error } = await supabase
       .from('users')
-      .insert({
-        id: user.id,
+      .upsert({
+        id: newUserId,
         name: user.name,
         email: user.email,
         role: user.role,
+        roles: user.roles && user.roles.length > 0 ? user.roles : [user.role],
         is_active: user.isActive,
         linked_group_id: user.linkedGroupId,
         volunteer_roles: user.volunteerRoles
@@ -482,7 +495,7 @@ export const supabaseService = {
       .single();
 
     if (error) {
-      console.error('Error creating user:', error);
+      console.error('Error updating user roles in public.users:', error);
       return null;
     }
 
@@ -491,7 +504,6 @@ export const supabaseService = {
       name: data.name,
       email: data.email,
       role: data.role as UserRole,
-      // FIX: Empty array [] is truthy, so we need to check length too
       roles: (data.roles && data.roles.length > 0 ? data.roles : [data.role]) as UserRole[],
       isActive: data.is_active,
       linkedGroupId: data.linked_group_id,
@@ -500,6 +512,16 @@ export const supabaseService = {
   },
 
   async updateUser(user: User, _password?: string): Promise<boolean> {
+    if (_password) {
+      const { data: edgeData, error: edgeError } = await supabase.functions.invoke('admin-manage-user', {
+        body: { action: 'UPDATE_PASSWORD', userId: user.id, password: _password }
+      });
+      if (edgeError || !edgeData?.success) {
+        console.error('Error updating password via Edge Function:', edgeError || edgeData?.error);
+        return false;
+      }
+    }
+
     const updates = {
       name: user.name,
       email: user.email,
@@ -629,15 +651,20 @@ export const supabaseService = {
   },
 
   async deleteUser(id: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', id);
+    const { data, error } = await supabase.rpc('admin_delete_user', {
+      target_user_id: id
+    });
 
     if (error) {
-      console.error('Error deleting user:', error);
+      console.error('Error deleting user (RPC):', error);
       return false;
     }
+
+    if (data && !data.success) {
+      console.error('Delete user failed:', data.error);
+      return false;
+    }
+
     return true;
   },
 
