@@ -18,7 +18,7 @@ const InfluosNewModal: React.FC<InfluosNewModalProps> = ({ isOpen, onClose, onSu
         lastName: '',
         age: '',
         phone: '',
-        tribe: 'Celeste' as 'Celeste' | 'Naranja',
+        tribe: 'Trueno (celeste)' as 'Trueno (celeste)' | 'Garra (naranja)',
         isFirstTime: true
     });
 
@@ -42,7 +42,7 @@ const InfluosNewModal: React.FC<InfluosNewModalProps> = ({ isOpen, onClose, onSu
             toast.success('Asistente registrado correctamente.');
             onSuccess();
             onClose();
-            setForm({ firstName: '', lastName: '', age: '', phone: '', tribe: 'Celeste', isFirstTime: true });
+            setForm({ firstName: '', lastName: '', age: '', phone: '', tribe: 'Trueno (celeste)', isFirstTime: true });
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Error desconocido';
             toast.error('Error al registrar: ' + msg);
@@ -109,25 +109,25 @@ const InfluosNewModal: React.FC<InfluosNewModalProps> = ({ isOpen, onClose, onSu
                     <div className="flex gap-3">
                         <button
                             type="button"
-                            onClick={() => setForm({ ...form, tribe: 'Celeste' })}
+                            onClick={() => setForm({ ...form, tribe: 'Trueno (celeste)' })}
                             className={`flex-1 py-3 border-2 font-black text-xs uppercase transition-all ${
-                                form.tribe === 'Celeste'
+                                form.tribe === 'Trueno (celeste)'
                                     ? 'bg-sky-500 border-sky-500 text-white shadow-[4px_4px_0px_0px_rgba(14,165,233,0.5)]'
                                     : 'bg-white border-black text-black hover:bg-sky-50'
                             }`}
                         >
-                            🔵 Celeste
+                            🔵 Trueno (celeste)
                         </button>
                         <button
                             type="button"
-                            onClick={() => setForm({ ...form, tribe: 'Naranja' })}
+                            onClick={() => setForm({ ...form, tribe: 'Garra (naranja)' })}
                             className={`flex-1 py-3 border-2 font-black text-xs uppercase transition-all ${
-                                form.tribe === 'Naranja'
+                                form.tribe === 'Garra (naranja)'
                                     ? 'bg-orange-500 border-orange-500 text-white shadow-[4px_4px_0px_0px_rgba(249,115,22,0.5)]'
                                     : 'bg-white border-black text-black hover:bg-orange-50'
                             }`}
                         >
-                            🟠 Naranja
+                            🟠 Garra (naranja)
                         </button>
                     </div>
                 </div>

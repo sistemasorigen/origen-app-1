@@ -85,10 +85,12 @@ const TRIBU_THEMES: Record<string, {
     'azul':     { label: 'Azul',     bg: 'bg-blue-600',     accent: 'bg-blue-700',     text: 'text-white', border: 'border-blue-300',     checkBg: 'bg-blue-700',     glow: 'rgba(59,130,246,0.5)' },
     'verde':    { label: 'Verde',    bg: 'bg-emerald-600',  accent: 'bg-emerald-700',  text: 'text-white', border: 'border-emerald-300',  checkBg: 'bg-emerald-700',  glow: 'rgba(16,185,129,0.5)' },
     'amarilla': { label: 'Amarilla', bg: 'bg-yellow-400',   accent: 'bg-yellow-500',   text: 'text-black', border: 'border-yellow-600',   checkBg: 'bg-yellow-500',   glow: 'rgba(234,179,8,0.5)' },
-    'naranja':  { label: 'Naranja',  bg: 'bg-orange-500',   accent: 'bg-orange-600',   text: 'text-white', border: 'border-orange-300',   checkBg: 'bg-orange-600',   glow: 'rgba(249,115,22,0.5)' },
     'violeta':  { label: 'Violeta',  bg: 'bg-violet-600',   accent: 'bg-violet-700',   text: 'text-white', border: 'border-violet-300',   checkBg: 'bg-violet-700',   glow: 'rgba(139,92,246,0.5)' },
     'rosa':     { label: 'Rosa',     bg: 'bg-pink-500',     accent: 'bg-pink-600',     text: 'text-white', border: 'border-pink-300',     checkBg: 'bg-pink-600',     glow: 'rgba(236,72,153,0.5)' },
-    'celeste':  { label: 'Celeste',  bg: 'bg-sky-400',      accent: 'bg-sky-500',      text: 'text-white', border: 'border-sky-200',      checkBg: 'bg-sky-500',      glow: 'rgba(14,165,233,0.5)' },
+    'celeste':  { label: 'Trueno',  bg: 'bg-sky-400',      accent: 'bg-sky-500',      text: 'text-white', border: 'border-sky-200',      checkBg: 'bg-sky-500',      glow: 'rgba(14,165,233,0.5)' },
+    'trueno (celeste)':  { label: 'Trueno',  bg: 'bg-sky-400',      accent: 'bg-sky-500',      text: 'text-white', border: 'border-sky-200',      checkBg: 'bg-sky-500',      glow: 'rgba(14,165,233,0.5)' },
+    'naranja':  { label: 'Garra',  bg: 'bg-orange-500',   accent: 'bg-orange-600',   text: 'text-white', border: 'border-orange-300',   checkBg: 'bg-orange-600',   glow: 'rgba(249,115,22,0.5)' },
+    'garra (naranja)':  { label: 'Garra',  bg: 'bg-orange-500',   accent: 'bg-orange-600',   text: 'text-white', border: 'border-orange-300',   checkBg: 'bg-orange-600',   glow: 'rgba(249,115,22,0.5)' },
     'blanca':   { label: 'Blanca',   bg: 'bg-white',        accent: 'bg-neutral-100',  text: 'text-black', border: 'border-neutral-400',  checkBg: 'bg-neutral-200',  glow: 'rgba(200,200,200,0.5)' },
     'negra':    { label: 'Negra',    bg: 'bg-neutral-900',  accent: 'bg-black',        text: 'text-white', border: 'border-neutral-600',  checkBg: 'bg-black',        glow: 'rgba(30,30,30,0.7)' },
 };
@@ -217,7 +219,7 @@ const InfluosAcceso: React.FC = () => {
 
                             {/* Texto principal */}
                             <h1 className="text-[2rem] md:text-[2.4rem] font-black uppercase tracking-tight text-white leading-[1.1] mb-6">
-                                ¡Descubramos<br />
+                                ¡Descubrí<br />
                                 de qué Tribu<br />
                                 sos!
                             </h1>
@@ -234,14 +236,7 @@ const InfluosAcceso: React.FC = () => {
                             </div>
                         </motion.button>
 
-                        <motion.p
-                            className="mt-10 text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-700"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.8, duration: 0.4 }}
-                        >
-                            Powered by Sistema Origen
-                        </motion.p>
+
                     </motion.div>
                 )}
 
@@ -397,7 +392,7 @@ const InfluosAcceso: React.FC = () => {
                                 transition={{ delay: 0.25, type: 'spring', stiffness: 260, damping: 18 }}
                                 className={`text-5xl md:text-6xl font-black uppercase tracking-tight ${theme.text} leading-none`}
                             >
-                                ¡Felicidades!
+                                ¡Vamosss!
                             </motion.h1>
 
                             {/* ¡Tu tribu es: + COLOR DE TRIBU — solo si hay tribu asignada */}
@@ -409,7 +404,7 @@ const InfluosAcceso: React.FC = () => {
                                         transition={{ delay: 0.42 }}
                                         className={`text-lg md:text-xl font-black uppercase tracking-widest ${theme.text} opacity-80`}
                                     >
-                                        ¡Tu tribu es:
+                                        Tu tribu es:
                                     </motion.p>
 
                                     <motion.div

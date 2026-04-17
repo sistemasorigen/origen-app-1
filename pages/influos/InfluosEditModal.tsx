@@ -15,12 +15,12 @@ interface InfluosEditModalProps {
 const InfluosEditModal: React.FC<InfluosEditModalProps> = ({ attendee, isOpen, onClose, onUpdate }) => {
     const toast = useToast();
     const [isLoading, setIsLoading] = useState(false);
-    const [formData, setFormData] = useState<Omit<InfluosAttendee, 'id' | 'created_at'> & { tribe: 'Celeste' | 'Naranja' }>({
+    const [formData, setFormData] = useState<Omit<InfluosAttendee, 'id' | 'created_at'> & { tribe: 'Trueno (celeste)' | 'Garra (naranja)' }>({
         first_name: '',
         last_name: '',
         age: 0,
         phone: '',
-        tribe: 'Celeste',
+        tribe: 'Trueno (celeste)',
         is_first_time: true
     });
 
@@ -31,7 +31,7 @@ const InfluosEditModal: React.FC<InfluosEditModalProps> = ({ attendee, isOpen, o
                 last_name: attendee.last_name,
                 age: attendee.age,
                 phone: attendee.phone,
-                tribe: (attendee.tribe === 'Naranja' ? 'Naranja' : 'Celeste') as 'Celeste' | 'Naranja',
+                tribe: (attendee.tribe === 'Garra (naranja)' || attendee.tribe === 'Naranja' ? 'Garra (naranja)' : 'Trueno (celeste)') as 'Trueno (celeste)' | 'Garra (naranja)',
                 is_first_time: attendee.is_first_time
             });
         }
@@ -147,25 +147,25 @@ const InfluosEditModal: React.FC<InfluosEditModalProps> = ({ attendee, isOpen, o
                     <div className="flex gap-3">
                         <button
                             type="button"
-                            onClick={() => setFormData({ ...formData, tribe: 'Celeste' })}
+                            onClick={() => setFormData({ ...formData, tribe: 'Trueno (celeste)' })}
                             className={`flex-1 py-3 border-2 font-black text-xs uppercase transition-all ${
-                                formData.tribe === 'Celeste'
+                                formData.tribe === 'Trueno (celeste)'
                                     ? 'bg-sky-500 border-sky-500 text-white shadow-[4px_4px_0px_0px_rgba(14,165,233,0.5)]'
                                     : 'bg-white border-black text-black hover:bg-sky-50'
                             }`}
                         >
-                            🔵 Celeste
+                            🔵 Trueno (celeste)
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFormData({ ...formData, tribe: 'Naranja' })}
+                            onClick={() => setFormData({ ...formData, tribe: 'Garra (naranja)' })}
                             className={`flex-1 py-3 border-2 font-black text-xs uppercase transition-all ${
-                                formData.tribe === 'Naranja'
+                                formData.tribe === 'Garra (naranja)'
                                     ? 'bg-orange-500 border-orange-500 text-white shadow-[4px_4px_0px_0px_rgba(249,115,22,0.5)]'
                                     : 'bg-white border-black text-black hover:bg-orange-50'
                             }`}
                         >
-                            🟠 Naranja
+                            🟠 Garra (naranja)
                         </button>
                     </div>
                 </div>

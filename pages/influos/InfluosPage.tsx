@@ -211,11 +211,11 @@ const InfluosContent: React.FC = () => {
                                                 <td className="px-4 py-3 font-bold text-sm text-black dark:text-white">{attendee.age}</td>
                                                 <td className="px-4 py-3 font-bold text-sm text-black dark:text-white">{attendee.phone}</td>
                                                 <td className="px-4 py-3">
-                                                    {attendee.tribe === 'Celeste' && (
-                                                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded bg-sky-100 text-sky-700 border border-sky-300">🔵 Celeste</span>
+                                                    {(attendee.tribe === 'Celeste' || attendee.tribe === 'Trueno (celeste)') && (
+                                                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded bg-sky-100 text-sky-700 border border-sky-300">🔵 Trueno (celeste)</span>
                                                     )}
-                                                    {attendee.tribe === 'Naranja' && (
-                                                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded bg-orange-100 text-orange-700 border border-orange-300">🟠 Naranja</span>
+                                                    {(attendee.tribe === 'Naranja' || attendee.tribe === 'Garra (naranja)') && (
+                                                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded bg-orange-100 text-orange-700 border border-orange-300">🟠 Garra (naranja)</span>
                                                     )}
                                                     {!attendee.tribe && (
                                                         <span className="text-gray-400 font-normal italic text-xs">—</span>
@@ -267,11 +267,11 @@ const InfluosContent: React.FC = () => {
                                                     {attendee.first_name} {attendee.last_name}
                                                 </p>
                                                 <p className="text-xs text-gray-500 font-bold">{attendee.phone}</p>
-                                                {attendee.tribe === 'Celeste' && (
-                                                    <p className="text-xs font-black uppercase text-sky-600 mt-0.5">🔵 Celeste</p>
+                                                {(attendee.tribe === 'Celeste' || attendee.tribe === 'Trueno (celeste)') && (
+                                                    <p className="text-xs font-black uppercase text-sky-600 mt-0.5">🔵 Trueno (celeste)</p>
                                                 )}
-                                                {attendee.tribe === 'Naranja' && (
-                                                    <p className="text-xs font-black uppercase text-orange-600 mt-0.5">🟠 Naranja</p>
+                                                {(attendee.tribe === 'Naranja' || attendee.tribe === 'Garra (naranja)') && (
+                                                    <p className="text-xs font-black uppercase text-orange-600 mt-0.5">🟠 Garra (naranja)</p>
                                                 )}
                                             </div>
                                             <div className="text-right">
