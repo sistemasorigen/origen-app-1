@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../services/supabaseClient';
 import { InfluosAttendee } from '../../types';
-import {
-    CheckCircle, XCircle, Loader2,
-    Search, ArrowRight
-} from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Search, ArrowRight } from 'lucide-react';
 
 // --------------- ANIMATION STYLES ---------------
 // Pattern from pages/infopoint/PublicHome.tsx — keyframes as inline <style>
@@ -115,8 +111,6 @@ const getTribaTheme = (tribu?: string) => {
 type Screen = 'landing' | 'search' | 'found' | 'notfound';
 
 const InfluosAcceso: React.FC = () => {
-    const navigate = useNavigate();
-
     const [screen, setScreen] = useState<Screen>('landing');
     const [searchFirstName, setSearchFirstName] = useState('');
     const [searchLastName, setSearchLastName] = useState('');
@@ -431,19 +425,6 @@ const InfluosAcceso: React.FC = () => {
 
 
 
-                            {/* Botón ir al sistema */}
-                            <motion.button
-                                onClick={() => navigate('/auth')}
-                                whileHover={{ scale: 1.03, y: -2 }}
-                                whileTap={{ scale: 0.97 }}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.95 }}
-                                className={`mt-4 w-full py-4 border-4 ${theme.border} font-black uppercase tracking-widest text-sm ${theme.text} hover:opacity-80 transition-opacity shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] flex items-center justify-center gap-3`}
-                            >
-                                Ingresar al sistema
-                                <ArrowRight className="w-4 h-4 transition-transform" />
-                            </motion.button>
                         </div>
 
 
