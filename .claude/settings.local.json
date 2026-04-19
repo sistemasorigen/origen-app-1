@@ -12,7 +12,10 @@
       "Bash(cp -r \"/c/Users/nacho/.claude/plugins/marketplaces/anthropic-agent-skills/skills/ui-design-master\" \"/c/Users/nacho/OneDrive/Desktop/Origen App/origen-app/origen-app/.claude/skills/\")",
       "Bash(cp -r \"/c/Users/nacho/.claude/plugins/marketplaces/anthropic-agent-skills/skills/systematic-debugger\" \"/c/Users/nacho/OneDrive/Desktop/Origen App/origen-app/origen-app/.claude/skills/\")",
       "Bash(npm run:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Read(//c/Users/nacho/.claude/skills/ui-ux-pro-max/**)",
+      "Bash(python scripts/search.py \"church management visitor pipeline kanban brutalist admin dashboard\" --design-system -p \"Origen Bienvenida\")",
+      "Bash(python3 scripts/search.py \"church management visitor pipeline kanban brutalist admin dashboard\" --design-system -p \"Origen Bienvenida\")"
     ]
   }
 }
