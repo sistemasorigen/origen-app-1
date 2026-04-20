@@ -71,6 +71,9 @@ serve(async (req) => {
                 actionResult = await handleHostApproved(record);
             }
         }
+        else if (table === 'welcome_visitors' && type === 'INSERT') {
+            actionResult = await handleNewWelcomeVisitor(record);
+        }
 
         return new Response(JSON.stringify({ success: true, actionResult }), {
             headers: { 'Content-Type': 'application/json' },
@@ -167,6 +170,27 @@ async function handleHostApproved(record: any) {
     return await sendEmail({
         to: [record.email],
         subject: '🎉 ¡Bienvenido como Anfitrión de Origen!',
+        html
+    });
+}
+
+async function handleNewWelcomeVisitor(record: any) {
+    console.log(
+        `[Bienvenida] Nuevo ingresante: ` +
+        `${record.first_name} ${record.last_name}`
+    );
+
+    const html = templates.newWelcomeVisitor(
+        record.first_name || '',
+        record.last_name || '',
+        record.phone || 'No proporcionado',
+        record.age ? String(record.age) : 'No proporcionado',
+        record.created_at || new Date().toISOString()
+    );
+
+    return await sendEmail({
+        to: ['bienvenida@origeniglesia.org'],
+        subject: `🙋 Nuevo Ingresante: ${record.first_name} ${record.last_name} — Origen`,
         html
     });
 }

@@ -152,6 +152,7 @@ const Formulario: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="label">Nombre</label>
+                                <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">El mismo nombre con el que te anotaste en recepción.</p>
                                 <input
                                     type="text"
                                     required
@@ -163,6 +164,7 @@ const Formulario: React.FC = () => {
                             </div>
                             <div>
                                 <label className="label">Apellido</label>
+                                <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">El mismo apellido con el que te anotaste en recepción.</p>
                                 <input
                                     type="text"
                                     required
@@ -174,6 +176,7 @@ const Formulario: React.FC = () => {
                             </div>
                             <div>
                                 <label className="label">Teléfono</label>
+                                <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">El mismo número que le diste al equipo de bienvenida. Lo usamos para identificarte.</p>
                                 <input
                                     type="tel"
                                     required
@@ -185,6 +188,7 @@ const Formulario: React.FC = () => {
                             </div>
                             <div>
                                 <label className="label">Email <span className="text-gray-400 font-normal">(Opcional)</span></label>
+                                <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">Solo para enviarte info de la iglesia cuando la tengas. No es obligatorio.</p>
                                 <input
                                     type="email"
                                     value={formData.email}
@@ -200,6 +204,7 @@ const Formulario: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="label">¿Es primera vez?</label>
+                            <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">¿Es la primera vez que venís a una reunión de Origen?</p>
                             <select
                                 className="input-field"
                                 required
@@ -216,6 +221,7 @@ const Formulario: React.FC = () => {
                         </div>
                         <div>
                             <label className="label">Decisión de Fe</label>
+                            <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">Hoy en la reunión, ¿tomaste la decisión de aceptar a Jesús por primera vez, o ya lo habías hecho antes?</p>
                             <select
                                 className="input-field"
                                 required
@@ -233,6 +239,7 @@ const Formulario: React.FC = () => {
                     <div className="space-y-4">
                         <div>
                             <label className="label">Experiencia / Comentarios</label>
+                            <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">Contanos cómo te sentiste hoy, qué fue lo que más te gustó o cualquier cosa que quieras compartir con nosotros.</p>
                             <textarea
                                 required
                                 className="input-field h-24 py-2 resize-none"
@@ -243,6 +250,7 @@ const Formulario: React.FC = () => {
                         </div>
                         <div>
                             <label className="label">Petición de Oración</label>
+                            <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">Si hay algo por lo que querés que oremos por vos, escribilo acá. Es confidencial.</p>
                             <textarea
                                 className="input-field h-24 py-2 resize-none"
                                 value={formData.prayer_request}
@@ -255,6 +263,7 @@ const Formulario: React.FC = () => {
                     {/* 5. INTERESES */}
                     <div>
                         <label className="label mb-2 block">Áreas de Interés</label>
+                        <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">Seleccioná todo lo que te llame la atención. Podés elegir más de uno, o ninguno si preferís.</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                             {INTEREST_OPTIONS.map(opt => (
                                 <label key={opt} className={`flex items-center gap-2 p-2 border-2 cursor-pointer transition-all ${formData.interest_areas.includes(opt) ? 'border-black bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'border-neutral-200 text-neutral-500 hover:border-black'}`}>

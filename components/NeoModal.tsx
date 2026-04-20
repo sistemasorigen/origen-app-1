@@ -1,4 +1,4 @@
-import React, { useEffect, useState, ReactNode } from 'react';
+import React, { useEffect, useState, useRef, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -17,6 +17,12 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
     // Media Query for Responsive Animations
     const [isMobile, setIsMobile] = useState(false);
 
+    // Drag solo se activa desde el handle, no desde
+    // el contenido. Esto evita que compita con scroll.
+    const [isDraggingFromHandle, setIsDraggingFromHandle] =
+        useState(false);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
         checkMobile();
@@ -24,25 +30,35 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Body Scroll Lock & Focus Mode
+    // Body Scroll Lock — compatible con iOS Safari
+    // Técnica: guardar scrollY → fijar body con
+    // position:fixed → restaurar al cerrar.
+    // Esto evita el congelamiento de scroll interno
+    // que causa overflow:hidden en iOS.
     useEffect(() => {
         if (disableScrollLock) return;
+        if (!isOpen) return;
 
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-            document.documentElement.style.overflow = 'hidden';
-            document.body.setAttribute('data-modal-active', 'true');
-        } else {
-            document.body.style.overflow = '';
-            document.documentElement.style.overflow = '';
-            document.body.removeAttribute('data-modal-active');
-        }
+        const scrollY = window.scrollY;
+
+        // Fijar el body en su posición actual
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+        document.body.style.overflowY = 'scroll'; // evitar layout shift
+        document.body.setAttribute('data-modal-active', 'true');
+
         return () => {
-            document.body.style.overflow = '';
-            document.documentElement.style.overflow = '';
+            // Restaurar posición y scroll
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            document.body.style.overflowY = '';
             document.body.removeAttribute('data-modal-active');
+            // Volver al scroll original sin salto visual
+            window.scrollTo({ top: scrollY, behavior: 'instant' as ScrollBehavior });
         };
-    }, [isOpen]);
+    }, [isOpen, disableScrollLock]);
 
     // Animation Variants
     const backdropVariants = {
@@ -95,14 +111,28 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                             transition={{ duration: 0.2 }} // Simple fade, no springs to avoid transforms
                             onClick={(e) => e.stopPropagation()}
                             // Removed Drag on Desktop to guarantee no transforms
-                            drag={isMobile && !persistent ? "y" : false}
+                            drag={isMobile && !persistent && isDraggingFromHandle ? "y" : false}
                             dragConstraints={{ top: 0, bottom: 0 }}
-                            dragElastic={0.1}
+                            dragElastic={0.3}
+                            dragMomentum={false}
                             onDragEnd={handleDragEnd}
                         >
                             {/* MOBILE DRAG HANDLE */}
+                            {/* El drag solo se activa desde acá —
+                                evita competir con el scroll interno */}
                             {isMobile && (
-                                <div className="w-full flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing">
+                                <div
+                                    className="w-full flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing select-none"
+                                    onPointerDown={() =>
+                                        setIsDraggingFromHandle(true)
+                                    }
+                                    onPointerUp={() =>
+                                        setIsDraggingFromHandle(false)
+                                    }
+                                    onPointerCancel={() =>
+                                        setIsDraggingFromHandle(false)
+                                    }
+                                >
                                     <div className="w-16 h-1.5 bg-neutral-300 rounded-full" />
                                 </div>
                             )}
@@ -125,9 +155,29 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                             </div>
 
                             {/* BODY */}
+                            {/* touchAction pan-y: el browser maneja el
+                                scroll vertical, Framer Motor no lo
+                                intercepta. overscrollBehavior contain:
+                                el scroll no se propaga al backdrop.
+                                WebkitOverflowScrolling touch: momentum
+                                scroll nativo en iOS Safari. */}
                             <div
                                 id="neo-modal-scroll-container"
-                                className={`flex-1 overflow-y-auto overflow-x-hidden overscroll-behavior-contain touch-pan-y ${isMobile ? 'px-6 pb-8' : 'px-6 md:px-8 lg:px-10 pb-6 md:pb-8'}`}
+                                ref={scrollContainerRef}
+                                className={`flex-1 overflow-y-auto overflow-x-hidden ${isMobile ? 'px-6 pb-8' : 'px-6 md:px-8 lg:px-10 pb-6 md:pb-8'}`}
+                                style={{
+                                    touchAction: 'pan-y',
+                                    overscrollBehavior: 'contain',
+                                    WebkitOverflowScrolling: 'touch',
+                                }}
+                                onPointerDown={(e) => {
+                                    // Si el scroll tiene contenido scrollable,
+                                    // cancelar cualquier drag activo del modal
+                                    const el = scrollContainerRef.current;
+                                    if (el && el.scrollHeight > el.clientHeight) {
+                                        setIsDraggingFromHandle(false);
+                                    }
+                                }}
                             >
                                 {children}
                             </div>

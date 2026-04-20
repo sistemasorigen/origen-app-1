@@ -93,14 +93,6 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
         }
     };
 
-    const DisplayField = ({ label, value }: { label: string, value: any }) => (
-        <div className="mb-1">
-            <label className="label">{label}</label>
-            <div className={`w-full min-h-[2.5rem] px-3 py-2 border-2 border-black font-bold flex items-center ${value ? 'bg-white' : 'bg-neutral-100 text-neutral-400 italic'}`}>
-                {value || 'Incompleto'}
-            </div>
-        </div>
-    );
 
     return (
         <NeoModal isOpen={isOpen} onClose={onClose} title="Detalle de Visitante" maxWidth="max-w-2xl">
@@ -132,49 +124,84 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
                     </div>
                 </div>
 
-                {/* 2. DATOS DEL FORMULARIO (READ ONLY) */}
-                <div className="bg-neutral-50 p-4 border-2 border-neutral-200">
-                    <h3 className="font-black uppercase mb-3 text-sm text-neutral-400 flex items-center gap-2">
+                {/* 2. RESPUESTAS DEL FORMULARIO (EDITABLE) */}
+                <div className="bg-slate-50 p-4 border-2 border-black">
+                    <h3 className="font-black uppercase mb-3 text-sm flex items-center gap-2">
                         Respuestas del Formulario
-                        {visitor.stage !== 'FILLED_FORM' && <span className="text-[10px] bg-neutral-200 px-2 py-0.5 text-black rounded-full">Lectura</span>}
                     </h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <DisplayField
-                            label="¿Es primera vez?"
-                            value={formData.is_first_time != null ? (formData.is_first_time ? 'Sí, primera vez' : 'No, ya había venido') : null}
-                        />
-                        <DisplayField
-                            label="Decisión de Fe"
-                            value={formData.accepted_jesus}
-                        />
+                        <div>
+                            <label className="label">¿Es primera vez?</label>
+                            <select
+                                className="input-field"
+                                value={formData.is_first_time == null ? '' : (formData.is_first_time ? 'yes' : 'no')}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    handleChange('is_first_time', val === '' ? null : val === 'yes');
+                                }}
+                            >
+                                <option value="">— Sin respuesta —</option>
+                                <option value="yes">Sí, primera vez</option>
+                                <option value="no">No, ya había venido</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="label">Decisión de Fe</label>
+                            <select
+                                className="input-field"
+                                value={formData.accepted_jesus || ''}
+                                onChange={e => handleChange('accepted_jesus', e.target.value)}
+                            >
+                                <option value="">— Sin respuesta —</option>
+                                <option value="Si">Sí, acepté hoy</option>
+                                <option value="No, antes">Ya lo había hecho antes</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="space-y-4 mb-4">
-                        <DisplayField
-                            label="Experiencia / Comentarios"
-                            value={formData.experience_description}
-                        />
-                        <DisplayField
-                            label="Petición de Oración"
-                            value={formData.prayer_request}
-                        />
+                        <div>
+                            <label className="label">Experiencia / Comentarios</label>
+                            <textarea
+                                className="input-field h-24 py-2 resize-none"
+                                value={formData.experience_description || ''}
+                                onChange={e => handleChange('experience_description', e.target.value)}
+                                placeholder="Sin respuesta"
+                            />
+                        </div>
+                        <div>
+                            <label className="label">Petición de Oración</label>
+                            <textarea
+                                className="input-field h-24 py-2 resize-none"
+                                value={formData.prayer_request || ''}
+                                onChange={e => handleChange('prayer_request', e.target.value)}
+                                placeholder="Sin respuesta"
+                            />
+                        </div>
                     </div>
 
                     <div>
                         <label className="label mb-2 block">Áreas de Interés</label>
-                        <div className="flex flex-wrap gap-2">
-                            {formData.interest_areas && formData.interest_areas.length > 0 ? (
-                                formData.interest_areas.map(interest => (
-                                    <span key={interest} className="px-3 py-1 bg-black text-white text-xs font-bold uppercase tracking-wider">
-                                        {interest}
-                                    </span>
-                                ))
-                            ) : (
-                                <div className="w-full min-h-[2.5rem] px-3 py-2 border-2 border-neutral-200 font-bold bg-neutral-100 flex items-center text-neutral-400 italic">
-                                    Incompleto
-                                </div>
-                            )}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {INTEREST_OPTIONS.map(opt => (
+                                <label
+                                    key={opt}
+                                    className={`flex items-center gap-2 p-2 border-2 cursor-pointer transition-all ${
+                                        (formData.interest_areas || []).includes(opt)
+                                            ? 'border-black bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                            : 'border-neutral-200 text-neutral-500 hover:border-black'
+                                    }`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        className="hidden"
+                                        checked={(formData.interest_areas || []).includes(opt)}
+                                        onChange={() => toggleInterest(opt)}
+                                    />
+                                    <span className="font-bold uppercase text-xs">{opt}</span>
+                                </label>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -216,6 +243,10 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
                     transition: all;
                     color: #000;
                     background: #fff;
+                }
+                textarea.input-field {
+                    height: auto;
+                    padding: 0.5rem 0.75rem;
                 }
                 .input-field:focus {
                     box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);

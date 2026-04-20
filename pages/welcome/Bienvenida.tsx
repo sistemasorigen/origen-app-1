@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '../../services/supabaseClient';
 import { WelcomeVisitor, VisitorStage } from '../../types';
@@ -6,7 +6,7 @@ import VisitorCard from './VisitorCard';
 import NewVisitorModal from './NewVisitorModal';
 import VisitorDetailModal from './VisitorDetailModal';
 import { ToastProvider } from '../infopoint/context/ToastContext';
-import { Plus, RefreshCw, Users } from 'lucide-react';
+import { Plus, RefreshCw, Users, Search, X } from 'lucide-react';
 
 import HorizontalMagnetMenu from './HorizontalMagnetMenu';
 import { useTutorial } from '../../src/hooks/useTutorial';
@@ -69,6 +69,36 @@ const Bienvenida: React.FC = () => {
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
     const [selectedVisitor, setSelectedVisitor] = useState<WelcomeVisitor | null>(null);
 
+    // Buscador global
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const searchRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+                setIsSearchOpen(false);
+                setSearchQuery('');
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const searchResults = searchQuery.trim().length >= 2
+        ? visitors.filter(v =>
+            `${v.first_name} ${v.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+        ).slice(0, 8)
+        : [];
+
+    const handleSelectResult = (visitor: WelcomeVisitor) => {
+        setActiveStage(visitor.stage);
+        setSelectedVisitor(visitor);
+        setIsSearchOpen(false);
+        setSearchQuery('');
+    };
+
     const fetchVisitors = async () => {
         setIsLoading(true);
         const { data, error } = await supabase
@@ -119,11 +149,43 @@ const Bienvenida: React.FC = () => {
     const stageIndex = STAGES.indexOf(activeStage);
     const totalCount = visitors.length;
 
-    const quickStats = [
-        { label: 'Total',       value: totalCount,                                                bg: 'bg-black',        text: 'text-white'        },
-        { label: 'Nuevos',      value: visitors.filter(v => v.stage === 'NEW').length,            bg: 'bg-yellow-300',   text: 'text-yellow-900'   },
-        { label: 'Voluntarios', value: visitors.filter(v => v.stage === 'VOLUNTEERS').length,     bg: 'bg-emerald-300',  text: 'text-emerald-900'  },
-        { label: 'Sin resp.',   value: visitors.filter(v => v.stage === 'NO_RESPONSE').length,    bg: 'bg-gray-300',     text: 'text-gray-700'     },
+    const kpis = [
+        {
+            value: totalCount,
+            label: 'Nuevos Ingresantes',
+            sub: 'Total general',
+            bg: 'bg-black',
+            text: 'text-white',
+            subText: 'text-white/50',
+            stage: null as VisitorStage | null,
+        },
+        {
+            value: visitors.filter(v => v.stage === 'DOING_GROWTH').length,
+            label: 'En Crecer',
+            sub: 'Cursando el proceso',
+            bg: 'bg-purple-400',
+            text: 'text-white',
+            subText: 'text-white/60',
+            stage: 'DOING_GROWTH' as VisitorStage,
+        },
+        {
+            value: visitors.filter(v => v.stage === 'DOING_TRAINING').length,
+            label: 'Entrenamiento',
+            sub: 'Futuros voluntarios',
+            bg: 'bg-pink-300',
+            text: 'text-pink-950',
+            subText: 'text-pink-700',
+            stage: 'DOING_TRAINING' as VisitorStage,
+        },
+        {
+            value: visitors.filter(v => v.stage === 'NEW').length,
+            label: 'Incompletos',
+            sub: 'Sin formulario',
+            bg: 'bg-yellow-300',
+            text: 'text-yellow-950',
+            subText: 'text-yellow-700',
+            stage: 'NEW' as VisitorStage,
+        },
     ];
 
     return (
@@ -177,16 +239,109 @@ const Bienvenida: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Quick stats strip */}
-                    <div className="flex gap-2 mt-3 flex-wrap">
-                        {quickStats.map(s => (
+                    {/* Buscador global */}
+                    <div ref={searchRef} className="relative mt-3">
+                        <div
+                            className="flex items-center"
+                            style={{ border: '2px solid black' }}
+                        >
+                            <Search size={14} className="ml-3 shrink-0 text-neutral-400" />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder="Buscar ingresante por nombre o apellido..."
+                                value={searchQuery}
+                                onFocus={() => setIsSearchOpen(true)}
+                                onChange={e => {
+                                    setSearchQuery(e.target.value);
+                                    setIsSearchOpen(true);
+                                }}
+                                className="flex-1 h-9 px-3 text-xs font-bold text-black bg-white"
+                                style={{ border: 'none', outline: 'none', boxShadow: 'none', borderRadius: 0 }}
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setSearchQuery(''); setIsSearchOpen(false); searchInputRef.current?.focus(); }}
+                                    className="mr-2 p-0.5 text-neutral-400 hover:text-black transition-colors cursor-pointer"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Resultados */}
+                        {isSearchOpen && searchQuery.trim().length >= 2 && (
                             <div
-                                key={s.label}
-                                className={`flex items-center gap-1.5 px-3 h-8 border-2 border-black text-xs font-black uppercase ${s.bg} ${s.text}`}
+                                className="absolute top-full left-0 right-0 bg-white z-50 flex flex-col overflow-hidden"
+                                style={{ border: '2px solid black', borderTop: 'none', boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)' }}
                             >
-                                <span className="tabular-nums">{s.value}</span>
-                                <span className="opacity-60">{s.label}</span>
+                                {searchResults.length === 0 ? (
+                                    <p className="px-4 py-4 text-xs font-bold text-neutral-400 uppercase tracking-widest text-center">
+                                        Sin resultados para "{searchQuery}"
+                                    </p>
+                                ) : (
+                                    <>
+                                        <div className="px-3 py-1.5 bg-neutral-50" style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                                                {searchResults.length} resultado{searchResults.length !== 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                        {searchResults.map(visitor => {
+                                            const cfg = STAGE_CONFIG[visitor.stage];
+                                            return (
+                                                <button
+                                                    key={visitor.id}
+                                                    type="button"
+                                                    onClick={() => handleSelectResult(visitor)}
+                                                    className="flex items-center gap-3 px-4 py-3 text-left hover:bg-neutral-50 transition-colors cursor-pointer"
+                                                    style={{ borderBottom: '1px solid #f3f4f6' }}
+                                                >
+                                                    {/* Avatar con iniciales */}
+                                                    <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                                                        {visitor.first_name[0]}{visitor.last_name?.[0] ?? ''}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-black text-black uppercase leading-none truncate">
+                                                            {visitor.first_name} {visitor.last_name}
+                                                        </p>
+                                                        {visitor.phone && (
+                                                            <p className="text-[10px] font-bold text-neutral-400 mt-0.5 truncate">
+                                                                {visitor.phone}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    {/* Stage badge */}
+                                                    <span className={`shrink-0 text-[9px] font-black uppercase tracking-widest px-2 py-1 border border-black ${cfg.accent}`}>
+                                                        {STAGE_LABELS[visitor.stage]}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </>
+                                )}
                             </div>
+                        )}
+                    </div>
+
+                    {/* KPI cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                        {kpis.map(k => (
+                            <button
+                                key={k.label}
+                                type="button"
+                                onClick={() => k.stage && setActiveStage(k.stage)}
+                                className={`flex flex-col justify-between p-3 min-h-[72px] text-left transition-all cursor-pointer ${k.bg} ${k.text} ${k.stage ? 'hover:brightness-95 active:scale-95' : 'cursor-default'}`}
+                                style={{ border: '2px solid black' }}
+                            >
+                                <span className={`text-[10px] font-black uppercase tracking-widest leading-tight ${k.subText}`}>
+                                    {k.sub}
+                                </span>
+                                <div>
+                                    <p className="text-3xl font-black tabular-nums leading-none">{k.value}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-wider mt-0.5 opacity-80 leading-none">{k.label}</p>
+                                </div>
+                            </button>
                         ))}
                     </div>
                 </div>
