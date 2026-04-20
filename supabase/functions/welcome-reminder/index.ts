@@ -9,7 +9,7 @@ import { templates } from '../email-notifier/emailTemplates.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SERVICE_KEY = Deno.env.get('ORIGEN_SERVICE_ROLE_KEY')!;
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('ORIGEN_SERVICE_ROLE_KEY')!;
 const BIENVENIDA_EMAIL = 'bienvenida@origeniglesia.org';
 const FROM_EMAIL = 'Origen <team@app.origeniglesia.org>';
 
