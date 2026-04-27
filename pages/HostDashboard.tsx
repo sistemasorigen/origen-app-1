@@ -4,10 +4,10 @@ import { User, UserRole, Group } from '../types';
 import { hasRole } from '../services/authUtils';
 import { supabaseService } from '../services/supabaseService';
 import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus, Check, Link } from 'lucide-react';
-import CreateGroupModal from '../components/groups/CreateGroupModal';
-import ApplicantsModal from '../components/groups/ApplicantsModal';
-import AttendanceModal from '../components/groups/AttendanceModal';
-import DropoutRequestModal from '../components/groups/DropoutRequestModal';
+import CreateGroupModal from '../components/GCX/CreateGroupModal';
+import ApplicantsModal from '../components/GCX/ApplicantsModal';
+import AttendanceModal from '../components/GCX/AttendanceModal';
+import DropoutRequestModal from '../components/GCX/DropoutRequestModal';
 import NeoModal from '../components/NeoModal';
 import { useTutorial } from '../src/hooks/useTutorial';
 import { useIsMobile } from '../src/hooks/useIsMobile';
@@ -52,8 +52,8 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
         e.stopPropagation();
         e.preventDefault();
 
-        const origin = window.location.hostname.includes('localhost') || window.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/) 
-            ? 'https://app.origeniglesia.org' 
+        const origin = window.location.hostname.includes('localhost') || window.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/)
+            ? 'https://app.origeniglesia.org'
             : window.location.origin;
         const url = `${origin}/#/groups?groupId=${groupId}`;
 
@@ -416,11 +416,10 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                                 <>
                                                                     <button
                                                                         onClick={(e) => handleCopyGroupLink(e, group.id)}
-                                                                        className={`flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 transition-all rounded-lg text-xs font-bold uppercase ${
-                                                                            copiedGroupId === group.id 
-                                                                            ? 'border-[#28a946] bg-[#28a946]/10 text-[#28a946]' 
-                                                                            : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                                                        }`}
+                                                                        className={`flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 transition-all rounded-lg text-xs font-bold uppercase ${copiedGroupId === group.id
+                                                                                ? 'border-[#28a946] bg-[#28a946]/10 text-[#28a946]'
+                                                                                : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                                            }`}
                                                                     >
                                                                         {copiedGroupId === group.id ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
                                                                         {copiedGroupId === group.id ? '¡Copiado!' : 'Copiar Enlace'}
@@ -571,11 +570,10 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                                 <>
                                                                     <button
                                                                         onClick={(e) => handleCopyGroupLink(e, group.id)}
-                                                                        className={`p-2 border-2 transition-all rounded-lg ${
-                                                                            copiedGroupId === group.id
-                                                                            ? 'border-[#28a946] bg-[#28a946]/10 text-[#28a946]'
-                                                                            : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                                                        }`}
+                                                                        className={`p-2 border-2 transition-all rounded-lg ${copiedGroupId === group.id
+                                                                                ? 'border-[#28a946] bg-[#28a946]/10 text-[#28a946]'
+                                                                                : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                                            }`}
                                                                         title="Copiar enlace"
                                                                     >
                                                                         {copiedGroupId === group.id ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}

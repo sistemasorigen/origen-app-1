@@ -8,23 +8,23 @@ import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide,
 import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield } from 'lucide-react';
 import HeroCarousel, { HeroSlideData } from '../components/HeroCarousel';
 import ImageUpload from '../components/ImageUpload';
-import GroupCard from '../components/groups/GroupCard';
-import JoinGroupModal from '../components/groups/JoinGroupModal';
+import GroupCard from '../components/GCX/GroupCard';
+import JoinGroupModal from '../components/GCX/JoinGroupModal';
 import AdminGroupReviewModal from '../components/admin/AdminGroupReviewModal';
-import CreateGroupModal from '../components/groups/CreateGroupModal';
-import AdminCreateGroupModal from '../components/groups/AdminCreateGroupModal';
-import AdminAddMemberModal from '../components/groups/AdminAddMemberModal';
-import ApplicantsModal from '../components/groups/ApplicantsModal';
+import CreateGroupModal from '../components/GCX/CreateGroupModal';
+import AdminCreateGroupModal from '../components/GCX/AdminCreateGroupModal';
+import AdminAddMemberModal from '../components/GCX/AdminAddMemberModal';
+import ApplicantsModal from '../components/GCX/ApplicantsModal';
 import NeoModal from '../components/NeoModal';
-import AdminDropoutInbox from '../components/groups/AdminDropoutInbox';
-import HostsManagementPanel from '../components/groups/HostsManagementPanel';
-import CoordinatorsManagementPanel from '../components/groups/CoordinatorsManagementPanel';
+import AdminDropoutInbox from '../components/GCX/AdminDropoutInbox';
+import HostsManagementPanel from '../components/GCX/HostsManagementPanel';
+import CoordinatorsManagementPanel from '../components/GCX/CoordinatorsManagementPanel';
 import { useTutorial } from '../src/hooks/useTutorial';
 import TutorialInvitation from '../components/TutorialInvitation';
 import TutorialController from '../components/TutorialController';
 import { tours } from '../src/config/tours';
-import GroupsAdminToolbar from '../components/groups/GroupsAdminToolbar';
-import GroupsAdminList from '../components/groups/GroupsAdminList';
+import GroupsAdminToolbar from '../components/GCX/GroupsAdminToolbar';
+import GroupsAdminList from '../components/GCX/GroupsAdminList';
 
 
 
