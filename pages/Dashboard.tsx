@@ -541,16 +541,16 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                             ? config.banner.slides.map(s => ({
                                 id: s.id,
                                 imageUrl: s.imageUrl,
-                                titlePrefix: s.title || s.titlePrefix,
-                                titleHighlight: s.titleHighlight,
+                                titlePrefix: 'Origen', // TODO: restore to s.title || s.titlePrefix
+                                titleHighlight: 'App',  // TODO: restore to s.titleHighlight
                                 description: s.subtitle || s.description
                             }))
                             : [
                                 {
                                     id: 'default-hero',
                                     imageUrl: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=2073&auto=format&fit=crop',
-                                    titlePrefix: 'PLATAFORMA',
-                                    titleHighlight: 'ORIGEN',
+                                    titlePrefix: 'Origen',
+                                    titleHighlight: 'App',
                                     description: 'Áreas de Servicio'
                                 }
                             ]

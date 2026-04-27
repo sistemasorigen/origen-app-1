@@ -237,7 +237,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                                         <>
                                             <div className={`${animBase} ${isActive ? animActive : ''}`}>
                                                 <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs sm:text-xs font-bold tracking-[0.2em] uppercase mb-2 sm:mb-6">
-                                                    Bienvenidos a casa
+                                                    ¡Qué bueno que estés en casa!
                                                 </span>
                                             </div>
                                             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-tighter mb-2 sm:mb-6 drop-shadow-2xl leading-tight">
