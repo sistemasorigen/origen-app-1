@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import NeoModal from '../components/NeoModal';
-import InteractionsDashboard from '../components/pastores/InteractionsDashboard';
+import InteractionsDashboard from '../components/Reportes/InteractionsDashboard';
 
 interface PastoresProps {
     currentUser: User | null;
