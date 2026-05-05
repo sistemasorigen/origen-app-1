@@ -16,7 +16,8 @@
       "Read(//c/Users/nacho/.claude/skills/ui-ux-pro-max/**)",
       "Bash(python scripts/search.py \"church management visitor pipeline kanban brutalist admin dashboard\" --design-system -p \"Origen Bienvenida\")",
       "Bash(python3 scripts/search.py \"church management visitor pipeline kanban brutalist admin dashboard\" --design-system -p \"Origen Bienvenida\")",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git remote *)"
     ]
   }
 }
