@@ -49,19 +49,27 @@ export const HamburgerButton: React.FC<{
     </button>
 );
 
+interface SubMenuItem {
+    label: string;
+    path: string;
+    roles?: UserRole[];
+}
+
+interface SubGroup {
+    label: string;
+    path?: string;
+    roles?: UserRole[];
+    subItems?: SubMenuItem[];
+}
+
 interface MenuItem {
     label: string;
     icon: React.ElementType;
     path?: string;
     roles?: UserRole[];
     subItems?: SubMenuItem[];
+    subGroups?: SubGroup[];
     action?: () => void;
-}
-
-interface SubMenuItem {
-    label: string;
-    path: string;
-    roles?: UserRole[];
 }
 
 const DrawerMenu: React.FC<DrawerMenuProps> = ({
@@ -128,31 +136,53 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Inicio',
             icon: Home,
             path: '/',
-            roles: [] // Visible to everyone
+            roles: []
         },
         {
-            label: 'Mis grupos',
-            icon: Users,
-            path: '/host-dashboard',
-            roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]
+            label: 'Audiencia Servicios',
+            icon: HeartHandshake,
+            path: '/pastoral-care',
+            roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]
         },
         {
-            label: 'Coordinadores',
-            icon: Users,
-            path: '/coordinators', // Default path if clicked
-            roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR],
+            label: 'Bienvenida',
+            icon: Heart,
+            path: '/welcome',
+            roles: [UserRole.SUPER_ADMIN, UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA],
             subItems: [
-                { label: 'Dashboard', path: '/coordinators?tab=dashboard' },
-                { label: 'Grupos', path: '/coordinators?tab=groups' },
-                { label: 'Asistencias', path: '/coordinators?tab=attendance' },
-                { label: 'Calendario', path: '/coordinators?tab=calendar' }
+                { label: 'Incompletos', path: '/welcome?stage=NEW' },
+                { label: 'Form Lleno', path: '/welcome?stage=FILLED_FORM' },
+                { label: '2° Contacto', path: '/welcome?stage=SECOND_CONTACT' },
+                { label: '3° Contacto', path: '/welcome?stage=THIRD_CONTACT' },
+                { label: 'Int. Crecer', path: '/welcome?stage=INTERESTED_GROWTH' },
+                { label: 'Creciendo', path: '/welcome?stage=DOING_GROWTH' },
+                { label: 'Entrenamiento', path: '/welcome?stage=DOING_TRAINING' },
+                { label: 'Voluntarios', path: '/welcome?stage=VOLUNTEERS' },
+                { label: 'No Respondió', path: '/welcome?stage=NO_RESPONSE' }
             ]
         },
         {
             label: 'GCX',
             icon: BarChart,
             path: '/groups',
-            roles: [], // Visible to everyone
+            roles: [],
+            subGroups: [
+                {
+                    label: 'Mis grupos',
+                    path: '/host-dashboard',
+                    roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]
+                },
+                {
+                    label: 'Coordinadores',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR],
+                    subItems: [
+                        { label: 'Dashboard', path: '/coordinators?tab=dashboard' },
+                        { label: 'Grupos', path: '/coordinators?tab=groups' },
+                        { label: 'Asistencias', path: '/coordinators?tab=attendance' },
+                        { label: 'Calendario', path: '/coordinators?tab=calendar' }
+                    ]
+                }
+            ],
             subItems: [
                 {
                     label: 'Gestión',
@@ -164,11 +194,17 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     path: '/groups?tab=HOSTS',
                     roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
                 },
-                { label: 'Coordinadores', path: '/groups?tab=COORDINATORS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Administración de coordinadores', path: '/groups?tab=COORDINATORS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Categorías', path: '/groups?tab=CATEGORIES', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Etiquetas', path: '/groups?tab=TAGS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Configuración', path: '/groups?tab=CONFIG', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] }
             ]
+        },
+        {
+            label: 'Influos',
+            icon: Star,
+            path: '/influos',
+            roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR]
         },
         {
             label: 'Punto de información',
@@ -228,41 +264,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             ]
         },
         {
-            label: 'Bienvenida',
-            icon: Heart,
-            path: '/welcome',
-            roles: [UserRole.SUPER_ADMIN, UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA],
-            subItems: [
-                { label: 'Incompletos', path: '/welcome?stage=NEW' },
-                { label: 'Form Lleno', path: '/welcome?stage=FILLED_FORM' },
-                { label: '2° Contacto', path: '/welcome?stage=SECOND_CONTACT' },
-                { label: '3° Contacto', path: '/welcome?stage=THIRD_CONTACT' },
-                { label: 'Int. Crecer', path: '/welcome?stage=INTERESTED_GROWTH' },
-                { label: 'Creciendo', path: '/welcome?stage=DOING_GROWTH' },
-                { label: 'Entrenamiento', path: '/welcome?stage=DOING_TRAINING' },
-                { label: 'Voluntarios', path: '/welcome?stage=VOLUNTEERS' },
-                { label: 'No Respondió', path: '/welcome?stage=NO_RESPONSE' }
-            ]
-        },
-        {
-            label: 'Influos',
-            icon: Star,
-            path: '/influos',
-            roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR]
-        },
-        {
-            label: 'Audiencia Servicios',
-            icon: HeartHandshake,
-            path: '/pastoral-care',
-            roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]
-        },
-        {
-            label: 'Tutoriales',
-            icon: Book,
-            path: '/tutorials',
-            roles: []
-        },
-        {
             label: 'Sistemas',
             icon: Settings,
             path: '/admin',
@@ -273,6 +274,12 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 { label: 'Logs', path: '/admin?tab=logs' },
                 { label: 'Base de datos', path: '/admin?tab=database' }
             ]
+        },
+        {
+            label: 'Tutoriales',
+            icon: Book,
+            path: '/tutorials',
+            roles: []
         }
     ];
 
@@ -302,7 +309,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             <nav className={`flex-1 overflow-y-auto py-4 space-y-1 ${isCollapsed ? 'px-2' : 'px-4'}`}>
                 {menuData.map((item, index) => {
                     if (currentUser && item.roles && item.roles.length > 0 && !hasRole(currentUser, item.roles)) return null;
-                    if (item.path === '/host-dashboard' && !currentUser) return null;
 
                     const isActive = (item.path === '/' && location.pathname === '/') ||
                         (item.path !== '/' && item.path && location.pathname.startsWith(item.path));
@@ -313,7 +319,15 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         return hasRole(currentUser, sub.roles);
                     }) || [];
 
+                    const visibleSubGroups = item.subGroups?.filter(group => {
+                        if (!group.roles || group.roles.length === 0) return true;
+                        if (!currentUser) return false;
+                        return hasRole(currentUser, group.roles);
+                    }) || [];
+
                     const hasSubItems = visibleSubItems.length > 0;
+                    const hasSubGroups = visibleSubGroups.length > 0;
+                    const hasChildren = hasSubItems || hasSubGroups;
                     const isExpanded = expandedItems.includes(item.label) || (isActive && !isCollapsed);
 
                     return (
@@ -325,15 +339,15 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 <button
                                     onClick={() => {
                                         if (item.path) handleNavigation(item.path);
-                                        if (hasSubItems && !isCollapsed) toggleExpand(item.label);
-                                        if (hasSubItems && isCollapsed && onToggleCollapse) onToggleCollapse();
+                                        if (hasChildren && !isCollapsed) toggleExpand(item.label);
+                                        if (hasChildren && isCollapsed && onToggleCollapse) onToggleCollapse();
                                     }}
                                     className={`flex-1 flex items-center gap-3 py-2.5 text-left ${isCollapsed ? 'justify-center px-0' : 'px-3'}`}
                                 >
                                     <item.icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? (isDarkMode ? 'text-black' : 'text-white dark:text-black') : 'text-gray-500 dark:text-zinc-500 group-hover:text-black dark:group-hover:text-white'}`} />
                                     {!isCollapsed && <span className="text-sm font-bold truncate">{item.label}</span>}
                                 </button>
-                                {!isCollapsed && hasSubItems && (
+                                {!isCollapsed && hasChildren && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); toggleExpand(item.label); }}
                                         className="pr-3 py-2.5 shrink-0"
@@ -343,8 +357,65 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 )}
                             </div>
 
-                            {!isCollapsed && hasSubItems && isExpanded && (
+                            {!isCollapsed && hasChildren && isExpanded && (
                                 <div className="ml-6 pl-2 border-l border-gray-100 dark:border-zinc-800 mt-1 mb-2 space-y-1">
+                                    {/* SubGroups: gray labeled sections, optionally expandable */}
+                                    {visibleSubGroups.map((group, gi) => {
+                                        const groupKey = `${item.label}::${group.label}`;
+                                        const isGroupExpanded = expandedItems.includes(groupKey);
+                                        const hasGroupItems = (group.subItems?.length ?? 0) > 0;
+                                        const isGroupActive = group.path
+                                            ? (location.pathname + location.search).startsWith(group.path)
+                                            : group.subItems?.some(s => (location.pathname + location.search) === s.path);
+
+                                        return (
+                                            <div key={gi}>
+                                                <div className="flex items-center rounded-lg transition-colors group/sg">
+                                                    <button
+                                                        onClick={() => {
+                                                            if (!hasGroupItems && group.path) handleNavigation(group.path);
+                                                            if (hasGroupItems) toggleExpand(groupKey);
+                                                        }}
+                                                        className={`flex-1 text-left px-3 py-1.5 text-xs font-bold transition-colors rounded-lg ${isGroupActive
+                                                            ? 'text-black dark:text-white'
+                                                            : 'text-gray-400 dark:text-zinc-600 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                                            }`}
+                                                    >
+                                                        {group.label}
+                                                    </button>
+                                                    {hasGroupItems && (
+                                                        <button
+                                                            onClick={() => toggleExpand(groupKey)}
+                                                            className="pr-2 py-1.5 shrink-0 text-gray-400 dark:text-zinc-600"
+                                                        >
+                                                            <ChevronRight className={`w-3 h-3 transition-transform duration-200 ${isGroupExpanded ? 'rotate-90' : ''}`} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {hasGroupItems && isGroupExpanded && (
+                                                    <div className="ml-3 pl-2 border-l border-gray-100 dark:border-zinc-800 mt-0.5 mb-1 space-y-0.5">
+                                                        {group.subItems!.map((sub, si) => {
+                                                            const isSubActive = (location.pathname + location.search) === sub.path;
+                                                            return (
+                                                                <button
+                                                                    key={si}
+                                                                    onClick={() => handleNavigation(sub.path)}
+                                                                    className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${isSubActive
+                                                                        ? 'bg-black text-white dark:bg-white dark:text-black'
+                                                                        : 'text-gray-500 dark:text-zinc-500 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white'
+                                                                        }`}
+                                                                >
+                                                                    {sub.label}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Regular subItems */}
                                     {visibleSubItems.map((sub, si) => {
                                         const isSubActive = (location.pathname + location.search) === sub.path;
                                         return (
