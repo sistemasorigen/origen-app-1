@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { User, StoreProduct, StoreCartItem, StoreOrder, ClothingSize, UserRole, ProductSizeInfo, StoreCheckoutConfig, StoreConfig, BannerSlide, StoreBanner, AppConfig } from '../types';
-import { db } from '../services/dbService';
-import { supabaseService } from '../services/supabaseService';
-import HeroCarousel, { HeroSlideData } from '../components/ui/CarruselHero';
+import { User, StoreProduct, StoreCartItem, StoreOrder, ClothingSize, UserRole, ProductSizeInfo, StoreCheckoutConfig, StoreConfig, BannerSlide, StoreBanner, AppConfig } from '../../types';
+import { db } from '../../services/dbService';
+import { supabaseService } from '../../services/supabaseService';
+import { hasRole } from '../../services/authUtils';
+import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import {
     ShoppingBag,
     ShoppingCart,
@@ -301,6 +302,8 @@ const StoreCheckout: React.FC<StoreCheckoutProps> = ({ cart, total, onClose, onP
     );
 };
 
+// --- END HELPER FUNCTIONS ---
+
 const generateSizeStock = (sizes: ClothingSize[], defaultStock: number = 0): Record<ClothingSize, ProductSizeInfo> => {
     const stock: any = {};
     const allSizes: ClothingSize[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Único'];
@@ -395,7 +398,7 @@ const Store: React.FC<StoreProps> = ({ currentUser }) => {
 
     const loadVolunteers = () => {
         const allUsers = db.getUsers();
-        setStoreVolunteers(allUsers.filter(u => u.role === UserRole.ANFITRION && u.linkedGroupId === 'STORE'));
+        setStoreVolunteers(allUsers.filter(u => hasRole(u, UserRole.ANFITRION) && u.linkedGroupId === 'STORE'));
     };
 
     useEffect(() => {
@@ -414,8 +417,8 @@ const Store: React.FC<StoreProps> = ({ currentUser }) => {
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 5000);
     };
 
-    const isStoreAdmin = currentUser?.role === UserRole.SUPER_ADMIN || currentUser?.role === UserRole.ADMIN_STORE;
-    const isStoreVolunteer = currentUser?.role === UserRole.ANFITRION && currentUser.linkedGroupId === 'STORE';
+    const isStoreAdmin = currentUser && hasRole(currentUser, [UserRole.SUPER_ADMIN, UserRole.ADMIN_STORE]);
+    const isStoreVolunteer = currentUser && hasRole(currentUser, UserRole.ANFITRION) && currentUser.linkedGroupId === 'STORE';
     const canAccessAdmin = isStoreAdmin || isStoreVolunteer;
 
     const allowedTabs = useMemo(() => {
@@ -622,6 +625,75 @@ const Store: React.FC<StoreProps> = ({ currentUser }) => {
         showToast(`Pedido actualizado: ${newStatus}`);
     };
 
+    // --- CATEGORY & TAG MANAGEMENT ---
+    const updateStoreConfig = async (newConfig: StoreConfig) => {
+        // Update Local
+        setStoreConfig(newConfig);
+        const appConfig = db.getAppConfig();
+        const updatedAppConfig = { ...appConfig, storeConfig: newConfig };
+
+        // Persist
+        db.saveAppConfig(updatedAppConfig);
+        await supabaseService.saveAppConfig(updatedAppConfig);
+        showToast('Configuración actualizada');
+    };
+
+    // Category CRUD
+    const handleAddCategory = async () => {
+        if (!newCategoryName.trim()) return;
+        const currentCats = storeConfig?.categories || [];
+        if (currentCats.includes(newCategoryName.trim())) {
+            showToast('Esa categoría ya existe', 'error');
+            return;
+        }
+        const updatedCats = [...currentCats, newCategoryName.trim()];
+        await updateStoreConfig({ ...storeConfig, categories: updatedCats });
+        setNewCategoryName('');
+    };
+
+    const handleUpdateCategory = async () => {
+        if (!editingCategoryName || !editingCategoryName.current.trim()) return;
+        const currentCats = storeConfig?.categories || [];
+        const updatedCats = currentCats.map(c => c === editingCategoryName.original ? editingCategoryName.current.trim() : c);
+        await updateStoreConfig({ ...storeConfig, categories: updatedCats });
+        setEditingCategoryName(null);
+    };
+
+    const handleDeleteCategory = async (cat: string) => {
+        // No confirmation needed as per request
+        const currentCats = storeConfig?.categories || [];
+        const updatedCats = currentCats.filter(c => c !== cat);
+        await updateStoreConfig({ ...storeConfig, categories: updatedCats });
+    };
+
+    // Tag CRUD
+    const handleAddTag = async () => {
+        if (!newTagName.trim()) return;
+        const currentTags = storeConfig?.tags || [];
+        if (currentTags.includes(newTagName.trim())) {
+            showToast('Esa etiqueta ya existe', 'error');
+            return;
+        }
+        const updatedTags = [...currentTags, newTagName.trim()];
+        await updateStoreConfig({ ...storeConfig, tags: updatedTags });
+        setNewTagName('');
+    };
+
+    const handleUpdateTag = async () => {
+        if (!editingTagName || !editingTagName.current.trim()) return;
+        const currentTags = storeConfig?.tags || [];
+        const updatedTags = currentTags.map(t => t === editingTagName.original ? editingTagName.current.trim() : t);
+        await updateStoreConfig({ ...storeConfig, tags: updatedTags });
+        setEditingTagName(null);
+    };
+
+    const handleDeleteTag = async (tag: string) => {
+        // No confirmation needed as per request
+        const currentTags = storeConfig?.tags || [];
+        const updatedTags = currentTags.filter(t => t !== tag);
+        await updateStoreConfig({ ...storeConfig, tags: updatedTags });
+    };
+
     // --- RENDER ---
 
     const filteredProducts = products.filter(p => {
@@ -794,8 +866,96 @@ const Store: React.FC<StoreProps> = ({ currentUser }) => {
                         </div>
                     )}
 
+                    {adminTab === 'CATEGORIES' && (
+                        <div className="max-w-2xl">
+                            <h3 className="text-xl font-bold mb-6">Gestión de Categorías</h3>
+
+                            <div className="flex gap-2 mb-6">
+                                <input
+                                    type="text"
+                                    value={newCategoryName}
+                                    onChange={e => setNewCategoryName(e.target.value)}
+                                    placeholder="Nueva Categoría..."
+                                    className="flex-1 p-2 border border-slate-200 rounded-lg text-sm"
+                                />
+                                <button onClick={handleAddCategory} className="bg-black text-white px-4 py-2 rounded-lg text-xs font-bold uppercase">Agregar</button>
+                            </div>
+
+                            <ul className="space-y-2">
+                                {(storeConfig?.categories || []).map((cat, idx) => (
+                                    <li key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                                        {editingCategoryName?.original === cat ? (
+                                            <input
+                                                type="text"
+                                                value={editingCategoryName.current}
+                                                onChange={e => setEditingCategoryName({ ...editingCategoryName, current: e.target.value })}
+                                                className="flex-1 p-1 border border-slate-300 rounded text-sm mr-2"
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <span className="font-medium text-sm">{cat}</span>
+                                        )}
+
+                                        <div className="flex gap-2">
+                                            {editingCategoryName?.original === cat ? (
+                                                <button onClick={handleUpdateCategory} className="p-1.5 bg-green-100 text-green-700 rounded"><Check className="w-4 h-4" /></button>
+                                            ) : (
+                                                <button onClick={() => setEditingCategoryName({ original: cat, current: cat })} className="p-1.5 text-slate-400 hover:text-black"><Edit2 className="w-4 h-4" /></button>
+                                            )}
+                                            <button onClick={() => handleDeleteCategory(cat)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {adminTab === 'TAGS' && (
+                        <div className="max-w-2xl">
+                            <h3 className="text-xl font-bold mb-6">Gestión de Etiquetas (Tags)</h3>
+
+                            <div className="flex gap-2 mb-6">
+                                <input
+                                    type="text"
+                                    value={newTagName}
+                                    onChange={e => setNewTagName(e.target.value)}
+                                    placeholder="Nueva Etiqueta..."
+                                    className="flex-1 p-2 border border-slate-200 rounded-lg text-sm"
+                                />
+                                <button onClick={handleAddTag} className="bg-black text-white px-4 py-2 rounded-lg text-xs font-bold uppercase">Agregar</button>
+                            </div>
+
+                            <ul className="space-y-2">
+                                {(storeConfig?.tags || []).map((tag, idx) => (
+                                    <li key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                                        {editingTagName?.original === tag ? (
+                                            <input
+                                                type="text"
+                                                value={editingTagName.current}
+                                                onChange={e => setEditingTagName({ ...editingTagName, current: e.target.value })}
+                                                className="flex-1 p-1 border border-slate-300 rounded text-sm mr-2"
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <span className="font-medium text-sm">#{tag}</span>
+                                        )}
+
+                                        <div className="flex gap-2">
+                                            {editingTagName?.original === tag ? (
+                                                <button onClick={handleUpdateTag} className="p-1.5 bg-green-100 text-green-700 rounded"><Check className="w-4 h-4" /></button>
+                                            ) : (
+                                                <button onClick={() => setEditingTagName({ original: tag, current: tag })} className="p-1.5 text-slate-400 hover:text-black"><Edit2 className="w-4 h-4" /></button>
+                                            )}
+                                            <button onClick={() => handleDeleteTag(tag)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
                     {/* Placeholder for other tabs if not implemented in truncated code */}
-                    {['CATEGORIES', 'TAGS', 'VOLUNTEERS', 'CONFIG'].includes(adminTab) && (
+                    {['VOLUNTEERS', 'CONFIG'].includes(adminTab) && (
                         <div className="text-center py-10 text-slate-400">
                             Funcionalidad de {adminTab} en desarrollo.
                         </div>
@@ -811,10 +971,41 @@ const Store: React.FC<StoreProps> = ({ currentUser }) => {
                                 <input type="text" placeholder="Nombre" value={editingProduct.name} onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })} className="w-full p-2 border rounded" />
                                 <div className="grid grid-cols-2 gap-4">
                                     <input type="number" placeholder="Precio" value={editingProduct.price} onChange={e => setEditingProduct({ ...editingProduct, price: parseInt(e.target.value) })} className="w-full p-2 border rounded" />
-                                    <input type="text" placeholder="Categoría" value={editingProduct.category} onChange={e => setEditingProduct({ ...editingProduct, category: e.target.value })} className="w-full p-2 border rounded" />
+                                    <select
+                                        value={editingProduct.category || ''}
+                                        onChange={e => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                                        className="w-full p-2 border rounded"
+                                    >
+                                        <option value="">Seleccionar Categoría...</option>
+                                        {storeConfig?.categories?.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <textarea placeholder="Descripción" value={editingProduct.description} onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })} className="w-full p-2 border rounded h-20" />
                                 <input type="text" placeholder="URL Imagen" value={editingProduct.image} onChange={e => setEditingProduct({ ...editingProduct, image: e.target.value })} className="w-full p-2 border rounded" />
+
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Etiquetas</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {storeConfig?.tags?.map(tag => {
+                                            const isSelected = (editingProduct.tags || []).includes(tag);
+                                            return (
+                                                <button
+                                                    key={tag}
+                                                    onClick={() => {
+                                                        const current = editingProduct.tags || [];
+                                                        const next = isSelected ? current.filter(t => t !== tag) : [...current, tag];
+                                                        setEditingProduct({ ...editingProduct, tags: next });
+                                                    }}
+                                                    className={`px-2 py-1 text-xs border rounded ${isSelected ? 'bg-black text-white border-black' : 'bg-white text-slate-500 border-slate-200'}`}
+                                                >
+                                                    {tag}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                             <div className="mt-6 flex justify-end gap-2">
                                 <button onClick={() => setEditingProduct(null)} className="px-4 py-2 text-slate-500">Cancelar</button>
