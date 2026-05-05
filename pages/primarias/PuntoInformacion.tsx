@@ -6,26 +6,26 @@ import { useSearchParams } from 'react-router-dom';
 import { AppProvider, useStore } from '../../store';
 import { ViewState, User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
-import NeoSidebar from '../infopoint/NeoBarraLateral';
+import NeoSidebar from '../punto-informacion/NeoBarraLateral';
 import SystemLoginModal from '../../components/modals/ModalLoginSistema';
 import { db } from '../../services/dbService';
-import { useToast } from '../infopoint/context/ContextoToast';
+import { useToast } from '../punto-informacion/context/ContextoToast';
 
 // Sub Views
-import PublicHome from '../infopoint/InicioPublico';
-import Dashboard from '../infopoint/Dashboard';
-import Inventory from '../infopoint/Inventario';
-import NewProduct from '../infopoint/NuevoProducto';
-import Movements from '../infopoint/Movimientos';
-import Events from '../infopoint/Eventos';
-import Loans from '../infopoint/Prestamos';
-import Baptisms from '../infopoint/Bautismos';
-import ChildPresentations from '../infopoint/PresentacionNinos';
-import Search from '../infopoint/Busqueda';
-import AdminPanel from '../infopoint/PanelAdministrador';
-import MobileHeader from '../infopoint/EncabezadoMovil';
-import InfoPointMenu from '../infopoint/MenuPuntoInformacion';
-import Announcements from '../infopoint/Anuncios';
+import PublicHome from '../punto-informacion/InicioPublico';
+import Dashboard from '../punto-informacion/PanelPrincipal';
+import Inventory from '../punto-informacion/Inventario';
+import NewProduct from '../punto-informacion/NuevoProducto';
+import Movements from '../punto-informacion/Movimientos';
+import Events from '../punto-informacion/Eventos';
+import Loans from '../punto-informacion/Prestamos';
+import Baptisms from '../punto-informacion/Bautismos';
+import ChildPresentations from '../punto-informacion/PresentacionNinos';
+import Search from '../punto-informacion/Busqueda';
+import AdminPanel from '../punto-informacion/PanelAdministrador';
+import MobileHeader from '../punto-informacion/EncabezadoMovil';
+import InfoPointMenu from '../punto-informacion/MenuPuntoInformacion';
+import Announcements from '../punto-informacion/Anuncios';
 
 interface InfoPointProps {
     currentUser: User | null;

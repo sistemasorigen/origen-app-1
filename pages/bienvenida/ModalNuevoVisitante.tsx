@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../services/supabaseClient';
 import { Loader2, Save, ChevronDown } from 'lucide-react';
-import { useToast } from '../infopoint/context/ContextoToast';
+import { useToast } from '../punto-informacion/context/ContextoToast';
 import NeoModal from '../../components/ui/NeoModal';
 
 interface Country {

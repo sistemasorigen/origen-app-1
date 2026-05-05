@@ -5,7 +5,7 @@ import { WelcomeVisitor, VisitorStage } from '../../types';
 import VisitorCard from './TarjetaVisitante';
 import NewVisitorModal from './ModalNuevoVisitante';
 import VisitorDetailModal from './ModalDetalleVisitante';
-import { ToastProvider } from '../infopoint/context/ContextoToast';
+import { ToastProvider } from '../punto-informacion/context/ContextoToast';
 import { Plus, RefreshCw, Users, Search, X } from 'lucide-react';
 
 import HorizontalMagnetMenu from './MenuMagneticoHorizontal';

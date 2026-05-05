@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { InfluosAttendee } from '../../types';
 import { Plus, RefreshCw, Users, Star, Search, Edit2, Trash2, UserPlus } from 'lucide-react';
-import { ToastProvider, useToast } from '../infopoint/context/ContextoToast';
+import { ToastProvider, useToast } from '../punto-informacion/context/ContextoToast';
 import InfluosNewModal from './InfluosModalNuevo';
 import InfluosEditModal from './InfluosModalEditar';
 
