@@ -627,6 +627,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
     const [filterYear, setFilterYear] = useState('');
     const [filterMonth, setFilterMonth] = useState('');
     const [filterTime, setFilterTime] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
 
     const availableYears = Array.from(new Set(records.map(r => r.service_date?.substring(0, 4)).filter(Boolean))).sort().reverse();
 
@@ -662,6 +663,8 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
         }
 
         if (filterTime && rec.service_time !== filterTime) return false;
+
+        if (filterCategory && rec.category !== filterCategory) return false;
 
         return true;
     }).sort((a, b) => {
@@ -814,8 +817,8 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                             )}
                         </div>
 
-                        {/* Filter chips — 3 equal columns, custom dropdowns */}
-                        <div className="grid grid-cols-3 gap-2">
+                        {/* Filter chips — 2 cols mobile / 4 cols desktop */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <FilterChip
                                 label="Año"
                                 value={filterYear}
@@ -858,6 +861,19 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                     { label: 'PM', value: 'PM' },
                                 ]}
                             />
+                            <FilterChip
+                                label="Categoría"
+                                value={filterCategory}
+                                onChange={setFilterCategory}
+                                activeColor="bg-emerald-600 border-emerald-600 text-white"
+                                options={[
+                                    { label: 'Todas', value: '' },
+                                    { label: 'Servicio de Domingo', value: 'Servicio de Domingo' },
+                                    { label: 'CXV', value: 'CXV' },
+                                    { label: 'Evento', value: 'Evento' },
+                                    { label: 'Conferencia', value: 'Conferencia' },
+                                ]}
+                            />
                         </div>
 
                         {/* Results count & clear all */}
@@ -865,9 +881,9 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                             <p className="text-xs text-slate-400 font-mono">
                                 {sorted.length} de {records.length} registros
                             </p>
-                            {(filterYear || filterMonth || filterTime || searchTerm) && (
+                            {(filterYear || filterMonth || filterTime || filterCategory || searchTerm) && (
                                 <button
-                                    onClick={() => { setFilterYear(''); setFilterMonth(''); setFilterTime(''); setSearchTerm(''); }}
+                                    onClick={() => { setFilterYear(''); setFilterMonth(''); setFilterTime(''); setFilterCategory(''); setSearchTerm(''); }}
                                     className="text-xs font-bold text-violet-600 hover:text-violet-800 underline underline-offset-2 transition-colors"
                                 >
                                     Limpiar filtros
