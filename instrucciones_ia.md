@@ -1,57 +1,474 @@
-# 🛸 Antigravity - IA Instructions & Style Guide
+# 🛸 Origen App — IA Instructions & Style Guide
+> Versión 2.0 · Obligatorio leer antes de cualquier intervención
 
-Este archivo sirve como la memoria central y manual de estilo para todas las interacciones con la IA en el proyecto **Antigravity**. Su cumplimiento es obligatorio para mantener la coherencia arquitectónica.
+Este archivo es la **memoria central y autoridad arquitectónica** del proyecto.
+Todo agente de IA que trabaje en este repositorio debe leerlo completo antes
+de escribir una sola línea de código. Su cumplimiento no es opcional.
 
-## 🛠 Stack Tecnológico
+---
 
-- **Frontend:** React 19 (Vite) + TypeScript.
-- **Estilos:** Tailwind CSS (vía CDN con configuración personalizada en `index.html`).
-- **Backend/Base de Datos:** Supabase (Auth, DB, Storage).
-- **IA:** Google Gemini API (`@google/generative-ai`).
-- **Animaciones:** Framer Motion.
-- **Iconos:** Lucide React.
-- **Física/Gráficos:** Matter.js.
-- **Estado/Datos:** Context API y servicios modulares.
+## 1. STACK TECNOLÓGICO
 
-## 📐 Reglas de Estructura y Nomenclatura
+| Capa | Tecnología | Notas |
+|---|---|---|
+| Frontend | React 19 + TypeScript + Vite | Componentes funcionales, sin clases |
+| Estilos | Tailwind CSS vía CDN | Config personalizada en `index.html` |
+| Backend / DB | Supabase | Auth, Postgres, Storage, Edge Functions |
+| IA / Texto | Google Gemini 2.5 Flash | `@google/generative-ai` + `@google/genai` |
+| Animaciones | Framer Motion 12 | `motion`, `AnimatePresence` |
+| Iconos | Lucide React 0.555 | Siempre desde `lucide-react` |
+| Física | Matter.js | Solo para efectos decorativos en Home |
+| Audio | Context API propio | `contexts/AudioContext.tsx` |
+| Estado global | React Context API | Sin Redux ni Zustand |
+| Routing | React Router DOM 7 | HashRouter (`/#/ruta`) |
+| Gráficos | Recharts 2 | Solo para dashboards de datos reales |
 
-### 1. Organización de Carpetas
-El proyecto utiliza una estructura plana en la raíz para facilitar el acceso modular:
-- `components/`: Componentes reutilizables.
-- `pages/`: Vistas principales de la aplicación.
-- `services/`: Lógica de negocio, clientes de API (Supabase, Gemini) y utilidades.
-- `hooks/`: Hooks personalizados de React.
-- `contexts/`: Proveedores de estado global (Audio, Auth, etc.).
-- `types.ts`: Definiciones de tipos e interfaces globales.
+**Dependencias instaladas — NO instalar alternativas:**
+`clsx`, `framer-motion`, `idb`, `lucide-react`, `matter-js`, `react-easy-crop`,
+`react-joyride`, `react-router-dom`, `recharts`, `tailwind-merge`, `xlsx`
 
-### 2. Convenciones de Nomenclatura
-- **Componentes:** `PascalCase` (ej. `NeoModal.tsx`, `HeroCarousel.tsx`).
-- **Servicios/Hooks/Utilidades:** `camelCase` (ej. `supabaseService.ts`, `useAudio.ts`).
-- **Variables y Funciones:** `camelCase` descriptivo.
-- **Interfaces/Tipos:** `PascalCase` (ej. `UserRole`, `AppConfig`).
-- **Archivos CSS:** `kebab-case` (ej. `index.css`).
+---
 
-## 🎨 Enfoque y Tono
+## 2. ESTRUCTURA DE CARPETAS
 
-- **Código Limpio y Modular:** Priorizar la separación de intereses. La lógica compleja debe residir en `services/` o `hooks/`, manteniendo los componentes visuales limpios.
-- **Sin Dependencias Innecesarias:** Antes de sugerir una nueva librería, verificar si el stack actual (o JS nativo) puede resolverlo.
-- **Estética "Neo-Minimalista":** La UI debe ser limpia, con un enfoque en tipografía (`Proxima Nova`), modo oscuro nativo y transiciones suaves.
-- **Seguridad:** Nunca exponer llaves de API directamente. Usar variables de entorno y el objeto `process.env` configurado en Vite.
+```
+origen-app/
+├── components/
+│   ├── GCX/              # Módulo Grupos de Conexión (13 componentes)
+│   ├── Reportes/         # Paneles de analíticas
+│   ├── admin/            # Componentes del panel Admin
+│   ├── calendar/         # CalendarioIglesia.tsx
+│   ├── info-point/       # Sidebar y menús del Punto de Info
+│   ├── layout/           # Estructura, MenuDeslizable, ReproductorGlobal
+│   ├── media/            # SubidaImagen, SubidaAvatar, EntradaImagenInteligente
+│   ├── modals/           # ModalLoginSistema, ModalCompletarPerfil, ModalCodigoQR
+│   ├── notifications/    # BannerPermisoNotificaciones, InterfazNotificaciones
+│   ├── onboarding/       # Tours interactivos (ControladorTutorial, TourBienvenida)
+│   └── ui/               # NeoModal, CarruselHero, CargadorEsqueleto, LimiteError
+├── contexts/             # AuthContext, AudioContext, NotificationContext
+├── hooks/                # useRole, useSpellingAI, usePushNotifications, etc.
+├── pages/
+│   ├── admin/            # Administrador.tsx
+│   ├── audiencia/        # Pastores, AudienciaServiciosPrincipal, Formulario
+│   ├── auth/             # PantallaAutenticacion, ActualizarContrasena, etc.
+│   ├── bienvenida/       # Bienvenida, Formulario, modales de visitantes
+│   ├── coordinadores/    # Coordinadores y subpaneles
+│   ├── groups/           # Grupos, PanelAnfitrion
+│   ├── home/             # Home.tsx (Dashboard principal)
+│   ├── influos/          # InfluosPagina, InfluosAcceso, modales
+│   ├── primarias/        # PuntoInformacion, Tienda, Alabanza
+│   ├── punto-informacion/# Subvistas del Punto de Info + context/ContextoToast
+│   └── user/             # PaginaPerfil, Notificaciones, PaginaTutoriales
+├── services/
+│   ├── supabaseClient.ts # Cliente Supabase (exporta `supabase`)
+│   ├── supabaseService.ts# Todas las queries a Supabase
+│   ├── authUtils.ts      # hasRole(), getRoleDisplayNames()
+│   ├── dbService.ts      # Módulos del sistema, config local
+│   ├── geminiService.ts  # Corrector ortográfico con Gemini
+│   └── db.ts             # dbAPI — wrapper de supabaseService
+├── src/
+│   ├── config/tours.ts   # Configuración de tours de onboarding
+│   ├── hooks/            # useIsMobile, useTutorial
+│   └── utils/cropImage.ts# Utilidad de recorte de imágenes
+├── supabase/functions/   # Edge Functions (Deno + Resend)
+├── sql/                  # Migraciones y scripts SQL
+├── types.ts              # ÚNICA fuente de tipos globales
+└── App.tsx               # Rutas, providers, lógica de sesión
+```
 
-## 📝 Formato de Respuesta de la IA
+---
 
-Antes de realizar cualquier cambio o escribir código, la IA debe seguir este formato:
+## 3. CONVENCIONES DE NOMENCLATURA
 
-1. **Análisis:** Breve explicación de lo que se ha detectado o lo que se necesita hacer.
-2. **Plan de Acción:** Listado de pasos técnicos que se ejecutarán.
-3. **Justificación:** Por qué se ha elegido ese enfoque (especialmente si afecta a la arquitectura).
-4. **Ejecución:** Código o comandos resultantes.
+| Elemento | Convención | Ejemplo |
+|---|---|---|
+| Componentes React | `PascalCase` | `NeoModal.tsx`, `TarjetaGrupo.tsx` |
+| Hooks | `camelCase` con prefijo `use` | `useRole.ts`, `useSpellingAI.ts` |
+| Servicios / Utilidades | `camelCase` | `supabaseService.ts`, `authUtils.ts` |
+| Interfaces / Tipos | `PascalCase` | `WelcomeVisitor`, `UserRole` |
+| Archivos CSS | `kebab-case` | `index.css` |
+| Variables y funciones | `camelCase` descriptivo | `fetchAttendees`, `handleSubmit` |
+| Constantes de módulo | `UPPER_SNAKE_CASE` | `COUNTRIES`, `INTEREST_OPTIONS` |
 
-> [!IMPORTANT]
-> **Nota estricta sobre el flujo de trabajo:**
-> Si el usuario habla en **Modo Plan**, la IA debe detenerse obligatoriamente en el **paso 3 (Justificación)** y preguntar si se aprueba el plan. **NUNCA** se debe generar el **paso 4 (Ejecución/Código)** hasta que el usuario dé la orden explícita de pasar a **Modo Build**.
+**Nota crítica sobre carpetas:** El proyecto usa **español** en los nombres de
+carpetas y archivos de `pages/` y la mayoría de `components/`.
+Al crear archivos nuevos, respetar el idioma del directorio donde se inserten.
 
-## 🚀 Reglas de Oro
-- **Alias de Importación:** Usar siempre `@/` para referirse a la raíz del proyecto (ej. `import { db } from '@/services/dbService'`).
-- **TypeScript Estricto:** Evitar el uso de `any`. Definir interfaces precisas en `types.ts` o localmente si son específicas.
-- **Comentarios:** Solo para explicar el "por qué" de lógicas no triviales. No comentar lo obvio.
+---
+
+## 4. REGLAS DE IMPORTACIÓN
+
+**El proyecto usa rutas relativas `../../`, NO el alias `@/`.**
+
+Aunque `vite.config.ts` define el alias `@/`, el código real del proyecto
+usa rutas relativas en todos los archivos. Seguir el patrón existente:
+
+```typescript
+// ✅ CORRECTO — rutas relativas
+import NeoModal from '../../components/ui/NeoModal';
+import { supabase } from '../../services/supabaseClient';
+import { ToastProvider, useToast } from '../punto-informacion/context/ContextoToast';
+import { hasRole } from '../../services/authUtils';
+
+// ❌ INCORRECTO — no usar alias aunque esté configurado
+import NeoModal from '@/components/ui/NeoModal';
+```
+
+---
+
+## 5. RUTAS PÚBLICAS Y PROTEGIDAS
+
+Las rutas se declaran en `App.tsx`. Hay dos zonas:
+
+**Rutas públicas** (sin auth, antes del bloque protegido):
+| Ruta | Componente |
+|---|---|
+| `/auth` | PantallaAutenticacion |
+| `/update-password` | ActualizarContrasena |
+| `/verify-email` | VerificarEmail |
+| `/form` | Formulario (público de bienvenida) |
+| `/influos-acceso` | InfluosAcceso (verificador público) |
+
+**Rutas protegidas** (requieren usuario autenticado):
+| Ruta | Módulo | Roles permitidos |
+|---|---|---|
+| `/` | Home / Dashboard | Todos |
+| `/info-point` | Punto de Información | Todos |
+| `/groups` | Grupos de Conexión | Todos |
+| `/welcome` | Bienvenida | SUPER_ADMIN, ENCARGADO_BIENVENIDA, VOLUNTARIO_BIENVENIDA |
+| `/influos` | Influos | SUPER_ADMIN, PASTOR, INFLUOS |
+| `/pastoral-care` | Audiencia Servicios | SUPER_ADMIN, PASTOR, ADMIN_CUIDADO_PASTORAL |
+| `/pastoral-care/new` | Formulario Pastoral | SUPER_ADMIN, PASTOR, ADMIN_CUIDADO_PASTORAL |
+| `/pastores` | Reportes | SUPER_ADMIN, PASTOR, ENCARGADO_PUNTO, ADMIN_PUNTO, ENCARGADO_GRUPOS, REPORTES, ADMIN_GROUPS |
+| `/coordinators` | Coordinadores | SUPER_ADMIN, COORDINATOR |
+| `/host-dashboard` | Panel Anfitrión | SUPER_ADMIN, ADMIN_GROUPS, ANFITRION, CO_ANFITRION |
+| `/admin` | Sistemas | SUPER_ADMIN |
+| `/perfil` | Perfil Personal | Todos |
+| `/notificaciones` | Notificaciones | Todos |
+| `/tutorials` | Tutoriales | Todos |
+
+---
+
+## 6. ROLES DEL SISTEMA
+
+```typescript
+enum UserRole {
+    SUPER_ADMIN, PASTOR,
+    ADMIN_PUNTO, ADMIN_GROUPS, ADMIN_STORE, ADMIN_ALABANZA,
+    ANFITRION, CO_ANFITRION,
+    ENCARGADO_PUNTO, ENCARGADO_GRUPOS, ENCARGADO_STORE,
+    ENCARGADO_ALABANZA, ENCARGADO_BIENVENIDA,
+    VOLUNTARIO, VOLUNTARIO_INFO, VOLUNTARIO_GRUPOS, VOLUNTARIO_BIENVENIDA,
+    COORDINATOR,        // Usa coordinatorVariant para su especialidad
+    ADMIN_CUIDADO_PASTORAL,
+    INFLUOS,            // Módulo gestión de menores
+    REPORTES,
+    USUARIO, VIEWER, VOLUNTEER  // Roles básicos / legacy
+}
+```
+
+Para verificar permisos usar siempre `hasRole()` de `services/authUtils.ts`:
+```typescript
+import { hasRole } from '../../services/authUtils';
+if (hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR])) { ... }
+```
+
+Para obtener el rol actual del usuario en un componente:
+```typescript
+import { useRole } from '../../hooks/useRole';
+const { isSuperAdmin, isAnfitrion, canManageGroups } = useRole();
+```
+
+---
+
+## 7. PATRONES DE CÓDIGO OBLIGATORIOS
+
+### 7.1 Toast Notifications
+```typescript
+// SIEMPRE importar desde ContextoToast
+import { ToastProvider, useToast } from '../punto-informacion/context/ContextoToast';
+
+// La página debe estar envuelta en ToastProvider
+const MiPagina = () => (
+    <ToastProvider>
+        <MiPaginaContenido />
+    </ToastProvider>
+);
+
+// Dentro del componente hijo:
+const { toast } = useToast();
+toast.success('Operación exitosa');
+toast.error('Algo salió mal');
+toast.neutral('Información');
+```
+
+### 7.2 Modales
+```typescript
+// SIEMPRE usar NeoModal de components/ui/NeoModal
+import NeoModal from '../../components/ui/NeoModal';
+
+<NeoModal
+    isOpen={isOpen}
+    onClose={onClose}
+    title="Título del Modal"
+    maxWidth="max-w-2xl"     // opcional, default max-w-2xl
+    persistent={false}        // opcional, impide cerrarlo
+    disableScrollLock={false} // opcional
+>
+    {/* Contenido */}
+</NeoModal>
+```
+
+### 7.3 Queries a Supabase
+```typescript
+import { supabase } from '../../services/supabaseClient';
+
+// Patrón estándar con manejo de error
+const { data, error } = await supabase
+    .from('nombre_tabla')
+    .select('campo1, campo2')
+    .eq('columna', valor)
+    .order('created_at', { ascending: false });
+
+if (error) throw error;
+```
+
+### 7.4 Componente de página con ToastProvider
+```typescript
+const MiPaginaContenido: React.FC = () => {
+    const { toast } = useToast();
+    // lógica...
+    return <div>...</div>;
+};
+
+const MiPagina: React.FC = () => (
+    <ToastProvider>
+        <MiPaginaContenido />
+    </ToastProvider>
+);
+
+export default MiPagina;
+```
+
+### 7.5 Subida de imágenes
+```typescript
+// Para imágenes generales (portadas, banners)
+import ImageUpload from '../../components/media/SubidaImagen';
+
+// Para avatar de perfil circular
+import AvatarUpload from '../../components/media/SubidaAvatar';
+```
+
+---
+
+## 8. ESTÉTICA — SISTEMA NEO-BRUTALIST
+
+El proyecto tiene un sistema de diseño propio y definido. Toda UI nueva
+debe ser coherente con él.
+
+### Reglas visuales
+- **Bordes:** `border-2 border-black` (o `border-4` para contenedores principales)
+- **Sombras brutalist:** `shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`
+  o `shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]` para elementos destacados
+- **Tipografía:** `font-black uppercase tracking-tight` para títulos
+- **Labels de campos:** `text-[11px] font-black uppercase tracking-widest`
+- **Fuente:** Proxima Nova (cargada globalmente — NO cambiar)
+- **Botón primario:**
+  ```
+  bg-black text-white font-black uppercase tracking-widest
+  border-2 border-black hover:bg-white hover:text-black
+  hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all
+  ```
+- **Input estándar:**
+  ```
+  border-2 border-black font-bold text-black bg-white
+  focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] outline-none
+  ```
+- **Dark mode:** clases `dark:` en paralelo. El modo se maneja con `darkMode: 'class'`
+- **Animaciones:** Framer Motion para transiciones de pantalla, CSS para microinteracciones
+- **NO usar:** rounded-lg en elementos principales, sombras suaves tipo `shadow-sm`,
+  colores pasteles sin contexto, gradientes genéricos
+
+### Colores de acento por módulo
+| Módulo | Color |
+|---|---|
+| Grupos (GCX) | blue-500 |
+| Bienvenida | emerald-500 |
+| Influos | violet-600 |
+| Pastoral / Audiencia | violet-700 |
+| Reportes | amber-500 |
+| Admin / Sistemas | neutral-900 |
+| Alabanza | pink-500 |
+
+---
+
+## 9. SKILLS DISPONIBLES — CUÁNDO USAR CADA UNA
+
+Antes de crear cualquier componente visual complejo o archivo especial,
+verificar si alguna skill aplica. Las skills codifican las mejores prácticas
+para cada tipo de entrega y **deben leerse antes de escribir código**.
+
+### Mapa de skills → contexto de uso
+
+| Skill | Leer cuando... |
+|---|---|
+| `frontend-design` | Se pide crear o mejorar cualquier componente UI, página, landing, dashboard o flujo visual. Esta es la skill más relevante para Origen App — guía la estética, tipografía, animaciones y calidad de producción. |
+| `pdf` | Se necesita generar, combinar, dividir, rellenar o extraer contenido de archivos `.pdf`. |
+| `pdf-reading` | Se sube un `.pdf` y hay que leer, extraer texto o tablas de él. |
+| `docx` | Se pide crear o editar un documento Word (`.docx`), reporte, memo o plantilla. |
+| `xlsx` | Se trabaja con planillas `.xlsx`, `.csv`, datos tabulares o modelos financieros. |
+| `pptx` | Se pide crear o editar una presentación (`.pptx`), slide deck o informe visual. |
+| `file-reading` | Se sube cualquier archivo cuyo contenido no está visible en el contexto. Es el router que indica cómo leer cada tipo. |
+| `product-self-knowledge` | Se pregunta sobre capacidades de Claude, la API de Anthropic, precios, modelos o SDKs. |
+
+### Cómo aplicarlas
+
+```
+1. El usuario hace una solicitud.
+2. Identificar si alguna skill del mapa aplica.
+3. Leer el SKILL.md correspondiente ANTES de escribir código.
+4. Ejecutar siguiendo las instrucciones de la skill.
+```
+
+**Para este proyecto, `frontend-design` aplica en la mayoría de los casos.**
+Leerla antes de crear cualquier componente nuevo, página o rediseño de UI.
+
+---
+
+## 10. EDGE FUNCTIONS (Supabase / Deno)
+
+Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
+
+| Función | Propósito |
+|---|---|
+| `email-notifier` | Central de emails (Resend). Recibe webhooks de triggers SQL. |
+| `welcome-reminder` | Cron job semanal de recordatorios a visitantes sin responder /form |
+| `send-group-confirmation` | Email de confirmación de inscripción a grupos |
+| `send-gcx-welcome` | Email de bienvenida al módulo GCX |
+| `send-whatsapp` | Envío de mensajes por WhatsApp Business API |
+| `generate-image` | Generación de imágenes con Google Imagen (Gemini) |
+| `admin-manage-user` | Gestión administrativa de usuarios vía service role |
+
+**Variables de entorno requeridas en las Edge Functions:**
+- `RESEND_API_KEY` — Proveedor de emails
+- `SUPABASE_URL` — URL del proyecto
+- `ORIGEN_SERVICE_ROLE_KEY` — Service role para operaciones admin
+- `GOOGLE_IMAGEN_KEY` — API Key de Google para generación de imágenes
+
+**Nunca hardcodear estas keys. Siempre usar `Deno.env.get('...')`.**
+
+---
+
+## 11. BASE DE DATOS — TABLAS PRINCIPALES
+
+| Tabla | Módulo | Descripción |
+|---|---|---|
+| `users` | Global | Perfil de usuarios (roles, avatar, datos personales) |
+| `groups` | GCX | Grupos de conexión con anfitriones |
+| `group_registrations` | GCX | Inscripciones a grupos |
+| `dropout_requests` | GCX | Solicitudes de baja de grupos |
+| `welcome_visitors` | Bienvenida | Registro de nuevos ingresantes |
+| `influos_attendees` | Influos | Asistentes al evento Influos (menores) |
+| `service_statistics` | Pastoral | Estadísticas de servicios dominicales |
+| `app_events` | Info Point | Eventos del calendario |
+| `announcements` | Info Point | Anuncios del tablero |
+| `notifications` | Global | Notificaciones in-app |
+| `audit_logs` | Admin | Registro de auditoría |
+
+**Todas las tablas tienen RLS habilitado.** Al crear tablas nuevas siempre
+agregar policies correspondientes.
+
+---
+
+## 12. SEGURIDAD — REGLAS OBLIGATORIAS
+
+- **Nunca** exponer API keys en código fuente. Usar `import.meta.env.VITE_*`
+- **Nunca** commitear archivos `.env`, `test_*.js`, `debug_*.js` o `*.backup`
+- El archivo `supabase/.temp/` contiene el project ID — no publicar
+- Las Edge Functions deben verificar autenticación antes de ejecutar lógica
+- El `SUPER_ADMIN` es el único rol que puede asignar roles privilegiados
+- El cache de `localStorage` nunca se usa para decisiones de acceso — solo para render optimista
+
+---
+
+## 13. TYPESCRIPT — REGLAS ESTRICTAS
+
+- **Prohibido usar `any`** salvo en callbacks de librerías externas donde no hay alternativa
+- Todas las interfaces globales van en `types.ts`
+- Interfaces locales a un solo archivo se declaran al inicio de ese archivo
+- Usar `unknown` + type narrowing en lugar de `any` para errores:
+  ```typescript
+  } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+  }
+  ```
+- Los enums de roles usan siempre `UserRole.NOMBRE` — nunca strings directos
+
+---
+
+## 14. FLUJO DE TRABAJO — MODOS DE OPERACIÓN
+
+La IA opera en dos modos. El usuario elige cuál usar.
+
+### 🗺 MODO PLAN (análisis y arquitectura)
+Activado cuando el usuario describe una funcionalidad nueva o pide análisis.
+
+La IA debe:
+1. **Leer** los archivos relevantes antes de responder
+2. **Analizar** el estado actual del código
+3. **Proponer** el plan técnico: qué archivos tocar, qué crear, qué patrón usar
+4. **Justificar** las decisiones arquitectónicas
+
+⛔ **STOP:** En Modo Plan la IA NO escribe código de implementación.
+Debe esperar la confirmación explícita del usuario para avanzar.
+
+### 🔨 MODO BUILD (implementación)
+Activado cuando el usuario aprueba el plan o pide implementación directa.
+
+La IA debe:
+1. Leer los archivos exactos que va a modificar
+2. Aplicar los cambios quirúrgicamente con `str_replace`
+3. No tocar código fuera del alcance definido
+4. Confirmar qué cambios se aplicaron
+
+---
+
+## 15. REGLAS DE ORO — CHECKLIST ANTES DE EJECUTAR
+
+Antes de escribir cualquier código, confirmar mentalmente:
+
+- [ ] ¿Leí `instrucciones_ia.md` completo?
+- [ ] ¿Leí todos los archivos que voy a modificar?
+- [ ] ¿Usé rutas relativas (`../../`) en los imports?
+- [ ] ¿Apliqué la skill correspondiente si existe?
+- [ ] ¿Usé `NeoModal` para modales y `ContextoToast` para toasts?
+- [ ] ¿Evité `any` en TypeScript?
+- [ ] ¿El estilo es coherente con el sistema neo-brutalist?
+- [ ] ¿Los campos nuevos tienen su columna SQL + tipo en `types.ts`?
+- [ ] ¿La nueva ruta tiene su guard de roles en `App.tsx`?
+- [ ] ¿No hardcodeé ninguna API key?
+
+---
+
+## 16. COMENTARIOS EN CÓDIGO
+
+Comentar **solo el "por qué"** de lógicas no obvias. Nunca comentar lo que
+el código ya dice por sí mismo.
+
+```typescript
+// ✅ Útil: explica una decisión no obvia
+// CRÍTICO: window.open ANTES del await.
+// Safari iOS bloquea window.open después de cualquier await
+// porque lo considera un popup no iniciado por el usuario.
+window.open(url, '_blank');
+await supabase.from('welcome_visitors').insert({...});
+
+// ❌ Inútil: repite lo que el código ya dice
+// Incrementar el contador
+counter++;
+```
+
+---
+
+*Última actualización: Mayo 2026 — Versión 2.0*
+*Repositorio: github.com/sistemasorigen/origen-app-1*
