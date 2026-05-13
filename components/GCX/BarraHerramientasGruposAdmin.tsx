@@ -231,7 +231,13 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
                                                 return (
                                                     <button
                                                         key={s}
-                                                        onClick={() => { setSeasonFilter(s); setIsFilterOpen(false); }}
+                                                        onClick={() => {
+                                                            // Activar modo SEASONS automáticamente al elegir una temporada
+                                                            // sin necesitar que el usuario cambie el toggle primero.
+                                                            setFilterMode('SEASONS');
+                                                            setSeasonFilter(s);
+                                                            setIsFilterOpen(false);
+                                                        }}
                                                         className={`px-2 py-2 rounded-lg text-[10px] font-black uppercase border-2 transition-all flex items-center justify-center gap-1 ${seasonFilter === s ? colors[i].active : colors[i].inactive}`}
                                                     >
                                                         <Calendar className="w-3 h-3 shrink-0" />

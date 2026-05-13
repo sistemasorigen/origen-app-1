@@ -72,18 +72,15 @@ const generateUUID = (): string => {
 // Helper to get season from date
 const getSeasonFromDate = (dateStr?: string): 'S1' | 'S2' | 'S3' | null => {
     if (!dateStr) return null;
-    const date = new Date(dateStr);
-    const m = date.getMonth() + 1; // 1-12
-    const d = date.getDate(); // 1-31
-    const md = m * 100 + d; // MMDD format for comparison
+    // parseLocalDate evita el bug de timezone: new Date("YYYY-MM-DD") parsea UTC
+    // medianoche, que en zonas UTC-N retrocede al día anterior y rompe el rango.
+    const date = parseLocalDate(dateStr);
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    const md = m * 100 + d;
 
-    // S1: 23 de marzo (323) al 17 de mayo (517)
     if (md >= 323 && md <= 517) return 'S1';
-
-    // S2: 29 de junio (629) al 23 de agosto (823)
     if (md >= 629 && md <= 823) return 'S2';
-
-    // S3: 5 de octubre (1005) al 29 de noviembre (1129)
     if (md >= 1005 && md <= 1129) return 'S3';
 
     return null;
@@ -464,8 +461,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                 });
             }
         } else {
-            // SEASONS MODE
+            // SEASONS MODE — filtrar por startDate dentro del rango de la temporada.
+            // Grupos sin startDate no tienen temporada asignable y se excluyen.
             filtered = filtered.filter(g => {
+                if (!g.startDate) return false;
                 const season = getSeasonFromDate(g.startDate);
                 return season === adminSeasonFilter;
             });
