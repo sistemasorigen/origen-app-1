@@ -19,7 +19,6 @@ const Formulario: React.FC = () => {
         email: '',
         experience: '',
         is_first_time: null as boolean | null,
-        accepted_jesus: '',
         // referral_source: '', // REMOVED
         // wants_growth: '',    // REMOVED
         interest_areas: [] as string[],
@@ -87,7 +86,6 @@ const Formulario: React.FC = () => {
 
                 // New Fields
                 is_first_time: formData.is_first_time === null ? false : formData.is_first_time,
-                accepted_jesus: formData.accepted_jesus,
                 // referral_source: formData.referral_source, // REMOVED
                 // wants_growth: formData.wants_growth,       // REMOVED
                 interest_areas: formData.interest_areas,
@@ -201,7 +199,7 @@ const Formulario: React.FC = () => {
                     </div>
 
                     {/* 2. SOBRE TU VISITA */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                         <div>
                             <label className="label">¿Es primera vez?</label>
                             <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">¿Es la primera vez que venís a una reunión de Origen?</p>
@@ -217,20 +215,6 @@ const Formulario: React.FC = () => {
                                 <option value="">- Seleccionar -</option>
                                 <option value="yes">Primera vez</option>
                                 <option value="no">Ya había venido</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="label">Decisión de Fe</label>
-                            <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">Hoy en la reunión, ¿tomaste la decisión de aceptar a Jesús por primera vez, o ya lo habías hecho antes?</p>
-                            <select
-                                className="input-field"
-                                required
-                                value={formData.accepted_jesus}
-                                onChange={e => setFormData({ ...formData, accepted_jesus: e.target.value })}
-                            >
-                                <option value="">- Seleccionar -</option>
-                                <option value="Si">Sí, acepté hoy</option>
-                                <option value="No, antes">Ya lo había hecho antes</option>
                             </select>
                         </div>
                     </div>

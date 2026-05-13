@@ -62,7 +62,9 @@ const NewVisitorModal: React.FC<NewVisitorModalProps> = ({ isOpen, onClose, onSu
         firstName: '',
         lastName: '',
         age: '',
-        phone: ''
+        phone: '',
+        accepted_jesus: '' as '' | 'Si' | 'No, antes' | 'Cristiano',
+        localidad: ''
     });
 
     // Selector de país
@@ -155,7 +157,9 @@ Gracias por tomarte unos minutos.
                         ? parseInt(formData.age)
                         : null,
                     phone: phoneForDB,
-                    stage: 'NEW'
+                    stage: 'NEW',
+                    accepted_jesus: formData.accepted_jesus || null,
+                    localidad: formData.localidad.trim() || null
                 });
 
             if (error) throw error;
@@ -165,7 +169,9 @@ Gracias por tomarte unos minutos.
             onClose();
             setFormData({
                 firstName: '', lastName: '',
-                age: '', phone: ''
+                age: '', phone: '',
+                accepted_jesus: '',
+                localidad: ''
             });
             setSelectedCountry(COUNTRIES[0]);
         } catch (err: any) {
@@ -222,21 +228,85 @@ Gracias por tomarte unos minutos.
                     </div>
                 </fieldset>
 
-                {/* Edad — mitad del ancho */}
-                <div className="w-1/2 pr-1.5">
+                {/* ── Edad + Localidad ──────────────────────── */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="block text-[11px] font-black uppercase tracking-widest mb-1.5 text-black">
+                            Edad
+                        </label>
+                        <input
+                            type="number"
+                            min={1}
+                            max={120}
+                            placeholder="Ej: 28"
+                            value={formData.age}
+                            onChange={e => setFormData({ ...formData, age: e.target.value })}
+                            className="w-full h-12 px-3 font-bold text-black bg-white outline-none transition-shadow"
+                            style={{ borderRadius: 0, border: '2px solid black' }}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-[11px] font-black uppercase tracking-widest mb-1.5 text-black">
+                            Localidad o barrio
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Ej: Palermo, Lomas..."
+                            value={formData.localidad}
+                            onChange={e => setFormData({ ...formData, localidad: e.target.value })}
+                            className="w-full h-12 px-3 font-bold text-black bg-white outline-none transition-shadow"
+                            style={{ borderRadius: 0, border: '2px solid black' }}
+                        />
+                    </div>
+                </div>
+
+                {/* ── Decisión de Fe ────────────────────────── */}
+                {/* Llenado por el equipo de bienvenida,
+                    NO aparece en el /form público */}
+                <div>
                     <label className="block text-[11px] font-black uppercase tracking-widest mb-1.5 text-black">
-                        Edad
+                        Decisión de Fe
                     </label>
-                    <input
-                        type="number"
-                        min={1}
-                        max={120}
-                        placeholder="Ej: 28"
-                        value={formData.age}
-                        onChange={e => setFormData({ ...formData, age: e.target.value })}
-                        className="w-full h-12 px-3 font-bold text-black bg-white outline-none transition-shadow"
-                        style={{ borderRadius: 0, border: '2px solid black' }}
-                    />
+                    <p className="text-[10px] font-bold text-neutral-400 mb-2 leading-snug tracking-wide">
+                        ¿Tomó una decisión en la reunión de hoy?
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                        {(
+                            [
+                                { value: 'Si',         label: 'Aceptó hoy' },
+                                { value: 'No, antes',  label: 'Ya era cristiano' },
+                                { value: 'Cristiano',  label: 'Sin decisión' },
+                            ] as { value: '' | 'Si' | 'No, antes' | 'Cristiano'; label: string }[]
+                        ).map(opt => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() =>
+                                    setFormData({
+                                        ...formData,
+                                        accepted_jesus:
+                                            formData.accepted_jesus === opt.value
+                                                ? ''
+                                                : opt.value
+                                    })
+                                }
+                                className={`h-10 text-[10px] font-black uppercase tracking-wide transition-all ${
+                                    formData.accepted_jesus === opt.value
+                                        ? 'bg-black text-white'
+                                        : 'bg-white text-black hover:bg-neutral-100'
+                                }`}
+                                style={{
+                                    borderRadius: 0,
+                                    border: '2px solid black',
+                                    boxShadow: formData.accepted_jesus === opt.value
+                                        ? '3px 3px 0px 0px rgba(0,0,0,0.3)'
+                                        : 'none'
+                                }}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* ── Contacto ─────────────────────────────────── */}

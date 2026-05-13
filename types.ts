@@ -778,6 +778,7 @@ export interface WelcomeVisitor {
     // New Fields from Public Form
     email?: string;
     experience_description?: string;
+    localidad?: string;         // Localidad o barrio — llenado por el equipo
 }
 
 // --- PASTORAL CARE TYPES ---
