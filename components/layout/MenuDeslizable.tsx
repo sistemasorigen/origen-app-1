@@ -185,19 +185,20 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             ],
             subItems: [
                 {
-                    label: 'Gestión',
+                    label: 'Gestión de grupos',
                     path: '/groups?tab=GROUPS',
                     roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
                 },
                 {
-                    label: 'Anfitriones',
+                    label: 'Gestión de anfitriones',
                     path: '/groups?tab=HOSTS',
                     roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
                 },
-                { label: 'Administración de coordinadores', path: '/groups?tab=COORDINATORS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Gestión de coordinadores', path: '/groups?tab=COORDINATORS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Categorías', path: '/groups?tab=CATEGORIES', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Etiquetas', path: '/groups?tab=TAGS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Configuración', path: '/groups?tab=CONFIG', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] }
+                { label: 'Configuración', path: '/groups?tab=CONFIG', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Reportes', path: '/pastores', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] }
             ]
         },
         {
@@ -223,44 +224,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 { label: 'Presentaciones', path: '/info-point?view=PRESENTATIONS' },
                 { label: 'Anuncios', path: '/info-point?view=ANNOUNCEMENTS' },
                 { label: 'Configuración', path: '/info-point?view=ADMIN_PANEL', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
-            ]
-        },
-        {
-            label: 'Reportes',
-            icon: FileText,
-            path: '/pastores',
-            roles: [
-                UserRole.SUPER_ADMIN,
-                UserRole.PASTOR,
-                UserRole.REPORTES,
-                UserRole.ADMIN_GROUPS,
-                UserRole.ENCARGADO_GRUPOS,
-                UserRole.ADMIN_PUNTO,
-                UserRole.ENCARGADO_PUNTO
-            ],
-            subItems: [
-                {
-                    label: 'Grupos de conexión',
-                    path: '/pastores?tab=GROUPS',
-                    roles: [
-                        UserRole.SUPER_ADMIN,
-                        UserRole.PASTOR,
-                        UserRole.REPORTES,
-                        UserRole.ADMIN_GROUPS,
-                        UserRole.ENCARGADO_GRUPOS
-                    ]
-                },
-                {
-                    label: 'Punto de información',
-                    path: '/pastores?tab=INFO',
-                    roles: [
-                        UserRole.SUPER_ADMIN,
-                        UserRole.PASTOR,
-                        UserRole.REPORTES,
-                        UserRole.ADMIN_PUNTO,
-                        UserRole.ENCARGADO_PUNTO
-                    ]
-                }
+                { label: 'Reportes', path: '/pastores', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
             ]
         },
         {
@@ -378,7 +342,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                                         }}
                                                         className={`flex-1 text-left px-3 py-1.5 text-xs font-bold transition-colors rounded-lg ${isGroupActive
                                                             ? 'text-black dark:text-white'
-                                                            : 'text-gray-400 dark:text-zinc-600 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                                            : 'text-gray-500 dark:text-zinc-500 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800'
                                                             }`}
                                                     >
                                                         {group.label}
@@ -386,7 +350,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                                     {hasGroupItems && (
                                                         <button
                                                             onClick={() => toggleExpand(groupKey)}
-                                                            className="pr-2 py-1.5 shrink-0 text-gray-400 dark:text-zinc-600"
+                                                            className="pr-2 py-1.5 shrink-0 text-gray-500 dark:text-zinc-500"
                                                         >
                                                             <ChevronRight className={`w-3 h-3 transition-transform duration-200 ${isGroupExpanded ? 'rotate-90' : ''}`} />
                                                         </button>
