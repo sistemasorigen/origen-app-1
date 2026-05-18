@@ -79,7 +79,7 @@ const getSeasonFromDate = (dateStr?: string): 'S1' | 'S2' | 'S3' | null => {
     const d = date.getDate();
     const md = m * 100 + d;
 
-    if (md >= 323 && md <= 517) return 'S1';
+    if (md >= 323 && md <= 531) return 'S1';
     if (md >= 629 && md <= 823) return 'S2';
     if (md >= 1005 && md <= 1129) return 'S3';
 

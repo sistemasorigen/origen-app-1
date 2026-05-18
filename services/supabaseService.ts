@@ -3,6 +3,20 @@ import { supabase } from './supabaseClient';
 import { db } from './dbService';
 import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant } from '../types';
 
+// Helper de temporadas — replicado de Grupos.tsx
+const getSeasonFromDate = (
+    dateStr?: string | null
+): 'S1' | 'S2' | 'S3' | null => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr + 'T12:00:00');
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    const md = m * 100 + d;
+    if (md >= 323 && md <= 531) return 'S1';
+    if (md >= 629 && md <= 823) return 'S2';
+    if (md >= 1005 && md <= 1129) return 'S3';
+    return null;
+};
 
 // EXPORTED standalone function for direct use
 export async function insertGroupDirect(group: Group): Promise<Group | null> {
@@ -828,7 +842,7 @@ export const supabaseService = {
   },
 
   // 4. Group Registration Chart Data
-  async getGroupRegistrationChartData(start: string, end: string): Promise<{ name: string; value: number; endDate?: string; status?: string }[]> {
+  async getGroupRegistrationChartData(start: string, end: string): Promise<{ name: string; value: number; startDate?: string; endDate?: string; status?: string }[]> {
     try {
       console.log('[Reports] Fetching group registration data...');
 
@@ -851,7 +865,7 @@ export const supabaseService = {
       // Step 2: Get all groups with endDate
       const { data: groups, error: groupsError } = await supabase
         .from('groups')
-        .select('id, name, end_date, status');
+        .select('id, name, start_date, end_date, status');
 
       if (groupsError) {
         console.error('[Reports] Error fetching groups:', groupsError);
@@ -861,26 +875,52 @@ export const supabaseService = {
       console.log('[Reports] Groups found:', groups?.length || 0);
 
       // Create a map of group_id -> group info
-      const groupMap: Record<string, { name: string; endDate?: string; status?: string }> = {};
+      const groupMap: Record<string, {
+          name: string;
+          startDate?: string;
+          endDate?: string;
+          status?: string;
+      }> = {};
       (groups || []).forEach(g => {
-        groupMap[g.id] = { name: g.name, endDate: g.end_date, status: g.status };
+        groupMap[g.id] = {
+            name: g.name,
+            startDate: g.start_date,
+            endDate: g.end_date,
+            status: g.status
+        };
       });
 
       // Aggregate by group
-      const agg: Record<string, { count: number; endDate?: string; status?: string }> = {};
+      const agg: Record<string, {
+          count: number;
+          startDate?: string;
+          endDate?: string;
+          status?: string;
+      }> = {};
 
       registrations.forEach((reg: any) => {
         const groupInfo = groupMap[reg.group_id] || { name: 'Desconocido', endDate: undefined, status: undefined };
         const groupName = groupInfo.name;
 
         if (!agg[groupName]) {
-          agg[groupName] = { count: 0, endDate: groupInfo.endDate, status: groupInfo.status };
+          agg[groupName] = {
+              count: 0,
+              startDate: groupInfo.startDate,
+              endDate: groupInfo.endDate,
+              status: groupInfo.status
+          };
         }
         agg[groupName].count += (reg.partner_data ? 2 : 1);
       });
 
       const result = Object.entries(agg)
-        .map(([name, data]) => ({ name, value: data.count, endDate: data.endDate, status: data.status }))
+        .map(([name, data]) => ({
+            name,
+            value: data.count,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            status: data.status
+        }))
         .sort((a, b) => b.value - a.value);
 
       console.log('[Reports] Final chart data:', result);
@@ -3328,6 +3368,110 @@ export const supabaseService = {
     }
   },
 
+  async getFullAttendanceReport(): Promise<{
+    groupId: string;
+    groupName: string;
+    leaderName: string;
+    meetingDay: string;
+    meetingTime: string;
+    startDate: string | null;
+    endDate: string | null;
+    status: string;
+    allMembers: { id: string; name: string }[];
+    attendanceRecords: {
+      date: string;
+      presentMembers: { id: string; name: string }[];
+      absentMembers: { id: string; name: string }[];
+      totalPresent: number;
+      totalAbsent: number;
+    }[];
+  }[]> {
+    try {
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select(`
+          id,
+          name,
+          status,
+          start_date,
+          end_date,
+          leader_name,
+          leader_surname,
+          meeting_day,
+          meeting_time,
+          group_registrations (
+            id,
+            first_name,
+            last_name,
+            status
+          )
+        `)
+        .in('status', ['approved', 'finished']);
+
+      if (groupsError) {
+        console.error('[FullAttendance] Error fetching groups:', groupsError);
+        return [];
+      }
+
+      const results = await Promise.all(
+        (groups || []).map(async (group: any) => {
+          const approvedRegs = (group.group_registrations || [])
+            .filter((r: any) => r.status === 'APPROVED');
+          const allMembers = approvedRegs.map((r: any) => ({
+            id: r.id,
+            name: `${r.first_name || ''} ${r.last_name || ''}`.trim() || 'Sin nombre'
+          }));
+
+          const { data: attendance, error: attError } = await supabase
+            .from('group_attendance')
+            .select('id, date, present_members')
+            .eq('group_id', group.id)
+            .order('date', { ascending: false });
+
+          if (attError) {
+            console.error(
+              `[FullAttendance] Error fetching attendance for ${group.id}:`,
+              attError
+            );
+          }
+
+          const attendanceRecords = (attendance || []).map((rec: any) => {
+            const presentIds: string[] = Array.isArray(rec.present_members)
+              ? rec.present_members
+              : [];
+            const presentMembers = allMembers.filter(m => presentIds.includes(m.id));
+            const absentMembers = allMembers.filter(m => !presentIds.includes(m.id));
+            return {
+              date: rec.date,
+              presentMembers,
+              absentMembers,
+              totalPresent: presentMembers.length,
+              totalAbsent: absentMembers.length,
+            };
+          });
+
+          return {
+            groupId: group.id,
+            groupName: group.name,
+            leaderName: `${group.leader_name || ''} ${group.leader_surname || ''}`.trim(),
+            meetingDay: group.meeting_day || 'Lunes',
+            meetingTime: group.meeting_time || '',
+            startDate: group.start_date || null,
+            endDate: group.end_date || null,
+            status: group.status,
+            allMembers,
+            attendanceRecords,
+          };
+        })
+      );
+
+      return results;
+    } catch (error) {
+      console.error('[FullAttendance] Exception:', error);
+      return [];
+    }
+  },
+
   /**
    * Get all dropout requests with full join data for reporting
    */
@@ -3638,7 +3782,9 @@ export const supabaseService = {
   },
 
   // --- METRICS (GROUPS) ---
-  async getGroupRegistrationAnalytics(filter: 'ACTIVOS' | 'FINALIZADOS' | 'ALL' = 'ALL'): Promise<{
+  async getGroupRegistrationAnalytics(
+    filter: 'ACTIVOS' | 'FINALIZADOS' | 'ALL' | 'S1' | 'S2' | 'S3' = 'ALL'
+  ): Promise<{
     totalGroups: number;
     totalHosts: number;
     totalCoHosts: number;
@@ -3649,7 +3795,7 @@ export const supabaseService = {
     try {
       const { data: groups, error: groupsError } = await supabase
         .from('groups')
-        .select('id, status, end_date, host_id, co_host_id');
+        .select('id, status, start_date, end_date, host_id, co_host_id');
 
       if (groupsError) {
         console.error('[supabaseService] Error fetching groups for analytics:', groupsError);
@@ -3657,19 +3803,25 @@ export const supabaseService = {
       }
 
       const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       let validGroups = groups || [];
 
       if (filter !== 'ALL') {
         validGroups = validGroups.filter((g: any) => {
-          const isFinished = g.status === 'finished' || (g.end_date && new Date(g.end_date) < now);
+          const isFinished = g.status === 'finished' ||
+              (g.end_date && g.end_date < todayStr);
 
           if (filter === 'ACTIVOS') {
-            return g.status === 'approved' && !isFinished;
+              return g.status === 'approved' && !isFinished;
+          } else if (filter === 'FINALIZADOS') {
+              return isFinished;
           } else {
-            // FINALIZADOS
-            // Consider finished if status is explicitly 'finished' OR endDate is past. 
-            // Also include explicitly rejected or anything that doesn't qualify as active pending
-            return isFinished;
+              // Filtro de temporada: S1, S2 o S3
+              // Solo grupos aprobados cuyo start_date
+              // cae en la temporada seleccionada
+              const season = getSeasonFromDate(g.start_date);
+              return g.status === 'approved' &&
+                     season === filter;
           }
         });
       }

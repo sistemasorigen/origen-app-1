@@ -7,7 +7,8 @@ import {
     LineChart, Line
 } from 'recharts';
 import {
-    AlertTriangle, ArrowLeft, Download, Church, Layers, Info, Eye, Users, UserMinus, CheckCircle, XCircle, Search
+    AlertTriangle, ArrowLeft, Download, Church, Layers, Info, Eye, Users, UserMinus,
+    CheckCircle, XCircle, Search, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import NeoModal from '../../components/ui/NeoModal';
@@ -64,25 +65,100 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
     // Sub-navigation for GROUPS tab
     const [groupsSubTab, setGroupsSubTab] = useState<GroupsSubTab>('METRICS');
     const [bajasType, setBajasType] = useState<BajasType>('INSCRIPCIONES');
-    const [groupsFilter, setGroupsFilter] = useState<'ACTIVOS' | 'FINALIZADOS'>('ACTIVOS');
+    type GroupsFilterType = 'ACTIVOS' | 'FINALIZADOS' | 'TEMPORADAS';
+    type SeasonType = 'S1' | 'S2' | 'S3';
+
+    const SEASON_LABELS: Record<SeasonType, string> = {
+        S1: '1ª Temporada',
+        S2: '2ª Temporada',
+        S3: '3ª Temporada',
+    };
+
+    // Helper de temporadas (idéntico al de Grupos.tsx)
+    const getSeasonFromDate = (dateStr?: string | null): SeasonType | null => {
+        if (!dateStr) return null;
+        const date = new Date(dateStr + 'T12:00:00');
+        const m = date.getMonth() + 1;
+        const d = date.getDate();
+        const md = m * 100 + d;
+        if (md >= 323 && md <= 531) return 'S1';
+        if (md >= 629 && md <= 823) return 'S2';
+        if (md >= 1005 && md <= 1129) return 'S3';
+        return null;
+    };
+
+    const [groupsFilter, setGroupsFilter] =
+        useState<GroupsFilterType>('ACTIVOS');
+    const [seasonFilter, setSeasonFilter] =
+        useState<SeasonType>('S1');
+
+    type AttendanceViewMode = 'ACTIVOS' | 'FINALIZADOS' | 'TEMPORADAS';
+
+    const DAY_TO_JS: Record<string, number> = {
+        'Domingo': 0, 'Lunes': 1, 'Martes': 2,
+        'Miércoles': 3, 'Jueves': 4,
+        'Viernes': 5, 'Sábado': 6,
+    };
+
+    const getExpectedMeetingDates = (
+        meetingDay: string,
+        startDate: string | null,
+        endDate: string | null
+    ): string[] => {
+        if (!startDate) return [];
+        const dayIndex = DAY_TO_JS[meetingDay];
+        if (dayIndex === undefined) return [];
+
+        const start = new Date(startDate + 'T12:00:00');
+        const end = endDate ? new Date(endDate + 'T12:00:00') : new Date();
+        const cutoff = new Date();
+        const effectiveEnd = end < cutoff ? end : cutoff;
+
+        const dates: string[] = [];
+        const current = new Date(start);
+
+        while (current.getDay() !== dayIndex) {
+            current.setDate(current.getDate() + 1);
+        }
+
+        while (current <= effectiveEnd) {
+            dates.push(current.toISOString().split('T')[0]);
+            current.setDate(current.getDate() + 7);
+        }
+
+        return dates.reverse();
+    };
 
     // Attendance Report State
     const [attendanceSearchQuery, setAttendanceSearchQuery] = useState('');
-    const [attendanceFilter, setAttendanceFilter] = useState<'ACTIVOS' | 'FINALIZADOS'>('ACTIVOS');
-    const [attendanceReport, setAttendanceReport] = useState<{
+    const [attendanceFilter, setAttendanceFilter] = useState<AttendanceViewMode>('ACTIVOS');
+    const [fullAttendanceReport, setFullAttendanceReport] = useState<{
         groupId: string;
         groupName: string;
-        latestDate: string | null;
-        presentMembers: { id: string; name: string }[];
-        absentMembers: { id: string; name: string }[];
-        allMembers: { id: string; name: string }[];
-        status: string;
-        endDate: string | null;
         leaderName: string;
+        meetingDay: string;
+        meetingTime: string;
+        startDate: string | null;
+        endDate: string | null;
+        status: string;
+        allMembers: { id: string; name: string }[];
+        attendanceRecords: {
+            date: string;
+            presentMembers: { id: string; name: string }[];
+            absentMembers: { id: string; name: string }[];
+            totalPresent: number;
+            totalAbsent: number;
+        }[];
     }[]>([]);
+    const [attendanceSeasonFilter, setAttendanceSeasonFilter] = useState<SeasonType>('S1');
+    const [expandedAttendanceGroupId, setExpandedAttendanceGroupId] = useState<string | null>(null);
     const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
-    const [attendanceModalType, setAttendanceModalType] = useState<'present' | 'absent'>('present');
-    const [selectedAttendanceGroup, setSelectedAttendanceGroup] = useState<any>(null);
+    const [attendanceModalData, setAttendanceModalData] = useState<{
+        groupName: string;
+        date: string;
+        type: 'present' | 'absent';
+        members: { id: string; name: string }[];
+    } | null>(null);
 
     // Dropout Report State
     const [dropoutRequests, setDropoutRequests] = useState<DropoutRequest[]>([]);
@@ -131,12 +207,12 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                     setGroupsData(groups);
 
                     // Also fetch attendance and dropout data
-                    const [attendance, dropouts, analytics] = await Promise.all([
-                        supabaseService.getGlobalAttendanceReport(),
+                    const [fullAttendance, dropouts, analytics] = await Promise.all([
+                        supabaseService.getFullAttendanceReport(),
                         supabaseService.getAllDropoutRequests(),
                         supabaseService.getGroupRegistrationAnalytics(groupsFilter)
                     ]);
-                    setAttendanceReport(attendance);
+                    setFullAttendanceReport(fullAttendance);
                     setDropoutRequests(dropouts);
                     setRegistrationAnalytics(analytics);
                 }
@@ -157,14 +233,20 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
         if (!canAccess || activeTab !== 'GROUPS') return;
         const fetchAnalytics = async () => {
             try {
-                const analytics = await supabaseService.getGroupRegistrationAnalytics(groupsFilter);
+                // Si el modo es TEMPORADAS, pasar la
+                // temporada seleccionada a la función
+                const analyticsFilter = groupsFilter === 'TEMPORADAS'
+                    ? seasonFilter
+                    : groupsFilter;
+                const analytics = await supabaseService
+                    .getGroupRegistrationAnalytics(analyticsFilter);
                 setRegistrationAnalytics(analytics);
             } catch (error) {
                 console.error("Error fetching filtered analytics", error);
             }
         };
         fetchAnalytics();
-    }, [groupsFilter, canAccess, activeTab]);
+    }, [groupsFilter, seasonFilter, canAccess, activeTab]);
 
     if (!canAccess) {
         return (
@@ -514,29 +596,58 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                         <h3 className="text-sm md:text-lg font-black text-black uppercase tracking-tight">Datos de Participación</h3>
                                                         <p className="text-[10px] md:text-xs text-neutral-500 font-bold uppercase">Métricas Generales</p>
                                                     </div>
-                                                    {/* Filter Toggle */}
-                                                    <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-                                                        <button
-                                                            onClick={() => setGroupsFilter('ACTIVOS')}
-                                                            className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'ACTIVOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'
-                                                                }`}
-                                                        >
-                                                            Activos
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setGroupsFilter('FINALIZADOS')}
-                                                            className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'FINALIZADOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'
-                                                                }`}
-                                                        >
-                                                            Finalizados
-                                                        </button>
+                                                    {/* Filter Toggle — 3 opciones */}
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                                                            <button
+                                                                onClick={() => setGroupsFilter('ACTIVOS')}
+                                                                className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'ACTIVOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'}`}
+                                                            >
+                                                                Activos
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setGroupsFilter('TEMPORADAS')}
+                                                                className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'TEMPORADAS' ? 'bg-amber-500 text-black' : 'text-black hover:bg-slate-200'}`}
+                                                            >
+                                                                Temporadas
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setGroupsFilter('FINALIZADOS')}
+                                                                className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${groupsFilter === 'FINALIZADOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'}`}
+                                                            >
+                                                                Finalizados
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Sub-filtro de temporada — visible solo en modo TEMPORADAS */}
+                                                        {groupsFilter === 'TEMPORADAS' && (
+                                                            <div className="flex gap-1 bg-amber-50 border-2 border-amber-400 p-1 rounded-lg animate-fadeIn">
+                                                                {(['S1', 'S2', 'S3'] as SeasonType[]).map((s) => (
+                                                                    <button
+                                                                        key={s}
+                                                                        onClick={() => setSeasonFilter(s)}
+                                                                        className={`px-3 py-1.5 text-[10px] font-black uppercase rounded transition-all ${seasonFilter === s
+                                                                            ? 'bg-amber-500 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                                                                            : 'text-amber-700 hover:bg-amber-100'}`}
+                                                                    >
+                                                                        {SEASON_LABELS[s]}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                                                     {/* Card 1: Grupos */}
                                                     <div className="border-2 border-black p-4 rounded-lg bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                                                         <p className="text-[10px] md:text-xs font-black uppercase text-slate-600 mb-1">
-                                                            Grupos {groupsFilter === 'ACTIVOS' ? 'Activos' : 'Finalizados'}
+                                                            Grupos {
+                                                                groupsFilter === 'ACTIVOS'
+                                                                    ? 'Activos'
+                                                                    : groupsFilter === 'FINALIZADOS'
+                                                                        ? 'Finalizados'
+                                                                        : SEASON_LABELS[seasonFilter]
+                                                            }
                                                         </p>
                                                         <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalGroups}</p>
                                                         <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Total de grupos</p>
@@ -597,16 +708,22 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                             {(() => {
                                                 // Filter groups based on active/finalized status
                                                 const now = new Date();
+                                                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                                                 const filteredGroups = groupsData.filter(item => {
-                                                    // This might need adjustment based on actual data structure
-                                                    const isFinished = item.status === 'finished' || (item.endDate && new Date(item.endDate) < now);
+                                                    const isFinished = item.status === 'finished' ||
+                                                        (item.endDate && item.endDate < todayStr);
 
                                                     if (groupsFilter === 'ACTIVOS') {
-                                                        // Active groups: must be exactly 'approved' and not past endDate
                                                         return item.status === 'approved' && !isFinished;
-                                                    } else {
-                                                        // Finalized groups: endDate is in the past or explicitly finished/rejected
+                                                    } else if (groupsFilter === 'FINALIZADOS') {
                                                         return isFinished;
+                                                    } else {
+                                                        // TEMPORADAS: filtrar por startDate
+                                                        const season = getSeasonFromDate(
+                                                            item.startDate
+                                                        );
+                                                        return item.status === 'approved' &&
+                                                               season === seasonFilter;
                                                     }
                                                 });
 
@@ -658,11 +775,11 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                                             <div>
                                                 <h3 className="text-sm md:text-lg font-black text-black uppercase tracking-tight">Reporte Global de Asistencias</h3>
-                                                <p className="text-[10px] md:text-xs text-neutral-500 font-bold uppercase">Último registro por grupo</p>
+                                                <p className="text-[10px] md:text-xs text-neutral-500 font-bold uppercase">Historial completo por grupo</p>
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                                             <div className="relative w-full sm:max-w-xs">
                                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                                                 <input
@@ -670,145 +787,174 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                     placeholder="Buscar grupo o anfitrión..."
                                                     value={attendanceSearchQuery}
                                                     onChange={(e) => setAttendanceSearchQuery(e.target.value)}
-                                                    className="w-full pl-9 pr-4 py-2 border-2 border-black rounded-lg text-xs font-bold focus:outline-none focus:ring-0 uppercase placeholder:normal-case"
+                                                    className="w-full pl-9 pr-4 py-2 border-2 border-black rounded-lg text-xs font-bold focus:outline-none uppercase placeholder:normal-case"
                                                 />
                                             </div>
-                                            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-full sm:w-auto">
-                                                <button
-                                                    onClick={() => setAttendanceFilter('ACTIVOS')}
-                                                    className={`flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${attendanceFilter === 'ACTIVOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'}`}
-                                                >
-                                                    Activos
-                                                </button>
-                                                <button
-                                                    onClick={() => setAttendanceFilter('FINALIZADOS')}
-                                                    className={`flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${attendanceFilter === 'FINALIZADOS' ? 'bg-black text-white' : 'text-black hover:bg-slate-200'}`}
-                                                >
-                                                    Finalizados
-                                                </button>
+                                            <div className="flex flex-col items-end gap-2">
+                                                <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-full sm:w-auto">
+                                                    {(['ACTIVOS', 'TEMPORADAS', 'FINALIZADOS'] as AttendanceViewMode[]).map(mode => (
+                                                        <button
+                                                            key={mode}
+                                                            onClick={() => setAttendanceFilter(mode)}
+                                                            className={`flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-all ${attendanceFilter === mode
+                                                                ? mode === 'TEMPORADAS' ? 'bg-amber-500 text-black' : 'bg-black text-white'
+                                                                : 'text-black hover:bg-slate-200'}`}
+                                                        >
+                                                            {mode === 'ACTIVOS' && 'Activos'}
+                                                            {mode === 'TEMPORADAS' && 'Temporadas'}
+                                                            {mode === 'FINALIZADOS' && 'Finalizados'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                {attendanceFilter === 'TEMPORADAS' && (
+                                                    <div className="flex gap-1 bg-amber-50 border-2 border-amber-400 p-1 rounded-lg animate-fadeIn">
+                                                        {(['S1', 'S2', 'S3'] as SeasonType[]).map(s => (
+                                                            <button
+                                                                key={s}
+                                                                onClick={() => setAttendanceSeasonFilter(s)}
+                                                                className={`px-3 py-1.5 text-[10px] font-black uppercase rounded transition-all ${attendanceSeasonFilter === s
+                                                                    ? 'bg-amber-500 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                                                                    : 'text-amber-700 hover:bg-amber-100'}`}
+                                                            >
+                                                                {SEASON_LABELS[s]}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
                                         {(() => {
-                                            const filteredAttendanceReport = attendanceReport.filter(row => {
-                                                const matchesSearch = row.groupName.toLowerCase().includes(attendanceSearchQuery.toLowerCase()) || 
-                                                                    (row.leaderName || '').toLowerCase().includes(attendanceSearchQuery.toLowerCase());
-                                                
-                                                const now = new Date();
-                                                const isFinished = row.status === 'finished' || (row.endDate && new Date(row.endDate) < now);
-                                                
+                                            const now = new Date();
+                                            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                                            const filtered = fullAttendanceReport.filter(row => {
+                                                const matchesSearch =
+                                                    row.groupName.toLowerCase().includes(attendanceSearchQuery.toLowerCase()) ||
+                                                    row.leaderName.toLowerCase().includes(attendanceSearchQuery.toLowerCase());
+                                                const isFinished = row.status === 'finished' ||
+                                                    (row.endDate && row.endDate < todayStr);
+
                                                 if (attendanceFilter === 'ACTIVOS') return matchesSearch && !isFinished;
-                                                return matchesSearch && isFinished;
+                                                if (attendanceFilter === 'FINALIZADOS') return matchesSearch && !!isFinished;
+                                                const season = getSeasonFromDate(row.startDate);
+                                                return matchesSearch && season === attendanceSeasonFilter;
                                             });
 
-                                            if (filteredAttendanceReport.length === 0) {
+                                            if (filtered.length === 0) {
                                                 return (
                                                     <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg">
                                                         <Layers className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                                                        <p className="text-slate-500 font-bold">No hay reportes {attendanceFilter.toLowerCase()} que coincidan</p>
+                                                        <p className="text-slate-500 font-bold">No hay grupos que coincidan</p>
                                                     </div>
                                                 );
                                             }
 
                                             return (
-                                                <>
-                                                    {/* Mobile Card View */}
-                                                    <div className="md:hidden space-y-3">
-                                                        {filteredAttendanceReport.map((row) => (
-                                                <div key={row.groupId} className="border-2 border-black rounded-lg p-4 bg-white">
-                                                    <p className="font-black text-sm uppercase mb-3">{row.groupName}</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {row.latestDate ? (
-                                                            <>
-                                                                <button
-                                                                    onClick={() => { setSelectedAttendanceGroup(row); setAttendanceModalType('present'); setAttendanceModalOpen(true); }}
-                                                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 text-emerald-700 border-2 border-emerald-300 rounded-lg text-[10px] font-bold uppercase"
-                                                                >
-                                                                    <CheckCircle className="w-3.5 h-3.5" /> {row.presentMembers.length} Presentes
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => { setSelectedAttendanceGroup(row); setAttendanceModalType('absent'); setAttendanceModalOpen(true); }}
-                                                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-100 text-red-700 border-2 border-red-300 rounded-lg text-[10px] font-bold uppercase"
-                                                                >
-                                                                    <XCircle className="w-3.5 h-3.5" /> {row.absentMembers.length} Ausentes
-                                                                </button>
-                                                            </>
-                                                        ) : (
-                                                            <span className="px-3 py-2 bg-slate-100 text-slate-500 border-2 border-dashed border-slate-300 rounded-lg text-[10px] font-bold uppercase">
-                                                                No Disponible
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                                <div className="space-y-3">
+                                                    {filtered.map(row => {
+                                                        const isExpanded = expandedAttendanceGroupId === row.groupId;
+                                                        const expectedDates = getExpectedMeetingDates(
+                                                            row.meetingDay,
+                                                            row.startDate,
+                                                            row.endDate
+                                                        );
+                                                        const recordsByDate = new Map(
+                                                            row.attendanceRecords.map(r => [r.date, r])
+                                                        );
+                                                        const isFinished = row.status === 'finished' ||
+                                                            (row.endDate && row.endDate < todayStr);
 
-                                        {/* Desktop Table */}
-                                        <div className="hidden md:block overflow-x-auto">
-                                            <table className="w-full border-2 border-black">
-                                                <thead className="bg-black text-white">
-                                                    <tr>
-                                                        <th className="px-4 py-3 text-left text-xs font-black uppercase">Grupo</th>
-                                                        <th className="px-4 py-3 text-center text-xs font-black uppercase">Asistencia</th>
-                                                        <th className="px-4 py-3 text-center text-xs font-black uppercase">No Asistencia</th>
-                                                        <th className="px-4 py-3 text-center text-xs font-black uppercase">Descargar</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {filteredAttendanceReport.map((row) => (
-                                                        <tr key={row.groupId} className="border-b border-slate-200 hover:bg-slate-50">
-                                                            <td className="px-4 py-3 font-bold text-sm">{row.groupName}</td>
-                                                            <td className="px-4 py-3 text-center">
-                                                                {row.latestDate ? (
-                                                                    <button
-                                                                        onClick={() => { setSelectedAttendanceGroup(row); setAttendanceModalType('present'); setAttendanceModalOpen(true); }}
-                                                                        className="px-3 py-1.5 bg-emerald-100 text-emerald-700 border border-emerald-300 rounded text-xs font-bold uppercase hover:bg-emerald-200 transition-colors"
-                                                                    >
-                                                                        Disponible ({row.presentMembers.length})
-                                                                    </button>
-                                                                ) : (
-                                                                    <span className="px-3 py-1.5 bg-slate-100 text-slate-400 border border-dashed border-slate-300 rounded text-xs font-bold uppercase">
-                                                                        No Disponible
-                                                                    </span>
+                                                        return (
+                                                            <div key={row.groupId} className="border-2 border-black rounded-xl overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setExpandedAttendanceGroupId(isExpanded ? null : row.groupId)}
+                                                                    className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-neutral-50 transition-colors text-left"
+                                                                >
+                                                                    <div className="flex items-center gap-3 min-w-0">
+                                                                        <div className="min-w-0">
+                                                                            <p className="font-black text-sm text-black uppercase tracking-tight truncate">{row.groupName}</p>
+                                                                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">
+                                                                                {row.meetingDay}{row.meetingTime ? ` · ${row.meetingTime}` : ''} · {row.allMembers.length} miembros · {row.attendanceRecords.length} registros
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 shrink-0 ml-3">
+                                                                        {isFinished && (
+                                                                            <span className="px-2 py-1 text-[9px] font-black uppercase bg-neutral-100 text-neutral-500 rounded">Finalizado</span>
+                                                                        )}
+                                                                        {isExpanded
+                                                                            ? <ChevronUp className="w-4 h-4 text-neutral-400" />
+                                                                            : <ChevronDown className="w-4 h-4 text-neutral-400" />
+                                                                        }
+                                                                    </div>
+                                                                </button>
+
+                                                                {isExpanded && (
+                                                                    <div className="border-t-2 border-black bg-neutral-50 divide-y divide-neutral-200">
+                                                                        {expectedDates.length === 0 && (
+                                                                            <div className="px-4 py-6 text-center">
+                                                                                <p className="text-xs font-bold text-neutral-400 uppercase">Sin fechas de reunión calculadas</p>
+                                                                            </div>
+                                                                        )}
+                                                                        {expectedDates.map(date => {
+                                                                            const record = recordsByDate.get(date);
+                                                                            const hasRecord = !!record;
+                                                                            const fmtDate = new Date(date + 'T12:00:00').toLocaleDateString('es-AR', {
+                                                                                weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+                                                                            });
+
+                                                                            return (
+                                                                                <div key={date} className="flex items-center px-4 py-3 gap-3">
+                                                                                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${hasRecord ? 'bg-emerald-500' : 'bg-neutral-300'}`} />
+                                                                                    <span className="text-xs font-black text-black uppercase tracking-wide w-44 shrink-0">{fmtDate}</span>
+                                                                                    {hasRecord && record ? (
+                                                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                                                            <button
+                                                                                                onClick={() => {
+                                                                                                    setAttendanceModalData({ groupName: row.groupName, date, type: 'present', members: record.presentMembers });
+                                                                                                    setAttendanceModalOpen(true);
+                                                                                                }}
+                                                                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 border border-emerald-300 rounded text-[10px] font-bold uppercase hover:bg-emerald-200 transition-colors"
+                                                                                            >
+                                                                                                <CheckCircle className="w-3 h-3" /> {record.totalPresent} presentes
+                                                                                            </button>
+                                                                                            <button
+                                                                                                onClick={() => {
+                                                                                                    setAttendanceModalData({ groupName: row.groupName, date, type: 'absent', members: record.absentMembers });
+                                                                                                    setAttendanceModalOpen(true);
+                                                                                                }}
+                                                                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 border border-red-300 rounded text-[10px] font-bold uppercase hover:bg-red-200 transition-colors"
+                                                                                            >
+                                                                                                <XCircle className="w-3 h-3" /> {record.totalAbsent} ausentes
+                                                                                            </button>
+                                                                                            <button
+                                                                                                onClick={() => {
+                                                                                                    const csvData = row.allMembers.map(m => ({
+                                                                                                        Nombre: m.name,
+                                                                                                        Estado: record.presentMembers.some(p => p.id === m.id) ? 'Presente' : 'Ausente'
+                                                                                                    }));
+                                                                                                    handleExportToCSV(csvData, `asistencia_${row.groupName.replace(/\s+/g, '_')}_${date}`);
+                                                                                                }}
+                                                                                                className="p-1.5 border border-black rounded hover:bg-black hover:text-white transition-all"
+                                                                                                title="Descargar CSV"
+                                                                                            >
+                                                                                                <Download className="w-3.5 h-3.5" />
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">Sin reporte</span>
+                                                                                    )}
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
                                                                 )}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-center">
-                                                                {row.latestDate ? (
-                                                                    <button
-                                                                        onClick={() => { setSelectedAttendanceGroup(row); setAttendanceModalType('absent'); setAttendanceModalOpen(true); }}
-                                                                        className="px-3 py-1.5 bg-red-100 text-red-700 border border-red-300 rounded text-xs font-bold uppercase hover:bg-red-200 transition-colors"
-                                                                    >
-                                                                        Disponible ({row.absentMembers.length})
-                                                                    </button>
-                                                                ) : (
-                                                                    <span className="px-3 py-1.5 bg-slate-100 text-slate-400 border border-dashed border-slate-300 rounded text-xs font-bold uppercase">
-                                                                        No Disponible
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-center">
-                                                                {row.latestDate && (
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const csvData = row.allMembers.map(m => ({
-                                                                                Nombre: m.name,
-                                                                                Estado: row.presentMembers.some(p => p.id === m.id) ? 'Presente' : 'Ausente'
-                                                                            }));
-                                                                            handleExportToCSV(csvData, `asistencia_${row.groupName.replace(/\s+/g, '_')}`);
-                                                                        }}
-                                                                        className="p-2 border-2 border-black rounded hover:bg-black hover:text-white transition-all"
-                                                                    >
-                                                                        <Download className="w-4 h-4" />
-                                                                    </button>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        </>
-                                        );
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
                                         })()}
                                     </div>
                                 )}
@@ -968,47 +1114,41 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
             {/* Attendance Modal */}
             <NeoModal
                 isOpen={attendanceModalOpen}
-                onClose={() => setAttendanceModalOpen(false)}
-                title={attendanceModalType === 'present' ? 'Miembros Presentes' : 'Miembros Ausentes'}
+                onClose={() => { setAttendanceModalOpen(false); setAttendanceModalData(null); }}
+                title={attendanceModalData?.type === 'present' ? 'Miembros Presentes' : 'Miembros Ausentes'}
             >
-                {selectedAttendanceGroup && (
+                {attendanceModalData && (
                     <div className="p-4 space-y-4">
                         <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                            <p className="font-bold text-sm">{selectedAttendanceGroup.groupName}</p>
-                            {selectedAttendanceGroup.latestDate && (
-                                <span className="text-xs text-slate-500">
-                                    {new Date(selectedAttendanceGroup.latestDate).toLocaleDateString('es-AR')}
-                                </span>
-                            )}
+                            <div>
+                                <p className="font-black text-sm uppercase tracking-tight">{attendanceModalData.groupName}</p>
+                                <p className="text-xs font-bold text-neutral-400 mt-0.5">
+                                    {new Date(attendanceModalData.date + 'T12:00:00').toLocaleDateString('es-AR', {
+                                        weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+                                    })}
+                                </p>
+                            </div>
+                            <span className={`px-2 py-1 text-[10px] font-black uppercase rounded ${attendanceModalData.type === 'present' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                {attendanceModalData.members.length} {attendanceModalData.type === 'present' ? 'presentes' : 'ausentes'}
+                            </span>
                         </div>
                         <div className="space-y-2 max-h-96 overflow-y-auto">
-                            {(attendanceModalType === 'present'
-                                ? selectedAttendanceGroup.presentMembers
-                                : selectedAttendanceGroup.absentMembers
-                            ).map((member: { id: string; name: string }) => (
-                                <div
-                                    key={member.id}
-                                    className={`flex items-center gap-3 p-3 rounded-lg border-2 ${attendanceModalType === 'present'
-                                        ? 'border-emerald-200 bg-emerald-50'
-                                        : 'border-red-200 bg-red-50'
-                                        }`}
-                                >
-                                    {attendanceModalType === 'present' ? (
-                                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                                    ) : (
-                                        <XCircle className="w-4 h-4 text-red-600 shrink-0" />
-                                    )}
-                                    <span className="font-medium text-sm">{member.name}</span>
-                                </div>
-                            ))}
-                            {(attendanceModalType === 'present'
-                                ? selectedAttendanceGroup.presentMembers
-                                : selectedAttendanceGroup.absentMembers
-                            ).length === 0 && (
-                                    <p className="text-center py-6 text-slate-400 font-medium">
-                                        No hay miembros {attendanceModalType === 'present' ? 'presentes' : 'ausentes'}
-                                    </p>
-                                )}
+                            {attendanceModalData.members.length === 0 ? (
+                                <p className="text-center py-6 text-slate-400 font-medium">No hay miembros en esta categoría</p>
+                            ) : (
+                                attendanceModalData.members.map(member => (
+                                    <div
+                                        key={member.id}
+                                        className={`flex items-center gap-3 p-3 rounded-lg border-2 ${attendanceModalData.type === 'present' ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}
+                                    >
+                                        {attendanceModalData.type === 'present'
+                                            ? <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            : <XCircle className="w-4 h-4 text-red-600 shrink-0" />
+                                        }
+                                        <span className="font-medium text-sm">{member.name}</span>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 )}
