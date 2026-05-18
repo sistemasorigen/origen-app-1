@@ -56,7 +56,7 @@ const FullScreenMenu: React.FC<FullScreenMenuProps> = ({ isOpen, onClose, curren
         },
         {
             label: 'REPORTES',
-            path: '/pastores',
+            path: '/reportes',
             visible: !!currentUser && hasRole(currentUser, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_PUNTO, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_GRUPOS, UserRole.REPORTES, UserRole.ADMIN_GROUPS])
         },
         {

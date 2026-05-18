@@ -141,7 +141,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         {
             label: 'Audiencia Servicios',
             icon: HeartHandshake,
-            path: '/pastoral-care',
+            path: '/audiencia-servicios',
             roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]
         },
         {
@@ -198,7 +198,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 { label: 'Categorías', path: '/groups?tab=CATEGORIES', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Etiquetas', path: '/groups?tab=TAGS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Configuración', path: '/groups?tab=CONFIG', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Reportes', path: '/pastores', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] }
+                { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] }
             ]
         },
         {
@@ -224,7 +224,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 { label: 'Presentaciones', path: '/info-point?view=PRESENTATIONS' },
                 { label: 'Anuncios', path: '/info-point?view=ANNOUNCEMENTS' },
                 { label: 'Configuración', path: '/info-point?view=ADMIN_PANEL', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
-                { label: 'Reportes', path: '/pastores', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
+                { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
             ]
         },
         {

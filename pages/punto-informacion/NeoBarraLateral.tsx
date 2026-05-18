@@ -125,7 +125,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                                 id={`tour-infopoint-${item.id.toLowerCase()}-sidebar`}
                                 onClick={() => {
                                     if (item.id === 'REPORTS') {
-                                        navigate('/pastores');
+                                        navigate('/reportes');
                                     } else {
                                         setView(item.id as ViewState);
                                     }

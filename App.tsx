@@ -243,7 +243,7 @@ const AppContent: React.FC = () => {
                             <Route path="/store" element={<Store currentUser={user} />} />
                             <Route path="/alabanza" element={<Alabanza currentUser={user} onLoginRequest={handleLogin} />} />
 
-                            <Route path="/pastores" element={
+                            <Route path="/reportes" element={
                                 (user && hasRole(user, [
                                     UserRole.SUPER_ADMIN,
                                     UserRole.PASTOR,
@@ -291,13 +291,13 @@ const AppContent: React.FC = () => {
 
                             <Route path="/tutorials" element={<TutorialsPage />} />
 
-                            <Route path="/pastoral-care" element={
+                            <Route path="/audiencia-servicios" element={
                                 (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]))
                                     ? <PastoralCareDashboard currentUser={user} />
                                     : <Navigate to="/" />
                             } />
 
-                            <Route path="/pastoral-care/new" element={
+                            <Route path="/audiencia-servicios/new" element={
                                 (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]))
                                     ? <PastoralCareForm currentUser={user} />
                                     : <Navigate to="/" />

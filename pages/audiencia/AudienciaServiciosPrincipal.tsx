@@ -713,7 +713,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         <button
-                            onClick={() => navigate('/pastoral-care/new')}
+                            onClick={() => navigate('/audiencia-servicios/new')}
                             className="flex items-center gap-2 px-4 py-2.5 bg-black dark:bg-white text-white dark:text-black font-bold text-xs uppercase border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.3)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             <Plus className="w-4 h-4" />
@@ -781,7 +781,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                         <p className="text-neutral-600 dark:text-neutral-400 text-sm mb-6 max-w-sm mx-auto">
                             Comenzá a registrar las estadísticas de los servicios para visualizar métricas y comparativas.
                         </p>
-                        <button onClick={() => navigate('/pastoral-care/new')}
+                        <button onClick={() => navigate('/audiencia-servicios/new')}
                             className="inline-flex items-center gap-2 px-5 py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-sm uppercase
                             border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
                             <Plus className="w-4 h-4" />
@@ -914,7 +914,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                             <button onClick={() => setYoyRecord(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-violet-600 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2" title="Comparativa YoY" aria-label="Comparativa año a año">
                                                 <GitCompareArrows className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => navigate('/pastoral-care/new', { state: { record: rec } })} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-amber-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2" title="Editar" aria-label="Editar registro">
+                                            <button onClick={() => navigate('/audiencia-servicios/new', { state: { record: rec } })} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-amber-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2" title="Editar" aria-label="Editar registro">
                                                 <Pencil className="w-4 h-4" />
                                             </button>
                                             <button onClick={() => setDeleteTarget(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-red-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2" title="Eliminar" aria-label="Eliminar registro">
@@ -999,7 +999,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                                     <button onClick={() => setYoyRecord(rec)} title="Comparativa YoY" aria-label="Comparativa año a año" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-violet-600 hover:bg-violet-600 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
                                                         <GitCompareArrows className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => navigate('/pastoral-care/new', { state: { record: rec } })} title="Editar" aria-label="Editar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
+                                                    <button onClick={() => navigate('/audiencia-servicios/new', { state: { record: rec } })} title="Editar" aria-label="Editar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
                                                     <button onClick={() => setDeleteTarget(rec)} title="Eliminar" aria-label="Eliminar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-red-500 hover:bg-red-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2">

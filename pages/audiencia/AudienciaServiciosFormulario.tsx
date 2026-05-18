@@ -238,7 +238,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                             </button>
                         )}
                         <button
-                            onClick={() => navigate('/pastoral-care')}
+                            onClick={() => navigate('/audiencia-servicios')}
                             className="w-full py-4 bg-black text-white font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             Ver Panel
@@ -258,7 +258,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
             <div className="bg-white border-b-4 border-black sticky top-0 z-10">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
                     <button
-                        onClick={() => navigate('/pastoral-care')}
+                        onClick={() => navigate('/audiencia-servicios')}
                         className="w-10 h-10 flex items-center justify-center border-2 border-black bg-white hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         aria-label="Volver"
                     >

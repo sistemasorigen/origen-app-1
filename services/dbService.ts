@@ -118,28 +118,6 @@ const MODULES: SystemModule[] = [
         iconColor: 'text-blue-500'
     },
     {
-        id: 'pastores',
-        title: 'Reportes',
-        subtitle: 'Alertas del Sistema',
-        description: 'Métricas y estadísticas para la toma de decisiones.',
-        icon: 'bar-chart-3',
-        route: '/pastores',
-        allowedRoles: [
-            UserRole.ENCARGADO_PUNTO,
-            UserRole.ENCARGADO_GRUPOS,
-            UserRole.REPORTES,
-            UserRole.SUPER_ADMIN,
-            UserRole.ADMIN_PUNTO,
-            UserRole.ADMIN_GROUPS
-        ],
-        publicAccess: false,
-        useImage: false,
-        gradientFrom: 'slate-700',
-        gradientTo: 'slate-900',
-        iconColor: 'text-slate-700',
-        status: 'active'
-    },
-    {
         id: 'coordinators',
         title: 'Coordinadores',
         subtitle: 'Panel de Gestión',
@@ -221,7 +199,7 @@ const MODULES: SystemModule[] = [
         subtitle: '',
         description: 'Estadísticas de audiencia a los servicios y eventos especiales',
         icon: 'heart-handshake',
-        route: '/pastoral-care',
+        route: '/audiencia-servicios',
         allowedRoles: [
             UserRole.SUPER_ADMIN,
             UserRole.PASTOR

@@ -172,7 +172,7 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
                                         </button>
 
                                         <button
-                                            onClick={() => navigate('/pastores')}
+                                            onClick={() => navigate('/reportes')}
                                             className="flex items-center gap-3 p-4 rounded-lg text-xs font-black uppercase tracking-wider transition-all bg-slate-50 text-black hover:bg-slate-100 border border-slate-200"
                                         >
                                             <BarChart3 className="w-5 h-5 shrink-0" />

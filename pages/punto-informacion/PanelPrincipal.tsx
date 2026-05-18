@@ -89,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                     <div>
                         <button
                             id="reports-btn"
-                            onClick={() => navigate('/pastores')}
+                            onClick={() => navigate('/reportes')}
                             className="hidden md:flex items-center gap-2 px-4 py-2 bg-white text-black border-2 border-black font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none transition-all"
                         >
                             <BarChart3 size={18} />
