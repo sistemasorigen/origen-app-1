@@ -68,6 +68,10 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
     type GroupsFilterType = 'ACTIVOS' | 'FINALIZADOS' | 'TEMPORADAS';
     type SeasonType = 'S1' | 'S2' | 'S3';
 
+    const currentYear = new Date().getFullYear();
+    const [selectedYear, setSelectedYear] = useState(currentYear);
+    const yearRange = Array.from({ length: 6 }, (_, i) => currentYear - 1 + i);
+
     const SEASON_LABELS: Record<SeasonType, string> = {
         S1: '1ª Temporada',
         S2: '2ª Temporada',
@@ -246,7 +250,7 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
             }
         };
         fetchAnalytics();
-    }, [groupsFilter, seasonFilter, canAccess, activeTab]);
+    }, [groupsFilter, seasonFilter, selectedYear, canAccess, activeTab]);
 
     if (!canAccess) {
         return (
@@ -621,18 +625,33 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
 
                                                         {/* Sub-filtro de temporada — visible solo en modo TEMPORADAS */}
                                                         {groupsFilter === 'TEMPORADAS' && (
-                                                            <div className="flex gap-1 bg-amber-50 border-2 border-amber-400 p-1 rounded-lg animate-fadeIn">
-                                                                {(['S1', 'S2', 'S3'] as SeasonType[]).map((s) => (
-                                                                    <button
-                                                                        key={s}
-                                                                        onClick={() => setSeasonFilter(s)}
-                                                                        className={`px-3 py-1.5 text-[10px] font-black uppercase rounded transition-all ${seasonFilter === s
-                                                                            ? 'bg-amber-500 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
-                                                                            : 'text-amber-700 hover:bg-amber-100'}`}
-                                                                    >
-                                                                        {SEASON_LABELS[s]}
-                                                                    </button>
-                                                                ))}
+                                                            <div className="flex flex-col gap-1 animate-fadeIn">
+                                                                <div className="flex gap-1 bg-slate-100 p-1 rounded-lg flex-wrap">
+                                                                    {yearRange.map((year) => (
+                                                                        <button
+                                                                            key={year}
+                                                                            onClick={() => setSelectedYear(year)}
+                                                                            className={`px-3 py-1.5 text-[10px] font-black uppercase rounded transition-all ${selectedYear === year
+                                                                                ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                                                                                : 'text-black hover:bg-slate-200'}`}
+                                                                        >
+                                                                            {year}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                                <div className="flex gap-1 bg-amber-50 border-2 border-amber-400 p-1 rounded-lg">
+                                                                    {(['S1', 'S2', 'S3'] as SeasonType[]).map((s) => (
+                                                                        <button
+                                                                            key={s}
+                                                                            onClick={() => setSeasonFilter(s)}
+                                                                            className={`px-3 py-1.5 text-[10px] font-black uppercase rounded transition-all ${seasonFilter === s
+                                                                                ? 'bg-amber-500 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                                                                                : 'text-amber-700 hover:bg-amber-100'}`}
+                                                                        >
+                                                                            {SEASON_LABELS[s]}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>
@@ -718,12 +737,12 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                     } else if (groupsFilter === 'FINALIZADOS') {
                                                         return isFinished;
                                                     } else {
-                                                        // TEMPORADAS: filtrar por startDate
-                                                        const season = getSeasonFromDate(
-                                                            item.startDate
-                                                        );
+                                                        // TEMPORADAS: filtrar por startDate y año
+                                                        const season = getSeasonFromDate(item.startDate);
+                                                        const itemYear = item.startDate ? new Date(item.startDate + 'T12:00:00').getFullYear() : null;
                                                         return item.status === 'approved' &&
-                                                               season === seasonFilter;
+                                                               season === seasonFilter &&
+                                                               itemYear === selectedYear;
                                                     }
                                                 });
 
@@ -807,18 +826,33 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                     ))}
                                                 </div>
                                                 {attendanceFilter === 'TEMPORADAS' && (
-                                                    <div className="flex gap-1 bg-amber-50 border-2 border-amber-400 p-1 rounded-lg animate-fadeIn">
-                                                        {(['S1', 'S2', 'S3'] as SeasonType[]).map(s => (
-                                                            <button
-                                                                key={s}
-                                                                onClick={() => setAttendanceSeasonFilter(s)}
-                                                                className={`px-3 py-1.5 text-[10px] font-black uppercase rounded transition-all ${attendanceSeasonFilter === s
-                                                                    ? 'bg-amber-500 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
-                                                                    : 'text-amber-700 hover:bg-amber-100'}`}
-                                                            >
-                                                                {SEASON_LABELS[s]}
-                                                            </button>
-                                                        ))}
+                                                    <div className="flex flex-col gap-1 animate-fadeIn">
+                                                        <div className="flex gap-1 bg-slate-100 p-1 rounded-lg flex-wrap">
+                                                            {yearRange.map((year) => (
+                                                                <button
+                                                                    key={year}
+                                                                    onClick={() => setSelectedYear(year)}
+                                                                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded transition-all ${selectedYear === year
+                                                                        ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                                                                        : 'text-black hover:bg-slate-200'}`}
+                                                                >
+                                                                    {year}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                        <div className="flex gap-1 bg-amber-50 border-2 border-amber-400 p-1 rounded-lg">
+                                                            {(['S1', 'S2', 'S3'] as SeasonType[]).map(s => (
+                                                                <button
+                                                                    key={s}
+                                                                    onClick={() => setAttendanceSeasonFilter(s)}
+                                                                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded transition-all ${attendanceSeasonFilter === s
+                                                                        ? 'bg-amber-500 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                                                                        : 'text-amber-700 hover:bg-amber-100'}`}
+                                                                >
+                                                                    {SEASON_LABELS[s]}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -837,7 +871,8 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                 if (attendanceFilter === 'ACTIVOS') return matchesSearch && !isFinished;
                                                 if (attendanceFilter === 'FINALIZADOS') return matchesSearch && !!isFinished;
                                                 const season = getSeasonFromDate(row.startDate);
-                                                return matchesSearch && season === attendanceSeasonFilter;
+                                                const rowYear = row.startDate ? new Date(row.startDate + 'T12:00:00').getFullYear() : null;
+                                                return matchesSearch && season === attendanceSeasonFilter && rowYear === selectedYear;
                                             });
 
                                             if (filtered.length === 0) {

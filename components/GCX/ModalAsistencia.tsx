@@ -134,7 +134,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
                     '✅ Asistencia registrada',
                     `Registraste ${selectedMembers.size} presente(s) en ${group.name} el ${formattedDate}. ¡Seguí así!`,
                     'ATTENDANCE',
-                    '/host-dashboard'
+                    '/mis-grupos'
                 );
             }
         }

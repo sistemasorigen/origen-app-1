@@ -52,7 +52,7 @@ const InfoPointCalendar: React.FC = () => {
 
     const handleCopyEventLink = (eventId: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        const url = `${window.location.origin}/#/info-point?eventId=${eventId}`;
+        const url = `${window.location.origin}/#/punto-de-informacion?eventId=${eventId}`;
         const fallbackCopy = () => {
             const input = document.createElement('input');
             input.value = url;

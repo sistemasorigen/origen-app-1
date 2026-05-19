@@ -55,7 +55,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
         const origin = window.location.hostname.includes('localhost') || window.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/)
             ? 'https://app.origeniglesia.org'
             : window.location.origin;
-        const url = `${origin}/#/groups?groupId=${groupId}`;
+        const url = `${origin}/#/gcx?groupId=${groupId}`;
 
         const fallbackCopy = () => {
             const textArea = document.createElement("textarea");

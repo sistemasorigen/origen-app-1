@@ -176,7 +176,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                     : `${formData.firstName} ${formData.lastName} se unió a ${group.name}.`;
 
                 const notifTitle = isCouplesGroup ? `Nueva solicitud de pareja` : `Nueva solicitud de miembro`;
-                const actionUrl = `/admin/groups?groupId=${group.id}`;
+                const actionUrl = `/panel-admin/groups?groupId=${group.id}`;
 
                 // Notify host
                 if ((group as any).host_id) {

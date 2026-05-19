@@ -84,7 +84,7 @@ const MODULES: SystemModule[] = [
         subtitle: 'FUIMOS CREADOS PARA ESTAR EN COMUNIDAD',
         description: 'Un lugar para encontrar libertad, hacer comunidad y crecer en nuestra relación con Dios.',
         icon: 'users',
-        route: '/groups',
+        route: '/gcx',
         // General Access: Visible to ALL (Public + Authenticated)
         allowedRoles: [
             UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ANFITRION, UserRole.VIEWER, UserRole.USUARIO,
@@ -103,7 +103,7 @@ const MODULES: SystemModule[] = [
         subtitle: 'Recursos & Gestión',
         description: 'Gestión de inventario, préstamos y eventos de la iglesia.',
         icon: 'info',
-        route: '/info-point',
+        route: '/punto-de-informacion',
         allowedRoles: [
             UserRole.VOLUNTARIO_INFO,
             UserRole.ENCARGADO_PUNTO,
@@ -141,7 +141,7 @@ const MODULES: SystemModule[] = [
         subtitle: 'Nuevo Ingresante',
         description: 'Seguimiento y gestión de nuevas personas.',
         icon: 'heart-handshake',
-        route: '/welcome',
+        route: '/bienvenida',
         allowedRoles: [
             UserRole.SUPER_ADMIN,
             UserRole.ENCARGADO_BIENVENIDA,
@@ -179,7 +179,7 @@ const MODULES: SystemModule[] = [
         subtitle: 'Capacitación',
         description: 'Aprende a usar todas las herramientas de la plataforma paso a paso.',
         icon: 'book',
-        route: '/tutorials',
+        route: '/tutoriales',
         allowedRoles: [
             UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ANFITRION, UserRole.VIEWER, UserRole.USUARIO,
             UserRole.VOLUNTARIO, UserRole.VOLUNTARIO_GRUPOS, UserRole.ENCARGADO_GRUPOS, UserRole.ENCARGADO_PUNTO,
@@ -217,7 +217,7 @@ const MODULES: SystemModule[] = [
         subtitle: 'Configuración Global',
         description: 'Gestiona usuarios, permisos y configuración general de la app.',
         icon: 'settings',
-        route: '/admin',
+        route: '/panel-admin',
         allowedRoles: [UserRole.SUPER_ADMIN],
         publicAccess: false,
         useImage: false,

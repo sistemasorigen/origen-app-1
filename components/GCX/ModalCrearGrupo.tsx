@@ -590,6 +590,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
     const [isModalReady, setIsModalReady] = useState(false); // Kept locally if needed, but not for tour anymore
 
+    const currentYear = new Date().getFullYear();
 
     // Removed the isModalReady logic for tour check
 
@@ -896,11 +897,10 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const year = new Date().getFullYear();
                                     setForm(prev => ({
                                         ...prev,
-                                        startDate: `${year}-03-23`,
-                                        endDate: `${year}-05-17`
+                                        startDate: `${currentYear}-03-23`,
+                                        endDate: `${currentYear}-05-17`
                                     }));
                                 }}
                                 className={`p-4 border-2 text-left transition-all ${form.startDate?.endsWith('-03-23') && form.endDate?.endsWith('-05-17')
@@ -916,7 +916,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                                         </div>
                                     )}
                                 </div>
-                                <span className="text-xs text-neutral-500 font-medium block mt-1">23 de Marzo - 17 de Mayo</span>
+                                <span className="text-xs text-neutral-500 font-medium block mt-1">23 de Marzo - 17 de Mayo {currentYear}</span>
                             </button>
 
                             {/* SEASON 2 - LOCKED UNTIL JUNE 29 */}
@@ -957,7 +957,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                                             )}
                                         </div>
                                         <span className="text-xs text-neutral-500 font-medium block mt-1">
-                                            29 de Junio - 23 de Agosto
+                                            29 de Junio - 23 de Agosto {year}
                                         </span>
                                     </button>
                                 );
@@ -1001,7 +1001,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                                             )}
                                         </div>
                                         <span className="text-xs text-neutral-500 font-medium block mt-1">
-                                            5 de Octubre - 29 de Noviembre
+                                            5 de Octubre - 29 de Noviembre {year}
                                         </span>
                                     </button>
                                 );

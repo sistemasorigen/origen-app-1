@@ -231,10 +231,10 @@ const AppContent: React.FC = () => {
 
                         <Routes>
                             <Route path="/" element={<Dashboard currentUser={user} onLoginRequest={handleLogin} />} />
-                            <Route path="/info-point" element={<InfoPoint currentUser={user} />} />
-                            <Route path="/groups" element={<Groups currentUser={user} onLoginRequest={handleLogin} />} />
+                            <Route path="/punto-de-informacion" element={<InfoPoint currentUser={user} />} />
+                            <Route path="/gcx" element={<Groups currentUser={user} onLoginRequest={handleLogin} />} />
 
-                            <Route path="/admin" element={
+                            <Route path="/panel-admin" element={
                                 isSuperAdmin(user)
                                     ? <Admin currentUser={user} onConfigUpdate={refreshConfig} />
                                     : <Navigate to="/" />
@@ -257,7 +257,7 @@ const AppContent: React.FC = () => {
                                     : <Navigate to="/" />
                             } />
 
-                            <Route path="/welcome" element={
+                            <Route path="/bienvenida" element={
                                 (user && hasRole(user, [
                                     UserRole.SUPER_ADMIN,
                                     UserRole.ENCARGADO_BIENVENIDA,
@@ -277,7 +277,7 @@ const AppContent: React.FC = () => {
                                     : <Navigate to="/" />
                             } />
 
-                            <Route path="/host-dashboard" element={
+                            <Route path="/mis-grupos" element={
                                 (user && hasRole(user, [UserRole.ANFITRION, UserRole.CO_ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]))
                                     ? <HostDashboard currentUser={user} />
                                     : <Navigate to="/" />
@@ -289,7 +289,7 @@ const AppContent: React.FC = () => {
                                     : <Navigate to="/" />
                             } />
 
-                            <Route path="/tutorials" element={<TutorialsPage />} />
+                            <Route path="/tutoriales" element={<TutorialsPage />} />
 
                             <Route path="/audiencia-servicios" element={
                                 (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]))

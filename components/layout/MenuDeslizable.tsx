@@ -147,29 +147,29 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         {
             label: 'Bienvenida',
             icon: Heart,
-            path: '/welcome',
+            path: '/bienvenida',
             roles: [UserRole.SUPER_ADMIN, UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA],
             subItems: [
-                { label: 'Incompletos', path: '/welcome?stage=NEW' },
-                { label: 'Form Lleno', path: '/welcome?stage=FILLED_FORM' },
-                { label: '2° Contacto', path: '/welcome?stage=SECOND_CONTACT' },
-                { label: '3° Contacto', path: '/welcome?stage=THIRD_CONTACT' },
-                { label: 'Int. Crecer', path: '/welcome?stage=INTERESTED_GROWTH' },
-                { label: 'Creciendo', path: '/welcome?stage=DOING_GROWTH' },
-                { label: 'Entrenamiento', path: '/welcome?stage=DOING_TRAINING' },
-                { label: 'Voluntarios', path: '/welcome?stage=VOLUNTEERS' },
-                { label: 'No Respondió', path: '/welcome?stage=NO_RESPONSE' }
+                { label: 'Incompletos', path: '/bienvenida?stage=NEW' },
+                { label: 'Form Lleno', path: '/bienvenida?stage=FILLED_FORM' },
+                { label: '2° Contacto', path: '/bienvenida?stage=SECOND_CONTACT' },
+                { label: '3° Contacto', path: '/bienvenida?stage=THIRD_CONTACT' },
+                { label: 'Int. Crecer', path: '/bienvenida?stage=INTERESTED_GROWTH' },
+                { label: 'Creciendo', path: '/bienvenida?stage=DOING_GROWTH' },
+                { label: 'Entrenamiento', path: '/bienvenida?stage=DOING_TRAINING' },
+                { label: 'Voluntarios', path: '/bienvenida?stage=VOLUNTEERS' },
+                { label: 'No Respondió', path: '/bienvenida?stage=NO_RESPONSE' }
             ]
         },
         {
             label: 'GCX',
             icon: BarChart,
-            path: '/groups',
+            path: '/gcx',
             roles: [],
             subGroups: [
                 {
                     label: 'Mis grupos',
-                    path: '/host-dashboard',
+                    path: '/mis-grupos',
                     roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]
                 },
                 {
@@ -186,18 +186,18 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             subItems: [
                 {
                     label: 'Gestión de grupos',
-                    path: '/groups?tab=GROUPS',
+                    path: '/gcx?tab=GROUPS',
                     roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
                 },
                 {
                     label: 'Gestión de anfitriones',
-                    path: '/groups?tab=HOSTS',
+                    path: '/gcx?tab=HOSTS',
                     roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
                 },
-                { label: 'Gestión de coordinadores', path: '/groups?tab=COORDINATORS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Categorías', path: '/groups?tab=CATEGORIES', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Etiquetas', path: '/groups?tab=TAGS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Configuración', path: '/groups?tab=CONFIG', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Gestión de coordinadores', path: '/gcx?tab=COORDINATORS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Categorías', path: '/gcx?tab=CATEGORIES', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Etiquetas', path: '/gcx?tab=TAGS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Configuración', path: '/gcx?tab=CONFIG', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] }
             ]
         },
@@ -210,39 +210,39 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         {
             label: 'Punto de información',
             icon: Info,
-            path: '/info-point',
+            path: '/punto-de-informacion',
             roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO],
             subItems: [
-                { label: 'Dashboard', path: '/info-point?view=PANEL' },
-                { label: 'Buscar', path: '/info-point?view=SEARCH' },
-                { label: 'Inventario', path: '/info-point?view=INVENTORY' },
-                { label: 'Nuevo Producto', path: '/info-point?view=NEW_PRODUCT' },
-                { label: 'Movimientos', path: '/info-point?view=MOVEMENTS' },
-                { label: 'Eventos', path: '/info-point?view=EVENTS' },
-                { label: 'Préstamos', path: '/info-point?view=LOANS' },
-                { label: 'Bautismos', path: '/info-point?view=BAPTISMS' },
-                { label: 'Presentaciones', path: '/info-point?view=PRESENTATIONS' },
-                { label: 'Anuncios', path: '/info-point?view=ANNOUNCEMENTS' },
-                { label: 'Configuración', path: '/info-point?view=ADMIN_PANEL', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
+                { label: 'Dashboard', path: '/punto-de-informacion?view=PANEL' },
+                { label: 'Buscar', path: '/punto-de-informacion?view=SEARCH' },
+                { label: 'Inventario', path: '/punto-de-informacion?view=INVENTORY' },
+                { label: 'Nuevo Producto', path: '/punto-de-informacion?view=NEW_PRODUCT' },
+                { label: 'Movimientos', path: '/punto-de-informacion?view=MOVEMENTS' },
+                { label: 'Eventos', path: '/punto-de-informacion?view=EVENTS' },
+                { label: 'Préstamos', path: '/punto-de-informacion?view=LOANS' },
+                { label: 'Bautismos', path: '/punto-de-informacion?view=BAPTISMS' },
+                { label: 'Presentaciones', path: '/punto-de-informacion?view=PRESENTATIONS' },
+                { label: 'Anuncios', path: '/punto-de-informacion?view=ANNOUNCEMENTS' },
+                { label: 'Configuración', path: '/punto-de-informacion?view=ADMIN_PANEL', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
                 { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
             ]
         },
         {
             label: 'Sistemas',
             icon: Settings,
-            path: '/admin',
+            path: '/panel-admin',
             roles: [UserRole.SUPER_ADMIN],
             subItems: [
-                { label: 'Usuarios', path: '/admin?tab=users' },
-                { label: 'Configuración', path: '/admin?tab=config' },
-                { label: 'Logs', path: '/admin?tab=logs' },
-                { label: 'Base de datos', path: '/admin?tab=database' }
+                { label: 'Usuarios', path: '/panel-admin?tab=users' },
+                { label: 'Configuración', path: '/panel-admin?tab=config' },
+                { label: 'Logs', path: '/panel-admin?tab=logs' },
+                { label: 'Base de datos', path: '/panel-admin?tab=database' }
             ]
         },
         {
             label: 'Tutoriales',
             icon: Book,
-            path: '/tutorials',
+            path: '/tutoriales',
             roles: []
         }
     ];

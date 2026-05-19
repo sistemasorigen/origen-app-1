@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const BLACKLIST = ['/form', '/nuevo', '/editar', '/login', '/update-password', '/welcome'];
+const BLACKLIST = ['/form', '/nuevo', '/editar', '/login', '/update-password', '/bienvenida'];
 const INACTIVITY_LIMIT = 300000; // 5 minutes
 const CHECK_INTERVAL = 30000;    // 30 seconds
 

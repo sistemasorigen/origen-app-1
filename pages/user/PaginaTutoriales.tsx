@@ -20,7 +20,7 @@ const TUTORIALS = [
         title: 'Explorar Grupos',
         description: 'Cómo buscar, filtrar y unirte a grupos de conexión.',
         icon: Users,
-        path: '/groups?restartTutorial=true',
+        path: '/gcx?restartTutorial=true',
         color: 'bg-purple-500'
     },
     {
@@ -28,7 +28,7 @@ const TUTORIALS = [
         title: 'Panel de Anfitrión',
         description: 'Guía para líderes: crear grupos, gestionar miembros y asistencia.',
         icon: Home,
-        path: '/host-dashboard?restartTutorial=true',
+        path: '/mis-grupos?restartTutorial=true',
         color: 'bg-pink-500',
         roles: [UserRole.ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]
     },
@@ -37,7 +37,7 @@ const TUTORIALS = [
         title: 'Crear Grupo',
         description: 'Paso a paso para configurar un nuevo Grupo de Conexión.',
         icon: Users,
-        path: '/host-dashboard?restartTutorial=true&modal=createGroup',
+        path: '/mis-grupos?restartTutorial=true&modal=createGroup',
         color: 'bg-green-500',
         roles: [UserRole.ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]
     },
@@ -46,7 +46,7 @@ const TUTORIALS = [
         title: 'Bienvenida',
         description: 'Gestión de nuevos visitantes y seguimiento de integración.',
         icon: Sparkles,
-        path: '/welcome?restartTutorial=true',
+        path: '/bienvenida?restartTutorial=true',
         color: 'bg-yellow-500',
         roles: [UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA, UserRole.SUPER_ADMIN]
     },

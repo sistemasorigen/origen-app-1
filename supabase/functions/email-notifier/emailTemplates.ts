@@ -42,7 +42,7 @@ export const templates = {
       <p>Ya puedes comenzar a ver las inscripciones y gestionar los detalles desde la aplicación Origen.</p>
       <p>¡Gracias por tu disposición para conectar a la iglesia!</p>
       <div style="text-align: center; margin-top: 30px;">
-        <a href="https://app.iglesiaorigen.com/groups" style="background-color: #0056b3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Ir a Mis Grupos</a>
+        <a href="https://app.iglesiaorigen.com/gcx" style="background-color: #0056b3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Ir a Mis Grupos</a>
       </div>
       <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
       <p style="font-size: 12px; color: #777; text-align: center;">El Equipo de Origen</p>
@@ -57,7 +57,7 @@ export const templates = {
       <p>Tu postulación ha sido <strong>aprobada</strong>. A partir de ahora formas parte oficial del equipo de Anfitriones de Grupos de Conexión (GCX).</p>
       <p>Puedes ingresar a la aplicación y comenzar a crear tus grupos.</p>
       <div style="text-align: center; margin-top: 30px;">
-        <a href="https://app.iglesiaorigen.com/groups/new" style="background-color: #0056b3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Crear mi Primer Grupo</a>
+        <a href="https://app.iglesiaorigen.com/gcx/new" style="background-color: #0056b3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Crear mi Primer Grupo</a>
       </div>
       <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
       <p style="font-size: 12px; color: #777; text-align: center;">El Equipo de Origen</p>
@@ -218,7 +218,7 @@ export const templates = {
             <!-- Link al sistema -->
             <div style="text-align: center;
                 margin-top: 24px;">
-                <a href="https://app.origeniglesia.org/#/welcome"
+                <a href="https://app.origeniglesia.org/#/bienvenida"
                     style="background-color: #000;
                         color: #fff;
                         padding: 12px 24px;
@@ -383,7 +383,7 @@ export const templates = {
 
             <div style="text-align: center;
                 margin-top: 24px;">
-                <a href="https://app.origeniglesia.org/#/welcome"
+                <a href="https://app.origeniglesia.org/#/bienvenida"
                     style="background-color: #000;
                         color: #fff;
                         padding: 12px 24px;

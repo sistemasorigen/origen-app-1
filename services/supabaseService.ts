@@ -1434,7 +1434,7 @@ export const supabaseService = {
             ? `Tu grupo "${groupData.name}" ha sido aprobado. Recuerda registrar asistencia cada ${groupData.meeting_day || 'reunión'}.`
             : `Tu grupo "${groupData.name}" no ha podido ser aprobado en este momento.${adminNote ? ` Motivo: ${adminNote}` : ''}`;
           const type = isApproved ? 'GROUP_APPROVED' : 'GROUP_REJECTED';
-          const actionUrl = '/host-dashboard';
+          const actionUrl = '/mis-grupos';
 
           if (groupData.host_id) {
             await supabaseService.createAppNotification(groupData.host_id, title, message, type, actionUrl);

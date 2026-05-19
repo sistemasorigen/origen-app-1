@@ -36,7 +36,7 @@ const FullScreenMenu: React.FC<FullScreenMenuProps> = ({ isOpen, onClose, curren
         },
         {
             label: 'MIS GRUPOS',
-            path: '/host-dashboard',
+            path: '/mis-grupos',
             visible: !!currentUser && hasRole(currentUser, [UserRole.ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN])
         },
         {
@@ -46,12 +46,12 @@ const FullScreenMenu: React.FC<FullScreenMenuProps> = ({ isOpen, onClose, curren
         },
         {
             label: 'GCX',
-            path: '/groups',
+            path: '/gcx',
             visible: !!currentUser
         },
         {
             label: 'PUNTO DE INFORMACIÓN',
-            path: '/info-point',
+            path: '/punto-de-informacion',
             visible: !!currentUser
         },
         {
@@ -61,12 +61,12 @@ const FullScreenMenu: React.FC<FullScreenMenuProps> = ({ isOpen, onClose, curren
         },
         {
             label: 'BIENVENIDA',
-            path: '/welcome',
+            path: '/bienvenida',
             visible: !!currentUser && hasRole(currentUser, [UserRole.SUPER_ADMIN, UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA])
         },
         {
             label: 'SISTEMAS',
-            path: '/admin',
+            path: '/panel-admin',
             visible: !!currentUser && hasRole(currentUser, [UserRole.SUPER_ADMIN])
         },
     ];

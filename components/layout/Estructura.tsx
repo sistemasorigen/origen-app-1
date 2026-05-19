@@ -35,7 +35,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     const [isNotifDrawerOpen, setIsNotifDrawerOpen] = useState(false);
 
     const isDashboard = location.pathname === '/';
-    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/groups' || location.pathname === '/info-point' || location.pathname === '/alabanza' || location.pathname.startsWith('/coordinators');
+    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/gcx' || location.pathname === '/punto-de-informacion' || location.pathname === '/alabanza' || location.pathname.startsWith('/coordinators');
 
     const handleLogoutAction = () => {
         onLogout?.();
