@@ -3783,7 +3783,8 @@ export const supabaseService = {
 
   // --- METRICS (GROUPS) ---
   async getGroupRegistrationAnalytics(
-    filter: 'ACTIVOS' | 'FINALIZADOS' | 'ALL' | 'S1' | 'S2' | 'S3' = 'ALL'
+    filter: 'ACTIVOS' | 'FINALIZADOS' | 'ALL' | 'S1' | 'S2' | 'S3' = 'ALL',
+    year?: number
   ): Promise<{
     totalGroups: number;
     totalHosts: number;
@@ -3816,12 +3817,15 @@ export const supabaseService = {
           } else if (filter === 'FINALIZADOS') {
               return isFinished;
           } else {
-              // Filtro de temporada: S1, S2 o S3
-              // Solo grupos aprobados cuyo start_date
-              // cae en la temporada seleccionada
+              // Filtro de temporada: S1, S2 o S3 + año opcional
               const season = getSeasonFromDate(g.start_date);
+              const groupYear = g.start_date
+                  ? new Date(g.start_date + 'T12:00:00').getFullYear()
+                  : null;
+              const yearMatch = year ? groupYear === year : true;
               return g.status === 'approved' &&
-                     season === filter;
+                     season === filter &&
+                     yearMatch;
           }
         });
       }

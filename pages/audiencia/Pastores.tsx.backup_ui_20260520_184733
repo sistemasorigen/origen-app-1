@@ -214,7 +214,7 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                     const [fullAttendance, dropouts, analytics] = await Promise.all([
                         supabaseService.getFullAttendanceReport(),
                         supabaseService.getAllDropoutRequests(),
-                        supabaseService.getGroupRegistrationAnalytics(groupsFilter, groupsFilter === 'TEMPORADAS' ? selectedYear : undefined)
+                        supabaseService.getGroupRegistrationAnalytics(groupsFilter)
                     ]);
                     setFullAttendanceReport(fullAttendance);
                     setDropoutRequests(dropouts);
@@ -243,7 +243,7 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                     ? seasonFilter
                     : groupsFilter;
                 const analytics = await supabaseService
-                    .getGroupRegistrationAnalytics(analyticsFilter, groupsFilter === 'TEMPORADAS' ? selectedYear : undefined);
+                    .getGroupRegistrationAnalytics(analyticsFilter);
                 setRegistrationAnalytics(analytics);
             } catch (error) {
                 console.error("Error fetching filtered analytics", error);
@@ -571,14 +571,14 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                         {activeTab === 'GROUPS' && (
                             <div className="space-y-4 md:space-y-6 animate-fadeIn">
                                 {/* Sub-Navigation Pills */}
-                                <div className="flex border-b-2 border-black overflow-x-auto scrollbar-hide bg-white rounded-t-xl -mb-px">
+                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                                     {(['METRICS', 'ASISTENCIAS', 'BAJAS', 'INTERACCIONES'] as GroupsSubTab[]).map((tab) => (
                                         <button
                                             key={tab}
                                             onClick={() => setGroupsSubTab(tab)}
-                                            className={`px-5 py-3.5 text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-b-[3px] -mb-px shrink-0 ${groupsSubTab === tab
-                                                ? 'border-amber-500 text-black bg-amber-50'
-                                                : 'border-transparent text-neutral-400 hover:text-black hover:border-neutral-300'
+                                            className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-2 rounded-full whitespace-nowrap transition-all ${groupsSubTab === tab
+                                                ? 'bg-black text-white border-black'
+                                                : 'bg-white text-black border-black hover:bg-slate-100'
                                                 }`}
                                         >
                                             {tab === 'METRICS' && 'Métricas'}
@@ -656,68 +656,53 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                                                     {/* Card 1: Grupos */}
-                                                    <div className="border-2 border-black p-5 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between min-h-[130px]">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                                                            Grupos {groupsFilter === 'ACTIVOS'
-                                                                ? 'Activos'
-                                                                : groupsFilter === 'FINALIZADOS'
-                                                                    ? 'Finalizados'
-                                                                    : SEASON_LABELS[seasonFilter]}
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                        <p className="text-[10px] md:text-xs font-black uppercase text-slate-600 mb-1">
+                                                            Grupos {
+                                                                groupsFilter === 'ACTIVOS'
+                                                                    ? 'Activos'
+                                                                    : groupsFilter === 'FINALIZADOS'
+                                                                        ? 'Finalizados'
+                                                                        : SEASON_LABELS[seasonFilter]
+                                                            }
                                                         </p>
-                                                        <p className="text-5xl md:text-6xl font-black text-black leading-none mt-2">
-                                                            {registrationAnalytics.totalGroups}
-                                                        </p>
-                                                        <p className="text-[10px] font-medium text-neutral-400 mt-2">Total de grupos</p>
+                                                        <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalGroups}</p>
+                                                        <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Total de grupos</p>
                                                     </div>
 
                                                     {/* Card 2: Anfitriones */}
-                                                    <div className="border-2 border-black p-5 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between min-h-[130px]">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">Anfitriones</p>
-                                                        <p className="text-5xl md:text-6xl font-black text-black leading-none mt-2">
-                                                            {registrationAnalytics.totalHosts}
-                                                        </p>
-                                                        <p className="text-[10px] font-medium text-neutral-400 mt-2">Líderes principales únicos</p>
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-orange-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                        <p className="text-[10px] md:text-xs font-black uppercase text-orange-600 mb-1">Anfitriones</p>
+                                                        <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalHosts}</p>
+                                                        <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Líderes principales únicos</p>
                                                     </div>
 
-                                                    {/* Card 3: Co-Anfitriones */}
-                                                    <div className="border-2 border-black p-5 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between min-h-[130px]">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">Co-Anfitriones</p>
-                                                        <p className="text-5xl md:text-6xl font-black text-black leading-none mt-2">
-                                                            {registrationAnalytics.totalCoHosts}
-                                                        </p>
-                                                        <p className="text-[10px] font-medium text-neutral-400 mt-2">Líderes de apoyo únicos</p>
+                                                    {/* Card 2.5: Co-Anfitriones */}
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-yellow-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                        <p className="text-[10px] md:text-xs font-black uppercase text-yellow-600 mb-1">Co-Anfitriones</p>
+                                                        <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalCoHosts}</p>
+                                                        <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Líderes de apoyo únicos</p>
                                                     </div>
 
-                                                    {/* Card 4: Personas Únicas */}
-                                                    <div className="border-2 border-black p-5 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between min-h-[130px]">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">Personas Únicas</p>
-                                                        <p className="text-5xl md:text-6xl font-black text-black leading-none mt-2">
-                                                            {registrationAnalytics.uniquePeople}
-                                                        </p>
-                                                        <p className="text-[10px] font-medium text-neutral-400 mt-2">Usuarios distintos inscriptos</p>
+                                                    {/* Card 3: Personas Únicas */}
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-amber-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                        <p className="text-[10px] md:text-xs font-black uppercase text-amber-600 mb-1">Personas Únicas</p>
+                                                        <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.uniquePeople}</p>
+                                                        <p className="text-[10px] text-neutral-500 mt-2 font-bold select-none">Usuarios distintos inscriptos</p>
                                                     </div>
 
-                                                    {/* Card 5: Inscripciones Totales — hero card */}
-                                                    <div className="border-2 border-black p-5 bg-black col-span-2 lg:col-span-1 shadow-[3px_3px_0px_0px_rgba(245,158,11,1)] flex flex-col justify-between min-h-[130px]">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500">Inscripciones Totales</p>
-                                                        <p className="text-5xl md:text-6xl font-black text-amber-500 leading-none mt-2">
-                                                            {registrationAnalytics.totalRegistrations}
-                                                        </p>
-                                                        <div className="space-y-1 mt-2">
-                                                            <div className="flex justify-between text-[9px] font-bold text-neutral-500">
-                                                                <span>1 grupo</span>
-                                                                <span className="text-white">{registrationAnalytics.distribution['1'] || 0}</span>
-                                                            </div>
-                                                            <div className="flex justify-between text-[9px] font-bold text-neutral-500">
-                                                                <span>2 grupos</span>
-                                                                <span className="text-white">{registrationAnalytics.distribution['2'] || 0}</span>
-                                                            </div>
-                                                            <div className="flex justify-between text-[9px] font-bold text-neutral-500">
-                                                                <span>3+ grupos</span>
-                                                                <span className="text-amber-400">{registrationAnalytics.distribution['3+'] || 0}</span>
-                                                            </div>
+                                                    {/* Card 4: Inscripciones. merged with distribution. */}
+                                                    <div className="border-2 border-black p-4 rounded-lg bg-emerald-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between">
+                                                        <div>
+                                                            <p className="text-[10px] md:text-xs font-black uppercase text-emerald-600 mb-1">Inscripciones Totales</p>
+                                                            <p className="text-3xl md:text-4xl font-black text-black">{registrationAnalytics.totalRegistrations}</p>
+                                                        </div>
+                                                        <div className="space-y-1 mt-3">
+                                                            <div className="flex justify-between items-center bg-white px-2 py-0.5 rounded text-[10px] font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[1px_1px_0px_0px_rgba(6,78,59,0.3)]"><span>1 grupo:</span> <span>{registrationAnalytics.distribution['1'] || 0}</span></div>
+                                                            <div className="flex justify-between items-center bg-white px-2 py-0.5 rounded text-[10px] font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[1px_1px_0px_0px_rgba(6,78,59,0.3)]"><span>2 grupos:</span> <span>{registrationAnalytics.distribution['2'] || 0}</span></div>
+                                                            <div className="flex justify-between items-center bg-white px-2 py-0.5 rounded text-[10px] font-bold text-black border-2 border-emerald-900 border-opacity-20 shadow-[1px_1px_0px_0px_rgba(6,78,59,0.3)]"><span>3+ grupos:</span> <span>{registrationAnalytics.distribution['3+'] || 0}</span></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -772,42 +757,21 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
 
                                                 return (
                                                     <>
-                                                        {/* Ranking de inscripciones */}
-                                                        <div className="space-y-1.5 mb-6">
-                                                            {filteredGroups.map((item, idx) => {
-                                                                const maxValue = filteredGroups[0]?.value || 1;
-                                                                const pct = Math.round((item.value / maxValue) * 100);
-                                                                return (
-                                                                    <div
-                                                                        key={idx}
-                                                                        className="flex items-center gap-3 px-3 py-2.5 border-2 border-black bg-white hover:bg-amber-50 transition-colors"
-                                                                    >
-                                                                        <span className="text-[10px] font-black text-neutral-300 w-6 shrink-0 tabular-nums">
-                                                                            {String(idx + 1).padStart(2, '0')}
-                                                                        </span>
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <p className="font-bold text-xs text-black truncate mb-1">{item.name}</p>
-                                                                            <div className="h-1 bg-neutral-100 w-full overflow-hidden">
-                                                                                <div
-                                                                                    className="h-full bg-amber-500 transition-all duration-500"
-                                                                                    style={{ width: `${pct}%` }}
-                                                                                />
-                                                                            </div>
-                                                                        </div>
-                                                                        <span className="font-black text-xl text-amber-500 shrink-0 tabular-nums w-8 text-right">
-                                                                            {item.value}
-                                                                        </span>
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-8">
+                                                            {filteredGroups.map((item, idx) => (
+                                                                <div key={idx} className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-white hover:bg-amber-50 transition-colors">
+                                                                    <span className="font-bold text-xs md:text-sm text-black truncate mr-2 md:mr-4">{item.name}</span>
+                                                                    <span className="font-black text-lg md:text-xl text-amber-600 shrink-0">{item.value}</span>
+                                                                </div>
+                                                            ))}
                                                         </div>
 
-                                                        <div className="block h-[400px] md:h-[560px] mt-4">
+                                                        <div className="block h-[500px] md:h-[600px] mt-4">
                                                             <ResponsiveContainer width="100%" height="100%">
-                                                                <BarChart data={filteredGroups} layout="vertical" margin={{ top: 5, right: 50, left: 8, bottom: 5 }}>
-                                                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#f0f0f0" />
-                                                                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: '700' }} allowDecimals={false} />
-                                                                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: '700' }} width={140} />
+                                                                <BarChart data={filteredGroups} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
+                                                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e5e5" />
+                                                                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: 'bold' }} allowDecimals={false} />
+                                                                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#000', fontSize: 10, fontWeight: 'bold' }} width={100} />
                                                                     <Tooltip
                                                                         contentStyle={{ backgroundColor: '#000', border: '2px solid #000', color: '#fff', fontWeight: 'bold' }}
                                                                         cursor={{ fill: '#fef3c7' }}
