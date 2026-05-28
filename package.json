@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "vite preview --host --port ${PORT:-8080}",
-    "deploy": "git pull upstream main && npm run build && git add -A && git commit -m \"chore: deploy\" --allow-empty && git push upstream main"
+    "deploy": "git pull upstream main && npm run build && git add -f dist && git add -A && git commit -m \"chore: deploy\" --allow-empty && git push upstream main"
   },
   "dependencies": {
     "@google/genai": "^1.31.0",
