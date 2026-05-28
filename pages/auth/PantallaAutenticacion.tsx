@@ -1,5 +1,6 @@
 
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabaseClient';
 import { User } from '../../types';
@@ -18,6 +19,7 @@ interface AuthScreenProps {
 type AuthMode = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD';
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
+    const navigate = useNavigate();
     const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
 
     const [mode, setMode] = useState<AuthMode>('LOGIN');
@@ -178,8 +180,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             return;
         }
 
-        if (formData.password.length < 6) {
-            setError("La contraseña debe tener al menos 6 caracteres.");
+        if (formData.password.length < 8) {
+            setError("La contraseña debe tener al menos 8 caracteres.");
             setLoading(false);
             return;
         }
@@ -294,6 +296,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     return (
         <>
         <div className="min-h-screen flex flex-col lg:flex-row bg-white font-sans text-black overflow-hidden">
+
+            {/* Back to Home button */}
+            <button
+                onClick={() => navigate('/')}
+                className="absolute top-4 left-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold text-slate-600 hover:text-black hover:bg-slate-100 transition-all"
+            >
+                <ArrowLeft className="w-4 h-4" />
+                Volver al home
+            </button>
+
             {/* Tutorial Components */}
             <TutorialInvitation
                 isOpen={showInvitation}

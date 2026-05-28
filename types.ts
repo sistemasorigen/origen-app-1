@@ -676,9 +676,35 @@ export interface BannerConfig {
 
 export type BlurLevel = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
+export interface SeasonConfig {
+    isOpen: boolean;
+    startDate: string;
+    endDate: string;
+    label: string;
+}
+
+export interface SeasonSettings {
+    activeYear: number;
+    seasons: {
+        S1: SeasonConfig;
+        S2: SeasonConfig;
+        S3: SeasonConfig;
+    };
+}
+
+export const DEFAULT_SEASON_SETTINGS: SeasonSettings = {
+    activeYear: new Date().getFullYear(),
+    seasons: {
+        S1: { isOpen: true,  startDate: '03-23', endDate: '05-17', label: 'Primera Temporada' },
+        S2: { isOpen: false, startDate: '06-29', endDate: '08-23', label: 'Segunda Temporada' },
+        S3: { isOpen: false, startDate: '10-05', endDate: '11-29', label: 'Tercer Temporada'  },
+    }
+};
+
 export interface GroupsConfig {
     activeBlurLevel: BlurLevel;
-    banners?: BannerSlide[]; // Ensures we have banners specifically for Groups module
+    banners?: BannerSlide[];
+    seasonSettings?: SeasonSettings;
 }
 
 export interface InfoPointConfig {

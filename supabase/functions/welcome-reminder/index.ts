@@ -21,6 +21,16 @@ serve(async (req) => {
         return new Response('Method Not Allowed', { status: 405 });
     }
 
+    // Verify caller is the scheduler using a pre-shared secret.
+    // Set CRON_SECRET in Supabase Edge Function environment variables,
+    // and configure pg_cron to pass: Authorization: Bearer <CRON_SECRET>
+    const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
+    const authHeader = req.headers.get('Authorization') ?? '';
+    if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+        console.warn('[Reminder] Unauthorized call — missing or invalid CRON_SECRET');
+        return new Response('Unauthorized', { status: 401 });
+    }
+
     try {
         const now = new Date();
 

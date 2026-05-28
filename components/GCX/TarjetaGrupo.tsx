@@ -101,6 +101,15 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
     };
 
     const getButtonState = () => {
+        // Sin sesión: mostrar botón invitación igual de verde para atraer al click
+        if (!currentUser) {
+            return {
+                text: 'UNIRME',
+                baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white shadow-lg shadow-[#28a946]/20 active:scale-95',
+                icon: <ArrowRight className="w-3.5 h-3.5" />,
+                disabled: false
+            };
+        }
         if (status === 'FINISHED') {
             return { text: 'FINALIZADO', baseClass: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-500 cursor-not-allowed', icon: null, disabled: true };
         }

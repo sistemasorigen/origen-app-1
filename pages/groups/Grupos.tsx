@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
-import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration } from '../../types';
+import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield } from 'lucide-react';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
@@ -31,7 +31,7 @@ import GroupsAdminList from '../../components/GCX/ListaGruposAdmin';
 
 interface GroupsProps {
     currentUser: User | null;
-    onLoginRequest: (email: string, pass: string) => Promise<boolean>;
+    onLoginRequest?: () => void;
 }
 
 // --- UTILITIES ---
@@ -97,8 +97,8 @@ interface GroupsNavbarProps {
     isGroupLeader: boolean;
     isSuperAdmin: boolean;
     // Admin Navigation Props
-    activeSubTab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS';
-    setSubTab: (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS') => void;
+    activeSubTab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS' | 'SEASONS';
+    setSubTab: (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS' | 'SEASONS') => void;
     canSeeConfig: boolean;
 }
 
@@ -122,10 +122,11 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
         'TAGS': 'Etiquetas',
         'CONFIG': 'Config',
         'HOSTS': 'Anfitriones',
-        'COORDINATORS': 'Coordinadores'
+        'COORDINATORS': 'Coordinadores',
+        'SEASONS': 'Temporadas'
     };
 
-    const handleTabClick = (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS') => {
+    const handleTabClick = (tab: 'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS' | 'SEASONS') => {
         setSubTab(tab);
         setIsMenuOpen(false);
     };
@@ -232,6 +233,16 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
                                                     <ImageIcon className="w-5 h-5 shrink-0" />
                                                     CONFIG
                                                 </button>
+                                                <button
+                                                    onClick={() => handleTabClick('SEASONS')}
+                                                    className={`flex items-center gap-3 p-4 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeSubTab === 'SEASONS'
+                                                        ? 'bg-black text-white'
+                                                        : 'bg-slate-50 text-black hover:bg-slate-100 border border-slate-200'
+                                                        }`}
+                                                >
+                                                    <Calendar className="w-5 h-5 shrink-0" />
+                                                    TEMPORADAS
+                                                </button>
                                             </>
                                         )}
                                     </div>
@@ -288,12 +299,12 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
     // --- MAIN STATE ---
     const [view, setView] = useState<'public' | 'admin'>('public');
-    const [adminSubTab, setAdminSubTab] = useState<'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS'>('GROUPS');
+    const [adminSubTab, setAdminSubTab] = useState<'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS' | 'SEASONS'>('GROUPS');
 
     // Deep linking for admin tabs
     useEffect(() => {
         const tab = searchParams.get('tab');
-        if (tab && ['GROUPS', 'CATEGORIES', 'TAGS', 'CONFIG', 'HOSTS', 'COORDINATORS'].includes(tab)) {
+        if (tab && ['GROUPS', 'CATEGORIES', 'TAGS', 'CONFIG', 'HOSTS', 'COORDINATORS', 'SEASONS'].includes(tab)) {
             setAdminSubTab(tab as any);
             setView('admin'); // Auto-switch to admin view if a tab is requested
         }
@@ -305,6 +316,8 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const [categories, setCategories] = useState<GroupCategory[]>([]);
     const [tags, setTags] = useState<GroupTag[]>([]);
     const [config, setConfig] = useState<AppConfig>(db.getAppConfig());
+    const [editingSeasons, setEditingSeasons] = useState<SeasonSettings | null>(null);
+    const [isSavingSeasons, setIsSavingSeasons] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     // Filters
@@ -888,18 +901,32 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // handleInquirySubmit removed - logic moved to JoinGroupModal
 
     const handleJoinClick = (g: Group) => {
+        // GUARD: Si no hay sesión, redirigir a /auth con retorno a /gcx
+        if (!currentUser) {
+            navigate('/auth', {
+                state: { from: { pathname: '/gcx' } }
+            });
+            return;
+        }
+
         // AGE VALIDATION
-        if (currentUser?.age) {
+        if (currentUser.age) {
             const minAge = g.minAge || 0;
             const maxAge = g.maxAge || 100;
 
             if (currentUser.age < minAge) {
-                showToast(`No puedes unirte. Debes tener al menos ${minAge} años.`, 'error');
+                showToast(
+                    `No puedes unirte. Debes tener al menos ${minAge} años.`,
+                    'error'
+                );
                 return;
             }
 
             if (currentUser.age > maxAge) {
-                showToast(`No puedes unirte. La edad máxima es ${maxAge} años.`, 'error');
+                showToast(
+                    `No puedes unirte. La edad máxima es ${maxAge} años.`,
+                    'error'
+                );
                 return;
             }
         }
@@ -1088,6 +1115,34 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         db.saveAppConfig(newConfig);
         supabaseService.saveAppConfig(newConfig);
         setConfig(newConfig);
+    };
+
+    const handleSaveSeasonSettings = async () => {
+        if (!editingSeasons) return;
+        setIsSavingSeasons(true);
+        try {
+            const updatedConfig: AppConfig = {
+                ...config,
+                groupsConfig: {
+                    ...config?.groupsConfig,
+                    activeBlurLevel: config?.groupsConfig?.activeBlurLevel || 'md',
+                    seasonSettings: editingSeasons
+                }
+            };
+            db.saveAppConfig(updatedConfig);
+            const ok = await supabaseService.saveAppConfig(updatedConfig);
+            if (ok) {
+                setConfig(updatedConfig);
+                setEditingSeasons(null);
+                showToast('Configuración de temporadas guardada', 'success');
+            } else {
+                showToast('Error al guardar', 'error');
+            }
+        } catch {
+            showToast('Error al guardar', 'error');
+        } finally {
+            setIsSavingSeasons(false);
+        }
     };
 
     const renderLeaderDashboard = () => {
@@ -1758,8 +1813,165 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                             )}
                                         </div>
                                     </div>
+
                                 </div>
                             )}
+
+                            {/* SEASONS MANAGEMENT TAB */}
+                            {adminSubTab === 'SEASONS' && (() => {
+                                const seasonSettings: SeasonSettings = config?.groupsConfig?.seasonSettings ?? DEFAULT_SEASON_SETTINGS;
+                                return (
+                                    <div className="max-w-4xl">
+                                        <h3 className="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tighter mb-6">Temporadas</h3>
+
+                                        <div className="bg-white p-8 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                            <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-black">
+                                                <div>
+                                                    <h4 className="font-black text-base uppercase tracking-tight">Configuración de Temporadas</h4>
+                                                    <p className="text-xs font-medium text-neutral-500 mt-1">
+                                                        Habilitá o deshabilitá en qué temporadas se puede crear o re-abrir un grupo. También podés ajustar el año activo y las fechas exactas.
+                                                    </p>
+                                                </div>
+                                                {!editingSeasons ? (
+                                                    <button
+                                                        onClick={() => setEditingSeasons(JSON.parse(JSON.stringify(seasonSettings)))}
+                                                        className="px-4 py-2 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all shrink-0"
+                                                    >
+                                                        Editar
+                                                    </button>
+                                                ) : (
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => setEditingSeasons(null)}
+                                                            className="px-4 py-2 text-xs font-black uppercase tracking-widest border-2 border-black hover:bg-neutral-100 transition-all"
+                                                        >
+                                                            Cancelar
+                                                        </button>
+                                                        <button
+                                                            onClick={handleSaveSeasonSettings}
+                                                            disabled={isSavingSeasons}
+                                                            className="px-4 py-2 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black hover:opacity-80 transition-all disabled:opacity-50 shrink-0"
+                                                        >
+                                                            {isSavingSeasons ? 'Guardando...' : 'Guardar'}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Año activo */}
+                                            <div className="mb-6 p-4 border-2 border-neutral-200 bg-neutral-50 flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-xs font-black uppercase tracking-widest text-neutral-600">Año activo de temporadas</p>
+                                                    <p className="text-[10px] font-medium text-neutral-400 mt-0.5">Las fechas de cada temporada se aplicarán a este año.</p>
+                                                </div>
+                                                {editingSeasons ? (
+                                                    <input
+                                                        type="number"
+                                                        min={2024}
+                                                        max={2030}
+                                                        value={editingSeasons.activeYear}
+                                                        onChange={e => setEditingSeasons({ ...editingSeasons, activeYear: parseInt(e.target.value) || new Date().getFullYear() })}
+                                                        className="w-24 h-10 px-3 border-2 border-black font-black text-center text-base focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                                    />
+                                                ) : (
+                                                    <span className="text-3xl font-black tabular-nums">{seasonSettings.activeYear}</span>
+                                                )}
+                                            </div>
+
+                                            {/* Las 3 temporadas */}
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                {(['S1', 'S2', 'S3'] as const).map(key => {
+                                                    const s = editingSeasons ? editingSeasons.seasons[key] : seasonSettings.seasons[key];
+                                                    const year = editingSeasons ? editingSeasons.activeYear : seasonSettings.activeYear;
+                                                    return (
+                                                        <div
+                                                            key={key}
+                                                            className={`border-2 p-5 transition-all ${s.isOpen ? 'border-black bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]' : 'border-neutral-200 bg-neutral-50'}`}
+                                                        >
+                                                            <div className="flex items-center justify-between mb-4">
+                                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{key}</p>
+                                                                {editingSeasons ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const updated = JSON.parse(JSON.stringify(editingSeasons));
+                                                                            updated.seasons[key].isOpen = !updated.seasons[key].isOpen;
+                                                                            setEditingSeasons(updated);
+                                                                        }}
+                                                                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider border-2 transition-all ${editingSeasons.seasons[key].isOpen ? 'bg-black border-black text-white' : 'bg-white border-neutral-300 text-neutral-400 hover:border-black'}`}
+                                                                    >
+                                                                        {editingSeasons.seasons[key].isOpen ? 'Abierta' : 'Cerrada'}
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-wider ${s.isOpen ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-400'}`}>
+                                                                        {s.isOpen ? 'Abierta' : 'Cerrada'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {editingSeasons ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={editingSeasons.seasons[key].label}
+                                                                    onChange={e => {
+                                                                        const updated = JSON.parse(JSON.stringify(editingSeasons));
+                                                                        updated.seasons[key].label = e.target.value;
+                                                                        setEditingSeasons(updated);
+                                                                    }}
+                                                                    className="w-full h-8 px-2 border-2 border-black font-black text-sm uppercase tracking-tight mb-3 focus:outline-none"
+                                                                />
+                                                            ) : (
+                                                                <p className="font-black text-base uppercase tracking-tight mb-3">{s.label}</p>
+                                                            )}
+
+                                                            <div className="space-y-2">
+                                                                <div>
+                                                                    <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1">Inicio (DD-MM)</p>
+                                                                    {editingSeasons ? (
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="23-03"
+                                                                            maxLength={5}
+                                                                            value={editingSeasons.seasons[key].startDate.split('-').reverse().join('-')}
+                                                                            onChange={e => {
+                                                                                const updated = JSON.parse(JSON.stringify(editingSeasons));
+                                                                                updated.seasons[key].startDate = e.target.value.split('-').reverse().join('-');
+                                                                                setEditingSeasons(updated);
+                                                                            }}
+                                                                            className="w-full h-8 px-2 border-2 border-black font-bold text-sm text-center tabular-nums focus:outline-none"
+                                                                        />
+                                                                    ) : (
+                                                                        <p className="text-sm font-bold tabular-nums text-neutral-600">{(s.startDate || '').split('-').reverse().join('-')} · {year}</p>
+                                                                    )}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1">Fin (DD-MM)</p>
+                                                                    {editingSeasons ? (
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="17-05"
+                                                                            maxLength={5}
+                                                                            value={editingSeasons.seasons[key].endDate.split('-').reverse().join('-')}
+                                                                            onChange={e => {
+                                                                                const updated = JSON.parse(JSON.stringify(editingSeasons));
+                                                                                updated.seasons[key].endDate = e.target.value.split('-').reverse().join('-');
+                                                                                setEditingSeasons(updated);
+                                                                            }}
+                                                                            className="w-full h-8 px-2 border-2 border-black font-bold text-sm text-center tabular-nums focus:outline-none"
+                                                                        />
+                                                                    ) : (
+                                                                        <p className="text-sm font-bold tabular-nums text-neutral-600">{(s.endDate || '').split('-').reverse().join('-')} · {year}</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* HOSTS MANAGEMENT TAB */}
                             {adminSubTab === 'HOSTS' && (

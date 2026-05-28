@@ -23,6 +23,9 @@ export async function correctTextWithGemini(text: string): Promise<string> {
     return text;
   }
 
+  // Strip control characters and cap length to prevent prompt injection
+  const sanitizedText = text.replace(/[\x00-\x1F\x7F]/g, ' ').slice(0, 2000);
+
   const prompt = `Actúa como un corrector ortográfico y gramatical experto de la RAE (Real Academia Española).
 Tu única misión es transformar el texto de entrada en español perfecto, formal y correcto.
 
@@ -47,7 +50,7 @@ Output: Hola, ¿cómo estás?
 Input: "Deberia de korregir todo lo que esta mal"
 Output: Debería corregir todo lo que está mal.
 
-Input: "${text}"
+Input: "${sanitizedText}"
 Output:`;
 
   try {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { User, UserRole, Group } from '../../types';
+import { User, UserRole, Group, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import { supabaseService } from '../../services/supabaseService';
 import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus, Check, Link } from 'lucide-react';
@@ -30,6 +30,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
     const [selectedGroupForAttendance, setSelectedGroupForAttendance] = useState<Group | null>(null);
     const [isReopenRequest, setIsReopenRequest] = useState(false);
+    const [seasonSettings, setSeasonSettings] = useState<SeasonSettings>(DEFAULT_SEASON_SETTINGS);
     const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
     const [isDropoutModalOpen, setIsDropoutModalOpen] = useState(false);
     const [selectedGroupForDropout, setSelectedGroupForDropout] = useState<Group | null>(null);
@@ -127,6 +128,14 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     useEffect(() => {
         fetchMyGroups();
     }, [currentUser]);
+
+    useEffect(() => {
+        supabaseService.getAppConfig().then(cfg => {
+            if (cfg?.groupsConfig?.seasonSettings) {
+                setSeasonSettings(cfg.groupsConfig.seasonSettings);
+            }
+        });
+    }, []);
 
     // Check for modal query param (e.g. from Tutorials page)
     useEffect(() => {
@@ -651,6 +660,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                     editingGroup={editingGroup}
                     currentUser={currentUser}
                     isReopenRequest={isReopenRequest}
+                    seasonSettings={seasonSettings}
                 />
             )}
 
