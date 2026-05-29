@@ -7,7 +7,6 @@ import { db } from '../../services/dbService';
 import { supabaseService } from '../../services/supabaseService';
 import { User, UserRole, Log, SystemModule, AppConfig, BannerSlide, ValuesSectionConfig, Group, FooterLinks, CoordinatorVariant } from '../../types';
 import { Users, Shield, Home, Database, CloudUpload, Save, Search, X, Check, Book, Palette, Globe, Plus, Edit2, Trash2, Info, UserCheck, ClipboardList, CheckCircle, XCircle, Share2, Instagram, Facebook, Youtube, Music, Eye } from 'lucide-react';
-import { migrateToSupabase } from '../../services/migrationService';
 import ImageUpload from '../../components/media/SubidaImagen';
 import AdminAuditLogs from '../../components/admin/RegistroAuditoriaAdmin';
 import NeoModal from '../../components/ui/NeoModal';
@@ -85,13 +84,13 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
 
 
 
-    const [activeTab, setActiveTab] = useState<'users' | 'leaders' | 'postulations' | 'config' | 'logs' | 'database'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'leaders' | 'postulations' | 'config' | 'logs'>('users');
     const [searchParams] = useSearchParams();
 
     // Deep linking
     useEffect(() => {
         const tab = searchParams.get('tab');
-        if (tab && ['users', 'leaders', 'config', 'logs', 'database'].includes(tab)) {
+        if (tab && ['users', 'leaders', 'config', 'logs'].includes(tab)) {
             setActiveTab(tab as any);
         }
     }, [searchParams]);
@@ -107,8 +106,6 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     const [toast, setToast] = useState<{ show: boolean, message: string, type: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
 
     // Migration State
-    const [migrationStatus, setMigrationStatus] = useState<string>('');
-    const [isMigrating, setIsMigrating] = useState(false);
 
     // Search State
     const [searchTerm, setSearchTerm] = useState('');
@@ -426,25 +423,6 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             ...config,
             verses: updatedVerses
         });
-    };
-
-    // --- MIGRATION HANDLER ---
-    const handleMigration = async () => {
-        if (!window.confirm("¿Estás seguro? Esto sobrescribirá los datos en Supabase con los datos locales actuales.")) return;
-
-        setIsMigrating(true);
-        setMigrationStatus("Iniciando...");
-
-        const success = await migrateToSupabase((msg) => {
-            setMigrationStatus(prev => prev + '\n' + msg);
-        });
-
-        setIsMigrating(false);
-        if (success) {
-            showToast("Migración completada con éxito.", 'success');
-        } else {
-            showToast("Hubo errores durante la migración.", 'error');
-        }
     };
 
     const handleEditUser = (user: User) => {
@@ -1126,9 +1104,6 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             {[
                                 { id: 'IDENTITY', icon: Palette, label: 'ID' },
                                 { id: 'BANNERS', icon: Home, label: 'Banners' },
-                                { id: 'INFO_POINT', icon: Info, label: 'Punto' },
-                                { id: 'VALUES', icon: Home, label: 'Valores' },
-                                { id: 'VERSES', icon: Book, label: 'Versos' },
                                 { id: 'FOOTER', icon: Share2, label: 'Pies' },
                             ].map(tab => (
                                 <button
@@ -1180,7 +1155,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             </div>
                         )}
 
-                        {(configSubTab === 'BANNERS' || configSubTab === 'INFO_POINT') && (
+                        {configSubTab === 'BANNERS' && (
                             <div className="space-y-4 md:space-y-6">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                     <h3 className="text-base md:text-xl font-bold uppercase">
@@ -1214,84 +1189,6 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                             No hay banners configurados.
                                         </div>
                                     )}
-                                </div>
-                            </div>
-                        )}
-
-                        {configSubTab === 'VALUES' && (
-                            <div className="bg-off-white p-8 rounded-2xl shadow-lg border border-slate-200 max-w-4xl">
-                                <h3 className="text-xl font-bold uppercase mb-6">Sección "Nuestros Valores"</h3>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div className="space-y-4">
-                                        <div><label className="text-xs font-bold uppercase text-slate-500">Título Sección</label><input type="text" value={valuesConfig.title} onChange={e => setValuesConfig({ ...valuesConfig, title: e.target.value })} className="w-full p-3 border border-slate-200 rounded-lg outline-none text-sm font-bold uppercase focus:border-black" /></div>
-                                        <div><label className="text-xs font-bold uppercase text-slate-500">Descripción</label><textarea value={valuesConfig.description} onChange={e => setValuesConfig({ ...valuesConfig, description: e.target.value })} className="w-full p-3 border border-slate-200 rounded-lg outline-none text-sm h-32 resize-none focus:border-black" /></div>
-                                        <div>
-                                            <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Imagen Lateral</label>
-                                            <ImageUpload
-                                                currentImage={valuesConfig.image}
-                                                folder="values"
-                                                onImageUpload={(url) => setValuesConfig({ ...valuesConfig, image: url })}
-                                                aspectRatio="square"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                                        <h4 className="text-xs font-bold uppercase text-slate-500 mb-4">Vista Previa Valores</h4>
-                                        <div className="space-y-3">
-                                            {valuesConfig.values.map(val => (
-                                                <div key={val.id} className="flex gap-3 items-center">
-                                                    <span className="text-xl">{val.icon}</span>
-                                                    <div>
-                                                        <p className="font-bold text-xs uppercase">{val.title}</p>
-                                                        <p className="text-[10px] text-slate-500 truncate w-40">{val.description}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            <p className="text-xs text-slate-400 italic mt-4 text-center">Edición de items individuales próximamente.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="mt-8 flex justify-end">
-                                    <button onClick={handleSaveValuesConfig} className="px-8 py-3 bg-slate-900 text-white font-medium uppercase text-xs tracking-widest rounded-lg hover:bg-slate-800 flex items-center gap-2">
-                                        <Save className="w-4 h-4" /> Guardar Cambios
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {configSubTab === 'VERSES' && (
-                            <div className="max-w-4xl space-y-8">
-                                <div className="bg-off-white p-8 rounded-2xl shadow-lg border border-slate-200">
-                                    <h3 className="text-xl font-bold uppercase mb-6 flex items-center gap-2"><Book className="w-5 h-5" /> Versículos del Día</h3>
-
-                                    <div className="flex gap-4 mb-8 items-end bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                        <div className="flex-1">
-                                            <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Texto Bíblico</label>
-                                            <input type="text" value={newVerse.text} onChange={e => setNewVerse({ ...newVerse, text: e.target.value })} placeholder="Porque de tal manera..." className="w-full p-3 border border-slate-200 rounded-lg text-sm outline-none focus:border-black" />
-                                        </div>
-                                        <div className="w-48">
-                                            <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Referencia</label>
-                                            <input type="text" value={newVerse.ref} onChange={e => setNewVerse({ ...newVerse, ref: e.target.value })} placeholder="Juan 3:16" className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold uppercase outline-none focus:border-black" />
-                                        </div>
-                                        <button onClick={handleAddVerse} className="px-6 py-3 bg-slate-900 text-white font-medium uppercase text-xs rounded-lg hover:bg-slate-800 h-full">Agregar</button>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        {(config.verses || []).map((verse, idx) => (
-                                            <div key={idx} className="flex justify-between items-center p-4 border border-slate-200 rounded-xl hover:border-black transition-colors group bg-white">
-                                                <div>
-                                                    <p className="text-sm font-medium italic text-slate-700">"{verse.text}"</p>
-                                                    <p className="text-xs font-bold uppercase text-slate-500 mt-1">— {verse.ref}</p>
-                                                </div>
-                                                <button onClick={() => handleDeleteVerse(idx)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        {(!config.verses || config.verses.length === 0) && (
-                                            <p className="text-center text-slate-400 py-8 text-sm italic">No hay versículos configurados. Se usará uno por defecto.</p>
-                                        )}
-                                    </div>
                                 </div>
                             </div>
                         )}
@@ -1376,68 +1273,6 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                 </div>
                             </div>
                         )}
-                    </div>
-                )}
-
-                {/* --- DATABASE MIGRATION TAB --- */}
-                {activeTab === 'database' && (
-                    <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 animate-fadeIn">
-                        <div className="bg-off-white p-4 md:p-8 rounded-xl md:rounded-2xl shadow-xl border border-slate-200">
-                            <div className="flex items-start md:items-center gap-3 md:gap-4 mb-4 md:mb-6">
-                                <div className="p-2 md:p-3 bg-indigo-50 text-indigo-600 rounded-lg md:rounded-xl">
-                                    <CloudUpload className="w-5 md:w-8 h-5 md:h-8" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg md:text-2xl font-bold text-slate-900 tracking-tight">Migración DB</h3>
-                                    <p className="text-slate-500 text-[10px] md:text-sm">Transfiere datos locales a Supabase Cloud.</p>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-50 p-4 md:p-6 rounded-lg md:rounded-xl border border-slate-200 mb-6 md:mb-8">
-                                <h4 className="font-bold text-[10px] md:text-sm text-slate-700 uppercase mb-2 md:mb-3 flex items-center gap-2">
-                                    <Check className="w-3 md:w-4 h-3 md:h-4 text-emerald-500" /> Qué se migrará:
-                                </h4>
-                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 md:gap-2 text-[10px] md:text-xs font-medium text-slate-600">
-                                    <li className="flex items-center gap-2">✔ Usuarios y Credenciales</li>
-                                    <li className="flex items-center gap-2">✔ Configuración Global</li>
-                                    <li className="flex items-center gap-2">✔ Grupos y Categorías</li>
-                                    <li className="flex items-center gap-2">✔ Miembros de Grupos</li>
-                                    <li className="flex items-center gap-2">✔ Canciones (Alabanza)</li>
-                                    <li className="flex items-center gap-2">✔ Productos Tienda</li>
-                                </ul>
-                            </div>
-
-                            <div className="space-y-4">
-                                {import.meta.env.VITE_ENABLE_MIGRATION === 'true' ? (
-                                    <button
-                                        onClick={handleMigration}
-                                        disabled={isMigrating}
-                                        className={`w-full py-4 rounded-xl font-bold text-slate-700 text-sm shadow-lg transition-all flex items-center justify-center gap-3 ${isMigrating ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-[1.01]'}`}
-                                    >
-                                        {isMigrating ? (
-                                            <>
-                                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-400 border-t-transparent"></div>
-                                                Migrando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CloudUpload className="w-5 h-5" /> Iniciar Migración a Supabase
-                                            </>
-                                        )}
-                                    </button>
-                                ) : (
-                                    <p className="text-red-600 font-bold p-4 text-center border-2 border-red-200 bg-red-50 rounded-xl">
-                                        Migración deshabilitada en entorno actual.
-                                    </p>
-                                )}
-
-                                {/* Log Console */}
-                                <div className="bg-black rounded-xl p-4 font-mono text-xs text-green-400 h-64 overflow-y-auto shadow-inner border border-slate-700">
-                                    <div className="opacity-50 mb-2 border-b border-white/10 pb-2">--- LOG DE MIGRACIÓN ---</div>
-                                    <pre className="whitespace-pre-wrap">{migrationStatus || 'Esperando inicio...'}</pre>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 )}
 

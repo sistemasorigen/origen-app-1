@@ -238,8 +238,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             subItems: [
                 { label: 'Usuarios', path: '/panel-admin?tab=users' },
                 { label: 'Configuración', path: '/panel-admin?tab=config' },
-                { label: 'Logs', path: '/panel-admin?tab=logs' },
-                { label: 'Base de datos', path: '/panel-admin?tab=database' }
+                { label: 'Logs', path: '/panel-admin?tab=logs' }
             ]
         },
         {
