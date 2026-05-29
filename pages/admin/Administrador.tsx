@@ -675,71 +675,57 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
 
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-4">
                                         {/* Level 1 */}
-                                        <div onClick={() => toggleRole(UserRole.VIEWER)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.VIEWER) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.VIEWER)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.VIEWER) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">USUARIO</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Acceso básico</span>
                                         </div>
                                         {/* Level 2 - Anfitrión: Can create their own group */}
-                                        <div onClick={() => toggleRole(UserRole.ANFITRION)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ANFITRION) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.ANFITRION)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.ANFITRION) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">ANFITRIÓN</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Crear grupos</span>
                                         </div>
                                         {/* Level 2b - Co-Anfitrión: Can manage assigned groups */}
-                                        <div onClick={() => toggleRole(UserRole.CO_ANFITRION)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.CO_ANFITRION) ? 'border-purple-600 bg-purple-600 text-white shadow-none' : 'border-purple-300 bg-purple-50 text-purple-700 hover:shadow-[3px_3px_0px_0px_rgba(147,51,234,0.5)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.CO_ANFITRION)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.CO_ANFITRION) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">CO-ANFITRIÓN</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Co-líder grupos</span>
                                         </div>
                                         {/* Level 3 - Voluntario */}
-                                        <div onClick={() => toggleRole(UserRole.VOLUNTEER)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.VOLUNTEER) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.VOLUNTEER)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.VOLUNTEER) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">VOLUNTARIO</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Colaborador</span>
                                         </div>
 
                                         {/* Level 4 - Admins */}
-                                        <div onClick={() => toggleRole(UserRole.ADMIN_PUNTO)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_PUNTO) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.ADMIN_PUNTO)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.ADMIN_PUNTO) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">ENCARGADO PUNTO</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Gestión Punto</span>
                                         </div>
-                                        <div onClick={() => toggleRole(UserRole.ADMIN_GROUPS)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_GROUPS) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.ADMIN_GROUPS)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.ADMIN_GROUPS) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">ENCARGADO GRUPOS</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Gestión Grupos</span>
                                         </div>
-                                        <div onClick={() => toggleRole(UserRole.ADMIN_STORE)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_STORE) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.ADMIN_STORE)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.ADMIN_STORE) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">ENCARGADO STORE</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Gestión Tienda</span>
                                         </div>
-                                        <div onClick={() => toggleRole(UserRole.ADMIN_ALABANZA)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_ALABANZA) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.ADMIN_ALABANZA)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.ADMIN_ALABANZA) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">ENCARGADO ALABANZA</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Gestión Alabanza</span>
                                         </div>
-                                        <div onClick={() => toggleRole(UserRole.ENCARGADO_BIENVENIDA)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ENCARGADO_BIENVENIDA) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.ENCARGADO_BIENVENIDA)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.ENCARGADO_BIENVENIDA) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">ENCARGADO BIENVENIDA</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Gestión Bienvenida</span>
                                         </div>
-                                        <div onClick={() => toggleRole(UserRole.ADMIN_CUIDADO_PASTORAL)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.ADMIN_CUIDADO_PASTORAL) ? 'border-amber-600 bg-amber-600 text-white shadow-none' : 'border-amber-300 bg-amber-50 text-amber-700 hover:shadow-[3px_3px_0px_0px_rgba(217,119,6,0.5)]'}`}>
-                                            <span className="block text-[10px] md:text-xs font-bold uppercase">CUIDADO PASTORAL</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Gestión Pastoral</span>
+                                        <div onClick={() => toggleRole(UserRole.ADMIN_CUIDADO_PASTORAL)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.ADMIN_CUIDADO_PASTORAL) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                            <span className="block text-[10px] md:text-xs font-bold uppercase">AUDIENCIA SERVICIO</span>
                                         </div>
-                                        <div onClick={() => toggleRole(UserRole.INFLUOS)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.INFLUOS) ? 'border-violet-600 bg-violet-600 text-white shadow-none' : 'border-violet-300 bg-violet-50 text-violet-700 hover:shadow-[3px_3px_0px_0px_rgba(139,92,246,0.5)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.INFLUOS)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.INFLUOS) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">INFLUOS</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Gestión de Menores</span>
                                         </div>
 
                                         {/* Level 5 */}
-                                        <div onClick={() => toggleRole(UserRole.PASTOR)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.PASTOR) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.PASTOR)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.PASTOR) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">REPORTES</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Pastor</span>
                                         </div>
                                         {/* Level 6 */}
-                                        <div onClick={() => toggleRole(UserRole.SUPER_ADMIN)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.SUPER_ADMIN) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.SUPER_ADMIN)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.SUPER_ADMIN) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">S. ADMIN</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Control total</span>
                                         </div>
 
                                         {/* Coordinator Role */}
-                                        <div onClick={() => toggleRole(UserRole.COORDINATOR)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center ${selectedRoles.has(UserRole.COORDINATOR) ? 'border-emerald-600 bg-emerald-600 text-white shadow-none' : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:shadow-[3px_3px_0px_0px_rgba(5,150,105,0.5)]'}`}>
+                                        <div onClick={() => toggleRole(UserRole.COORDINATOR)} className={`p-2 md:p-4 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[64px] md:min-h-[88px] ${selectedRoles.has(UserRole.COORDINATOR) ? 'border-black bg-black text-white shadow-none' : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'}`}>
                                             <span className="block text-[10px] md:text-xs font-bold uppercase">COORDINADOR</span>
-                                            <span className="hidden md:block text-[10px] opacity-70">Departamento</span>
                                         </div>
                                     </div>
 
