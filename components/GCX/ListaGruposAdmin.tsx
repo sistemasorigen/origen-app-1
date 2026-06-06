@@ -106,6 +106,15 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
         );
     }
 
+    const getStatusPriority = (group: Group): number => {
+        if (isGroupFinished(group) || group.status === 'finished') return 3;
+        if (group.status === 'rejected') return 2;
+        if (group.status === 'approved') return 1;
+        return 0; // pending o sin estado
+    };
+
+    const sortedGroups = [...groups].sort((a, b) => getStatusPriority(a) - getStatusPriority(b));
+
     return (
         <>
             {/* ───── GROUP DETAIL MODAL ───── */}
@@ -250,7 +259,7 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
 
             {/* Mobile Card View */}
             <div className="md:hidden space-y-3">
-                {groups.map(group => {
+                {sortedGroups.map(group => {
                     const pct = getCapacityPercent(group);
                     return (
                         <div key={group.id} className={`bg-white border rounded-xl p-4 shadow-sm relative transition-all ${group.status === 'pending' || !group.status ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200'}`}>
@@ -349,7 +358,7 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {groups.map((group) => {
+                            {sortedGroups.map((group) => {
                                 const pct = getCapacityPercent(group);
                                 const isPending = group.status === 'pending' || !group.status;
                                 return (
