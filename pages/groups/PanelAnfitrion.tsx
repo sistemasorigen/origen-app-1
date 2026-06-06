@@ -179,11 +179,17 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
 
     const handleGroupSaved = async (savedGroup?: Group) => {
         if (isReopenRequest && savedGroup?.id) {
-            await supabaseService.clearGroupParticipants(savedGroup.id);
-            setSuccessModalMessage('Solicitud de re-apertura enviada. El grupo se ha reiniciado (cupos liberados) y estará pendiente de aprobación.');
+            // Con el nuevo flujo, el grupo nuevo ya nace vacío — no hace falta borrar participantes.
+            // El grupo original quedó marcado como 'finished' con su historial intacto.
+            setSuccessModalMessage(
+                'Solicitud de re-apertura enviada. ' +
+                'Se creó un nuevo grupo para la temporada seleccionada. El administrador lo revisará.'
+            );
             setIsSuccessModalOpen(true);
         } else if (isReopenRequest) {
-            setSuccessModalMessage('Solicitud de re-apertura enviada. El administrador revisará tu grupo.');
+            setSuccessModalMessage(
+                'Solicitud de re-apertura enviada. El administrador revisará tu grupo.'
+            );
             setIsSuccessModalOpen(true);
         } else if (!editingGroup) {
             setSuccessModalMessage('Recibirás un aviso por email cuando tu Grupo de Conexión esté aprobado o rechazado junto a la razón.');

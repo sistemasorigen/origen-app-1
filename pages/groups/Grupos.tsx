@@ -746,21 +746,36 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const handleReopenGroup = async (groupId: string) => {
         const confirmed = window.confirm(
             '⚠️ RE-APERTURA DE GRUPO\n\n' +
-            'Esta acción eliminará PERMANENTEMENTE:\n' +
-            '• Todos los inscriptos actuales\n' +
-            '• Todas las asistencias registradas\n\n' +
-            'El grupo volverá a estado "Pendiente" para ser aprobado nuevamente.\n\n' +
-            '¿Estás seguro de continuar?'
+            'Esta acción creará un NUEVO GRUPO para una\n' +
+            'nueva temporada y finalizará el actual.\n\n' +
+            'Los inscriptos y asistencias del grupo actual\n' +
+            'quedarán conservados como historial.\n\n' +
+            'El nuevo grupo quedará Aprobado con las\n' +
+            'fechas del grupo actual. El anfitrión puede\n' +
+            'actualizarlas después.\n\n' +
+            '¿Continuar?'
         );
 
         if (!confirmed) return;
 
         setIsReviewLoading(true);
         try {
-            const success = await supabaseService.reopenGroup(groupId);
-            if (success) {
-                showToast('Grupo re-abierto exitosamente. Ahora está pendiente de aprobación.', 'success');
-                fetchAdminGroups(); // Refresh admin list
+            const existingGroup = adminGroups.find(g => g.id === groupId);
+            if (!existingGroup) throw new Error('Grupo no encontrado');
+
+            const newGroup = await supabaseService.cloneGroupForNewSeason(
+                groupId,
+                existingGroup.startDate || '',
+                existingGroup.endDate  || '',
+                true // isAdminView → status='approved'
+            );
+
+            if (newGroup) {
+                showToast(
+                    'Nuevo grupo creado para la temporada. El anfitrión puede actualizar las fechas.',
+                    'success'
+                );
+                fetchAdminGroups();
             } else {
                 showToast('Error al re-abrir el grupo', 'error');
             }

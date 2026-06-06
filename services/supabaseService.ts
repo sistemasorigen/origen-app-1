@@ -47,7 +47,10 @@ export async function insertGroupDirect(group: Group): Promise<Group | null> {
     co_host_last_name: group.coHostLastName || '',
     min_age: group.minAge || 0,
     max_age: group.maxAge || 100,
-    target_gender: group.targetGender || 'Mixto'
+    target_gender: group.targetGender || 'Mixto',
+    parent_group_id: (group as any).parentGroupId
+        || (group as any).parent_group_id
+        || null,
   };
 
   // Add host_id if provided
@@ -193,6 +196,7 @@ function transformDbRowToGroup(data: any): Group {
     coHostLastName: data.co_host_last_name || '',
     maxAge: data.max_age || 100,
     targetGender: data.target_gender || 'Mixto',
+    parentGroupId: data.parent_group_id || undefined,
     registrations: []
   };
 }
@@ -1453,6 +1457,7 @@ export const supabaseService = {
       maxAge: row.max_age || 100,
       targetGender: row.target_gender || 'Mixto',
       adminNote: row.admin_note || '', // Admin review note
+      parentGroupId: row.parent_group_id || undefined,
       registrations: (row.registrations || []).map((r: any) => ({
         id: r.id,
         user_id: r.user_id || null,
@@ -1625,7 +1630,9 @@ export const supabaseService = {
   // Re-open a finished/rejected group: Delete all registrations and attendance, reset members count
   async reopenGroup(groupId: string): Promise<boolean> {
     try {
-
+      // DEPRECADO: Usar cloneGroupForNewSeason para el flujo correcto de re-apertura.
+      // Se mantiene para compatibilidad temporal.
+      console.warn('[Groups] reopenGroup is deprecated. Use cloneGroupForNewSeason instead.');
 
       // 1. Delete all registrations for this group
       const { error: regError } = await supabase
@@ -1706,6 +1713,86 @@ export const supabaseService = {
     } catch (error) {
       console.error('[Groups] Error clearing participants:', error);
       return false;
+    }
+  },
+
+  async cloneGroupForNewSeason(
+    originalGroupId: string,
+    newStartDate: string,
+    newEndDate: string,
+    isAdminView: boolean = false
+  ): Promise<Group | null> {
+    try {
+      console.log('[Groups] Cloning group for new season:', originalGroupId);
+
+      const { data: originalData, error: fetchError } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('id', originalGroupId)
+        .single();
+
+      if (fetchError || !originalData) {
+        console.error('[Groups] Error fetching original group:', fetchError);
+        return null;
+      }
+
+      const newGroupData: Record<string, any> = {
+        name:               originalData.name,
+        leader_name:        originalData.leader_name,
+        leader_surname:     originalData.leader_surname,
+        leader_phone:       originalData.leader_phone || '',
+        meeting_day:        originalData.meeting_day,
+        meeting_time:       originalData.meeting_time,
+        location:           originalData.location,
+        max_capacity:       originalData.max_capacity,
+        description:        originalData.description,
+        image_url:          originalData.image_url,
+        category_id:        originalData.category_id,
+        tags:               originalData.tags || [],
+        host_id:            originalData.host_id,
+        co_host_id:         originalData.co_host_id,
+        co_host_first_name: originalData.co_host_first_name || '',
+        co_host_last_name:  originalData.co_host_last_name || '',
+        min_age:            originalData.min_age || 0,
+        max_age:            originalData.max_age || 100,
+        target_gender:      originalData.target_gender || 'Mixto',
+        start_date:         newStartDate,
+        end_date:           newEndDate,
+        members_count:      0,
+        status:             isAdminView ? 'approved' : 'pending',
+        admin_note:         '',
+        parent_group_id:    originalGroupId,
+      };
+
+      const { data: newGroup, error: insertError } = await supabase
+        .from('groups')
+        .insert(newGroupData)
+        .select()
+        .single();
+
+      if (insertError || !newGroup) {
+        console.error('[Groups] Error creating new season group:', insertError);
+        return null;
+      }
+
+      console.log('[Groups] New season group created:', newGroup.id);
+
+      const { error: finishError } = await supabase
+        .from('groups')
+        .update({ status: 'finished' })
+        .eq('id', originalGroupId);
+
+      if (finishError) {
+        // Non-fatal — nuevo grupo ya creado
+        console.warn('[Groups] Could not mark original as finished:', finishError);
+      }
+
+      console.log('[Groups] Original group marked as finished:', originalGroupId);
+
+      return transformDbRowToGroup(newGroup);
+    } catch (error) {
+      console.error('[Groups] Exception in cloneGroupForNewSeason:', error);
+      return null;
     }
   },
 

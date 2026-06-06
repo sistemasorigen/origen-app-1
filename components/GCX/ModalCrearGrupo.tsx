@@ -572,7 +572,16 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             }
 
             let result;
-            if (editingGroup) {
+            if (isReopenRequest && editingGroup) {
+                // RE-APERTURA: crear nuevo grupo, no actualizar.
+                // El original pasa a 'finished' automáticamente.
+                result = await supabaseService.cloneGroupForNewSeason(
+                    editingGroup.id,
+                    form.startDate,
+                    form.endDate,
+                    isAdminView
+                );
+            } else if (editingGroup) {
                 result = await updateGroupDirect(groupData as Group);
             } else {
                 result = await insertGroupDirect(groupData as Group);

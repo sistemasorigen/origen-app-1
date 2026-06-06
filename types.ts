@@ -548,6 +548,9 @@ export interface Group {
     targetGender?: 'Hombre' | 'Mujer' | 'Mixto';
     adminNote?: string; // Note from admin when approving/rejecting
 
+    // Linaje de temporadas: apunta al grupo de la temporada anterior del que fue re-abierto
+    parentGroupId?: string;
+
     // UI/Display Helpers (Join results)
     hostName?: string;
     hostLastName?: string;
