@@ -374,6 +374,9 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const [isReviewLoading, setIsReviewLoading] = useState(false);
     const [adminGroups, setAdminGroups] = useState<Group[]>([]); // All groups for admin view
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // Admin Create Group Modal
+    // Estado para el modal de re-apertura del admin
+    const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
+    const [groupToReopen, setGroupToReopen] = useState<Group | null>(null);
     const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false); // Admin Add Member Modal
     const [isDropoutInboxOpen, setIsDropoutInboxOpen] = useState(false); // Admin Dropout Inbox
     const [pendingDropoutCount, setPendingDropoutCount] = useState(0); // Badge count for dropout requests
@@ -743,48 +746,14 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     };
 
     // Handle Re-opening a finished or rejected group
-    const handleReopenGroup = async (groupId: string) => {
-        const confirmed = window.confirm(
-            '⚠️ RE-APERTURA DE GRUPO\n\n' +
-            'Esta acción creará un NUEVO GRUPO para una\n' +
-            'nueva temporada y finalizará el actual.\n\n' +
-            'Los inscriptos y asistencias del grupo actual\n' +
-            'quedarán conservados como historial.\n\n' +
-            'El nuevo grupo quedará Aprobado con las\n' +
-            'fechas del grupo actual. El anfitrión puede\n' +
-            'actualizarlas después.\n\n' +
-            '¿Continuar?'
-        );
-
-        if (!confirmed) return;
-
-        setIsReviewLoading(true);
-        try {
-            const existingGroup = adminGroups.find(g => g.id === groupId);
-            if (!existingGroup) throw new Error('Grupo no encontrado');
-
-            const newGroup = await supabaseService.cloneGroupForNewSeason(
-                groupId,
-                existingGroup.startDate || '',
-                existingGroup.endDate  || '',
-                true // isAdminView → status='approved'
-            );
-
-            if (newGroup) {
-                showToast(
-                    'Nuevo grupo creado para la temporada. El anfitrión puede actualizar las fechas.',
-                    'success'
-                );
-                fetchAdminGroups();
-            } else {
-                showToast('Error al re-abrir el grupo', 'error');
-            }
-        } catch (error) {
-            console.error('Error re-opening group:', error);
-            showToast('Error al re-abrir el grupo', 'error');
-        } finally {
-            setIsReviewLoading(false);
-        }
+    const handleReopenGroup = (groupId: string) => {
+        const group = adminGroups.find(g => g.id === groupId);
+        if (!group) return;
+        // El admin pasa por el mismo modal que el anfitrión.
+        // isAdminView=true → nuevo grupo en status='approved'.
+        // isReopenRequest=true → usa cloneGroupForNewSeason.
+        setGroupToReopen(group);
+        setIsReopenModalOpen(true);
     };
 
 
@@ -2499,6 +2468,30 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     onApprove={handleApproveGroup}
                     onReject={handleRejectGroup}
                     isLoading={isReviewLoading}
+                />
+            )}
+
+            {/* Modal de re-apertura — Admin */}
+            {isReopenModalOpen && groupToReopen && (
+                <CreateGroupModal
+                    isOpen={isReopenModalOpen}
+                    onClose={() => {
+                        setIsReopenModalOpen(false);
+                        setGroupToReopen(null);
+                    }}
+                    onSave={() => {
+                        setIsReopenModalOpen(false);
+                        setGroupToReopen(null);
+                        fetchAdminGroups();
+                        showToast(
+                            'Grupo re-abierto. El nuevo grupo está activo para esta temporada.',
+                            'success'
+                        );
+                    }}
+                    editingGroup={groupToReopen}
+                    currentUser={currentUser}
+                    isAdminView={true}
+                    isReopenRequest={true}
                 />
             )}
 
