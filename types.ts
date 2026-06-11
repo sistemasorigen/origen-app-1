@@ -557,6 +557,32 @@ export interface Group {
     categoryName?: string;
     meetingType?: string;
     maxMembers?: number; // Alias for maxCapacity if needed, or separate field
+
+    // Transferencia pendiente entrante para este grupo
+    pendingTransferFrom?: {
+        transferId: string;
+        fromUserId: string;
+        fromUserName: string;
+    };
+}
+
+// ── TRANSFERENCIA DE GRUPOS ───────────────────
+
+export type TransferStatus =
+    'pending' | 'accepted' | 'rejected' | 'cancelled';
+
+export interface GroupTransferRequest {
+    id: string;
+    groupId: string;
+    fromUserId: string;
+    toUserId: string;
+    status: TransferStatus;
+    createdAt: string;
+    resolvedAt?: string;
+    // Datos enriquecidos (para mostrar en UI)
+    fromUserName?: string;
+    toUserName?: string;
+    groupName?: string;
 }
 
 export interface InquiryMetadata {

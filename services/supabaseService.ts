@@ -3320,6 +3320,303 @@ export const supabaseService = {
     return this.toggleUserRole(userId, UserRole.ANFITRION, true);
   },
 
+  // ── TRANSFERENCIA DE GRUPOS ───────────────────
+
+  async searchUsersForTransfer(term: string): Promise<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    isHost: boolean;
+    role: string;
+  }[]> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, phone, role, roles')
+        .or(
+          `name.ilike.%${term}%,` +
+          `email.ilike.%${term}%`
+        )
+        .eq('is_active', true)
+        .limit(10)
+        // Forzar lectura desde la DB sin caché
+        // para que los cambios de rol sean inmediatos
+        .throwOnError();
+
+      // Invalidar caché del cliente después de la query
+      // usando timestamp para evitar resultados stale
+      const _bust = Date.now();
+
+      if (error) throw error;
+
+      return (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name || '',
+        email: u.email || '',
+        phone: u.phone || '',
+        // Verificar TODOS los roles que pueden ser
+        // anfitrión. También revisar el array 'roles'
+        // (algunos usuarios tienen multi-rol) además
+        // de la columna 'role' principal.
+        isHost: (
+            u.role === UserRole.ANFITRION
+            || u.role === UserRole.SUPER_ADMIN
+            || u.role === UserRole.PASTOR
+            || u.role === UserRole.ADMIN_GROUPS
+            || u.role === UserRole.ENCARGADO_GRUPOS
+        ) || (
+            Array.isArray(u.roles) && (
+                u.roles.includes('ANFITRION') ||
+                u.roles.includes('SUPER_ADMIN')
+            )
+        ),
+        role: u.role || '',
+      }));
+    } catch (err) {
+      console.error('[Transfer] Search error:', err);
+      return [];
+    }
+  },
+
+  async initiateGroupTransfer(
+    groupId: string,
+    toUserId: string,
+    fromUserName: string,
+    groupName: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data: existing } = await supabase
+        .from('group_transfer_requests')
+        .select('id')
+        .eq('group_id', groupId)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (existing) {
+        return {
+          success: false,
+          error: 'Ya existe una transferencia ' +
+                 'pendiente para este grupo.'
+        };
+      }
+
+      const { error: insertError } = await supabase
+        .from('group_transfer_requests')
+        .insert({
+          group_id:     groupId,
+          from_user_id: (await supabase.auth.getUser())
+                          .data.user?.id,
+          to_user_id:   toUserId,
+          status:       'pending',
+        });
+
+      if (insertError) throw insertError;
+
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: toUserId,
+          title:   '¿Querés ser Anfitrión?',
+          message: `${fromUserName} te está ` +
+                   `transfiriendo el grupo ` +
+                   `"${groupName}". ` +
+                   `Revisá tu Panel de Anfitrión.`,
+          type:    'GROUPS',
+          read:    false,
+          metadata: {
+            groupId,
+            action: 'TRANSFER_REQUEST'
+          }
+        });
+
+      return { success: true };
+
+    } catch (err: unknown) {
+      console.error('[Transfer] Initiate error:', err);
+      const msg = err instanceof Error ? err.message : 'Error al iniciar.';
+      return { success: false, error: msg };
+    }
+  },
+
+  async acceptGroupTransfer(
+    transferId: string,
+    groupId: string,
+    newHostId: string,
+    newHostName: string
+  ): Promise<boolean> {
+    try {
+      const nameParts = newHostName.trim().split(/\s+/);
+      const firstName  = nameParts[0] || '';
+      const lastName   = nameParts.slice(1).join(' ') || '';
+
+      const { error: groupError } = await supabase
+        .from('groups')
+        .update({
+          host_id:        newHostId,
+          leader_name:    firstName,
+          leader_surname: lastName,
+        })
+        .eq('id', groupId);
+
+      if (groupError) throw groupError;
+
+      await this.promoteUserToHost(newHostId);
+
+      const { error: transferError } = await supabase
+        .from('group_transfer_requests')
+        .update({
+          status:      'accepted',
+          resolved_at: new Date().toISOString()
+        })
+        .eq('id', transferId);
+
+      if (transferError) throw transferError;
+
+      return true;
+    } catch (err) {
+      console.error('[Transfer] Accept error:', err);
+      return false;
+    }
+  },
+
+  async rejectGroupTransfer(
+    transferId: string,
+    fromUserId: string,
+    groupName: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('group_transfer_requests')
+        .update({
+          status:      'rejected',
+          resolved_at: new Date().toISOString()
+        })
+        .eq('id', transferId);
+
+      if (error) throw error;
+
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: fromUserId,
+          title:   'Transferencia rechazada',
+          message: `El usuario rechazó la ` +
+                   `transferencia del grupo ` +
+                   `"${groupName}".`,
+          type:    'GROUPS',
+          read:    false,
+        });
+
+      return true;
+    } catch (err) {
+      console.error('[Transfer] Reject error:', err);
+      return false;
+    }
+  },
+
+  async cancelGroupTransfer(
+    transferId: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('group_transfer_requests')
+        .update({
+          status:      'cancelled',
+          resolved_at: new Date().toISOString()
+        })
+        .eq('id', transferId);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Transfer] Cancel error:', err);
+      return false;
+    }
+  },
+
+  async getPendingIncomingTransfers(
+    userId: string
+  ): Promise<{
+    transferId: string;
+    groupId: string;
+    groupName: string;
+    groupImageUrl: string;
+    groupDescription: string;
+    groupMeetingDay: string;
+    groupMeetingTime: string;
+    groupLocation: string;
+    fromUserId: string;
+    fromUserName: string;
+    createdAt: string;
+  }[]> {
+    try {
+      // from_user_id FK apunta a auth.users (no traversable por PostgREST).
+      // Se hace join manual en un segundo query a public.users.
+      const { data, error } = await supabase
+        .from('group_transfer_requests')
+        .select(`
+          id,
+          group_id,
+          from_user_id,
+          created_at,
+          groups!inner (
+            name, image_url, description,
+            meeting_day, meeting_time, location,
+            status
+          )
+        `)
+        .eq('to_user_id', userId)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      // Resolver nombres de los originantes en un solo query
+      const fromIds = [...new Set(data.map((r: any) => r.from_user_id as string))];
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, name')
+        .in('id', fromIds);
+
+      const nameMap: Record<string, string> = {};
+      (usersData || []).forEach((u: any) => { nameMap[u.id] = u.name || ''; });
+
+      return data.map((row: any) => ({
+        transferId:        row.id,
+        groupId:           row.group_id,
+        groupName:         row.groups?.name || '',
+        groupImageUrl:     row.groups?.image_url || '',
+        groupDescription:  row.groups?.description || '',
+        groupMeetingDay:   row.groups?.meeting_day || '',
+        groupMeetingTime:  row.groups?.meeting_time || '',
+        groupLocation:     row.groups?.location || '',
+        fromUserId:        row.from_user_id,
+        fromUserName:      nameMap[row.from_user_id] || 'Anfitrión',
+        createdAt:         row.created_at,
+      }));
+    } catch (err) {
+      console.error('[Transfer] Get incoming error:', err);
+      return [];
+    }
+  },
+
+  async getPendingOutgoingTransferGroupIds(userId: string): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .from('group_transfer_requests')
+        .select('group_id')
+        .eq('from_user_id', userId)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      return (data || []).map((r: any) => r.group_id as string);
+    } catch (err) {
+      console.error('[Transfer] Get outgoing error:', err);
+      return [];
+    }
+  },
+
   // --- ATTENDANCE SYSTEM ---
 
   /**

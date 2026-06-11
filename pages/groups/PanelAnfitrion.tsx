@@ -3,17 +3,32 @@ import { useLocation } from 'react-router-dom';
 import { User, UserRole, Group, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import { supabaseService } from '../../services/supabaseService';
-import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus, Check, Link } from 'lucide-react';
+import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus, Check, Link, ArrowLeftRight, X, AlertTriangle, Loader2 } from 'lucide-react';
 import CreateGroupModal from '../../components/GCX/ModalCrearGrupo';
 import ApplicantsModal from '../../components/GCX/ModalSolicitantes';
 import AttendanceModal from '../../components/GCX/ModalAsistencia';
 import DropoutRequestModal from '../../components/GCX/ModalSolicitudBaja';
+import ModalTransferirGrupo from '../../components/GCX/ModalTransferirGrupo';
 import NeoModal from '../../components/ui/NeoModal';
 import { useTutorial } from '../../src/hooks/useTutorial';
 import { useIsMobile } from '../../src/hooks/useIsMobile';
 import TutorialInvitation from '../../components/onboarding/InvitacionTutorial';
 import TutorialController from '../../components/onboarding/ControladorTutorial';
 import { tours } from '../../src/config/tours';
+
+interface IncomingTransfer {
+    transferId: string;
+    groupId: string;
+    groupName: string;
+    groupImageUrl: string;
+    groupDescription: string;
+    groupMeetingDay: string;
+    groupMeetingTime: string;
+    groupLocation: string;
+    fromUserId: string;
+    fromUserName: string;
+    createdAt: string;
+}
 
 interface HostDashboardProps {
     currentUser: User | null;
@@ -37,6 +52,15 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalMessage, setSuccessModalMessage] = useState('');
     const [copiedGroupId, setCopiedGroupId] = useState<string | null>(null);
+    const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+    const [groupToTransfer, setGroupToTransfer] = useState<Group | null>(null);
+    // Transferencias entrantes (soy el destinatario)
+    const [incomingTransfers, setIncomingTransfers] = useState<IncomingTransfer[]>([]);
+    // Grupos míos con transferencia saliente pendiente
+    const [pendingOutgoingGroupIds, setPendingOutgoingGroupIds] = useState<Set<string>>(new Set());
+    const [isTransferDetailOpen, setIsTransferDetailOpen] = useState(false);
+    const [selectedIncomingTransfer, setSelectedIncomingTransfer] = useState<IncomingTransfer | null>(null);
+    const [isProcessingTransfer, setIsProcessingTransfer] = useState(false);
     const isMobile = useIsMobile();
 
     // Tutorial Hook
@@ -110,14 +134,75 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
         setIsDropoutModalOpen(true);
     };
 
+    const handleTransferGroup = (group: Group) => {
+        setGroupToTransfer(group);
+        setIsTransferModalOpen(true);
+    };
+
+    const handleAcceptTransfer = async (transfer: IncomingTransfer) => {
+        if (!currentUser) return;
+        setIsProcessingTransfer(true);
+        try {
+            const ok = await supabaseService.acceptGroupTransfer(
+                transfer.transferId,
+                transfer.groupId,
+                currentUser.id,
+                currentUser.name || ''
+            );
+            if (ok) {
+                setIsTransferDetailOpen(false);
+                setSelectedIncomingTransfer(null);
+                await fetchMyGroups();
+            } else {
+                alert('Error al aceptar la transferencia. Intentá de nuevo.');
+            }
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Error desconocido';
+            alert(msg);
+        } finally {
+            setIsProcessingTransfer(false);
+        }
+    };
+
+    const handleRejectTransfer = async (transfer: IncomingTransfer) => {
+        setIsProcessingTransfer(true);
+        try {
+            const ok = await supabaseService.rejectGroupTransfer(
+                transfer.transferId,
+                transfer.fromUserId,
+                transfer.groupName
+            );
+            if (ok) {
+                setIsTransferDetailOpen(false);
+                setSelectedIncomingTransfer(null);
+                await fetchMyGroups();
+            } else {
+                alert('Error al rechazar la transferencia. Intentá de nuevo.');
+            }
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Error desconocido';
+            alert(msg);
+        } finally {
+            setIsProcessingTransfer(false);
+        }
+    };
+
     // Fetch groups owned by this host (all statuses - pending, approved, rejected)
     const fetchMyGroups = async () => {
         if (!currentUser) return;
         setLoading(true);
         try {
-            // Use getGroupsByHost to fetch ALL groups owned by this host (regardless of status)
+            // Grupos propios
             const owned = await supabaseService.getGroupsByHost(currentUser.id);
             setMyGroups(owned);
+
+            // Transferencias pendientes entrantes y salientes
+            const [incoming, outgoingIds] = await Promise.all([
+                supabaseService.getPendingIncomingTransfers(currentUser.id),
+                supabaseService.getPendingOutgoingTransferGroupIds(currentUser.id),
+            ]);
+            setIncomingTransfers(incoming);
+            setPendingOutgoingGroupIds(new Set(outgoingIds));
         } catch (error) {
             console.error('Error fetching groups:', error);
         } finally {
@@ -228,6 +313,11 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
         );
     }
 
+    // Excluir transferencias de grupos que el usuario ya posee (datos inconsistentes / pruebas)
+    const displayIncomingTransfers = incomingTransfers.filter(
+        t => !myGroups.some(g => g.id === t.groupId)
+    );
+
     return (
         <div className="min-h-screen bg-white dark:bg-black py-8 px-4 md:px-8">
             <TutorialInvitation
@@ -271,6 +361,205 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
 
                 {/* Content */}
                 <div id="host-content-area">
+
+                    {/* ── TRANSFERENCIAS PENDIENTES ENTRANTES ── */}
+                    {displayIncomingTransfers.length > 0 && (
+                        <section aria-label="Grupos que te ofrecieron" className="mb-8">
+                            {/* Header */}
+                            <div className="flex items-center gap-2.5 mb-4">
+                                <ArrowLeftRight className="w-4 h-4 text-purple-500 shrink-0" aria-hidden="true" />
+                                <h2 className="text-sm font-black uppercase tracking-widest text-black dark:text-white">
+                                    Grupos que te ofrecieron
+                                </h2>
+                                <span className="text-[9px] font-black bg-purple-600 text-white px-2 py-0.5 shrink-0">
+                                    {displayIncomingTransfers.length}
+                                </span>
+                            </div>
+
+                            {/* Mismo contenedor que la lista de grupos */}
+                            <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-lg">
+
+                                {/* MOBILE */}
+                                <div className="md:hidden divide-y-2 divide-black/10 dark:divide-white/10">
+                                    {displayIncomingTransfers.map(transfer => (
+                                        <div key={transfer.transferId} className="p-4">
+                                            {/* Header row */}
+                                            <div className="flex items-start gap-3 mb-3">
+                                                {transfer.groupImageUrl ? (
+                                                    <img
+                                                        src={transfer.groupImageUrl}
+                                                        alt={transfer.groupName}
+                                                        className="w-14 h-14 rounded-lg object-cover grayscale border border-slate-200 dark:border-slate-700 shrink-0"
+                                                        loading="lazy"
+                                                        width={56}
+                                                        height={56}
+                                                    />
+                                                ) : (
+                                                    <div className="w-14 h-14 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shrink-0">
+                                                        <Users className="w-6 h-6 text-neutral-400" aria-hidden="true" />
+                                                    </div>
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-black dark:text-white uppercase flex items-center gap-2 flex-wrap">
+                                                        <span className="truncate">{transfer.groupName}</span>
+                                                        <span className="px-2 py-0.5 text-[9px] font-black uppercase bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-full shrink-0">
+                                                            Pendiente
+                                                        </span>
+                                                    </p>
+                                                    <p className="text-xs text-purple-600 dark:text-purple-400 font-bold mt-0.5 truncate">
+                                                        De: {transfer.fromUserName}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Info row */}
+                                            {(transfer.groupMeetingDay || transfer.groupLocation) && (
+                                                <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400 mb-3">
+                                                    <div className="flex items-center gap-1">
+                                                        <Calendar className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                                                        <span>{transfer.groupMeetingDay}{transfer.groupMeetingTime ? ` ${transfer.groupMeetingTime}` : ''}</span>
+                                                    </div>
+                                                    {transfer.groupLocation && (
+                                                        <div className="flex items-center gap-1 min-w-0">
+                                                            <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                                                            <span className="truncate">{transfer.groupLocation}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Acciones */}
+                                            <div className="flex flex-col gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setSelectedIncomingTransfer(transfer); setIsTransferDetailOpen(true); }}
+                                                    className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all rounded-lg text-xs font-bold uppercase w-full"
+                                                    aria-label={`Ver detalle de la transferencia del grupo ${transfer.groupName}`}
+                                                >
+                                                    <Eye className="w-4 h-4" aria-hidden="true" />
+                                                    Ver detalle
+                                                </button>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRejectTransfer(transfer)}
+                                                        disabled={isProcessingTransfer}
+                                                        className="flex-1 flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        aria-label={`Rechazar transferencia del grupo ${transfer.groupName}`}
+                                                    >
+                                                        <X className="w-4 h-4" aria-hidden="true" />
+                                                        Rechazar
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleAcceptTransfer(transfer)}
+                                                        disabled={isProcessingTransfer}
+                                                        className="flex-1 flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        aria-label={`Aceptar transferencia del grupo ${transfer.groupName}`}
+                                                    >
+                                                        {isProcessingTransfer
+                                                            ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                                                            : <Check className="w-4 h-4" aria-hidden="true" />
+                                                        }
+                                                        Aceptar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* DESKTOP TABLE */}
+                                <table className="w-full hidden md:table">
+                                    <thead className="bg-black dark:bg-white text-white dark:text-black">
+                                        <tr className="text-xs font-black uppercase tracking-widest">
+                                            <th className="p-4 text-left">Grupo</th>
+                                            <th className="p-4 text-center">Ofrecido por</th>
+                                            <th className="p-4 text-left">Horario</th>
+                                            <th className="p-4 text-right">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {displayIncomingTransfers.map(transfer => (
+                                            <tr key={transfer.transferId} className="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-3">
+                                                        {transfer.groupImageUrl ? (
+                                                            <img
+                                                                src={transfer.groupImageUrl}
+                                                                alt={transfer.groupName}
+                                                                className="w-12 h-12 rounded-lg object-cover grayscale border border-slate-200 dark:border-slate-700"
+                                                                loading="lazy"
+                                                                width={48}
+                                                                height={48}
+                                                            />
+                                                        ) : (
+                                                            <div className="w-12 h-12 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shrink-0">
+                                                                <Users className="w-5 h-5 text-neutral-400" aria-hidden="true" />
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <p className="font-bold text-black dark:text-white uppercase">{transfer.groupName}</p>
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black uppercase bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full mt-0.5">
+                                                                <ArrowLeftRight className="w-2.5 h-2.5" aria-hidden="true" />
+                                                                Transferencia pendiente
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <p className="text-sm font-bold text-purple-600 dark:text-purple-400">{transfer.fromUserName}</p>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                        <Calendar className="w-4 h-4 shrink-0" aria-hidden="true" />
+                                                        <span>{transfer.groupMeetingDay}{transfer.groupMeetingTime ? ` - ${transfer.groupMeetingTime}` : ''}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setSelectedIncomingTransfer(transfer); setIsTransferDetailOpen(true); }}
+                                                            className="p-2 border-2 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all rounded-lg"
+                                                            title="Ver detalle"
+                                                            aria-label={`Ver detalle del grupo ${transfer.groupName}`}
+                                                        >
+                                                            <Eye className="w-4 h-4" aria-hidden="true" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRejectTransfer(transfer)}
+                                                            disabled={isProcessingTransfer}
+                                                            className="p-2 border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                                                            title="Rechazar"
+                                                            aria-label={`Rechazar transferencia del grupo ${transfer.groupName}`}
+                                                        >
+                                                            <X className="w-4 h-4" aria-hidden="true" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleAcceptTransfer(transfer)}
+                                                            disabled={isProcessingTransfer}
+                                                            className="flex items-center gap-2 px-3 py-2 border-2 border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase disabled:opacity-40 disabled:cursor-not-allowed"
+                                                            aria-label={`Aceptar transferencia del grupo ${transfer.groupName}`}
+                                                        >
+                                                            {isProcessingTransfer
+                                                                ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                                                                : <Check className="w-4 h-4" aria-hidden="true" />
+                                                            }
+                                                            Aceptar
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
+
                     {(() => {
                         // SAMPLE DATA FOR TUTORIAL
                         const SAMPLE_GROUP: Group = {
@@ -339,7 +628,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                 {/* MOBILE CARD VIEW */}
                                 <div className="md:hidden divide-y-2 divide-black/10 dark:divide-white/10">
                                     {displayGroups.map((group, index) => (
-                                        <div key={group.id} id={isMobile ? `host-group-card-${index}` : undefined} className={`p-4 ${group.status === 'pending' || !group.status ? 'bg-yellow-50/30 dark:bg-yellow-900/10' : ''}`}>
+                                        <div key={group.id} id={isMobile ? `host-group-card-${index}` : undefined} className={`p-4 ${group.status === 'pending' || !group.status ? 'bg-yellow-50/30 dark:bg-yellow-900/10' : ''} ${pendingOutgoingGroupIds.has(group.id) ? 'grayscale opacity-60' : ''}`}>
                                             {/* Header Row */}
                                             <div className="flex items-start gap-3 mb-3">
                                                 {group.imageUrl && (
@@ -411,8 +700,14 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                             )}
 
                                             {/* Action Toggle Button */}
-                                            {/* Action Toggle Button - Hidden for Pending */}
-                                            {!(group.status === 'pending' || !group.status) && (
+                                            {pendingOutgoingGroupIds.has(group.id) ? (
+                                                <div className="flex items-center gap-2 mt-2 px-3 py-2.5 border-2 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950/30">
+                                                    <ArrowLeftRight className="w-3.5 h-3.5 text-purple-500 shrink-0" aria-hidden="true" />
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">
+                                                        Transferencia pendiente
+                                                    </p>
+                                                </div>
+                                            ) : !(group.status === 'pending' || !group.status) && (
                                                 <div className="flex flex-col gap-2">
                                                     <button
                                                         id={isMobile ? `btn-host-actions-${index}` : undefined}
@@ -463,6 +758,16 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                                         <UserMinus className="w-4 h-4" />
                                                                         Bajas
                                                                     </button>
+                                                                    {/* Transferir — solo approved, solo host principal */}
+                                                                    {(group as any).co_host_id !== currentUser?.id && (
+                                                                        <button
+                                                                            onClick={() => handleTransferGroup(group)}
+                                                                            className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-purple-500 text-purple-500 hover:bg-purple-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase"
+                                                                        >
+                                                                            <ArrowLeftRight className="w-4 h-4" />
+                                                                            Transferir
+                                                                        </button>
+                                                                    )}
                                                                 </>
                                                             )}
 
@@ -510,7 +815,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                         {displayGroups.map((group, index) => (
-                                            <tr key={group.id} id={!isMobile ? `host-group-row-${index}` : undefined} className={`hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors ${group.status === 'pending' || !group.status ? 'bg-yellow-50/30 dark:bg-yellow-900/10' : ''}`}>
+                                            <tr key={group.id} id={!isMobile ? `host-group-row-${index}` : undefined} className={`transition-colors ${pendingOutgoingGroupIds.has(group.id) ? 'grayscale opacity-60' : 'hover:bg-slate-50 dark:hover:bg-zinc-800'} ${group.status === 'pending' || !group.status ? 'bg-yellow-50/30 dark:bg-yellow-900/10' : ''}`}>
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-3">
                                                         {group.imageUrl && (
@@ -579,8 +884,15 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                     </span>
                                                 </td>
                                                 <td className="p-4">
-                                                    {!(group.status === 'pending' || !group.status) && (
-                                                        <div id={!isMobile ? `btn-host-actions-${index}` : undefined} className="flex justify-end gap-2"> {/* Added ID to container */}
+                                                    {pendingOutgoingGroupIds.has(group.id) ? (
+                                                        <div className="flex justify-end">
+                                                            <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400 px-2 py-1.5 bg-purple-50 dark:bg-purple-950/20 border border-purple-300 dark:border-purple-700">
+                                                                <ArrowLeftRight className="w-3 h-3" aria-hidden="true" />
+                                                                Transferencia pendiente
+                                                            </span>
+                                                        </div>
+                                                    ) : !(group.status === 'pending' || !group.status) && (
+                                                        <div id={!isMobile ? `btn-host-actions-${index}` : undefined} className="flex justify-end gap-2">
                                                             {group.status === 'approved' && (
                                                                 <>
                                                                     <button
@@ -617,6 +929,16 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                                     >
                                                                         <UserMinus className="w-4 h-4" />
                                                                     </button>
+                                                                    {/* Transferir — solo host principal */}
+                                                                    {(group as any).co_host_id !== currentUser?.id && (
+                                                                        <button
+                                                                            onClick={() => handleTransferGroup(group)}
+                                                                            className="p-2 border-2 border-purple-500 text-purple-500 hover:bg-purple-500 hover:text-white transition-all rounded-lg"
+                                                                            title="Transferir grupo"
+                                                                        >
+                                                                            <ArrowLeftRight className="w-4 h-4" />
+                                                                        </button>
+                                                                    )}
                                                                 </>
                                                             )}
 
@@ -698,6 +1020,143 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                     group={selectedGroupForDropout}
                     currentUserId={currentUser.id}
                     onSuccess={() => fetchMyGroups()}
+                />
+            )}
+
+            {/* Modal de detalle — transferencia entrante */}
+            <NeoModal
+                isOpen={isTransferDetailOpen}
+                onClose={() => {
+                    if (isProcessingTransfer) return;
+                    setIsTransferDetailOpen(false);
+                    setSelectedIncomingTransfer(null);
+                }}
+                title="Solicitud de Titularidad"
+                maxWidth="max-w-lg"
+                persistent={isProcessingTransfer}
+            >
+                {selectedIncomingTransfer && (
+                    <div className="space-y-5 px-1 pb-1">
+                        {/* Quién transfiere — highlighted pill */}
+                        <div className="flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-950/30 border-2 border-purple-300 dark:border-purple-700">
+                            <ArrowLeftRight className="w-5 h-5 text-purple-500 shrink-0" aria-hidden="true" />
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-500 mb-0.5">
+                                    Te transfiere este grupo
+                                </p>
+                                <p className="font-black text-sm text-black dark:text-white">
+                                    {selectedIncomingTransfer.fromUserName}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Imagen */}
+                        {selectedIncomingTransfer.groupImageUrl && (
+                            <img
+                                src={selectedIncomingTransfer.groupImageUrl}
+                                alt={selectedIncomingTransfer.groupName}
+                                className="w-full h-44 object-cover border-2 border-black dark:border-neutral-600"
+                                loading="lazy"
+                                width={600}
+                                height={176}
+                            />
+                        )}
+
+                        {/* Datos del grupo */}
+                        <div className="space-y-3">
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-0.5">Grupo</p>
+                                <p className="font-black text-base uppercase tracking-tight text-black dark:text-white">
+                                    {selectedIncomingTransfer.groupName}
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-0.5">Día</p>
+                                    <p className="font-bold text-sm text-black dark:text-white">
+                                        {selectedIncomingTransfer.groupMeetingDay || '—'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-0.5">Horario</p>
+                                    <p className="font-bold text-sm text-black dark:text-white">
+                                        {selectedIncomingTransfer.groupMeetingTime || 'Sin especificar'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-0.5">Ubicación</p>
+                                <p className="font-bold text-sm text-black dark:text-white">
+                                    {selectedIncomingTransfer.groupLocation || 'Sin especificar'}
+                                </p>
+                            </div>
+
+                            {selectedIncomingTransfer.groupDescription && (
+                                <div>
+                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-0.5">Descripción</p>
+                                    <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                                        {selectedIncomingTransfer.groupDescription}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Advertencia */}
+                        <div className="border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 p-4 flex gap-3" role="note">
+                            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+                            <p className="text-xs font-medium text-amber-700 dark:text-amber-400 leading-relaxed">
+                                Al aceptar, pasarás a ser el Anfitrión oficial de este grupo.
+                                Solo un Encargado de Grupos o el Administrador puede revertir esta acción.
+                            </p>
+                        </div>
+
+                        {/* Botones — min-h 44px para touch */}
+                        <div className="flex gap-3 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => handleRejectTransfer(selectedIncomingTransfer)}
+                                disabled={isProcessingTransfer}
+                                className="flex-1 min-h-[44px] border-2 border-red-500 text-red-500 text-xs font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                aria-label="Rechazar la transferencia de este grupo"
+                            >
+                                <X className="w-4 h-4" aria-hidden="true" />
+                                Rechazar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleAcceptTransfer(selectedIncomingTransfer)}
+                                disabled={isProcessingTransfer}
+                                className="flex-[2] min-h-[44px] bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
+                                aria-label="Aceptar la titularidad de este grupo"
+                            >
+                                {isProcessingTransfer ? (
+                                    <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Procesando...</>
+                                ) : (
+                                    <><Check className="w-4 h-4" aria-hidden="true" /> Aceptar titularidad</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </NeoModal>
+
+            {/* Transfer Modal */}
+            {isTransferModalOpen && groupToTransfer && currentUser && (
+                <ModalTransferirGrupo
+                    isOpen={isTransferModalOpen}
+                    onClose={() => {
+                        setIsTransferModalOpen(false);
+                        setGroupToTransfer(null);
+                    }}
+                    group={groupToTransfer}
+                    currentUser={currentUser}
+                    onTransferInitiated={() => {
+                        setIsTransferModalOpen(false);
+                        setGroupToTransfer(null);
+                        fetchMyGroups();
+                    }}
                 />
             )}
 
