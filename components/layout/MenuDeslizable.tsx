@@ -19,7 +19,8 @@ import {
     Sun,
     Moon,
     UserCircle,
-    Star
+    Star,
+    Trophy
 } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
@@ -209,6 +210,12 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             icon: Star,
             path: '/influos',
             roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR]
+        },
+        {
+            label: 'Prode Mundial',
+            icon: Trophy,
+            path: '/prode',
+            roles: []
         },
         {
             label: 'Punto de información',

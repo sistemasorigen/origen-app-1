@@ -212,6 +212,24 @@ const MODULES: SystemModule[] = [
         status: 'active'
     },
     {
+        id: 'prode',
+        title: 'Prode Mundial',
+        subtitle: 'PREDICCIONES 2026',
+        description: 'Jugá, predecí resultados y competí en el ranking.',
+        icon: 'trophy',
+        route: '/prode',
+        allowedRoles: [
+            UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ANFITRION, UserRole.VIEWER, UserRole.USUARIO,
+            UserRole.VOLUNTARIO, UserRole.VOLUNTARIO_GRUPOS, UserRole.ENCARGADO_GRUPOS, UserRole.ENCARGADO_PUNTO
+        ],
+        publicAccess: true,
+        useImage: false,
+        gradientFrom: 'emerald-500',
+        gradientTo: 'teal-600',
+        iconColor: 'text-emerald-500',
+        status: 'active'
+    },
+    {
         id: 'admin',
         title: 'Sistemas',
         subtitle: 'Configuración Global',

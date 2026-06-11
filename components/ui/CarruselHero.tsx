@@ -19,7 +19,7 @@ interface HeroCarouselProps {
     slides: HeroSlideData[];
     autoPlayInterval?: number;
     heightClass?: string;
-    theme?: 'default' | 'alabanza' | 'store' | 'infopoint' | 'groups';
+    theme?: 'default' | 'alabanza' | 'store' | 'infopoint' | 'groups' | 'prode';
 }
 
 const HeroCarousel: React.FC<HeroCarouselProps> = ({
@@ -88,6 +88,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
         if (theme === 'alabanza') return 'bg-white/30 mix-blend-overlay';
         if (theme === 'infopoint') return 'bg-gradient-to-t from-black/60 via-black/20 to-transparent';
         if (theme === 'groups') return 'bg-gradient-to-t from-black/70 via-black/30 to-transparent';
+        if (theme === 'prode') return 'bg-transparent';
         return 'bg-gradient-to-b from-black/70 via-black/40 to-slate-900';
     };
 
@@ -118,7 +119,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                             <img
                                 src={slide.imageUrl}
                                 alt={slide.titlePrefix}
-                                className={`w-full h-full object-cover transition-transform duration-700 ${getImageClass()}`}
+                                className={`w-full h-full ${theme === 'prode' ? 'object-contain bg-white' : 'object-cover'} transition-transform duration-700 ${getImageClass()}`}
                             />
 
                             {/* Overlay */}
@@ -230,6 +231,32 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                                                         </div>
                                                     )}
                                                 </div>
+                                            </div>
+                                        </div>
+                                    ) : theme === 'prode' ? (
+                                        // Prode Layout - Centered text, no dark overlay, strong shadows
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <div className="max-w-4xl px-6 md:px-12 py-10 md:py-14 text-center">
+                                                {/* Main Headline */}
+                                                <h1 className={`text-4xl md:text-5xl lg:text-7xl font-black uppercase tracking-tight leading-[1.05] text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] ${animBase} ${isActive ? animActive : ''}`}>
+                                                    {slide.title || slide.titlePrefix || "PRODE MUNDIAL"}
+                                                </h1>
+
+                                                {/* Sub-headline */}
+                                                <p className={`mt-4 md:mt-6 text-lg md:text-xl font-bold text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] max-w-2xl mx-auto ${animBase} ${isActive ? `${animActive} animation-delay-200` : ''}`}>
+                                                    {slide.subtitle || slide.description}
+                                                </p>
+                                                
+                                                {slide.buttonText && (
+                                                    <div className={`mt-8 ${animBase} ${isActive ? `${animActive} animation-delay-400` : ''}`}>
+                                                        <button
+                                                            onClick={slide.onButtonClick}
+                                                            className="px-8 py-3 bg-white text-black font-black uppercase tracking-widest text-sm hover:bg-neutral-200 transition-all hover:scale-105 rounded-full shadow-xl"
+                                                        >
+                                                            {slide.buttonText}
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ) : (

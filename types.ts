@@ -797,6 +797,7 @@ export interface AppConfig {
     valuesSection?: ValuesSectionConfig; // New Values Section Config
     verses?: BiblicalVerse[]; // New: Array of verses
     footerLinks?: FooterLinks; // New Footer Links
+    prodeConfig?: ProdeConfig;
 }
 
 // --- WELCOME SYSTEM TYPES ---
@@ -902,3 +903,95 @@ export interface InfluosAttendee {
     tribe?: string;
     tribu?: string;
 }
+
+// ════════════════════════════════════════════════
+// PRODE MUNDIAL 2026
+// ════════════════════════════════════════════════
+
+export type ProdeRound =
+    | 'Fase de grupos'
+    | 'Octavos de final'
+    | 'Cuartos de final'
+    | 'Semifinal'
+    | 'Tercer puesto'
+    | 'Final';
+
+export interface ProdeMatch {
+    id: string;
+    matchNumber: number;
+    round: ProdeRound;
+    groupName?: string;
+    homeTeam: string;
+    awayTeam: string;
+    homeFlag?: string;
+    awayFlag?: string;
+    matchDate?: string;      // ISO string UTC
+    venue?: string;
+    isOpen: boolean;         // Acepta predicciones
+    isFinished: boolean;     // Resultado cargado
+    homeScoreReal?: number;
+    awayScoreReal?: number;
+    createdAt: string;
+}
+
+export interface ProdeParticipant {
+    id: string;
+    firstName: string;
+    lastName: string;
+    userId?: string;         // null si no tiene cuenta
+    totalPoints: number;
+    createdAt: string;
+}
+
+export interface ProdePrediction {
+    id: string;
+    participantId: string;
+    matchId: string;
+    homeScorePred: number;
+    awayScorePred: number;
+    pointsEarned?: number;  // null hasta que hay resultado
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Config completa del prode (guardada en app_config)
+export interface ProdeConfig {
+    // Banner de la página pública
+    bannerTitle: string;          // Ej: '¡Prode Mundial 2026!'
+    bannerSubtitle: string;       // Descripción corta
+    bannerImageUrl?: string;      // URL de imagen de fondo
+    bannerColor: string;          // Color hex del banner
+    isActive: boolean;            // Habilitar/deshabilitar prode
+
+    // Sistema de puntuación (configurable)
+    pointsExactScore: number;     // Default: 6
+    pointsCorrectResult: number;  // Default: 3
+    pointsWrong: number;          // Default: 0
+}
+
+// Defaults del prode
+export const DEFAULT_PRODE_CONFIG: ProdeConfig = {
+    bannerTitle: '¡Prode Mundial 2026!',
+    bannerSubtitle:
+        'Predecí los resultados y competí con tu comunidad.',
+    bannerImageUrl: undefined,
+    bannerColor: '#000000',
+    isActive: true,
+    pointsExactScore: 6,
+    pointsCorrectResult: 3,
+    pointsWrong: 0,
+};
+
+// Para el ranking público — combina participant + predictions
+export interface ProdeRankingEntry {
+    participant: ProdeParticipant;
+    predictions: ProdePrediction[];
+    rank: number;
+}
+
+// Resultado de la verificación de género
+export type ProdeGenderCheckResult =
+    | 'ok'
+    | 'not_found'       // No se encontró en users
+    | 'not_male'        // Género no es Masculino
+    | 'already_exists'; // Ya tiene un participante registrado

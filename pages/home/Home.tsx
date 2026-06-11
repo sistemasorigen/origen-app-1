@@ -25,7 +25,8 @@ import {
     CalendarDays as CalendarCoord,
     ChevronRight,
     Book,
-    Star
+    Star,
+    Trophy
 } from 'lucide-react';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 
@@ -80,6 +81,7 @@ const getModuleIcon = (id: string, defaultIcon: string, isConstruction?: boolean
         case 'coordinators': return <ClipboardList className={iconClass} />;
         case 'pastoral': return <HeartHandshake className={iconClass} />;
         case 'influos': return <Star className={iconClass} />;
+        case 'prode': return <Trophy className={iconClass} />;
         default: return <span className="text-3xl">{defaultIcon}</span>;
     }
 };

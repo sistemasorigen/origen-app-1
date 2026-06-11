@@ -4508,4 +4508,657 @@ export const supabaseService = {
       throw error;
     }
   },
+
+  // ════════════════════════════════════════════════
+  // PRODE MUNDIAL 2026
+  // ════════════════════════════════════════════════
+
+  /**
+   * Convierte una fila de DB al tipo ProdeMatch
+   */
+  _rowToProdeMatch(row: any): import('../types').ProdeMatch {
+    return {
+      id:            row.id,
+      matchNumber:   row.match_number,
+      round:         row.round as import('../types').ProdeRound,
+      groupName:     row.group_name || undefined,
+      homeTeam:      row.home_team,
+      awayTeam:      row.away_team,
+      homeFlag:      row.home_flag || undefined,
+      awayFlag:      row.away_flag || undefined,
+      matchDate:     row.match_date || undefined,
+      venue:         row.venue || undefined,
+      isOpen:        row.is_open,
+      isFinished:    row.is_finished,
+      homeScoreReal: row.home_score_real ?? undefined,
+      awayScoreReal: row.away_score_real ?? undefined,
+      createdAt:     row.created_at,
+    };
+  },
+
+  /**
+   * Obtiene todos los partidos del prode.
+   * Público — sin autenticación requerida.
+   */
+  async getProdeMatches(): Promise<import('../types').ProdeMatch[]> {
+    try {
+      const { data, error } = await supabase
+        .from('prode_matches')
+        .select('*')
+        .order('match_number', { ascending: true });
+      if (error) throw error;
+      return (data || []).map((r: any) =>
+        this._rowToProdeMatch(r)
+      );
+    } catch (err) {
+      console.error('[Prode] getMatches error:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Guarda un partido (INSERT si nuevo, UPDATE si existe).
+   * Solo admins.
+   */
+  async saveProdeMatch(
+    match: Partial<import('../types').ProdeMatch> & { matchNumber: number }
+  ): Promise<import('../types').ProdeMatch | null> {
+    try {
+      const payload: any = {
+        match_number:    match.matchNumber,
+        round:           match.round || 'Fase de grupos',
+        group_name:      match.groupName || null,
+        home_team:       match.homeTeam || '',
+        away_team:       match.awayTeam || '',
+        home_flag:       match.homeFlag || null,
+        away_flag:       match.awayFlag || null,
+        match_date:      match.matchDate || null,
+        venue:           match.venue || null,
+        is_open:         match.isOpen ?? false,
+        is_finished:     match.isFinished ?? false,
+        home_score_real: match.homeScoreReal ?? null,
+        away_score_real: match.awayScoreReal ?? null,
+      };
+
+      if (match.id) {
+        const { data, error } = await supabase
+          .from('prode_matches')
+          .update(payload)
+          .eq('id', match.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return this._rowToProdeMatch(data);
+      } else {
+        const { data, error } = await supabase
+          .from('prode_matches')
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        return this._rowToProdeMatch(data);
+      }
+    } catch (err) {
+      console.error('[Prode] saveMatch error:', err);
+      return null;
+    }
+  },
+
+  async deleteProdeMatch(matchId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('prode_matches')
+        .delete()
+        .eq('id', matchId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Prode] deleteMatch error:', err);
+      return false;
+    }
+  },
+
+  async resetProdeMatchResult(matchId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('prode_matches')
+        .update({
+          home_score_real: null,
+          away_score_real: null,
+          is_finished: false,
+          is_open: false,
+        })
+        .eq('id', matchId);
+      if (error) throw error;
+
+      await supabase
+        .from('prode_predictions')
+        .update({ points_earned: 0 })
+        .eq('match_id', matchId);
+
+      return true;
+    } catch (err) {
+      console.error('[Prode] resetMatchResult error:', err);
+      return false;
+    }
+  },
+
+  async deleteProdeParticipant(participantId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('prode_participants')
+        .delete()
+        .eq('id', participantId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Prode] deleteParticipant error:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Carga el resultado real de un partido y calcula
+   * los puntos de todas las predicciones asociadas.
+   * Solo admins.
+   */
+  async setProdeMatchResult(
+    matchId: string,
+    homeScore: number,
+    awayScore: number,
+    pointsExact: number,
+    pointsResult: number,
+    pointsWrong: number
+  ): Promise<boolean> {
+    try {
+      // 1. Actualizar resultado real del partido
+      const { error: matchError } = await supabase
+        .from('prode_matches')
+        .update({
+          home_score_real: homeScore,
+          away_score_real: awayScore,
+          is_finished:     true,
+          is_open:         false,
+        })
+        .eq('id', matchId);
+      if (matchError) throw matchError;
+
+      // 2. Traer todas las predicciones de ese partido
+      const { data: preds, error: predError } =
+        await supabase
+          .from('prode_predictions')
+          .select('id, participant_id, home_score_pred, away_score_pred')
+          .eq('match_id', matchId);
+      if (predError) throw predError;
+      if (!preds?.length) return true;
+
+      // 3. Calcular puntos por predicción
+      const realHome = homeScore;
+      const realAway = awayScore;
+      const realWinner =
+        realHome > realAway ? 'home'
+        : realAway > realHome ? 'away'
+        : 'draw';
+
+      for (const pred of preds) {
+        const predHome = pred.home_score_pred;
+        const predAway = pred.away_score_pred;
+        const predWinner =
+          predHome > predAway ? 'home'
+          : predAway > predHome ? 'away'
+          : 'draw';
+
+        let pts = pointsWrong;
+        if (
+          predHome === realHome &&
+          predAway === realAway
+        ) {
+          pts = pointsExact;
+        } else if (
+          predWinner === realWinner ||
+          predHome === realHome ||
+          predAway === realAway
+        ) {
+          pts = pointsResult;
+        }
+
+        // Actualizar puntos en la predicción
+        await supabase
+          .from('prode_predictions')
+          .update({
+            points_earned: pts,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', pred.id);
+
+        // Sumar puntos al participante
+        const { data: participant } = await supabase
+          .from('prode_participants')
+          .select('total_points')
+          .eq('id', pred.participant_id)
+          .single();
+
+        if (participant) {
+          await supabase
+            .from('prode_participants')
+            .update({
+              total_points:
+                (participant.total_points || 0) + pts
+            })
+            .eq('id', pred.participant_id);
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error('[Prode] setResult error:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Verifica si un nombre/apellido corresponde a un
+   * hombre en el sistema. Usado para usuarios sin sesión.
+   * Retorna el tipo de resultado para mostrar el mensaje
+   * adecuado en el frontend.
+   */
+  async checkProdeGenderByName(
+    firstName: string,
+    lastName: string
+  ): Promise<{
+    result: import('../types').ProdeGenderCheckResult;
+    userId?: string;
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, gender, name')
+        .ilike('name',
+          `%${firstName.trim()}%${lastName.trim()}%`
+        )
+        .limit(5);
+
+      if (error) throw error;
+
+      if (!data?.length) {
+        // Intentar búsqueda más flexible
+        const { data: data2 } = await supabase
+          .from('users')
+          .select('id, gender, name')
+          .or(
+            `name.ilike.%${firstName.trim()}%,` +
+            `name.ilike.%${lastName.trim()}%`
+          )
+          .limit(10);
+
+        const match = (data2 || []).find((u: any) => {
+          const fullName =
+            (u.name || '').toLowerCase();
+          const fn = firstName.toLowerCase().trim();
+          const ln = lastName.toLowerCase().trim();
+          return (
+            fullName.includes(fn) &&
+            fullName.includes(ln)
+          );
+        });
+
+        if (!match) {
+          return { result: 'not_found' };
+        }
+
+        if (match.gender !== 'Masculino') {
+          return { result: 'not_male' };
+        }
+
+        return { result: 'ok', userId: match.id };
+      }
+
+      // Buscar el match más preciso
+      const exactMatch = data.find((u: any) => {
+        const fullName =
+          (u.name || '').toLowerCase();
+        const fn = firstName.toLowerCase().trim();
+        const ln = lastName.toLowerCase().trim();
+        return (
+          fullName.includes(fn) &&
+          fullName.includes(ln)
+        );
+      });
+
+      if (!exactMatch) {
+        return { result: 'not_found' };
+      }
+
+      if (exactMatch.gender !== 'Masculino') {
+        return { result: 'not_male' };
+      }
+
+      return { result: 'ok', userId: exactMatch.id };
+
+    } catch (err) {
+      console.error('[Prode] genderCheck error:', err);
+      return { result: 'not_found' };
+    }
+  },
+
+  /**
+   * Obtiene o crea un participante del prode.
+   * Si ya existe (por user_id o por nombre), lo retorna.
+   * Si no existe, lo crea.
+   */
+  async getOrCreateProdeParticipant(
+    firstName: string,
+    lastName: string,
+    userId?: string
+  ): Promise<import('../types').ProdeParticipant | null> {
+    try {
+      // Buscar por user_id si tiene cuenta
+      if (userId) {
+        const { data: existing } = await supabase
+          .from('prode_participants')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (existing) {
+          return {
+            id:          existing.id,
+            firstName:   existing.first_name,
+            lastName:    existing.last_name,
+            userId:      existing.user_id,
+            totalPoints: existing.total_points,
+            createdAt:   existing.created_at,
+          };
+        }
+      }
+
+      // Buscar por nombre si no tiene cuenta
+      if (!userId) {
+        const { data: byName } = await supabase
+          .from('prode_participants')
+          .select('*')
+          .ilike('first_name',
+            `%${firstName.trim()}%`)
+          .ilike('last_name',
+            `%${lastName.trim()}%`)
+          .maybeSingle();
+
+        if (byName) {
+          return {
+            id:          byName.id,
+            firstName:   byName.first_name,
+            lastName:    byName.last_name,
+            userId:      byName.user_id,
+            totalPoints: byName.total_points,
+            createdAt:   byName.created_at,
+          };
+        }
+      }
+
+      // Crear nuevo participante
+      const { data: created, error } = await supabase
+        .from('prode_participants')
+        .insert({
+          first_name: firstName.trim(),
+          last_name:  lastName.trim(),
+          user_id:    userId || null,
+          total_points: 0,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id:          created.id,
+        firstName:   created.first_name,
+        lastName:    created.last_name,
+        userId:      created.user_id,
+        totalPoints: created.total_points,
+        createdAt:   created.created_at,
+      };
+    } catch (err) {
+      console.error('[Prode] getOrCreate error:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Guarda o actualiza una predicción.
+   * Bloquea si el partido no está abierto.
+   */
+  async saveProdePrediction(
+    participantId: string,
+    matchId: string,
+    homeScore: number,
+    awayScore: number
+  ): Promise<boolean> {
+    try {
+      // Verificar que el partido está abierto
+      const { data: match } = await supabase
+        .from('prode_matches')
+        .select('is_open, is_finished')
+        .eq('id', matchId)
+        .single();
+
+      if (!match?.is_open || match?.is_finished) {
+        console.warn(
+          '[Prode] Match not open for predictions'
+        );
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('prode_predictions')
+        .upsert({
+          participant_id:  participantId,
+          match_id:        matchId,
+          home_score_pred: homeScore,
+          away_score_pred: awayScore,
+          updated_at:      new Date().toISOString(),
+        }, { onConflict: 'participant_id,match_id' });
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error(
+        '[Prode] savePrediction error:', err
+      );
+      return false;
+    }
+  },
+
+  /**
+   * Obtiene el ranking público del prode.
+   * Ordenado por total_points DESC.
+   */
+  async getProdeRanking(): Promise<import('../types').ProdeParticipant[]> {
+    try {
+      const { data, error } = await supabase
+        .from('prode_participants')
+        .select('*')
+        .order('total_points', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      return (data || []).map((r: any) => ({
+        id:          r.id,
+        firstName:   r.first_name,
+        lastName:    r.last_name,
+        userId:      r.user_id || undefined,
+        totalPoints: r.total_points,
+        createdAt:   r.created_at,
+      }));
+    } catch (err) {
+      console.error('[Prode] getRanking error:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Obtiene las predicciones de un participante.
+   */
+  async getProdePredictions(
+    participantId: string
+  ): Promise<import('../types').ProdePrediction[]> {
+    try {
+      const { data, error } = await supabase
+        .from('prode_predictions')
+        .select('*')
+        .eq('participant_id', participantId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []).map((r: any) => ({
+        id:             r.id,
+        participantId:  r.participant_id,
+        matchId:        r.match_id,
+        homeScorePred:  r.home_score_pred,
+        awayScorePred:  r.away_score_pred,
+        pointsEarned:   r.points_earned ?? undefined,
+        createdAt:      r.created_at,
+        updatedAt:      r.updated_at,
+      }));
+    } catch (err) {
+      console.error(
+        '[Prode] getPredictions error:', err
+      );
+      return [];
+    }
+  },
+
+  /**
+   * Ajuste manual de puntos por el admin.
+   * Puede dar o quitar puntos a un participante.
+   */
+  async adjustProdePoints(
+    participantId: string,
+    delta: number, // positivo = sumar, negativo = restar
+    _reason?: string
+  ): Promise<boolean> {
+    try {
+      const { data: participant } = await supabase
+        .from('prode_participants')
+        .select('total_points')
+        .eq('id', participantId)
+        .single();
+
+      if (!participant) return false;
+
+      const newTotal = Math.max(
+        0,
+        (participant.total_points || 0) + delta
+      );
+
+      const { error } = await supabase
+        .from('prode_participants')
+        .update({ total_points: newTotal })
+        .eq('id', participantId);
+
+      if (error) {
+          console.error('[Prode] Supabase update error in adjustPoints:', error);
+          throw error;
+      }
+      return true;
+    } catch (err) {
+      console.error(
+        '[Prode] adjustPoints error:', err
+      );
+      return false;
+    }
+  },
+
+  /**
+   * Recalcula los puntos totales de todos los
+   * participantes desde cero basándose en las
+   * predicciones y resultados reales actuales.
+   * Útil si el admin cambia el sistema de puntuación.
+   */
+  async recalculateAllProdePoints(
+    pointsExact: number,
+    pointsResult: number,
+    pointsWrong: number
+  ): Promise<boolean> {
+    try {
+      // 1. Resetear todos los totales a 0
+      const { error: resetError } = await supabase
+        .from('prode_participants')
+        .update({ total_points: 0 })
+        .not('id', 'is', null); // Supabase requires a filter for bulk updates
+
+      if (resetError) {
+          console.error('[Prode] Supabase bulk update error:', resetError);
+          throw resetError;
+      }
+
+      // 2. Traer todos los partidos finalizados
+      const { data: finishedMatches } = await supabase
+        .from('prode_matches')
+        .select('id, home_score_real, away_score_real')
+        .eq('is_finished', true)
+        .not('home_score_real', 'is', null);
+
+      if (!finishedMatches?.length) return true;
+
+      // 3. Para cada partido, recalcular predicciones
+      for (const match of finishedMatches) {
+        const { data: preds } = await supabase
+          .from('prode_predictions')
+          .select(
+            'id, participant_id, ' +
+            'home_score_pred, away_score_pred'
+          )
+          .eq('match_id', match.id);
+
+        if (!preds?.length) continue;
+
+        const rH = match.home_score_real;
+        const rA = match.away_score_real;
+        const rW = rH > rA ? 'home'
+                 : rA > rH ? 'away' : 'draw';
+
+        for (const pred of preds) {
+          const pH = pred.home_score_pred;
+          const pA = pred.away_score_pred;
+          const pW = pH > pA ? 'home'
+                   : pA > pH ? 'away' : 'draw';
+
+          let pts = pointsWrong;
+          if (pH === rH && pA === rA)
+            pts = pointsExact;
+          else if (pW === rW)
+            pts = pointsResult;
+
+          await supabase
+            .from('prode_predictions')
+            .update({ points_earned: pts })
+            .eq('id', pred.id);
+
+          // Sumar al total del participante
+          const { data: p } = await supabase
+            .from('prode_participants')
+            .select('total_points')
+            .eq('id', pred.participant_id)
+            .single();
+
+          if (p) {
+            await supabase
+              .from('prode_participants')
+              .update({
+                total_points:
+                  (p.total_points || 0) + pts
+              })
+              .eq('id', pred.participant_id);
+          }
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error('[Prode] recalculate error:', err);
+      return false;
+    }
+  },
 };
