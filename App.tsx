@@ -25,6 +25,7 @@ import Notifications from './pages/user/Notificaciones';
 import PastoralCareDashboard from './pages/audiencia/AudienciaServiciosPrincipal';
 import ProfilePage from './pages/user/PaginaPerfil';
 import Prode from './pages/prode/Prode';
+import AdminProde from './pages/prode/AdminProde';
 import SystemLoginModal from './components/modals/ModalLoginSistema';
 import CompleteProfileModal from './components/modals/ModalCompletarPerfil';
 import { User, UserRole, AppConfig } from './types';
@@ -362,6 +363,15 @@ const AppContent: React.FC = () => {
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/prode" element={<Prode />} />
+                                <Route path="/prode/administracion" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.PRODE
+                                    ]))
+                                        ? <AdminProde />
+                                        : <Navigate to="/" />
+                                } />
                                 <Route path="/notificaciones" element={<Notifications />} />
                                 <Route path="/perfil" element={<ProfilePage />} />
                                 <Route path="*" element={<Navigate to="/" />} />

@@ -11,10 +11,10 @@ import {
 import {
     Trophy, ChevronUp, ChevronDown,
     Check, Loader2, Medal,
-    Shield, Swords, ArrowLeft,
+    Swords, ArrowLeft,
     Target, CircleCheck, XCircle, Lock
 } from 'lucide-react';
-import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
+import HeroCarousel from '../../components/ui/CarruselHero';
 
 // ─── Keyframes ────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -72,6 +72,104 @@ const STYLES = `
     }
 `;
 
+
+const TEAM_TO_CODE: Record<string, string> = {
+    // CONMEBOL
+    'argentina': 'ar', 'brasil': 'br', 'brazil': 'br', 'uruguay': 'uy',
+    'colombia': 'co', 'chile': 'cl', 'peru': 'pe', 'perú': 'pe',
+    'ecuador': 'ec', 'paraguay': 'py', 'venezuela': 've', 'bolivia': 'bo',
+    // UEFA
+    'francia': 'fr', 'france': 'fr',
+    'inglaterra': 'gb-eng', 'england': 'gb-eng',
+    'españa': 'es', 'espana': 'es', 'spain': 'es',
+    'alemania': 'de', 'germany': 'de',
+    'portugal': 'pt',
+    'italia': 'it', 'italy': 'it',
+    'paises bajos': 'nl', 'países bajos': 'nl', 'holanda': 'nl', 'netherlands': 'nl',
+    'croacia': 'hr', 'croatia': 'hr',
+    'belgica': 'be', 'bélgica': 'be', 'belgium': 'be',
+    'dinamarca': 'dk', 'denmark': 'dk',
+    'suiza': 'ch', 'switzerland': 'ch',
+    'serbia': 'rs',
+    'polonia': 'pl', 'poland': 'pl',
+    'gales': 'gb-wls', 'wales': 'gb-wls',
+    'escocia': 'gb-sct', 'scotland': 'gb-sct',
+    'suecia': 'se', 'sweden': 'se',
+    'ucrania': 'ua', 'ukraine': 'ua',
+    'bosnia y herzegovina': 'ba', 'bosnia': 'ba',
+    'eslovenia': 'si', 'slovenia': 'si',
+    // Otros
+    'turquia': 'tr', 'turquía': 'tr', 'turkey': 'tr',
+    'curazao': 'cw', 'curacao': 'cw',
+    'haiti': 'ht', 'haití': 'ht',
+    'costa de marfil': 'ci', 'ivory coast': 'ci',
+    // AFC
+    'japon': 'jp', 'japón': 'jp', 'japan': 'jp',
+    'corea del sur': 'kr', 'republica de corea': 'kr', 'south korea': 'kr', 'korea': 'kr',
+    'chequia': 'cz', 'republica checa': 'cz', 'czech republic': 'cz', 'czechia': 'cz',
+    'arabia saudita': 'sa', 'saudi arabia': 'sa',
+    'iran': 'ir', 'irán': 'ir',
+    'australia': 'au',
+    'qatar': 'qa', 'katar': 'qa', 'cátar': 'qa', 'catar': 'qa',
+    // CAF
+    'senegal': 'sn',
+    'marruecos': 'ma', 'morocco': 'ma',
+    'tunez': 'tn', 'túnez': 'tn', 'tunisia': 'tn',
+    'ghana': 'gh',
+    'camerun': 'cm', 'camerún': 'cm', 'cameroon': 'cm',
+    'egipto': 'eg', 'egypt': 'eg',
+    'nigeria': 'ng',
+    'sudafrica': 'za', 'south africa': 'za',
+    'angola': 'ao', 'mali': 'ml', 'zambia': 'zm',
+    // CONCACAF
+    'mexico': 'mx', 'méxico': 'mx',
+    'estados unidos': 'us', 'usa': 'us', 'united states': 'us',
+    'costa rica': 'cr',
+    'canada': 'ca', 'canadá': 'ca',
+    // OFC
+    'nueva zelanda': 'nz', 'new zealand': 'nz'
+};
+
+const normalizeName = (name: string): string =>
+    name.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .trim();
+
+interface FlagImageProps {
+    teamName: string;
+    size?: 'sm' | 'md' | 'lg' | 'xl';
+    className?: string;
+    emoji?: string; // emoji de bandera guardado en BD (fallback si el nombre no está mapeado)
+}
+
+const FLAG_FONT_SIZE: Record<string, string> = { sm: '1rem', md: '1.5rem', lg: '2rem', xl: '2.75rem' };
+
+const FlagImage: React.FC<FlagImageProps> = ({ teamName, size = 'lg', className = '', emoji }) => {
+    const code = TEAM_TO_CODE[normalizeName(teamName)];
+    if (!code) {
+        if (emoji) return <span className={`leading-none drop-shadow-sm ${className}`} style={{ fontSize: FLAG_FONT_SIZE[size] }}>{emoji}</span>;
+        return <span className={`text-slate-300 font-bold uppercase ${className}`}>{teamName.substring(0, 2)}</span>;
+    }
+    
+    // Size mapping
+    const sizeMap = { sm: 24, md: 32, lg: 48, xl: 64 };
+    const px = sizeMap[size];
+    
+    return (
+        <img 
+            src={`https://flagcdn.com/${code}.svg`}
+            alt={`Bandera de ${teamName}`}
+            width={px}
+            className={`rounded-[4px] shadow-sm object-cover ${className}`}
+            style={{ height: size === 'xl' ? '42px' : size === 'lg' ? '32px' : size === 'md' ? '22px' : '16px' }}
+            onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+            }}
+        />
+    );
+};
+
+
 type ProdeScreen = 'landing' | 'predict' | 'success';
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -91,6 +189,12 @@ const Prode: React.FC = () => {
     const [savedMatches, setSavedMatches] = useState<Set<string>>(new Set());
     const [poppedCell, setPoppedCell] = useState<string | null>(null);
     const [predictions, setPredictions] = useState<ProdePrediction[]>([]);
+    const [now, setNow] = useState(Date.now());
+
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, []);
 
     useEffect(() => {
         const load = async () => {
@@ -200,9 +304,28 @@ const Prode: React.FC = () => {
         });
     }, []);
 
+    // Countdown helpers — usan el estado reactivo `now` (actualizado cada segundo)
+    const CUTOFF_MS = 15 * 60 * 1000;
+    const getTimeLeftMs = (match: ProdeMatch): number =>
+        new Date(match.matchDate || 0).getTime() - CUTOFF_MS - now;
+    const isMatchLocked = (match: ProdeMatch): boolean =>
+        !match.matchDate || getTimeLeftMs(match) <= 0;
+    const formatCountdown = (ms: number): string => {
+        const s = Math.floor(ms / 1000);
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        if (h > 0) return `${h}h ${m}m`;
+        if (m > 0) return `${m}m ${String(sec).padStart(2, '0')}s`;
+        return `${String(sec)}s`;
+    };
+
     const isMale = user?.gender === 'Masculino';
     const openMatches = matches.filter(m => m.isOpen && !m.isFinished);
-    const allSaved = openMatches.length > 0 && openMatches.every(m => savedMatches.has(m.id));
+    const liveMatches = openMatches.filter(m => m.matchDate && now >= new Date(m.matchDate).getTime()).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
+    const upcomingMatches = openMatches.filter(m => !m.matchDate || now < new Date(m.matchDate).getTime()).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
+    const unlockedOpenMatches = openMatches.filter(m => !isMatchLocked(m));
+    const allSaved = openMatches.length > 0 && unlockedOpenMatches.every(m => savedMatches.has(m.id));
 
     const currentMatch = [...openMatches].sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime())[0];
     const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !== undefined && m.awayScoreReal !== undefined).sort((a, b) => new Date(b.matchDate || 0).getTime() - new Date(a.matchDate || 0).getTime());
@@ -310,16 +433,16 @@ const Prode: React.FC = () => {
                                             ) : openMatches.length > 0 ? (
                                                 <motion.button
                                                     onClick={handleStartPredicting}
-                                                    disabled={initializingParticipant}
+                                                    disabled={initializingParticipant || (participant && savedMatches.size === openMatches.length)}
                                                     whileHover={{ scale: 1.02 }}
                                                     whileTap={{ scale: 0.96 }}
-                                                    className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-[12px] font-black uppercase tracking-widest rounded-full disabled:opacity-40 transition-all shadow-[0_8px_20px_-4px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_25px_-4px_rgba(16,185,129,0.4)]"
+                                                    className={`w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 text-[12px] font-black uppercase tracking-widest rounded-full disabled:opacity-40 transition-all ${participant && savedMatches.size === openMatches.length ? 'bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-sm cursor-not-allowed' : 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-[0_8px_20px_-4px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_25px_-4px_rgba(16,185,129,0.4)]'}`}
                                                 >
                                                     {initializingParticipant
                                                         ? <Loader2 className="w-5 h-5 animate-spin" />
-                                                        : <Swords className="w-5 h-5" />
+                                                        : participant && savedMatches.size === openMatches.length ? <Lock className="w-5 h-5" /> : <Swords className="w-5 h-5" />
                                                     }
-                                                    {initializingParticipant ? 'Preparando...' : 'Predecir Resultados'}
+                                                    {initializingParticipant ? 'Preparando...' : participant && savedMatches.size === openMatches.length ? 'Predicciones Completadas' : 'Predecir Resultados'}
                                                 </motion.button>
                                             ) : (
                                                 <div className="px-6 py-4 text-slate-400 text-[11px] font-bold uppercase tracking-widest rounded-full bg-slate-50 border border-slate-100">
@@ -334,19 +457,88 @@ const Prode: React.FC = () => {
                             {/* BODY SECTIONS */}
                             <div className="px-5 md:px-12 py-6 space-y-12 max-w-5xl mx-auto">
 
-                                {/* ── PARTIDOS ACTUALES ── */}
-                                {openMatches.length > 0 && (
+                                                            {/* ─── PARTIDOS EN VIVO ─── */}
+                                <div className="fu s3 mb-12">
+                                    <div className="flex items-center justify-center mb-6 px-1">
+                                        <div className="flex flex-col items-center gap-1.5">
+                                            <span className="px-3 py-1 bg-red-100 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-full flex items-center gap-1.5 shadow-sm">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                                En Vivo
+                                            </span>
+                                            <h2 className="text-lg font-black uppercase tracking-tight text-slate-700">
+                                                Partidos en Vivo
+                                            </h2>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {liveMatches.length > 0 ? liveMatches.map(match => {
+                                            const pred = predictions.find(p => p.matchId === match.id);
+                                            return (
+                                            <div key={match.id} className="bg-white rounded-[2rem] p-6 shadow-[0_4px_20px_-4px_rgba(239,68,68,0.1)] border-2 border-red-100 transition-all overflow-hidden relative">
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-full pointer-events-none" />
+                                                <div className="flex items-center justify-between mb-4 relative z-10">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400">{match.round}</span>
+                                                        {match.groupName && (
+                                                            <span className="text-[10px] font-bold text-slate-300">· {match.groupName}</span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-50 text-red-500">
+                                                        Jugándose
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-4 relative z-10">
+                                                    <div className="flex-1 flex flex-col items-end text-right">
+                                                        <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="xl" className="mb-2" />
+                                                        <p className="font-black text-[13px] uppercase tracking-wide text-slate-600">{match.homeTeam}</p>
+                                                    </div>
+                                                    <div className="shrink-0 flex flex-col items-center px-4">
+                                                        <span className="text-red-400 font-black text-xl animate-pulse">VS</span>
+                                                    </div>
+                                                    <div className="flex-1 flex flex-col items-start text-left">
+                                                        <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="xl" className="mb-2" />
+                                                        <p className="font-black text-[13px] uppercase tracking-wide text-slate-600">{match.awayTeam}</p>
+                                                    </div>
+                                                </div>
+                                                {pred && (
+                                                    <div className="mt-6 pt-4 border-t border-slate-100 relative z-10">
+                                                        <div className="bg-slate-50 rounded-xl p-3 flex flex-col items-center justify-center gap-1 border border-slate-100">
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tu Predicción</span>
+                                                            <span className="text-xl font-black text-slate-700 tabular-nums">{pred.homeScorePred} - {pred.awayScorePred}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {!pred && (
+                                                    <div className="mt-6 pt-4 border-t border-slate-100 relative z-10">
+                                                        <div className="bg-slate-50 rounded-xl p-3 flex flex-col items-center justify-center gap-1 border border-slate-100">
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No predijiste este partido</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}) : (
+                                            <div className="bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center gap-3">
+                                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                                    No hay partidos en vivo en este momento
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+{/* ── PARTIDOS ACTUALES ── */}
+                                {upcomingMatches.length > 0 && (
                                     <div className="fu s3">
                                         <div className="flex items-center justify-center mb-6 px-1">
                                             <div className="flex flex-col items-center gap-1.5">
-                                                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-widest rounded-full">En Juego / Próximo</span>
+                                                
                                                 <h2 className="text-lg font-black uppercase tracking-tight text-slate-700">
-                                                    {openMatches.length === 1 ? 'Partido Actual' : 'Próximos Partidos'}
+                                                    {upcomingMatches.length === 1 ? 'Próximo Partido' : 'Próximos Partidos'}
                                                 </h2>
                                             </div>
                                         </div>
                                         <div className="space-y-4">
-                                            {[...openMatches].sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime()).map(match => (
+                                            {[...upcomingMatches].sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime()).map(match => (
                                                 <div key={match.id} className="bg-white rounded-[2rem] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.06)] border border-slate-100/50 transition-all">
                                                     <div className="flex items-center justify-between mb-4">
                                                         <div className="flex items-center gap-2">
@@ -357,19 +549,32 @@ const Prode: React.FC = () => {
                                                             )}
                                                         </div>
                                                         {match.matchDate && (
-                                                            <span className="text-[11px] font-bold text-slate-400 tabular-nums bg-slate-50 px-2.5 py-1 rounded-lg">{formatMatchDate(match.matchDate)}</span>
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <span className="text-[11px] font-bold text-slate-400 tabular-nums bg-slate-50 px-2.5 py-1 rounded-lg">{formatMatchDate(match.matchDate)}</span>
+                                                                {(() => {
+                                                                    const ms = getTimeLeftMs(match);
+                                                                    if (ms <= 0) return <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg bg-slate-100 text-slate-400">Cerrado</span>;
+                                                                    const urg = ms < 5 * 60 * 1000;
+                                                                    const warn = ms < 30 * 60 * 1000;
+                                                                    return (
+                                                                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg tabular-nums ${urg ? 'bg-rose-50 text-rose-500' : warn ? 'bg-amber-50 text-amber-500' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                                            {formatCountdown(ms)}
+                                                                        </span>
+                                                                    );
+                                                                })()}
+                                                            </div>
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-4">
                                                         <div className="flex-1 flex flex-col items-end text-right">
-                                                            {match.homeFlag && <span className="text-4xl mb-2 drop-shadow-md leading-none">{match.homeFlag}</span>}
+                                                            <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="xl" className="mb-2" />
                                                             <p className="font-black text-[13px] uppercase tracking-wide text-slate-600">{match.homeTeam}</p>
                                                         </div>
                                                         <div className="shrink-0 flex flex-col items-center px-4">
                                                             <span className="text-slate-300 font-black text-xl">VS</span>
                                                         </div>
                                                         <div className="flex-1 flex flex-col items-start text-left">
-                                                            {match.awayFlag && <span className="text-4xl mb-2 drop-shadow-md leading-none">{match.awayFlag}</span>}
+                                                            <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="xl" className="mb-2" />
                                                             <p className="font-black text-[13px] uppercase tracking-wide text-slate-600">{match.awayTeam}</p>
                                                         </div>
                                                     </div>
@@ -417,7 +622,7 @@ const Prode: React.FC = () => {
                                                         return (
                                                             <div key={match.id} className="bg-white/10 border border-white/20 rounded-[1.25rem] p-3.5 flex items-center justify-between backdrop-blur-md shadow-inner transition-all hover:bg-white/20">
                                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                                    {match.homeFlag && <span className="text-xl drop-shadow-md">{match.homeFlag}</span>}
+                                                                    <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="sm" />
                                                                     <span className="text-xs font-black uppercase tracking-wider truncate">{match.homeTeam}</span>
                                                                 </div>
                                                                 <div className="px-4 py-1.5 bg-black/20 rounded-xl text-sm font-black mx-3 shrink-0 tabular-nums shadow-inner text-emerald-50 border border-black/10">
@@ -425,7 +630,7 @@ const Prode: React.FC = () => {
                                                                 </div>
                                                                 <div className="flex items-center gap-3 flex-1 min-w-0 justify-end text-right">
                                                                     <span className="text-xs font-black uppercase tracking-wider truncate">{match.awayTeam}</span>
-                                                                    {match.awayFlag && <span className="text-xl drop-shadow-md">{match.awayFlag}</span>}
+                                                                    <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="sm" />
                                                                 </div>
                                                             </div>
                                                         );
@@ -539,13 +744,13 @@ const Prode: React.FC = () => {
                                                     <div className="flex items-center justify-between md:justify-center gap-4 flex-1">
                                                         <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
                                                             <span className="text-xs sm:text-sm font-black uppercase text-slate-700 truncate">{match.homeTeam}</span>
-                                                            <span className="text-2xl drop-shadow-sm shrink-0">{match.homeFlag}</span>
+                                                            <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="lg" />
                                                         </div>
                                                         <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-lg font-black text-slate-700 tabular-nums shadow-inner shrink-0">
                                                             {match.homeScoreReal} - {match.awayScoreReal}
                                                         </div>
                                                         <div className="flex items-center gap-3 flex-1 justify-start min-w-0">
-                                                            <span className="text-2xl drop-shadow-sm shrink-0">{match.awayFlag}</span>
+                                                            <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="lg" />
                                                             <span className="text-xs sm:text-sm font-black uppercase text-slate-700 truncate">{match.awayTeam}</span>
                                                         </div>
                                                     </div>
@@ -605,13 +810,13 @@ const Prode: React.FC = () => {
                                                         {/* Teams */}
                                                         <div className="flex items-center justify-between w-full py-2">
                                                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                                {match.homeFlag && <span className="text-3xl drop-shadow-sm shrink-0">{match.homeFlag}</span>}
+                                                                <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="lg" />
                                                                 <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.homeTeam}</span>
                                                             </div>
                                                             <span className="text-slate-300 font-black text-sm px-4">VS</span>
                                                             <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
                                                                 <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.awayTeam}</span>
-                                                                {match.awayFlag && <span className="text-3xl drop-shadow-sm shrink-0">{match.awayFlag}</span>}
+                                                                <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="lg" />
                                                             </div>
                                                         </div>
 
@@ -689,18 +894,26 @@ const Prode: React.FC = () => {
                                         const score = scores[match.id] || { home: 0, away: 0 };
                                         const isSaved = savedMatches.has(match.id);
                                         const isSaving = savingMatch === match.id;
+                                        const locked = isMatchLocked(match);
+                                        const msLeft = locked ? 0 : getTimeLeftMs(match);
+                                        const urgent = !locked && msLeft < 5 * 60 * 1000;
+                                        const warning = !locked && msLeft < 30 * 60 * 1000;
 
                                         return (
                                             <div
                                                 key={match.id}
                                                 className={`fu s${Math.min(idx + 1, 6)} overflow-hidden transition-all duration-300 rounded-[2rem] ${
-                                                    isSaved ? 'bg-gradient-to-b from-white to-emerald-50/10 shadow-[0_8px_30px_-4px_rgba(16,185,129,0.15)] ring-1 ring-emerald-200/50' : 'bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] border border-white'
+                                                    locked
+                                                        ? 'bg-slate-50 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] border border-slate-100'
+                                                        : isSaved
+                                                            ? 'bg-gradient-to-b from-white to-emerald-50/10 shadow-[0_8px_30px_-4px_rgba(16,185,129,0.15)] ring-1 ring-emerald-200/50'
+                                                            : 'bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] border border-white'
                                                 }`}
                                             >
                                                 {/* Header */}
                                                 <div className="flex items-center justify-between px-6 py-4 bg-white/50">
                                                     <div className="flex items-center gap-2.5">
-                                                        <div className={`w-2 h-2 rounded-full ${isSaved ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-slate-200'} transition-all`} />
+                                                        <div className={`w-2 h-2 rounded-full ${locked ? 'bg-slate-300' : isSaved ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-slate-200'} transition-all`} />
                                                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{match.round}</span>
                                                         {match.groupName && (
                                                             <span className="text-[10px] font-bold text-slate-300">· {match.groupName}</span>
@@ -711,13 +924,25 @@ const Prode: React.FC = () => {
                                                     )}
                                                 </div>
 
+                                                {/* Countdown */}
+                                                <div className={`mx-4 mb-1 px-4 py-1.5 rounded-xl flex items-center gap-2 ${
+                                                    locked ? 'bg-slate-100' : urgent ? 'bg-rose-50' : warning ? 'bg-amber-50' : 'bg-emerald-50/60'
+                                                }`}>
+                                                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                                                        locked ? 'bg-slate-300' : urgent ? 'bg-rose-400 animate-pulse' : warning ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'
+                                                    }`} />
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest tabular-nums ${
+                                                        locked ? 'text-slate-400' : urgent ? 'text-rose-500' : warning ? 'text-amber-500' : 'text-emerald-600'
+                                                    }`}>
+                                                        {locked ? 'Predicciones cerradas' : `Cierra en ${formatCountdown(msLeft)}`}
+                                                    </span>
+                                                </div>
+
                                                 {/* Teams + controls */}
                                                 <div className="px-6 pb-6 pt-2 flex items-center gap-4">
                                                     {/* Home team */}
                                                     <div className="flex-1 min-w-0 flex flex-col items-end text-right">
-                                                        {match.homeFlag && (
-                                                            <span className="text-4xl mb-2 drop-shadow-md leading-none">{match.homeFlag}</span>
-                                                        )}
+                                                        <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="xl" className="mb-2" />
                                                         <p className="font-black text-[13px] uppercase tracking-wide text-slate-600 truncate w-full">{match.homeTeam}</p>
                                                     </div>
 
@@ -727,7 +952,8 @@ const Prode: React.FC = () => {
                                                         <div className="flex flex-col items-center gap-2">
                                                             <button
                                                                 onClick={() => adjustScore(match.id, 'home', 1)}
-                                                                className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 transition-all"
+                                                                disabled={isSaved || locked}
+                                                                className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:text-slate-400 transition-all"
                                                                 aria-label="Más goles local"
                                                             >
                                                                 <ChevronUp className="w-5 h-5" />
@@ -737,8 +963,8 @@ const Prode: React.FC = () => {
                                                             </div>
                                                             <button
                                                                 onClick={() => adjustScore(match.id, 'home', -1)}
-                                                                disabled={score.home === 0}
-                                                                className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed transition-all"
+                                                                disabled={score.home === 0 || isSaved || locked}
+                                                                className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:text-slate-400 transition-all"
                                                                 aria-label="Menos goles local"
                                                             >
                                                                 <ChevronDown className="w-5 h-5" />
@@ -755,7 +981,8 @@ const Prode: React.FC = () => {
                                                         <div className="flex flex-col items-center gap-2">
                                                             <button
                                                                 onClick={() => adjustScore(match.id, 'away', 1)}
-                                                                className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 transition-all"
+                                                                disabled={isSaved || locked}
+                                                                className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:text-slate-400 transition-all"
                                                                 aria-label="Más goles visitante"
                                                             >
                                                                 <ChevronUp className="w-5 h-5" />
@@ -765,8 +992,8 @@ const Prode: React.FC = () => {
                                                             </div>
                                                             <button
                                                                 onClick={() => adjustScore(match.id, 'away', -1)}
-                                                                disabled={score.away === 0}
-                                                                className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed transition-all"
+                                                                disabled={score.away === 0 || isSaved || locked}
+                                                                className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:text-slate-400 transition-all"
                                                                 aria-label="Menos goles visitante"
                                                             >
                                                                 <ChevronDown className="w-5 h-5" />
@@ -776,9 +1003,7 @@ const Prode: React.FC = () => {
 
                                                     {/* Away team */}
                                                     <div className="flex-1 min-w-0 flex flex-col items-start text-left">
-                                                        {match.awayFlag && (
-                                                            <span className="text-4xl mb-2 drop-shadow-md leading-none">{match.awayFlag}</span>
-                                                        )}
+                                                        <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="xl" className="mb-2" />
                                                         <p className="font-black text-[13px] uppercase tracking-wide text-slate-600 truncate w-full">{match.awayTeam}</p>
                                                     </div>
                                                 </div>
@@ -790,18 +1015,22 @@ const Prode: React.FC = () => {
                                                 {/* Save button */}
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleSavePrediction(match.id)}
-                                                    disabled={isSaving}
-                                                    className={`w-full flex items-center justify-center gap-2.5 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 disabled:opacity-50 ${
-                                                        isSaved
-                                                            ? 'text-white bg-gradient-to-r from-teal-500 to-emerald-500'
-                                                            : 'text-slate-500 bg-slate-50 hover:bg-slate-100 hover:text-slate-700'
+                                                    onClick={() => !isSaved && !locked && handleSavePrediction(match.id)}
+                                                    disabled={isSaving || isSaved || locked}
+                                                    className={`w-full flex items-center justify-center gap-2.5 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 disabled:opacity-60 ${
+                                                        locked
+                                                            ? 'text-slate-400 bg-slate-100 cursor-not-allowed'
+                                                            : isSaved
+                                                                ? 'text-emerald-700 bg-emerald-50 cursor-not-allowed border-t border-emerald-100'
+                                                                : 'text-white bg-gradient-to-r from-teal-500 to-emerald-500 shadow-[0_4px_20px_-4px_rgba(16,185,129,0.3)] hover:shadow-[0_8px_25px_-4px_rgba(16,185,129,0.4)]'
                                                     }`}
                                                 >
-                                                    {isSaving ? <Loader2 className="w-5 h-5 animate-spin" />
-                                                        : isSaved ? <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                                                    {locked
+                                                        ? <Lock className="w-4 h-4" strokeWidth={2.5} />
+                                                        : isSaving ? <Loader2 className="w-5 h-5 animate-spin" />
+                                                        : isSaved ? <Lock className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
                                                         : null}
-                                                    {isSaving ? 'Guardando...' : isSaved ? '¡Guardado!' : 'Guardar Predicción'}
+                                                    {locked ? 'Cerrado — quedan menos de 15 min' : isSaving ? 'Guardando...' : isSaved ? 'Predicción Guardada' : 'Guardar Predicción'}
                                                 </button>
                                             </div>
                                         );

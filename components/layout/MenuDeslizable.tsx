@@ -215,7 +215,14 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Prode Mundial',
             icon: Trophy,
             path: '/prode',
-            roles: []
+            roles: [],
+            subItems: [
+                {
+                    label: 'Administración',
+                    path: '/prode/administracion',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                }
+            ]
         },
         {
             label: 'Punto de información',
@@ -255,7 +262,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             roles: [],
             requiresAuth: true
         }
-    ];
+    ].filter(item => {
+        // Excluir Prode explícitamente para mujeres
+        if (item.label === 'Prode Mundial' && currentUser?.gender === 'Femenino') return false;
+        return true;
+    });
 
     if (!shouldRender && type === 'drawer') return null;
 

@@ -26,7 +26,8 @@ export enum UserRole {
     VOLUNTARIO_BIENVENIDA = 'VOLUNTARIO_BIENVENIDA',
     ADMIN_CUIDADO_PASTORAL = 'ADMIN_CUIDADO_PASTORAL', // NEW ROLE for Pastoral Care
     COORDINATOR = 'COORDINATOR',
-    INFLUOS = 'INFLUOS', // Módulo de gestión de menores
+    INFLUOS = 'INFLUOS',   // Módulo de gestión de menores
+    PRODE = 'PRODE',       // Administración del Prode Mundial
 }
 
 export enum CoordinatorVariant {

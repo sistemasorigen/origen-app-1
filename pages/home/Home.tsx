@@ -168,7 +168,13 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                 if (!currentUser) return false;
 
                 // 3. Super Admin -> See All
-                if (hasRole(currentUser, UserRole.SUPER_ADMIN)) return true;
+                if (hasRole(currentUser, UserRole.SUPER_ADMIN)) {
+                    if (m.id === 'prode' && currentUser?.gender === 'Femenino') return false;
+                    return true;
+                }
+
+                // Excluir Prode explícitamente para mujeres
+                if (m.id === 'prode' && currentUser?.gender === 'Femenino') return false;
 
                 // 4. Check Allowed Roles overlap
                 // If user has ANY of the allowed roles for this module

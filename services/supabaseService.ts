@@ -4976,7 +4976,8 @@ export const supabaseService = {
     try {
       const { data, error } = await supabase
         .from('prode_participants')
-        .select('*')
+        // El !inner hace que solo devuelva participantes que tengan al menos una predicción
+        .select('*, prode_predictions!inner(id)')
         .order('total_points', { ascending: false })
         .limit(100);
 
