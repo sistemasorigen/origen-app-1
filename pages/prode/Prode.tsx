@@ -221,13 +221,14 @@ const Prode: React.FC = () => {
                         
                         const initScores: Record<string, { home: number; away: number }> = {};
                         const savedSet = new Set<string>();
+                        const openIds = new Set(matchData.filter(m => m.isOpen && !m.isFinished).map(m => m.id));
                         preds.forEach(pred => {
                             initScores[pred.matchId] = { home: pred.homeScorePred, away: pred.awayScorePred };
-                            savedSet.add(pred.matchId);
+                            if (openIds.has(pred.matchId)) savedSet.add(pred.matchId);
                         });
                         // init empty ones
-                        matchData.filter(m => m.isOpen && !m.isFinished).forEach(m => {
-                            if (!initScores[m.id]) initScores[m.id] = { home: 0, away: 0 };
+                        openIds.forEach(id => {
+                            if (!initScores[id]) initScores[id] = { home: 0, away: 0 };
                         });
                         setScores(initScores);
                         setSavedMatches(savedSet);
@@ -261,13 +262,15 @@ const Prode: React.FC = () => {
             const preds: ProdePrediction[] = await supabaseService.getProdePredictions(p.id);
             const initScores: Record<string, { home: number; away: number }> = {};
             const savedSet = new Set<string>();
+            const openIds = new Set(matches.filter(m => m.isOpen && !m.isFinished).map(m => m.id));
             preds.forEach(pred => {
                 initScores[pred.matchId] = { home: pred.homeScorePred, away: pred.awayScorePred };
-                savedSet.add(pred.matchId);
+                if (openIds.has(pred.matchId)) savedSet.add(pred.matchId);
             });
-            matches.filter(m => m.isOpen && !m.isFinished).forEach(m => {
-                if (!initScores[m.id]) initScores[m.id] = { home: 0, away: 0 };
+            openIds.forEach(id => {
+                if (!initScores[id]) initScores[id] = { home: 0, away: 0 };
             });
+            setPredictions(preds);
             setScores(initScores);
             setSavedMatches(savedSet);
             setScreen('predict');
@@ -284,7 +287,27 @@ const Prode: React.FC = () => {
             const ok = await supabaseService.saveProdePrediction(
                 participant.id, matchId, score.home, score.away
             );
-            if (ok) setSavedMatches(prev => new Set([...prev, matchId]));
+            if (ok) {
+                setSavedMatches(prev => new Set([...prev, matchId]));
+                setPredictions(prev => {
+                    const existing = prev.find(p => p.matchId === matchId);
+                    if (existing) {
+                        return prev.map(p => p.matchId === matchId
+                            ? { ...p, homeScorePred: score.home, awayScorePred: score.away }
+                            : p
+                        );
+                    }
+                    return [...prev, {
+                        id: '',
+                        participantId: participant.id,
+                        matchId,
+                        homeScorePred: score.home,
+                        awayScorePred: score.away,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                    }];
+                });
+            }
         } finally {
             setSavingMatch(null);
         }
@@ -329,8 +352,7 @@ const Prode: React.FC = () => {
     const unlockedOpenMatches = openMatches.filter(m => !isMatchLocked(m));
     const allSaved = openMatches.length > 0 && unlockedOpenMatches.every(m => savedMatches.has(m.id));
 
-    const currentMatch = [...openMatches].sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime())[0];
-    const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !== undefined && m.awayScoreReal !== undefined).sort((a, b) => new Date(b.matchDate || 0).getTime() - new Date(a.matchDate || 0).getTime());
+const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !== undefined && m.awayScoreReal !== undefined).sort((a, b) => new Date(b.matchDate || 0).getTime() - new Date(a.matchDate || 0).getTime());
 
     const formatMatchDate = (iso: string) =>
         new Date(iso).toLocaleString('es-AR', {
@@ -590,7 +612,8 @@ const Prode: React.FC = () => {
                                 )}
 
                                 {/* ── TUS PREDICCIONES GUARDADAS ── */}
-                                {participant && openMatches.length > 0 && (
+                                {/* Ocultado de forma visual a pedido del usuario */}
+                                {false && participant && openMatches.length > 0 && (
                                     <div className="fu s4">
                                         <div className="bg-gradient-to-br from-teal-500 to-emerald-500 rounded-[2rem] p-6 md:p-8 text-white shadow-[0_8px_30px_-4px_rgba(16,185,129,0.3)] relative overflow-hidden">
                                             {/* Decorative element */}
@@ -771,7 +794,7 @@ const Prode: React.FC = () => {
                                 </div>
 
                                 {/* ── TUS PREDICCIONES (HISTORIAL) ── */}
-                                {predictions.filter(p => publishedMatches.some(m => m.id === p.matchId)).length > 0 && (
+                                {participant && (publishedMatches.length > 0 || predictions.length > 0) && (
                                     <div className="fu s6 pb-20 mt-12 pt-8 border-t border-slate-100">
                                         <div className="flex items-center justify-center mb-8 px-1">
                                             <div className="flex flex-col items-center gap-2">
@@ -779,63 +802,115 @@ const Prode: React.FC = () => {
                                                 <h2 className="text-xl font-black uppercase tracking-tight text-slate-700">Tus Predicciones</h2>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="space-y-3">
-                                            {publishedMatches.filter(m => predictions.some(p => p.matchId === m.id)).map(match => {
-                                                const pred = predictions.find(p => p.matchId === match.id)!;
-                                                const gainedPoints = (pred.pointsEarned ?? 0) > 0;
+                                            {(() => {
+                                                // Construir lista unificada: publicados + pendientes
+                                                type HistItem = { match: ProdeMatch; pred: ProdePrediction | null; isPublished: boolean };
+                                                const items: HistItem[] = [
+                                                    ...publishedMatches.map(match => ({
+                                                        match,
+                                                        pred: predictions.find(p => p.matchId === match.id) ?? null,
+                                                        isPublished: true,
+                                                    })),
+                                                    ...predictions
+                                                        .filter(pred => !publishedMatches.some(m => m.id === pred.matchId))
+                                                        .map(pred => ({ match: matches.find(m => m.id === pred.matchId)!, pred, isPublished: false }))
+                                                        .filter(item => item.match),
+                                                ];
 
-                                                return (
-                                                    <div key={`hist-${match.id}`} className={`bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] border ${gainedPoints ? 'border-emerald-200' : 'border-slate-100'} rounded-[2rem] p-5 flex flex-col gap-4 relative overflow-hidden`}>
-                                                        {gainedPoints && (
-                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/10 rounded-bl-full pointer-events-none" />
-                                                        )}
-                                                        
-                                                        {/* Header: Match Info & Points */}
-                                                        <div className="flex items-center justify-between w-full">
-                                                            <div className="flex items-center gap-2 text-slate-400">
-                                                                <span className="text-[10px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded-sm">Nº {match.matchNumber}</span>
-                                                                <span className="text-[10px] font-bold uppercase truncate">{match.round}</span>
+                                                // Ordenar: próximos primero (fecha asc), ya jugados al final
+                                                items.sort((a, b) => {
+                                                    const aT = new Date(a.match.matchDate || 0).getTime();
+                                                    const bT = new Date(b.match.matchDate || 0).getTime();
+                                                    const aFut = aT >= now;
+                                                    const bFut = bT >= now;
+                                                    if (aFut && bFut) return aT - bT;   // ambos futuros: más cercano primero
+                                                    if (!aFut && !bFut) return bT - aT; // ambos pasados: más reciente primero
+                                                    return aFut ? -1 : 1;               // futuros antes que pasados
+                                                });
+
+                                                return items.map(({ match, pred, isPublished }) => {
+                                                    const gainedPoints = (pred?.pointsEarned ?? 0) > 0;
+                                                    return isPublished ? (
+                                                        <div key={`hist-pub-${match.id}`} className={`bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] border ${gainedPoints ? 'border-emerald-200' : 'border-slate-100'} rounded-[2rem] p-5 flex flex-col gap-4 relative overflow-hidden`}>
+                                                            {gainedPoints && <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/10 rounded-bl-full pointer-events-none" />}
+                                                            <div className="flex items-center justify-between w-full">
+                                                                <div className="flex items-center gap-2 text-slate-400">
+                                                                    <span className="text-[10px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded-sm">Nº {match.matchNumber}</span>
+                                                                    <span className="text-[10px] font-bold uppercase truncate">{match.round}</span>
+                                                                </div>
+                                                                {pred ? (
+                                                                    <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 z-10 ${gainedPoints ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                                                                        {gainedPoints ? <CircleCheck className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                                                                        <span className="text-xs font-black uppercase tracking-widest tabular-nums">{gainedPoints ? `+${pred.pointsEarned} pts` : '0 pts'}</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="px-3 py-1.5 rounded-xl border bg-slate-50 border-slate-200 text-slate-400 flex items-center gap-1.5 z-10">
+                                                                        <XCircle className="w-4 h-4" />
+                                                                        <span className="text-xs font-black uppercase tracking-widest">Sin predicción</span>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                            <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 z-10 ${
-                                                                gainedPoints 
-                                                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm' 
-                                                                    : 'bg-slate-50 border-slate-200 text-slate-400'
-                                                            }`}>
-                                                                {gainedPoints ? <CircleCheck className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                                                                <span className="text-xs font-black uppercase tracking-widest tabular-nums">
-                                                                    {gainedPoints ? `+${pred.pointsEarned} pts` : '0 pts'}
-                                                                </span>
+                                                            <div className="flex items-center justify-between w-full py-2">
+                                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                    <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="lg" />
+                                                                    <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.homeTeam}</span>
+                                                                </div>
+                                                                <span className="text-slate-300 font-black text-sm px-4">VS</span>
+                                                                <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
+                                                                    <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.awayTeam}</span>
+                                                                    <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="lg" />
+                                                                </div>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-3 mt-1 bg-slate-50/50 p-3 rounded-2xl border border-slate-100/50">
+                                                                <div className="flex flex-col items-center justify-center gap-1.5 p-2 bg-white rounded-xl shadow-sm border border-slate-100">
+                                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tu Predicción</span>
+                                                                    {pred ? (
+                                                                        <span className="text-xl font-black text-slate-700 tabular-nums">{pred.homeScorePred} - {pred.awayScorePred}</span>
+                                                                    ) : (
+                                                                        <span className="text-sm font-black text-slate-300">—</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex flex-col items-center justify-center gap-1.5 p-2 bg-white rounded-xl shadow-sm border border-slate-100">
+                                                                    <span className="text-[9px] font-black text-emerald-600/70 uppercase tracking-widest">Resultado Real</span>
+                                                                    <span className="text-xl font-black text-emerald-700 tabular-nums">{match.homeScoreReal} - {match.awayScoreReal}</span>
+                                                                </div>
                                                             </div>
                                                         </div>
-
-                                                        {/* Teams */}
-                                                        <div className="flex items-center justify-between w-full py-2">
-                                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                                <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="lg" />
-                                                                <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.homeTeam}</span>
+                                                    ) : (
+                                                        <div key={`hist-pend-${match.id}`} className="bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] border border-slate-100 rounded-[2rem] p-5 flex flex-col gap-4">
+                                                            <div className="flex items-center justify-between w-full">
+                                                                <div className="flex items-center gap-2 text-slate-400">
+                                                                    <span className="text-[10px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded-sm">Nº {match.matchNumber}</span>
+                                                                    <span className="text-[10px] font-bold uppercase truncate">{match.round}</span>
+                                                                </div>
+                                                                <div className="px-3 py-1.5 rounded-xl border bg-amber-50 border-amber-200 text-amber-500 flex items-center gap-1.5">
+                                                                    <Loader2 className="w-3.5 h-3.5" />
+                                                                    <span className="text-xs font-black uppercase tracking-widest">Pendiente</span>
+                                                                </div>
                                                             </div>
-                                                            <span className="text-slate-300 font-black text-sm px-4">VS</span>
-                                                            <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
-                                                                <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.awayTeam}</span>
-                                                                <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="lg" />
+                                                            <div className="flex items-center justify-between w-full py-2">
+                                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                    <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="lg" />
+                                                                    <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.homeTeam}</span>
+                                                                </div>
+                                                                <span className="text-slate-300 font-black text-sm px-4">VS</span>
+                                                                <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
+                                                                    <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.awayTeam}</span>
+                                                                    <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="lg" />
+                                                                </div>
+                                                            </div>
+                                                            <div className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100/50">
+                                                                <div className="flex flex-col items-center justify-center gap-1.5 p-2 bg-white rounded-xl shadow-sm border border-slate-100">
+                                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tu Predicción</span>
+                                                                    <span className="text-xl font-black text-slate-700 tabular-nums">{pred!.homeScorePred} - {pred!.awayScorePred}</span>
+                                                                </div>
                                                             </div>
                                                         </div>
-
-                                                        {/* Scores Comparison */}
-                                                        <div className="grid grid-cols-2 gap-3 mt-1 bg-slate-50/50 p-3 rounded-2xl border border-slate-100/50">
-                                                            <div className="flex flex-col items-center justify-center gap-1.5 p-2 bg-white rounded-xl shadow-sm border border-slate-100">
-                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tu Predicción</span>
-                                                                <span className="text-xl font-black text-slate-700 tabular-nums">{pred.homeScorePred} - {pred.awayScorePred}</span>
-                                                            </div>
-                                                            <div className="flex flex-col items-center justify-center gap-1.5 p-2 bg-white rounded-xl shadow-sm border border-slate-100">
-                                                                <span className="text-[9px] font-black text-emerald-600/70 uppercase tracking-widest">Resultado Real</span>
-                                                                <span className="text-xl font-black text-emerald-700 tabular-nums">{match.homeScoreReal} - {match.awayScoreReal}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                                                    );
+                                                });
+                                            })()}
                                         </div>
                                     </div>
                                 )}

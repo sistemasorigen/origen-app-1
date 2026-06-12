@@ -4727,31 +4727,20 @@ export const supabaseService = {
       // 3. Calcular puntos por predicción
       const realHome = homeScore;
       const realAway = awayScore;
-      const realWinner =
-        realHome > realAway ? 'home'
-        : realAway > realHome ? 'away'
-        : 'draw';
 
       for (const pred of preds) {
         const predHome = pred.home_score_pred;
         const predAway = pred.away_score_pred;
-        const predWinner =
-          predHome > predAway ? 'home'
-          : predAway > predHome ? 'away'
-          : 'draw';
 
         let pts = pointsWrong;
-        if (
-          predHome === realHome &&
-          predAway === realAway
-        ) {
+        if (predHome === realHome && predAway === realAway) {
           // Marcador exacto
           pts = pointsExact;
-        } else if (predWinner === realWinner) {
-          // Solo acertó ganador/empate — no el marcador
+        } else if (predHome === realHome || predAway === realAway) {
+          // Acertó uno de los dos marcadores
           pts = pointsResult;
         }
-        // Cualquier otro caso: 0 puntos (pointsWrong)
+        // Ninguno correcto: 0 puntos (pointsWrong)
 
         const oldPointsEarned = pred.points_earned ?? 0;
         const delta = pts - oldPointsEarned;
@@ -5278,78 +5267,78 @@ export const supabaseService = {
     pointsWrong: number
   ): Promise<boolean> {
     try {
-      // 1. Resetear todos los totales a 0
-      const { error: resetError } = await supabase
-        .from('prode_participants')
-        .update({ total_points: 0 })
-        .not('id', 'is', null); // Supabase requires a filter for bulk updates
+      // 1. Traer partidos finalizados y todas sus predicciones en paralelo
+      const [matchesRes, predsRes] = await Promise.all([
+        supabase
+          .from('prode_matches')
+          .select('id, home_score_real, away_score_real')
+          .eq('is_finished', true)
+          .not('home_score_real', 'is', null),
+        supabase
+          .from('prode_predictions')
+          .select('id, match_id, participant_id, home_score_pred, away_score_pred'),
+      ]);
+      const finishedMatches = matchesRes.data as { id: string; home_score_real: number; away_score_real: number }[] | null;
+      const allPreds = predsRes.data as { id: string; match_id: string; participant_id: string; home_score_pred: number; away_score_pred: number }[] | null;
 
-      if (resetError) {
-          console.error('[Prode] Supabase bulk update error:', resetError);
-          throw resetError;
+      if (!finishedMatches?.length || !allPreds?.length) {
+        await supabase
+          .from('prode_participants')
+          .update({ total_points: 0 })
+          .not('id', 'is', null);
+        return true;
       }
 
-      // 2. Traer todos los partidos finalizados
-      const { data: finishedMatches } = await supabase
-        .from('prode_matches')
-        .select('id, home_score_real, away_score_real')
-        .eq('is_finished', true)
-        .not('home_score_real', 'is', null);
+      // 2. Calcular puntos en memoria
+      const matchMap = new Map(finishedMatches.map(m => [m.id, m]));
+      const participantTotals = new Map<string, number>();
+      const predUpdates: { id: string; points_earned: number }[] = [];
 
-      if (!finishedMatches?.length) return true;
+      for (const pred of allPreds) {
+        const match = matchMap.get(pred.match_id);
+        if (!match) continue;
 
-      // 3. Para cada partido, recalcular predicciones
-      for (const match of finishedMatches) {
-        const { data: preds } = await supabase
-          .from('prode_predictions')
-          .select(
-            'id, participant_id, ' +
-            'home_score_pred, away_score_pred'
-          )
-          .eq('match_id', match.id);
-
-        if (!preds?.length) continue;
-
+        const pH = pred.home_score_pred;
+        const pA = pred.away_score_pred;
         const rH = match.home_score_real;
         const rA = match.away_score_real;
-        const rW = rH > rA ? 'home'
-                 : rA > rH ? 'away' : 'draw';
 
-        for (const pred of preds) {
-          const pH = pred.home_score_pred;
-          const pA = pred.away_score_pred;
-          const pW = pH > pA ? 'home'
-                   : pA > pH ? 'away' : 'draw';
+        let pts = pointsWrong;
+        if (pH === rH && pA === rA)
+          pts = pointsExact;
+        else if (pH === rH || pA === rA)
+          pts = pointsResult;
 
-          let pts = pointsWrong;
-          if (pH === rH && pA === rA)
-            pts = pointsExact;
-          else if (pW === rW)
-            pts = pointsResult;
-
-          await supabase
-            .from('prode_predictions')
-            .update({ points_earned: pts })
-            .eq('id', pred.id);
-
-          // Sumar al total del participante
-          const { data: p } = await supabase
-            .from('prode_participants')
-            .select('total_points')
-            .eq('id', pred.participant_id)
-            .single();
-
-          if (p) {
-            await supabase
-              .from('prode_participants')
-              .update({
-                total_points:
-                  (p.total_points || 0) + pts
-              })
-              .eq('id', pred.participant_id);
-          }
-        }
+        predUpdates.push({ id: pred.id, points_earned: pts });
+        participantTotals.set(
+          pred.participant_id,
+          (participantTotals.get(pred.participant_id) ?? 0) + pts
+        );
       }
+
+      // 3. Reset participantes + actualizar predicciones en paralelo
+      await Promise.all([
+        supabase
+          .from('prode_participants')
+          .update({ total_points: 0 })
+          .not('id', 'is', null),
+        ...predUpdates.map(({ id, points_earned }) =>
+          supabase
+            .from('prode_predictions')
+            .update({ points_earned })
+            .eq('id', id)
+        ),
+      ]);
+
+      // 4. Actualizar totales de participantes en paralelo
+      await Promise.all(
+        [...participantTotals.entries()].map(([participantId, total]) =>
+          supabase
+            .from('prode_participants')
+            .update({ total_points: total })
+            .eq('id', participantId)
+        )
+      );
 
       return true;
     } catch (err) {
