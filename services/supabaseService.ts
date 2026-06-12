@@ -4620,6 +4620,43 @@ export const supabaseService = {
 
   async resetProdeMatchResult(matchId: string): Promise<boolean> {
     try {
+      // 1. Traer las predicciones ANTES de resetear
+      const { data: preds } = await supabase
+        .from('prode_predictions')
+        .select('id, participant_id, points_earned')
+        .eq('match_id', matchId);
+
+      // 2. Descontar los puntos de cada participante
+      for (const pred of (preds || [])) {
+        const oldPts = pred.points_earned ?? 0;
+        if (oldPts === 0) continue;
+
+        const { data: participant } = await supabase
+          .from('prode_participants')
+          .select('total_points')
+          .eq('id', pred.participant_id)
+          .single();
+
+        if (participant) {
+          await supabase
+            .from('prode_participants')
+            .update({
+              total_points: Math.max(
+                0,
+                (participant.total_points || 0) - oldPts
+              )
+            })
+            .eq('id', pred.participant_id);
+        }
+      }
+
+      // 3. Resetear points_earned a null
+      await supabase
+        .from('prode_predictions')
+        .update({ points_earned: null })
+        .eq('match_id', matchId);
+
+      // 4. Resetear el partido
       const { error } = await supabase
         .from('prode_matches')
         .update({
@@ -4630,11 +4667,6 @@ export const supabaseService = {
         })
         .eq('id', matchId);
       if (error) throw error;
-
-      await supabase
-        .from('prode_predictions')
-        .update({ points_earned: 0 })
-        .eq('match_id', matchId);
 
       return true;
     } catch (err) {
@@ -4687,7 +4719,7 @@ export const supabaseService = {
       const { data: preds, error: predError } =
         await supabase
           .from('prode_predictions')
-          .select('id, participant_id, home_score_pred, away_score_pred')
+          .select('id, participant_id, home_score_pred, away_score_pred, points_earned')
           .eq('match_id', matchId);
       if (predError) throw predError;
       if (!preds?.length) return true;
@@ -4713,14 +4745,16 @@ export const supabaseService = {
           predHome === realHome &&
           predAway === realAway
         ) {
+          // Marcador exacto
           pts = pointsExact;
-        } else if (
-          predWinner === realWinner ||
-          predHome === realHome ||
-          predAway === realAway
-        ) {
+        } else if (predWinner === realWinner) {
+          // Solo acertó ganador/empate — no el marcador
           pts = pointsResult;
         }
+        // Cualquier otro caso: 0 puntos (pointsWrong)
+
+        const oldPointsEarned = pred.points_earned ?? 0;
+        const delta = pts - oldPointsEarned;
 
         // Actualizar puntos en la predicción
         await supabase
@@ -4731,21 +4765,25 @@ export const supabaseService = {
           })
           .eq('id', pred.id);
 
-        // Sumar puntos al participante
-        const { data: participant } = await supabase
-          .from('prode_participants')
-          .select('total_points')
-          .eq('id', pred.participant_id)
-          .single();
-
-        if (participant) {
-          await supabase
+        // Ajustar total del participante con el delta
+        if (delta !== 0) {
+          const { data: participant } = await supabase
             .from('prode_participants')
-            .update({
-              total_points:
-                (participant.total_points || 0) + pts
-            })
-            .eq('id', pred.participant_id);
+            .select('total_points')
+            .eq('id', pred.participant_id)
+            .single();
+
+          if (participant) {
+            await supabase
+              .from('prode_participants')
+              .update({
+                total_points: Math.max(
+                  0,
+                  (participant.total_points || 0) + delta
+                )
+              })
+              .eq('id', pred.participant_id);
+          }
         }
       }
 
@@ -5027,6 +5065,163 @@ export const supabaseService = {
         '[Prode] getPredictions error:', err
       );
       return [];
+    }
+  },
+
+  /**
+   * Trae TODAS las predicciones de todos los
+   * participantes. Solo para admins.
+   * Incluye datos del partido y del participante
+   * para mostrar en la tabla de administración.
+   */
+  async getAllProdePredictions(): Promise<{
+    predictionId: string;
+    participantId: string;
+    participantName: string;
+    userId: string | null;
+    matchId: string;
+    matchNumber: number;
+    homeTeam: string;
+    awayTeam: string;
+    homeFlag: string;
+    awayFlag: string;
+    homeScorePred: number;
+    awayScorePred: number;
+    pointsEarned: number | null;
+    isMatchFinished: boolean;
+    createdAt: string;
+  }[]> {
+    try {
+      const { data, error } = await supabase
+        .from('prode_predictions')
+        .select(`
+          id,
+          participant_id,
+          match_id,
+          home_score_pred,
+          away_score_pred,
+          points_earned,
+          created_at,
+          prode_participants!inner (
+            id,
+            first_name,
+            last_name,
+            user_id
+          ),
+          prode_matches!inner (
+            id,
+            match_number,
+            home_team,
+            away_team,
+            home_flag,
+            away_flag,
+            is_finished
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((r: any) => ({
+        predictionId:    r.id,
+        participantId:   r.participant_id,
+        participantName: `${r.prode_participants.first_name} ${r.prode_participants.last_name}`.trim(),
+        userId:          r.prode_participants.user_id || null,
+        matchId:         r.match_id,
+        matchNumber:     r.prode_matches.match_number,
+        homeTeam:        r.prode_matches.home_team,
+        awayTeam:        r.prode_matches.away_team,
+        homeFlag:        r.prode_matches.home_flag || '',
+        awayFlag:        r.prode_matches.away_flag || '',
+        homeScorePred:   r.home_score_pred,
+        awayScorePred:   r.away_score_pred,
+        pointsEarned:    r.points_earned ?? null,
+        isMatchFinished: r.prode_matches.is_finished,
+        createdAt:       r.created_at,
+      }));
+    } catch (err) {
+      console.error('[Prode] getAllPredictions error:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Lista todos los participantes del prode.
+   * Para el buscador en la sección de predicciones.
+   */
+  async getAllProdeParticipants(): Promise<import('../types').ProdeParticipant[]> {
+    try {
+      const { data, error } = await supabase
+        .from('prode_participants')
+        .select('*')
+        .order('last_name', { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []).map((r: any) => ({
+        id:          r.id,
+        firstName:   r.first_name,
+        lastName:    r.last_name,
+        userId:      r.user_id || undefined,
+        totalPoints: r.total_points,
+        createdAt:   r.created_at,
+      }));
+    } catch (err) {
+      console.error('[Prode] getAllParticipants:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Versión admin de saveProdePrediction.
+   * Sin bloqueo de is_open — el admin puede crear
+   * y editar predicciones en cualquier partido.
+   */
+  async saveProdePredictionAdmin(
+    participantId: string,
+    matchId: string,
+    homeScore: number,
+    awayScore: number
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('prode_predictions')
+        .upsert({
+          participant_id:  participantId,
+          match_id:        matchId,
+          home_score_pred: homeScore,
+          away_score_pred: awayScore,
+          updated_at:      new Date().toISOString(),
+        }, { onConflict: 'participant_id,match_id' });
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Prode] savePredAdmin error:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Elimina una predicción por su ID.
+   * El participante puede volver a predecir ese
+   * partido si está abierto.
+   * Solo admins (controlado por RLS).
+   */
+  async deleteProdePrediction(
+    predictionId: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('prode_predictions')
+        .delete()
+        .eq('id', predictionId);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Prode] deletePrediction error:', err);
+      return false;
     }
   },
 

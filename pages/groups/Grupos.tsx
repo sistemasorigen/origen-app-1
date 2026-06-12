@@ -261,14 +261,12 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
 
                 {/* RIGHT SECTION: Actions (Admin/Exit) */}
                 <div className="flex-1 flex justify-end items-center gap-2 md:gap-4 pointer-events-auto">
-                    {canAccessAdmin && (
+                    {view === 'admin' && canAccessAdmin && (
                         <button
-                            onClick={() => setView(view === 'admin' ? 'public' : 'admin')}
-                            className={`flex items-center gap-2 px-4 md:px-5 py-2 text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap border-2 border-black rounded-lg ${view === 'admin'
-                                ? 'bg-black text-white'
-                                : 'bg-white text-black hover:bg-black hover:text-white'}`}
+                            onClick={() => setView('public')}
+                            className="flex items-center gap-2 px-4 md:px-5 py-2 text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap border-2 border-black rounded-lg bg-black text-white hover:bg-white hover:text-black"
                         >
-                            {view === 'admin' ? 'SALIR' : 'ADMIN'}
+                            SALIR
                         </button>
                     )}
                 </div>

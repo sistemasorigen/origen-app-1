@@ -435,16 +435,16 @@ const Prode: React.FC = () => {
                                             ) : openMatches.length > 0 ? (
                                                 <motion.button
                                                     onClick={handleStartPredicting}
-                                                    disabled={initializingParticipant || (participant && savedMatches.size === openMatches.length)}
+                                                    disabled={initializingParticipant}
                                                     whileHover={{ scale: 1.02 }}
                                                     whileTap={{ scale: 0.96 }}
-                                                    className={`w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 text-[12px] font-black uppercase tracking-widest rounded-full disabled:opacity-40 transition-all ${participant && savedMatches.size === openMatches.length ? 'bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-sm cursor-not-allowed' : 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-[0_8px_20px_-4px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_25px_-4px_rgba(16,185,129,0.4)]'}`}
+                                                    className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 text-[12px] font-black uppercase tracking-widest rounded-full disabled:opacity-40 transition-all bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-[0_8px_20px_-4px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_25px_-4px_rgba(16,185,129,0.4)]"
                                                 >
                                                     {initializingParticipant
                                                         ? <Loader2 className="w-5 h-5 animate-spin" />
-                                                        : participant && savedMatches.size === openMatches.length ? <Lock className="w-5 h-5" /> : <Swords className="w-5 h-5" />
+                                                        : <Swords className="w-5 h-5" />
                                                     }
-                                                    {initializingParticipant ? 'Preparando...' : participant && savedMatches.size === openMatches.length ? 'Predicciones Completadas' : 'Predecir Resultados'}
+                                                    {initializingParticipant ? 'Preparando...' : 'Predecir Resultados'}
                                                 </motion.button>
                                             ) : (
                                                 <div className="px-6 py-4 text-slate-400 text-[11px] font-bold uppercase tracking-widest rounded-full bg-slate-50 border border-slate-100">
@@ -954,7 +954,7 @@ const Prode: React.FC = () => {
                                                         <div className="flex flex-col items-center gap-2">
                                                             <button
                                                                 onClick={() => adjustScore(match.id, 'home', 1)}
-                                                                disabled={isSaved || locked}
+                                                                disabled={locked}
                                                                 className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:text-slate-400 transition-all"
                                                                 aria-label="Más goles local"
                                                             >
@@ -965,7 +965,7 @@ const Prode: React.FC = () => {
                                                             </div>
                                                             <button
                                                                 onClick={() => adjustScore(match.id, 'home', -1)}
-                                                                disabled={score.home === 0 || isSaved || locked}
+                                                                disabled={score.home === 0 || locked}
                                                                 className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:text-slate-400 transition-all"
                                                                 aria-label="Menos goles local"
                                                             >
@@ -983,7 +983,7 @@ const Prode: React.FC = () => {
                                                         <div className="flex flex-col items-center gap-2">
                                                             <button
                                                                 onClick={() => adjustScore(match.id, 'away', 1)}
-                                                                disabled={isSaved || locked}
+                                                                disabled={locked}
                                                                 className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:text-slate-400 transition-all"
                                                                 aria-label="Más goles visitante"
                                                             >
@@ -994,7 +994,7 @@ const Prode: React.FC = () => {
                                                             </div>
                                                             <button
                                                                 onClick={() => adjustScore(match.id, 'away', -1)}
-                                                                disabled={score.away === 0 || isSaved || locked}
+                                                                disabled={score.away === 0 || locked}
                                                                 className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 bg-white shadow-sm hover:shadow-md hover:text-emerald-500 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:text-slate-400 transition-all"
                                                                 aria-label="Menos goles visitante"
                                                             >
@@ -1017,22 +1017,30 @@ const Prode: React.FC = () => {
                                                 {/* Save button */}
                                                 <button
                                                     type="button"
-                                                    onClick={() => !isSaved && !locked && handleSavePrediction(match.id)}
-                                                    disabled={isSaving || isSaved || locked}
+                                                    onClick={() => !locked && handleSavePrediction(match.id)}
+                                                    disabled={isSaving || locked}
                                                     className={`w-full flex items-center justify-center gap-2.5 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 disabled:opacity-60 ${
                                                         locked
                                                             ? 'text-slate-400 bg-slate-100 cursor-not-allowed'
                                                             : isSaved
-                                                                ? 'text-emerald-700 bg-emerald-50 cursor-not-allowed border-t border-emerald-100'
+                                                                ? 'text-teal-700 bg-teal-50 hover:bg-teal-100 border-t border-teal-100'
                                                                 : 'text-white bg-gradient-to-r from-teal-500 to-emerald-500 shadow-[0_4px_20px_-4px_rgba(16,185,129,0.3)] hover:shadow-[0_8px_25px_-4px_rgba(16,185,129,0.4)]'
                                                     }`}
                                                 >
                                                     {locked
                                                         ? <Lock className="w-4 h-4" strokeWidth={2.5} />
-                                                        : isSaving ? <Loader2 className="w-5 h-5 animate-spin" />
-                                                        : isSaved ? <Lock className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
-                                                        : null}
-                                                    {locked ? 'Cerrado — quedan menos de 15 min' : isSaving ? 'Guardando...' : isSaved ? 'Predicción Guardada' : 'Guardar Predicción'}
+                                                        : isSaving
+                                                            ? <Loader2 className="w-5 h-5 animate-spin" />
+                                                            : isSaved
+                                                                ? <Check className="w-4 h-4 text-teal-600" strokeWidth={2.5} />
+                                                                : null}
+                                                    {locked
+                                                        ? 'Cerrado — quedan menos de 15 min'
+                                                        : isSaving
+                                                            ? 'Guardando...'
+                                                            : isSaved
+                                                                ? 'Actualizar Predicción'
+                                                                : 'Guardar Predicción'}
                                                 </button>
                                             </div>
                                         );

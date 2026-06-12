@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabaseService } from '../../services/supabaseService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,68 +8,68 @@ import {
 } from '../../types';
 import {
     Trophy, Check, Loader2, Plus, Edit2, Trash2,
-    ChevronLeft, X, CheckCircle, Medal, Search
+    ChevronLeft, X, CheckCircle, Medal
 } from 'lucide-react';
 import { hasRole } from '../../services/authUtils';
 
-// ── 48 equipos del FIFA World Cup 2026 ─────────────────────────────────────────
+// ÔöÇÔöÇ 48 equipos del FIFA World Cup 2026 ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 const WORLD_CUP_2026_TEAMS: { name: string; flag: string; confederation: string }[] = [
     // CONMEBOL
-    { name: 'Argentina',      flag: '🇦🇷', confederation: 'CONMEBOL' },
-    { name: 'Brasil',         flag: '🇧🇷', confederation: 'CONMEBOL' },
-    { name: 'Colombia',       flag: '🇨🇴', confederation: 'CONMEBOL' },
-    { name: 'Ecuador',        flag: '🇪🇨', confederation: 'CONMEBOL' },
-    { name: 'Paraguay',       flag: '🇵🇾', confederation: 'CONMEBOL' },
-    { name: 'Uruguay',        flag: '🇺🇾', confederation: 'CONMEBOL' },
+    { name: 'Argentina',      flag: '­ƒçª­ƒçÀ', confederation: 'CONMEBOL' },
+    { name: 'Brasil',         flag: '­ƒçº­ƒçÀ', confederation: 'CONMEBOL' },
+    { name: 'Colombia',       flag: '­ƒç¿­ƒç┤', confederation: 'CONMEBOL' },
+    { name: 'Ecuador',        flag: '­ƒç¬­ƒç¿', confederation: 'CONMEBOL' },
+    { name: 'Paraguay',       flag: '­ƒçÁ­ƒç¥', confederation: 'CONMEBOL' },
+    { name: 'Uruguay',        flag: '­ƒç║­ƒç¥', confederation: 'CONMEBOL' },
     // UEFA
-    { name: 'Alemania',       flag: '🇩🇪', confederation: 'UEFA' },
-    { name: 'Austria',        flag: '🇦🇹', confederation: 'UEFA' },
-    { name: 'Bélgica',        flag: '🇧🇪', confederation: 'UEFA' },
-    { name: 'Bosnia',         flag: '🇧🇦', confederation: 'UEFA' },
-    { name: 'Croacia',        flag: '🇭🇷', confederation: 'UEFA' },
-    { name: 'Chequia',        flag: '🇨🇿', confederation: 'UEFA' },
-    { name: 'Dinamarca',      flag: '🇩🇰', confederation: 'UEFA' },
-    { name: 'Escocia',        flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', confederation: 'UEFA' },
-    { name: 'España',         flag: '🇪🇸', confederation: 'UEFA' },
-    { name: 'Francia',        flag: '🇫🇷', confederation: 'UEFA' },
-    { name: 'Holanda',        flag: '🇳🇱', confederation: 'UEFA' },
-    { name: 'Inglaterra',     flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', confederation: 'UEFA' },
-    { name: 'Noruega',        flag: '🇳🇴', confederation: 'UEFA' },
-    { name: 'Polonia',        flag: '🇵🇱', confederation: 'UEFA' },
-    { name: 'Portugal',       flag: '🇵🇹', confederation: 'UEFA' },
-    { name: 'Suecia',         flag: '🇸🇪', confederation: 'UEFA' },
-    { name: 'Suiza',          flag: '🇨🇭', confederation: 'UEFA' },
-    { name: 'Turquía',        flag: '🇹🇷', confederation: 'UEFA' },
+    { name: 'Alemania',       flag: '­ƒç®­ƒç¬', confederation: 'UEFA' },
+    { name: 'Austria',        flag: '­ƒçª­ƒç╣', confederation: 'UEFA' },
+    { name: 'B├®lgica',        flag: '­ƒçº­ƒç¬', confederation: 'UEFA' },
+    { name: 'Bosnia',         flag: '­ƒçº­ƒçª', confederation: 'UEFA' },
+    { name: 'Croacia',        flag: '­ƒç¡­ƒçÀ', confederation: 'UEFA' },
+    { name: 'Chequia',        flag: '­ƒç¿­ƒç┐', confederation: 'UEFA' },
+    { name: 'Dinamarca',      flag: '­ƒç®­ƒç░', confederation: 'UEFA' },
+    { name: 'Escocia',        flag: '­ƒÅ┤¾áüº¾áüó¾áü│¾áüú¾áü┤¾áü┐', confederation: 'UEFA' },
+    { name: 'Espa├▒a',         flag: '­ƒç¬­ƒç©', confederation: 'UEFA' },
+    { name: 'Francia',        flag: '­ƒç½­ƒçÀ', confederation: 'UEFA' },
+    { name: 'Holanda',        flag: '­ƒç│­ƒç▒', confederation: 'UEFA' },
+    { name: 'Inglaterra',     flag: '­ƒÅ┤¾áüº¾áüó¾áüÑ¾áü«¾áüº¾áü┐', confederation: 'UEFA' },
+    { name: 'Noruega',        flag: '­ƒç│­ƒç┤', confederation: 'UEFA' },
+    { name: 'Polonia',        flag: '­ƒçÁ­ƒç▒', confederation: 'UEFA' },
+    { name: 'Portugal',       flag: '­ƒçÁ­ƒç╣', confederation: 'UEFA' },
+    { name: 'Suecia',         flag: '­ƒç©­ƒç¬', confederation: 'UEFA' },
+    { name: 'Suiza',          flag: '­ƒç¿­ƒç¡', confederation: 'UEFA' },
+    { name: 'Turqu├¡a',        flag: '­ƒç╣­ƒçÀ', confederation: 'UEFA' },
     // AFC
-    { name: 'Arabia Saudita', flag: '🇸🇦', confederation: 'AFC' },
-    { name: 'Australia',      flag: '🇦🇺', confederation: 'AFC' },
-    { name: 'Corea del Sur',  flag: '🇰🇷', confederation: 'AFC' },
-    { name: 'Corea del Norte',flag: '🇰🇵', confederation: 'AFC' },
-    { name: 'Irán',           flag: '🇮🇷', confederation: 'AFC' },
-    { name: 'Iraq',           flag: '🇮🇶', confederation: 'AFC' },
-    { name: 'Japón',          flag: '🇯🇵', confederation: 'AFC' },
-    { name: 'Jordania',       flag: '🇯🇴', confederation: 'AFC' },
-    { name: 'Qatar',          flag: '🇶🇦', confederation: 'AFC' },
-    { name: 'Uzbekistán',     flag: '🇺🇿', confederation: 'AFC' },
+    { name: 'Arabia Saudita', flag: '­ƒç©­ƒçª', confederation: 'AFC' },
+    { name: 'Australia',      flag: '­ƒçª­ƒç║', confederation: 'AFC' },
+    { name: 'Corea del Sur',  flag: '­ƒç░­ƒçÀ', confederation: 'AFC' },
+    { name: 'Corea del Norte',flag: '­ƒç░­ƒçÁ', confederation: 'AFC' },
+    { name: 'Ir├ín',           flag: '­ƒç«­ƒçÀ', confederation: 'AFC' },
+    { name: 'Iraq',           flag: '­ƒç«­ƒçÂ', confederation: 'AFC' },
+    { name: 'Jap├│n',          flag: '­ƒç»­ƒçÁ', confederation: 'AFC' },
+    { name: 'Jordania',       flag: '­ƒç»­ƒç┤', confederation: 'AFC' },
+    { name: 'Qatar',          flag: '­ƒçÂ­ƒçª', confederation: 'AFC' },
+    { name: 'Uzbekist├ín',     flag: '­ƒç║­ƒç┐', confederation: 'AFC' },
     // CAF
-    { name: 'Algeria',        flag: '🇩🇿', confederation: 'CAF' },
-    { name: 'Congo DR',       flag: '🇨🇩', confederation: 'CAF' },
-    { name: 'Egipto',         flag: '🇪🇬', confederation: 'CAF' },
-    { name: 'Ghana',          flag: '🇬🇭', confederation: 'CAF' },
-    { name: 'Marruecos',      flag: '🇲🇦', confederation: 'CAF' },
-    { name: 'Nigeria',        flag: '🇳🇬', confederation: 'CAF' },
-    { name: 'Senegal',        flag: '🇸🇳', confederation: 'CAF' },
-    { name: 'Sudáfrica',      flag: '🇿🇦', confederation: 'CAF' },
-    { name: 'Túnez',          flag: '🇹🇳', confederation: 'CAF' },
+    { name: 'Algeria',        flag: '­ƒç®­ƒç┐', confederation: 'CAF' },
+    { name: 'Congo DR',       flag: '­ƒç¿­ƒç®', confederation: 'CAF' },
+    { name: 'Egipto',         flag: '­ƒç¬­ƒç¼', confederation: 'CAF' },
+    { name: 'Ghana',          flag: '­ƒç¼­ƒç¡', confederation: 'CAF' },
+    { name: 'Marruecos',      flag: '­ƒç▓­ƒçª', confederation: 'CAF' },
+    { name: 'Nigeria',        flag: '­ƒç│­ƒç¼', confederation: 'CAF' },
+    { name: 'Senegal',        flag: '­ƒç©­ƒç│', confederation: 'CAF' },
+    { name: 'Sud├ífrica',      flag: '­ƒç┐­ƒçª', confederation: 'CAF' },
+    { name: 'T├║nez',          flag: '­ƒç╣­ƒç│', confederation: 'CAF' },
     // CONCACAF
-    { name: 'Canadá',         flag: '🇨🇦', confederation: 'CONCACAF' },
-    { name: 'Costa Rica',     flag: '🇨🇷', confederation: 'CONCACAF' },
-    { name: 'Estados Unidos', flag: '🇺🇸', confederation: 'CONCACAF' },
-    { name: 'Honduras',       flag: '🇭🇳', confederation: 'CONCACAF' },
-    { name: 'México',         flag: '🇲🇽', confederation: 'CONCACAF' },
-    { name: 'Panamá',         flag: '🇵🇦', confederation: 'CONCACAF' },
+    { name: 'Canad├í',         flag: '­ƒç¿­ƒçª', confederation: 'CONCACAF' },
+    { name: 'Costa Rica',     flag: '­ƒç¿­ƒçÀ', confederation: 'CONCACAF' },
+    { name: 'Estados Unidos', flag: '­ƒç║­ƒç©', confederation: 'CONCACAF' },
+    { name: 'Honduras',       flag: '­ƒç¡­ƒç│', confederation: 'CONCACAF' },
+    { name: 'M├®xico',         flag: '­ƒç▓­ƒç¢', confederation: 'CONCACAF' },
+    { name: 'Panam├í',         flag: '­ƒçÁ­ƒçª', confederation: 'CONCACAF' },
     // OFC
-    { name: 'Nueva Zelanda',  flag: '🇳🇿', confederation: 'OFC' },
+    { name: 'Nueva Zelanda',  flag: '­ƒç│­ƒç┐', confederation: 'OFC' },
 ];
 
 const CONF_ORDER = ['CONMEBOL', 'UEFA', 'AFC', 'CAF', 'CONCACAF', 'OFC'];
@@ -79,19 +79,19 @@ const TEAMS_SORTED = [...WORLD_CUP_2026_TEAMS].sort((a, b) => {
     return a.name.localeCompare(b.name, 'es');
 });
 
-// ── Flag helpers ────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Flag helpers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 const TEAM_TO_CODE: Record<string, string> = {
     'argentina': 'ar', 'brasil': 'br', 'brazil': 'br', 'uruguay': 'uy',
     'colombia': 'co', 'chile': 'cl', 'ecuador': 'ec', 'paraguay': 'py',
-    'venezuela': 've', 'bolivia': 'bo', 'peru': 'pe', 'perú': 'pe',
+    'venezuela': 've', 'bolivia': 'bo', 'peru': 'pe', 'per├║': 'pe',
     'francia': 'fr', 'france': 'fr',
     'inglaterra': 'gb-eng', 'england': 'gb-eng',
-    'españa': 'es', 'espana': 'es', 'spain': 'es',
+    'espa├▒a': 'es', 'espana': 'es', 'spain': 'es',
     'alemania': 'de', 'germany': 'de',
     'portugal': 'pt', 'italia': 'it', 'italy': 'it',
-    'paises bajos': 'nl', 'países bajos': 'nl', 'holanda': 'nl', 'netherlands': 'nl',
+    'paises bajos': 'nl', 'pa├¡ses bajos': 'nl', 'holanda': 'nl', 'netherlands': 'nl',
     'croacia': 'hr', 'croatia': 'hr',
-    'belgica': 'be', 'bélgica': 'be', 'belgium': 'be',
+    'belgica': 'be', 'b├®lgica': 'be', 'belgium': 'be',
     'dinamarca': 'dk', 'denmark': 'dk',
     'suiza': 'ch', 'switzerland': 'ch',
     'serbia': 'rs', 'polonia': 'pl', 'poland': 'pl',
@@ -101,30 +101,30 @@ const TEAM_TO_CODE: Record<string, string> = {
     'ucrania': 'ua', 'ukraine': 'ua',
     'bosnia y herzegovina': 'ba', 'bosnia': 'ba',
     'austria': 'at', 'noruega': 'no', 'norway': 'no',
-    'turquia': 'tr', 'turquía': 'tr', 'turkey': 'tr',
-    'japon': 'jp', 'japón': 'jp', 'japan': 'jp',
+    'turquia': 'tr', 'turqu├¡a': 'tr', 'turkey': 'tr',
+    'japon': 'jp', 'jap├│n': 'jp', 'japan': 'jp',
     'corea del sur': 'kr', 'republica de corea': 'kr', 'south korea': 'kr', 'korea': 'kr',
     'corea del norte': 'kp', 'north korea': 'kp',
     'chequia': 'cz', 'republica checa': 'cz', 'czech republic': 'cz', 'czechia': 'cz',
     'arabia saudita': 'sa', 'saudi arabia': 'sa',
-    'iran': 'ir', 'irán': 'ir',
+    'iran': 'ir', 'ir├ín': 'ir',
     'australia': 'au', 'qatar': 'qa', 'katar': 'qa',
-    'iraq': 'iq', 'jordania': 'jo', 'uzbekistan': 'uz', 'uzbekistán': 'uz',
+    'iraq': 'iq', 'jordania': 'jo', 'uzbekistan': 'uz', 'uzbekist├ín': 'uz',
     'senegal': 'sn', 'marruecos': 'ma', 'morocco': 'ma',
-    'tunez': 'tn', 'túnez': 'tn', 'tunisia': 'tn',
+    'tunez': 'tn', 't├║nez': 'tn', 'tunisia': 'tn',
     'ghana': 'gh', 'nigeria': 'ng', 'egipto': 'eg', 'egypt': 'eg',
-    'sudafrica': 'za', 'sudáfrica': 'za', 'south africa': 'za',
+    'sudafrica': 'za', 'sud├ífrica': 'za', 'south africa': 'za',
     'algeria': 'dz', 'argelia': 'dz',
     'congo dr': 'cd', 'congo': 'cd',
-    'mexico': 'mx', 'méxico': 'mx',
+    'mexico': 'mx', 'm├®xico': 'mx',
     'estados unidos': 'us', 'usa': 'us', 'united states': 'us',
-    'costa rica': 'cr', 'canada': 'ca', 'canadá': 'ca',
-    'honduras': 'hn', 'panama': 'pa', 'panamá': 'pa',
+    'costa rica': 'cr', 'canada': 'ca', 'canad├í': 'ca',
+    'honduras': 'hn', 'panama': 'pa', 'panam├í': 'pa',
     'nueva zelanda': 'nz', 'new zealand': 'nz',
 };
 
 const normalizeName = (name: string): string =>
-    name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    name.toLowerCase().normalize('NFD').replace(/[╠Ç-═»]/g, '').trim();
 
 interface FlagImageProps { teamName: string; size?: 'sm' | 'md' | 'lg'; emoji?: string; className?: string; }
 const FlagImage: React.FC<FlagImageProps> = ({ teamName, size = 'md', emoji, className = '' }) => {
@@ -156,7 +156,7 @@ const fmtDate = (iso: string): string =>
         hour: '2-digit', minute: '2-digit',
     });
 
-// ── Componente selector de equipo ───────────────────────────────────────────────
+// ÔöÇÔöÇ Componente selector de equipo ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 interface TeamSelectorProps {
     value: string;
     flagValue: string;
@@ -188,7 +188,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ value, flagValue, label, on
                 onChange={handleSelectChange}
                 className="w-full h-9 px-2 border-2 border-black font-bold text-sm bg-white focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
             >
-                <option value="">— Elegir equipo —</option>
+                <option value="">ÔÇö Elegir equipo ÔÇö</option>
                 {CONF_ORDER.map(conf => {
                     const teams = TEAMS_SORTED.filter(t => t.confederation === conf);
                     if (!teams.length) return null;
@@ -223,7 +223,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ value, flagValue, label, on
 const AdminProdeContent: React.FC = () => {
     const navigate = useNavigate();
 
-    type ProdeAdminSection = 'config' | 'matches' | 'results' | 'ranking' | 'predictions';
+    type ProdeAdminSection = 'config' | 'matches' | 'results' | 'ranking';
     const [prodeSection, setProdeSection] = useState<ProdeAdminSection>('config');
 
     // Config del prode
@@ -248,59 +248,17 @@ const AdminProdeContent: React.FC = () => {
     const [applyingAdjustment, setApplyingAdjustment] = useState<string | null>(null);
     const [recalculating, setRecalculating] = useState(false);
 
-    // Seccion Predicciones
-    type PredRow = {
-        predictionId: string;
-        participantId: string;
-        participantName: string;
-        userId: string | null;
-        matchId: string;
-        matchNumber: number;
-        homeTeam: string;
-        awayTeam: string;
-        homeFlag: string;
-        awayFlag: string;
-        homeScorePred: number;
-        awayScorePred: number;
-        pointsEarned: number | null;
-        isMatchFinished: boolean;
-        createdAt: string;
-    };
-
-    const [allPredictions, setAllPredictions] = useState<PredRow[]>([]);
-    const [predsLoading, setPredsLoading] = useState(false);
-    const [predSearchTerm, setPredSearchTerm] = useState('');
-
-    // Formulario nueva prediccion
-    const [showNewPredForm, setShowNewPredForm] = useState(false);
-    const [newPredParticipantSearch, setNewPredParticipantSearch] = useState('');
-    const [newPredParticipants, setNewPredParticipants] = useState<ProdeParticipant[]>([]);
-    const [newPredSelectedParticipant, setNewPredSelectedParticipant] = useState<ProdeParticipant | null>(null);
-    const [newPredMatchId, setNewPredMatchId] = useState('');
-    const [newPredHome, setNewPredHome] = useState(0);
-    const [newPredAway, setNewPredAway] = useState(0);
-    const [savingNewPred, setSavingNewPred] = useState(false);
-
-    // Edicion inline
-    const [editingPredId, setEditingPredId] = useState<string | null>(null);
-    const [editPredHome, setEditPredHome] = useState(0);
-    const [editPredAway, setEditPredAway] = useState(0);
-    const [savingEditPred, setSavingEditPred] = useState(false);
-    const [deletingPredId, setDeletingPredId] = useState<string | null>(null);
-
     // Carga inicial al montar el componente
     useEffect(() => {
         const load = async () => {
             setProdeMatchesLoading(true);
             setRankingLoading(true);
             try {
-                const [cfg, matches, ranking, allPreds] = await Promise.all([
+                const [cfg, matches, ranking] = await Promise.all([
                     supabaseService.getAppConfig(),
                     supabaseService.getProdeMatches(),
                     supabaseService.getProdeRanking(),
-                    supabaseService.getAllProdePredictions(),
                 ]);
-                setAllPredictions(allPreds);
                 if (cfg?.prodeConfig) {
                     setProdeConfig(cfg.prodeConfig);
                 }
@@ -322,7 +280,7 @@ const AdminProdeContent: React.FC = () => {
         load();
     }, []);
 
-    // ── Guardar config del prode ─────────────────
+    // ÔöÇÔöÇ Guardar config del prode ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     const handleSaveProdeConfig = async () => {
         setProdeSavingConfig(true);
         try {
@@ -338,7 +296,7 @@ const AdminProdeContent: React.FC = () => {
         }
     };
 
-    // ── Guardar partido ──────────────────────────
+    // ÔöÇÔöÇ Guardar partido ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     const handleSaveProdeMatch = async () => {
         if (!editingMatch || !editingMatch.homeTeam || !editingMatch.awayTeam || !editingMatch.matchNumber) return;
         setSavingMatch(true);
@@ -372,7 +330,7 @@ const AdminProdeContent: React.FC = () => {
         }
     };
 
-    // ── Publicar resultado ───────────────────────
+    // ÔöÇÔöÇ Publicar resultado ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     const handlePublishResult = async (matchId: string) => {
         const score = resultScores[matchId];
         if (!score) return;
@@ -397,9 +355,9 @@ const AdminProdeContent: React.FC = () => {
         }
     };
 
-    // ── Editar Resultado ─────────────────────────
+    // ÔöÇÔöÇ Editar Resultado ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     const handleEditResult = async (matchId: string, oldHome: number, oldAway: number) => {
-        if (!window.confirm('Vas a editar este resultado. El partido pasará a "pendientes" temporalmente hasta que lo vuelvas a publicar.')) return;
+        if (!window.confirm('Vas a editar este resultado. El partido pasar├í a "pendientes" temporalmente hasta que lo vuelvas a publicar.')) return;
         setSubmittingResult(matchId);
         try {
             await supabaseService.resetProdeMatchResult(matchId);
@@ -412,9 +370,9 @@ const AdminProdeContent: React.FC = () => {
         }
     };
 
-    // ── Deshacer Resultado ───────────────────────
+    // ÔöÇÔöÇ Deshacer Resultado ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     const handleResetResult = async (matchId: string) => {
-        if (!window.confirm('¿Estás seguro de deshacer este resultado? Se restarán los puntos a todos los participantes.')) return;
+        if (!window.confirm('┬┐Est├ís seguro de deshacer este resultado? Se restar├ín los puntos a todos los participantes.')) return;
         setSubmittingResult(matchId);
         try {
             await supabaseService.resetProdeMatchResult(matchId);
@@ -431,9 +389,9 @@ const AdminProdeContent: React.FC = () => {
         }
     };
 
-    // ── Eliminar Participante ────────────────────
+    // ÔöÇÔöÇ Eliminar Participante ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     const handleDeleteParticipant = async (participantId: string) => {
-        if (!window.confirm('¿Estás seguro de eliminar este participante y todas sus predicciones? Esta acción no se puede deshacer.')) return;
+        if (!window.confirm('┬┐Est├ís seguro de eliminar este participante y todas sus predicciones? Esta acci├│n no se puede deshacer.')) return;
         setApplyingAdjustment(participantId);
         try {
             await supabaseService.deleteProdeParticipant(participantId);
@@ -444,7 +402,7 @@ const AdminProdeContent: React.FC = () => {
         }
     };
 
-    // ── Aplicar ajuste de puntos ─────────────────
+    // ÔöÇÔöÇ Aplicar ajuste de puntos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     const handleApplyAdjustment = async (participantId: string) => {
         const delta = parseInt(adjustments[participantId] || '0');
         if (isNaN(delta) || delta === 0) return;
@@ -459,78 +417,10 @@ const AdminProdeContent: React.FC = () => {
         }
     };
 
-    // Recargar predicciones
-    const reloadPredictions = async () => {
-        setPredsLoading(true);
-        const preds = await supabaseService.getAllProdePredictions();
-        setAllPredictions(preds);
-        setPredsLoading(false);
-    };
-
-    // Buscar participantes para nueva prediccion
-    const handleSearchParticipants = async (term: string) => {
-        setNewPredParticipantSearch(term);
-        if (!term.trim()) { setNewPredParticipants([]); return; }
-        const all = await supabaseService.getAllProdeParticipants();
-        setNewPredParticipants(
-            all.filter(p =>
-                `${p.firstName} ${p.lastName}`.toLowerCase().includes(term.toLowerCase())
-            )
-        );
-    };
-
-    // Guardar nueva prediccion (admin)
-    const handleSaveNewPred = async () => {
-        if (!newPredSelectedParticipant || !newPredMatchId) return;
-        setSavingNewPred(true);
-        try {
-            const ok = await supabaseService.saveProdePredictionAdmin(
-                newPredSelectedParticipant.id,
-                newPredMatchId,
-                newPredHome,
-                newPredAway
-            );
-            if (ok) {
-                setShowNewPredForm(false);
-                setNewPredSelectedParticipant(null);
-                setNewPredParticipantSearch('');
-                setNewPredMatchId('');
-                setNewPredHome(0);
-                setNewPredAway(0);
-                await reloadPredictions();
-            }
-        } finally { setSavingNewPred(false); }
-    };
-
-    // Guardar edicion de prediccion
-    const handleSaveEditPred = async (
-        _predictionId: string,
-        participantId: string,
-        matchId: string
-    ) => {
-        setSavingEditPred(true);
-        try {
-            const ok = await supabaseService.saveProdePredictionAdmin(
-                participantId, matchId, editPredHome, editPredAway
-            );
-            if (ok) { setEditingPredId(null); await reloadPredictions(); }
-        } finally { setSavingEditPred(false); }
-    };
-
-    // Eliminar prediccion
-    const handleDeletePred = async (predictionId: string) => {
-        if (!window.confirm('Eliminar esta prediccion. El usuario podra volver a predecir si el partido esta abierto.')) return;
-        setDeletingPredId(predictionId);
-        try {
-            await supabaseService.deleteProdePrediction(predictionId);
-            await reloadPredictions();
-        } finally { setDeletingPredId(null); }
-    };
-
-    // Recalcular todos los puntos
+    // ÔöÇÔöÇ Recalcular todos los puntos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     const handleRecalculate = async (skipConfirm = false) => {
         if (!skipConfirm && !window.confirm(
-            'Esto recalculará los puntos de TODOS los participantes desde cero. ¿Continuar?'
+            'Esto recalcular├í los puntos de TODOS los participantes desde cero. ┬┐Continuar?'
         )) return;
         setRecalculating(true);
         try {
@@ -560,7 +450,7 @@ const AdminProdeContent: React.FC = () => {
                 <div className="flex items-center gap-3">
                     <Trophy className="w-6 h-6 text-amber-500" />
                     <div>
-                        <h1 className="text-lg font-black uppercase tracking-tight">Administración Prode</h1>
+                        <h1 className="text-lg font-black uppercase tracking-tight">Administraci├│n Prode</h1>
                         <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Mundial 2026</p>
                     </div>
                 </div>
@@ -568,14 +458,13 @@ const AdminProdeContent: React.FC = () => {
 
             <div className="space-y-6 animate-fadeIn">
 
-                {/* Sub-navegación */}
+                {/* Sub-navegaci├│n */}
                 <div className="flex gap-4 border-b border-slate-200 overflow-x-auto scrollbar-hide pb-1">
                     {([
-                        { id: 'config',      label: 'Configuracion' },
-                        { id: 'matches',     label: 'Partidos' },
-                        { id: 'results',     label: 'Resultados' },
-                        { id: 'ranking',     label: 'Ranking' },
-                        { id: 'predictions', label: 'Predicciones' },
+                        { id: 'config', label: 'Configuraci├│n' },
+                        { id: 'matches', label: 'Partidos' },
+                        { id: 'results', label: 'Resultados' },
+                        { id: 'ranking', label: 'Ranking' },
                     ] as { id: ProdeAdminSection; label: string }[]).map(s => (
                         <button
                             key={s.id}
@@ -591,17 +480,17 @@ const AdminProdeContent: React.FC = () => {
                     ))}
                 </div>
 
-                {/* ── CONFIGURACIÓN ──────────────────── */}
+                {/* ÔöÇÔöÇ CONFIGURACI├ôN ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
                 {prodeSection === 'config' && (
                     <div className="max-w-2xl space-y-6">
-                        <h3 className="text-sm font-black uppercase tracking-tight">Configuración del Prode</h3>
+                        <h3 className="text-sm font-black uppercase tracking-tight">Configuraci├│n del Prode</h3>
 
                         {/* Toggle activo */}
                         <div className="flex items-center justify-between p-4 border-2 border-black">
                             <div>
                                 <p className="text-xs font-black uppercase tracking-widest">Prode activo</p>
                                 <p className="text-[10px] font-medium text-neutral-500 mt-0.5">
-                                    Los usuarios pueden acceder a la página /prode
+                                    Los usuarios pueden acceder a la p├ígina /prode
                                 </p>
                             </div>
                             <button
@@ -621,7 +510,7 @@ const AdminProdeContent: React.FC = () => {
                         <div className="space-y-3">
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Banner</p>
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1 block">Título</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1 block">T├¡tulo</label>
                                 <input
                                     type="text"
                                     value={prodeConfig.bannerTitle}
@@ -630,7 +519,7 @@ const AdminProdeContent: React.FC = () => {
                                 />
                             </div>
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1 block">Subtítulo</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1 block">Subt├¡tulo</label>
                                 <input
                                     type="text"
                                     value={prodeConfig.bannerSubtitle}
@@ -640,9 +529,9 @@ const AdminProdeContent: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Sistema de puntuación */}
+                        {/* Sistema de puntuaci├│n */}
                         <div className="space-y-3">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Sistema de puntuación</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Sistema de puntuaci├│n</p>
                             <div className="grid grid-cols-3 gap-3">
                                 {[
                                     { key: 'pointsExactScore', label: 'Exacto' },
@@ -676,7 +565,7 @@ const AdminProdeContent: React.FC = () => {
                                         : 'border-black bg-black text-white hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
                                 } disabled:opacity-50`}
                             >
-                                {prodeSavingConfig ? <Loader2 className="w-4 h-4 animate-spin" /> : prodeConfigSaved ? <><Check className="w-4 h-4" /> Guardado</> : 'Guardar configuración'}
+                                {prodeSavingConfig ? <Loader2 className="w-4 h-4 animate-spin" /> : prodeConfigSaved ? <><Check className="w-4 h-4" /> Guardado</> : 'Guardar configuraci├│n'}
                             </button>
                             <button
                                 type="button"
@@ -690,7 +579,7 @@ const AdminProdeContent: React.FC = () => {
                     </div>
                 )}
 
-                {/* ── PARTIDOS ───────────────────────── */}
+                {/* ÔöÇÔöÇ PARTIDOS ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
                 {prodeSection === 'matches' && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
@@ -704,7 +593,7 @@ const AdminProdeContent: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Formulario inline de edición */}
+                        {/* Formulario inline de edici├│n */}
                         {editingMatch && (
                             <div className="border-2 border-black p-5 bg-neutral-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-4 mb-8">
                                 <div className="flex justify-between items-center mb-3">
@@ -714,7 +603,7 @@ const AdminProdeContent: React.FC = () => {
 
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     <div>
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">Nº</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">N┬║</label>
                                         <input type="number" min={1} value={editingMatch.matchNumber || ''} onChange={e => setEditingMatch(m => ({ ...m!, matchNumber: parseInt(e.target.value) || 1 }))} className="w-full h-9 px-2 border-2 border-black font-bold text-sm focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" />
                                     </div>
                                     <div>
@@ -780,14 +669,14 @@ const AdminProdeContent: React.FC = () => {
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-black uppercase text-black bg-neutral-200 px-1 py-0.5">Nº {match.matchNumber}</span>
+                                                <span className="text-[10px] font-black uppercase text-black bg-neutral-200 px-1 py-0.5">N┬║ {match.matchNumber}</span>
                                                 <span className="text-[10px] font-bold text-neutral-500 uppercase">{match.round} {match.groupName && `- ${match.groupName}`}</span>
                                             </div>
                                             <p className="text-[10px] font-medium text-neutral-500 mt-1">{fmtDate(match.matchDate)}</p>
                                         </div>
                                         <div className="flex gap-1">
                                             <button onClick={() => setEditingMatch(match)} className="p-1 border border-transparent hover:border-black transition-all" title="Editar"><Edit2 className="w-4 h-4 text-black" /></button>
-                                            <button onClick={async () => { if (window.confirm('¿Eliminar partido?')) { await supabaseService.deleteProdeMatch(match.id); setProdeMatches(await supabaseService.getProdeMatches()); } }} className="p-1 border border-transparent hover:border-red-500 text-red-500 transition-all" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                                            <button onClick={async () => { if (window.confirm('┬┐Eliminar partido?')) { await supabaseService.deleteProdeMatch(match.id); setProdeMatches(await supabaseService.getProdeMatches()); } }} className="p-1 border border-transparent hover:border-red-500 text-red-500 transition-all" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
                                         </div>
                                     </div>
 
@@ -828,12 +717,12 @@ const AdminProdeContent: React.FC = () => {
                     </div>
                 )}
 
-                {/* ── RESULTADOS ─────────────────────── */}
+                {/* ÔöÇÔöÇ RESULTADOS ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
                 {prodeSection === 'results' && (
                     <div className="space-y-4">
                         <h3 className="text-sm font-black uppercase tracking-tight">Cargar Resultados Reales</h3>
                         <p className="text-[10px] font-medium text-neutral-500 mb-4 max-w-xl">
-                            Aquí aparecen los partidos que ya están cerrados (no aceptan más predicciones) pero aún no tienen un resultado final publicado. Al publicar el resultado, se calcularán automáticamente los puntos de todos los usuarios que hayan participado.
+                            Aqu├¡ aparecen los partidos que ya est├ín cerrados (no aceptan m├ís predicciones) pero a├║n no tienen un resultado final publicado. Al publicar el resultado, se calcular├ín autom├íticamente los puntos de todos los usuarios que hayan participado.
                         </p>
 
                         <div className="space-y-4">
@@ -847,7 +736,7 @@ const AdminProdeContent: React.FC = () => {
                             {prodeMatches.filter(m => !m.isOpen && !m.isFinished).map(match => (
                                 <div key={match.id} className="border-2 border-black p-4 md:p-6 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col md:flex-row items-center justify-between gap-6">
                                     <div className="flex flex-col items-center md:items-start w-full md:w-auto">
-                                        <span className="text-[10px] font-black uppercase text-neutral-500 mb-1">Partido Nº {match.matchNumber}</span>
+                                        <span className="text-[10px] font-black uppercase text-neutral-500 mb-1">Partido N┬║ {match.matchNumber}</span>
                                         <div className="flex items-center gap-4 text-sm font-black uppercase">
                                             <div className="flex items-center gap-2"><FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="md" /> {match.homeTeam}</div>
                                             <span className="text-neutral-300">VS</span>
@@ -873,11 +762,11 @@ const AdminProdeContent: React.FC = () => {
                                                         onClick={() => setResultScores(p => ({ ...p, [match.id]: { ...p[match.id], home: Math.max(0, (p[match.id]?.home ?? 0) - 1) } }))}
                                                         disabled={submittingResult === match.id}
                                                         className="w-9 h-9 rounded-lg bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-black text-base flex items-center justify-center shadow-sm transition-all disabled:opacity-40"
-                                                    >−</button>
+                                                    >ÔêÆ</button>
                                                 </div>
                                             </div>
 
-                                            <span className="font-black text-slate-300 text-2xl px-1">—</span>
+                                            <span className="font-black text-slate-300 text-2xl px-1">ÔÇö</span>
 
                                             {/* Visitante */}
                                             <div className="flex items-center gap-1.5">
@@ -894,7 +783,7 @@ const AdminProdeContent: React.FC = () => {
                                                         onClick={() => setResultScores(p => ({ ...p, [match.id]: { ...p[match.id], away: Math.max(0, (p[match.id]?.away ?? 0) - 1) } }))}
                                                         disabled={submittingResult === match.id}
                                                         className="w-9 h-9 rounded-lg bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-black text-base flex items-center justify-center shadow-sm transition-all disabled:opacity-40"
-                                                    >−</button>
+                                                    >ÔêÆ</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -911,14 +800,14 @@ const AdminProdeContent: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* ── RESULTADOS PUBLICADOS ── */}
+                        {/* ÔöÇÔöÇ RESULTADOS PUBLICADOS ÔöÇÔöÇ */}
                         <div className="mt-12 space-y-4">
                             <h3 className="text-sm font-black uppercase tracking-tight">Resultados Publicados</h3>
                             <div className="space-y-3">
                                 {prodeMatches.filter(m => m.isFinished && m.homeScoreReal !== undefined && m.awayScoreReal !== undefined).sort((a, b) => new Date(b.matchDate || 0).getTime() - new Date(a.matchDate || 0).getTime()).map(match => (
                                     <div key={match.id} className="bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] border border-slate-100 rounded-[2rem] p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden group">
                                         <div className="flex items-center gap-2 text-slate-400 md:w-1/4">
-                                            <span className="text-[10px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded-sm">Nº {match.matchNumber}</span>
+                                            <span className="text-[10px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded-sm">N┬║ {match.matchNumber}</span>
                                             <span className="text-[10px] font-bold uppercase truncate">{match.round}</span>
                                         </div>
                                         <div className="flex items-center justify-between md:justify-center gap-4 flex-1">
@@ -965,14 +854,14 @@ const AdminProdeContent: React.FC = () => {
                                     </div>
                                 ))}
                                 {prodeMatches.filter(m => m.isFinished).length === 0 && (
-                                    <p className="text-center text-xs font-bold text-neutral-400 py-8">Aún no hay resultados publicados.</p>
+                                    <p className="text-center text-xs font-bold text-neutral-400 py-8">A├║n no hay resultados publicados.</p>
                                 )}
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* ── RANKING ────────────────────────── */}
+                {/* ÔöÇÔöÇ RANKING ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
                 {prodeSection === 'ranking' && (
                     <div className="space-y-4">
                         <div className="flex justify-between items-end">
@@ -1037,7 +926,7 @@ const AdminProdeContent: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {/* Controles de ajuste: − / delta / + → Ajustar → Borrar */}
+                                        {/* Controles de ajuste: ÔêÆ / delta / + ÔåÆ Ajustar ÔåÆ Borrar */}
                                         <div className="flex items-center gap-2 pt-4 border-t border-slate-100 md:border-none md:pt-0 shrink-0">
                                             <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 overflow-hidden h-10">
                                                 <button
@@ -1048,7 +937,7 @@ const AdminProdeContent: React.FC = () => {
                                                     disabled={applyingAdjustment === p.id}
                                                     className="w-9 h-full flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 font-black text-base transition-all disabled:opacity-40 border-r border-slate-200"
                                                 >
-                                                    −
+                                                    ÔêÆ
                                                 </button>
                                                 <span className={`w-10 text-center font-black text-sm tabular-nums select-none ${
                                                     parseInt(adjustments[p.id] || '0') > 0 ? 'text-emerald-600' :
@@ -1093,435 +982,6 @@ const AdminProdeContent: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                    </div>
-                )}
-
-                {/* PREDICCIONES */}
-                {prodeSection === 'predictions' && (
-                    <div className="space-y-6">
-
-                        {/* Header */}
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <h3 className="text-base font-black uppercase tracking-tight leading-none">
-                                    Predicciones
-                                </h3>
-                                <p className="text-[11px] font-semibold text-neutral-400 mt-1.5 tracking-wide">
-                                    {predsLoading ? '...' : (
-                                        <>
-                                            <span className="font-black text-black">{allPredictions.length}</span>
-                                            {' '}prediccion{allPredictions.length !== 1 ? 'es' : ''} registradas
-                                        </>
-                                    )}
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowNewPredForm(s => !s);
-                                    setNewPredSelectedParticipant(null);
-                                    setNewPredParticipantSearch('');
-                                    setNewPredMatchId('');
-                                    setNewPredHome(0);
-                                    setNewPredAway(0);
-                                }}
-                                className={`shrink-0 flex items-center gap-2 px-4 py-2.5 border-2 text-xs font-black uppercase tracking-widest transition-all ${
-                                    showNewPredForm
-                                        ? 'bg-white text-black border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
-                                        : 'bg-black text-white border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                                }`}
-                            >
-                                <Plus className={`w-4 h-4 transition-transform duration-200 ${showNewPredForm ? 'rotate-45' : ''}`} />
-                                <span className="hidden sm:inline">{showNewPredForm ? 'Cerrar' : 'Nueva prediccion'}</span>
-                                <span className="sm:hidden">{showNewPredForm ? 'Cerrar' : 'Nueva'}</span>
-                            </button>
-                        </div>
-
-                        {/* Formulario nueva prediccion */}
-                        {showNewPredForm && (
-                            <div className="border-2 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-                                <div className="bg-black px-5 py-3 flex items-center justify-between">
-                                    <p className="text-white text-[10px] font-black uppercase tracking-[0.2em]">
-                                        Nueva prediccion manual
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowNewPredForm(false)}
-                                        className="text-neutral-400 hover:text-white transition-colors"
-                                        aria-label="Cerrar formulario"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-
-                                <div className="p-5 space-y-5">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                                        {/* Buscar participante */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 block">
-                                                Participante
-                                            </label>
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Buscar por nombre..."
-                                                    value={newPredParticipantSearch}
-                                                    onChange={e => handleSearchParticipants(e.target.value)}
-                                                    className="w-full h-11 pl-10 pr-4 border-2 border-neutral-300 font-bold text-sm focus:outline-none focus:border-black transition-colors"
-                                                />
-                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-                                            </div>
-
-                                            {newPredParticipants.length > 0 && !newPredSelectedParticipant && (
-                                                <div className="border-2 border-black border-t-0 bg-white max-h-44 overflow-y-auto shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                                    {newPredParticipants.map(p => (
-                                                        <button
-                                                            key={p.id}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setNewPredSelectedParticipant(p);
-                                                                setNewPredParticipantSearch(`${p.firstName} ${p.lastName}`);
-                                                                setNewPredParticipants([]);
-                                                            }}
-                                                            className="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-center gap-3 border-b border-neutral-100 last:border-0 transition-colors"
-                                                        >
-                                                            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-black text-neutral-600 shrink-0 select-none">
-                                                                {p.firstName.charAt(0)}
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <p className="font-bold text-sm truncate">{p.firstName} {p.lastName}</p>
-                                                                <p className="text-[10px] text-neutral-400 font-medium">{p.totalPoints} pts</p>
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {newPredSelectedParticipant && (
-                                                <div className="flex items-center gap-2.5 px-3 py-2 bg-neutral-900 text-white">
-                                                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-black shrink-0 select-none">
-                                                        {newPredSelectedParticipant.firstName.charAt(0)}
-                                                    </div>
-                                                    <span className="text-xs font-bold truncate flex-1">
-                                                        {newPredSelectedParticipant.firstName} {newPredSelectedParticipant.lastName}
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setNewPredSelectedParticipant(null);
-                                                            setNewPredParticipantSearch('');
-                                                        }}
-                                                        className="text-neutral-400 hover:text-white transition-colors shrink-0"
-                                                        aria-label="Quitar seleccion"
-                                                    >
-                                                        <X className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Elegir partido */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 block">
-                                                Partido
-                                            </label>
-                                            <select
-                                                value={newPredMatchId}
-                                                onChange={e => setNewPredMatchId(e.target.value)}
-                                                className="w-full h-11 px-3 border-2 border-neutral-300 font-bold text-sm bg-white focus:outline-none focus:border-black transition-colors cursor-pointer"
-                                            >
-                                                <option value="">-- Elegir partido --</option>
-                                                {prodeMatches.map(m => (
-                                                    <option key={m.id} value={m.id}>
-                                                        #{m.matchNumber} - {m.homeTeam} vs {m.awayTeam}
-                                                        {m.isFinished ? ' (finalizado)' : m.isOpen ? ' (abierto)' : ' (cerrado)'}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {/* Marcador */}
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 block">
-                                            Prediccion del marcador
-                                        </label>
-                                        <div className="inline-flex items-center gap-3 bg-neutral-50 border-2 border-neutral-200 px-5 py-3">
-                                            <input
-                                                type="number" min={0} max={30}
-                                                value={newPredHome}
-                                                onChange={e => setNewPredHome(parseInt(e.target.value) || 0)}
-                                                className="w-14 h-12 text-center border-2 border-black font-black text-2xl focus:outline-none bg-white"
-                                            />
-                                            <span className="text-2xl font-black text-neutral-300 select-none">-</span>
-                                            <input
-                                                type="number" min={0} max={30}
-                                                value={newPredAway}
-                                                onChange={e => setNewPredAway(parseInt(e.target.value) || 0)}
-                                                className="w-14 h-12 text-center border-2 border-black font-black text-2xl focus:outline-none bg-white"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Botones */}
-                                    <div className="flex gap-3 pt-1 border-t border-neutral-100">
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowNewPredForm(false)}
-                                            className="px-5 py-2.5 border-2 border-neutral-300 text-xs font-black uppercase tracking-widest text-neutral-500 hover:border-black hover:text-black transition-all"
-                                        >
-                                            Cancelar
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={handleSaveNewPred}
-                                            disabled={!newPredSelectedParticipant || !newPredMatchId || savingNewPred}
-                                            className="flex-1 py-2.5 bg-black text-white border-2 border-black text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-40 flex items-center justify-center gap-2"
-                                        >
-                                            {savingNewPred ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                            ) : (
-                                                <>
-                                                    <Check className="w-4 h-4" />
-                                                    Guardar prediccion
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Buscador */}
-                        <div className="relative">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-                            <input
-                                type="text"
-                                placeholder="Buscar por participante, equipo..."
-                                value={predSearchTerm}
-                                onChange={e => setPredSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-10 h-11 border-2 border-neutral-300 font-semibold text-sm focus:outline-none focus:border-black transition-colors placeholder:text-neutral-400"
-                            />
-                            {predSearchTerm && (
-                                <button
-                                    type="button"
-                                    onClick={() => setPredSearchTerm('')}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
-                                    aria-label="Limpiar busqueda"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Lista */}
-                        {predsLoading ? (
-                            <div className="flex flex-col items-center justify-center py-20 gap-3">
-                                <Loader2 className="w-8 h-8 animate-spin text-neutral-300" />
-                                <p className="text-[11px] font-black uppercase tracking-widest text-neutral-400">
-                                    Cargando predicciones...
-                                </p>
-                            </div>
-                        ) : (() => {
-                            const filtered = allPredictions.filter(p => {
-                                if (!predSearchTerm.trim()) return true;
-                                const term = predSearchTerm.toLowerCase();
-                                return (
-                                    p.participantName.toLowerCase().includes(term) ||
-                                    p.homeTeam.toLowerCase().includes(term) ||
-                                    p.awayTeam.toLowerCase().includes(term)
-                                );
-                            });
-
-                            if (filtered.length === 0) {
-                                return (
-                                    <div className="py-20 border-2 border-dashed border-neutral-200 flex flex-col items-center gap-2">
-                                        <Search className="w-8 h-8 text-neutral-200" />
-                                        <p className="text-xs font-black text-neutral-400 uppercase tracking-widest">
-                                            {predSearchTerm ? 'Sin resultados para esa busqueda' : 'No hay predicciones cargadas'}
-                                        </p>
-                                        {predSearchTerm && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setPredSearchTerm('')}
-                                                className="mt-1 text-[10px] font-black uppercase tracking-widest underline text-neutral-400 hover:text-black transition-colors"
-                                            >
-                                                Limpiar busqueda
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            }
-
-                            return (
-                                <div className="space-y-2">
-                                    {filtered.map(pred => {
-                                        const isEditing = editingPredId === pred.predictionId;
-                                        const isDeleting = deletingPredId === pred.predictionId;
-                                        const initial = pred.participantName.charAt(0).toUpperCase();
-
-                                        return (
-                                            <div
-                                                key={pred.predictionId}
-                                                className={`bg-white border-2 transition-all duration-200 ${
-                                                    isEditing
-                                                        ? 'border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                                                        : 'border-neutral-200 hover:border-neutral-400'
-                                                }`}
-                                            >
-                                                {/* Fila principal */}
-                                                <div className="flex items-center gap-3 px-4 py-3">
-
-                                                    {/* Avatar */}
-                                                    <div className="w-9 h-9 rounded-full bg-neutral-100 flex items-center justify-center text-[13px] font-black text-neutral-600 shrink-0 select-none">
-                                                        {initial}
-                                                    </div>
-
-                                                    {/* Info */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-black text-sm leading-tight truncate">
-                                                            {pred.participantName}
-                                                        </p>
-                                                        <p className="text-[10px] font-semibold text-neutral-400 mt-0.5 truncate">
-                                                            #{pred.matchNumber} · {pred.homeTeam} vs {pred.awayTeam}
-                                                        </p>
-                                                    </div>
-
-                                                    {/* Vista normal */}
-                                                    {!isEditing && (
-                                                        <div className="flex items-center gap-2 shrink-0">
-                                                            <div className="flex items-center gap-1 bg-neutral-50 border border-neutral-200 px-2.5 py-1.5">
-                                                                <span className="font-black text-sm tabular-nums text-black leading-none">{pred.homeScorePred}</span>
-                                                                <span className="text-neutral-300 font-bold text-xs leading-none mx-0.5">-</span>
-                                                                <span className="font-black text-sm tabular-nums text-black leading-none">{pred.awayScorePred}</span>
-                                                            </div>
-
-                                                            {pred.pointsEarned !== null ? (
-                                                                <span className={`hidden sm:inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1.5 leading-none ${
-                                                                    pred.pointsEarned > 0
-                                                                        ? 'bg-emerald-600 text-white'
-                                                                        : 'bg-neutral-100 text-neutral-500'
-                                                                }`}>
-                                                                    {pred.pointsEarned > 0 ? `+${pred.pointsEarned}pts` : '0pts'}
-                                                                </span>
-                                                            ) : (
-                                                                <span className="hidden sm:inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1.5 leading-none bg-amber-50 text-amber-500 border border-amber-200">
-                                                                    Pendiente
-                                                                </span>
-                                                            )}
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setEditingPredId(pred.predictionId);
-                                                                    setEditPredHome(pred.homeScorePred);
-                                                                    setEditPredAway(pred.awayScorePred);
-                                                                }}
-                                                                className="w-9 h-9 flex items-center justify-center border border-neutral-200 text-neutral-400 hover:border-black hover:bg-black hover:text-white transition-all shrink-0"
-                                                                title="Editar prediccion"
-                                                                aria-label="Editar prediccion"
-                                                            >
-                                                                <Edit2 className="w-3.5 h-3.5" />
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleDeletePred(pred.predictionId)}
-                                                                disabled={isDeleting}
-                                                                className="w-9 h-9 flex items-center justify-center border border-neutral-200 text-red-400 hover:border-red-500 hover:bg-red-500 hover:text-white transition-all shrink-0 disabled:opacity-40"
-                                                                title="Eliminar prediccion"
-                                                                aria-label="Eliminar prediccion"
-                                                            >
-                                                                {isDeleting
-                                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                    : <Trash2 className="w-3.5 h-3.5" />
-                                                                }
-                                                            </button>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Modo edicion: botones en fila */}
-                                                    {isEditing && (
-                                                        <div className="flex items-center gap-1.5 shrink-0">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setEditingPredId(null)}
-                                                                className="h-9 px-3 border-2 border-neutral-200 text-xs font-black uppercase text-neutral-500 hover:border-black hover:text-black transition-all"
-                                                                aria-label="Cancelar edicion"
-                                                            >
-                                                                <X className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleSaveEditPred(pred.predictionId, pred.participantId, pred.matchId)}
-                                                                disabled={savingEditPred}
-                                                                className="h-9 px-3 bg-black text-white border-2 border-black text-xs font-black uppercase hover:bg-white hover:text-black transition-all disabled:opacity-40 flex items-center gap-1"
-                                                                aria-label="Guardar edicion"
-                                                            >
-                                                                {savingEditPred
-                                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                    : <Check className="w-3.5 h-3.5" />
-                                                                }
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Panel edicion inline */}
-                                                {isEditing && (
-                                                    <div className="border-t-2 border-black bg-neutral-50 px-4 py-4">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-3">
-                                                            Nuevo marcador
-                                                        </p>
-                                                        <div className="flex items-center gap-3">
-                                                            <input
-                                                                type="number" min={0} max={30}
-                                                                value={editPredHome}
-                                                                onChange={e => setEditPredHome(parseInt(e.target.value) || 0)}
-                                                                className="w-16 h-12 text-center border-2 border-black font-black text-2xl focus:outline-none bg-white"
-                                                                autoFocus
-                                                                aria-label="Goles local"
-                                                            />
-                                                            <span className="text-xl font-black text-neutral-300 select-none">-</span>
-                                                            <input
-                                                                type="number" min={0} max={30}
-                                                                value={editPredAway}
-                                                                onChange={e => setEditPredAway(parseInt(e.target.value) || 0)}
-                                                                className="w-16 h-12 text-center border-2 border-black font-black text-2xl focus:outline-none bg-white"
-                                                                aria-label="Goles visitante"
-                                                            />
-                                                            <p className="ml-2 text-[10px] text-neutral-400 font-semibold leading-snug hidden sm:block">
-                                                                Tocá el check<br />para guardar
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Badge puntos en mobile */}
-                                                {!isEditing && (
-                                                    <div className="sm:hidden px-4 pb-3 -mt-1">
-                                                        {pred.pointsEarned !== null ? (
-                                                            <span className={`inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1 leading-none ${
-                                                                pred.pointsEarned > 0
-                                                                    ? 'bg-emerald-600 text-white'
-                                                                    : 'bg-neutral-100 text-neutral-500'
-                                                            }`}>
-                                                                {pred.pointsEarned > 0 ? `+${pred.pointsEarned} pts` : '0 pts'}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1 leading-none bg-amber-50 text-amber-500 border border-amber-200">
-                                                                Pendiente
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            );
-                        })()}
                     </div>
                 )}
             </div>

@@ -53,8 +53,9 @@ export const HamburgerButton: React.FC<{
 
 interface SubMenuItem {
     label: string;
-    path: string;
+    path?: string;
     roles?: UserRole[];
+    separator?: boolean;
 }
 
 interface SubGroup {
@@ -175,18 +176,25 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     path: '/mis-grupos',
                     roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]
                 },
-                {
-                    label: 'Coordinadores',
-                    roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR],
-                    subItems: [
-                        { label: 'Dashboard', path: '/coordinators?tab=dashboard' },
-                        { label: 'Grupos', path: '/coordinators?tab=groups' },
-                        { label: 'Asistencias', path: '/coordinators?tab=attendance' },
-                        { label: 'Calendario', path: '/coordinators?tab=calendar' }
-                    ]
-                }
             ],
             subItems: [
+                // ── Separador: Coordinación ──────────────────
+                {
+                    label: 'Coordinación',
+                    separator: true,
+                    roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR]
+                },
+                {
+                    label: 'Coordinadores',
+                    path: '/coordinators?tab=dashboard',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR]
+                },
+                // ── Separador: Administración ─────────────────
+                {
+                    label: 'Administración',
+                    separator: true,
+                    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
+                },
                 {
                     label: 'Gestión de grupos',
                     path: '/gcx?tab=GROUPS',
@@ -215,6 +223,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Prode Mundial',
             icon: Trophy,
             path: '/prode',
+            requiresAuth: true,
             roles: [],
             subItems: [
                 {
@@ -404,13 +413,24 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                         );
                                     })}
 
-                                    {/* Regular subItems */}
+                                    {/* Regular subItems — con soporte de separadores */}
                                     {visibleSubItems.map((sub, si) => {
-                                        const isSubActive = (location.pathname + location.search) === sub.path;
+                                        if (sub.separator) {
+                                            return (
+                                                <div key={si} className="px-3 pt-3 pb-1">
+                                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 dark:text-zinc-600 select-none">
+                                                        {sub.label}
+                                                    </span>
+                                                </div>
+                                            );
+                                        }
+                                        const isSubActive = sub.path
+                                            ? (location.pathname + location.search) === sub.path
+                                            : false;
                                         return (
                                             <button
                                                 key={si}
-                                                onClick={() => handleNavigation(sub.path)}
+                                                onClick={() => sub.path && handleNavigation(sub.path)}
                                                 className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${isSubActive
                                                     ? 'bg-black text-white dark:bg-white dark:text-black'
                                                     : 'text-gray-500 dark:text-zinc-500 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white'

@@ -219,10 +219,16 @@ const MODULES: SystemModule[] = [
         icon: 'trophy',
         route: '/prode',
         allowedRoles: [
-            UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ANFITRION, UserRole.VIEWER, UserRole.USUARIO,
-            UserRole.VOLUNTARIO, UserRole.VOLUNTARIO_GRUPOS, UserRole.ENCARGADO_GRUPOS, UserRole.ENCARGADO_PUNTO
+            UserRole.SUPER_ADMIN, UserRole.PASTOR,
+            UserRole.ANFITRION, UserRole.CO_ANFITRION,
+            UserRole.VIEWER, UserRole.USUARIO,
+            UserRole.VOLUNTARIO, UserRole.VOLUNTARIO_GRUPOS,
+            UserRole.ENCARGADO_GRUPOS, UserRole.ENCARGADO_PUNTO,
+            UserRole.COORDINATOR, UserRole.ADMIN_GROUPS,
+            UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO,
+            UserRole.REPORTES, UserRole.PRODE
         ],
-        publicAccess: true,
+        publicAccess: false,
         useImage: false,
         gradientFrom: 'emerald-500',
         gradientTo: 'teal-600',
