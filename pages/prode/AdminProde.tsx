@@ -79,6 +79,71 @@ const TEAMS_SORTED = [...WORLD_CUP_2026_TEAMS].sort((a, b) => {
     return a.name.localeCompare(b.name, 'es');
 });
 
+// ── Flag helpers ────────────────────────────────────────────────────────────────
+const TEAM_TO_CODE: Record<string, string> = {
+    'argentina': 'ar', 'brasil': 'br', 'brazil': 'br', 'uruguay': 'uy',
+    'colombia': 'co', 'chile': 'cl', 'ecuador': 'ec', 'paraguay': 'py',
+    'venezuela': 've', 'bolivia': 'bo', 'peru': 'pe', 'perú': 'pe',
+    'francia': 'fr', 'france': 'fr',
+    'inglaterra': 'gb-eng', 'england': 'gb-eng',
+    'españa': 'es', 'espana': 'es', 'spain': 'es',
+    'alemania': 'de', 'germany': 'de',
+    'portugal': 'pt', 'italia': 'it', 'italy': 'it',
+    'paises bajos': 'nl', 'países bajos': 'nl', 'holanda': 'nl', 'netherlands': 'nl',
+    'croacia': 'hr', 'croatia': 'hr',
+    'belgica': 'be', 'bélgica': 'be', 'belgium': 'be',
+    'dinamarca': 'dk', 'denmark': 'dk',
+    'suiza': 'ch', 'switzerland': 'ch',
+    'serbia': 'rs', 'polonia': 'pl', 'poland': 'pl',
+    'escocia': 'gb-sct', 'scotland': 'gb-sct',
+    'gales': 'gb-wls', 'wales': 'gb-wls',
+    'suecia': 'se', 'sweden': 'se',
+    'ucrania': 'ua', 'ukraine': 'ua',
+    'bosnia y herzegovina': 'ba', 'bosnia': 'ba',
+    'austria': 'at', 'noruega': 'no', 'norway': 'no',
+    'turquia': 'tr', 'turquía': 'tr', 'turkey': 'tr',
+    'japon': 'jp', 'japón': 'jp', 'japan': 'jp',
+    'corea del sur': 'kr', 'republica de corea': 'kr', 'south korea': 'kr', 'korea': 'kr',
+    'corea del norte': 'kp', 'north korea': 'kp',
+    'chequia': 'cz', 'republica checa': 'cz', 'czech republic': 'cz', 'czechia': 'cz',
+    'arabia saudita': 'sa', 'saudi arabia': 'sa',
+    'iran': 'ir', 'irán': 'ir',
+    'australia': 'au', 'qatar': 'qa', 'katar': 'qa',
+    'iraq': 'iq', 'jordania': 'jo', 'uzbekistan': 'uz', 'uzbekistán': 'uz',
+    'senegal': 'sn', 'marruecos': 'ma', 'morocco': 'ma',
+    'tunez': 'tn', 'túnez': 'tn', 'tunisia': 'tn',
+    'ghana': 'gh', 'nigeria': 'ng', 'egipto': 'eg', 'egypt': 'eg',
+    'sudafrica': 'za', 'sudáfrica': 'za', 'south africa': 'za',
+    'algeria': 'dz', 'argelia': 'dz',
+    'congo dr': 'cd', 'congo': 'cd',
+    'mexico': 'mx', 'méxico': 'mx',
+    'estados unidos': 'us', 'usa': 'us', 'united states': 'us',
+    'costa rica': 'cr', 'canada': 'ca', 'canadá': 'ca',
+    'honduras': 'hn', 'panama': 'pa', 'panamá': 'pa',
+    'nueva zelanda': 'nz', 'new zealand': 'nz',
+};
+
+const normalizeName = (name: string): string =>
+    name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
+interface FlagImageProps { teamName: string; size?: 'sm' | 'md' | 'lg'; emoji?: string; className?: string; }
+const FlagImage: React.FC<FlagImageProps> = ({ teamName, size = 'md', emoji, className = '' }) => {
+    const code = TEAM_TO_CODE[normalizeName(teamName)];
+    if (!code) {
+        if (emoji) return <span className={`leading-none ${className}`} style={{ fontSize: size === 'lg' ? '2rem' : size === 'md' ? '1.5rem' : '1rem' }}>{emoji}</span>;
+        return <span className={`text-slate-300 font-bold uppercase text-xs ${className}`}>{teamName.substring(0, 2)}</span>;
+    }
+    const px = size === 'lg' ? 48 : size === 'md' ? 32 : 20;
+    const h  = size === 'lg' ? 32 : size === 'md' ? 22 : 14;
+    return (
+        <img src={`https://flagcdn.com/${code}.svg`} alt={teamName} width={px}
+            className={`rounded-[3px] shadow-sm object-cover shrink-0 ${className}`}
+            style={{ height: `${h}px` }}
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+    );
+};
+
 const toDatetimeLocal = (iso: string): string => {
     const d = new Date(iso);
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -617,7 +682,7 @@ const AdminProdeContent: React.FC = () => {
 
                                     <div className="flex items-center justify-between mt-2">
                                         <div className="flex items-center gap-2 w-2/5">
-                                            <span className="text-xl">{match.homeFlag}</span>
+                                            <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="md" />
                                             <span className="text-xs font-black uppercase truncate">{match.homeTeam}</span>
                                         </div>
                                         <div className="flex-1 flex flex-col items-center justify-center">
@@ -629,7 +694,7 @@ const AdminProdeContent: React.FC = () => {
                                         </div>
                                         <div className="flex items-center justify-end gap-2 w-2/5">
                                             <span className="text-xs font-black uppercase truncate text-right">{match.awayTeam}</span>
-                                            <span className="text-xl">{match.awayFlag}</span>
+                                            <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="md" />
                                         </div>
                                     </div>
 
@@ -673,32 +738,60 @@ const AdminProdeContent: React.FC = () => {
                                     <div className="flex flex-col items-center md:items-start w-full md:w-auto">
                                         <span className="text-[10px] font-black uppercase text-neutral-500 mb-1">Partido Nº {match.matchNumber}</span>
                                         <div className="flex items-center gap-4 text-sm font-black uppercase">
-                                            <div className="flex items-center gap-2"><span className="text-xl">{match.homeFlag}</span> {match.homeTeam}</div>
+                                            <div className="flex items-center gap-2"><FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="md" /> {match.homeTeam}</div>
                                             <span className="text-neutral-300">VS</span>
-                                            <div className="flex items-center gap-2">{match.awayTeam} <span className="text-xl">{match.awayFlag}</span></div>
+                                            <div className="flex items-center gap-2">{match.awayTeam} <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="md" /></div>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-4 w-full md:w-auto justify-center">
+                                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto justify-center">
+                                        {/* Marcador con controles +/- horizontales */}
                                         <div className="flex items-center gap-2">
-                                            <input
-                                                type="number" min={0}
-                                                value={resultScores[match.id]?.home ?? ''}
-                                                onChange={e => setResultScores(p => ({ ...p, [match.id]: { ...p[match.id], home: parseInt(e.target.value) || 0 } }))}
-                                                className="w-12 h-12 text-center border-2 border-black font-black text-xl focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                                            />
-                                            <span className="font-bold text-neutral-400">-</span>
-                                            <input
-                                                type="number" min={0}
-                                                value={resultScores[match.id]?.away ?? ''}
-                                                onChange={e => setResultScores(p => ({ ...p, [match.id]: { ...p[match.id], away: parseInt(e.target.value) || 0 } }))}
-                                                className="w-12 h-12 text-center border-2 border-black font-black text-xl focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                                            />
+                                            {/* Local */}
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-11 text-center font-black text-2xl tabular-nums select-none text-slate-800">
+                                                    {resultScores[match.id]?.home ?? 0}
+                                                </span>
+                                                <div className="flex flex-col gap-1">
+                                                    <button
+                                                        onClick={() => setResultScores(p => ({ ...p, [match.id]: { ...p[match.id], home: (p[match.id]?.home ?? 0) + 1 } }))}
+                                                        disabled={submittingResult === match.id}
+                                                        className="w-9 h-9 rounded-lg bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-base flex items-center justify-center shadow-sm transition-all disabled:opacity-40"
+                                                    >+</button>
+                                                    <button
+                                                        onClick={() => setResultScores(p => ({ ...p, [match.id]: { ...p[match.id], home: Math.max(0, (p[match.id]?.home ?? 0) - 1) } }))}
+                                                        disabled={submittingResult === match.id}
+                                                        className="w-9 h-9 rounded-lg bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-black text-base flex items-center justify-center shadow-sm transition-all disabled:opacity-40"
+                                                    >−</button>
+                                                </div>
+                                            </div>
+
+                                            <span className="font-black text-slate-300 text-2xl px-1">—</span>
+
+                                            {/* Visitante */}
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-11 text-center font-black text-2xl tabular-nums select-none text-slate-800">
+                                                    {resultScores[match.id]?.away ?? 0}
+                                                </span>
+                                                <div className="flex flex-col gap-1">
+                                                    <button
+                                                        onClick={() => setResultScores(p => ({ ...p, [match.id]: { ...p[match.id], away: (p[match.id]?.away ?? 0) + 1 } }))}
+                                                        disabled={submittingResult === match.id}
+                                                        className="w-9 h-9 rounded-lg bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-base flex items-center justify-center shadow-sm transition-all disabled:opacity-40"
+                                                    >+</button>
+                                                    <button
+                                                        onClick={() => setResultScores(p => ({ ...p, [match.id]: { ...p[match.id], away: Math.max(0, (p[match.id]?.away ?? 0) - 1) } }))}
+                                                        disabled={submittingResult === match.id}
+                                                        className="w-9 h-9 rounded-lg bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-black text-base flex items-center justify-center shadow-sm transition-all disabled:opacity-40"
+                                                    >−</button>
+                                                </div>
+                                            </div>
                                         </div>
+
                                         <button
                                             onClick={() => handlePublishResult(match.id)}
-                                            disabled={submittingResult === match.id || resultScores[match.id]?.home === undefined || resultScores[match.id]?.away === undefined}
-                                            className="h-12 px-6 bg-[#28a946] text-white border-2 border-black text-xs font-black uppercase tracking-widest hover:bg-emerald-600 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 flex items-center gap-2"
+                                            disabled={submittingResult === match.id}
+                                            className="h-12 px-8 rounded-xl bg-emerald-600 text-white text-xs font-black uppercase tracking-widest hover:bg-emerald-700 shadow-sm transition-all disabled:opacity-50 flex items-center gap-2 w-full sm:w-auto justify-center"
                                         >
                                             {submittingResult === match.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Publicar</>}
                                         </button>
@@ -720,13 +813,13 @@ const AdminProdeContent: React.FC = () => {
                                         <div className="flex items-center justify-between md:justify-center gap-4 flex-1">
                                             <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
                                                 <span className="text-xs sm:text-sm font-black uppercase text-slate-700 truncate">{match.homeTeam}</span>
-                                                <span className="text-2xl drop-shadow-sm shrink-0">{match.homeFlag}</span>
+                                                <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="lg" />
                                             </div>
                                             <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-lg font-black text-slate-700 tabular-nums shadow-inner shrink-0">
                                                 {match.homeScoreReal} - {match.awayScoreReal}
                                             </div>
                                             <div className="flex items-center gap-3 flex-1 justify-start min-w-0">
-                                                <span className="text-2xl drop-shadow-sm shrink-0">{match.awayFlag}</span>
+                                                <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="lg" />
                                                 <span className="text-xs sm:text-sm font-black uppercase text-slate-700 truncate">{match.awayTeam}</span>
                                             </div>
                                         </div>
