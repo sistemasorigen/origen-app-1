@@ -63,6 +63,7 @@ CREATE POLICY "prode_matches_select"
     USING (true);
 
 -- Solo admins pueden crear/editar/eliminar partidos
+-- Soporta tanto columna legacy `role` como array `roles[]`
 DROP POLICY IF EXISTS "prode_matches_admin_write"
     ON public.prode_matches;
 CREATE POLICY "prode_matches_admin_write"
@@ -72,14 +73,20 @@ CREATE POLICY "prode_matches_admin_write"
         EXISTS (
             SELECT 1 FROM public.users
             WHERE id = auth.uid()
-            AND role IN ('SUPER_ADMIN', 'PASTOR')
+            AND (
+                role::text IN ('SUPER_ADMIN', 'PASTOR', 'PRODE')
+                OR roles && ARRAY['SUPER_ADMIN', 'PASTOR', 'PRODE']::text[]
+            )
         )
     )
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.users
             WHERE id = auth.uid()
-            AND role IN ('SUPER_ADMIN', 'PASTOR')
+            AND (
+                role::text IN ('SUPER_ADMIN', 'PASTOR', 'PRODE')
+                OR roles && ARRAY['SUPER_ADMIN', 'PASTOR', 'PRODE']::text[]
+            )
         )
     );
 
@@ -143,7 +150,27 @@ CREATE POLICY "prode_participants_update"
         OR EXISTS (
             SELECT 1 FROM public.users
             WHERE id = auth.uid()
-            AND role IN ('SUPER_ADMIN', 'PASTOR')
+            AND (
+                role::text IN ('SUPER_ADMIN', 'PASTOR', 'PRODE')
+                OR roles && ARRAY['SUPER_ADMIN', 'PASTOR', 'PRODE']::text[]
+            )
+        )
+    );
+
+-- Solo admins pueden eliminar participantes
+DROP POLICY IF EXISTS "prode_participants_delete"
+    ON public.prode_participants;
+CREATE POLICY "prode_participants_delete"
+    ON public.prode_participants
+    FOR DELETE TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.users
+            WHERE id = auth.uid()
+            AND (
+                role::text IN ('SUPER_ADMIN', 'PASTOR', 'PRODE')
+                OR roles && ARRAY['SUPER_ADMIN', 'PASTOR', 'PRODE']::text[]
+            )
         )
     );
 

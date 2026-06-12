@@ -79,6 +79,18 @@ const TEAMS_SORTED = [...WORLD_CUP_2026_TEAMS].sort((a, b) => {
     return a.name.localeCompare(b.name, 'es');
 });
 
+const toDatetimeLocal = (iso: string): string => {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const fmtDate = (iso: string): string =>
+    new Date(iso).toLocaleString('es-AR', {
+        day: '2-digit', month: '2-digit', year: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+    });
+
 // ── Componente selector de equipo ───────────────────────────────────────────────
 interface TeamSelectorProps {
     value: string;
@@ -144,7 +156,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ value, flagValue, label, on
 };
 
 const AdminProdeContent: React.FC = () => {
-    const { user } = useAuth();
     const navigate = useNavigate();
 
     type ProdeAdminSection = 'config' | 'matches' | 'results' | 'ranking';
@@ -564,7 +575,7 @@ const AdminProdeContent: React.FC = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
                                     <div className="col-span-2">
                                         <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">Fecha y Hora</label>
-                                        <input type="datetime-local" value={editingMatch.matchDate ? new Date(editingMatch.matchDate).toISOString().slice(0, 16) : ''} onChange={e => setEditingMatch(m => ({ ...m!, matchDate: e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString() }))} className="w-full h-9 px-2 border-2 border-black font-bold text-xs focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" />
+                                        <input type="datetime-local" value={editingMatch.matchDate ? toDatetimeLocal(editingMatch.matchDate) : ''} onChange={e => setEditingMatch(m => ({ ...m!, matchDate: e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString() }))} className="w-full h-9 px-2 border-2 border-black font-bold text-xs focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" />
                                     </div>
                                     <div className="col-span-2 flex items-center justify-end gap-3 mt-4 md:mt-0">
                                         <label className="flex items-center gap-2 cursor-pointer">
@@ -596,7 +607,7 @@ const AdminProdeContent: React.FC = () => {
                                                 <span className="text-[10px] font-black uppercase text-black bg-neutral-200 px-1 py-0.5">Nº {match.matchNumber}</span>
                                                 <span className="text-[10px] font-bold text-neutral-500 uppercase">{match.round} {match.groupName && `- ${match.groupName}`}</span>
                                             </div>
-                                            <p className="text-[10px] font-medium text-neutral-500 mt-1">{new Date(match.matchDate).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                                            <p className="text-[10px] font-medium text-neutral-500 mt-1">{fmtDate(match.matchDate)}</p>
                                         </div>
                                         <div className="flex gap-1">
                                             <button onClick={() => setEditingMatch(match)} className="p-1 border border-transparent hover:border-black transition-all" title="Editar"><Edit2 className="w-4 h-4 text-black" /></button>
@@ -611,9 +622,9 @@ const AdminProdeContent: React.FC = () => {
                                         </div>
                                         <div className="flex-1 flex flex-col items-center justify-center">
                                             <div className="flex items-center gap-2 px-3 py-1 border-2 border-black bg-neutral-100">
-                                                <span className="font-black text-sm">{match.homeScore ?? '-'}</span>
+                                                <span className="font-black text-sm">{match.homeScoreReal ?? '-'}</span>
                                                 <span className="text-neutral-400 font-bold">:</span>
-                                                <span className="font-black text-sm">{match.awayScore ?? '-'}</span>
+                                                <span className="font-black text-sm">{match.awayScoreReal ?? '-'}</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-end gap-2 w-2/5">
@@ -814,39 +825,54 @@ const AdminProdeContent: React.FC = () => {
                                                 </p>
                                             </div>
 
-                                            <div className="flex flex-col items-end shrink-0">
-                                                <div className="flex items-baseline gap-1.5">
-                                                    <span className={`text-2xl font-black tabular-nums tracking-tight ${isFirst ? 'text-amber-500' : 'text-slate-600'}`}>
-                                                        {p.totalPoints}
-                                                    </span>
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">pts</span>
-                                                </div>
-                                                {p.pointsAdjustment !== 0 && (
-                                                    <span className="text-[9px] font-black text-amber-500 uppercase">
-                                                        {p.pointsAdjustment > 0 ? `+${p.pointsAdjustment} ajuste` : `${p.pointsAdjustment} ajuste`}
-                                                    </span>
-                                                )}
+                                            <div className="flex items-baseline gap-1.5 shrink-0">
+                                                <span className={`text-2xl font-black tabular-nums tracking-tight ${isFirst ? 'text-amber-500' : 'text-slate-600'}`}>
+                                                    {p.totalPoints}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">pts</span>
                                             </div>
                                         </div>
 
+                                        {/* Controles de ajuste: − / delta / + → Ajustar → Borrar */}
                                         <div className="flex items-center gap-2 pt-4 border-t border-slate-100 md:border-none md:pt-0 shrink-0">
-                                            <input
-                                                type="number"
-                                                placeholder="Ajuste"
-                                                value={adjustments[p.id] ?? ''}
-                                                onChange={e => setAdjustments(prev => ({ ...prev, [p.id]: e.target.value }))}
-                                                className="w-16 h-10 rounded-xl text-center border border-slate-200 bg-slate-50 font-bold text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all"
-                                            />
+                                            <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 overflow-hidden h-10">
+                                                <button
+                                                    onClick={() => setAdjustments(prev => ({
+                                                        ...prev,
+                                                        [p.id]: String((parseInt(prev[p.id] || '0') || 0) - 1)
+                                                    }))}
+                                                    disabled={applyingAdjustment === p.id}
+                                                    className="w-9 h-full flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 font-black text-base transition-all disabled:opacity-40 border-r border-slate-200"
+                                                >
+                                                    −
+                                                </button>
+                                                <span className={`w-10 text-center font-black text-sm tabular-nums select-none ${
+                                                    parseInt(adjustments[p.id] || '0') > 0 ? 'text-emerald-600' :
+                                                    parseInt(adjustments[p.id] || '0') < 0 ? 'text-rose-500' : 'text-slate-400'
+                                                }`}>
+                                                    {parseInt(adjustments[p.id] || '0') > 0 ? `+${adjustments[p.id]}` : (adjustments[p.id] || '0')}
+                                                </span>
+                                                <button
+                                                    onClick={() => setAdjustments(prev => ({
+                                                        ...prev,
+                                                        [p.id]: String((parseInt(prev[p.id] || '0') || 0) + 1)
+                                                    }))}
+                                                    disabled={applyingAdjustment === p.id}
+                                                    className="w-9 h-full flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 font-black text-base transition-all disabled:opacity-40 border-l border-slate-200"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
                                             <button
                                                 onClick={() => handleApplyAdjustment(p.id)}
                                                 disabled={applyingAdjustment === p.id || !adjustments[p.id] || isNaN(parseInt(adjustments[p.id])) || parseInt(adjustments[p.id]) === 0}
-                                                className="h-10 px-4 rounded-xl bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white shadow-sm transition-all disabled:opacity-50 flex justify-center items-center min-w-[80px]"
+                                                className="h-10 px-4 rounded-xl bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 shadow-sm transition-all disabled:opacity-50 flex justify-center items-center min-w-[72px]"
                                             >
                                                 {applyingAdjustment === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Ajustar'}
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteParticipant(p.id)}
-                                                className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition-colors"
+                                                className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition-colors shrink-0"
                                                 title="Eliminar Participante"
                                             >
                                                 <Trash2 className="w-4 h-4" />

@@ -321,7 +321,9 @@ const Prode: React.FC = () => {
     };
 
     const isMale = user?.gender === 'Masculino';
-    const openMatches = matches.filter(m => m.isOpen && !m.isFinished);
+    const openMatches = matches
+        .filter(m => m.isOpen && !m.isFinished)
+        .sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
     const liveMatches = openMatches.filter(m => m.matchDate && now >= new Date(m.matchDate).getTime()).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
     const upcomingMatches = openMatches.filter(m => !m.matchDate || now < new Date(m.matchDate).getTime()).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
     const unlockedOpenMatches = openMatches.filter(m => !isMatchLocked(m));
@@ -331,8 +333,8 @@ const Prode: React.FC = () => {
     const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !== undefined && m.awayScoreReal !== undefined).sort((a, b) => new Date(b.matchDate || 0).getTime() - new Date(a.matchDate || 0).getTime());
 
     const formatMatchDate = (iso: string) =>
-        new Date(iso).toLocaleDateString('es-AR', {
-            weekday: 'short', day: '2-digit', month: '2-digit',
+        new Date(iso).toLocaleString('es-AR', {
+            weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit',
             hour: '2-digit', minute: '2-digit',
         });
 
