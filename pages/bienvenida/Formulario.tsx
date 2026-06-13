@@ -1,9 +1,53 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabaseClient';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, ChevronDown } from 'lucide-react';
 import { useToast } from '../../pages/punto-informacion/context/ContextoToast';
+
+interface Country {
+    name: string;
+    flag: string;
+    iso: string;
+    dialCode: string;
+}
+
+const COUNTRIES: Country[] = [
+    { name: 'Argentina',            flag: '🇦🇷', iso: 'AR', dialCode: '+54'  },
+    { name: 'Bolivia',              flag: '🇧🇴', iso: 'BO', dialCode: '+591' },
+    { name: 'Brasil',               flag: '🇧🇷', iso: 'BR', dialCode: '+55'  },
+    { name: 'Chile',                flag: '🇨🇱', iso: 'CL', dialCode: '+56'  },
+    { name: 'Colombia',             flag: '🇨🇴', iso: 'CO', dialCode: '+57'  },
+    { name: 'Costa Rica',           flag: '🇨🇷', iso: 'CR', dialCode: '+506' },
+    { name: 'Cuba',                 flag: '🇨🇺', iso: 'CU', dialCode: '+53'  },
+    { name: 'Ecuador',              flag: '🇪🇨', iso: 'EC', dialCode: '+593' },
+    { name: 'El Salvador',          flag: '🇸🇻', iso: 'SV', dialCode: '+503' },
+    { name: 'España',               flag: '🇪🇸', iso: 'ES', dialCode: '+34'  },
+    { name: 'Estados Unidos',       flag: '🇺🇸', iso: 'US', dialCode: '+1'   },
+    { name: 'Guatemala',            flag: '🇬🇹', iso: 'GT', dialCode: '+502' },
+    { name: 'Honduras',             flag: '🇭🇳', iso: 'HN', dialCode: '+504' },
+    { name: 'México',               flag: '🇲🇽', iso: 'MX', dialCode: '+52'  },
+    { name: 'Nicaragua',            flag: '🇳🇮', iso: 'NI', dialCode: '+505' },
+    { name: 'Panamá',               flag: '🇵🇦', iso: 'PA', dialCode: '+507' },
+    { name: 'Paraguay',             flag: '🇵🇾', iso: 'PY', dialCode: '+595' },
+    { name: 'Perú',                 flag: '🇵🇪', iso: 'PE', dialCode: '+51'  },
+    { name: 'Puerto Rico',          flag: '🇵🇷', iso: 'PR', dialCode: '+1'   },
+    { name: 'República Dominicana', flag: '🇩🇴', iso: 'DO', dialCode: '+1'   },
+    { name: 'Uruguay',              flag: '🇺🇾', iso: 'UY', dialCode: '+598' },
+    { name: 'Venezuela',            flag: '🇻🇪', iso: 'VE', dialCode: '+58'  },
+    { name: 'Alemania',             flag: '🇩🇪', iso: 'DE', dialCode: '+49'  },
+    { name: 'Australia',            flag: '🇦🇺', iso: 'AU', dialCode: '+61'  },
+    { name: 'Canada',               flag: '🇨🇦', iso: 'CA', dialCode: '+1'   },
+    { name: 'China',                flag: '🇨🇳', iso: 'CN', dialCode: '+86'  },
+    { name: 'Francia',              flag: '🇫🇷', iso: 'FR', dialCode: '+33'  },
+    { name: 'India',                flag: '🇮🇳', iso: 'IN', dialCode: '+91'  },
+    { name: 'Israel',               flag: '🇮🇱', iso: 'IL', dialCode: '+972' },
+    { name: 'Italia',               flag: '🇮🇹', iso: 'IT', dialCode: '+39'  },
+    { name: 'Japón',                flag: '🇯🇵', iso: 'JP', dialCode: '+81'  },
+    { name: 'Portugal',             flag: '🇵🇹', iso: 'PT', dialCode: '+351' },
+    { name: 'Reino Unido',          flag: '🇬🇧', iso: 'GB', dialCode: '+44'  },
+    { name: 'Suiza',                flag: '🇨🇭', iso: 'CH', dialCode: '+41'  },
+];
 
 const INTEREST_OPTIONS = ['Domingos', 'Grupos GCX', 'Voluntarios', 'Oración', 'Bautismos', 'Niños'];
 const FORM_RATE_KEY = 'form_last_submit';
@@ -21,11 +65,47 @@ const Formulario: React.FC = () => {
         email: '',
         experience: '',
         is_first_time: null as boolean | null,
-        // referral_source: '', // REMOVED
-        // wants_growth: '',    // REMOVED
         interest_areas: [] as string[],
         prayer_request: ''
     });
+
+    // Selector de país
+    const [selectedCountry, setSelectedCountry] =
+        useState<Country>(COUNTRIES[0]); // Argentina por defecto
+    const [isCountryOpen, setIsCountryOpen] = useState(false);
+    const [countrySearch, setCountrySearch] = useState('');
+    const countryRef = useRef<HTMLDivElement>(null);
+    const btnRef = useRef<HTMLButtonElement>(null);
+    const [dropdownPos, setDropdownPos] =
+        useState({ top: 0, left: 0, width: 288 });
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (
+                countryRef.current &&
+                !countryRef.current.contains(e.target as Node)
+            ) {
+                setIsCountryOpen(false);
+                setCountrySearch('');
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const openDropdown = () => {
+        if (btnRef.current) {
+            const r = btnRef.current.getBoundingClientRect();
+            setDropdownPos({ top: r.bottom + 4, left: r.left, width: 288 });
+        }
+        setIsCountryOpen(o => !o);
+        setCountrySearch('');
+    };
+
+    const filteredCountries = COUNTRIES.filter(c =>
+        c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+        c.dialCode.includes(countrySearch)
+    );
 
     const toggleInterest = (interest: string) => {
         const current = formData.interest_areas;
@@ -35,6 +115,10 @@ const Formulario: React.FC = () => {
             setFormData({ ...formData, interest_areas: [...current, interest] });
         }
     };
+
+    // Normaliza un número a solo dígitos para comparar sin importar el formato
+    const normalizePhone = (phone: string): string =>
+        phone.replace(/\D/g, '');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,38 +136,51 @@ const Formulario: React.FC = () => {
         setIsLoading(true);
 
         try {
-            // 1. Search for existing visitor by phone (handle duplicates by taking latest)
-            const { data: existingVisitors, error: searchError } = await supabase
-                .from('welcome_visitors')
-                .select('id, first_name, last_name')
-                .eq('phone', formData.phone)
-                .order('created_at', { ascending: false })
-                .limit(1);
+            // Construir número normalizado para comparar
+            // El número en DB es "+54 9 11 1234-5678"
+            // El usuario puede tipear "9 11 1234-5678" o "11 1234-5678"
+            // → normalizamos ambos a solo dígitos y comparamos por sufijo
+            const localDigits = formData.phone
+                .replace(/\D/g, '')
+                .replace(/^0+/, '');
+            const dialDigits = selectedCountry.dialCode.replace(/\D/g, '');
+            const phoneNormalized = `${dialDigits}${localDigits}`;
 
-            if (searchError) {
-                console.error("Search error", searchError);
+            // PASO A: buscar por nombre (ilike = case-insensitive)
+            const { data: byName, error: nameSearchError } = await supabase
+                .from('welcome_visitors')
+                .select('id, first_name, last_name, phone')
+                .ilike('first_name', formData.firstName.trim())
+                .ilike('last_name', formData.lastName.trim())
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (nameSearchError) {
+                console.error('Search error', nameSearchError);
                 toast.error('Error al buscar registro.');
                 setIsLoading(false);
                 return;
             }
 
-            const existingVisitor = existingVisitors && existingVisitors.length > 0 ? existingVisitors[0] : null;
+            // PASO B: de los que matchean el nombre, encontrar el que
+            // tiene el teléfono más cercano comparando sufijos de dígitos
+            const existingVisitor = (byName || []).find(v => {
+                const dbPhoneNorm = normalizePhone(v.phone || '');
+                const minLen = Math.min(phoneNormalized.length, dbPhoneNorm.length);
+                // Mínimo 8 dígitos para evitar falsos positivos
+                if (minLen < 8) return false;
+                return (
+                    dbPhoneNorm.endsWith(phoneNormalized.slice(-minLen)) ||
+                    phoneNormalized.endsWith(dbPhoneNorm.slice(-minLen))
+                );
+            }) || null;
 
-            // VALIDATION: Check if visitor exists
             if (!existingVisitor) {
-                toast.error('No se encontró un registro previo con este teléfono. Por favor acercate a recepción.');
-                setTimeout(() => navigate('/auth'), 3000);
-                return;
-            }
-
-            // VALIDATION: Check if Name and Surname match (Case insensitive, trimmed)
-            const dbName = existingVisitor.first_name?.trim().toLowerCase() || '';
-            const inputName = formData.firstName.trim().toLowerCase();
-            const dbLast = existingVisitor.last_name?.trim().toLowerCase() || '';
-            const inputLast = formData.lastName.trim().toLowerCase();
-
-            if (dbName !== inputName || dbLast !== inputLast) {
-                toast.error('El nombre y apellido no coinciden con nuestros registros de Bienvenida.');
+                toast.error(
+                    'No encontramos tu registro. ' +
+                    'Verificá que el nombre y teléfono ' +
+                    'sean exactamente los que diste en recepción.'
+                );
                 setTimeout(() => navigate('/auth'), 3000);
                 return;
             }
@@ -92,20 +189,11 @@ const Formulario: React.FC = () => {
                 email: formData.email,
                 experience_description: formData.experience,
                 stage: 'FILLED_FORM',
-                // Keep original names to ensure consistency, or update if slight fix? User asked to validate match.
-                // We update the other fields.
-                // first_name: formData.firstName, // Optional: if we want to correct casing
-                // last_name: formData.lastName, 
-
-                // New Fields
                 is_first_time: formData.is_first_time === null ? false : formData.is_first_time,
-                // referral_source: formData.referral_source, // REMOVED
-                // wants_growth: formData.wants_growth,       // REMOVED
                 interest_areas: formData.interest_areas,
                 prayer_request: formData.prayer_request
             };
 
-            // Update existing
             const { error: updateError } = await supabase
                 .from('welcome_visitors')
                 .update(updateData)
@@ -188,15 +276,116 @@ const Formulario: React.FC = () => {
                             </div>
                             <div>
                                 <label className="label">Teléfono</label>
-                                <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">El mismo número que le diste al equipo de bienvenida. Lo usamos para identificarte.</p>
-                                <input
-                                    type="tel"
-                                    required
-                                    value={formData.phone}
-                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                    className="input-field"
-                                    placeholder="+54 9..."
-                                />
+                                <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">
+                                    El mismo número que le diste al equipo de bienvenida.
+                                    Seleccioná tu país y escribí el número sin el 0 inicial.
+                                </p>
+
+                                {/* Selector de país + input — wrapper con borde único */}
+                                <div className="flex" style={{ border: '2px solid #d1d5db' }}>
+
+                                    {/* Selector de país */}
+                                    <div ref={countryRef} className="relative shrink-0">
+                                        <button
+                                            ref={btnRef}
+                                            type="button"
+                                            onClick={openDropdown}
+                                            className="h-11 px-3 bg-neutral-50 hover:bg-neutral-100 transition-colors flex items-center gap-2 text-black focus:outline-none cursor-pointer"
+                                            style={{ borderRight: '2px solid #d1d5db' }}
+                                        >
+                                            <span
+                                                className="text-[10px] font-black text-neutral-500 bg-neutral-200 px-1.5 py-0.5 leading-none tabular-nums"
+                                                style={{ minWidth: 26, textAlign: 'center' }}
+                                            >
+                                                {selectedCountry.iso}
+                                            </span>
+                                            <span className="text-xs font-black tabular-nums text-black">
+                                                {selectedCountry.dialCode}
+                                            </span>
+                                            <ChevronDown
+                                                size={12}
+                                                className={`text-neutral-400 transition-transform duration-150 ${isCountryOpen ? 'rotate-180' : ''}`}
+                                            />
+                                        </button>
+
+                                        {/* Dropdown de países */}
+                                        {isCountryOpen && (
+                                            <div
+                                                className="bg-white flex flex-col overflow-hidden"
+                                                style={{
+                                                    position: 'fixed',
+                                                    top: dropdownPos.top,
+                                                    left: dropdownPos.left,
+                                                    width: dropdownPos.width,
+                                                    zIndex: 9999,
+                                                    border: '2px solid black',
+                                                    boxShadow: '6px 6px 0px 0px rgba(0,0,0,1)',
+                                                }}
+                                            >
+                                                <div className="p-2 bg-neutral-50" style={{ borderBottom: '2px solid black' }}>
+                                                    <input
+                                                        type="text"
+                                                        autoFocus
+                                                        placeholder="Buscar país o prefijo..."
+                                                        value={countrySearch}
+                                                        onChange={e => setCountrySearch(e.target.value)}
+                                                        className="w-full h-9 px-3 text-xs font-bold text-black bg-white"
+                                                        style={{ border: '2px solid black', outline: 'none' }}
+                                                    />
+                                                </div>
+                                                <div className="overflow-y-auto max-h-52">
+                                                    {filteredCountries.length === 0 ? (
+                                                        <p className="px-4 py-5 text-xs font-bold text-neutral-400 text-center uppercase tracking-widest">
+                                                            Sin resultados
+                                                        </p>
+                                                    ) : (
+                                                        filteredCountries.map(c => {
+                                                            const isSelected = selectedCountry.iso === c.iso;
+                                                            return (
+                                                                <button
+                                                                    key={`${c.dialCode}-${c.iso}`}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setSelectedCountry(c);
+                                                                        setIsCountryOpen(false);
+                                                                        setCountrySearch('');
+                                                                    }}
+                                                                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-left transition-colors cursor-pointer ${
+                                                                        isSelected ? 'bg-black text-white' : 'text-black hover:bg-neutral-100'
+                                                                    }`}
+                                                                >
+                                                                    <span
+                                                                        className={`text-[9px] font-black px-1 py-0.5 leading-none shrink-0 ${
+                                                                            isSelected ? 'bg-white text-black' : 'bg-black text-white'
+                                                                        }`}
+                                                                        style={{ minWidth: 22, textAlign: 'center' }}
+                                                                    >
+                                                                        {c.iso}
+                                                                    </span>
+                                                                    <span className="flex-1 truncate">{c.name}</span>
+                                                                    <span className={`tabular-nums shrink-0 text-[11px] ${isSelected ? 'text-white/60' : 'text-neutral-400'}`}>
+                                                                        {c.dialCode}
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Input del número — sin borde propio, lo hereda el wrapper */}
+                                    <input
+                                        type="tel"
+                                        required
+                                        value={formData.phone}
+                                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                        className="flex-1 h-11 px-3 font-bold text-black bg-white outline-none min-w-0"
+                                        style={{ border: 'none', fontSize: '0.9rem' }}
+                                        placeholder="9 11 1234-5678"
+                                    />
+                                </div>
                             </div>
                             <div>
                                 <label className="label">Email <span className="text-gray-400 font-normal">(Opcional)</span></label>
@@ -314,7 +503,7 @@ const Formulario: React.FC = () => {
                 }
                 .input-field:focus {
                     box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
-                    background-color: #fffbeb; 
+                    background-color: #fffbeb;
                 }
             `}</style>
         </div>

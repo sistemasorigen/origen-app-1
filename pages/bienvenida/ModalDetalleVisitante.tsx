@@ -52,11 +52,9 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
                     last_name: formData.last_name,
                     age: formData.age,
                     phone: formData.phone,
+                    localidad: formData.localidad,
                     is_first_time: formData.is_first_time,
                     accepted_jesus: formData.accepted_jesus,
-                    // referral_source: formData.referral_source, // REMOVED
-                    experience_rating: formData.experience_rating,
-                    // wants_growth: formData.wants_growth,       // REMOVED
                     interest_areas: formData.interest_areas,
                     prayer_request: formData.prayer_request,
                     email: formData.email,
@@ -117,7 +115,11 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
                             <label className="label">Teléfono</label>
                             <input type="tel" className="input-field" value={formData.phone || ''} onChange={e => handleChange('phone', e.target.value)} />
                         </div>
-                        <div className="col-span-2">
+                        <div>
+                            <label className="label">Localidad / Barrio</label>
+                            <input type="text" className="input-field" value={formData.localidad || ''} onChange={e => handleChange('localidad', e.target.value)} placeholder="Ej: Palermo, Lomas..." />
+                        </div>
+                        <div>
                             <label className="label">Email</label>
                             <input type="email" className="input-field" value={formData.email || ''} onChange={e => handleChange('email', e.target.value)} />
                         </div>
@@ -156,6 +158,7 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
                                 <option value="">— Sin respuesta —</option>
                                 <option value="Si">Sí, acepté hoy</option>
                                 <option value="No, antes">Ya lo había hecho antes</option>
+                                <option value="Cristiano">Sin decisión (ya era cristiano)</option>
                             </select>
                         </div>
                     </div>
