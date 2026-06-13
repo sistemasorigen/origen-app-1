@@ -10,11 +10,12 @@ import {
 } from '../../types';
 import {
     Trophy, ChevronUp, ChevronDown,
-    Check, Loader2, Medal,
+    Check, Loader2,
     Swords, ArrowLeft,
-    Target, CircleCheck, XCircle, Lock
+    Target, Lock
 } from 'lucide-react';
 import HeroCarousel from '../../components/ui/CarruselHero';
+import FlagImage from './FlagImage';
 
 // ─── Keyframes ────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -72,104 +73,6 @@ const STYLES = `
     }
 `;
 
-
-const TEAM_TO_CODE: Record<string, string> = {
-    // CONMEBOL
-    'argentina': 'ar', 'brasil': 'br', 'brazil': 'br', 'uruguay': 'uy',
-    'colombia': 'co', 'chile': 'cl', 'peru': 'pe', 'perú': 'pe',
-    'ecuador': 'ec', 'paraguay': 'py', 'venezuela': 've', 'bolivia': 'bo',
-    // UEFA
-    'francia': 'fr', 'france': 'fr',
-    'inglaterra': 'gb-eng', 'england': 'gb-eng',
-    'españa': 'es', 'espana': 'es', 'spain': 'es',
-    'alemania': 'de', 'germany': 'de',
-    'portugal': 'pt',
-    'italia': 'it', 'italy': 'it',
-    'paises bajos': 'nl', 'países bajos': 'nl', 'holanda': 'nl', 'netherlands': 'nl',
-    'croacia': 'hr', 'croatia': 'hr',
-    'belgica': 'be', 'bélgica': 'be', 'belgium': 'be',
-    'dinamarca': 'dk', 'denmark': 'dk',
-    'suiza': 'ch', 'switzerland': 'ch',
-    'serbia': 'rs',
-    'polonia': 'pl', 'poland': 'pl',
-    'gales': 'gb-wls', 'wales': 'gb-wls',
-    'escocia': 'gb-sct', 'scotland': 'gb-sct',
-    'suecia': 'se', 'sweden': 'se',
-    'ucrania': 'ua', 'ukraine': 'ua',
-    'bosnia y herzegovina': 'ba', 'bosnia': 'ba',
-    'eslovenia': 'si', 'slovenia': 'si',
-    // Otros
-    'turquia': 'tr', 'turquía': 'tr', 'turkey': 'tr',
-    'curazao': 'cw', 'curacao': 'cw',
-    'haiti': 'ht', 'haití': 'ht',
-    'costa de marfil': 'ci', 'ivory coast': 'ci',
-    // AFC
-    'japon': 'jp', 'japón': 'jp', 'japan': 'jp',
-    'corea del sur': 'kr', 'republica de corea': 'kr', 'south korea': 'kr', 'korea': 'kr',
-    'chequia': 'cz', 'republica checa': 'cz', 'czech republic': 'cz', 'czechia': 'cz',
-    'arabia saudita': 'sa', 'saudi arabia': 'sa',
-    'iran': 'ir', 'irán': 'ir',
-    'australia': 'au',
-    'qatar': 'qa', 'katar': 'qa', 'cátar': 'qa', 'catar': 'qa',
-    // CAF
-    'senegal': 'sn',
-    'marruecos': 'ma', 'morocco': 'ma',
-    'tunez': 'tn', 'túnez': 'tn', 'tunisia': 'tn',
-    'ghana': 'gh',
-    'camerun': 'cm', 'camerún': 'cm', 'cameroon': 'cm',
-    'egipto': 'eg', 'egypt': 'eg',
-    'nigeria': 'ng',
-    'sudafrica': 'za', 'south africa': 'za',
-    'angola': 'ao', 'mali': 'ml', 'zambia': 'zm',
-    // CONCACAF
-    'mexico': 'mx', 'méxico': 'mx',
-    'estados unidos': 'us', 'usa': 'us', 'united states': 'us',
-    'costa rica': 'cr',
-    'canada': 'ca', 'canadá': 'ca',
-    // OFC
-    'nueva zelanda': 'nz', 'new zealand': 'nz'
-};
-
-const normalizeName = (name: string): string =>
-    name.toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .trim();
-
-interface FlagImageProps {
-    teamName: string;
-    size?: 'sm' | 'md' | 'lg' | 'xl';
-    className?: string;
-    emoji?: string; // emoji de bandera guardado en BD (fallback si el nombre no está mapeado)
-}
-
-const FLAG_FONT_SIZE: Record<string, string> = { sm: '1rem', md: '1.5rem', lg: '2rem', xl: '2.75rem' };
-
-const FlagImage: React.FC<FlagImageProps> = ({ teamName, size = 'lg', className = '', emoji }) => {
-    const code = TEAM_TO_CODE[normalizeName(teamName)];
-    if (!code) {
-        if (emoji) return <span className={`leading-none drop-shadow-sm ${className}`} style={{ fontSize: FLAG_FONT_SIZE[size] }}>{emoji}</span>;
-        return <span className={`text-slate-300 font-bold uppercase ${className}`}>{teamName.substring(0, 2)}</span>;
-    }
-    
-    // Size mapping
-    const sizeMap = { sm: 24, md: 32, lg: 48, xl: 64 };
-    const px = sizeMap[size];
-    
-    return (
-        <img 
-            src={`https://flagcdn.com/${code}.svg`}
-            alt={`Bandera de ${teamName}`}
-            width={px}
-            className={`rounded-[4px] shadow-sm object-cover ${className}`}
-            style={{ height: size === 'xl' ? '42px' : size === 'lg' ? '32px' : size === 'md' ? '22px' : '16px' }}
-            onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-            }}
-        />
-    );
-};
-
-
 type ProdeScreen = 'landing' | 'predict' | 'success';
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -180,7 +83,6 @@ const Prode: React.FC = () => {
     const [screen, setScreen] = useState<ProdeScreen>('landing');
     const [prodeConfig, setProdeConfig] = useState<ProdeConfig>(DEFAULT_PRODE_CONFIG);
     const [matches, setMatches] = useState<ProdeMatch[]>([]);
-    const [ranking, setRanking] = useState<ProdeParticipant[]>([]);
     const [loading, setLoading] = useState(true);
     const [participant, setParticipant] = useState<ProdeParticipant | null>(null);
     const [initializingParticipant, setInitializingParticipant] = useState(false);
@@ -200,14 +102,12 @@ const Prode: React.FC = () => {
         const load = async () => {
             setLoading(true);
             try {
-                const [cfg, matchData, rankData] = await Promise.all([
+                const [cfg, matchData] = await Promise.all([
                     supabaseService.getAppConfig(),
                     supabaseService.getProdeMatches(),
-                    supabaseService.getProdeRanking(),
                 ]);
                 if (cfg?.prodeConfig) setProdeConfig(cfg.prodeConfig);
                 setMatches(matchData);
-                setRanking(rankData);
 
                 if (user?.id) {
                     const nameParts = (user.name || '').split(' ');
@@ -281,6 +181,8 @@ const Prode: React.FC = () => {
 
     const handleSavePrediction = async (matchId: string) => {
         if (!participant) return;
+        const match = matches.find(m => m.id === matchId);
+        if (!match || isMatchLocked(match)) return;
         setSavingMatch(matchId);
         try {
             const score = scores[matchId] || { home: 0, away: 0 };
@@ -347,12 +249,16 @@ const Prode: React.FC = () => {
     const openMatches = matches
         .filter(m => m.isOpen && !m.isFinished)
         .sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
-    const liveMatches = openMatches.filter(m => m.matchDate && now >= new Date(m.matchDate).getTime()).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
+    const LIVE_MAX_MS = 3 * 60 * 60 * 1000; // máx 3h mostrando como "Jugándose"
+    const liveMatches = openMatches.filter(m => {
+        if (!m.matchDate) return false;
+        const t = new Date(m.matchDate).getTime();
+        return now >= t && now <= t + LIVE_MAX_MS;
+    }).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
     const upcomingMatches = openMatches.filter(m => !m.matchDate || now < new Date(m.matchDate).getTime()).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
     const unlockedOpenMatches = openMatches.filter(m => !isMatchLocked(m));
     const allSaved = openMatches.length > 0 && unlockedOpenMatches.every(m => savedMatches.has(m.id));
 
-const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !== undefined && m.awayScoreReal !== undefined).sort((a, b) => new Date(b.matchDate || 0).getTime() - new Date(a.matchDate || 0).getTime());
 
     const formatMatchDate = (iso: string) =>
         new Date(iso).toLocaleString('es-AR', {
@@ -360,7 +266,6 @@ const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !==
             hour: '2-digit', minute: '2-digit',
         });
 
-    const MEDAL_COLORS = ['#F59E0B', '#94A3B8', '#D97706']; // Brighter Gold, Silver, Bronze
 
     // ─────────────────────────────────────────────────────────────────────────
     return (
@@ -438,14 +343,6 @@ const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !==
                                                         {openMatches.length} partido{openMatches.length !== 1 ? 's' : ''}
                                                     </span>
                                                 </div>
-                                                {ranking.length > 0 && (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2.5 h-2.5 bg-amber-400 rounded-full shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
-                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-                                                            {ranking.length} participante{ranking.length !== 1 ? 's' : ''}
-                                                        </span>
-                                                    </div>
-                                                )}
                                             </div>
                                         )}
 
@@ -471,6 +368,20 @@ const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !==
                                             ) : (
                                                 <div className="px-6 py-4 text-slate-400 text-[11px] font-bold uppercase tracking-widest rounded-full bg-slate-50 border border-slate-100">
                                                     Sin partidos abiertos
+                                        <div className="flex gap-2 px-2">
+                                            <button
+                                                onClick={() => navigate('/prode/ranking')}
+                                                className="px-4 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-full bg-slate-50 border border-slate-100 text-slate-500 hover:text-slate-700 hover:border-slate-200 transition-all"
+                                            >
+                                                Ranking
+                                            </button>
+                                            <button
+                                                onClick={() => navigate('/prode/resultados')}
+                                                className="px-4 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-full bg-slate-50 border border-slate-100 text-slate-500 hover:text-slate-700 hover:border-slate-200 transition-all"
+                                            >
+                                                Resultados
+                                            </button>
+                                        </div>
                                                 </div>
                                             )}
                                         </div>
@@ -662,255 +573,6 @@ const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !==
                                                     })}
                                                 </div>
                                             )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* ── RANKING ── */}
-                                <div className="fu s5 pb-12">
-                                    <div className="flex items-center justify-center mb-8 px-1">
-                                        <div className="flex flex-col items-center gap-2">
-                                            <Trophy className="w-6 h-6 text-amber-400 drop-shadow-sm" />
-                                            <h2 className="text-xl font-black uppercase tracking-tight text-slate-700">Ranking Global</h2>
-                                        </div>
-                                    </div>
-
-                                    {loading ? (
-                                        <div className="space-y-4">
-                                            {[...Array(4)].map((_, i) => (
-                                                <div key={i} className="h-20 bg-white rounded-[2rem] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] animate-pulse" />
-                                            ))}
-                                        </div>
-                                    ) : ranking.length === 0 ? (
-                                        <div className="py-20 text-center bg-white rounded-[3rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-                                            <Trophy className="w-10 h-10 mx-auto mb-4 text-slate-200" strokeWidth={1.5} />
-                                            <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">
-                                                Todavía no hay predicciones
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {ranking.map((entry, idx) => {
-                                                const pos = idx + 1;
-                                                const isFirst = pos === 1;
-                                                const isTop3 = pos <= 3;
-                                                const isMine = participant?.id === entry.id;
-
-                                                return (
-                                                    <div
-                                                        key={entry.id}
-                                                        className={`flex items-center gap-4 px-6 py-5 rounded-[2rem] transition-all duration-300 ${
-                                                            isMine
-                                                                ? 'bg-gradient-to-r from-emerald-50/50 to-teal-50/50 shadow-[0_4px_20px_-4px_rgba(16,185,129,0.1)] border border-emerald-100/50'
-                                                                : isFirst
-                                                                    ? 'bg-gradient-to-r from-amber-50/50 to-orange-50/50 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.1)] border border-amber-100/50'
-                                                                    : 'bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_25px_-4px_rgba(0,0,0,0.04)] border border-white'
-                                                        }`}
-                                                    >
-                                                        {/* Position */}
-                                                        <div className="w-10 shrink-0 flex justify-center">
-                                                            {isTop3 ? (
-                                                                <Medal className="w-7 h-7 drop-shadow-sm" style={{ color: MEDAL_COLORS[pos - 1] }} />
-                                                            ) : (
-                                                                <span className="text-[13px] font-black text-slate-300 tabular-nums">
-                                                                    {String(pos).padStart(2, '0')}
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Avatar & Name */}
-                                                        <div className="flex-1 flex items-center gap-4 min-w-0">
-                                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-black shrink-0 shadow-inner ${
-                                                                isFirst ? 'bg-amber-100 text-amber-700' : isMine ? 'bg-emerald-100 text-teal-700' : 'bg-slate-50 text-slate-400'
-                                                            }`}>
-                                                                {entry.firstName.charAt(0)}
-                                                            </div>
-                                                            <p className={`font-bold text-base truncate ${isMine ? 'text-teal-900' : 'text-slate-600'}`}>
-                                                                {entry.firstName} {entry.lastName}
-                                                                {isMine && (
-                                                                    <span className="ml-3 text-[9px] font-black text-teal-600 bg-teal-50 border border-teal-100 px-2.5 py-1 rounded-full uppercase tracking-widest">
-                                                                        Tú
-                                                                    </span>
-                                                                )}
-                                                            </p>
-                                                        </div>
-
-                                                        {/* Points */}
-                                                        <div className="flex items-baseline gap-1.5 shrink-0 text-right">
-                                                            <span className={`text-2xl font-black tabular-nums tracking-tight ${isFirst ? 'text-amber-500' : isMine ? 'text-teal-600' : 'text-slate-600'}`}>
-                                                                {entry.totalPoints}
-                                                            </span>
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">pts</span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* ── RESULTADOS PUBLICADOS ── */}
-                                <div className="fu s6 pb-20 mt-12 pt-8 border-t border-slate-100">
-                                    <div className="flex items-center justify-center mb-8 px-1">
-                                        <div className="flex flex-col items-center gap-2">
-                                            <Check className="w-6 h-6 text-emerald-400 drop-shadow-sm" />
-                                            <h2 className="text-xl font-black uppercase tracking-tight text-slate-700">Resultados Publicados</h2>
-                                        </div>
-                                    </div>
-                                    
-                                    {publishedMatches.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {publishedMatches.map(match => (
-                                                <div key={match.id} className="bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] border border-slate-100 rounded-[2rem] p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                    <div className="flex items-center gap-2 text-slate-400 md:w-1/4">
-                                                        <span className="text-[10px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded-sm">Nº {match.matchNumber}</span>
-                                                        <span className="text-[10px] font-bold uppercase truncate">{match.round}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between md:justify-center gap-4 flex-1">
-                                                        <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
-                                                            <span className="text-xs sm:text-sm font-black uppercase text-slate-700 truncate">{match.homeTeam}</span>
-                                                            <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="lg" />
-                                                        </div>
-                                                        <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-lg font-black text-slate-700 tabular-nums shadow-inner shrink-0">
-                                                            {match.homeScoreReal} - {match.awayScoreReal}
-                                                        </div>
-                                                        <div className="flex items-center gap-3 flex-1 justify-start min-w-0">
-                                                            <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="lg" />
-                                                            <span className="text-xs sm:text-sm font-black uppercase text-slate-700 truncate">{match.awayTeam}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="hidden md:block md:w-1/4"></div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center gap-3">
-                                            <Target className="w-8 h-8 text-slate-300" />
-                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                                Aún no hay resultados publicados
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* ── TUS PREDICCIONES (HISTORIAL) ── */}
-                                {participant && (publishedMatches.length > 0 || predictions.length > 0) && (
-                                    <div className="fu s6 pb-20 mt-12 pt-8 border-t border-slate-100">
-                                        <div className="flex items-center justify-center mb-8 px-1">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <Target className="w-6 h-6 text-teal-400 drop-shadow-sm" />
-                                                <h2 className="text-xl font-black uppercase tracking-tight text-slate-700">Tus Predicciones</h2>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            {(() => {
-                                                // Construir lista unificada: publicados + pendientes
-                                                type HistItem = { match: ProdeMatch; pred: ProdePrediction | null; isPublished: boolean };
-                                                const items: HistItem[] = [
-                                                    ...publishedMatches.map(match => ({
-                                                        match,
-                                                        pred: predictions.find(p => p.matchId === match.id) ?? null,
-                                                        isPublished: true,
-                                                    })),
-                                                    ...predictions
-                                                        .filter(pred => !publishedMatches.some(m => m.id === pred.matchId))
-                                                        .map(pred => ({ match: matches.find(m => m.id === pred.matchId)!, pred, isPublished: false }))
-                                                        .filter(item => item.match),
-                                                ];
-
-                                                // Ordenar: próximos primero (fecha asc), ya jugados al final
-                                                items.sort((a, b) => {
-                                                    const aT = new Date(a.match.matchDate || 0).getTime();
-                                                    const bT = new Date(b.match.matchDate || 0).getTime();
-                                                    const aFut = aT >= now;
-                                                    const bFut = bT >= now;
-                                                    if (aFut && bFut) return aT - bT;   // ambos futuros: más cercano primero
-                                                    if (!aFut && !bFut) return bT - aT; // ambos pasados: más reciente primero
-                                                    return aFut ? -1 : 1;               // futuros antes que pasados
-                                                });
-
-                                                return items.map(({ match, pred, isPublished }) => {
-                                                    const gainedPoints = (pred?.pointsEarned ?? 0) > 0;
-                                                    return isPublished ? (
-                                                        <div key={`hist-pub-${match.id}`} className={`bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] border ${gainedPoints ? 'border-emerald-200' : 'border-slate-100'} rounded-[2rem] p-5 flex flex-col gap-4 relative overflow-hidden`}>
-                                                            {gainedPoints && <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/10 rounded-bl-full pointer-events-none" />}
-                                                            <div className="flex items-center justify-between w-full">
-                                                                <div className="flex items-center gap-2 text-slate-400">
-                                                                    <span className="text-[10px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded-sm">Nº {match.matchNumber}</span>
-                                                                    <span className="text-[10px] font-bold uppercase truncate">{match.round}</span>
-                                                                </div>
-                                                                {pred ? (
-                                                                    <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 z-10 ${gainedPoints ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
-                                                                        {gainedPoints ? <CircleCheck className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                                                                        <span className="text-xs font-black uppercase tracking-widest tabular-nums">{gainedPoints ? `+${pred.pointsEarned} pts` : '0 pts'}</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="px-3 py-1.5 rounded-xl border bg-slate-50 border-slate-200 text-slate-400 flex items-center gap-1.5 z-10">
-                                                                        <XCircle className="w-4 h-4" />
-                                                                        <span className="text-xs font-black uppercase tracking-widest">Sin predicción</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex items-center justify-between w-full py-2">
-                                                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                                    <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="lg" />
-                                                                    <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.homeTeam}</span>
-                                                                </div>
-                                                                <span className="text-slate-300 font-black text-sm px-4">VS</span>
-                                                                <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
-                                                                    <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.awayTeam}</span>
-                                                                    <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="lg" />
-                                                                </div>
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-3 mt-1 bg-slate-50/50 p-3 rounded-2xl border border-slate-100/50">
-                                                                <div className="flex flex-col items-center justify-center gap-1.5 p-2 bg-white rounded-xl shadow-sm border border-slate-100">
-                                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tu Predicción</span>
-                                                                    {pred ? (
-                                                                        <span className="text-xl font-black text-slate-700 tabular-nums">{pred.homeScorePred} - {pred.awayScorePred}</span>
-                                                                    ) : (
-                                                                        <span className="text-sm font-black text-slate-300">—</span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex flex-col items-center justify-center gap-1.5 p-2 bg-white rounded-xl shadow-sm border border-slate-100">
-                                                                    <span className="text-[9px] font-black text-emerald-600/70 uppercase tracking-widest">Resultado Real</span>
-                                                                    <span className="text-xl font-black text-emerald-700 tabular-nums">{match.homeScoreReal} - {match.awayScoreReal}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div key={`hist-pend-${match.id}`} className="bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] border border-slate-100 rounded-[2rem] p-5 flex flex-col gap-4">
-                                                            <div className="flex items-center justify-between w-full">
-                                                                <div className="flex items-center gap-2 text-slate-400">
-                                                                    <span className="text-[10px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded-sm">Nº {match.matchNumber}</span>
-                                                                    <span className="text-[10px] font-bold uppercase truncate">{match.round}</span>
-                                                                </div>
-                                                                <div className="px-3 py-1.5 rounded-xl border bg-amber-50 border-amber-200 text-amber-500 flex items-center gap-1.5">
-                                                                    <Loader2 className="w-3.5 h-3.5" />
-                                                                    <span className="text-xs font-black uppercase tracking-widest">Pendiente</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center justify-between w-full py-2">
-                                                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                                    <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="lg" />
-                                                                    <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.homeTeam}</span>
-                                                                </div>
-                                                                <span className="text-slate-300 font-black text-sm px-4">VS</span>
-                                                                <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
-                                                                    <span className="text-sm sm:text-base font-black uppercase text-slate-700 truncate">{match.awayTeam}</span>
-                                                                    <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="lg" />
-                                                                </div>
-                                                            </div>
-                                                            <div className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100/50">
-                                                                <div className="flex flex-col items-center justify-center gap-1.5 p-2 bg-white rounded-xl shadow-sm border border-slate-100">
-                                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tu Predicción</span>
-                                                                    <span className="text-xl font-black text-slate-700 tabular-nums">{pred!.homeScorePred} - {pred!.awayScorePred}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                });
-                                            })()}
                                         </div>
                                     </div>
                                 )}
@@ -1129,7 +791,7 @@ const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !==
                                             onClick={() => setScreen('landing')}
                                             className="flex-1 py-4 rounded-full bg-white text-slate-500 text-[11px] font-black uppercase tracking-widest hover:text-slate-700 transition-all shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_25px_-4px_rgba(0,0,0,0.06)]"
                                         >
-                                            Volver al Ranking
+                                            Volver
                                         </button>
                                         <AnimatePresence>
                                             {allSaved && (
@@ -1191,7 +853,7 @@ const publishedMatches = matches.filter(m => m.isFinished && m.homeScoreReal !==
                                 className="w-full max-w-sm flex flex-col gap-4"
                             >
                                 <button
-                                    onClick={() => setScreen('landing')}
+                                    onClick={() => navigate('/prode/ranking')}
                                     className="w-full py-6 rounded-full bg-gradient-to-r from-slate-700 to-slate-600 text-white text-[14px] font-black uppercase tracking-widest hover:from-slate-600 hover:to-slate-500 transition-all shadow-[0_8px_25px_-4px_rgba(51,65,85,0.4)] hover:shadow-[0_12px_30px_-4px_rgba(51,65,85,0.5)]"
                                 >
                                     Ver Ranking Global

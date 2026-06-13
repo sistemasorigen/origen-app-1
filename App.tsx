@@ -26,6 +26,8 @@ import PastoralCareDashboard from './pages/audiencia/AudienciaServiciosPrincipal
 import ProfilePage from './pages/user/PaginaPerfil';
 import Prode from './pages/prode/Prode';
 import AdminProde from './pages/prode/AdminProde';
+import ProdeRanking from './pages/prode/ProdeRanking';
+import ProdeResultados from './pages/prode/ProdeResultados';
 import SystemLoginModal from './components/modals/ModalLoginSistema';
 import CompleteProfileModal from './components/modals/ModalCompletarPerfil';
 import { User, UserRole, AppConfig } from './types';
@@ -363,6 +365,8 @@ const AppContent: React.FC = () => {
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/prode" element={<Prode />} />
+                                <Route path="/prode/ranking" element={<ProdeRanking />} />
+                                <Route path="/prode/resultados" element={<ProdeResultados />} />
                                 <Route path="/prode/administracion" element={
                                     (user && hasRole(user, [
                                         UserRole.SUPER_ADMIN,

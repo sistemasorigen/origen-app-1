@@ -4700,6 +4700,7 @@ export const supabaseService = {
     awayScore: number,
     pointsExact: number,
     pointsResult: number,
+    pointsPartial: number,
     pointsWrong: number
   ): Promise<boolean> {
     try {
@@ -4724,55 +4725,52 @@ export const supabaseService = {
       if (predError) throw predError;
       if (!preds?.length) return true;
 
-      // 3. Calcular puntos por predicción
-      const realHome = homeScore;
-      const realAway = awayScore;
+      // 3. Calcular puntos por predicción en memoria
+      const rH = homeScore;
+      const rA = awayScore;
+      const rW = rH > rA ? 'home' : rA > rH ? 'away' : 'draw';
 
-      for (const pred of preds) {
-        const predHome = pred.home_score_pred;
-        const predAway = pred.away_score_pred;
-
+      type PredUpdate = { id: string; pts: number; delta: number; participantId: string };
+      const predUpdates: PredUpdate[] = (preds as { id: string; participant_id: string; home_score_pred: number; away_score_pred: number; points_earned: number | null }[]).map(pred => {
+        const pH = pred.home_score_pred;
+        const pA = pred.away_score_pred;
+        const pW = pH > pA ? 'home' : pA > pH ? 'away' : 'draw';
         let pts = pointsWrong;
-        if (predHome === realHome && predAway === realAway) {
-          // Marcador exacto
-          pts = pointsExact;
-        } else if (predHome === realHome || predAway === realAway) {
-          // Acertó uno de los dos marcadores
-          pts = pointsResult;
+        if (pH === rH && pA === rA)                    pts = pointsExact;
+        else if (pW === rW && pW !== 'draw')           pts = pointsResult;
+        else if (pH === rH || pA === rA)               pts = pointsPartial;
+        return { id: pred.id, pts, delta: pts - (pred.points_earned ?? 0), participantId: pred.participant_id };
+      });
+
+      // 4. Actualizar todas las predicciones en paralelo
+      const now = new Date().toISOString();
+      await Promise.all(predUpdates.map(u =>
+        supabase.from('prode_predictions')
+          .update({ points_earned: u.pts, updated_at: now })
+          .eq('id', u.id)
+      ));
+
+      // 5. Agregar deltas por participante
+      const participantDeltas = new Map<string, number>();
+      for (const u of predUpdates) {
+        if (u.delta !== 0) {
+          participantDeltas.set(u.participantId, (participantDeltas.get(u.participantId) ?? 0) + u.delta);
         }
-        // Ninguno correcto: 0 puntos (pointsWrong)
+      }
 
-        const oldPointsEarned = pred.points_earned ?? 0;
-        const delta = pts - oldPointsEarned;
-
-        // Actualizar puntos en la predicción
-        await supabase
-          .from('prode_predictions')
-          .update({
-            points_earned: pts,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', pred.id);
-
-        // Ajustar total del participante con el delta
-        if (delta !== 0) {
-          const { data: participant } = await supabase
-            .from('prode_participants')
-            .select('total_points')
-            .eq('id', pred.participant_id)
-            .single();
-
-          if (participant) {
-            await supabase
-              .from('prode_participants')
-              .update({
-                total_points: Math.max(
-                  0,
-                  (participant.total_points || 0) + delta
-                )
-              })
-              .eq('id', pred.participant_id);
-          }
+      // 6. Fetch participantes afectados en una sola query y actualizar en paralelo
+      const affectedIds = [...participantDeltas.keys()];
+      if (affectedIds.length > 0) {
+        const { data: participants } = await supabase
+          .from('prode_participants')
+          .select('id, total_points')
+          .in('id', affectedIds);
+        if (participants) {
+          await Promise.all((participants as { id: string; total_points: number }[]).map(p =>
+            supabase.from('prode_participants')
+              .update({ total_points: Math.max(0, (p.total_points || 0) + (participantDeltas.get(p.id) ?? 0)) })
+              .eq('id', p.id)
+          ));
         }
       }
 
@@ -5264,6 +5262,7 @@ export const supabaseService = {
   async recalculateAllProdePoints(
     pointsExact: number,
     pointsResult: number,
+    pointsPartial: number,
     pointsWrong: number
   ): Promise<boolean> {
     try {
@@ -5302,12 +5301,17 @@ export const supabaseService = {
         const pA = pred.away_score_pred;
         const rH = match.home_score_real;
         const rA = match.away_score_real;
+        const pW = pH > pA ? 'home' : pA > pH ? 'away' : 'draw';
+        const rW = rH > rA ? 'home' : rA > rH ? 'away' : 'draw';
 
         let pts = pointsWrong;
-        if (pH === rH && pA === rA)
+        if (pH === rH && pA === rA) {
           pts = pointsExact;
-        else if (pH === rH || pA === rA)
+        } else if (pW === rW && pW !== 'draw') {
           pts = pointsResult;
+        } else if (pH === rH || pA === rA) {
+          pts = pointsPartial;
+        }
 
         predUpdates.push({ id: pred.id, points_earned: pts });
         participantTotals.set(

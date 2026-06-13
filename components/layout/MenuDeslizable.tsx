@@ -227,10 +227,45 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             roles: [],
             subItems: [
                 {
+                    label: 'Ranking',
+                    path: '/prode/ranking',
+                    roles: []
+                },
+                {
+                    label: 'Predicciones y resultados',
+                    path: '/prode/resultados',
+                    roles: []
+                },
+                {
                     label: 'Administración',
-                    path: '/prode/administracion',
+                    separator: true,
                     roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
-                }
+                },
+                {
+                    label: 'Configuración',
+                    path: '/prode/administracion?tab=configuracion',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
+                {
+                    label: 'Partidos',
+                    path: '/prode/administracion?tab=partidos',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
+                {
+                    label: 'Resultados',
+                    path: '/prode/administracion?tab=resultados',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
+                {
+                    label: 'Ranking',
+                    path: '/prode/administracion?tab=ranking',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
+                {
+                    label: 'Predicciones',
+                    path: '/prode/administracion?tab=predicciones',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
             ]
         },
         {

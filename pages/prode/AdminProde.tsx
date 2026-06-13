@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabaseService } from '../../services/supabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -222,9 +222,22 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ value, flagValue, label, on
 
 const AdminProdeContent: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
 
     type ProdeAdminSection = 'config' | 'matches' | 'results' | 'ranking' | 'predictions';
     const [prodeSection, setProdeSection] = useState<ProdeAdminSection>('config');
+
+    useEffect(() => {
+        const TAB_MAP: Record<string, ProdeAdminSection> = {
+            configuracion: 'config',
+            partidos:      'matches',
+            resultados:    'results',
+            ranking:       'ranking',
+            predicciones:  'predictions',
+        };
+        const tab = new URLSearchParams(location.search).get('tab');
+        if (tab && TAB_MAP[tab]) setProdeSection(TAB_MAP[tab]);
+    }, [location.search]);
 
     // Config del prode
     const [prodeConfig, setProdeConfig] = useState<ProdeConfig>(DEFAULT_PRODE_CONFIG);
@@ -304,11 +317,25 @@ const AdminProdeContent: React.FC = () => {
                 if (cfg?.prodeConfig) {
                     setProdeConfig(cfg.prodeConfig);
                 }
-                setProdeMatches(matches);
+                // Auto-cerrar partidos que pasaron el corte de 15 min antes del inicio
+                const CUTOFF = 15 * 60 * 1000;
+                const toClose = matches.filter(m =>
+                    m.isOpen && !m.isFinished && m.matchDate &&
+                    new Date(m.matchDate).getTime() - CUTOFF <= Date.now()
+                );
+                let finalMatches = matches;
+                if (toClose.length > 0) {
+                    await Promise.all(toClose.map(m =>
+                        supabaseService.saveProdeMatch({ ...m, isOpen: false } as Parameters<typeof supabaseService.saveProdeMatch>[0])
+                    ));
+                    finalMatches = await supabaseService.getProdeMatches();
+                }
+
+                setProdeMatches(finalMatches);
                 setProdeRanking(ranking);
 
                 const scores: Record<string, { home: number; away: number }> = {};
-                matches
+                finalMatches
                     .filter(m => !m.isOpen && !m.isFinished)
                     .forEach(m => { scores[m.id] = { home: 0, away: 0 }; });
                 setResultScores(scores);
@@ -384,14 +411,16 @@ const AdminProdeContent: React.FC = () => {
                 score.away,
                 prodeConfig.pointsExactScore,
                 prodeConfig.pointsCorrectResult,
+                prodeConfig.pointsPartialGoal ?? 1,
                 prodeConfig.pointsWrong
             );
-            const [matches, ranking] = await Promise.all([
-                supabaseService.getProdeMatches(),
-                supabaseService.getProdeRanking(),
-            ]);
-            setProdeMatches(matches);
-            setProdeRanking(ranking);
+            // Actualizar estado local sin refetch
+            setProdeMatches(prev => prev.map(m =>
+                m.id === matchId
+                    ? { ...m, homeScoreReal: score.home, awayScoreReal: score.away, isFinished: true, isOpen: false }
+                    : m
+            ));
+            setResultScores(prev => { const c = { ...prev }; delete c[matchId]; return c; });
         } finally {
             setSubmittingResult(null);
         }
@@ -404,9 +433,12 @@ const AdminProdeContent: React.FC = () => {
         try {
             await supabaseService.resetProdeMatchResult(matchId);
             await handleRecalculate(true);
+            setProdeMatches(prev => prev.map(m =>
+                m.id === matchId
+                    ? { ...m, homeScoreReal: undefined, awayScoreReal: undefined, isFinished: false, isOpen: false }
+                    : m
+            ));
             setResultScores(prev => ({ ...prev, [matchId]: { home: oldHome, away: oldAway } }));
-            const updatedMatches = await supabaseService.getProdeMatches();
-            setProdeMatches(updatedMatches);
         } finally {
             setSubmittingResult(null);
         }
@@ -419,13 +451,12 @@ const AdminProdeContent: React.FC = () => {
         try {
             await supabaseService.resetProdeMatchResult(matchId);
             await handleRecalculate(true);
-            setResultScores(prev => {
-                const copy = { ...prev };
-                delete copy[matchId];
-                return copy;
-            });
-            const updatedMatches = await supabaseService.getProdeMatches();
-            setProdeMatches(updatedMatches);
+            setProdeMatches(prev => prev.map(m =>
+                m.id === matchId
+                    ? { ...m, homeScoreReal: undefined, awayScoreReal: undefined, isFinished: false, isOpen: false }
+                    : m
+            ));
+            setResultScores(prev => { const c = { ...prev }; delete c[matchId]; return c; });
         } finally {
             setSubmittingResult(null);
         }
@@ -537,6 +568,7 @@ const AdminProdeContent: React.FC = () => {
             await supabaseService.recalculateAllProdePoints(
                 prodeConfig.pointsExactScore,
                 prodeConfig.pointsCorrectResult,
+                prodeConfig.pointsPartialGoal ?? 1,
                 prodeConfig.pointsWrong
             );
             const updated = await supabaseService.getProdeRanking();
@@ -643,11 +675,12 @@ const AdminProdeContent: React.FC = () => {
                         {/* Sistema de puntuación */}
                         <div className="space-y-3">
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Sistema de puntuación</p>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 {[
-                                    { key: 'pointsExactScore', label: 'Exacto' },
-                                    { key: 'pointsCorrectResult', label: 'Resultado' },
-                                    { key: 'pointsWrong', label: 'Fallo' },
+                                    { key: 'pointsExactScore',    label: 'Exacto'   },
+                                    { key: 'pointsCorrectResult', label: 'Ganador'  },
+                                    { key: 'pointsPartialGoal',   label: 'Parcial'  },
+                                    { key: 'pointsWrong',         label: 'Fallo'    },
                                 ].map(field => (
                                     <div key={field.key}>
                                         <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1 block">{field.label}</label>

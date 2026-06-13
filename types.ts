@@ -967,6 +967,7 @@ export interface ProdeConfig {
     // Sistema de puntuación (configurable)
     pointsExactScore: number;     // Default: 6
     pointsCorrectResult: number;  // Default: 3
+    pointsPartialGoal: number;    // Default: 1
     pointsWrong: number;          // Default: 0
 }
 
@@ -980,6 +981,7 @@ export const DEFAULT_PRODE_CONFIG: ProdeConfig = {
     isActive: true,
     pointsExactScore: 6,
     pointsCorrectResult: 3,
+    pointsPartialGoal: 1,
     pointsWrong: 0,
 };
 
