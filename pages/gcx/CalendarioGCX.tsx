@@ -630,13 +630,7 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
                                 onClick={() => {
                                     activeGroups
                                         .filter(g => selectedGroupIds.has(g.id))
-                                        .forEach(g => {
-                                            if (isMobile) {
-                                                downloadIcs(g);
-                                            } else {
-                                                window.open(buildGoogleCalUrl(g), '_blank');
-                                            }
-                                        });
+                                        .forEach(g => window.open(buildGoogleCalUrl(g), '_blank'));
                                 }}
                                 className="w-full flex items-center justify-center gap-3 px-4 py-3 min-h-[52px] border-2 border-[#4285F4] text-[#4285F4] font-black text-xs uppercase tracking-widest hover:bg-[#4285F4] hover:text-white transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4285F4]"
                             >
@@ -646,7 +640,7 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
                             </button>
                             {isMobile && (
                                 <p className="text-[10px] text-neutral-400 text-center leading-snug px-2">
-                                    Se descarga un archivo · elegí Google Calendar cuando iOS te pregunte
+                                    En el teléfono activá <span className="font-bold text-neutral-500">“Repetir → Semanal”</span> dentro del evento
                                 </p>
                             )}
                         </div>
