@@ -934,6 +934,7 @@ export interface ProdeMatch {
     isFinished: boolean;     // Resultado cargado
     homeScoreReal?: number;
     awayScoreReal?: number;
+    externalMatchId?: number;
     createdAt: string;
 }
 

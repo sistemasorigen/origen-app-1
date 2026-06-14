@@ -8,8 +8,10 @@ import {
 } from '../../types';
 import {
     Trophy, Check, Loader2, Plus, Edit2, Trash2,
-    ChevronLeft, X, CheckCircle, Medal, Search
+    ChevronLeft, X, CheckCircle, Medal, Search, RefreshCw,
+    Link2, AlertTriangle
 } from 'lucide-react';
+import { supabase } from '../../services/supabaseClient';
 import { hasRole } from '../../services/authUtils';
 
 // ── 48 equipos del FIFA World Cup 2026 ─────────────────────────────────────────
@@ -249,6 +251,13 @@ const AdminProdeContent: React.FC = () => {
     const [prodeMatchesLoading, setProdeMatchesLoading] = useState(false);
     const [editingMatch, setEditingMatch] = useState<Partial<ProdeMatch> | null>(null);
     const [savingMatch, setSavingMatch] = useState(false);
+    const [matchSearchQuery, setMatchSearchQuery] = useState('');
+    const [matchStatusFilter, setMatchStatusFilter] = useState<'all' | 'pending' | 'finished'>('all');
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [lastSyncResult, setLastSyncResult] = useState<string | null>(
+        () => localStorage.getItem('prode_last_sync') || null
+    );
+    const [syncUpdatedMatches, setSyncUpdatedMatches] = useState<string[]>([]);
 
     // Resultados
     const [resultScores, setResultScores] = useState<Record<string, { home: number; away: number }>>({});
@@ -376,7 +385,11 @@ const AdminProdeContent: React.FC = () => {
             if (saved) {
                 const updated = await supabaseService.getProdeMatches();
                 setProdeMatches(updated);
+                const hadExternalId = !!editingMatch?.externalMatchId;
                 setEditingMatch(null);
+                if (hadExternalId) {
+                    handleManualSync();
+                }
             }
         } finally {
             setSavingMatch(false);
@@ -578,6 +591,74 @@ const AdminProdeContent: React.FC = () => {
         }
     };
 
+    const handleManualSync = async () => {
+        setIsSyncing(true);
+        setSyncUpdatedMatches([]);
+        const beforeFinished = new Set(prodeMatches.filter(m => m.isFinished).map(m => m.id));
+        try {
+            const session = (await supabase.auth.getSession()).data.session;
+            const res = await fetch(
+                'https://oqtumgalnozppqnnjjdb.supabase.co/functions/v1/prode-sync-results',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`
+                    }
+                }
+            );
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                const msg = `Error ${res.status}: ${text.slice(0, 120)}`;
+                setLastSyncResult(msg);
+                localStorage.setItem('prode_last_sync', msg);
+                return;
+            }
+            const result = await res.json();
+            const timeStr = new Date().toLocaleTimeString('es-AR');
+            const syncMsg = `${timeStr} · ${result.matchesUpdated} partido(s) actualizado(s)`;
+            setLastSyncResult(syncMsg);
+            localStorage.setItem('prode_last_sync', syncMsg);
+            if (result.matchesUpdated > 0) {
+                const [matches, ranking] = await Promise.all([
+                    supabaseService.getProdeMatches(),
+                    supabaseService.getProdeRanking(),
+                ]);
+                setProdeMatches(matches);
+                setProdeRanking(ranking);
+                const updated = matches
+                    .filter(m => m.isFinished && !beforeFinished.has(m.id))
+                    .map(m => `${m.homeTeam} vs ${m.awayTeam} (${m.homeScoreReal}–${m.awayScoreReal})`);
+                setSyncUpdatedMatches(updated);
+            }
+        } catch (err) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            const msg = `Error al sincronizar: ${errMsg.slice(0, 80)}`;
+            setLastSyncResult(msg);
+            localStorage.setItem('prode_last_sync', msg);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const _mq = matchSearchQuery.toLowerCase().trim();
+    const filteredMatches = prodeMatches
+        .filter(m => {
+            const matchesSearch = !_mq ||
+                m.homeTeam.toLowerCase().includes(_mq) ||
+                m.awayTeam.toLowerCase().includes(_mq);
+            const matchesStatus =
+                matchStatusFilter === 'all' ? true :
+                matchStatusFilter === 'pending' ? !m.isFinished :
+                m.isFinished;
+            return matchesSearch && matchesStatus;
+        })
+        .sort((a, b) => {
+            if (!a.isFinished && b.isFinished) return -1;
+            if (a.isFinished && !b.isFinished) return 1;
+            return (a.matchNumber || 0) - (b.matchNumber || 0);
+        });
+
     return (
         <div className="max-w-[1200px] mx-auto px-4 md:px-8 py-6 md:py-10">
 
@@ -720,21 +801,123 @@ const AdminProdeContent: React.FC = () => {
                                 {recalculating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Recalcular puntos'}
                             </button>
                         </div>
+
+                        {/* Sync manual con API externa */}
+                        <div className="border-2 border-black p-4 bg-neutral-50 space-y-3 mt-4">
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-widest">
+                                    Sync Automático
+                                </p>
+                                <p className="text-[10px] font-medium text-neutral-500 mt-0.5">
+                                    Actualiza resultados desde worldcup26.ir.
+                                    Corre automáticamente cada 5 minutos.
+                                    Usá el botón para forzar ahora.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleManualSync}
+                                disabled={isSyncing}
+                                className="flex items-center gap-2 px-4 py-2 border-2 border-black text-xs font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all disabled:opacity-40"
+                            >
+                                {isSyncing ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <RefreshCw className="w-4 h-4" />
+                                )}
+                                {isSyncing ? 'Sincronizando...' : 'Sync ahora'}
+                            </button>
+                            {lastSyncResult && (
+                                <p className="text-[10px] font-medium text-neutral-400">
+                                    Último sync: {lastSyncResult}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 )}
 
                 {/* ── PARTIDOS ───────────────────────── */}
                 {prodeSection === 'matches' && (
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-black uppercase tracking-tight">Partidos ({prodeMatches.length})</h3>
+                        <div className="flex items-center justify-between gap-3">
+                            <h3 className="text-sm font-black uppercase tracking-tight shrink-0">
+                                Partidos ({prodeMatches.length})
+                            </h3>
                             <button
                                 type="button"
                                 onClick={() => setEditingMatch({ matchNumber: prodeMatches.length + 1, round: 'Fase de grupos', isOpen: false, isFinished: false })}
-                                className="flex items-center gap-2 px-4 py-2 bg-black text-white border-2 border-black text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                                className="flex items-center gap-2 px-4 py-2 bg-black text-white border-2 border-black text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all shrink-0"
                             >
                                 <Plus className="w-4 h-4" /> Nuevo partido
                             </button>
+                        </div>
+
+                        {/* Buscador + filtros */}
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            {/* Search */}
+                            <div className="relative flex-1 min-w-0">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por equipo..."
+                                    value={matchSearchQuery}
+                                    onChange={e => setMatchSearchQuery(e.target.value)}
+                                    className="w-full min-h-[44px] pl-10 pr-9 border-2 border-black text-sm font-bold placeholder:text-neutral-400 placeholder:font-normal focus:outline-none focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-shadow duration-150"
+                                />
+                                {matchSearchQuery && (
+                                    <button
+                                        onClick={() => setMatchSearchQuery('')}
+                                        aria-label="Limpiar búsqueda"
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Filtro segmentado */}
+                            <div
+                                role="group"
+                                aria-label="Filtrar partidos por estado"
+                                className="flex w-full sm:w-fit border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+                            >
+                                {([
+                                    { key: 'all'      as const, label: 'Todos',     count: prodeMatches.length,                           icon: null        },
+                                    { key: 'pending'  as const, label: 'Pendiente', count: prodeMatches.filter(m => !m.isFinished).length, icon: 'dot-amber' },
+                                    { key: 'finished' as const, label: 'Finalizado', count: prodeMatches.filter(m => m.isFinished).length,  icon: 'check'     },
+                                ]).map((f, i) => {
+                                    const active = matchStatusFilter === f.key;
+                                    return (
+                                        <button
+                                            key={f.key}
+                                            type="button"
+                                            onClick={() => setMatchStatusFilter(f.key)}
+                                            aria-pressed={active}
+                                            className={`flex flex-1 sm:flex-none justify-center items-center gap-1.5 px-3 min-h-[44px] text-[10px] font-black uppercase tracking-widest transition-colors duration-150 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black whitespace-nowrap ${
+                                                i > 0 ? 'border-l-2 border-black' : ''
+                                            } ${
+                                                active ? 'bg-black text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'
+                                            }`}
+                                        >
+                                            {f.icon === 'dot-amber' && (
+                                                <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" aria-hidden="true" />
+                                            )}
+                                            {f.icon === 'check' && (
+                                                <CheckCircle className={`w-3 h-3 shrink-0 ${active ? 'text-emerald-400' : 'text-emerald-500'}`} aria-hidden="true" />
+                                            )}
+                                            {f.label}
+                                            <span
+                                                aria-hidden="true"
+                                                className={`text-[9px] font-black tabular-nums px-1 min-w-[18px] text-center leading-[18px] ${
+                                                    active ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-500'
+                                                }`}
+                                            >
+                                                {f.count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                         {/* Formulario inline de edición */}
@@ -749,6 +932,27 @@ const AdminProdeContent: React.FC = () => {
                                     <div>
                                         <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">Nº</label>
                                         <input type="number" min={1} value={editingMatch.matchNumber || ''} onChange={e => setEditingMatch(m => ({ ...m!, matchNumber: parseInt(e.target.value) || 1 }))} className="w-full h-9 px-2 border-2 border-black font-bold text-sm focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
+                                            <Link2 className={`w-3 h-3 ${editingMatch.externalMatchId ? 'text-emerald-500' : 'text-neutral-400'}`} />
+                                            <span className={editingMatch.externalMatchId ? 'text-emerald-600' : 'text-neutral-400'}>ID API Auto-Sync</span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            placeholder="ID de worldcup26.ir"
+                                            value={editingMatch.externalMatchId || ''}
+                                            onChange={e => setEditingMatch(m => ({
+                                                ...m!,
+                                                externalMatchId:
+                                                    parseInt(e.target.value) || undefined
+                                            }))}
+                                            className={`w-full h-9 px-2 border-2 font-bold text-sm focus:outline-none ${editingMatch.externalMatchId ? 'border-emerald-500 focus:shadow-[2px_2px_0px_0px_rgba(16,185,129,1)]' : 'border-black focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'}`}
+                                        />
+                                        <p className={`text-[9px] mt-0.5 font-semibold ${editingMatch.externalMatchId ? 'text-emerald-600' : 'text-neutral-400'}`}>
+                                            {editingMatch.externalMatchId ? 'Vinculado · al guardar se hará sync automático' : 'Sin ID = resultado solo manual'}
+                                        </p>
                                     </div>
                                     <div>
                                         <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">Fase</label>
@@ -801,14 +1005,16 @@ const AdminProdeContent: React.FC = () => {
 
                         {/* Lista de Partidos */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {prodeMatches.length === 0 && !prodeMatchesLoading && (
+                            {prodeMatchesLoading && <div className="col-span-full text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-neutral-400" /></div>}
+                            {!prodeMatchesLoading && filteredMatches.length === 0 && (
                                 <div className="col-span-full py-10 border-2 border-dashed border-neutral-300 text-center">
-                                    <p className="text-xs font-black text-neutral-400 uppercase tracking-widest">No hay partidos cargados</p>
+                                    <p className="text-xs font-black text-neutral-400 uppercase tracking-widest">
+                                        {prodeMatches.length === 0 ? 'No hay partidos cargados' : 'Sin resultados para esa búsqueda'}
+                                    </p>
                                 </div>
                             )}
-                            {prodeMatchesLoading && <div className="col-span-full text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-neutral-400" /></div>}
 
-                            {prodeMatches.map(match => (
+                            {filteredMatches.map(match => (
                                 <div key={match.id} className={`border-2 ${match.isFinished ? 'border-neutral-200 bg-neutral-50' : 'border-black bg-white'} p-4 flex flex-col gap-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
                                     <div className="flex justify-between items-start">
                                         <div>
@@ -864,7 +1070,40 @@ const AdminProdeContent: React.FC = () => {
                 {/* ── RESULTADOS ─────────────────────── */}
                 {prodeSection === 'results' && (
                     <div className="space-y-4">
-                        <h3 className="text-sm font-black uppercase tracking-tight">Cargar Resultados Reales</h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <h3 className="text-sm font-black uppercase tracking-tight">Cargar Resultados Reales</h3>
+                            <div className="flex items-center gap-3">
+                                {lastSyncResult && (
+                                    <div className="flex flex-col items-end gap-1">
+                                        <span className={`text-[10px] font-bold ${lastSyncResult.startsWith('Error') ? 'text-rose-500' : 'text-neutral-400'}`}>
+                                            Último sync: {lastSyncResult}
+                                        </span>
+                                        {syncUpdatedMatches.length > 0 && (
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                {syncUpdatedMatches.map((name, i) => (
+                                                    <span key={i} className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5">
+                                                        ✓ {name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={handleManualSync}
+                                    disabled={isSyncing}
+                                    className="flex items-center gap-2 px-3 py-1.5 border-2 border-black text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all disabled:opacity-40"
+                                >
+                                    {isSyncing ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                        <RefreshCw className="w-3 h-3" />
+                                    )}
+                                    {isSyncing ? 'Syncing...' : 'Sync ahora'}
+                                </button>
+                            </div>
+                        </div>
                         <p className="text-[10px] font-medium text-neutral-500 mb-4 max-w-xl">
                             Aquí aparecen los partidos que ya están cerrados (no aceptan más predicciones) pero aún no tienen un resultado final publicado. Al publicar el resultado, se calcularán automáticamente los puntos de todos los usuarios que hayan participado.
                         </p>
@@ -880,7 +1119,18 @@ const AdminProdeContent: React.FC = () => {
                             {prodeMatches.filter(m => !m.isOpen && !m.isFinished).map(match => (
                                 <div key={match.id} className="border-2 border-black p-4 md:p-6 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col md:flex-row items-center justify-between gap-6">
                                     <div className="flex flex-col items-center md:items-start w-full md:w-auto">
-                                        <span className="text-[10px] font-black uppercase text-neutral-500 mb-1">Partido Nº {match.matchNumber}</span>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-[10px] font-black uppercase text-neutral-500">Partido Nº {match.matchNumber}</span>
+                                            {match.externalMatchId ? (
+                                                <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-1.5 py-0.5">
+                                                    <Link2 className="w-2.5 h-2.5" /> API #{match.externalMatchId}
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1 text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-300 px-1.5 py-0.5">
+                                                    <AlertTriangle className="w-2.5 h-2.5" /> Sin ID API
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="flex items-center gap-4 text-sm font-black uppercase">
                                             <div className="flex items-center gap-2"><FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="md" /> {match.homeTeam}</div>
                                             <span className="text-neutral-300">VS</span>
@@ -949,18 +1199,18 @@ const AdminProdeContent: React.FC = () => {
                             <h3 className="text-sm font-black uppercase tracking-tight">Resultados Publicados</h3>
                             <div className="space-y-3">
                                 {prodeMatches.filter(m => m.isFinished && m.homeScoreReal !== undefined && m.awayScoreReal !== undefined).sort((a, b) => new Date(b.matchDate || 0).getTime() - new Date(a.matchDate || 0).getTime()).map(match => (
-                                    <div key={match.id} className="bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] border border-slate-100 rounded-[2rem] p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden group">
-                                        <div className="flex items-center gap-2 text-slate-400 md:w-1/4">
-                                            <span className="text-[10px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded-sm">Nº {match.matchNumber}</span>
-                                            <span className="text-[10px] font-bold uppercase truncate">{match.round}</span>
+                                    <div key={match.id} className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-2 md:w-1/4">
+                                            <span className="text-[10px] font-black uppercase border-2 border-black px-2 py-0.5">Nº {match.matchNumber}</span>
+                                            <span className="text-[10px] font-bold uppercase text-neutral-500 truncate">{match.round}</span>
                                         </div>
                                         <div className="flex items-center justify-between md:justify-center gap-4 flex-1">
                                             <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
                                                 <span className="text-xs sm:text-sm font-black uppercase text-slate-700 truncate">{match.homeTeam}</span>
                                                 <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="lg" />
                                             </div>
-                                            <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-lg font-black text-slate-700 tabular-nums shadow-inner shrink-0">
-                                                {match.homeScoreReal} - {match.awayScoreReal}
+                                            <div className="px-4 py-2 bg-black text-white text-lg font-black tabular-nums border-2 border-black shrink-0">
+                                                {match.homeScoreReal} – {match.awayScoreReal}
                                             </div>
                                             <div className="flex items-center gap-3 flex-1 justify-start min-w-0">
                                                 <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="lg" />
@@ -970,13 +1220,13 @@ const AdminProdeContent: React.FC = () => {
                                         <div className="hidden md:flex md:w-1/4 items-center justify-end gap-2">
                                             <button
                                                 onClick={() => handleEditResult(match.id, match.homeScoreReal!, match.awayScoreReal!)}
-                                                className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2"
+                                                className="px-3 py-2 border-2 border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2"
                                             >
                                                 <Edit2 className="w-3 h-3" /> Editar
                                             </button>
                                             <button
                                                 onClick={() => handleResetResult(match.id)}
-                                                className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2"
+                                                className="px-3 py-2 border-2 border-rose-400 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2"
                                             >
                                                 <Trash2 className="w-3 h-3" /> Deshacer
                                             </button>
@@ -984,13 +1234,13 @@ const AdminProdeContent: React.FC = () => {
                                         <div className="md:hidden mt-4 w-full flex flex-col gap-2">
                                             <button
                                                 onClick={() => handleEditResult(match.id, match.homeScoreReal!, match.awayScoreReal!)}
-                                                className="w-full py-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2"
+                                                className="w-full py-2 border-2 border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2"
                                             >
                                                 <Edit2 className="w-3 h-3" /> Editar Resultado
                                             </button>
                                             <button
                                                 onClick={() => handleResetResult(match.id)}
-                                                className="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2"
+                                                className="w-full py-2 border-2 border-rose-400 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-2"
                                             >
                                                 <Trash2 className="w-3 h-3" /> Deshacer / Eliminar
                                             </button>

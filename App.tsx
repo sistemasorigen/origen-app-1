@@ -28,6 +28,7 @@ import Prode from './pages/prode/Prode';
 import AdminProde from './pages/prode/AdminProde';
 import ProdeRanking from './pages/prode/ProdeRanking';
 import ProdeResultados from './pages/prode/ProdeResultados';
+import CalendarioGCX from './pages/gcx/CalendarioGCX';
 import SystemLoginModal from './components/modals/ModalLoginSistema';
 import CompleteProfileModal from './components/modals/ModalCompletarPerfil';
 import { User, UserRole, AppConfig } from './types';
@@ -339,6 +340,9 @@ const AppContent: React.FC = () => {
                                     ]))
                                         ? <HostDashboard currentUser={user} />
                                         : <Navigate to="/" />
+                                } />
+                                <Route path="/gcx/calendario" element={
+                                    user ? <CalendarioGCX currentUser={user} /> : <Navigate to="/" />
                                 } />
                                 <Route path="/coordinators" element={
                                     (user && hasRole(user, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN]))

@@ -4532,6 +4532,7 @@ export const supabaseService = {
       isFinished:    row.is_finished,
       homeScoreReal: row.home_score_real ?? undefined,
       awayScoreReal: row.away_score_real ?? undefined,
+      externalMatchId: row.external_match_id || undefined,
       createdAt:     row.created_at,
     };
   },
@@ -4578,6 +4579,7 @@ export const supabaseService = {
         is_finished:     match.isFinished ?? false,
         home_score_real: match.homeScoreReal ?? null,
         away_score_real: match.awayScoreReal ?? null,
+        external_match_id: match.externalMatchId || null,
       };
 
       if (match.id) {

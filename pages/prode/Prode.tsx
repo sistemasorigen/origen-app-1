@@ -244,18 +244,33 @@ const Prode: React.FC = () => {
         if (m > 0) return `${m}m ${String(sec).padStart(2, '0')}s`;
         return `${String(sec)}s`;
     };
+    const getTimeToStartMs = (match: ProdeMatch): number =>
+        new Date(match.matchDate || 0).getTime() - now;
 
     const isMale = user?.gender === 'Masculino';
     const openMatches = matches
         .filter(m => m.isOpen && !m.isFinished)
         .sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
     const LIVE_MAX_MS = 3 * 60 * 60 * 1000; // máx 3h mostrando como "Jugándose"
-    const liveMatches = openMatches.filter(m => {
+    // Todos los partidos no finalizados (con o sin predicciones abiertas) para sección En Vivo
+    const allActiveMatches = matches
+        .filter(m => !m.isFinished)
+        .sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
+    const liveMatches = allActiveMatches.filter(m => {
         if (!m.matchDate) return false;
         const t = new Date(m.matchDate).getTime();
         return now >= t && now <= t + LIVE_MAX_MS;
     }).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
-    const upcomingMatches = openMatches.filter(m => !m.matchDate || now < new Date(m.matchDate).getTime()).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
+    // Cerrado para predicciones pero aún no empezó (ventana de 15 min antes)
+    const preLiveMatches = allActiveMatches.filter(m => {
+        if (!m.matchDate) return false;
+        return isMatchLocked(m) && now < new Date(m.matchDate).getTime();
+    }).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
+    // Solo los que todavía aceptan predicciones
+    const upcomingMatches = openMatches.filter(m => {
+        if (!m.matchDate) return true;
+        return now < new Date(m.matchDate).getTime() && !isMatchLocked(m);
+    }).sort((a, b) => new Date(a.matchDate || 0).getTime() - new Date(b.matchDate || 0).getTime());
     const unlockedOpenMatches = openMatches.filter(m => !isMatchLocked(m));
     const allSaved = openMatches.length > 0 && unlockedOpenMatches.every(m => savedMatches.has(m.id));
 
@@ -406,52 +421,106 @@ const Prode: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-4">
-                                        {liveMatches.length > 0 ? liveMatches.map(match => {
+
+                                        {/* Pre-live: predicciones cerradas, cuenta regresiva al inicio */}
+                                        {preLiveMatches.map(match => {
                                             const pred = predictions.find(p => p.matchId === match.id);
+                                            const msToStart = getTimeToStartMs(match);
                                             return (
-                                            <div key={match.id} className="bg-white rounded-[2rem] p-6 shadow-[0_4px_20px_-4px_rgba(239,68,68,0.1)] border-2 border-red-100 transition-all overflow-hidden relative">
-                                                <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-full pointer-events-none" />
-                                                <div className="flex items-center justify-between mb-4 relative z-10">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400">{match.round}</span>
-                                                        {match.groupName && (
-                                                            <span className="text-[10px] font-bold text-slate-300">· {match.groupName}</span>
+                                                <div key={match.id} className="bg-white rounded-[2rem] p-6 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.12)] border-2 border-amber-100 transition-all overflow-hidden relative">
+                                                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50/60 rounded-bl-full pointer-events-none" />
+                                                    <div className="flex items-center justify-between mb-4 relative z-10">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">{match.round}</span>
+                                                            {match.groupName && (
+                                                                <span className="text-[10px] font-bold text-slate-300">· {match.groupName}</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200 flex items-center gap-1.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                                            Predicciones cerradas
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-4 relative z-10">
+                                                        <div className="flex-1 flex flex-col items-end text-right">
+                                                            <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="xl" className="mb-2" />
+                                                            <p className="font-black text-[13px] uppercase tracking-wide text-slate-600">{match.homeTeam}</p>
+                                                        </div>
+                                                        <div className="shrink-0 flex flex-col items-center px-3 gap-0.5">
+                                                            <span className="text-slate-300 font-black text-xl">VS</span>
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-amber-500 mt-1">Empieza en</span>
+                                                            <span className="text-base font-black text-amber-600 tabular-nums">{formatCountdown(msToStart)}</span>
+                                                        </div>
+                                                        <div className="flex-1 flex flex-col items-start text-left">
+                                                            <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="xl" className="mb-2" />
+                                                            <p className="font-black text-[13px] uppercase tracking-wide text-slate-600">{match.awayTeam}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-6 pt-4 border-t border-slate-100 relative z-10">
+                                                        {pred ? (
+                                                            <div className="bg-amber-50 rounded-xl p-3 flex flex-col items-center justify-center gap-1 border border-amber-100">
+                                                                <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Tu Predicción</span>
+                                                                <span className="text-xl font-black text-slate-700 tabular-nums">{pred.homeScorePred} - {pred.awayScorePred}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="bg-slate-50 rounded-xl p-3 flex flex-col items-center justify-center gap-1 border border-slate-100">
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No predijiste este partido</span>
+                                                            </div>
                                                         )}
                                                     </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-50 text-red-500">
-                                                        Jugándose
-                                                    </span>
                                                 </div>
-                                                <div className="flex items-center gap-4 relative z-10">
-                                                    <div className="flex-1 flex flex-col items-end text-right">
-                                                        <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="xl" className="mb-2" />
-                                                        <p className="font-black text-[13px] uppercase tracking-wide text-slate-600">{match.homeTeam}</p>
+                                            );
+                                        })}
+
+                                        {/* Live: ya empezó */}
+                                        {liveMatches.map(match => {
+                                            const pred = predictions.find(p => p.matchId === match.id);
+                                            return (
+                                                <div key={match.id} className="bg-white rounded-[2rem] p-6 shadow-[0_4px_20px_-4px_rgba(239,68,68,0.1)] border-2 border-red-100 transition-all overflow-hidden relative">
+                                                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-full pointer-events-none" />
+                                                    <div className="flex items-center justify-between mb-4 relative z-10">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400">{match.round}</span>
+                                                            {match.groupName && (
+                                                                <span className="text-[10px] font-bold text-slate-300">· {match.groupName}</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-50 text-red-500 flex items-center gap-1.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                                            Jugándose
+                                                        </span>
                                                     </div>
-                                                    <div className="shrink-0 flex flex-col items-center px-4">
-                                                        <span className="text-red-400 font-black text-xl animate-pulse">VS</span>
-                                                    </div>
-                                                    <div className="flex-1 flex flex-col items-start text-left">
-                                                        <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="xl" className="mb-2" />
-                                                        <p className="font-black text-[13px] uppercase tracking-wide text-slate-600">{match.awayTeam}</p>
-                                                    </div>
-                                                </div>
-                                                {pred && (
-                                                    <div className="mt-6 pt-4 border-t border-slate-100 relative z-10">
-                                                        <div className="bg-slate-50 rounded-xl p-3 flex flex-col items-center justify-center gap-1 border border-slate-100">
-                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tu Predicción</span>
-                                                            <span className="text-xl font-black text-slate-700 tabular-nums">{pred.homeScorePred} - {pred.awayScorePred}</span>
+                                                    <div className="flex items-center gap-4 relative z-10">
+                                                        <div className="flex-1 flex flex-col items-end text-right">
+                                                            <FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="xl" className="mb-2" />
+                                                            <p className="font-black text-[13px] uppercase tracking-wide text-slate-600">{match.homeTeam}</p>
+                                                        </div>
+                                                        <div className="shrink-0 flex flex-col items-center px-4">
+                                                            <span className="text-red-400 font-black text-xl animate-pulse">VS</span>
+                                                        </div>
+                                                        <div className="flex-1 flex flex-col items-start text-left">
+                                                            <FlagImage teamName={match.awayTeam} emoji={match.awayFlag} size="xl" className="mb-2" />
+                                                            <p className="font-black text-[13px] uppercase tracking-wide text-slate-600">{match.awayTeam}</p>
                                                         </div>
                                                     </div>
-                                                )}
-                                                {!pred && (
                                                     <div className="mt-6 pt-4 border-t border-slate-100 relative z-10">
-                                                        <div className="bg-slate-50 rounded-xl p-3 flex flex-col items-center justify-center gap-1 border border-slate-100">
-                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No predijiste este partido</span>
-                                                        </div>
+                                                        {pred ? (
+                                                            <div className="bg-slate-50 rounded-xl p-3 flex flex-col items-center justify-center gap-1 border border-slate-100">
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tu Predicción</span>
+                                                                <span className="text-xl font-black text-slate-700 tabular-nums">{pred.homeScorePred} - {pred.awayScorePred}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="bg-slate-50 rounded-xl p-3 flex flex-col items-center justify-center gap-1 border border-slate-100">
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No predijiste este partido</span>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        )}) : (
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* Empty state */}
+                                        {preLiveMatches.length === 0 && liveMatches.length === 0 && (
                                             <div className="bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center gap-3">
                                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                                                     No hay partidos en vivo en este momento

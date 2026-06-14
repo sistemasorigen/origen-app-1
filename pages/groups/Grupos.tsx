@@ -5,7 +5,7 @@ import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
-import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield } from 'lucide-react';
+import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, CalendarDays } from 'lucide-react';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
 import GroupCard from '../../components/GCX/TarjetaGrupo';
@@ -1443,6 +1443,21 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Mi Calendario shortcut — mobile only */}
+                        {currentUser && (
+                            <div className="md:hidden mb-4">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/gcx/calendario')}
+                                    aria-label="Ir a mi calendario de grupos"
+                                    className="w-full flex items-center justify-center gap-2 px-4 min-h-[44px] bg-[#28a946] text-white border-2 border-[#28a946] font-black text-xs uppercase tracking-widest shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-[#28a946] transition-colors duration-150 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#28a946]"
+                                >
+                                    <CalendarDays className="w-4 h-4" aria-hidden="true" />
+                                    Mi Calendario
+                                </button>
+                            </div>
+                        )}
 
                         {/* Section Header */}
                         <div className="mb-8 md:mb-12 pb-4 border-b-4 border-black">

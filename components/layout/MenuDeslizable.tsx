@@ -176,6 +176,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     path: '/mis-grupos',
                     roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]
                 },
+                {
+                    label: 'Mi Calendario',
+                    path: '/gcx/calendario',
+                    roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION, UserRole.USUARIO, UserRole.VIEWER]
+                },
             ],
             subItems: [
                 // ── Separador: Coordinación ──────────────────
