@@ -257,6 +257,10 @@ const AdminProdeContent: React.FC = () => {
     const [prodeMatches, setProdeMatches] = useState<ProdeMatch[]>([]);
     const [prodeMatchesLoading, setProdeMatchesLoading] = useState(false);
     const [editingMatch, setEditingMatch] = useState<Partial<ProdeMatch> | null>(null);
+
+    useEffect(() => {
+        if (editingMatch) window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [editingMatch]);
     const [savingMatch, setSavingMatch] = useState(false);
     const [matchSearchQuery, setMatchSearchQuery] = useState('');
     const [matchStatusFilter, setMatchStatusFilter] = useState<'all' | 'pending' | 'finished'>('all');
