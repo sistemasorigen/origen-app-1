@@ -48,8 +48,17 @@ const getWeekStart = (date: Date): Date => {
     return d;
 };
 
+const getFirstOccurrence = (startDate: string, meetingDay: string): string => {
+    const targetDow = DAY_MAP[meetingDay];
+    if (targetDow === undefined || !startDate) return startDate;
+    const d = new Date(startDate + 'T00:00:00');
+    const diff = (targetDow - d.getDay() + 7) % 7;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().split('T')[0];
+};
+
 const buildGoogleCalUrl = (group: Group): string => {
-    const start = group.startDate || '';
+    const start = getFirstOccurrence(group.startDate || '', group.meetingDay);
     const [h, m] = (group.meetingTime || '19:00').split(':');
     const hPad = h.padStart(2, '0');
     const mPad = m.padStart(2, '0');
@@ -69,7 +78,7 @@ const buildGoogleCalUrl = (group: Group): string => {
 };
 
 const buildIcsContent = (group: Group): string => {
-    const start = group.startDate?.replace(/-/g, '') || '';
+    const start = getFirstOccurrence(group.startDate || '', group.meetingDay).replace(/-/g, '');
     const time = (group.meetingTime || '19:00').replace(':', '');
     const hEnd = String(parseInt(time.slice(0, 2)) + 2).padStart(2, '0');
     return [
