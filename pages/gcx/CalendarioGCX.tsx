@@ -271,6 +271,7 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
     const [participantGroups, setParticipantGroups]   = useState<Group[]>([]);
     const [loading, setLoading]                       = useState(true);
     const [seasonLabel, setSeasonLabel]               = useState<string | null>(null);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     const [selectedDay, setSelectedDay]               = useState<Date | null>(null);
     const [selectedDayGroups, setSelectedDayGroups]   = useState<{ group: Group; asHost: boolean }[]>([]);
@@ -616,26 +617,41 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
                     )}
 
                     {/* Acciones */}
-                    <div className="space-y-2 pt-1 border-t-2 border-black">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 pt-3 mb-2">
+                    <div className="space-y-3 pt-1 border-t-2 border-black">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 pt-3">
                             Agregar con:
                         </p>
 
-                        <button
-                            type="button"
-                            disabled={selectedGroupIds.size === 0}
-                            onClick={() => {
-                                activeGroups
-                                    .filter(g => selectedGroupIds.has(g.id))
-                                    .forEach(g => window.open(buildGoogleCalUrl(g), '_blank'));
-                            }}
-                            className="w-full flex items-center justify-center gap-3 px-4 py-3 min-h-[52px] border-2 border-[#4285F4] text-[#4285F4] font-black text-xs uppercase tracking-widest hover:bg-[#4285F4] hover:text-white transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4285F4]"
-                        >
-                            <GoogleGSvg />
-                            Google Calendar
-                            {selectedGroupIds.size > 0 && <span className="ml-1 opacity-70">({selectedGroupIds.size})</span>}
-                        </button>
+                        {/* Google Calendar */}
+                        <div className="space-y-1">
+                            <button
+                                type="button"
+                                disabled={selectedGroupIds.size === 0}
+                                onClick={() => {
+                                    activeGroups
+                                        .filter(g => selectedGroupIds.has(g.id))
+                                        .forEach(g => {
+                                            if (isMobile) {
+                                                downloadIcs(g);
+                                            } else {
+                                                window.open(buildGoogleCalUrl(g), '_blank');
+                                            }
+                                        });
+                                }}
+                                className="w-full flex items-center justify-center gap-3 px-4 py-3 min-h-[52px] border-2 border-[#4285F4] text-[#4285F4] font-black text-xs uppercase tracking-widest hover:bg-[#4285F4] hover:text-white transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4285F4]"
+                            >
+                                <GoogleGSvg />
+                                Google Calendar
+                                {selectedGroupIds.size > 0 && <span className="ml-1 opacity-70">({selectedGroupIds.size})</span>}
+                            </button>
+                            {isMobile && (
+                                <p className="text-[10px] text-neutral-400 text-center leading-snug px-2">
+                                    Se descarga un archivo · elegí Google Calendar cuando iOS te pregunte
+                                </p>
+                            )}
+                        </div>
 
+                        {/* Apple Calendar / Outlook */}
                         <button
                             type="button"
                             disabled={selectedGroupIds.size === 0}
