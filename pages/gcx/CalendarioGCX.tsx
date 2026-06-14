@@ -66,19 +66,17 @@ const buildGoogleCalUrl = (group: Group): string => {
     const hEnd = String(parseInt(h) + 2).padStart(2, '0');
     const dtEnd = `${start.replace(/-/g, '')}T${hEnd}${mPad}00`;
     const until = group.endDate ? `${group.endDate.replace(/-/g, '')}T235959Z` : '';
+    // recur se agrega manualmente sin URLSearchParams para que : y ; no queden
+    // codificados como %3A/%3B — Google Calendar en mobile los interpreta en crudo.
     const params = new URLSearchParams({
         action: 'TEMPLATE',
         text: `GCX - ${group.name}`,
         dates: `${dtStart}/${dtEnd}`,
         details: `Anfitrión: ${group.leaderName} ${group.leaderSurname}\nUbicación: ${group.location}\n${group.description || ''}`,
         location: group.location || '',
-        recur: until ? `RRULE:FREQ=WEEKLY;UNTIL=${until}` : 'RRULE:FREQ=WEEKLY',
     });
-    // Usar /calendar/r/eventedit en vez de /render para evitar que iOS
-    // intercepte con Universal Links y abra la app nativa (que ignora recur).
-    // El path /r/eventedit no está registrado en el entitlement de Universal Links
-    // de la app de Google Calendar, por lo que abre en Safari donde sí funciona.
-    return `https://calendar.google.com/calendar/r/eventedit?${params}`;
+    const recur = until ? `RRULE:FREQ=WEEKLY;UNTIL=${until}` : 'RRULE:FREQ=WEEKLY';
+    return `https://calendar.google.com/calendar/render?${params}&recur=${recur}`;
 };
 
 const buildIcsContent = (group: Group): string => {
