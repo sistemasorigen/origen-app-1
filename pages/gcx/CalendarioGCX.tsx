@@ -65,14 +65,14 @@ const buildGoogleCalUrl = (group: Group): string => {
     const dtStart = `${start.replace(/-/g, '')}T${hPad}${mPad}00`;
     const hEnd = String(parseInt(h) + 2).padStart(2, '0');
     const dtEnd = `${start.replace(/-/g, '')}T${hEnd}${mPad}00`;
-    const until = group.endDate?.replace(/-/g, '') || '';
+    const until = group.endDate ? `${group.endDate.replace(/-/g, '')}T235959Z` : '';
     const params = new URLSearchParams({
         action: 'TEMPLATE',
         text: `GCX - ${group.name}`,
         dates: `${dtStart}/${dtEnd}`,
         details: `Anfitrión: ${group.leaderName} ${group.leaderSurname}\nUbicación: ${group.location}\n${group.description || ''}`,
         location: group.location || '',
-        recur: `RRULE:FREQ=WEEKLY;UNTIL=${until}`,
+        recur: until ? `RRULE:FREQ=WEEKLY;UNTIL=${until}` : 'RRULE:FREQ=WEEKLY',
     });
     return `https://calendar.google.com/calendar/render?${params}`;
 };
@@ -85,7 +85,7 @@ const buildIcsContent = (group: Group): string => {
         'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
         `DTSTART:${start}T${time}00`,
         `DTEND:${start}T${hEnd}${time.slice(2)}00`,
-        `RRULE:FREQ=WEEKLY;UNTIL=${group.endDate?.replace(/-/g, '') || ''}`,
+        group.endDate ? `RRULE:FREQ=WEEKLY;UNTIL=${group.endDate.replace(/-/g, '')}T235959Z` : 'RRULE:FREQ=WEEKLY',
         `SUMMARY:GCX - ${group.name}`,
         `DESCRIPTION:Anfitrión: ${group.leaderName} ${group.leaderSurname}`,
         `LOCATION:${group.location || ''}`,
