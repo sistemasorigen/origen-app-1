@@ -74,7 +74,11 @@ const buildGoogleCalUrl = (group: Group): string => {
         location: group.location || '',
         recur: until ? `RRULE:FREQ=WEEKLY;UNTIL=${until}` : 'RRULE:FREQ=WEEKLY',
     });
-    return `https://calendar.google.com/calendar/render?${params}`;
+    // Usar /calendar/r/eventedit en vez de /render para evitar que iOS
+    // intercepte con Universal Links y abra la app nativa (que ignora recur).
+    // El path /r/eventedit no está registrado en el entitlement de Universal Links
+    // de la app de Google Calendar, por lo que abre en Safari donde sí funciona.
+    return `https://calendar.google.com/calendar/r/eventedit?${params}`;
 };
 
 const buildIcsContent = (group: Group): string => {
@@ -645,7 +649,7 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
                             className="w-full flex items-center justify-center gap-3 px-4 py-3 min-h-[52px] border-2 border-neutral-300 text-neutral-600 font-black text-xs uppercase tracking-widest hover:border-black hover:text-black transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                         >
                             <CalendarDays className="w-4 h-4 shrink-0" aria-hidden="true" />
-                            Apple / Outlook (.ics)
+                            Apple Calendar / Outlook (.ics)
                             {selectedGroupIds.size > 0 && <span className="ml-1 opacity-60">({selectedGroupIds.size})</span>}
                         </button>
                     </div>
