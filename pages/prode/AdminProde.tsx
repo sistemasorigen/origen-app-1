@@ -17,68 +17,68 @@ import { hasRole } from '../../services/authUtils';
 // ── 48 equipos del FIFA World Cup 2026 ─────────────────────────────────────────
 const WORLD_CUP_2026_TEAMS: {
     name: string;
-    flag: string;
+    flag: string;       // código ISO alpha-2 minúscula
     confederation: string;
 }[] = [
     // ── CONMEBOL (6) ──────────────────────────
-    { name: 'Argentina',            flag: '🇦🇷', confederation: 'CONMEBOL' },
-    { name: 'Brasil',               flag: '🇧🇷', confederation: 'CONMEBOL' },
-    { name: 'Colombia',             flag: '🇨🇴', confederation: 'CONMEBOL' },
-    { name: 'Ecuador',              flag: '🇪🇨', confederation: 'CONMEBOL' },
-    { name: 'Paraguay',             flag: '🇵🇾', confederation: 'CONMEBOL' },
-    { name: 'Uruguay',              flag: '🇺🇾', confederation: 'CONMEBOL' },
+    { name: 'Argentina',            flag: 'ar', confederation: 'CONMEBOL' },
+    { name: 'Brasil',               flag: 'br', confederation: 'CONMEBOL' },
+    { name: 'Colombia',             flag: 'co', confederation: 'CONMEBOL' },
+    { name: 'Ecuador',              flag: 'ec', confederation: 'CONMEBOL' },
+    { name: 'Paraguay',             flag: 'py', confederation: 'CONMEBOL' },
+    { name: 'Uruguay',              flag: 'uy', confederation: 'CONMEBOL' },
 
     // ── UEFA (16) ─────────────────────────────
-    { name: 'Alemania',             flag: '🇩🇪', confederation: 'UEFA' },
-    { name: 'Austria',              flag: '🇦🇹', confederation: 'UEFA' },
-    { name: 'Bélgica',              flag: '🇧🇪', confederation: 'UEFA' },
-    { name: 'Bosnia y Herzegovina', flag: '🇧🇦', confederation: 'UEFA' },
-    { name: 'Croacia',              flag: '🇭🇷', confederation: 'UEFA' },
-    { name: 'Escocia',              flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', confederation: 'UEFA' },
-    { name: 'España',               flag: '🇪🇸', confederation: 'UEFA' },
-    { name: 'Francia',              flag: '🇫🇷', confederation: 'UEFA' },
-    { name: 'Inglaterra',           flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', confederation: 'UEFA' },
-    { name: 'Noruega',              flag: '🇳🇴', confederation: 'UEFA' },
-    { name: 'Países Bajos',         flag: '🇳🇱', confederation: 'UEFA' },
-    { name: 'Portugal',             flag: '🇵🇹', confederation: 'UEFA' },
-    { name: 'República Checa',      flag: '🇨🇿', confederation: 'UEFA' },
-    { name: 'Suecia',               flag: '🇸🇪', confederation: 'UEFA' },
-    { name: 'Suiza',                flag: '🇨🇭', confederation: 'UEFA' },
-    { name: 'Turquía',              flag: '🇹🇷', confederation: 'UEFA' },
+    { name: 'Alemania',             flag: 'de', confederation: 'UEFA' },
+    { name: 'Austria',              flag: 'at', confederation: 'UEFA' },
+    { name: 'Bélgica',              flag: 'be', confederation: 'UEFA' },
+    { name: 'Bosnia y Herzegovina', flag: 'ba', confederation: 'UEFA' },
+    { name: 'Croacia',              flag: 'hr', confederation: 'UEFA' },
+    { name: 'Escocia',              flag: 'gb-sct', confederation: 'UEFA' },
+    { name: 'España',               flag: 'es', confederation: 'UEFA' },
+    { name: 'Francia',              flag: 'fr', confederation: 'UEFA' },
+    { name: 'Inglaterra',           flag: 'gb-eng', confederation: 'UEFA' },
+    { name: 'Noruega',              flag: 'no', confederation: 'UEFA' },
+    { name: 'Países Bajos',         flag: 'nl', confederation: 'UEFA' },
+    { name: 'Portugal',             flag: 'pt', confederation: 'UEFA' },
+    { name: 'República Checa',      flag: 'cz', confederation: 'UEFA' },
+    { name: 'Suecia',               flag: 'se', confederation: 'UEFA' },
+    { name: 'Suiza',                flag: 'ch', confederation: 'UEFA' },
+    { name: 'Turquía',              flag: 'tr', confederation: 'UEFA' },
 
     // ── AFC (9) ───────────────────────────────
-    { name: 'Arabia Saudita',       flag: '🇸🇦', confederation: 'AFC' },
-    { name: 'Australia',            flag: '🇦🇺', confederation: 'AFC' },
-    { name: 'Corea del Sur',        flag: '🇰🇷', confederation: 'AFC' },
-    { name: 'Irak',                 flag: '🇮🇶', confederation: 'AFC' },
-    { name: 'Irán',                 flag: '🇮🇷', confederation: 'AFC' },
-    { name: 'Japón',                flag: '🇯🇵', confederation: 'AFC' },
-    { name: 'Jordania',             flag: '🇯🇴', confederation: 'AFC' },
-    { name: 'Qatar',                flag: '🇶🇦', confederation: 'AFC' },
-    { name: 'Uzbekistán',           flag: '🇺🇿', confederation: 'AFC' },
+    { name: 'Arabia Saudita',       flag: 'sa', confederation: 'AFC' },
+    { name: 'Australia',            flag: 'au', confederation: 'AFC' },
+    { name: 'Corea del Sur',        flag: 'kr', confederation: 'AFC' },
+    { name: 'Irak',                 flag: 'iq', confederation: 'AFC' },
+    { name: 'Irán',                 flag: 'ir', confederation: 'AFC' },
+    { name: 'Japón',                flag: 'jp', confederation: 'AFC' },
+    { name: 'Jordania',             flag: 'jo', confederation: 'AFC' },
+    { name: 'Qatar',                flag: 'qa', confederation: 'AFC' },
+    { name: 'Uzbekistán',           flag: 'uz', confederation: 'AFC' },
 
     // ── CAF (10) ──────────────────────────────
-    { name: 'Argelia',              flag: '🇩🇿', confederation: 'CAF' },
-    { name: 'Cabo Verde',           flag: '🇨🇻', confederation: 'CAF' },
-    { name: 'Costa de Marfil',      flag: '🇨🇮', confederation: 'CAF' },
-    { name: 'Egipto',               flag: '🇪🇬', confederation: 'CAF' },
-    { name: 'Ghana',                flag: '🇬🇭', confederation: 'CAF' },
-    { name: 'Marruecos',            flag: '🇲🇦', confederation: 'CAF' },
-    { name: 'RD Congo',             flag: '🇨🇩', confederation: 'CAF' },
-    { name: 'Senegal',              flag: '🇸🇳', confederation: 'CAF' },
-    { name: 'Sudáfrica',            flag: '🇿🇦', confederation: 'CAF' },
-    { name: 'Túnez',                flag: '🇹🇳', confederation: 'CAF' },
+    { name: 'Argelia',              flag: 'dz', confederation: 'CAF' },
+    { name: 'Cabo Verde',           flag: 'cv', confederation: 'CAF' },
+    { name: 'Costa de Marfil',      flag: 'ci', confederation: 'CAF' },
+    { name: 'Egipto',               flag: 'eg', confederation: 'CAF' },
+    { name: 'Ghana',                flag: 'gh', confederation: 'CAF' },
+    { name: 'Marruecos',            flag: 'ma', confederation: 'CAF' },
+    { name: 'RD Congo',             flag: 'cd', confederation: 'CAF' },
+    { name: 'Senegal',              flag: 'sn', confederation: 'CAF' },
+    { name: 'Sudáfrica',            flag: 'za', confederation: 'CAF' },
+    { name: 'Túnez',                flag: 'tn', confederation: 'CAF' },
 
     // ── CONCACAF (6) ──────────────────────────
-    { name: 'Canadá',               flag: '🇨🇦', confederation: 'CONCACAF' },
-    { name: 'Curazao',              flag: '🇨🇼', confederation: 'CONCACAF' },
-    { name: 'Estados Unidos',       flag: '🇺🇸', confederation: 'CONCACAF' },
-    { name: 'Haití',                flag: '🇭🇹', confederation: 'CONCACAF' },
-    { name: 'México',               flag: '🇲🇽', confederation: 'CONCACAF' },
-    { name: 'Panamá',               flag: '🇵🇦', confederation: 'CONCACAF' },
+    { name: 'Canadá',               flag: 'ca', confederation: 'CONCACAF' },
+    { name: 'Curazao',              flag: 'cw', confederation: 'CONCACAF' },
+    { name: 'Estados Unidos',       flag: 'us', confederation: 'CONCACAF' },
+    { name: 'Haití',                flag: 'ht', confederation: 'CONCACAF' },
+    { name: 'México',               flag: 'mx', confederation: 'CONCACAF' },
+    { name: 'Panamá',               flag: 'pa', confederation: 'CONCACAF' },
 
     // ── OFC (1) ───────────────────────────────
-    { name: 'Nueva Zelanda',        flag: '🇳🇿', confederation: 'OFC' },
+    { name: 'Nueva Zelanda',        flag: 'nz', confederation: 'OFC' },
 ];
 
 const CONF_ORDER = ['CONMEBOL', 'UEFA', 'AFC', 'CAF', 'CONCACAF', 'OFC'];
@@ -204,7 +204,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ value, flagValue, label, on
                     return (
                         <optgroup key={conf} label={conf}>
                             {teams.map(t => (
-                                <option key={t.name} value={t.name}>{t.flag} {t.name}</option>
+                                <option key={t.name} value={t.name}>{t.name}</option>
                             ))}
                         </optgroup>
                     );
@@ -212,7 +212,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ value, flagValue, label, on
             </select>
             <div className="flex items-center gap-2">
                 {flagValue && (
-                    <span className="text-3xl leading-none select-none" aria-hidden="true">{flagValue}</span>
+                    <FlagImage teamName={value} size="md" />
                 )}
                 <input
                     type="text"
