@@ -4739,7 +4739,7 @@ export const supabaseService = {
         const pW = pH > pA ? 'home' : pA > pH ? 'away' : 'draw';
         let pts = pointsWrong;
         if (pH === rH && pA === rA)                    pts = pointsExact;
-        else if (pW === rW && pW !== 'draw')           pts = pointsResult;
+        else if (pW === rW)                            pts = pointsResult;
         else if (pH === rH || pA === rA)               pts = pointsPartial;
         return { id: pred.id, pts, delta: pts - (pred.points_earned ?? 0), participantId: pred.participant_id };
       });
@@ -5309,7 +5309,7 @@ export const supabaseService = {
         let pts = pointsWrong;
         if (pH === rH && pA === rA) {
           pts = pointsExact;
-        } else if (pW === rW && pW !== 'draw') {
+        } else if (pW === rW) {
           pts = pointsResult;
         } else if (pH === rH || pA === rA) {
           pts = pointsPartial;
