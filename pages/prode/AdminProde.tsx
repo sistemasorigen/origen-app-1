@@ -9,8 +9,9 @@ import {
 import {
     Trophy, Check, Loader2, Plus, Edit2, Trash2,
     ChevronLeft, X, CheckCircle, Medal, Search, RefreshCw,
-    Link2, AlertTriangle
+    ChevronRight
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../services/supabaseClient';
 import { hasRole } from '../../services/authUtils';
 
@@ -235,6 +236,30 @@ const AdminProdeContent: React.FC = () => {
 
     type ProdeAdminSection = 'config' | 'matches' | 'results' | 'ranking' | 'predictions';
     const [prodeSection, setProdeSection] = useState<ProdeAdminSection>('config');
+    const [prodeSectionDirection, setProdeSectionDirection] = useState(1);
+
+    const ADMIN_SECTIONS: { id: ProdeAdminSection; label: string }[] = [
+        { id: 'config',      label: 'Configuración' },
+        { id: 'matches',     label: 'Partidos' },
+        { id: 'results',     label: 'Resultados' },
+        { id: 'ranking',     label: 'Ranking' },
+        { id: 'predictions', label: 'Predicciones' },
+    ];
+
+    const currentSectionIndex = ADMIN_SECTIONS.findIndex(s => s.id === prodeSection);
+    const currentSectionLabel = ADMIN_SECTIONS[currentSectionIndex]?.label || '';
+
+    const nextSection = () => {
+        setProdeSectionDirection(1);
+        const nextIdx = (currentSectionIndex + 1) % ADMIN_SECTIONS.length;
+        setProdeSection(ADMIN_SECTIONS[nextIdx].id);
+    };
+
+    const prevSection = () => {
+        setProdeSectionDirection(-1);
+        const prevIdx = (currentSectionIndex - 1 + ADMIN_SECTIONS.length) % ADMIN_SECTIONS.length;
+        setProdeSection(ADMIN_SECTIONS[prevIdx].id);
+    };
 
     useEffect(() => {
         const TAB_MAP: Record<string, ProdeAdminSection> = {
@@ -396,11 +421,10 @@ const AdminProdeContent: React.FC = () => {
             if (saved) {
                 const updated = await supabaseService.getProdeMatches();
                 setProdeMatches(updated);
-                const hadExternalId = !!editingMatch?.externalMatchId;
                 setEditingMatch(null);
-                if (hadExternalId) {
-                    handleManualSync();
-                }
+                // El sync matchea por equipos, así que intentamos traer el
+                // resultado oficial al guardar (si el partido ya terminó).
+                handleManualSync();
             }
         } finally {
             setSavingMatch(false);
@@ -674,33 +698,46 @@ const AdminProdeContent: React.FC = () => {
         <div className="max-w-[1200px] mx-auto px-4 md:px-8 py-6 md:py-10">
 
             {/* Header */}
-            <div className="flex items-center gap-3 mb-8">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="p-2 border-2 border-black hover:bg-black hover:text-white transition-all"
-                >
-                    <ChevronLeft className="w-4 h-4" />
-                </button>
-                <div className="flex items-center gap-3">
-                    <Trophy className="w-6 h-6 text-amber-500" />
-                    <div>
-                        <h1 className="text-lg font-black uppercase tracking-tight">Administración Prode</h1>
-                        <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Mundial 2026</p>
-                    </div>
-                </div>
+            <div className="flex items-center justify-center mb-8 text-center">
+                <h1 className="text-xl font-black uppercase tracking-tight text-black">Administración Prode</h1>
             </div>
 
             <div className="space-y-6 animate-fadeIn">
 
-                {/* Sub-navegación */}
-                <div className="flex gap-4 border-b border-slate-200 overflow-x-auto scrollbar-hide pb-1">
-                    {([
-                        { id: 'config',      label: 'Configuracion' },
-                        { id: 'matches',     label: 'Partidos' },
-                        { id: 'results',     label: 'Resultados' },
-                        { id: 'ranking',     label: 'Ranking' },
-                        { id: 'predictions', label: 'Predicciones' },
-                    ] as { id: ProdeAdminSection; label: string }[]).map(s => (
+                {/* ── Sub-navegación ── */}
+                {/* Mobile: Selector animado */}
+                <div className="md:hidden flex flex-col items-center justify-center mb-6">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Sección</span>
+                    <div className="flex items-center justify-between w-full max-w-sm mx-auto">
+                        <motion.button 
+                            whileHover={{ scale: 1.1, x: -3 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={prevSection}
+                            className="w-10 h-10 bg-white/90 backdrop-blur rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black hover:border-slate-300 transition-colors shrink-0"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </motion.button>
+
+                        <div className="flex-1 overflow-hidden relative h-10 flex items-center justify-center">
+                            <h2 className="text-xl font-black uppercase tracking-tight text-black absolute text-center whitespace-nowrap">
+                                {currentSectionLabel}
+                            </h2>
+                        </div>
+
+                        <motion.button 
+                            whileHover={{ scale: 1.1, x: 3 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={nextSection}
+                            className="w-10 h-10 bg-white/90 backdrop-blur rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-slate-100 flex items-center justify-center text-slate-400 hover:text-black hover:border-slate-300 transition-colors shrink-0"
+                        >
+                            <ChevronRight className="w-5 h-5" />
+                        </motion.button>
+                    </div>
+                </div>
+
+                {/* Desktop: Pestañas clásicas */}
+                <div className="hidden md:flex gap-4 border-b border-slate-200 overflow-x-auto scrollbar-hide pb-1">
+                    {ADMIN_SECTIONS.map(s => (
                         <button
                             key={s.id}
                             onClick={() => setProdeSection(s.id)}
@@ -945,27 +982,6 @@ const AdminProdeContent: React.FC = () => {
                                         <input type="number" min={1} value={editingMatch.matchNumber || ''} onChange={e => setEditingMatch(m => ({ ...m!, matchNumber: parseInt(e.target.value) || 1 }))} className="w-full h-9 px-2 border-2 border-black font-bold text-sm focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" />
                                     </div>
                                     <div>
-                                        <label className="text-[9px] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
-                                            <Link2 className={`w-3 h-3 ${editingMatch.externalMatchId ? 'text-emerald-500' : 'text-neutral-400'}`} />
-                                            <span className={editingMatch.externalMatchId ? 'text-emerald-600' : 'text-neutral-400'}>ID API Auto-Sync</span>
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            placeholder="ID de worldcup26.ir"
-                                            value={editingMatch.externalMatchId || ''}
-                                            onChange={e => setEditingMatch(m => ({
-                                                ...m!,
-                                                externalMatchId:
-                                                    parseInt(e.target.value) || undefined
-                                            }))}
-                                            className={`w-full h-9 px-2 border-2 font-bold text-sm focus:outline-none ${editingMatch.externalMatchId ? 'border-emerald-500 focus:shadow-[2px_2px_0px_0px_rgba(16,185,129,1)]' : 'border-black focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'}`}
-                                        />
-                                        <p className={`text-[9px] mt-0.5 font-semibold ${editingMatch.externalMatchId ? 'text-emerald-600' : 'text-neutral-400'}`}>
-                                            {editingMatch.externalMatchId ? 'Vinculado · al guardar se hará sync automático' : 'Sin ID = resultado solo manual'}
-                                        </p>
-                                    </div>
-                                    <div>
                                         <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">Fase</label>
                                         <select value={editingMatch.round || 'Fase de grupos'} onChange={e => setEditingMatch(m => ({ ...m!, round: e.target.value as ProdeRound }))} className="w-full h-9 px-2 border-2 border-black font-bold text-xs bg-white focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                                             {['Fase de grupos', 'Octavos de final', 'Cuartos de final', 'Semifinal', 'Tercer puesto', 'Final'].map(r => <option key={r} value={r}>{r}</option>)}
@@ -1132,15 +1148,6 @@ const AdminProdeContent: React.FC = () => {
                                     <div className="flex flex-col items-center md:items-start w-full md:w-auto">
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="text-[10px] font-black uppercase text-neutral-500">Partido Nº {match.matchNumber}</span>
-                                            {match.externalMatchId ? (
-                                                <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-1.5 py-0.5">
-                                                    <Link2 className="w-2.5 h-2.5" /> API #{match.externalMatchId}
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1 text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-300 px-1.5 py-0.5">
-                                                    <AlertTriangle className="w-2.5 h-2.5" /> Sin ID API
-                                                </span>
-                                            )}
                                         </div>
                                         <div className="flex items-center gap-4 text-sm font-black uppercase">
                                             <div className="flex items-center gap-2"><FlagImage teamName={match.homeTeam} emoji={match.homeFlag} size="md" /> {match.homeTeam}</div>
