@@ -140,6 +140,9 @@ const ProdeResultados: React.FC = () => {
 
     const phaseFilteredMatches = publishedMatches.filter(m => (m.round || 'Otros').toUpperCase() === currentPhase);
 
+    // Todos los partidos (incluyendo no terminados) de la fase actual, para detectar grupos
+    const allPhaseMatches = matches.filter(m => (m.round || 'Otros').toUpperCase() === currentPhase);
+
     const matchesByGroup = phaseFilteredMatches.reduce((acc, match) => {
         const group = match.groupName || match.round || 'Otros';
         if (!acc[group]) acc[group] = [];
@@ -147,7 +150,14 @@ const ProdeResultados: React.FC = () => {
         return acc;
     }, {} as Record<string, typeof publishedMatches>);
 
-    const groupKeys = Object.keys(matchesByGroup).sort((a, b) => a.localeCompare(b));
+    // Grupos que existen en todos los partidos de la fase, ordenados alfabéticamente
+    const allGroupKeys = Array.from(
+        new Set(allPhaseMatches.map(m => m.groupName || m.round || 'Otros'))
+    ).sort((a, b) => a.localeCompare(b));
+
+    // Si es fase de grupos usamos todos los grupos; de lo contrario solo los que tienen resultados
+    const groupKeys = currentPhase === 'FASE DE GRUPOS' ? allGroupKeys : Object.keys(matchesByGroup).sort((a, b) => a.localeCompare(b));
+
     const totalPages = Math.ceil(groupKeys.length / itemsPerPage);
 
     useEffect(() => {
@@ -293,7 +303,8 @@ const ProdeResultados: React.FC = () => {
                                                         </div>
                                                     </div>
                                                     <div className="space-y-4">
-                                                        {matchesByGroup[group].map(match => {
+                                                        {(matchesByGroup[group] && matchesByGroup[group].length > 0) ? (
+                                                            matchesByGroup[group].map(match => {
                                                 const pred = participant ? predictions.find(p => p.matchId === match.id) : null;
                                                 const gainedPoints = (pred?.pointsEarned ?? 0) > 0;
                                                 const matchTime = match.matchDate ? new Date(match.matchDate).getTime() : 0;
@@ -353,7 +364,13 @@ const ProdeResultados: React.FC = () => {
                                                         )}
                                                     </div>
                                                 );
-                                            })}
+                                            })
+                                                        ) : (
+                                                            <div className="bg-white border border-dashed border-slate-200 rounded-[2rem] px-5 py-8 flex flex-col items-center justify-center gap-2">
+                                                                <Loader2 className="w-5 h-5 text-slate-300" />
+                                                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Aún sin resultados</p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}

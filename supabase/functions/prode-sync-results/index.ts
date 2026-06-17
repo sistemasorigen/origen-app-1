@@ -88,6 +88,38 @@ const teamIso = (name: string, flag?: string): string | null => {
     return ISO_BY_NAME[norm(name)] || null;
 };
 
+// fetch con reintentos: la API worldcup26.ir es intermitente (~1 de cada 3
+// llamadas falla con "connection closed"). Reintenta con timeout por intento
+// para que un solo disparo del cron se recupere solo, sin esperar 5 minutos.
+const fetchWithRetry = async (
+    url: string,
+    init: RequestInit = {},
+    attempts = 4,
+    perAttemptMs = 15000
+): Promise<Response> => {
+    let lastErr: unknown;
+    let lastRes: Response | undefined;
+    for (let i = 1; i <= attempts; i++) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), perAttemptMs);
+        try {
+            const res = await fetch(url, { ...init, signal: ctrl.signal });
+            clearTimeout(timer);
+            // Reintentar ante 5xx o 429 (la API es intermitente); devolver el resto.
+            if (res.ok || (res.status < 500 && res.status !== 429)) return res;
+            lastRes = res;
+            console.warn(`[ProdeSync] fetch intento ${i}/${attempts} HTTP ${res.status} para ${url}`);
+        } catch (err) {
+            clearTimeout(timer);
+            lastErr = err;
+            console.warn(`[ProdeSync] fetch intento ${i}/${attempts} falló para ${url}: ${err instanceof Error ? err.message : err}`);
+        }
+        if (i < attempts) await new Promise(r => setTimeout(r, 1000 * i));
+    }
+    if (lastRes) return lastRes;
+    throw lastErr;
+};
+
 serve(async (req) => {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
@@ -100,8 +132,8 @@ serve(async (req) => {
     let errorMsg: string | null = null;
 
     try {
-        // 1. Login a la API externa
-        const loginRes = await fetch(`${API_BASE}/auth/authenticate`, {
+        // 1. Login a la API externa (con reintentos)
+        const loginRes = await fetchWithRetry(`${API_BASE}/auth/authenticate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -117,8 +149,8 @@ serve(async (req) => {
         const { token } = await loginRes.json();
         if (!token) throw new Error('No JWT token from API');
 
-        // 2. Traer todos los partidos
-        const gamesRes = await fetch(`${API_BASE}/get/games`, {
+        // 2. Traer todos los partidos (con reintentos)
+        const gamesRes = await fetchWithRetry(`${API_BASE}/get/games`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
