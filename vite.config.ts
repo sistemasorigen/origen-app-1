@@ -1,3 +1,4 @@
+import os from 'os';
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -21,6 +22,8 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       }
-    }
+    },
+    // Move dep optimization cache outside OneDrive to avoid file-lock read errors
+    cacheDir: path.join(os.tmpdir(), 'vite-origen-app'),
   };
 });

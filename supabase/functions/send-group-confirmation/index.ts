@@ -44,6 +44,38 @@ interface GroupDetails {
   start_date: string;
 }
 
+function calcularPrimerReunion(
+    meetingDay: string,
+    startDateStr: string
+): Date {
+    const DAY_MAP: Record<string, number> = {
+        'Domingo':    0,
+        'Lunes':      1,
+        'Martes':     2,
+        'Miércoles':  3,
+        'Jueves':     4,
+        'Viernes':    5,
+        'Sábado':     6,
+    };
+
+    const targetDow = DAY_MAP[meetingDay];
+    if (targetDow === undefined) {
+        return new Date(startDateStr);
+    }
+
+    const [year, month, day] = startDateStr
+        .split('T')[0]
+        .split('-')
+        .map(Number);
+    const start = new Date(year, month - 1, day);
+
+    const currentDow = start.getDay();
+    let diff = targetDow - currentDow;
+    if (diff < 0) diff += 7;
+    start.setDate(start.getDate() + diff);
+    return start;
+}
+
 // Neo-Brutalist HTML Email Template
 function buildEmailHtml(
   userName: string,
@@ -111,7 +143,21 @@ function buildEmailHtml(
                           ARRANCA
                         </td>
                         <td style="font-size: 16px; font-weight: 600; color: #000000;">
-                          ${group.start_date ? new Date(group.start_date).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Por confirmar'}
+                          ${group.start_date && group.meeting_day
+            ? calcularPrimerReunion(group.meeting_day, group.start_date)
+                .toLocaleDateString('es-AR', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long'
+                })
+            : group.start_date
+                ? new Date(group.start_date).toLocaleDateString('es-AR', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long'
+                  })
+                : 'Por confirmar'
+          }
                         </td>
                       </tr>
                     </table>

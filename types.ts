@@ -28,6 +28,8 @@ export enum UserRole {
     COORDINATOR = 'COORDINATOR',
     INFLUOS = 'INFLUOS',   // Módulo de gestión de menores
     PRODE = 'PRODE',       // Administración del Prode Mundial
+    EVENTOS = 'EVENTOS',   // Gestión / acceso a Eventos
+    ENCARGADO_EVENTOS = 'ENCARGADO_EVENTOS', // Gestión de eventos
 }
 
 export enum CoordinatorVariant {
@@ -291,6 +293,8 @@ export interface AppEvent {
     endTime?: string;
     type?: EventType;
     color?: string;
+    imageUrl?: string;  // URL de imagen de portada
+    location?: string;  // Ubicación del evento
 }
 
 export interface Announcement {
@@ -799,6 +803,7 @@ export interface AppConfig {
     verses?: BiblicalVerse[]; // New: Array of verses
     footerLinks?: FooterLinks; // New Footer Links
     prodeConfig?: ProdeConfig;
+    dpadreConfig?: DpadreConfig; // Evento Día del Padre
 }
 
 // --- WELCOME SYSTEM TYPES ---
@@ -913,6 +918,7 @@ export interface InfluosAttendee {
 
 export type ProdeRound =
     | 'Fase de grupos'
+    | 'Dieciseisavo de final'
     | 'Octavos de final'
     | 'Cuartos de final'
     | 'Semifinal'
@@ -974,6 +980,16 @@ export interface ProdeConfig {
     pointsWrong: number;          // Default: 0
 }
 
+// Config del evento Día del Padre (guardada en app_config)
+export interface DpadreConfig {
+    isActive: boolean; // Habilitar/deshabilitar el evento (visible en el menú)
+}
+
+// Defaults del evento Día del Padre
+export const DEFAULT_DPADRE_CONFIG: DpadreConfig = {
+    isActive: true,
+};
+
 // Defaults del prode
 export const DEFAULT_PRODE_CONFIG: ProdeConfig = {
     bannerTitle: '¡Prode Mundial 2026!',
@@ -1001,3 +1017,140 @@ export type ProdeGenderCheckResult =
     | 'not_found'       // No se encontró en users
     | 'not_male'        // Género no es Masculino
     | 'already_exists'; // Ya tiene un participante registrado
+
+// ════════════════════════════════════════
+// EVENTO: DÍA DEL PADRE
+// ════════════════════════════════════════
+
+export interface DpadreFamilia {
+    id: string;
+    padreNombre:   string;
+    padreApellido: string;
+    totalPoints:   number;
+    createdAt:     string;
+    hijos?:        DpadreHijo[];
+}
+
+export interface DpadreHijo {
+    id:        string;
+    familiaId: string;
+    nombre:    string;
+    apellido:  string;
+    createdAt: string;
+}
+
+export interface DpadrePuntosLog {
+    id:         string;
+    familiaId:  string;
+    puntos:     number;
+    zona:       'trivia' | 'futbol';
+    operadorId: string | null;
+    createdAt:  string;
+}
+
+// ════════════════════════════════════════
+// TRIVIA ORIGEN
+// ════════════════════════════════════════
+
+export type TriviaColor =
+    | 'rojo' | 'azul' | 'amarillo'
+    | 'verde' | 'naranja' | 'violeta';
+
+export type TriviaEstadoJuego =
+    | 'esperando'
+    | 'en_curso'
+    | 'entre_preguntas'
+    | 'finalizando'
+    | 'finalizado';
+
+export type TriviaEstadoPregunta =
+    | 'esperando'
+    | 'abierta'
+    | 'cerrada'
+    | 'revelada';
+
+export interface TriviaJuego {
+    id: string;
+    titulo: string;
+    pin: string;
+    estado: TriviaEstadoJuego;
+    preguntaActualIdx: number; // -1 = no iniciado
+    createdBy: string | null;
+    createdAt: string;
+    // Enriquecidos
+    preguntas?: TriviaPreguntas[];
+    totalJugadores?: number;
+}
+
+export interface TriviaPreguntas {
+    id: string;
+    juegoId: string;
+    orden: number;
+    texto: string;
+    imagenUrl?: string;
+    tiempoLimite: number;
+    esDoble: boolean;
+    createdAt: string;
+    // Enriquecido
+    opciones?: TriviaOpcion[];
+}
+
+export interface TriviaOpcion {
+    id: string;
+    preguntaId: string;
+    texto: string;
+    esCorrecta: boolean;
+    color: TriviaColor;
+    orden: number;
+}
+
+export interface TriviaJugador {
+    id: string;
+    juegoId: string;
+    nickname: string;
+    avatarEmoji: string;
+    puntajeTotal: number;
+    rachaActual: number;
+    maxRacha: number;
+    createdAt: string;
+}
+
+export interface TriviaRespuesta {
+    id: string;
+    jugadorId: string;
+    preguntaId: string;
+    opcionId: string;
+    tiempoRespuestaMs: number;
+    puntosGanados: number;
+    esCorrecta: boolean;
+    createdAt: string;
+}
+
+export interface TriviaEstadoPreguntaRow {
+    id: string;
+    juegoId: string;
+    preguntaId: string;
+    estado: TriviaEstadoPregunta;
+    totalRespuestas: number;
+    updatedAt: string;
+}
+
+// Mapa de colores para el UI
+export const TRIVIA_COLORES: Record<TriviaColor, string> = {
+    rojo:     '#FF3B5C',
+    azul:     '#4B8BFF',
+    amarillo: '#FFD700',
+    verde:    '#46D483',
+    naranja:  '#FF8C00',
+    violeta:  '#9B59B6',
+};
+
+// Íconos de forma para cada color (Kahoot-style)
+export const TRIVIA_ICONOS: Record<TriviaColor, string> = {
+    rojo:     '▲',
+    azul:     '◆',
+    amarillo: '●',
+    verde:    '■',
+    naranja:  '★',
+    violeta:  '♥',
+};

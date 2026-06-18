@@ -609,7 +609,7 @@ const AdminProdeContent: React.FC = () => {
                                     <div>
                                         <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">Fase</label>
                                         <select value={editingMatch.round || 'Fase de grupos'} onChange={e => setEditingMatch(m => ({ ...m!, round: e.target.value as ProdeRound }))} className="w-full h-9 px-2 border-2 border-black font-bold text-xs bg-white focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                                            {['Fase de grupos', 'Octavos de final', 'Cuartos de final', 'Semifinal', 'Tercer puesto', 'Final'].map(r => <option key={r} value={r}>{r}</option>)}
+                                            {['Fase de grupos', 'Dieciseisavo de final', 'Octavos de final', 'Cuartos de final', 'Semifinal', 'Tercer puesto', 'Final'].map(r => <option key={r} value={r}>{r}</option>)}
                                         </select>
                                     </div>
                                     <div>

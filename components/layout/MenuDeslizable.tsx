@@ -4,12 +4,10 @@ import {
     X,
     Menu,
     Home,
-    Users,
     BarChart,
     Info,
     Book,
     Settings,
-    FileText,
     Heart,
     HeartHandshake,
     ChevronDown,
@@ -20,10 +18,12 @@ import {
     Moon,
     UserCircle,
     Star,
-    Trophy
+    Trophy,
+    CalendarDays
 } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
+import { supabaseService } from '../../services/supabaseService';
 
 interface DrawerMenuProps {
     isOpen: boolean;
@@ -91,6 +91,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     const location = useLocation();
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
     const [shouldRender, setShouldRender] = useState(false);
+    // Estado del evento Día del Padre (visible/oculto en el menú). Activo por defecto.
+    const [dpadreActivo, setDpadreActivo] = useState(true);
+
+    useEffect(() => {
+        supabaseService.getAppConfig()
+            .then(cfg => {
+                if (cfg?.dpadreConfig) setDpadreActivo(cfg.dpadreConfig.isActive);
+            })
+            .catch(() => { /* fallback: queda activo */ });
+    }, []);
 
     // Handle animation mounting
     useEffect(() => {
@@ -274,6 +284,61 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             ]
         },
         {
+            label: 'Eventos',
+            icon: CalendarDays,
+            path: '/eventos',
+            requiresAuth: true,
+            roles: [],
+            subItems: [
+                // ── ADMINISTRACIÓN ────────────────
+                {
+                    label: 'Administración',
+                    separator: true,
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_EVENTOS,
+                    ]
+                },
+                {
+                    label: 'Panel de eventos',
+                    path: '/panel-eventos',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_EVENTOS,
+                    ]
+                },
+                {
+                    label: 'Trivia Origen',
+                    path: '/trivia/admin',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_EVENTOS,
+                    ]
+                },
+                // ── DÍA DEL PADRE (solo si el evento está activo) ──
+                ...(dpadreActivo ? [
+                    {
+                        label: 'Día del Padre',
+                        separator: true,
+                        roles: []
+                    },
+                    {
+                        label: 'Ranking',
+                        path: '/eventos/ranking-diadelpadre',
+                        roles: []
+                    },
+                    {
+                        label: 'Puntuación',
+                        path: '/eventos/puntuacion',
+                        roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.EVENTOS, UserRole.ENCARGADO_EVENTOS]
+                    },
+                ] : []),
+            ]
+        },
+        {
             label: 'Punto de información',
             icon: Info,
             path: '/punto-de-informacion',
@@ -314,6 +379,13 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     ].filter(item => {
         // Excluir Prode explícitamente para mujeres
         if (item.label === 'Prode Mundial' && currentUser?.gender === 'Femenino') return false;
+        // Día del Padre desactivado: ocultar "Eventos" salvo a administradores del evento
+        if (item.label === 'Eventos' && !dpadreActivo) {
+            const isEventAdmin = !!currentUser && hasRole(currentUser, [
+                UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS
+            ]);
+            if (!isEventAdmin) return false;
+        }
         return true;
     });
 
@@ -352,8 +424,10 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         (item.path !== '/' && item.path && location.pathname.startsWith(item.path));
 
                     const visibleSubItems = item.subItems?.filter(sub => {
-                        if (!currentUser) return false;
+                        // Sin roles: público (separadores sin roles incluidos)
                         if (!sub.roles || sub.roles.length === 0) return true;
+                        // Con roles: requiere login y el rol (aplica a items y separadores)
+                        if (!currentUser) return false;
                         return hasRole(currentUser, sub.roles);
                     }) || [];
 

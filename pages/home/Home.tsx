@@ -82,6 +82,7 @@ const getModuleIcon = (id: string, defaultIcon: string, isConstruction?: boolean
         case 'pastoral': return <HeartHandshake className={iconClass} />;
         case 'influos': return <Star className={iconClass} />;
         case 'prode': return <Trophy className={iconClass} />;
+        case 'eventos': return <CalendarCoord className={iconClass} />;
         default: return <span className="text-3xl">{defaultIcon}</span>;
     }
 };
