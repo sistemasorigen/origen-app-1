@@ -20,7 +20,7 @@ de escribir una sola línea de código. Su cumplimiento no es opcional.
 | Física | Matter.js | Solo para efectos decorativos en Home |
 | Audio | Context API propio | `contexts/AudioContext.tsx` |
 | Estado global | React Context API | Sin Redux ni Zustand |
-| Routing | React Router DOM 7 | HashRouter (`/#/ruta`) |
+| Routing | React Router DOM 7 | BrowserRouter (`/ruta`) |
 | Gráficos | Recharts 2 | Solo para dashboards de datos reales |
 
 **Dependencias instaladas — NO instalar alternativas:**
@@ -154,6 +154,14 @@ Redirigen a `/auth` con `state.from` si no hay sesión activa.
 | `/audiencia-servicios/new` | Formulario Pastoral | SUPER_ADMIN, PASTOR, ADMIN_CUIDADO_PASTORAL |
 | `/notificaciones` | Notificaciones | Todos (autenticados) |
 | `/perfil` | Perfil Personal | Todos (autenticados) |
+<<<<<<< HEAD
+=======
+| `/prode` | Prode Mundial | Solo gender='Masculino' |
+| `/prode/ranking` | Ranking Prode | Solo gender='Masculino' |
+| `/prode/resultados` | Resultados + Predicciones | Solo gender='Masculino' |
+| `/prode/administracion` | Admin Prode | SUPER_ADMIN, PASTOR, PRODE |
+| `/gcx/calendario` | Calendario GCX | Autenticados con grupos |
+>>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
 
 ---
 
@@ -171,6 +179,7 @@ enum UserRole {
     ADMIN_CUIDADO_PASTORAL,
     INFLUOS,            // Módulo gestión de menores
     REPORTES,
+    PRODE,              // Administración del Prode Mundial
     USUARIO, VIEWER, VOLUNTEER  // Roles básicos / legacy
 }
 ```
@@ -267,6 +276,30 @@ import ImageUpload from '../../components/media/SubidaImagen';
 import AvatarUpload from '../../components/media/SubidaAvatar';
 ```
 
+<<<<<<< HEAD
+=======
+### 7.7 MenuDeslizable — patrones extendidos
+
+La interfaz `SubMenuItem` soporta dos campos nuevos:
+
+```typescript
+interface SubMenuItem {
+    label: string;
+    path?: string;          // opcional: separadores no tienen path
+    roles?: UserRole[];
+    separator?: boolean;    // si true: etiqueta gris no clickeable
+}
+```
+
+Los **separadores** se usan para organizar secciones
+dentro de un grupo de sub-items (ej: GCX tiene
+separadores "Coordinación" y "Administración").
+
+La interfaz `MenuItem` soporta `requiresAuth?: boolean`
+para ocultar ítems a usuarios sin sesión aunque
+`roles: []` los haga visibles a todos los autenticados.
+
+>>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
 ### 7.6 Páginas con modo público
 `Home (/)` y `Grupos (/gcx)` son accesibles sin login. `currentUser` puede
 ser `null` en estos componentes. Reglas:
@@ -386,12 +419,15 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `send-whatsapp` | Envío de mensajes por WhatsApp Business API |
 | `generate-image` | Generación de imágenes con Google Imagen (Gemini) |
 | `admin-manage-user` | Gestión administrativa de usuarios vía service role |
+| `prode-sync-results` | Sincronización automática de resultados del Mundial con worldcup26.ir. Cron cada 5 min. Calcula puntos automáticamente. |
 
 **Variables de entorno requeridas en las Edge Functions:**
 - `RESEND_API_KEY` — Proveedor de emails
 - `SUPABASE_URL` — URL del proyecto
 - `ORIGEN_SERVICE_ROLE_KEY` — Service role para operaciones admin
 - `GOOGLE_IMAGEN_KEY` — API Key de Google para generación de imágenes
+- `WC2026_API_EMAIL` — Credencial API worldcup26.ir
+- `WC2026_API_PASSWORD` — Credencial API worldcup26.ir
 
 **Nunca hardcodear estas keys. Siempre usar `Deno.env.get('...')`.**
 
@@ -415,6 +451,11 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `announcements` | Info Point | Anuncios del tablero |
 | `notifications` | Global | Notificaciones in-app |
 | `audit_logs` | Admin | Registro de auditoría |
+| `group_transfer_requests` | GCX | Solicitudes de transferencia de titularidad de grupos entre anfitriones. Estados: pending/accepted/rejected/cancelled |
+| `prode_matches` | Prode | Partidos del Mundial 2026. Campos clave: external_match_id, is_open, is_finished, home/away_score_real |
+| `prode_participants` | Prode | Participantes del prode (con o sin cuenta). Acumula total_points |
+| `prode_predictions` | Prode | Predicciones por participante por partido. points_earned null hasta que haya resultado |
+| `prode_sync_log` | Prode | Auditoría de sincronizaciones automáticas con API externa |
 
 **Todas las tablas tienen RLS habilitado.** Al crear tablas nuevas siempre
 agregar policies correspondientes. Ver Sección 17 para tablas con acceso `anon`.
@@ -560,10 +601,134 @@ currentUser ? hasRole(currentUser, [...]) : false  // ✅
 
 ---
 
+<<<<<<< HEAD
 *Última actualización: Mayo 2026 — Versión 3.0*
 *Cambios v3.0: rutas corregidas al naming real del repo (zona 1/2/3),
  arquitectura de acceso público documentada (sección 17),
  patrón público agregado (sección 7.6), tablas actualizadas (group_categories,
  group_tags, group_attendance, columnas de welcome_visitors e influos_attendees),
  color GCX corregido a `#28a946`, checklist ampliado con regla de optional chaining*
+=======
+---
+
+## 18. MÓDULO PRODE MUNDIAL 2026
+
+### Acceso
+Ruta raíz `/prode` y sub-rutas. Protegido para
+usuarios con `gender === 'Masculino'`. La restricción
+de género se aplica internamente en cada página
+(no en App.tsx). Usuarios Femenino o sin género
+ven una pantalla de acceso restringido.
+
+### Estructura de páginas
+| Ruta | Componente | Descripción |
+|---|---|---|
+| `/prode` | `pages/prode/Prode.tsx` | Landing con banner, CTAs y formulario de predicciones |
+| `/prode/ranking` | `pages/prode/ProdeRanking.tsx` | Ranking global con medallas top 3 |
+| `/prode/resultados` | `pages/prode/ProdeResultados.tsx` | Resultados publicados + historial de predicciones del usuario |
+| `/prode/administracion` | `pages/prode/AdminProde.tsx` | Panel admin: Config, Partidos, Resultados, Ranking, Predicciones |
+
+### Sistema de puntuación (configurable desde admin)
+| Resultado | Puntos default |
+|---|---|
+| Marcador exacto | 6 |
+| Ganador o empate acertado | 3 |
+| Goles de alguno acertados | 1 |
+| Sin acierto | 0 |
+
+Los valores se guardan en `app_config.prodeConfig` y
+se leen en runtime — NO están hardcodeados.
+
+### Selector de banderas
+Los equipos usan códigos ISO alpha-2 (ej: `'ar'`, `'es'`)
+renderizados como `<img src="https://flagcdn.com/[iso].svg">`.
+NO usar emojis de bandera — no renderizan en todos
+los dispositivos. Escocia: `gb-sct`, Inglaterra: `gb-eng`.
+La constante `WORLD_CUP_2026_TEAMS` en `AdminProde.tsx`
+contiene los 48 equipos con sus códigos ISO.
+
+### Sync automático de resultados
+Edge Function `prode-sync-results` conecta con
+`https://worldcup26.ir`. La API devuelve:
+- `finished` como STRING `"TRUE"`/`"FALSE"` (no boolean)
+- `time_elapsed` como `"finished"`/`"notstarted"`
+- `home_score`/`away_score` como STRINGS
+
+**CRÍTICO:** Siempre verificar `finished === 'TRUE'`
+Y `time_elapsed === 'finished'` antes de procesar.
+Nunca comparar con booleano `true`.
+
+### Cálculo de puntos
+La función `setProdeMatchResult` en supabaseService
+usa sistema de **delta** para evitar duplicación:
+calcula `(puntos nuevos) - (puntos anteriores)` y
+suma/resta del total del participante. Permite
+editar resultados sin corromper totales.
+
+---
+
+## 19. FEATURES GCX — EXTENSIONES 2026
+
+### Transferencia de grupos
+Un anfitrión puede transferir la titularidad de su
+grupo a otro usuario con rol ANFITRION.
+
+**Flujo:** Modal 3 pasos (buscar → datos → confirmar
+escribiendo "Transferir") → crea registro en
+`group_transfer_requests` con status=pending →
+el destinatario ve el grupo en gris en su panel →
+acepta o rechaza.
+
+**Al aceptar:** `groups.host_id` cambia al nuevo
+anfitrión, el original pierde el grupo de su lista.
+
+Componente: `components/GCX/ModalTransferirGrupo.tsx`
+
+### Re-apertura de grupos por temporada
+El reopen ya NO sobreescribe el grupo original.
+Crea un NUEVO grupo con nuevo UUID y el campo
+`parent_group_id` apuntando al original. El original
+pasa a status `finished` conservando su historial.
+
+**Función:** `supabaseService.cloneGroupForNewSeason(
+originalGroupId, newStartDate, newEndDate, isAdminView)`
+
+### Configuración de temporadas
+Las 3 temporadas (S1/S2/S3) son configurables desde
+el panel admin de Grupos (tab CONFIG → sección
+"Configuración de Temporadas"). Se guardan en
+`app_config.groupsConfig.seasonSettings`.
+
+Estructura en `types.ts`: `SeasonSettings`, `SeasonConfig`,
+`DEFAULT_SEASON_SETTINGS`.
+
+### Calendario GCX
+Ruta: `/gcx/calendario` — Componente: `pages/gcx/CalendarioGCX.tsx`
+
+Muestra calendarios semanales separados por rol:
+- "Calendario de Anfitrión" (grupos donde es host/co-host)
+- "Calendario de Participante" (grupos donde está inscripto)
+
+Cada grupo aparece en el día de la semana según
+`meeting_day` del grupo, durante toda la temporada
+(`startDate` → `endDate`).
+
+Permite agregar grupos a Google Calendar (URL con
+RRULE recurrente) o descargar `.ics` para Apple/Outlook.
+El modal de selección permite elegir qué grupos agregar.
+
+**Acceso mobile:** botón "Mis grupos anotados"
+debajo del filtro de etiquetas en `/gcx`.
+
+---
+
+*Última actualización: Junio 2026 — Versión 4.0*
+*Cambios v4.0: Módulo Prode Mundial 2026 completo (sección 18), features GCX 2026 (sección 19),
+ BrowserRouter confirmado, rol PRODE agregado,
+ tablas group_transfer_requests/prode_matches/prode_participants/prode_predictions/prode_sync_log,
+ Edge Function prode-sync-results, calendario GCX,
+ re-apertura por temporada con parent_group_id,
+ configuración de temporadas, transferencia de grupos,
+ patrones SubMenuItem extendidos (sección 7.7)*
+>>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
 *Repositorio: github.com/sistemasorigen/origen-app-1*

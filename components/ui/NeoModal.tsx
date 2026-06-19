@@ -17,10 +17,7 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
     // Media Query for Responsive Animations
     const [isMobile, setIsMobile] = useState(false);
 
-    // Drag solo se activa desde el handle, no desde
-    // el contenido. Esto evita que compita con scroll.
-    const [isDraggingFromHandle, setIsDraggingFromHandle] =
-        useState(false);
+    const [isDraggingFromHandle, setIsDraggingFromHandle] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -117,25 +114,6 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                             dragMomentum={false}
                             onDragEnd={handleDragEnd}
                         >
-                            {/* MOBILE DRAG HANDLE */}
-                            {/* El drag solo se activa desde acá —
-                                evita competir con el scroll interno */}
-                            {isMobile && (
-                                <div
-                                    className="w-full flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing select-none"
-                                    onPointerDown={() =>
-                                        setIsDraggingFromHandle(true)
-                                    }
-                                    onPointerUp={() =>
-                                        setIsDraggingFromHandle(false)
-                                    }
-                                    onPointerCancel={() =>
-                                        setIsDraggingFromHandle(false)
-                                    }
-                                >
-                                    <div className="w-16 h-1.5 bg-neutral-300 rounded-full" />
-                                </div>
-                            )}
 
                             {/* HEADER */}
                             <div className={`flex items-start justify-between shrink-0 ${isMobile ? 'px-6 pt-2 pb-2' : 'px-6 md:px-8 lg:px-10 pt-6 pb-2'}`}>

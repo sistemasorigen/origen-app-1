@@ -368,7 +368,7 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
     return (
         <div className="min-h-screen bg-white pb-20 animate-fadeIn">
             {/* Header - BRUTALIST - Mobile Optimized */}
-            <div className="bg-black text-white pt-6 md:pt-10 pb-24 md:pb-32 px-4 md:px-12 relative overflow-hidden border-b-4 border-amber-500">
+            <div className="bg-black text-white pt-6 md:pt-10 pb-24 md:pb-32 px-4 md:px-12 relative overflow-hidden border-b-4 border-amber-500 print:hidden">
                 <div className="max-w-[1920px] mx-auto relative z-10">
                     {/* Top Row: Title + Exit Button */}
                     <div className="flex justify-between items-start mb-4 md:mb-6">
@@ -431,7 +431,7 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                     )}
 
                     {/* Navigation Tabs - Mobile: Smaller, Scrollable */}
-                    <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
+                    <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide print:hidden">
                         {/* Punto de Información tab */}
                         {currentUser && hasRole(currentUser, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_PUNTO, UserRole.ADMIN_PUNTO]) && (
                             <button
@@ -571,7 +571,7 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
                         {activeTab === 'GROUPS' && (
                             <div className="space-y-4 md:space-y-6 animate-fadeIn">
                                 {/* Sub-Navigation Pills */}
-                                <div className="flex border-b-2 border-black overflow-x-auto scrollbar-hide bg-white rounded-t-xl -mb-px">
+                                <div className="flex border-b-2 border-black overflow-x-auto scrollbar-hide bg-white rounded-t-xl -mb-px print:hidden">
                                     {(['METRICS', 'ASISTENCIAS', 'BAJAS', 'INTERACCIONES'] as GroupsSubTab[]).map((tab) => (
                                         <button
                                             key={tab}
@@ -1174,7 +1174,15 @@ const Pastores: React.FC<PastoresProps> = ({ currentUser }) => {
 
                                 {/* INTERACCIONES Sub-Tab */}
                                 {groupsSubTab === 'INTERACCIONES' && (
-                                    <InteractionsDashboard />
+                                    <InteractionsDashboard
+                                        selectedYear={selectedYear}
+                                        seasonFilter={
+                                            groupsFilter === 'TEMPORADAS'
+                                                ? seasonFilter
+                                                : null
+                                        }
+                                        groupsFilter={groupsFilter}
+                                    />
                                 )}
                             </div>
                         )}

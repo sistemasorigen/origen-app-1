@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import NeoModal from '../ui/NeoModal';
-import { Group, User, GroupTag } from '../../types';
+import { Group, User, GroupTag, SeasonSettings } from '../../types';
 import { supabaseService, insertGroupDirect, updateGroupDirect } from '../../services/supabaseService';
 import { supabase } from '../../services/supabaseClient';
 import { Save, UserPlus, Users, Crown, Search, Check, ChevronDown, Calendar, ArrowRight, Wand2, X } from 'lucide-react';
@@ -20,6 +20,7 @@ interface CreateGroupModalProps {
     currentUser: User | null;
     isAdminView?: boolean;
     isReopenRequest?: boolean;
+    seasonSettings?: SeasonSettings;
 }
 
 interface GroupCategory {
@@ -121,7 +122,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     editingGroup,
     currentUser,
     isAdminView = false,
-    isReopenRequest = false
+    isReopenRequest = false,
+    seasonSettings,
 }) => {
     const [categories, setCategories] = useState<GroupCategory[]>([]);
     const [availableTags, setAvailableTags] = useState<GroupTag[]>([]);
@@ -410,10 +412,11 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
         // Validate dates are not in the past
         const today = new Date().toISOString().split('T')[0];
-        const year = new Date().getFullYear();
-        const isPrimeraTemporada = form.startDate === `${year}-03-23` && form.endDate === `${year}-05-17`;
+        const isOfficialSeason = (['S1', 'S2', 'S3'] as const).some(key =>
+            form.startDate === `${currentYear}-${resolvedSeasons[key].startDate}`
+        );
 
-        if (!isPrimeraTemporada && form.startDate && form.startDate < today) {
+        if (!isOfficialSeason && form.startDate && form.startDate < today) {
             return alert('La fecha de arranque no puede ser anterior a hoy.');
         }
         if (form.endDate && form.endDate < today) {
@@ -569,7 +572,16 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             }
 
             let result;
-            if (editingGroup) {
+            if (isReopenRequest && editingGroup) {
+                // RE-APERTURA: crear nuevo grupo, no actualizar.
+                // El original pasa a 'finished' automáticamente.
+                result = await supabaseService.cloneGroupForNewSeason(
+                    editingGroup.id,
+                    form.startDate,
+                    form.endDate,
+                    isAdminView
+                );
+            } else if (editingGroup) {
                 result = await updateGroupDirect(groupData as Group);
             } else {
                 result = await insertGroupDirect(groupData as Group);
@@ -590,7 +602,13 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
     const [isModalReady, setIsModalReady] = useState(false); // Kept locally if needed, but not for tour anymore
 
-    const currentYear = new Date().getFullYear();
+    const currentYear = seasonSettings?.activeYear ?? new Date().getFullYear();
+
+    const resolvedSeasons = seasonSettings?.seasons ?? {
+        S1: { isOpen: true,  startDate: '03-23', endDate: '05-17', label: 'Primera Temporada' },
+        S2: { isOpen: false, startDate: '06-29', endDate: '08-23', label: 'Segunda Temporada' },
+        S3: { isOpen: false, startDate: '10-05', endDate: '11-29', label: 'Tercer Temporada'  },
+    };
 
     // Removed the isModalReady logic for tour check
 
@@ -893,119 +911,57 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
                     {isSeasonMode ? (
                         <div className="grid grid-cols-1 gap-3">
-                            {/* SEASON 1 - ALWAYS OPEN (For now) */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setForm(prev => ({
-                                        ...prev,
-                                        startDate: `${currentYear}-03-23`,
-                                        endDate: `${currentYear}-05-17`
-                                    }));
-                                }}
-                                className={`p-4 border-2 text-left transition-all ${form.startDate?.endsWith('-03-23') && form.endDate?.endsWith('-05-17')
-                                    ? 'border-[#118f46] bg-[#118f46]/5 relative'
-                                    : 'border-neutral-200 hover:border-black'
-                                    }`}
-                            >
-                                <div className="flex justify-between items-center">
-                                    <span className="font-black uppercase text-sm">Primer Temporada</span>
-                                    {form.startDate?.endsWith('-03-23') && form.endDate?.endsWith('-05-17') && (
-                                        <div className="bg-[#118f46] text-white p-1 rounded-full">
-                                            <Check className="w-3 h-3" />
-                                        </div>
-                                    )}
-                                </div>
-                                <span className="text-xs text-neutral-500 font-medium block mt-1">23 de Marzo - 17 de Mayo {currentYear}</span>
-                            </button>
-
-                            {/* SEASON 2 - LOCKED UNTIL JUNE 29 */}
-                            {(() => {
-                                const year = new Date().getFullYear();
-                                const seasonStart = new Date(`${year}-06-29`);
-                                const today = new Date();
-                                const isLocked = today < seasonStart;
+                            {(['S1', 'S2', 'S3'] as const).map(key => {
+                                const season = resolvedSeasons[key];
+                                const isLocked = !season.isOpen;
+                                const fullStart = `${currentYear}-${season.startDate}`;
+                                const fullEnd   = `${currentYear}-${season.endDate}`;
+                                const isSelected =
+                                    form.startDate === fullStart &&
+                                    form.endDate   === fullEnd;
 
                                 return (
                                     <button
+                                        key={key}
                                         type="button"
                                         disabled={isLocked}
                                         onClick={() => {
                                             if (isLocked) return;
                                             setForm(prev => ({
                                                 ...prev,
-                                                startDate: `${year}-06-29`,
-                                                endDate: `${year}-08-23`
+                                                startDate: fullStart,
+                                                endDate:   fullEnd
                                             }));
                                         }}
                                         className={`p-4 border-2 text-left transition-all ${isLocked
                                             ? 'border-neutral-100 bg-neutral-50 opacity-50 cursor-not-allowed'
-                                            : (form.startDate?.endsWith('-06-29') && form.endDate?.endsWith('-08-23')
+                                            : isSelected
                                                 ? 'border-[#118f46] bg-[#118f46]/5 relative'
-                                                : 'border-neutral-200 hover:border-black')
-                                            }`}
+                                                : 'border-neutral-200 hover:border-black'
+                                        }`}
                                     >
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-black uppercase text-sm">Segunda Temporada</span>
-                                                {isLocked && <span className="text-[10px] bg-neutral-200 text-neutral-500 px-2 py-0.5 rounded-full">Próximamente</span>}
+                                                <span className="font-black uppercase text-sm">{season.label}</span>
+                                                {isLocked && (
+                                                    <span className="text-[10px] bg-neutral-200 text-neutral-500 px-2 py-0.5 rounded-full">No disponible</span>
+                                                )}
                                             </div>
-                                            {!isLocked && form.startDate?.endsWith('-06-29') && form.endDate?.endsWith('-08-23') && (
+                                            {!isLocked && isSelected && (
                                                 <div className="bg-[#118f46] text-white p-1 rounded-full">
                                                     <Check className="w-3 h-3" />
                                                 </div>
                                             )}
                                         </div>
                                         <span className="text-xs text-neutral-500 font-medium block mt-1">
-                                            29 de Junio - 23 de Agosto {year}
+                                            {new Date(fullStart + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}
+                                            {' — '}
+                                            {new Date(fullEnd + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}
+                                            {' '}{currentYear}
                                         </span>
                                     </button>
                                 );
-                            })()}
-
-                            {/* SEASON 3 - LOCKED UNTIL OCT 5 */}
-                            {(() => {
-                                const year = new Date().getFullYear();
-                                const seasonStart = new Date(`${year}-10-05`);
-                                const today = new Date();
-                                const isLocked = today < seasonStart;
-
-                                return (
-                                    <button
-                                        type="button"
-                                        disabled={isLocked}
-                                        onClick={() => {
-                                            if (isLocked) return;
-                                            setForm(prev => ({
-                                                ...prev,
-                                                startDate: `${year}-10-05`,
-                                                endDate: `${year}-11-29`
-                                            }));
-                                        }}
-                                        className={`p-4 border-2 text-left transition-all ${isLocked
-                                            ? 'border-neutral-100 bg-neutral-50 opacity-50 cursor-not-allowed'
-                                            : (form.startDate?.endsWith('-10-05') && form.endDate?.endsWith('-11-29')
-                                                ? 'border-[#118f46] bg-[#118f46]/5 relative'
-                                                : 'border-neutral-200 hover:border-black')
-                                            }`}
-                                    >
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-black uppercase text-sm">Tercer Temporada</span>
-                                                {isLocked && <span className="text-[10px] bg-neutral-200 text-neutral-500 px-2 py-0.5 rounded-full">Próximamente</span>}
-                                            </div>
-                                            {!isLocked && form.startDate?.endsWith('-10-05') && form.endDate?.endsWith('-11-29') && (
-                                                <div className="bg-[#118f46] text-white p-1 rounded-full">
-                                                    <Check className="w-3 h-3" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span className="text-xs text-neutral-500 font-medium block mt-1">
-                                            5 de Octubre - 29 de Noviembre {year}
-                                        </span>
-                                    </button>
-                                );
-                            })()}
+                            })}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">

@@ -24,6 +24,25 @@ import PastoralCareForm from './pages/audiencia/AudienciaServiciosFormulario';
 import Notifications from './pages/user/Notificaciones';
 import PastoralCareDashboard from './pages/audiencia/AudienciaServiciosPrincipal';
 import ProfilePage from './pages/user/PaginaPerfil';
+import Prode from './pages/prode/Prode';
+import AdminProde from './pages/prode/AdminProde';
+import ProdeRanking from './pages/prode/ProdeRanking';
+import ProdeResultados from './pages/prode/ProdeResultados';
+import Eventos from './pages/eventos/Eventos';
+import PanelEventos from './pages/eventos/PanelEventos';
+import InscripcionDPadre from './pages/eventos/dpadre/InscripcionDPadre';
+import RankingDPadre from './pages/eventos/dpadre/RankingDPadre';
+import Puntuacion from './pages/eventos/dpadre/Puntuacion';
+import AdminDPadre from './pages/eventos/dpadre/AdminDPadre';
+import DetalleFamilia from './pages/eventos/dpadre/DetalleFamilia';
+import CalendarioGCX from './pages/gcx/CalendarioGCX';
+import AdminTrivia from './pages/trivia/AdminTrivia';
+import CrearJuego from './pages/trivia/CrearJuego';
+import TriviaLanding from './pages/trivia/TriviaLanding';
+import TriviaUnirse from './pages/trivia/TriviaUnirse';
+import TriviaJugador from './pages/trivia/TriviaJugador';
+import TriviaProyector from './pages/trivia/TriviaProyector';
+import TriviaControl from './pages/trivia/TriviaControl';
 import SystemLoginModal from './components/modals/ModalLoginSistema';
 import CompleteProfileModal from './components/modals/ModalCompletarPerfil';
 import { User, UserRole, AppConfig } from './types';
@@ -214,6 +233,13 @@ const AppContent: React.FC = () => {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/form" element={<Formulario />} />
             <Route path="/influos-acceso" element={<InfluosAcceso />} />
+            <Route path="/id-dpadre" element={<InscripcionDPadre />} />
+            <Route path="/eventos/ranking-diadelpadre" element={<RankingDPadre />} />
+            {/* Trivia Origen — rutas públicas de jugadores y proyector */}
+            <Route path="/trivia" element={<TriviaLanding />} />
+            <Route path="/trivia/unirse/:pin" element={<TriviaUnirse />} />
+            <Route path="/trivia/jugar/:pin" element={<TriviaJugador />} />
+            <Route path="/trivia/pantalla/:pin" element={<TriviaProyector />} />
 
             {/* ── RUTAS PÚBLICAS CON LAYOUT ────────── */}
             <Route path="/" element={
@@ -336,6 +362,12 @@ const AppContent: React.FC = () => {
                                         ? <HostDashboard currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
+<<<<<<< HEAD
+=======
+                                <Route path="/gcx/calendario" element={
+                                    user ? <CalendarioGCX currentUser={user} /> : <Navigate to="/" />
+                                } />
+>>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
                                 <Route path="/coordinators" element={
                                     (user && hasRole(user, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN]))
                                         ? <Coordinators currentUser={user} />
@@ -360,6 +392,84 @@ const AppContent: React.FC = () => {
                                         ? <PastoralCareForm currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
+<<<<<<< HEAD
+=======
+                                <Route path="/prode" element={<Prode />} />
+                                <Route path="/prode/ranking" element={<ProdeRanking />} />
+                                <Route path="/prode/resultados" element={<ProdeResultados />} />
+                                <Route path="/prode/administracion" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.PRODE
+                                    ]))
+                                        ? <AdminProde />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos" element={
+                                    user ? <Eventos currentUser={user} /> : <Navigate to="/" />
+                                } />
+                                <Route path="/panel-eventos" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <PanelEventos currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/admin/diadelpadre" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <AdminDPadre currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/puntuacion" element={
+                                    (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.EVENTOS, UserRole.ENCARGADO_EVENTOS]))
+                                        ? <Puntuacion zona="trivia" currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/futboltenis" element={
+                                    (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.EVENTOS, UserRole.ENCARGADO_EVENTOS]))
+                                        ? <Puntuacion zona="futbol" currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/dpadre/:id" element={
+                                    (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.EVENTOS, UserRole.ENCARGADO_EVENTOS]))
+                                        ? <DetalleFamilia currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/trivia/admin" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <AdminTrivia currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/trivia/admin/nuevo" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <CrearJuego currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/trivia/admin/:id" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <TriviaControl currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+>>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
                                 <Route path="/notificaciones" element={<Notifications />} />
                                 <Route path="/perfil" element={<ProfilePage />} />
                                 <Route path="*" element={<Navigate to="/" />} />

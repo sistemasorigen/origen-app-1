@@ -36,7 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     const [isNotifDrawerOpen, setIsNotifDrawerOpen] = useState(false);
 
     const isDashboard = location.pathname === '/';
-    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/gcx' || location.pathname === '/punto-de-informacion' || location.pathname === '/alabanza' || location.pathname.startsWith('/coordinators');
+    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/gcx' || location.pathname === '/punto-de-informacion' || location.pathname === '/alabanza' || location.pathname === '/prode' || location.pathname.startsWith('/coordinators');
 
     const handleLogoutAction = () => {
         onLogout?.();
@@ -117,14 +117,14 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                     <div className="h-full px-4 sm:px-6 lg:px-8 relative flex items-center">
 
                         {/* Left: Hamburger (mobile only) */}
-                        <div className="flex-1 flex items-center md:hidden">
+                        <div className="flex-1 flex items-center md:hidden print:hidden">
                             <HamburgerButton
                                 onClick={() => setIsMenuOpen(true)}
                             />
                         </div>
 
                         {/* Portal for pages (desktop) */}
-                        <div className="hidden md:flex flex-1 items-center">
+                        <div className="hidden md:flex flex-1 items-center print:hidden">
                             {!isDashboard && (
                                 <div id="navbar-portal" className="flex items-center"></div>
                             )}
@@ -142,7 +142,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                         </div>
 
                         {/* Right: Actions */}
-                        <div className="flex-1 flex items-center justify-end gap-2 sm:gap-4">
+                        <div className="flex-1 flex items-center justify-end gap-2 sm:gap-4 print:hidden">
                             {onToggleTheme && (
                                 <button
                                     onClick={onToggleTheme}

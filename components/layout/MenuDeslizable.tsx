@@ -4,12 +4,10 @@ import {
     X,
     Menu,
     Home,
-    Users,
     BarChart,
     Info,
     Book,
     Settings,
-    FileText,
     Heart,
     HeartHandshake,
     ChevronDown,
@@ -19,10 +17,13 @@ import {
     Sun,
     Moon,
     UserCircle,
-    Star
+    Star,
+    Trophy,
+    CalendarDays
 } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
+import { supabaseService } from '../../services/supabaseService';
 
 interface DrawerMenuProps {
     isOpen: boolean;
@@ -52,8 +53,9 @@ export const HamburgerButton: React.FC<{
 
 interface SubMenuItem {
     label: string;
-    path: string;
+    path?: string;
     roles?: UserRole[];
+    separator?: boolean;
 }
 
 interface SubGroup {
@@ -89,6 +91,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     const location = useLocation();
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
     const [shouldRender, setShouldRender] = useState(false);
+    // Estado del evento Día del Padre (visible/oculto en el menú). Activo por defecto.
+    const [dpadreActivo, setDpadreActivo] = useState(true);
+
+    useEffect(() => {
+        supabaseService.getAppConfig()
+            .then(cfg => {
+                if (cfg?.dpadreConfig) setDpadreActivo(cfg.dpadreConfig.isActive);
+            })
+            .catch(() => { /* fallback: queda activo */ });
+    }, []);
 
     // Handle animation mounting
     useEffect(() => {
@@ -175,17 +187,29 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]
                 },
                 {
-                    label: 'Coordinadores',
-                    roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR],
-                    subItems: [
-                        { label: 'Dashboard', path: '/coordinators?tab=dashboard' },
-                        { label: 'Grupos', path: '/coordinators?tab=groups' },
-                        { label: 'Asistencias', path: '/coordinators?tab=attendance' },
-                        { label: 'Calendario', path: '/coordinators?tab=calendar' }
-                    ]
-                }
+                    label: 'Mi Calendario',
+                    path: '/gcx/calendario',
+                    roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION, UserRole.USUARIO, UserRole.VIEWER]
+                },
             ],
             subItems: [
+                // ── Separador: Coordinación ──────────────────
+                {
+                    label: 'Coordinación',
+                    separator: true,
+                    roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR]
+                },
+                {
+                    label: 'Coordinadores',
+                    path: '/coordinators?tab=dashboard',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR]
+                },
+                // ── Separador: Administración ─────────────────
+                {
+                    label: 'Administración',
+                    separator: true,
+                    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
+                },
                 {
                     label: 'Gestión de grupos',
                     path: '/gcx?tab=GROUPS',
@@ -200,6 +224,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 { label: 'Categorías', path: '/gcx?tab=CATEGORIES', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Etiquetas', path: '/gcx?tab=TAGS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Configuración', path: '/gcx?tab=CONFIG', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Temporadas', path: '/gcx?tab=SEASONS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] }
             ]
         },
@@ -208,6 +233,110 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             icon: Star,
             path: '/influos',
             roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR]
+        },
+        {
+            label: 'Prode Mundial',
+            icon: Trophy,
+            path: '/prode',
+            requiresAuth: true,
+            roles: [],
+            subItems: [
+                {
+                    label: 'Ranking',
+                    path: '/prode/ranking',
+                    roles: []
+                },
+                {
+                    label: 'Predicciones y resultados',
+                    path: '/prode/resultados',
+                    roles: []
+                },
+                {
+                    label: 'Administración',
+                    separator: true,
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
+                {
+                    label: 'Configuración',
+                    path: '/prode/administracion?tab=configuracion',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
+                {
+                    label: 'Partidos',
+                    path: '/prode/administracion?tab=partidos',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
+                {
+                    label: 'Resultados',
+                    path: '/prode/administracion?tab=resultados',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
+                {
+                    label: 'Ranking',
+                    path: '/prode/administracion?tab=ranking',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
+                {
+                    label: 'Predicciones',
+                    path: '/prode/administracion?tab=predicciones',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.PRODE]
+                },
+            ]
+        },
+        {
+            label: 'Eventos',
+            icon: CalendarDays,
+            path: '/eventos',
+            requiresAuth: true,
+            roles: [],
+            subItems: [
+                // ── ADMINISTRACIÓN ────────────────
+                {
+                    label: 'Administración',
+                    separator: true,
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_EVENTOS,
+                    ]
+                },
+                {
+                    label: 'Panel de eventos',
+                    path: '/panel-eventos',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_EVENTOS,
+                    ]
+                },
+                {
+                    label: 'Trivia Origen',
+                    path: '/trivia/admin',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_EVENTOS,
+                    ]
+                },
+                // ── DÍA DEL PADRE (solo si el evento está activo) ──
+                ...(dpadreActivo ? [
+                    {
+                        label: 'Día del Padre',
+                        separator: true,
+                        roles: []
+                    },
+                    {
+                        label: 'Ranking',
+                        path: '/eventos/ranking-diadelpadre',
+                        roles: []
+                    },
+                    {
+                        label: 'Puntuación',
+                        path: '/eventos/puntuacion',
+                        roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.EVENTOS, UserRole.ENCARGADO_EVENTOS]
+                    },
+                ] : []),
+            ]
         },
         {
             label: 'Punto de información',
@@ -237,8 +366,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             subItems: [
                 { label: 'Usuarios', path: '/panel-admin?tab=users' },
                 { label: 'Configuración', path: '/panel-admin?tab=config' },
-                { label: 'Logs', path: '/panel-admin?tab=logs' },
-                { label: 'Base de datos', path: '/panel-admin?tab=database' }
+                { label: 'Logs', path: '/panel-admin?tab=logs' }
             ]
         },
         {
@@ -248,7 +376,18 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             roles: [],
             requiresAuth: true
         }
-    ];
+    ].filter(item => {
+        // Excluir Prode explícitamente para mujeres
+        if (item.label === 'Prode Mundial' && currentUser?.gender === 'Femenino') return false;
+        // Día del Padre desactivado: ocultar "Eventos" salvo a administradores del evento
+        if (item.label === 'Eventos' && !dpadreActivo) {
+            const isEventAdmin = !!currentUser && hasRole(currentUser, [
+                UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS
+            ]);
+            if (!isEventAdmin) return false;
+        }
+        return true;
+    });
 
     if (!shouldRender && type === 'drawer') return null;
 
@@ -285,8 +424,10 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         (item.path !== '/' && item.path && location.pathname.startsWith(item.path));
 
                     const visibleSubItems = item.subItems?.filter(sub => {
-                        if (!currentUser) return false;
+                        // Sin roles: público (separadores sin roles incluidos)
                         if (!sub.roles || sub.roles.length === 0) return true;
+                        // Con roles: requiere login y el rol (aplica a items y separadores)
+                        if (!currentUser) return false;
                         return hasRole(currentUser, sub.roles);
                     }) || [];
 
@@ -386,13 +527,24 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                         );
                                     })}
 
-                                    {/* Regular subItems */}
+                                    {/* Regular subItems — con soporte de separadores */}
                                     {visibleSubItems.map((sub, si) => {
-                                        const isSubActive = (location.pathname + location.search) === sub.path;
+                                        if (sub.separator) {
+                                            return (
+                                                <div key={si} className="px-3 pt-3 pb-1">
+                                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 dark:text-zinc-600 select-none">
+                                                        {sub.label}
+                                                    </span>
+                                                </div>
+                                            );
+                                        }
+                                        const isSubActive = sub.path
+                                            ? (location.pathname + location.search) === sub.path
+                                            : false;
                                         return (
                                             <button
                                                 key={si}
-                                                onClick={() => handleNavigation(sub.path)}
+                                                onClick={() => sub.path && handleNavigation(sub.path)}
                                                 className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${isSubActive
                                                     ? 'bg-black text-white dark:bg-white dark:text-black'
                                                     : 'text-gray-500 dark:text-zinc-500 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white'

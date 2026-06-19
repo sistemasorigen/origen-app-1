@@ -25,7 +25,8 @@ import {
     CalendarDays as CalendarCoord,
     ChevronRight,
     Book,
-    Star
+    Star,
+    Trophy
 } from 'lucide-react';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 
@@ -80,6 +81,8 @@ const getModuleIcon = (id: string, defaultIcon: string, isConstruction?: boolean
         case 'coordinators': return <ClipboardList className={iconClass} />;
         case 'pastoral': return <HeartHandshake className={iconClass} />;
         case 'influos': return <Star className={iconClass} />;
+        case 'prode': return <Trophy className={iconClass} />;
+        case 'eventos': return <CalendarCoord className={iconClass} />;
         default: return <span className="text-3xl">{defaultIcon}</span>;
     }
 };
@@ -166,7 +169,13 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                 if (!currentUser) return false;
 
                 // 3. Super Admin -> See All
-                if (hasRole(currentUser, UserRole.SUPER_ADMIN)) return true;
+                if (hasRole(currentUser, UserRole.SUPER_ADMIN)) {
+                    if (m.id === 'prode' && currentUser?.gender === 'Femenino') return false;
+                    return true;
+                }
+
+                // Excluir Prode explícitamente para mujeres
+                if (m.id === 'prode' && currentUser?.gender === 'Femenino') return false;
 
                 // 4. Check Allowed Roles overlap
                 // If user has ANY of the allowed roles for this module

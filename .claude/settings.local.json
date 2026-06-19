@@ -24,7 +24,17 @@
       "Bash(set PYTHONUTF8=1)",
       "Bash(mkdir -p 'C:\\\\Users\\\\nacho\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\50ecb3fb-fbcd-4510-be38-5829bfc8dd03\\\\b8a9fecb-5098-424d-a21f-f85230a25a82\\\\origen-security-workspace\\\\iteration-1/__TRACKED_VAR__/__TRACKED_VAR__/run-1')",
       "Bash(cp 'C:\\\\Users\\\\nacho\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\50ecb3fb-fbcd-4510-be38-5829bfc8dd03\\\\b8a9fecb-5098-424d-a21f-f85230a25a82\\\\origen-security-workspace\\\\iteration-1/__TRACKED_VAR__/__TRACKED_VAR__/grading.json' 'C:\\\\Users\\\\nacho\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\50ecb3fb-fbcd-4510-be38-5829bfc8dd03\\\\b8a9fecb-5098-424d-a21f-f85230a25a82\\\\origen-security-workspace\\\\iteration-1/__TRACKED_VAR__/__TRACKED_VAR__/run-1/grading.json')",
+<<<<<<< HEAD
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\nacho\\\\Desktop\\\\origen-security-workspace\\\\iteration-1\" -Recurse | Where-Object { $_.Name -eq \"outputs\" } | Select-Object FullName)"
+=======
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\nacho\\\\Desktop\\\\origen-security-workspace\\\\iteration-1\" -Recurse | Where-Object { $_.Name -eq \"outputs\" } | Select-Object FullName)",
+      "Bash(python3 \"C:\\\\Users\\\\nacho\\\\.claude\\\\skills\\\\ui-ux-pro-max\\\\scripts\\\\search.py\" \"church community calendar events religious organization\" --design-system -p \"CalendarioIglesia\" -f markdown)",
+      "PowerShell(python \"C:\\\\Users\\\\nacho\\\\.claude\\\\skills\\\\ui-ux-pro-max\\\\scripts\\\\search.py\" \"church community calendar events religious organization\" --design-system -p \"CalendarioIglesia\" -f markdown 2>&1)",
+      "PowerShell(python \"C:\\\\Users\\\\nacho\\\\.claude\\\\skills\\\\ui-ux-pro-max\\\\scripts\\\\search.py\" \"church group weekly calendar schedule participation host\" --design-system -p \"CalendarioGCX\" -f markdown 2>&1)",
+      "PowerShell(python \"C:\\\\Users\\\\nacho\\\\.claude\\\\skills\\\\ui-ux-pro-max\\\\scripts\\\\search.py\" \"calendar weekly view schedule mobile touch\" --domain ux 2>&1)",
+      "Bash(npx tsc *)",
+      "Bash(python scripts/search.py \"sports admin brutalist filter search bar\" --domain style -n 3)"
+>>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
     ]
   }
 }

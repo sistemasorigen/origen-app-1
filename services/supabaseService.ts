@@ -47,7 +47,10 @@ export async function insertGroupDirect(group: Group): Promise<Group | null> {
     co_host_last_name: group.coHostLastName || '',
     min_age: group.minAge || 0,
     max_age: group.maxAge || 100,
-    target_gender: group.targetGender || 'Mixto'
+    target_gender: group.targetGender || 'Mixto',
+    parent_group_id: (group as any).parentGroupId
+        || (group as any).parent_group_id
+        || null,
   };
 
   // Add host_id if provided
@@ -193,6 +196,7 @@ function transformDbRowToGroup(data: any): Group {
     coHostLastName: data.co_host_last_name || '',
     maxAge: data.max_age || 100,
     targetGender: data.target_gender || 'Mixto',
+    parentGroupId: data.parent_group_id || undefined,
     registrations: []
   };
 }
@@ -1096,7 +1100,173 @@ export const supabaseService = {
     }
   },
 
-  // 7. Detailed Analytics for Export
+  // 7. Gender Analytics by Category (for Interacciones panel)
+  async getGenderAnalyticsByCategory(
+    year: number,
+    season: 'S1' | 'S2' | 'S3'
+  ): Promise<{
+    totalMasculino: number;
+    totalFemenino: number;
+    totalSinDatos: number;
+    byCategory: {
+      categoryId: string;
+      categoryName: string;
+      categoryColor: string;
+      total: number;
+      masculino: number;
+      femenino: number;
+      sinDatos: number;
+    }[];
+  }> {
+    try {
+      const emptyResult = {
+        totalMasculino: 0,
+        totalFemenino: 0,
+        totalSinDatos: 0,
+        byCategory: []
+      };
+
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select(`
+          id,
+          category_id,
+          start_date,
+          end_date,
+          status,
+          group_categories!inner(id, name, color)
+        `)
+        .eq('status', 'approved');
+
+      if (groupsError || !groups?.length) return emptyResult;
+
+      const filteredGroupIds = new Set(
+        groups.filter((g: any) => {
+          const groupSeason = getSeasonFromDate(g.start_date);
+          const groupYear = g.start_date
+              ? new Date(g.start_date + 'T12:00:00').getFullYear()
+              : null;
+          return groupSeason === season && groupYear === year;
+        }).map((g: any) => g.id)
+      );
+
+      if (filteredGroupIds.size === 0) return emptyResult;
+
+      const groupMap = new Map(
+        groups
+          .filter((g: any) => filteredGroupIds.has(g.id))
+          .map((g: any) => [g.id, g])
+      );
+
+      const { data: regs, error: regsError } = await supabase
+        .from('group_registrations')
+        .select('group_id, user_id, status, partner_data, partner_user_id, email')
+        .in('group_id', Array.from(filteredGroupIds));
+
+      if (regsError || !regs?.length) return emptyResult;
+
+      const validRegs = regs;
+
+      const userIds = [...new Set(
+        validRegs.flatMap((r: any) => [r.user_id, r.partner_user_id]).filter(Boolean)
+      )];
+
+      const genderMap = new Map<string, string>();
+
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('id, gender')
+          .in('id', userIds);
+        (users || []).forEach((u: any) => {
+          genderMap.set(u.id, u.gender || '');
+        });
+      }
+
+      const catStats = new Map<string, {
+        categoryName: string;
+        categoryColor: string;
+        total: number;
+        masculino: number;
+        femenino: number;
+        sinDatos: number;
+      }>();
+
+      let totalMasculino = 0;
+      let totalFemenino = 0;
+      let totalSinDatos = 0;
+
+      // Usamos un Set para no contar a la misma persona 2 veces en los totales globales
+      // pero sí los contamos por cada categoría a la que asistan
+      const countedGlobal = new Set<string>();
+
+      validRegs.forEach((reg: any) => {
+        const group = groupMap.get(reg.group_id);
+        if (!group) return;
+
+        const catId = group.category_id;
+        const catName = group.group_categories?.name || 'Sin categoría';
+        const catColor = group.group_categories?.color || '#888888';
+
+        if (!catStats.has(catId)) {
+          catStats.set(catId, {
+            categoryName: catName,
+            categoryColor: catColor,
+            total: 0,
+            masculino: 0,
+            femenino: 0,
+            sinDatos: 0,
+          });
+        }
+
+        const entry = catStats.get(catId)!;
+
+        // 1. Procesar usuario principal
+        const mainId = reg.user_id || reg.email || `reg-${Math.random()}`;
+        const gender1 = reg.user_id ? (genderMap.get(reg.user_id) || '') : '';
+        const key1 = gender1 === 'Masculino' ? 'masculino' : gender1 === 'Femenino' ? 'femenino' : 'sinDatos';
+        
+        entry.total++;
+        entry[key1]++;
+        
+        if (!countedGlobal.has(mainId)) {
+          countedGlobal.add(mainId);
+          if (key1 === 'masculino') totalMasculino++;
+          else if (key1 === 'femenino') totalFemenino++;
+          else totalSinDatos++;
+        }
+
+        // 2. Procesar partner si existe
+        if (reg.partner_data) {
+          const pd = reg.partner_data as any;
+          const partnerId = reg.partner_user_id || pd?.email || (pd?.firstName + pd?.lastName) || `partner-${Math.random()}`;
+          const gender2 = reg.partner_user_id ? (genderMap.get(reg.partner_user_id) || '') : '';
+          const key2 = gender2 === 'Masculino' ? 'masculino' : gender2 === 'Femenino' ? 'femenino' : 'sinDatos';
+
+          entry.total++;
+          entry[key2]++;
+
+          if (!countedGlobal.has(partnerId)) {
+            countedGlobal.add(partnerId);
+            if (key2 === 'masculino') totalMasculino++;
+            else if (key2 === 'femenino') totalFemenino++;
+            else totalSinDatos++;
+          }
+        }
+      });
+
+      const byCategory = Array.from(catStats.entries())
+        .map(([id, data]) => ({ categoryId: id, ...data }))
+        .sort((a, b) => b.total - a.total);
+
+      return { totalMasculino, totalFemenino, totalSinDatos, byCategory };
+    } catch (err) {
+      console.error('[GenderAnalytics] Exception:', err);
+      return { totalMasculino: 0, totalFemenino: 0, totalSinDatos: 0, byCategory: [] };
+    }
+  },
+
+  // 8. Detailed Analytics for Export
   async getDetailedAnalyticsForExport(
     type: 'CATEGORIAS' | 'ETIQUETAS' | 'TODAS',
     startDate: string,
@@ -1287,6 +1457,7 @@ export const supabaseService = {
       maxAge: row.max_age || 100,
       targetGender: row.target_gender || 'Mixto',
       adminNote: row.admin_note || '', // Admin review note
+      parentGroupId: row.parent_group_id || undefined,
       registrations: (row.registrations || []).map((r: any) => ({
         id: r.id,
         user_id: r.user_id || null,
@@ -1459,7 +1630,13 @@ export const supabaseService = {
   // Re-open a finished/rejected group: Delete all registrations and attendance, reset members count
   async reopenGroup(groupId: string): Promise<boolean> {
     try {
+<<<<<<< HEAD
 
+=======
+      // DEPRECADO: Usar cloneGroupForNewSeason para el flujo correcto de re-apertura.
+      // Se mantiene para compatibilidad temporal.
+      console.warn('[Groups] reopenGroup is deprecated. Use cloneGroupForNewSeason instead.');
+>>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
 
       // 1. Delete all registrations for this group
       const { error: regError } = await supabase
@@ -1540,6 +1717,86 @@ export const supabaseService = {
     } catch (error) {
       console.error('[Groups] Error clearing participants:', error);
       return false;
+    }
+  },
+
+  async cloneGroupForNewSeason(
+    originalGroupId: string,
+    newStartDate: string,
+    newEndDate: string,
+    isAdminView: boolean = false
+  ): Promise<Group | null> {
+    try {
+      console.log('[Groups] Cloning group for new season:', originalGroupId);
+
+      const { data: originalData, error: fetchError } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('id', originalGroupId)
+        .single();
+
+      if (fetchError || !originalData) {
+        console.error('[Groups] Error fetching original group:', fetchError);
+        return null;
+      }
+
+      const newGroupData: Record<string, any> = {
+        name:               originalData.name,
+        leader_name:        originalData.leader_name,
+        leader_surname:     originalData.leader_surname,
+        leader_phone:       originalData.leader_phone || '',
+        meeting_day:        originalData.meeting_day,
+        meeting_time:       originalData.meeting_time,
+        location:           originalData.location,
+        max_capacity:       originalData.max_capacity,
+        description:        originalData.description,
+        image_url:          originalData.image_url,
+        category_id:        originalData.category_id,
+        tags:               originalData.tags || [],
+        host_id:            originalData.host_id,
+        co_host_id:         originalData.co_host_id,
+        co_host_first_name: originalData.co_host_first_name || '',
+        co_host_last_name:  originalData.co_host_last_name || '',
+        min_age:            originalData.min_age || 0,
+        max_age:            originalData.max_age || 100,
+        target_gender:      originalData.target_gender || 'Mixto',
+        start_date:         newStartDate,
+        end_date:           newEndDate,
+        members_count:      0,
+        status:             isAdminView ? 'approved' : 'pending',
+        admin_note:         '',
+        parent_group_id:    originalGroupId,
+      };
+
+      const { data: newGroup, error: insertError } = await supabase
+        .from('groups')
+        .insert(newGroupData)
+        .select()
+        .single();
+
+      if (insertError || !newGroup) {
+        console.error('[Groups] Error creating new season group:', insertError);
+        return null;
+      }
+
+      console.log('[Groups] New season group created:', newGroup.id);
+
+      const { error: finishError } = await supabase
+        .from('groups')
+        .update({ status: 'finished' })
+        .eq('id', originalGroupId);
+
+      if (finishError) {
+        // Non-fatal — nuevo grupo ya creado
+        console.warn('[Groups] Could not mark original as finished:', finishError);
+      }
+
+      console.log('[Groups] Original group marked as finished:', originalGroupId);
+
+      return transformDbRowToGroup(newGroup);
+    } catch (error) {
+      console.error('[Groups] Exception in cloneGroupForNewSeason:', error);
+      return null;
     }
   },
 
@@ -2612,6 +2869,8 @@ export const supabaseService = {
       endTime: row.end_time || row.endTime,
       type: row.type,
       color: row.color,
+      imageUrl: row.image_url || undefined,
+      location: row.location || undefined,
       createdAt: row.created_at || row.createdAt,
     }));
   },
@@ -2627,7 +2886,9 @@ export const supabaseService = {
       start_time: event.startTime,
       end_time: event.endTime,
       type: event.type,
-      color: event.color
+      color: event.color,
+      image_url: event.imageUrl || null,
+      location: event.location || null
       // created_at is auto-generated by Supabase, do NOT include it
     };
 
@@ -3065,6 +3326,303 @@ export const supabaseService = {
 
   async promoteUserToHost(userId: string): Promise<boolean> {
     return this.toggleUserRole(userId, UserRole.ANFITRION, true);
+  },
+
+  // ── TRANSFERENCIA DE GRUPOS ───────────────────
+
+  async searchUsersForTransfer(term: string): Promise<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    isHost: boolean;
+    role: string;
+  }[]> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, phone, role, roles')
+        .or(
+          `name.ilike.%${term}%,` +
+          `email.ilike.%${term}%`
+        )
+        .eq('is_active', true)
+        .limit(10)
+        // Forzar lectura desde la DB sin caché
+        // para que los cambios de rol sean inmediatos
+        .throwOnError();
+
+      // Invalidar caché del cliente después de la query
+      // usando timestamp para evitar resultados stale
+      const _bust = Date.now();
+
+      if (error) throw error;
+
+      return (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name || '',
+        email: u.email || '',
+        phone: u.phone || '',
+        // Verificar TODOS los roles que pueden ser
+        // anfitrión. También revisar el array 'roles'
+        // (algunos usuarios tienen multi-rol) además
+        // de la columna 'role' principal.
+        isHost: (
+            u.role === UserRole.ANFITRION
+            || u.role === UserRole.SUPER_ADMIN
+            || u.role === UserRole.PASTOR
+            || u.role === UserRole.ADMIN_GROUPS
+            || u.role === UserRole.ENCARGADO_GRUPOS
+        ) || (
+            Array.isArray(u.roles) && (
+                u.roles.includes('ANFITRION') ||
+                u.roles.includes('SUPER_ADMIN')
+            )
+        ),
+        role: u.role || '',
+      }));
+    } catch (err) {
+      console.error('[Transfer] Search error:', err);
+      return [];
+    }
+  },
+
+  async initiateGroupTransfer(
+    groupId: string,
+    toUserId: string,
+    fromUserName: string,
+    groupName: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data: existing } = await supabase
+        .from('group_transfer_requests')
+        .select('id')
+        .eq('group_id', groupId)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (existing) {
+        return {
+          success: false,
+          error: 'Ya existe una transferencia ' +
+                 'pendiente para este grupo.'
+        };
+      }
+
+      const { error: insertError } = await supabase
+        .from('group_transfer_requests')
+        .insert({
+          group_id:     groupId,
+          from_user_id: (await supabase.auth.getUser())
+                          .data.user?.id,
+          to_user_id:   toUserId,
+          status:       'pending',
+        });
+
+      if (insertError) throw insertError;
+
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: toUserId,
+          title:   '¿Querés ser Anfitrión?',
+          message: `${fromUserName} te está ` +
+                   `transfiriendo el grupo ` +
+                   `"${groupName}". ` +
+                   `Revisá tu Panel de Anfitrión.`,
+          type:    'GROUPS',
+          read:    false,
+          metadata: {
+            groupId,
+            action: 'TRANSFER_REQUEST'
+          }
+        });
+
+      return { success: true };
+
+    } catch (err: unknown) {
+      console.error('[Transfer] Initiate error:', err);
+      const msg = err instanceof Error ? err.message : 'Error al iniciar.';
+      return { success: false, error: msg };
+    }
+  },
+
+  async acceptGroupTransfer(
+    transferId: string,
+    groupId: string,
+    newHostId: string,
+    newHostName: string
+  ): Promise<boolean> {
+    try {
+      const nameParts = newHostName.trim().split(/\s+/);
+      const firstName  = nameParts[0] || '';
+      const lastName   = nameParts.slice(1).join(' ') || '';
+
+      const { error: groupError } = await supabase
+        .from('groups')
+        .update({
+          host_id:        newHostId,
+          leader_name:    firstName,
+          leader_surname: lastName,
+        })
+        .eq('id', groupId);
+
+      if (groupError) throw groupError;
+
+      await this.promoteUserToHost(newHostId);
+
+      const { error: transferError } = await supabase
+        .from('group_transfer_requests')
+        .update({
+          status:      'accepted',
+          resolved_at: new Date().toISOString()
+        })
+        .eq('id', transferId);
+
+      if (transferError) throw transferError;
+
+      return true;
+    } catch (err) {
+      console.error('[Transfer] Accept error:', err);
+      return false;
+    }
+  },
+
+  async rejectGroupTransfer(
+    transferId: string,
+    fromUserId: string,
+    groupName: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('group_transfer_requests')
+        .update({
+          status:      'rejected',
+          resolved_at: new Date().toISOString()
+        })
+        .eq('id', transferId);
+
+      if (error) throw error;
+
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: fromUserId,
+          title:   'Transferencia rechazada',
+          message: `El usuario rechazó la ` +
+                   `transferencia del grupo ` +
+                   `"${groupName}".`,
+          type:    'GROUPS',
+          read:    false,
+        });
+
+      return true;
+    } catch (err) {
+      console.error('[Transfer] Reject error:', err);
+      return false;
+    }
+  },
+
+  async cancelGroupTransfer(
+    transferId: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('group_transfer_requests')
+        .update({
+          status:      'cancelled',
+          resolved_at: new Date().toISOString()
+        })
+        .eq('id', transferId);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Transfer] Cancel error:', err);
+      return false;
+    }
+  },
+
+  async getPendingIncomingTransfers(
+    userId: string
+  ): Promise<{
+    transferId: string;
+    groupId: string;
+    groupName: string;
+    groupImageUrl: string;
+    groupDescription: string;
+    groupMeetingDay: string;
+    groupMeetingTime: string;
+    groupLocation: string;
+    fromUserId: string;
+    fromUserName: string;
+    createdAt: string;
+  }[]> {
+    try {
+      // from_user_id FK apunta a auth.users (no traversable por PostgREST).
+      // Se hace join manual en un segundo query a public.users.
+      const { data, error } = await supabase
+        .from('group_transfer_requests')
+        .select(`
+          id,
+          group_id,
+          from_user_id,
+          created_at,
+          groups!inner (
+            name, image_url, description,
+            meeting_day, meeting_time, location,
+            status
+          )
+        `)
+        .eq('to_user_id', userId)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      // Resolver nombres de los originantes en un solo query
+      const fromIds = [...new Set(data.map((r: any) => r.from_user_id as string))];
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, name')
+        .in('id', fromIds);
+
+      const nameMap: Record<string, string> = {};
+      (usersData || []).forEach((u: any) => { nameMap[u.id] = u.name || ''; });
+
+      return data.map((row: any) => ({
+        transferId:        row.id,
+        groupId:           row.group_id,
+        groupName:         row.groups?.name || '',
+        groupImageUrl:     row.groups?.image_url || '',
+        groupDescription:  row.groups?.description || '',
+        groupMeetingDay:   row.groups?.meeting_day || '',
+        groupMeetingTime:  row.groups?.meeting_time || '',
+        groupLocation:     row.groups?.location || '',
+        fromUserId:        row.from_user_id,
+        fromUserName:      nameMap[row.from_user_id] || 'Anfitrión',
+        createdAt:         row.created_at,
+      }));
+    } catch (err) {
+      console.error('[Transfer] Get incoming error:', err);
+      return [];
+    }
+  },
+
+  async getPendingOutgoingTransferGroupIds(userId: string): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .from('group_transfer_requests')
+        .select('group_id')
+        .eq('from_user_id', userId)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      return (data || []).map((r: any) => r.group_id as string);
+    } catch (err) {
+      console.error('[Transfer] Get outgoing error:', err);
+      return [];
+    }
   },
 
   // --- ATTENDANCE SYSTEM ---
@@ -3956,6 +4514,1615 @@ export const supabaseService = {
     if (error) {
       console.error('[supabaseService] Error deleting announcement:', error);
       throw error;
+    }
+  },
+
+  // ════════════════════════════════════════════════
+  // PRODE MUNDIAL 2026
+  // ════════════════════════════════════════════════
+
+  /**
+   * Convierte una fila de DB al tipo ProdeMatch
+   */
+  _rowToProdeMatch(row: any): import('../types').ProdeMatch {
+    return {
+      id:            row.id,
+      matchNumber:   row.match_number,
+      round:         row.round as import('../types').ProdeRound,
+      groupName:     row.group_name || undefined,
+      homeTeam:      row.home_team,
+      awayTeam:      row.away_team,
+      homeFlag:      row.home_flag || undefined,
+      awayFlag:      row.away_flag || undefined,
+      matchDate:     row.match_date || undefined,
+      venue:         row.venue || undefined,
+      isOpen:        row.is_open,
+      isFinished:    row.is_finished,
+      homeScoreReal: row.home_score_real ?? undefined,
+      awayScoreReal: row.away_score_real ?? undefined,
+      externalMatchId: row.external_match_id || undefined,
+      createdAt:     row.created_at,
+    };
+  },
+
+  /**
+   * Obtiene todos los partidos del prode.
+   * Público — sin autenticación requerida.
+   */
+  async getProdeMatches(): Promise<import('../types').ProdeMatch[]> {
+    try {
+      const { data, error } = await supabase
+        .from('prode_matches')
+        .select('*')
+        .order('match_number', { ascending: true });
+      if (error) throw error;
+      return (data || []).map((r: any) =>
+        this._rowToProdeMatch(r)
+      );
+    } catch (err) {
+      console.error('[Prode] getMatches error:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Guarda un partido (INSERT si nuevo, UPDATE si existe).
+   * Solo admins.
+   */
+  async saveProdeMatch(
+    match: Partial<import('../types').ProdeMatch> & { matchNumber: number }
+  ): Promise<import('../types').ProdeMatch | null> {
+    try {
+      const payload: any = {
+        match_number:    match.matchNumber,
+        round:           match.round || 'Fase de grupos',
+        group_name:      match.groupName || null,
+        home_team:       match.homeTeam || '',
+        away_team:       match.awayTeam || '',
+        home_flag:       match.homeFlag || null,
+        away_flag:       match.awayFlag || null,
+        match_date:      match.matchDate || null,
+        venue:           match.venue || null,
+        is_open:         match.isOpen ?? false,
+        is_finished:     match.isFinished ?? false,
+        home_score_real: match.homeScoreReal ?? null,
+        away_score_real: match.awayScoreReal ?? null,
+        external_match_id: match.externalMatchId || null,
+      };
+
+      if (match.id) {
+        const { data, error } = await supabase
+          .from('prode_matches')
+          .update(payload)
+          .eq('id', match.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return this._rowToProdeMatch(data);
+      } else {
+        const { data, error } = await supabase
+          .from('prode_matches')
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        return this._rowToProdeMatch(data);
+      }
+    } catch (err) {
+      console.error('[Prode] saveMatch error:', err);
+      return null;
+    }
+  },
+
+  async deleteProdeMatch(matchId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('prode_matches')
+        .delete()
+        .eq('id', matchId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Prode] deleteMatch error:', err);
+      return false;
+    }
+  },
+
+  async resetProdeMatchResult(matchId: string): Promise<boolean> {
+    try {
+      // 1. Traer las predicciones ANTES de resetear
+      const { data: preds } = await supabase
+        .from('prode_predictions')
+        .select('id, participant_id, points_earned')
+        .eq('match_id', matchId);
+
+      // 2. Descontar los puntos de cada participante
+      for (const pred of (preds || [])) {
+        const oldPts = pred.points_earned ?? 0;
+        if (oldPts === 0) continue;
+
+        const { data: participant } = await supabase
+          .from('prode_participants')
+          .select('total_points')
+          .eq('id', pred.participant_id)
+          .single();
+
+        if (participant) {
+          await supabase
+            .from('prode_participants')
+            .update({
+              total_points: Math.max(
+                0,
+                (participant.total_points || 0) - oldPts
+              )
+            })
+            .eq('id', pred.participant_id);
+        }
+      }
+
+      // 3. Resetear points_earned a null
+      await supabase
+        .from('prode_predictions')
+        .update({ points_earned: null })
+        .eq('match_id', matchId);
+
+      // 4. Resetear el partido
+      const { error } = await supabase
+        .from('prode_matches')
+        .update({
+          home_score_real: null,
+          away_score_real: null,
+          is_finished: false,
+          is_open: false,
+        })
+        .eq('id', matchId);
+      if (error) throw error;
+
+      return true;
+    } catch (err) {
+      console.error('[Prode] resetMatchResult error:', err);
+      return false;
+    }
+  },
+
+  async deleteProdeParticipant(participantId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('prode_participants')
+        .delete()
+        .eq('id', participantId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Prode] deleteParticipant error:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Carga el resultado real de un partido y calcula
+   * los puntos de todas las predicciones asociadas.
+   * Solo admins.
+   */
+  async setProdeMatchResult(
+    matchId: string,
+    homeScore: number,
+    awayScore: number,
+    pointsExact: number,
+    pointsResult: number,
+    pointsPartial: number,
+    pointsWrong: number
+  ): Promise<boolean> {
+    try {
+      // 1. Actualizar resultado real del partido
+      const { error: matchError } = await supabase
+        .from('prode_matches')
+        .update({
+          home_score_real: homeScore,
+          away_score_real: awayScore,
+          is_finished:     true,
+          is_open:         false,
+        })
+        .eq('id', matchId);
+      if (matchError) throw matchError;
+
+      // 2. Traer todas las predicciones de ese partido
+      const { data: preds, error: predError } =
+        await supabase
+          .from('prode_predictions')
+          .select('id, participant_id, home_score_pred, away_score_pred, points_earned')
+          .eq('match_id', matchId);
+      if (predError) throw predError;
+      if (!preds?.length) return true;
+
+      // 3. Calcular puntos por predicción en memoria
+      const rH = homeScore;
+      const rA = awayScore;
+      const rW = rH > rA ? 'home' : rA > rH ? 'away' : 'draw';
+
+      type PredUpdate = { id: string; pts: number; delta: number; participantId: string };
+      const predUpdates: PredUpdate[] = (preds as { id: string; participant_id: string; home_score_pred: number; away_score_pred: number; points_earned: number | null }[]).map(pred => {
+        const pH = pred.home_score_pred;
+        const pA = pred.away_score_pred;
+        const pW = pH > pA ? 'home' : pA > pH ? 'away' : 'draw';
+        let pts = pointsWrong;
+        if (pH === rH && pA === rA)                    pts = pointsExact;
+        else if (pW === rW)                            pts = pointsResult;
+        else if (pH === rH || pA === rA)               pts = pointsPartial;
+        return { id: pred.id, pts, delta: pts - (pred.points_earned ?? 0), participantId: pred.participant_id };
+      });
+
+      // 4. Actualizar todas las predicciones en paralelo
+      const now = new Date().toISOString();
+      await Promise.all(predUpdates.map(u =>
+        supabase.from('prode_predictions')
+          .update({ points_earned: u.pts, updated_at: now })
+          .eq('id', u.id)
+      ));
+
+      // 5. Agregar deltas por participante
+      const participantDeltas = new Map<string, number>();
+      for (const u of predUpdates) {
+        if (u.delta !== 0) {
+          participantDeltas.set(u.participantId, (participantDeltas.get(u.participantId) ?? 0) + u.delta);
+        }
+      }
+
+      // 6. Fetch participantes afectados en una sola query y actualizar en paralelo
+      const affectedIds = [...participantDeltas.keys()];
+      if (affectedIds.length > 0) {
+        const { data: participants } = await supabase
+          .from('prode_participants')
+          .select('id, total_points')
+          .in('id', affectedIds);
+        if (participants) {
+          await Promise.all((participants as { id: string; total_points: number }[]).map(p =>
+            supabase.from('prode_participants')
+              .update({ total_points: Math.max(0, (p.total_points || 0) + (participantDeltas.get(p.id) ?? 0)) })
+              .eq('id', p.id)
+          ));
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error('[Prode] setResult error:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Verifica si un nombre/apellido corresponde a un
+   * hombre en el sistema. Usado para usuarios sin sesión.
+   * Retorna el tipo de resultado para mostrar el mensaje
+   * adecuado en el frontend.
+   */
+  async checkProdeGenderByName(
+    firstName: string,
+    lastName: string
+  ): Promise<{
+    result: import('../types').ProdeGenderCheckResult;
+    userId?: string;
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, gender, name')
+        .ilike('name',
+          `%${firstName.trim()}%${lastName.trim()}%`
+        )
+        .limit(5);
+
+      if (error) throw error;
+
+      if (!data?.length) {
+        // Intentar búsqueda más flexible
+        const { data: data2 } = await supabase
+          .from('users')
+          .select('id, gender, name')
+          .or(
+            `name.ilike.%${firstName.trim()}%,` +
+            `name.ilike.%${lastName.trim()}%`
+          )
+          .limit(10);
+
+        const match = (data2 || []).find((u: any) => {
+          const fullName =
+            (u.name || '').toLowerCase();
+          const fn = firstName.toLowerCase().trim();
+          const ln = lastName.toLowerCase().trim();
+          return (
+            fullName.includes(fn) &&
+            fullName.includes(ln)
+          );
+        });
+
+        if (!match) {
+          return { result: 'not_found' };
+        }
+
+        if (match.gender !== 'Masculino') {
+          return { result: 'not_male' };
+        }
+
+        return { result: 'ok', userId: match.id };
+      }
+
+      // Buscar el match más preciso
+      const exactMatch = data.find((u: any) => {
+        const fullName =
+          (u.name || '').toLowerCase();
+        const fn = firstName.toLowerCase().trim();
+        const ln = lastName.toLowerCase().trim();
+        return (
+          fullName.includes(fn) &&
+          fullName.includes(ln)
+        );
+      });
+
+      if (!exactMatch) {
+        return { result: 'not_found' };
+      }
+
+      if (exactMatch.gender !== 'Masculino') {
+        return { result: 'not_male' };
+      }
+
+      return { result: 'ok', userId: exactMatch.id };
+
+    } catch (err) {
+      console.error('[Prode] genderCheck error:', err);
+      return { result: 'not_found' };
+    }
+  },
+
+  /**
+   * Obtiene o crea un participante del prode.
+   * Si ya existe (por user_id o por nombre), lo retorna.
+   * Si no existe, lo crea.
+   */
+  async getOrCreateProdeParticipant(
+    firstName: string,
+    lastName: string,
+    userId?: string
+  ): Promise<import('../types').ProdeParticipant | null> {
+    try {
+      // Buscar por user_id si tiene cuenta
+      if (userId) {
+        const { data: existing } = await supabase
+          .from('prode_participants')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (existing) {
+          return {
+            id:          existing.id,
+            firstName:   existing.first_name,
+            lastName:    existing.last_name,
+            userId:      existing.user_id,
+            totalPoints: existing.total_points,
+            createdAt:   existing.created_at,
+          };
+        }
+      }
+
+      // Buscar por nombre si no tiene cuenta
+      if (!userId) {
+        const { data: byName } = await supabase
+          .from('prode_participants')
+          .select('*')
+          .ilike('first_name',
+            `%${firstName.trim()}%`)
+          .ilike('last_name',
+            `%${lastName.trim()}%`)
+          .maybeSingle();
+
+        if (byName) {
+          return {
+            id:          byName.id,
+            firstName:   byName.first_name,
+            lastName:    byName.last_name,
+            userId:      byName.user_id,
+            totalPoints: byName.total_points,
+            createdAt:   byName.created_at,
+          };
+        }
+      }
+
+      // Crear nuevo participante
+      const { data: created, error } = await supabase
+        .from('prode_participants')
+        .insert({
+          first_name: firstName.trim(),
+          last_name:  lastName.trim(),
+          user_id:    userId || null,
+          total_points: 0,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id:          created.id,
+        firstName:   created.first_name,
+        lastName:    created.last_name,
+        userId:      created.user_id,
+        totalPoints: created.total_points,
+        createdAt:   created.created_at,
+      };
+    } catch (err) {
+      console.error('[Prode] getOrCreate error:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Guarda o actualiza una predicción.
+   * Bloquea si el partido no está abierto.
+   */
+  async saveProdePrediction(
+    participantId: string,
+    matchId: string,
+    homeScore: number,
+    awayScore: number
+  ): Promise<boolean> {
+    try {
+      // Verificar que el partido está abierto
+      const { data: match } = await supabase
+        .from('prode_matches')
+        .select('is_open, is_finished')
+        .eq('id', matchId)
+        .single();
+
+      if (!match?.is_open || match?.is_finished) {
+        console.warn(
+          '[Prode] Match not open for predictions'
+        );
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('prode_predictions')
+        .upsert({
+          participant_id:  participantId,
+          match_id:        matchId,
+          home_score_pred: homeScore,
+          away_score_pred: awayScore,
+          updated_at:      new Date().toISOString(),
+        }, { onConflict: 'participant_id,match_id' });
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error(
+        '[Prode] savePrediction error:', err
+      );
+      return false;
+    }
+  },
+
+  /**
+   * Obtiene el ranking público del prode.
+   * Ordenado por total_points DESC.
+   */
+  async getProdeRanking(): Promise<import('../types').ProdeParticipant[]> {
+    try {
+      const { data, error } = await supabase
+        .from('prode_participants')
+        // El !inner hace que solo devuelva participantes que tengan al menos una predicción
+        .select('*, prode_predictions!inner(id)')
+        .order('total_points', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      return (data || []).map((r: any) => ({
+        id:          r.id,
+        firstName:   r.first_name,
+        lastName:    r.last_name,
+        userId:      r.user_id || undefined,
+        totalPoints: r.total_points,
+        createdAt:   r.created_at,
+      }));
+    } catch (err) {
+      console.error('[Prode] getRanking error:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Obtiene las predicciones de un participante.
+   */
+  async getProdePredictions(
+    participantId: string
+  ): Promise<import('../types').ProdePrediction[]> {
+    try {
+      const { data, error } = await supabase
+        .from('prode_predictions')
+        .select('*')
+        .eq('participant_id', participantId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []).map((r: any) => ({
+        id:             r.id,
+        participantId:  r.participant_id,
+        matchId:        r.match_id,
+        homeScorePred:  r.home_score_pred,
+        awayScorePred:  r.away_score_pred,
+        pointsEarned:   r.points_earned ?? undefined,
+        createdAt:      r.created_at,
+        updatedAt:      r.updated_at,
+      }));
+    } catch (err) {
+      console.error(
+        '[Prode] getPredictions error:', err
+      );
+      return [];
+    }
+  },
+
+  /**
+   * Trae TODAS las predicciones de todos los
+   * participantes. Solo para admins.
+   * Incluye datos del partido y del participante
+   * para mostrar en la tabla de administración.
+   */
+  async getAllProdePredictions(): Promise<{
+    predictionId: string;
+    participantId: string;
+    participantName: string;
+    userId: string | null;
+    matchId: string;
+    matchNumber: number;
+    homeTeam: string;
+    awayTeam: string;
+    homeFlag: string;
+    awayFlag: string;
+    homeScorePred: number;
+    awayScorePred: number;
+    pointsEarned: number | null;
+    isMatchFinished: boolean;
+    createdAt: string;
+  }[]> {
+    try {
+      const { data, error } = await supabase
+        .from('prode_predictions')
+        .select(`
+          id,
+          participant_id,
+          match_id,
+          home_score_pred,
+          away_score_pred,
+          points_earned,
+          created_at,
+          prode_participants!inner (
+            id,
+            first_name,
+            last_name,
+            user_id
+          ),
+          prode_matches!inner (
+            id,
+            match_number,
+            home_team,
+            away_team,
+            home_flag,
+            away_flag,
+            is_finished
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((r: any) => ({
+        predictionId:    r.id,
+        participantId:   r.participant_id,
+        participantName: `${r.prode_participants.first_name} ${r.prode_participants.last_name}`.trim(),
+        userId:          r.prode_participants.user_id || null,
+        matchId:         r.match_id,
+        matchNumber:     r.prode_matches.match_number,
+        homeTeam:        r.prode_matches.home_team,
+        awayTeam:        r.prode_matches.away_team,
+        homeFlag:        r.prode_matches.home_flag || '',
+        awayFlag:        r.prode_matches.away_flag || '',
+        homeScorePred:   r.home_score_pred,
+        awayScorePred:   r.away_score_pred,
+        pointsEarned:    r.points_earned ?? null,
+        isMatchFinished: r.prode_matches.is_finished,
+        createdAt:       r.created_at,
+      }));
+    } catch (err) {
+      console.error('[Prode] getAllPredictions error:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Lista todos los participantes del prode.
+   * Para el buscador en la sección de predicciones.
+   */
+  async getAllProdeParticipants(): Promise<import('../types').ProdeParticipant[]> {
+    try {
+      const { data, error } = await supabase
+        .from('prode_participants')
+        .select('*')
+        .order('last_name', { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []).map((r: any) => ({
+        id:          r.id,
+        firstName:   r.first_name,
+        lastName:    r.last_name,
+        userId:      r.user_id || undefined,
+        totalPoints: r.total_points,
+        createdAt:   r.created_at,
+      }));
+    } catch (err) {
+      console.error('[Prode] getAllParticipants:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Versión admin de saveProdePrediction.
+   * Sin bloqueo de is_open — el admin puede crear
+   * y editar predicciones en cualquier partido.
+   */
+  async saveProdePredictionAdmin(
+    participantId: string,
+    matchId: string,
+    homeScore: number,
+    awayScore: number
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('prode_predictions')
+        .upsert({
+          participant_id:  participantId,
+          match_id:        matchId,
+          home_score_pred: homeScore,
+          away_score_pred: awayScore,
+          updated_at:      new Date().toISOString(),
+        }, { onConflict: 'participant_id,match_id' });
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Prode] savePredAdmin error:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Elimina una predicción por su ID.
+   * El participante puede volver a predecir ese
+   * partido si está abierto.
+   * Solo admins (controlado por RLS).
+   */
+  async deleteProdePrediction(
+    predictionId: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('prode_predictions')
+        .delete()
+        .eq('id', predictionId);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Prode] deletePrediction error:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Ajuste manual de puntos por el admin.
+   * Puede dar o quitar puntos a un participante.
+   */
+  async adjustProdePoints(
+    participantId: string,
+    delta: number, // positivo = sumar, negativo = restar
+    _reason?: string
+  ): Promise<boolean> {
+    try {
+      const { data: participant } = await supabase
+        .from('prode_participants')
+        .select('total_points')
+        .eq('id', participantId)
+        .single();
+
+      if (!participant) return false;
+
+      const newTotal = Math.max(
+        0,
+        (participant.total_points || 0) + delta
+      );
+
+      const { error } = await supabase
+        .from('prode_participants')
+        .update({ total_points: newTotal })
+        .eq('id', participantId);
+
+      if (error) {
+          console.error('[Prode] Supabase update error in adjustPoints:', error);
+          throw error;
+      }
+      return true;
+    } catch (err) {
+      console.error(
+        '[Prode] adjustPoints error:', err
+      );
+      return false;
+    }
+  },
+
+  /**
+   * Recalcula los puntos totales de todos los
+   * participantes desde cero basándose en las
+   * predicciones y resultados reales actuales.
+   * Útil si el admin cambia el sistema de puntuación.
+   */
+  async recalculateAllProdePoints(
+    pointsExact: number,
+    pointsResult: number,
+    pointsPartial: number,
+    pointsWrong: number
+  ): Promise<boolean> {
+    try {
+      // 1. Traer partidos finalizados y todas sus predicciones en paralelo
+      const [matchesRes, predsRes] = await Promise.all([
+        supabase
+          .from('prode_matches')
+          .select('id, home_score_real, away_score_real')
+          .eq('is_finished', true)
+          .not('home_score_real', 'is', null),
+        supabase
+          .from('prode_predictions')
+          .select('id, match_id, participant_id, home_score_pred, away_score_pred'),
+      ]);
+      const finishedMatches = matchesRes.data as { id: string; home_score_real: number; away_score_real: number }[] | null;
+      const allPreds = predsRes.data as { id: string; match_id: string; participant_id: string; home_score_pred: number; away_score_pred: number }[] | null;
+
+      if (!finishedMatches?.length || !allPreds?.length) {
+        await supabase
+          .from('prode_participants')
+          .update({ total_points: 0 })
+          .not('id', 'is', null);
+        return true;
+      }
+
+      // 2. Calcular puntos en memoria
+      const matchMap = new Map(finishedMatches.map(m => [m.id, m]));
+      const participantTotals = new Map<string, number>();
+      const predUpdates: { id: string; points_earned: number }[] = [];
+
+      for (const pred of allPreds) {
+        const match = matchMap.get(pred.match_id);
+        if (!match) continue;
+
+        const pH = pred.home_score_pred;
+        const pA = pred.away_score_pred;
+        const rH = match.home_score_real;
+        const rA = match.away_score_real;
+        const pW = pH > pA ? 'home' : pA > pH ? 'away' : 'draw';
+        const rW = rH > rA ? 'home' : rA > rH ? 'away' : 'draw';
+
+        let pts = pointsWrong;
+        if (pH === rH && pA === rA) {
+          pts = pointsExact;
+        } else if (pW === rW) {
+          pts = pointsResult;
+        } else if (pH === rH || pA === rA) {
+          pts = pointsPartial;
+        }
+
+        predUpdates.push({ id: pred.id, points_earned: pts });
+        participantTotals.set(
+          pred.participant_id,
+          (participantTotals.get(pred.participant_id) ?? 0) + pts
+        );
+      }
+
+      // 3. Reset participantes + actualizar predicciones en paralelo
+      await Promise.all([
+        supabase
+          .from('prode_participants')
+          .update({ total_points: 0 })
+          .not('id', 'is', null),
+        ...predUpdates.map(({ id, points_earned }) =>
+          supabase
+            .from('prode_predictions')
+            .update({ points_earned })
+            .eq('id', id)
+        ),
+      ]);
+
+      // 4. Actualizar totales de participantes en paralelo
+      await Promise.all(
+        [...participantTotals.entries()].map(([participantId, total]) =>
+          supabase
+            .from('prode_participants')
+            .update({ total_points: total })
+            .eq('id', participantId)
+        )
+      );
+
+      return true;
+    } catch (err) {
+      console.error('[Prode] recalculate error:', err);
+      return false;
+    }
+  },
+
+  // ════════════════════════════════════════
+  // EVENTO: DÍA DEL PADRE
+  // ════════════════════════════════════════
+
+  async inscribirFamilia(
+    padreNombre: string,
+    padreApellido: string,
+    hijos: { nombre: string; apellido: string }[]
+  ): Promise<{ success: boolean; familia?: import('../types').DpadreFamilia; error?: string }> {
+    try {
+      const { data: existing } = await supabase
+        .from('dpadre_familias')
+        .select('id')
+        .ilike('padre_nombre', padreNombre.trim())
+        .ilike('padre_apellido', padreApellido.trim())
+        .maybeSingle();
+
+      if (existing) return { success: false, error: 'Este padre ya está inscripto.' };
+
+      const { data: familia, error: famError } = await supabase
+        .from('dpadre_familias')
+        .insert({ padre_nombre: padreNombre.trim(), padre_apellido: padreApellido.trim(), total_points: 0 })
+        .select()
+        .single();
+
+      if (famError || !familia) throw famError;
+
+      if (hijos.length > 0) {
+        const { error: hijosError } = await supabase
+          .from('dpadre_hijos')
+          .insert(hijos.map(h => ({ familia_id: familia.id, nombre: h.nombre.trim(), apellido: h.apellido.trim() })));
+        if (hijosError) throw hijosError;
+      }
+
+      return {
+        success: true,
+        familia: {
+          id: familia.id,
+          padreNombre: familia.padre_nombre,
+          padreApellido: familia.padre_apellido,
+          totalPoints: familia.total_points,
+          createdAt: familia.created_at,
+          hijos: hijos.map(h => ({ id: '', familiaId: familia.id, nombre: h.nombre, apellido: h.apellido, createdAt: '' }))
+        }
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al inscribir.';
+      console.error('[DPadre] inscribir error:', err);
+      return { success: false, error: msg };
+    }
+  },
+
+  async buscarFamilias(term: string): Promise<import('../types').DpadreFamilia[]> {
+    try {
+      const { data: porPadre } = await supabase
+        .from('dpadre_familias')
+        .select('*, dpadre_hijos(id, nombre, apellido, created_at)')
+        .or(`padre_nombre.ilike.%${term}%,padre_apellido.ilike.%${term}%`)
+        .order('total_points', { ascending: false });
+
+      const { data: hijosMatch } = await supabase
+        .from('dpadre_hijos')
+        .select('familia_id')
+        .or(`nombre.ilike.%${term}%,apellido.ilike.%${term}%`);
+
+      const extraIds = [...new Set((hijosMatch || []).map(h => h.familia_id))]
+        .filter(id => !(porPadre || []).find(f => f.id === id));
+
+      let extraFamilias: any[] = [];
+      if (extraIds.length > 0) {
+        const { data } = await supabase
+          .from('dpadre_familias')
+          .select('*, dpadre_hijos(id, nombre, apellido, created_at)')
+          .in('id', extraIds);
+        extraFamilias = data || [];
+      }
+
+      return [...(porPadre || []), ...extraFamilias].map(f => ({
+        id: f.id,
+        padreNombre: f.padre_nombre,
+        padreApellido: f.padre_apellido,
+        totalPoints: f.total_points,
+        createdAt: f.created_at,
+        hijos: (f.dpadre_hijos || []).map((h: any) => ({ id: h.id, familiaId: f.id, nombre: h.nombre, apellido: h.apellido, createdAt: h.created_at }))
+      }));
+    } catch (err) {
+      console.error('[DPadre] buscar error:', err);
+      return [];
+    }
+  },
+
+  async getFamilia(id: string): Promise<import('../types').DpadreFamilia | null> {
+    try {
+      const { data, error } = await supabase
+        .from('dpadre_familias')
+        .select('*, dpadre_hijos(id, nombre, apellido, created_at)')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) return null;
+
+      return {
+        id: data.id,
+        padreNombre: data.padre_nombre,
+        padreApellido: data.padre_apellido,
+        totalPoints: data.total_points,
+        createdAt: data.created_at,
+        hijos: (data.dpadre_hijos || []).map((h: any) => ({ id: h.id, familiaId: data.id, nombre: h.nombre, apellido: h.apellido, createdAt: h.created_at }))
+      };
+    } catch (err) {
+      console.error('[DPadre] getFamilia error:', err);
+      return null;
+    }
+  },
+
+  async ajustarPuntosFamilia(familiaId: string, delta: number, zona: 'trivia' | 'futbol' | 'admin', operadorId: string): Promise<boolean> {
+    try {
+      const { data: familia } = await supabase
+        .from('dpadre_familias')
+        .select('total_points')
+        .eq('id', familiaId)
+        .single();
+
+      if (!familia) return false;
+
+      const newTotal = Math.max(0, (familia.total_points || 0) + delta);
+
+      const { error: updateError } = await supabase
+        .from('dpadre_familias')
+        .update({ total_points: newTotal })
+        .eq('id', familiaId);
+
+      if (updateError) throw updateError;
+
+      await supabase
+        .from('dpadre_puntos_log')
+        .insert({ familia_id: familiaId, puntos: delta, zona, operador_id: operadorId });
+
+      return true;
+    } catch (err) {
+      console.error('[DPadre] ajustar error:', err);
+      return false;
+    }
+  },
+
+  async getRankingDPadre(): Promise<import('../types').DpadreFamilia[]> {
+    try {
+      const { data, error } = await supabase
+        .from('dpadre_familias')
+        .select('*, dpadre_hijos(id, nombre, apellido)')
+        .order('total_points', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      return (data || []).map(f => ({
+        id: f.id,
+        padreNombre: f.padre_nombre,
+        padreApellido: f.padre_apellido,
+        totalPoints: f.total_points,
+        createdAt: f.created_at,
+        hijos: (f.dpadre_hijos || []).map((h: any) => ({ id: h.id, familiaId: f.id, nombre: h.nombre, apellido: h.apellido, createdAt: '' }))
+      }));
+    } catch (err) {
+      console.error('[DPadre] ranking error:', err);
+      return [];
+    }
+  },
+
+  async updateFamiliaDPadre(familiaId: string, padreNombre: string, padreApellido: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('dpadre_familias')
+        .update({ padre_nombre: padreNombre.trim(), padre_apellido: padreApellido.trim() })
+        .eq('id', familiaId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[DPadre] update error:', err);
+      return false;
+    }
+  },
+
+  async deleteFamiliaDPadre(familiaId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('dpadre_familias')
+        .delete()
+        .eq('id', familiaId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[DPadre] delete familia error:', err);
+      return false;
+    }
+  },
+
+  async addHijoDPadre(familiaId: string, nombre: string, apellido: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('dpadre_hijos')
+        .insert({ familia_id: familiaId, nombre: nombre.trim(), apellido: apellido.trim() });
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[DPadre] addHijo error:', err);
+      return false;
+    }
+  },
+
+  async deleteHijoDPadre(hijoId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('dpadre_hijos')
+        .delete()
+        .eq('id', hijoId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[DPadre] deleteHijo error:', err);
+      return false;
+    }
+  },
+
+  // ════════════════════════════════════════
+  // TRIVIA ORIGEN
+  // ════════════════════════════════════════
+
+  async _generarPinUnico(): Promise<string> {
+    const intentos = 20;
+    for (let i = 0; i < intentos; i++) {
+      const pin = String(Math.floor(100000 + Math.random() * 900000));
+      const { data } = await supabase
+        .from('trivia_juegos')
+        .select('id')
+        .eq('pin', pin)
+        .maybeSingle();
+      if (!data) return pin;
+    }
+    throw new Error('No se pudo generar un PIN único');
+  },
+
+  async crearTriviaJuego(
+    titulo: string,
+    createdBy: string
+  ): Promise<import('../types').TriviaJuego | null> {
+    try {
+      const pin = await this._generarPinUnico();
+      const { data, error } = await supabase
+        .from('trivia_juegos')
+        .insert({
+          titulo,
+          pin,
+          estado:              'esperando',
+          pregunta_actual_idx: -1,
+          created_by:          createdBy,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return {
+        id:                data.id,
+        titulo:            data.titulo,
+        pin:               data.pin,
+        estado:            data.estado,
+        preguntaActualIdx: data.pregunta_actual_idx,
+        createdBy:         data.created_by,
+        createdAt:         data.created_at,
+      };
+    } catch (err) {
+      console.error('[Trivia] crearJuego:', err);
+      return null;
+    }
+  },
+
+  async getTriviaJuegos(): Promise<import('../types').TriviaJuego[]> {
+    try {
+      const { data, error } = await supabase
+        .from('trivia_juegos')
+        .select(`*, trivia_jugadores(count)`)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map((d: any) => ({
+        id:                d.id,
+        titulo:            d.titulo,
+        pin:               d.pin,
+        estado:            d.estado,
+        preguntaActualIdx: d.pregunta_actual_idx,
+        createdBy:         d.created_by,
+        createdAt:         d.created_at,
+        totalJugadores:    d.trivia_jugadores?.[0]?.count ?? 0,
+      }));
+    } catch (err) {
+      console.error('[Trivia] getJuegos:', err);
+      return [];
+    }
+  },
+
+  async getTriviaJuego(
+    id: string
+  ): Promise<import('../types').TriviaJuego | null> {
+    try {
+      const { data, error } = await supabase
+        .from('trivia_juegos')
+        .select(`*, trivia_preguntas (*, trivia_opciones (*))`)
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return {
+        id:                data.id,
+        titulo:            data.titulo,
+        pin:               data.pin,
+        estado:            data.estado,
+        preguntaActualIdx: data.pregunta_actual_idx,
+        createdBy:         data.created_by,
+        createdAt:         data.created_at,
+        preguntas: (data.trivia_preguntas || [])
+          .sort((a: any, b: any) => a.orden - b.orden)
+          .map((p: any) => ({
+            id:           p.id,
+            juegoId:      p.juego_id,
+            orden:        p.orden,
+            texto:        p.texto,
+            imagenUrl:    p.imagen_url || undefined,
+            tiempoLimite: p.tiempo_limite,
+            esDoble:      p.es_doble_puntos,
+            createdAt:    p.created_at,
+            opciones: (p.trivia_opciones || [])
+              .sort((a: any, b: any) => a.orden - b.orden)
+              .map((o: any) => ({
+                id:         o.id,
+                preguntaId: o.pregunta_id,
+                texto:      o.texto,
+                esCorrecta: o.es_correcta,
+                color:      o.color,
+                orden:      o.orden,
+              })),
+          })),
+      };
+    } catch (err) {
+      console.error('[Trivia] getJuego:', err);
+      return null;
+    }
+  },
+
+  async getTriviaJuegoPorPin(
+    pin: string
+  ): Promise<import('../types').TriviaJuego | null> {
+    try {
+      const { data, error } = await supabase
+        .from('trivia_juegos')
+        .select('*')
+        .eq('pin', pin.trim())
+        .maybeSingle();
+      if (error || !data) return null;
+      return {
+        id:                data.id,
+        titulo:            data.titulo,
+        pin:               data.pin,
+        estado:            data.estado,
+        preguntaActualIdx: data.pregunta_actual_idx,
+        createdBy:         data.created_by,
+        createdAt:         data.created_at,
+      };
+    } catch (err) {
+      console.error('[Trivia] getJuegoPorPin:', err);
+      return null;
+    }
+  },
+
+  async guardarTriviaPreguntas(
+    juegoId: string,
+    preguntas: {
+      id?: string;
+      orden: number;
+      texto: string;
+      imagenUrl?: string;
+      tiempoLimite: number;
+      esDoble: boolean;
+      opciones: {
+        id?: string;
+        texto: string;
+        esCorrecta: boolean;
+        color: import('../types').TriviaColor;
+        orden: number;
+      }[];
+    }[]
+  ): Promise<boolean> {
+    try {
+      for (const p of preguntas) {
+        let preguntaId = p.id;
+
+        if (preguntaId) {
+          await supabase
+            .from('trivia_preguntas')
+            .update({
+              orden:           p.orden,
+              texto:           p.texto,
+              imagen_url:      p.imagenUrl || null,
+              tiempo_limite:   p.tiempoLimite,
+              es_doble_puntos: p.esDoble,
+            })
+            .eq('id', preguntaId);
+        } else {
+          const { data: nueva } = await supabase
+            .from('trivia_preguntas')
+            .insert({
+              juego_id:        juegoId,
+              orden:           p.orden,
+              texto:           p.texto,
+              imagen_url:      p.imagenUrl || null,
+              tiempo_limite:   p.tiempoLimite,
+              es_doble_puntos: p.esDoble,
+            })
+            .select()
+            .single();
+          preguntaId = nueva?.id;
+        }
+
+        if (!preguntaId) continue;
+
+        await supabase
+          .from('trivia_opciones')
+          .delete()
+          .eq('pregunta_id', preguntaId);
+
+        await supabase
+          .from('trivia_opciones')
+          .insert(
+            p.opciones.map(o => ({
+              pregunta_id: preguntaId,
+              texto:       o.texto,
+              es_correcta: o.esCorrecta,
+              color:       o.color,
+              orden:       o.orden,
+            }))
+          );
+      }
+      return true;
+    } catch (err) {
+      console.error('[Trivia] guardarPreguntas:', err);
+      return false;
+    }
+  },
+
+  async eliminarTriviaPreguntas(preguntaId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('trivia_preguntas')
+        .delete()
+        .eq('id', preguntaId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Trivia] eliminarPregunta:', err);
+      return false;
+    }
+  },
+
+  async subirImagenTrivia(file: File): Promise<string> {
+    return this.uploadImage(file, 'trivia');
+  },
+
+  async unirseTrivia(
+    juegoId: string,
+    nickname: string,
+    avatarEmoji: string
+  ): Promise<{
+    success: boolean;
+    jugador?: import('../types').TriviaJugador;
+    error?: string;
+  }> {
+    try {
+      const { data: juego } = await supabase
+        .from('trivia_juegos')
+        .select('estado')
+        .eq('id', juegoId)
+        .single();
+
+      if (juego?.estado !== 'esperando') {
+        return { success: false, error: 'El juego ya comenzó.' };
+      }
+
+      const { data, error } = await supabase
+        .from('trivia_jugadores')
+        .insert({
+          juego_id:      juegoId,
+          nickname:      nickname.trim(),
+          avatar_emoji:  avatarEmoji,
+          puntaje_total: 0,
+          racha_actual:  0,
+          max_racha:     0,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          return { success: false, error: 'Ese nickname ya está en uso.' };
+        }
+        throw error;
+      }
+
+      return {
+        success: true,
+        jugador: {
+          id:           data.id,
+          juegoId:      data.juego_id,
+          nickname:     data.nickname,
+          avatarEmoji:  data.avatar_emoji,
+          puntajeTotal: data.puntaje_total,
+          rachaActual:  data.racha_actual,
+          maxRacha:     data.max_racha,
+          createdAt:    data.created_at,
+        },
+      };
+    } catch (err) {
+      console.error('[Trivia] unirse:', err);
+      return { success: false, error: 'Error al unirse al juego.' };
+    }
+  },
+
+  async getTriviaRanking(
+    juegoId: string,
+    limit: number = 10
+  ): Promise<import('../types').TriviaJugador[]> {
+    try {
+      const { data, error } = await supabase
+        .from('trivia_jugadores')
+        .select('*')
+        .eq('juego_id', juegoId)
+        .order('puntaje_total', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data || []).map((d: any) => ({
+        id:           d.id,
+        juegoId:      d.juego_id,
+        nickname:     d.nickname,
+        avatarEmoji:  d.avatar_emoji,
+        puntajeTotal: d.puntaje_total,
+        rachaActual:  d.racha_actual,
+        maxRacha:     d.max_racha,
+        createdAt:    d.created_at,
+      }));
+    } catch (err) {
+      console.error('[Trivia] getRanking:', err);
+      return [];
+    }
+  },
+
+  async responderTrivia(
+    jugadorId: string,
+    preguntaId: string,
+    opcionId: string,
+    tiempoRespuestaMs: number
+  ): Promise<{
+    esCorrecta: boolean;
+    puntosGanados: number;
+    rachaActual: number;
+    puntajeTotal: number;
+  }> {
+    try {
+      const { data: opcion } = await supabase
+        .from('trivia_opciones')
+        .select('es_correcta')
+        .eq('id', opcionId)
+        .single();
+
+      const { data: pregunta } = await supabase
+        .from('trivia_preguntas')
+        .select('tiempo_limite, es_doble_puntos')
+        .eq('id', preguntaId)
+        .single();
+
+      const esCorrecta = opcion?.es_correcta ?? false;
+      const tiempoLimiteMs = (pregunta?.tiempo_limite ?? 20) * 1000;
+      const esDoble = pregunta?.es_doble_puntos ?? false;
+
+      let puntos = 0;
+      if (esCorrecta) {
+        const tiempoRestante = Math.max(0, tiempoLimiteMs - tiempoRespuestaMs);
+        const ratio = tiempoRestante / tiempoLimiteMs;
+        puntos = Math.max(50, Math.round(1000 * ratio));
+        if (esDoble) puntos *= 2;
+      }
+
+      await supabase
+        .from('trivia_respuestas')
+        .insert({
+          jugador_id:          jugadorId,
+          pregunta_id:         preguntaId,
+          opcion_id:           opcionId,
+          tiempo_respuesta_ms: tiempoRespuestaMs,
+          puntos_ganados:      puntos,
+          es_correcta:         esCorrecta,
+        });
+
+      const { data: jugador } = await supabase
+        .from('trivia_jugadores')
+        .select('puntaje_total, racha_actual, max_racha')
+        .eq('id', jugadorId)
+        .single();
+
+      const rachaAnterior = jugador?.racha_actual ?? 0;
+      const nuevaRacha = esCorrecta ? rachaAnterior + 1 : 0;
+      const maxRacha = Math.max(jugador?.max_racha ?? 0, nuevaRacha);
+      const nuevoPuntaje = (jugador?.puntaje_total ?? 0) + puntos;
+
+      await supabase
+        .from('trivia_jugadores')
+        .update({
+          puntaje_total: nuevoPuntaje,
+          racha_actual:  nuevaRacha,
+          max_racha:     maxRacha,
+        })
+        .eq('id', jugadorId);
+
+      // Leer → sumar → escribir (sin rpc 'increment')
+      const { data: ep } = await supabase
+        .from('trivia_estado_pregunta')
+        .select('total_respuestas')
+        .eq('pregunta_id', preguntaId)
+        .maybeSingle();
+      if (ep) {
+        await supabase
+          .from('trivia_estado_pregunta')
+          .update({
+            total_respuestas: (ep.total_respuestas || 0) + 1,
+            updated_at:       new Date().toISOString(),
+          })
+          .eq('pregunta_id', preguntaId);
+      }
+
+      return {
+        esCorrecta,
+        puntosGanados: puntos,
+        rachaActual:   nuevaRacha,
+        puntajeTotal:  nuevoPuntaje,
+      };
+    } catch (err) {
+      console.error('[Trivia] responder:', err);
+      return { esCorrecta: false, puntosGanados: 0, rachaActual: 0, puntajeTotal: 0 };
+    }
+  },
+
+  async avanzarTriviaJuego(
+    juegoId: string,
+    accion: 'iniciar' | 'siguiente' | 'revelar' | 'finalizar',
+    totalPreguntas?: number
+  ): Promise<boolean> {
+    try {
+      const { data: juego } = await supabase
+        .from('trivia_juegos')
+        .select('estado, pregunta_actual_idx')
+        .eq('id', juegoId)
+        .single();
+
+      if (!juego) return false;
+
+      let updates: Record<string, any> = {};
+
+      switch (accion) {
+        case 'iniciar':
+          updates = { estado: 'en_curso', pregunta_actual_idx: 0 };
+          break;
+        case 'siguiente': {
+          const nextIdx = juego.pregunta_actual_idx + 1;
+          const esUltima =
+            totalPreguntas !== undefined && nextIdx >= totalPreguntas;
+          updates = {
+            estado: esUltima ? 'finalizando' : 'en_curso',
+            pregunta_actual_idx: esUltima
+              ? juego.pregunta_actual_idx
+              : nextIdx,
+          };
+          break;
+        }
+        case 'revelar':
+          updates = { estado: 'entre_preguntas' };
+          break;
+        case 'finalizar':
+          updates = { estado: 'finalizado' };
+          break;
+      }
+
+      const { error } = await supabase
+        .from('trivia_juegos')
+        .update(updates)
+        .eq('id', juegoId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Trivia] avanzar:', err);
+      return false;
+    }
+  },
+
+  async setTriviaPreguntaEstado(
+    juegoId: string,
+    preguntaId: string,
+    estado: import('../types').TriviaEstadoPregunta
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('trivia_estado_pregunta')
+        .upsert(
+          {
+            juego_id:         juegoId,
+            pregunta_id:      preguntaId,
+            estado,
+            total_respuestas: 0,
+            updated_at:       new Date().toISOString(),
+          },
+          { onConflict: 'juego_id,pregunta_id' }
+        );
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Trivia] setPreguntaEstado:', err);
+      return false;
+    }
+  },
+
+  async getTriviaRespuestaJugador(
+    jugadorId: string,
+    preguntaId: string
+  ): Promise<import('../types').TriviaRespuesta | null> {
+    try {
+      const { data } = await supabase
+        .from('trivia_respuestas')
+        .select('*')
+        .eq('jugador_id', jugadorId)
+        .eq('pregunta_id', preguntaId)
+        .maybeSingle();
+      if (!data) return null;
+      return {
+        id:                data.id,
+        jugadorId:         data.jugador_id,
+        preguntaId:        data.pregunta_id,
+        opcionId:          data.opcion_id,
+        tiempoRespuestaMs: data.tiempo_respuesta_ms,
+        puntosGanados:     data.puntos_ganados,
+        esCorrecta:        data.es_correcta,
+        createdAt:         data.created_at,
+      };
+    } catch (err) {
+      console.error('[Trivia] getRespuesta:', err);
+      return null;
+    }
+  },
+
+  async eliminarTriviaJuego(juegoId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('trivia_juegos')
+        .delete()
+        .eq('id', juegoId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Trivia] eliminarJuego:', err);
+      return false;
     }
   },
 };
