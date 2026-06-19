@@ -1,13 +1,14 @@
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole, CoordinatorVariant } from '../types';
+import { hasRole } from '../services/authUtils';
 
 export const useRole = () => {
     const { user } = useAuth();
 
-    const isAnfitrion = user?.role === UserRole.ANFITRION;
-    const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
-    const isGroupsAdmin = user?.role === UserRole.ADMIN_GROUPS;
-    const isEncargadoGroups = user?.role === UserRole.ENCARGADO_GRUPOS;
+    const isAnfitrion = hasRole(user, UserRole.ANFITRION);
+    const isSuperAdmin = hasRole(user, UserRole.SUPER_ADMIN);
+    const isGroupsAdmin = hasRole(user, UserRole.ADMIN_GROUPS);
+    const isEncargadoGroups = hasRole(user, UserRole.ENCARGADO_GRUPOS);
     const isAdmin = isSuperAdmin || isGroupsAdmin;
     const canManageGroups = isAdmin || isEncargadoGroups;
     const isCoordinator = user?.roles?.includes(UserRole.COORDINATOR) ?? false;

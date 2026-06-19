@@ -18,32 +18,17 @@ export const migrateToSupabase = async (onProgress: (msg: string) => void) => {
         // 2. Users
         onProgress("Migrando Usuarios...");
         const users = db.getUsers();
-        // Intentar recuperar credenciales locales si existen para no perder acceso
-        // Nota: Esto es un hack para migración local. En producción, las contraseñas deberían ser hash.
-        let credentials: Record<string, string> = {};
-        try {
-            const storedCreds = localStorage.getItem('credentials');
-            if (storedCreds) credentials = JSON.parse(storedCreds);
-        } catch (e) { console.warn("No se pudieron leer credenciales locales"); }
-
-        const usersPayload = users.reduce((acc, u) => {
-            // NUNCA usar contraseña default
-            if (!credentials[u.email]) {
-                console.warn(`Usuario ${u.email} omitido: sin credencial local`);
-                return acc;
-            }
-            acc.push({
-                id: u.id,
-                name: u.name,
-                email: u.email,
-                role: u.role,
-                isActive: u.isActive,
-                linkedGroupId: u.linkedGroupId,
-                volunteerRoles: u.volunteerRoles,
-                password: credentials[u.email] 
-            });
-            return acc;
-        }, [] as any[]);
+        // Migrate user profile data only — never migrate passwords.
+        // Passwords are managed exclusively by Supabase Auth.
+        const usersPayload = users.map(u => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            isActive: u.isActive,
+            linkedGroupId: u.linkedGroupId,
+            volunteerRoles: u.volunteerRoles,
+        }));
 
         const { error: usersError } = await supabase.from('users').upsert(usersPayload);
         if (usersError) throw usersError;

@@ -145,7 +145,7 @@ const AppContent: React.FC = () => {
     };
 
     const handleLogin = () => {
-        navigate('/auth');
+        navigate('/auth', { state: { from: location } });
     };
 
     const handleGlobalVolunteerLogin = async (email: string, pass: string) => {
@@ -201,115 +201,171 @@ const AppContent: React.FC = () => {
 
     return (
         <Routes>
-            {/* PUBLIC AUTH ROUTE */}
+            {/* ── RUTAS SIN LAYOUT ────────────────── */}
             <Route
                 path="/auth"
-                element={!user ? <AuthScreen onLoginSuccess={handleAuthScreenLogin} /> : <Navigate to="/" />}
+                element={
+                    !user
+                        ? <AuthScreen onLoginSuccess={handleAuthScreenLogin} />
+                        : <Navigate to="/" />
+                }
             />
-
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/form" element={<Formulario />} />
             <Route path="/influos-acceso" element={<InfluosAcceso />} />
 
-            {/* PROTECTED ROUTES WRAPPED IN LAYOUT */}
-            <Route path="*" element={
-                !user ? <Navigate to="/auth" state={{ from: location }} replace /> : (
-                    <Layout
-                        userRole={user?.role || null}
+            {/* ── RUTAS PÚBLICAS CON LAYOUT ────────── */}
+            <Route path="/" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                    onVolunteerClick={
+                        user && showVolunteerAccess
+                            ? () => setIsVolunteerModalOpen(true)
+                            : undefined
+                    }
+                >
+                    <SystemLoginModal
+                        isOpen={isVolunteerModalOpen}
+                        onClose={() => setIsVolunteerModalOpen(false)}
+                        systemName="Acceso Voluntarios"
+                        onLogin={handleGlobalVolunteerLogin}
+                    />
+                    <Dashboard
                         currentUser={user}
-                        onLogout={onLogoutClick}
-                        appConfig={config}
-                        onVolunteerClick={showVolunteerAccess ? () => setIsVolunteerModalOpen(true) : undefined}
-                    >
-                        <SystemLoginModal
-                            isOpen={isVolunteerModalOpen}
-                            onClose={() => setIsVolunteerModalOpen(false)}
-                            systemName="Acceso Voluntarios"
-                            onLogin={handleGlobalVolunteerLogin}
-                        />
+                        onLoginRequest={handleLogin}
+                    />
+                </Layout>
+            } />
 
-                        <Routes>
-                            <Route path="/" element={<Dashboard currentUser={user} onLoginRequest={handleLogin} />} />
-                            <Route path="/punto-de-informacion" element={<InfoPoint currentUser={user} />} />
-                            <Route path="/gcx" element={<Groups currentUser={user} onLoginRequest={handleLogin} />} />
+            <Route path="/gcx" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                    onVolunteerClick={
+                        user && showVolunteerAccess
+                            ? () => setIsVolunteerModalOpen(true)
+                            : undefined
+                    }
+                >
+                    <Groups
+                        currentUser={user}
+                        onLoginRequest={handleLogin}
+                    />
+                </Layout>
+            } />
 
-                            <Route path="/panel-admin" element={
-                                isSuperAdmin(user)
-                                    ? <Admin currentUser={user} onConfigUpdate={refreshConfig} />
-                                    : <Navigate to="/" />
-                            } />
-
-                            <Route path="/store" element={<Store currentUser={user} />} />
-                            <Route path="/alabanza" element={<Alabanza currentUser={user} onLoginRequest={handleLogin} />} />
-
-                            <Route path="/reportes" element={
-                                (user && hasRole(user, [
-                                    UserRole.SUPER_ADMIN,
-                                    UserRole.PASTOR,
-                                    UserRole.ENCARGADO_PUNTO,
-                                    UserRole.ADMIN_PUNTO,
-                                    UserRole.ENCARGADO_GRUPOS,
-                                    UserRole.REPORTES,
-                                    UserRole.ADMIN_GROUPS
-                                ]))
-                                    ? <Pastores currentUser={user} />
-                                    : <Navigate to="/" />
-                            } />
-
-                            <Route path="/bienvenida" element={
-                                (user && hasRole(user, [
-                                    UserRole.SUPER_ADMIN,
-                                    UserRole.ENCARGADO_BIENVENIDA,
-                                    UserRole.VOLUNTARIO_BIENVENIDA
-                                ]))
-                                    ? <Bienvenida />
-                                    : <Navigate to="/" />
-                            } />
-
-                            <Route path="/influos" element={
-                                (user && hasRole(user, [
-                                    UserRole.INFLUOS,
-                                    UserRole.SUPER_ADMIN,
-                                    UserRole.PASTOR
-                                ]))
-                                    ? <InfluosPage />
-                                    : <Navigate to="/" />
-                            } />
-
-                            <Route path="/mis-grupos" element={
-                                (user && hasRole(user, [UserRole.ANFITRION, UserRole.CO_ANFITRION, UserRole.ADMIN_GROUPS, UserRole.SUPER_ADMIN]))
-                                    ? <HostDashboard currentUser={user} />
-                                    : <Navigate to="/" />
-                            } />
-
-                            <Route path="/coordinators" element={
-                                (user && hasRole(user, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN]))
-                                    ? <Coordinators currentUser={user} />
-                                    : <Navigate to="/" />
-                            } />
-
-                            <Route path="/tutoriales" element={<TutorialsPage />} />
-
-                            <Route path="/audiencia-servicios" element={
-                                (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]))
-                                    ? <PastoralCareDashboard currentUser={user} />
-                                    : <Navigate to="/" />
-                            } />
-
-                            <Route path="/audiencia-servicios/new" element={
-                                (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]))
-                                    ? <PastoralCareForm currentUser={user} />
-                                    : <Navigate to="/" />
-                            } />
-
-                            <Route path="/notificaciones" element={<Notifications />} />
-                            <Route path="/perfil" element={<ProfilePage />} />
-
-                            <Route path="*" element={<Navigate to="/" />} />
-                        </Routes>
-                    </Layout>
-                )
+            {/* ── RUTAS PROTEGIDAS CON LAYOUT ──────── */}
+            <Route path="*" element={
+                !user
+                    ? <Navigate
+                        to="/auth"
+                        state={{ from: location }}
+                        replace
+                      />
+                    : (
+                        <Layout
+                            userRole={user?.role || null}
+                            currentUser={user}
+                            onLogout={onLogoutClick}
+                            appConfig={config}
+                            onVolunteerClick={
+                                showVolunteerAccess
+                                    ? () => setIsVolunteerModalOpen(true)
+                                    : undefined
+                            }
+                        >
+                            <SystemLoginModal
+                                isOpen={isVolunteerModalOpen}
+                                onClose={() => setIsVolunteerModalOpen(false)}
+                                systemName="Acceso Voluntarios"
+                                onLogin={handleGlobalVolunteerLogin}
+                            />
+                            <Routes>
+                                <Route path="/punto-de-informacion" element={<InfoPoint currentUser={user} />} />
+                                <Route path="/panel-admin" element={
+                                    isSuperAdmin(user)
+                                        ? <Admin currentUser={user} onConfigUpdate={refreshConfig} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/store" element={<Store currentUser={user} />} />
+                                <Route path="/alabanza" element={<Alabanza currentUser={user} onLoginRequest={handleLogin} />} />
+                                <Route path="/reportes" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_PUNTO,
+                                        UserRole.ADMIN_PUNTO,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                        UserRole.REPORTES,
+                                        UserRole.ADMIN_GROUPS
+                                    ]))
+                                        ? <Pastores currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/bienvenida" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ENCARGADO_BIENVENIDA,
+                                        UserRole.VOLUNTARIO_BIENVENIDA
+                                    ]))
+                                        ? <Bienvenida />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/influos" element={
+                                    (user && hasRole(user, [
+                                        UserRole.INFLUOS,
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR
+                                    ]))
+                                        ? <InfluosPage />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/mis-grupos" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <HostDashboard currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/coordinators" element={
+                                    (user && hasRole(user, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN]))
+                                        ? <Coordinators currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/tutoriales" element={<TutorialsPage />} />
+                                <Route path="/audiencia-servicios" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ADMIN_CUIDADO_PASTORAL
+                                    ]))
+                                        ? <PastoralCareDashboard currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/audiencia-servicios/new" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ADMIN_CUIDADO_PASTORAL
+                                    ]))
+                                        ? <PastoralCareForm currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/notificaciones" element={<Notifications />} />
+                                <Route path="/perfil" element={<ProfilePage />} />
+                                <Route path="*" element={<Navigate to="/" />} />
+                            </Routes>
+                        </Layout>
+                    )
             } />
         </Routes>
     );

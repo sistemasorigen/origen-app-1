@@ -1,0 +1,41 @@
+{
+  "name": "origen-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite preview --host --port ${PORT:-8080}",
+    "deploy": "git pull upstream main && npm run build && git add -f dist && git add -A && git commit -m \"chore: deploy\" --allow-empty && git push upstream main"
+  },
+  "dependencies": {
+    "@google/genai": "^1.31.0",
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "2.39.0",
+    "@types/matter-js": "^0.20.2",
+    "@types/react-joyride": "^2.0.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.0",
+    "framer-motion": "^12.26.2",
+    "idb": "^8.0.0",
+    "lucide-react": "^0.555.0",
+    "matter-js": "^0.20.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-easy-crop": "^5.5.6",
+    "react-joyride": "^2.9.3",
+    "react-router-dom": "^7.10.1",
+    "recharts": "^2.15.0",
+    "tailwind-merge": "^2.2.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

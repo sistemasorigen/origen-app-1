@@ -15,6 +15,7 @@ import {
     ChevronDown,
     ChevronRight,
     LogOut,
+    LogIn,
     Sun,
     Moon,
     UserCircle,
@@ -67,6 +68,7 @@ interface MenuItem {
     icon: React.ElementType;
     path?: string;
     roles?: UserRole[];
+    requiresAuth?: boolean;
     subItems?: SubMenuItem[];
     subGroups?: SubGroup[];
     action?: () => void;
@@ -243,7 +245,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Tutoriales',
             icon: Book,
             path: '/tutoriales',
-            roles: []
+            roles: [],
+            requiresAuth: true
         }
     ];
 
@@ -272,7 +275,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             {/* Menu Items */}
             <nav className={`flex-1 overflow-y-auto py-4 space-y-1 ${isCollapsed ? 'px-2' : 'px-4'}`}>
                 {menuData.map((item, index) => {
-                    if (currentUser && item.roles && item.roles.length > 0 && !hasRole(currentUser, item.roles)) return null;
+                    if (item.roles && item.roles.length > 0) {
+                        if (!currentUser) return null;
+                        if (!hasRole(currentUser, item.roles)) return null;
+                    }
+                    if (item.requiresAuth && !currentUser) return null;
 
                     const isActive = (item.path === '/' && location.pathname === '/') ||
                         (item.path !== '/' && item.path && location.pathname.startsWith(item.path));
@@ -461,14 +468,14 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                             {!isCollapsed && <span>Cerrar Sesión</span>}
                         </button>
                     ) : (
-                        !isCollapsed && (
-                            <button
-                                onClick={() => { handleNavigation('/login'); }}
-                                className="w-full p-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black text-xs font-bold shadow-md hover:shadow-lg transition-all"
-                            >
-                                Iniciar Sesión
-                            </button>
-                        )
+                        <button
+                            onClick={() => { handleNavigation('/auth'); onClose(); }}
+                            className={`w-full flex items-center gap-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-black text-xs uppercase tracking-wider transition-all border-2 border-black hover:opacity-80 ${isCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+                            title={isCollapsed ? "Iniciar Sesión" : undefined}
+                        >
+                            <LogIn className="w-4 h-4 shrink-0" />
+                            {!isCollapsed && <span>Iniciar Sesión</span>}
+                        </button>
                     )}
                 </div>
             </div>

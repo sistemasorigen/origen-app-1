@@ -31,7 +31,7 @@ import GroupsAdminList from '../../components/GCX/ListaGruposAdmin';
 
 interface GroupsProps {
     currentUser: User | null;
-    onLoginRequest: (email: string, pass: string) => Promise<boolean>;
+    onLoginRequest?: () => void;
 }
 
 // --- UTILITIES ---
@@ -888,18 +888,32 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // handleInquirySubmit removed - logic moved to JoinGroupModal
 
     const handleJoinClick = (g: Group) => {
+        // GUARD: Si no hay sesión, redirigir a /auth con retorno a /gcx
+        if (!currentUser) {
+            navigate('/auth', {
+                state: { from: { pathname: '/gcx' } }
+            });
+            return;
+        }
+
         // AGE VALIDATION
-        if (currentUser?.age) {
+        if (currentUser.age) {
             const minAge = g.minAge || 0;
             const maxAge = g.maxAge || 100;
 
             if (currentUser.age < minAge) {
-                showToast(`No puedes unirte. Debes tener al menos ${minAge} años.`, 'error');
+                showToast(
+                    `No puedes unirte. Debes tener al menos ${minAge} años.`,
+                    'error'
+                );
                 return;
             }
 
             if (currentUser.age > maxAge) {
-                showToast(`No puedes unirte. La edad máxima es ${maxAge} años.`, 'error');
+                showToast(
+                    `No puedes unirte. La edad máxima es ${maxAge} años.`,
+                    'error'
+                );
                 return;
             }
         }

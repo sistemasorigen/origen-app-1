@@ -1,5 +1,5 @@
 # 🛸 Origen App — IA Instructions & Style Guide
-> Versión 2.0 · Obligatorio leer antes de cualquier intervención
+> Versión 3.0 · Obligatorio leer antes de cualquier intervención
 
 Este archivo es la **memoria central y autoridad arquitectónica** del proyecto.
 Todo agente de IA que trabaje en este repositorio debe leerlo completo antes
@@ -118,9 +118,9 @@ import NeoModal from '@/components/ui/NeoModal';
 
 ## 5. RUTAS PÚBLICAS Y PROTEGIDAS
 
-Las rutas se declaran en `App.tsx`. Hay dos zonas:
+Las rutas se declaran en `App.tsx`. Hay **tres zonas**:
 
-**Rutas públicas** (sin auth, antes del bloque protegido):
+### Zona 1 — Públicas sin Layout (sin auth, sin chrome)
 | Ruta | Componente |
 |---|---|
 | `/auth` | PantallaAutenticacion |
@@ -129,23 +129,31 @@ Las rutas se declaran en `App.tsx`. Hay dos zonas:
 | `/form` | Formulario (público de bienvenida) |
 | `/influos-acceso` | InfluosAcceso (verificador público) |
 
-**Rutas protegidas** (requieren usuario autenticado):
-| Ruta | Módulo | Roles permitidos |
+### Zona 2 — Públicas con Layout (sin auth, con chrome)
+Accesibles sin login. `currentUser` puede ser `null` en estos componentes.
+| Ruta | Componente | Notas |
 |---|---|---|
-| `/` | Home / Dashboard | Todos |
-| `/info-point` | Punto de Información | Todos |
-| `/groups` | Grupos de Conexión | Todos |
-| `/welcome` | Bienvenida | SUPER_ADMIN, ENCARGADO_BIENVENIDA, VOLUNTARIO_BIENVENIDA |
+| `/` | Home / Dashboard | Sin sesión muestra contenido general |
+| `/gcx` | Grupos (Grupos.tsx) | Botón UNIRME requiere sesión para inscribirse |
+
+### Zona 3 — Protegidas con Layout (requieren auth)
+Redirigen a `/auth` con `state.from` si no hay sesión activa.
+| Ruta | Módulo | Roles (guard en App.tsx) |
+|---|---|---|
+| `/punto-de-informacion` | Punto de Información | Todos (autenticados) |
+| `/panel-admin` | Sistemas / Admin | SUPER_ADMIN |
+| `/store` | Tienda | Todos (autenticados) |
+| `/alabanza` | Alabanza | Todos (autenticados) |
+| `/reportes` | Reportes | SUPER_ADMIN, PASTOR, ENCARGADO_PUNTO, ADMIN_PUNTO, ENCARGADO_GRUPOS, REPORTES, ADMIN_GROUPS |
+| `/bienvenida` | Bienvenida | SUPER_ADMIN, ENCARGADO_BIENVENIDA, VOLUNTARIO_BIENVENIDA |
 | `/influos` | Influos | SUPER_ADMIN, PASTOR, INFLUOS |
-| `/pastoral-care` | Audiencia Servicios | SUPER_ADMIN, PASTOR, ADMIN_CUIDADO_PASTORAL |
-| `/pastoral-care/new` | Formulario Pastoral | SUPER_ADMIN, PASTOR, ADMIN_CUIDADO_PASTORAL |
-| `/pastores` | Reportes | SUPER_ADMIN, PASTOR, ENCARGADO_PUNTO, ADMIN_PUNTO, ENCARGADO_GRUPOS, REPORTES, ADMIN_GROUPS |
+| `/mis-grupos` | Panel Anfitrión | SUPER_ADMIN, ADMIN_GROUPS, ANFITRION, CO_ANFITRION |
 | `/coordinators` | Coordinadores | SUPER_ADMIN, COORDINATOR |
-| `/host-dashboard` | Panel Anfitrión | SUPER_ADMIN, ADMIN_GROUPS, ANFITRION, CO_ANFITRION |
-| `/admin` | Sistemas | SUPER_ADMIN |
-| `/perfil` | Perfil Personal | Todos |
-| `/notificaciones` | Notificaciones | Todos |
-| `/tutorials` | Tutoriales | Todos |
+| `/tutoriales` | Tutoriales | Todos (autenticados) |
+| `/audiencia-servicios` | Audiencia Servicios | SUPER_ADMIN, PASTOR, ADMIN_CUIDADO_PASTORAL |
+| `/audiencia-servicios/new` | Formulario Pastoral | SUPER_ADMIN, PASTOR, ADMIN_CUIDADO_PASTORAL |
+| `/notificaciones` | Notificaciones | Todos (autenticados) |
+| `/perfil` | Perfil Personal | Todos (autenticados) |
 
 ---
 
@@ -259,6 +267,36 @@ import ImageUpload from '../../components/media/SubidaImagen';
 import AvatarUpload from '../../components/media/SubidaAvatar';
 ```
 
+### 7.6 Páginas con modo público
+`Home (/)` y `Grupos (/gcx)` son accesibles sin login. `currentUser` puede
+ser `null` en estos componentes. Reglas:
+
+- **NUNCA** asumir que `currentUser` existe en `pages/home/Home.tsx` ni en `pages/groups/Grupos.tsx`
+- Siempre usar optional chaining: `currentUser?.role`
+- Botón UNIRME en Grupos: si `!currentUser`, navegar a `/auth` con state `{ from: { pathname: '/gcx' } }`
+- El `Layout` recibe `currentUser={null}` en estas rutas y muestra "Ingresar"/"Registrarse" en el header
+
+```typescript
+// ✅ CORRECTO en componentes de zona pública
+currentUser?.role
+currentUser ? hasRole(currentUser, [...]) : false
+
+// ❌ INCORRECTO — crashea si currentUser es null
+currentUser.role
+hasRole(currentUser, [...])  // sin guard previo
+```
+
+```typescript
+// Patrón de redirección en handleJoinClick (Grupos.tsx)
+const handleJoinClick = (g: Group) => {
+    if (!currentUser) {
+        navigate('/auth', { state: { from: { pathname: '/gcx' } } });
+        return;
+    }
+    // ... lógica con usuario autenticado
+};
+```
+
 ---
 
 ## 8. ESTÉTICA — SISTEMA NEO-BRUTALIST
@@ -292,7 +330,7 @@ debe ser coherente con él.
 ### Colores de acento por módulo
 | Módulo | Color |
 |---|---|
-| Grupos (GCX) | blue-500 |
+| Grupos (GCX) | `#28a946` (verde — usado en TarjetaGrupo, botones UNIRME, badges) |
 | Bienvenida | emerald-500 |
 | Influos | violet-600 |
 | Pastoral / Audiencia | violet-700 |
@@ -342,7 +380,7 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | Función | Propósito |
 |---|---|
 | `email-notifier` | Central de emails (Resend). Recibe webhooks de triggers SQL. |
-| `welcome-reminder` | Cron job semanal de recordatorios a visitantes sin responder /form |
+| `welcome-reminder` | Cron job semanal (pg_cron, lunes 10am UTC). Busca `welcome_visitors` con `stage='NEW'` y `form_reminder_count < 3`. Envía recordatorios a bienvenida@origeniglesia.org |
 | `send-group-confirmation` | Email de confirmación de inscripción a grupos |
 | `send-gcx-welcome` | Email de bienvenida al módulo GCX |
 | `send-whatsapp` | Envío de mensajes por WhatsApp Business API |
@@ -366,9 +404,12 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `users` | Global | Perfil de usuarios (roles, avatar, datos personales) |
 | `groups` | GCX | Grupos de conexión con anfitriones |
 | `group_registrations` | GCX | Inscripciones a grupos |
+| `group_categories` | GCX | Categorías de grupos |
+| `group_tags` | GCX | Etiquetas de grupos |
+| `group_attendance` | GCX | Asistencias a grupos. Columnas: `date DATE`, `present_members JSONB` (array de registration IDs) |
 | `dropout_requests` | GCX | Solicitudes de baja de grupos |
-| `welcome_visitors` | Bienvenida | Registro de nuevos ingresantes |
-| `influos_attendees` | Influos | Asistentes al evento Influos (menores) |
+| `welcome_visitors` | Bienvenida | Registro de nuevos ingresantes. Columnas relevantes: `accepted_jesus TEXT`, `localidad TEXT`, `form_reminder_count INT`, `form_reminder_sent_at TIMESTAMPTZ` |
+| `influos_attendees` | Influos | Asistentes al evento Influos (menores). Columnas relevantes: `tribu TEXT`, `localidad TEXT`, `accepted_jesus TEXT` |
 | `service_statistics` | Pastoral | Estadísticas de servicios dominicales |
 | `app_events` | Info Point | Eventos del calendario |
 | `announcements` | Info Point | Anuncios del tablero |
@@ -376,7 +417,7 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `audit_logs` | Admin | Registro de auditoría |
 
 **Todas las tablas tienen RLS habilitado.** Al crear tablas nuevas siempre
-agregar policies correspondientes.
+agregar policies correspondientes. Ver Sección 17 para tablas con acceso `anon`.
 
 ---
 
@@ -447,6 +488,7 @@ Antes de escribir cualquier código, confirmar mentalmente:
 - [ ] ¿Los campos nuevos tienen su columna SQL + tipo en `types.ts`?
 - [ ] ¿La nueva ruta tiene su guard de roles en `App.tsx`?
 - [ ] ¿No hardcodeé ninguna API key?
+- [ ] ¿En componentes de zona pública usé `currentUser?.role` con optional chaining?
 
 ---
 
@@ -470,5 +512,58 @@ counter++;
 
 ---
 
-*Última actualización: Mayo 2026 — Versión 2.0*
+## 17. ARQUITECTURA DE ACCESO PÚBLICO
+
+### Contexto
+`Home (/)` y `Grupos (/gcx)` son páginas híbridas: accesibles sin autenticación
+pero con funcionalidad extendida para usuarios con sesión.
+
+### Comportamiento por estado de sesión
+
+| Elemento | Sin sesión | Con sesión |
+|---|---|---|
+| Home — cards de módulos | Muestra contenido general | Solo los permitidos por rol |
+| Grupos — grilla | Visible completa | Visible completa |
+| Grupos — botón UNIRME | Redirige a `/auth` con `state.from` | Abre modal de inscripción |
+| Grupos — tab Admin | Oculto | Visible si tiene rol GCX |
+| Layout — header | Botones "Ingresar" / "Registrarse" | Avatar + campana notificaciones |
+| MenuDeslizable — footer | Botón "Iniciar Sesión" → `/auth` | Botón "Cerrar Sesión" |
+| Menú — items con roles | Ocultos | Visibles según rol |
+| Menú — Inicio, GCX, Tutoriales | Visibles (roles: `[]`) | Visibles |
+
+### RLS de Supabase para acceso público
+Las siguientes tablas tienen SELECT abierto al rol `anon`:
+- `groups` — solo `status = 'approved'`
+- `group_categories` — sin restricciones adicionales
+- `group_tags` — sin restricciones adicionales
+- `group_registrations` — solo SELECT; INSERT/UPDATE/DELETE requieren `authenticated`
+
+Política de ejemplo:
+```sql
+CREATE POLICY "groups_public_select"
+    ON public.groups FOR SELECT
+    TO anon, authenticated
+    USING (status = 'approved');
+```
+
+### Regla de código
+En componentes con `currentUser` nullable, NUNCA usar:
+```typescript
+currentUser.role          // ❌ crashea si null
+hasRole(currentUser, [...])  // ❌ sin guard previo
+```
+Siempre usar:
+```typescript
+currentUser?.role                          // ✅
+currentUser ? hasRole(currentUser, [...]) : false  // ✅
+```
+
+---
+
+*Última actualización: Mayo 2026 — Versión 3.0*
+*Cambios v3.0: rutas corregidas al naming real del repo (zona 1/2/3),
+ arquitectura de acceso público documentada (sección 17),
+ patrón público agregado (sección 7.6), tablas actualizadas (group_categories,
+ group_tags, group_attendance, columnas de welcome_visitors e influos_attendees),
+ color GCX corregido a `#28a946`, checklist ampliado con regla de optional chaining*
 *Repositorio: github.com/sistemasorigen/origen-app-1*

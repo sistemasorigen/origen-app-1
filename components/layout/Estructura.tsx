@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { UserRole, AppConfig, User } from '../../types';
 import { db } from '../../services/dbService';
 
@@ -28,6 +28,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     useAutoRefresh();
     useAttendanceReminder();
     const location = useLocation();
+    const navigate = useNavigate();
     const { currentSong } = useAudio();
     const { shouldShowBanner, requestPermission, dismissBanner } = usePushNotifications();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -157,10 +158,16 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                             <div className="flex items-center">
                                 {!currentUser && (
                                     <div className="hidden md:flex items-center gap-2">
-                                        <button className="text-xs font-bold text-slate-500 hover:text-black transition-colors uppercase tracking-wider px-2">
+                                        <button
+                                            onClick={() => navigate('/auth')}
+                                            className="text-xs font-bold text-slate-500 hover:text-black transition-colors uppercase tracking-wider px-2"
+                                        >
                                             Ingresar
                                         </button>
-                                        <button className="px-5 py-2 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider hover:opacity-80 transition-all shadow-md">
+                                        <button
+                                            onClick={() => navigate('/auth')}
+                                            className="px-5 py-2 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider hover:opacity-80 transition-all shadow-md"
+                                        >
                                             Registrarse
                                         </button>
                                     </div>

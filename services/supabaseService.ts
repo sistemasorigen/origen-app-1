@@ -1,7 +1,10 @@
-
+﻿
 import { supabase } from './supabaseClient';
 import { db } from './dbService';
 import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant } from '../types';
+
+// Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
+const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
 
 // Helper de temporadas — replicado de Grupos.tsx
 const getSeasonFromDate = (
@@ -20,7 +23,7 @@ const getSeasonFromDate = (
 
 // EXPORTED standalone function for direct use
 export async function insertGroupDirect(group: Group): Promise<Group | null> {
-  console.log('[insertGroupDirect] Called with:', group.name);
+
   const dbRow: Record<string, any> = {
     id: group.id,
     name: group.name,
@@ -57,14 +60,14 @@ export async function insertGroupDirect(group: Group): Promise<Group | null> {
     dbRow.co_host_id = (group as any).co_host_id;
   }
 
-  console.log('[insertGroupDirect] Sending to Supabase...');
+
   const { data, error } = await supabase.from('groups').insert(dbRow).select().single();
-  console.log('[insertGroupDirect] Result:', { data, error });
+
 
   if (error) {
     // If duplicate, try update
     if (error.code === '23505') {
-      console.log('[insertGroupDirect] Duplicate key, trying update...');
+
       return await updateGroupDirect(group);
     }
     console.error('[insertGroupDirect] Error:', error);
@@ -76,7 +79,7 @@ export async function insertGroupDirect(group: Group): Promise<Group | null> {
 
 // Update group
 export async function updateGroupDirect(group: Group): Promise<Group | null> {
-  console.log('[updateGroupDirect] Called with:', group.id, group.name);
+
 
   // First, verify the group exists
   const { data: existingGroup, error: checkError } = await supabase
@@ -91,7 +94,7 @@ export async function updateGroupDirect(group: Group): Promise<Group | null> {
 
   if (!existingGroup) {
     console.error('[updateGroupDirect] Group not found with ID:', group.id);
-    console.log('[updateGroupDirect] Attempting insert instead...');
+
     // Try insert if group doesn't exist
     return await insertGroupDirect(group);
   }
@@ -122,11 +125,11 @@ export async function updateGroupDirect(group: Group): Promise<Group | null> {
     target_gender: group.targetGender || 'Mixto'
   };
 
-  console.log('[updateGroupDirect] Updating with data:', dbRow);
-  console.log('[updateGroupDirect] HOST ID in payload:', dbRow.host_id);
+
+
 
   // Use RPC for consistent updates (bypassing Client RLS limitations)
-  console.log('[updateGroupDirect] Calling RPC admin_update_group_v2');
+
   const { data: updatedData, error: rpcError } = await supabase.rpc('admin_update_group_v2', {
     p_group_id: group.id,
     p_group_data: dbRow
@@ -137,7 +140,7 @@ export async function updateGroupDirect(group: Group): Promise<Group | null> {
     return null;
   }
 
-  console.log('[updateGroupDirect] RPC Success');
+
 
   if (updatedData) {
     return transformDbRowToGroup(updatedData);
@@ -148,7 +151,7 @@ export async function updateGroupDirect(group: Group): Promise<Group | null> {
 
 // Delete group - Uses RPC to bypass RLS and cascade delete
 export async function deleteGroupDirect(id: string): Promise<boolean> {
-  console.log('[deleteGroupDirect] Called with:', id);
+
 
   // Use RPC function to bypass RLS and delete associated registrations/attendance
   const { data, error } = await supabase.rpc('admin_delete_group', {
@@ -160,7 +163,7 @@ export async function deleteGroupDirect(id: string): Promise<boolean> {
     return false;
   }
 
-  console.log('[deleteGroupDirect] Success, result:', data);
+
   return data === true;
 }
 
@@ -290,7 +293,7 @@ export const supabaseService = {
         // Self-Healing: Try to create the user profile if it doesn't exist
         // This handles cases where the Trigger failed or wasn't set up when user was created.
         if (!user && authData.user) {
-          console.log("Attempting self-repair for missing profile...");
+
           const { data: newUser, error: createError } = await supabase
             .from('users')
             .insert({
@@ -379,7 +382,7 @@ export const supabaseService = {
       // Use just the origin - Supabase will append #access_token=xxx&type=recovery...
       // App.tsx will detect type=recovery and show UpdatePassword component
       const redirectTo = window.location.origin + '/';
-      console.log("Solicitando reseteo de password para:", email, "RedirectTo:", redirectTo);
+
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectTo,
@@ -417,7 +420,7 @@ export const supabaseService = {
     const { data: nameCheck } = await supabase
       .from('users')
       .select('id')
-      .ilike('name', fullName)
+      .ilike('name', escapeLikePattern(fullName))
       .maybeSingle();
 
     if (nameCheck) return { exists: true, reason: 'Ya existe un usuario con ese Nombre y Apellido.' };
@@ -648,14 +651,14 @@ export const supabaseService = {
 
   // Link a user to a group explicitly (updates linked_group_id)
   async linkUserToGroup(userId: string, groupId: string): Promise<boolean> {
-    console.log(`[linkUserToGroup] Linking user ${userId} to group ${groupId}`);
+
     const { data, error } = await supabase
       .from('users')
       .update({ linked_group_id: groupId })
       .eq('id', userId)
       .select();
 
-    console.log('[linkUserToGroup] Result:', { data, error });
+
 
     if (error) {
       console.error('[linkUserToGroup] Error:', error);
@@ -844,7 +847,7 @@ export const supabaseService = {
   // 4. Group Registration Chart Data
   async getGroupRegistrationChartData(start: string, end: string): Promise<{ name: string; value: number; startDate?: string; endDate?: string; status?: string }[]> {
     try {
-      console.log('[Reports] Fetching group registration data...');
+
 
       // Step 1: Get all registrations
       const { data: registrations, error: regError } = await supabase
@@ -856,7 +859,7 @@ export const supabaseService = {
         return [];
       }
 
-      console.log('[Reports] Registrations found:', registrations?.length || 0);
+
 
       if (!registrations || registrations.length === 0) {
         return [];
@@ -872,7 +875,7 @@ export const supabaseService = {
         return [];
       }
 
-      console.log('[Reports] Groups found:', groups?.length || 0);
+
 
       // Create a map of group_id -> group info
       const groupMap: Record<string, {
@@ -923,7 +926,7 @@ export const supabaseService = {
         }))
         .sort((a, b) => b.value - a.value);
 
-      console.log('[Reports] Final chart data:', result);
+
       return result;
     } catch (err) {
       console.error('[Reports] Exception in getGroupRegistrationChartData:', err);
@@ -938,7 +941,7 @@ export const supabaseService = {
     groupStatus: 'ACTIVOS' | 'FINALIZADOS' | 'TODOS'
   ): Promise<{ categoryId: string; categoryName: string; categoryColor: string; count: number; percentage: number }[]> {
     try {
-      console.log('[Analytics] Fetching category analytics...', { startDate, endDate, groupStatus });
+
 
       // Get all groups with their categories
       const { data: groups, error: groupsError } = await supabase
@@ -1010,7 +1013,7 @@ export const supabaseService = {
         percentage: total > 0 ? Math.round((data.count / total) * 100) : 0
       })).sort((a, b) => b.count - a.count);
 
-      console.log('[Analytics] Category analytics result:', result);
+
       return result;
     } catch (err) {
       console.error('[Analytics] Exception in getGroupAnalyticsByCategory:', err);
@@ -1025,7 +1028,7 @@ export const supabaseService = {
     groupStatus: 'ACTIVOS' | 'FINALIZADOS' | 'TODOS'
   ): Promise<{ tagName: string; count: number; percentage: number }[]> {
     try {
-      console.log('[Analytics] Fetching tag analytics...', { startDate, endDate, groupStatus });
+
 
       // Get all groups with tags
       const { data: groups, error: groupsError } = await supabase
@@ -1085,7 +1088,7 @@ export const supabaseService = {
         percentage: total > 0 ? Math.round((count / total) * 100) : 0
       })).sort((a, b) => b.count - a.count);
 
-      console.log('[Analytics] Tag analytics result:', result);
+
       return result;
     } catch (err) {
       console.error('[Analytics] Exception in getGroupAnalyticsByTags:', err);
@@ -1101,7 +1104,7 @@ export const supabaseService = {
     groupStatus: 'ACTIVOS' | 'FINALIZADOS' | 'TODOS'
   ): Promise<{ tipo: string; nombre: string; cantidadInscritos: number; estadoGrupo: string; fechaInicio: string }[]> {
     try {
-      console.log('[Analytics] Fetching detailed export data...', { type, startDate, endDate, groupStatus });
+
 
       // Get all groups with full details
       const { data: groups, error: groupsError } = await supabase
@@ -1218,7 +1221,7 @@ export const supabaseService = {
         });
       }
 
-      console.log('[Analytics] Export data result:', results);
+
       return results.sort((a, b) => b.cantidadInscritos - a.cantidadInscritos);
     } catch (err) {
       console.error('[Analytics] Exception in getDetailedAnalyticsForExport:', err);
@@ -1347,7 +1350,6 @@ export const supabaseService = {
         throw error;
       }
 
-      console.log('[Groups] Fetched approved groups from DB:', data?.length || 0, 'groups');
       return (data || []).map((row: any) => this._dbRowToGroup(row));
     } catch (error) {
       console.warn('[Groups] Using local fallback due to error');
@@ -1368,7 +1370,7 @@ export const supabaseService = {
         throw error;
       }
 
-      console.log('[Groups Admin] Fetched all groups:', data?.length || 0, 'groups');
+
       return (data || []).map((row: any) => this._dbRowToGroup(row));
     } catch (error) {
       console.warn('[Groups Admin] Using local fallback due to error');
@@ -1390,7 +1392,7 @@ export const supabaseService = {
         throw error;
       }
 
-      console.log('[Groups by Host] Fetched groups for host:', hostId, 'count:', data?.length || 0);
+
       return (data || []).map((row: any) => this._dbRowToGroup(row));
     } catch (error) {
       console.warn('[Groups by Host] Error, returning empty array');
@@ -1423,7 +1425,7 @@ export const supabaseService = {
         return false;
       }
 
-      console.log('[Groups] Status updated:', groupId, '->', status, adminNote ? '(with note)' : '');
+
 
       // Send in-app notifications to host/co-host
       if (status === 'approved' || status === 'rejected') {
@@ -1457,7 +1459,7 @@ export const supabaseService = {
   // Re-open a finished/rejected group: Delete all registrations and attendance, reset members count
   async reopenGroup(groupId: string): Promise<boolean> {
     try {
-      console.log('[Groups] Re-opening group:', groupId);
+
 
       // 1. Delete all registrations for this group
       const { error: regError } = await supabase
@@ -1469,7 +1471,7 @@ export const supabaseService = {
         console.error('[Groups] Error deleting registrations:', regError);
         return false;
       }
-      console.log('[Groups] Deleted all registrations for group:', groupId);
+
 
       // 2. Delete all attendance records for this group
       const { error: attError } = await supabase
@@ -1481,7 +1483,7 @@ export const supabaseService = {
         console.warn('[Groups] Error deleting attendance (may not exist):', attError);
         // Non-fatal, continue
       } else {
-        console.log('[Groups] Deleted all attendance for group:', groupId);
+
       }
 
       // 3. Reset members_count to 0 and set status to 'pending'
@@ -1499,7 +1501,7 @@ export const supabaseService = {
         return false;
       }
 
-      console.log('[Groups] Group re-opened successfully:', groupId);
+
       return true;
     } catch (error) {
       console.error('[Groups] Exception re-opening group:', error);
@@ -1570,7 +1572,7 @@ export const supabaseService = {
         target_gender: groupWithoutRegs.targetGender || 'Mixto'
       };
 
-      console.log('[Groups] saveGroup called with:', dbRow);
+
 
       // Add timeout to diagnose hanging issue
       const timeoutPromise = new Promise((_, reject) =>
@@ -1583,7 +1585,7 @@ export const supabaseService = {
         .select()
         .single();
 
-      console.log('[Groups] Starting insert with 10s timeout...');
+
 
       let data, error;
       try {
@@ -1595,12 +1597,12 @@ export const supabaseService = {
         return null;
       }
 
-      console.log('[Groups] Insert result:', { data, error });
+
 
       if (error) {
         // If it's a duplicate, try update
         if (error.code === '23505') {
-          console.log('[Groups] Duplicate, trying update...');
+
           const { data: updated, error: updateError } = await supabase
             .from('groups')
             .update(dbRow)
@@ -1612,14 +1614,14 @@ export const supabaseService = {
             console.error('[Groups] Update error:', updateError);
             return null;
           }
-          console.log('[Groups] Updated:', updated?.id);
+
           return this._transformDbToGroup(updated);
         }
         console.error('[Groups] Save error:', error);
         return null;
       }
 
-      console.log('[Groups] Saved successfully:', data?.id);
+
       return this._transformDbToGroup(data);
     } catch (error) {
       console.error('[Groups] Save exception:', error);
@@ -1659,7 +1661,7 @@ export const supabaseService = {
         console.error('[Groups] Delete error:', error);
         return false;
       }
-      console.log('[Groups] Deleted:', id);
+
       return true;
     } catch (error) {
       console.error('[Groups] Delete exception:', error);
@@ -1705,7 +1707,7 @@ export const supabaseService = {
         .eq('isActive', true);
 
       if (searchTerm) {
-        query = query.ilike('name', `%${searchTerm}%`);
+        query = query.ilike('name', `%${escapeLikePattern(searchTerm)}%`);
       }
 
       const { data, error } = await query;
@@ -1742,7 +1744,7 @@ export const supabaseService = {
 
         // If REJECTED, we update to PENDING (Re-application)
         if (existing.status === 'REJECTED') {
-          console.log('[Groups] Reactivating REJECTED registration');
+
           const { error: updateError } = await supabase
             .from('group_registrations')
             .update({
@@ -1786,7 +1788,7 @@ export const supabaseService = {
         dbReg.partner_user_id = registration.partnerUserId;
       }
 
-      console.log('[Groups] Registering new member:', dbReg);
+
 
       const { error: insertError } = await supabase
         .from('group_registrations')
@@ -1826,7 +1828,7 @@ export const supabaseService = {
           .eq('id', registration.groupId);
       }
 
-      console.log('[Groups] Registered successfully:', registration.id);
+
       return true;
     } catch (error) {
       console.error('[Groups] Registration exception:', error);
@@ -1858,12 +1860,12 @@ export const supabaseService = {
       for (const reg of data) {
         // Check main user email
         if (reg.email?.toLowerCase().trim() === emailLower) {
-          console.log('[Groups] Partner email matches existing main user');
+
           return true;
         }
         // Check partner_data email
         if (reg.partner_data?.email?.toLowerCase().trim() === emailLower) {
-          console.log('[Groups] Partner email matches existing partner');
+
           return true;
         }
       }
@@ -1881,7 +1883,7 @@ export const supabaseService = {
       const { data, error } = await supabase
         .from('users')
         .select('id, name')
-        .ilike('email', email.toLowerCase().trim())
+        .eq('email', email.toLowerCase().trim())
         .maybeSingle();
 
       if (error) {
@@ -1890,7 +1892,7 @@ export const supabaseService = {
       }
 
       if (data) {
-        console.log('[Users] Found user by email:', data.name);
+
         return { id: data.id, name: data.name };
       }
 
@@ -1907,7 +1909,7 @@ export const supabaseService = {
     try {
       if (!userId && !email) return null;
 
-      console.log('[Groups] getCoupleRegistrationStatus called:', { groupId, userId, email });
+
 
       // Try RPC first (most robust)
       try {
@@ -1918,7 +1920,7 @@ export const supabaseService = {
         });
 
         if (!error && data) {
-          console.log('[Groups] RPC get_couple_registration_status result:', data);
+
           return data as 'PENDING' | 'APPROVED' | 'REJECTED';
         }
 
@@ -1948,7 +1950,7 @@ export const supabaseService = {
         const isMainByEmail = email && reg.email?.toLowerCase().trim() === email.toLowerCase().trim();
 
         if (isMainUser || isPartnerById || isPartnerByEmail || isMainByEmail) {
-          console.log('[Groups] Found matching registration:', { status: reg.status, isMainUser, isPartnerById, isPartnerByEmail });
+
           return reg.status as 'PENDING' | 'APPROVED' | 'REJECTED';
         }
       }
@@ -1998,14 +2000,14 @@ export const supabaseService = {
     try {
       if (!userId && !email) return [];
 
-      console.log('[Groups] getUserRegistrations called with:', { userId, email });
+
 
       // TRY RPC FIRST (Most robust for partners)
       try {
         const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_group_registrations');
 
         if (!rpcError && rpcData) {
-          console.log('[Groups] RPC get_my_group_registrations success:', rpcData.length);
+
           return rpcData.map((row: any) => ({
             id: row.id,
             firstName: row.first_name,
@@ -2034,10 +2036,10 @@ export const supabaseService = {
       // - partner_user_id is the user's ID (they're linked as partner)
       const str = [];
       if (userId) str.push(`user_id.eq.${userId}`);
-      if (email) str.push(`email.ilike.${email}`);
+      if (email) str.push(`email.eq.${email}`);
       if (userId) str.push(`partner_user_id.eq.${userId}`); // Include registrations where user is partner
 
-      console.log('[Groups] Query OR conditions:', str.join(','));
+
 
       if (str.length > 0) {
         query = query.or(str.join(','));
@@ -2052,7 +2054,7 @@ export const supabaseService = {
         return [];
       }
 
-      console.log('[Groups] Found registrations (Fallback):', data?.length, data);
+
 
       return (data || []).map(row => ({
         id: row.id,
@@ -2078,7 +2080,7 @@ export const supabaseService = {
     try {
       if (!email) return [];
 
-      console.log('[Groups] Calling RPC get_registrations_by_partner_email for:', email);
+
 
       // Use RPC for case-insensitive JSON search
       const { data, error } = await supabase
@@ -2090,7 +2092,7 @@ export const supabaseService = {
         return [];
       }
 
-      console.log('[Groups] RPC get_registrations_by_partner_email success:', data?.length);
+
 
       return (data || []).map((row: any) => ({
         id: row.id,
@@ -2113,7 +2115,7 @@ export const supabaseService = {
 
   async updateRegistrationStatus(id: string, status: 'APPROVED' | 'REJECTED'): Promise<boolean> {
     try {
-      console.log('[Groups] Calling RPC manage_group_registration_v3 with:', { id, status });
+
 
       // Fetch user info for notification
       const { data: regInfo } = await supabase
@@ -2138,7 +2140,7 @@ export const supabaseService = {
         throw error;
       }
 
-      console.log('[Groups] RPC Result:', data);
+
 
       // If REJECTED, also clear partner data to clean up
       if (status === 'REJECTED') {
@@ -2149,7 +2151,7 @@ export const supabaseService = {
             partner_user_id: null
           })
           .eq('id', id);
-        console.log('[Groups] Cleared partner data for rejected registration');
+
       }
 
       // Send notifications
@@ -2184,7 +2186,7 @@ export const supabaseService = {
     try {
       if (!registrationIds.length) return { success: false, message: 'No selected members' };
 
-      console.log('[Groups] Calling RPC bulk_remove_group_members with:', registrationIds);
+
 
       const { data, error } = await supabase
         .rpc('bulk_remove_group_members', {
@@ -2204,7 +2206,7 @@ export const supabaseService = {
   },
 
   async deleteGroupRegistration(registrationId: string, groupId: string): Promise<boolean> {
-    console.log('[Groups] deleteGroupRegistration called with:', { registrationId, groupId });
+
     try {
       // First check if registration exists
       const { data: existing, error: checkError } = await supabase
@@ -2213,7 +2215,7 @@ export const supabaseService = {
         .eq('id', registrationId)
         .single();
 
-      console.log('[Groups] Registration lookup:', { existing, checkError });
+
 
       if (checkError) {
         console.error('[Groups] Registration not found:', checkError);
@@ -2225,7 +2227,7 @@ export const supabaseService = {
         .delete()
         .eq('id', registrationId);
 
-      console.log('[Groups] Delete result:', { deleteError, count });
+
 
       if (deleteError) {
         console.error('[Groups] Registration delete error:', deleteError);
@@ -2247,7 +2249,7 @@ export const supabaseService = {
           .eq('id', groupId);
       }
 
-      console.log('[Groups] Registration deleted successfully');
+
       return true;
     } catch (error) {
       console.error('[Groups] Delete registration exception:', error);
@@ -2260,7 +2262,6 @@ export const supabaseService = {
   async getGroupCategories(): Promise<GroupCategory[]> {
     try {
       const { data, error } = await supabase.from('group_categories').select('*');
-      console.log('[Supabase] Categories loaded:', data, 'Error:', error);
       if (error) throw error;
       return data || [];
     } catch (error) {
@@ -2271,13 +2272,13 @@ export const supabaseService = {
 
   async saveGroupCategory(category: GroupCategory): Promise<boolean> {
     try {
-      console.log('[Categories] Saving:', category);
+
       const { error } = await supabase.from('group_categories').upsert(category);
       if (error) {
         console.error('[Categories] Save error:', error);
         throw error;
       }
-      console.log('[Categories] Saved successfully');
+
       return true;
     } catch (error) {
       console.error('[Categories] Save exception:', error);
@@ -2299,7 +2300,6 @@ export const supabaseService = {
   async getGroupTags(): Promise<GroupTag[]> {
     try {
       const { data, error } = await supabase.from('group_tags').select('*');
-      console.log('[Supabase] Tags loaded:', data, 'Error:', error);
       if (error) throw error;
       return data || [];
     } catch (error) {
@@ -2310,13 +2310,13 @@ export const supabaseService = {
 
   async saveGroupTag(tag: GroupTag): Promise<boolean> {
     try {
-      console.log('[Tags] Saving:', tag);
+
       const { error } = await supabase.from('group_tags').upsert(tag);
       if (error) {
         console.error('[Tags] Save error:', error);
         throw error;
       }
-      console.log('[Tags] Saved successfully');
+
       return true;
     } catch (error) {
       console.error('[Tags] Save exception:', error);
@@ -2691,7 +2691,7 @@ export const supabaseService = {
         throw new Error('No se pudo obtener la URL pública de la imagen');
       }
 
-      console.log('[uploadImage] Success:', data.publicUrl);
+
       return data.publicUrl;
     } catch (error) {
       console.error('[uploadImage] Error:', error);
@@ -2745,7 +2745,7 @@ export const supabaseService = {
         throw new Error('No se pudo obtener la URL pública de la imagen');
       }
 
-      console.log('[uploadBase64Image] Success:', data.publicUrl);
+
       return data.publicUrl;
     } catch (error) {
       console.error('[uploadBase64Image] Error:', error);
@@ -2979,7 +2979,7 @@ export const supabaseService = {
         return false;
       }
 
-      console.log('[Admin Add Member] Member added and approved, email notification triggered');
+
       return true;
     } catch (error) {
       console.error('[Admin Add Member] Exception adding member:', error);
@@ -2996,7 +2996,7 @@ export const supabaseService = {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .ilike('name', `%${term}%`)
+        .ilike('name', `%${escapeLikePattern(term)}%`)
         .limit(20);
 
       if (error) {

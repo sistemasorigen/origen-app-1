@@ -6,6 +6,8 @@ import { Loader2, Send } from 'lucide-react';
 import { useToast } from '../../pages/punto-informacion/context/ContextoToast';
 
 const INTEREST_OPTIONS = ['Domingos', 'Grupos GCX', 'Voluntarios', 'Oración', 'Bautismos', 'Niños'];
+const FORM_RATE_KEY = 'form_last_submit';
+const FORM_RATE_MS = 60_000;
 
 const Formulario: React.FC = () => {
     const navigate = useNavigate();
@@ -36,6 +38,17 @@ const Formulario: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        const lastSubmit = sessionStorage.getItem(FORM_RATE_KEY);
+        if (lastSubmit) {
+            const elapsed = Date.now() - parseInt(lastSubmit, 10);
+            if (elapsed < FORM_RATE_MS) {
+                const remaining = Math.ceil((FORM_RATE_MS - elapsed) / 1000);
+                toast.error(`Por favor esperá ${remaining} segundos antes de volver a enviar.`);
+                return;
+            }
+        }
+
         setIsLoading(true);
 
         try {
@@ -100,6 +113,7 @@ const Formulario: React.FC = () => {
 
             if (updateError) throw updateError;
 
+            sessionStorage.setItem(FORM_RATE_KEY, Date.now().toString());
             setStep(2);
             setTimeout(() => {
                 navigate('/auth');

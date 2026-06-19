@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+﻿import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { supabaseService } from '../services/supabaseService';
 import { User, UserRole, CoordinatorVariant } from '../types';
@@ -81,8 +81,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => clearTimeout(safetyTimer);
     }, [isLoadingSession]);
 
-    // Helper to cache/retrieve user profile from LocalStorage
-    // "Stale-While-Revalidate" pattern to prevent role flickering
+    // Helper to cache/retrieve user profile from sessionStorage
+    // "Stale-While-Revalidate" pattern to prevent role flickering.
+    // sessionStorage is tab-scoped, preventing cross-tab session sharing.
     const STORAGE_KEY = 'origen_user_profile';
     const saveProfileToCache = (user: User) => {
         try {
@@ -90,17 +91,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 user,
                 expiresAt: Date.now() + 60 * 60 * 1000, // Valid for 1 hour
             };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(cached));
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(cached));
         } catch (e) { console.error('[Auth] Cache write error', e); }
     };
 
     const getProfileFromCache = (): User | null => {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
+            const raw = sessionStorage.getItem(STORAGE_KEY);
             if (!raw) return null;
             const cached = JSON.parse(raw);
             if (cached.expiresAt && Date.now() > cached.expiresAt) {
-                localStorage.removeItem(STORAGE_KEY);
+                sessionStorage.removeItem(STORAGE_KEY);
                 return null;
             }
             return cached.user ?? null;
@@ -112,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // 1. Try to recover from Cache first (optimistic)
         const cached = getProfileFromCache();
         if (cached && cached.id === sessionUser.id) {
-            console.log('[Auth] Using cached profile for immediate render.');
+
             return cached;
         }
 
@@ -133,11 +134,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Hydrate User Function (Hoisted)
     const hydrateUser = async (sessionUser: any) => {
-        console.log('[Auth] Hydrating user:', sessionUser?.email);
+
         if (!sessionUser) {
-            console.log('[Auth] No session user, clearing state.');
+
             setUser(null);
-            localStorage.removeItem(STORAGE_KEY); // Clear cache
+            sessionStorage.removeItem(STORAGE_KEY); // Clear cache
             setIsProfileSynced(false);
             setIsLoadingSession(false);
             setIsLoadingProfile(false);
@@ -146,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // CRITICAL: Unblock UI immediately with partial user (or cached user)
         // We SKIP the mounted check here to ensure we unblock even if strict mode is doing weird things
-        console.log('[Auth] Setting partial user immediately.');
+
         setUser(prev => prev || createPartialUser(sessionUser));
         setIsLoadingSession(false); // <--- UNBLOCKS APP SHELL
         setIsLoadingProfile(true);  // Indicates background work
@@ -162,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         .maybeSingle();
 
                     if (!error && data) {
-                        // console.log('[Auth] Profile fetched:', data);
+                        //
                     }
 
                     if (data) return { data, error: null };
@@ -190,7 +191,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (mounted.current) {
                 if (profileData) {
-                    console.log(`[Auth] Full profile found (Role: ${profileData.role}), updating user.`);
+
 const fullUser: User = {
                         id: profileData.id,
                         name: profileData.name,
@@ -252,7 +253,6 @@ const fullUser: User = {
     // Main Auth Listener
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            console.log(`[Auth] State Change: ${event}`);
 
             if (event === 'INITIAL_SESSION') {
                 if (!session) {
@@ -285,7 +285,7 @@ const fullUser: User = {
                 if (!session) {
                     setIsLoadingSession(false);
                 } else {
-                    console.log('[Auth] Session found by getSession (backup check), hydrating...');
+
                     hydrateUser(session.user);
                 }
             }
@@ -307,7 +307,7 @@ const fullUser: User = {
 
             if (result.user) {
                 // EXPLICIT HYDRATION: Don't wait for listener
-                console.log('[Auth] SignIn success, manually hydrating...');
+
                 await hydrateUser(result.user);
 
                 setError(null);
@@ -340,7 +340,7 @@ const fullUser: User = {
 
     const signOut = async () => {
         setUser(null);
-        localStorage.removeItem(STORAGE_KEY); // Clear cache
+        sessionStorage.removeItem(STORAGE_KEY); // Clear cache
         setIsLoadingSession(false);
         setIsLoadingProfile(false);
         setError(null);
@@ -399,7 +399,7 @@ const fullUser: User = {
         const updated = { ...user, avatarUrl: url };
         setUser(updated);
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
         } catch (e) { /* silenciar */ }
     };
 
