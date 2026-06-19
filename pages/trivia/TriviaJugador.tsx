@@ -42,11 +42,22 @@ const TriviaJugador: React.FC = () => {
     const [resultadoRespuesta, setResultadoRespuesta]     = useState<ResultadoRespuesta | null>(null);
     const [totalRespondieron, setTotalRespondieron] = useState(0);
     const [jugadores, setJugadores]                 = useState<TriviaJugadorType[]>([]);
+    const [tiempoRestante, setTiempoRestante]       = useState(0);
+    const [tiempoTotal, setTiempoTotal]             = useState(0);
+    const [mensajeBloqueado, setMensajeBloqueado]   = useState<string | null>(null);
 
     const inicializadoRef = useRef(false);
     const juegoRef        = useRef<TriviaJuego | null>(null);
     const jugadorRef      = useRef<TriviaJugadorType | null>(null);
     const dobleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const timerRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const detenerTimer = () => {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+    };
 
     // ── Cargar pregunta por índice ────────────────────────
     const cargarPregunta = useCallback(async (
@@ -72,6 +83,25 @@ const TriviaJugador: React.FC = () => {
             }
         }
 
+        const segundos = p.tiempoLimite;
+
+        const startTimer = () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+            setTiempoTotal(segundos);
+            setTiempoRestante(segundos);
+            let count = segundos;
+            timerRef.current = setInterval(() => {
+                count--;
+                if (count <= 0) {
+                    clearInterval(timerRef.current!);
+                    timerRef.current = null;
+                    setTiempoRestante(0);
+                } else {
+                    setTiempoRestante(count);
+                }
+            }, 1000);
+        };
+
         if (p.esDoble) {
             setPantalla('doble');
             if (dobleTimeoutRef.current)
@@ -79,10 +109,12 @@ const TriviaJugador: React.FC = () => {
             dobleTimeoutRef.current = setTimeout(() => {
                 setPantalla('pregunta');
                 setTiempoInicioPregunta(Date.now());
+                startTimer();
             }, 2500);
         } else {
             setPantalla('pregunta');
             setTiempoInicioPregunta(Date.now());
+            startTimer();
         }
     }, []);
 
@@ -177,8 +209,8 @@ const TriviaJugador: React.FC = () => {
         init();
 
         return () => {
-            if (dobleTimeoutRef.current)
-                clearTimeout(dobleTimeoutRef.current);
+            if (dobleTimeoutRef.current) clearTimeout(dobleTimeoutRef.current);
+            detenerTimer();
         };
     }, [pin]);
 
@@ -219,6 +251,7 @@ const TriviaJugador: React.FC = () => {
                         await cargarPregunta(juegoUpdated, idx);
 
                     } else if (estado === 'entre_preguntas') {
+                        detenerTimer();
                         const p = pregs[idx];
                         if (!p || !jug) {
                             setPantalla('respondida');
@@ -253,6 +286,7 @@ const TriviaJugador: React.FC = () => {
                         estado === 'finalizando' ||
                         estado === 'finalizado'
                     ) {
+                        detenerTimer();
                         const ranking = await supabaseService
                             .getTriviaRanking(juegoActual.id, 200);
                         const yo = ranking.find(r => r.id === jug?.id);
@@ -316,17 +350,29 @@ const TriviaJugador: React.FC = () => {
         if (opcionElegida) return;
         if (!jugador || !preguntaActual) return;
 
+        detenerTimer();
         const tiempoMs = Date.now() - tiempoInicioPregunta;
         setOpcionElegida(opcion.id);
         setPantalla('respondida');
 
-        await supabaseService.responderTrivia(
+        const resultado = await supabaseService.responderTrivia(
             jugador.id,
             preguntaActual.id,
             opcion.id,
             tiempoMs
         );
+
+        if (resultado.bloqueado) {
+            setOpcionElegida(null);
+            setPantalla('pregunta');
+            setMensajeBloqueado('El admin pausó el juego. Esperá un momento.');
+            setTimeout(() => setMensajeBloqueado(null), 3500);
+        }
     };
+
+    // ── Helpers para color del timer ──────────────────────
+    const pct = tiempoTotal > 0 ? tiempoRestante / tiempoTotal : 0;
+    const timerColor = pct > 0.5 ? '#22C55E' : pct > 0.25 ? '#F59E0B' : '#EF4444';
 
     // ── JSX ───────────────────────────────────────────────
     return (
@@ -455,17 +501,48 @@ const TriviaJugador: React.FC = () => {
                 {pantalla === 'pregunta' && preguntaActual && (
                     <motion.div
                         key={`pregunta-${preguntaActual.id}`}
-                        className="min-h-screen flex flex-col"
+                        className="h-screen flex flex-col overflow-hidden"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 1.05 }}
                         transition={{ duration: 0.3 }}
                     >
-                        {/* Header */}
-                        <div className="px-4 pt-8 pb-4 text-center">
+                        {/* Barra de progreso del timer */}
+                        <div className="w-full h-2 bg-white/10 shrink-0">
+                            {tiempoTotal > 0 && (
+                                <div
+                                    className="h-full transition-all duration-1000 ease-linear"
+                                    style={{
+                                        width: `${pct * 100}%`,
+                                        background: timerColor,
+                                    }}
+                                />
+                            )}
+                        </div>
+
+                        {/* Toast: admin pausó el timer */}
+                        {mensajeBloqueado && (
+                            <div className="mx-4 mt-3 px-4 py-2.5 rounded-xl text-center text-sm font-semibold shrink-0"
+                                style={{ background: 'rgba(251,146,60,0.15)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.3)' }}
+                            >
+                                {mensajeBloqueado}
+                            </div>
+                        )}
+
+                        {/* Top: logo + label + timer */}
+                        <div className="px-4 pt-3 pb-0 text-center shrink-0">
+                            <div className="flex justify-center mb-3">
+                                <img
+                                    src="/origen-logo.png"
+                                    alt="Origen"
+                                    className="h-9 opacity-85"
+                                    style={{ filter: 'brightness(0) invert(1)' }}
+                                />
+                            </div>
+
                             {preguntaActual.esDoble && (
                                 <div
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-3"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-2"
                                     style={{
                                         background: 'rgba(255,215,0,0.15)',
                                         border: '1px solid rgba(255,215,0,0.3)'
@@ -480,30 +557,47 @@ const TriviaJugador: React.FC = () => {
                                     </span>
                                 </div>
                             )}
-                            <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-3">
-                                Elegí tu respuesta
-                            </p>
-                            <p className="text-white text-xl font-bold leading-snug px-2">
+
+                            <div className="flex items-center justify-between px-1">
+                                <p className="text-white/50 text-xs font-semibold uppercase tracking-widest">
+                                    Elegí tu respuesta
+                                </p>
+                                {tiempoTotal > 0 && (
+                                    <span
+                                        className="text-sm font-black tabular-nums transition-colors duration-500"
+                                        style={{ color: timerColor }}
+                                    >
+                                        {tiempoRestante}s
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Pregunta */}
+                        <div className="flex-1 flex items-center px-4">
+                            <p className="w-full text-white text-2xl font-bold leading-tight text-center">
                                 {preguntaActual.texto}
                             </p>
                         </div>
 
                         {/* Grid de opciones */}
-                        <div className="flex-1 grid grid-cols-2 gap-3 px-3 pb-6 pt-4 items-start">
-                            {(preguntaActual.opciones || []).map(opcion => (
-                                <motion.button
-                                    key={opcion.id}
-                                    type="button"
-                                    onClick={() => handleResponder(opcion)}
-                                    whileTap={{ scale: 0.94 }}
-                                    className="flex flex-col items-center justify-center gap-2 rounded-2xl p-5 min-h-[120px] text-white font-bold active:brightness-90 transition-all"
-                                    style={{ background: TRIVIA_COLORES[opcion.color] }}
-                                >
-                                    <span className="text-4xl drop-shadow">
-                                        {TRIVIA_ICONOS[opcion.color]}
-                                    </span>
-                                </motion.button>
-                            ))}
+                        <div className="shrink-0 px-3 pb-4">
+                            <div className="grid grid-cols-2 gap-3 w-full" style={{ maxHeight: '62vh' }}>
+                                {(preguntaActual.opciones || []).map(opcion => (
+                                    <motion.button
+                                        key={opcion.id}
+                                        type="button"
+                                        onClick={() => handleResponder(opcion)}
+                                        whileTap={{ scale: 0.94 }}
+                                        className="flex flex-col items-center justify-center rounded-3xl text-white font-bold active:brightness-90 transition-all"
+                                        style={{ background: TRIVIA_COLORES[opcion.color], height: '29vh' }}
+                                    >
+                                        <span className="text-5xl drop-shadow">
+                                            {TRIVIA_ICONOS[opcion.color]}
+                                        </span>
+                                    </motion.button>
+                                ))}
+                            </div>
                         </div>
                     </motion.div>
                 )}

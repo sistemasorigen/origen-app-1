@@ -29,7 +29,7 @@ const PANELES_EVENTOS = [
     },
     {
         id:          'trivia',
-        titulo:      'Trivia Origen',
+        titulo:      'Kahoot Origen',
         descripcion: 'Crear y gestionar juegos de trivia en vivo con PIN.',
         ruta:        '/trivia/admin',
         icono:       Trophy,

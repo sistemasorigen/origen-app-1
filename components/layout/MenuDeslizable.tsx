@@ -310,7 +310,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     ]
                 },
                 {
-                    label: 'Trivia Origen',
+                    label: 'Kahoot Origen',
                     path: '/trivia/admin',
                     roles: [
                         UserRole.SUPER_ADMIN,

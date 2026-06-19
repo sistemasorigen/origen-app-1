@@ -5,7 +5,7 @@ import { User, TriviaJuego, TriviaEstadoJuego } from '../../types';
 import {
     Plus, Trash2, Edit2, Play,
     Loader2, Trophy, Users, Clock,
-    CheckCircle, Circle, Zap
+    CheckCircle, Circle, Zap, RotateCcw
 } from 'lucide-react';
 
 const ESTADO_CONFIG: Record<TriviaEstadoJuego, {
@@ -25,13 +25,28 @@ const AdminTrivia: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const navigate = useNavigate();
     const [juegos, setJuegos]         = useState<TriviaJuego[]>([]);
     const [loading, setLoading]       = useState(true);
-    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [deletingId,    setDeletingId]    = useState<string | null>(null);
+    const [reiniciandoId, setReiniciandoId] = useState<string | null>(null);
 
     useEffect(() => {
         supabaseService.getTriviaJuegos()
             .then(setJuegos)
             .finally(() => setLoading(false));
     }, []);
+
+    const handleReiniciar = async (id: string) => {
+        if (!window.confirm(
+            '¿Reiniciar este juego? Se borrarán todos los jugadores y respuestas anteriores.'
+        )) return;
+        setReiniciandoId(id);
+        const ok = await supabaseService.reiniciarTriviaJuego(id);
+        if (ok) {
+            setJuegos(prev => prev.map(j =>
+                j.id === id ? { ...j, estado: 'esperando' as const, totalJugadores: 0 } : j
+            ));
+        }
+        setReiniciandoId(null);
+    };
 
     const handleEliminar = async (id: string) => {
         if (!window.confirm(
@@ -50,7 +65,7 @@ const AdminTrivia: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                 {/* Header */}
                 <div className="mb-8 pb-8 border-b border-gray-100">
                     <p className="text-[11px] font-medium tracking-wide text-gray-400 uppercase mb-2">
-                        Trivia Origen · Admin
+                        Kahoot Origen · Admin
                     </p>
                     <div className="flex items-center justify-between gap-4">
                         <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight">
@@ -138,6 +153,20 @@ const AdminTrivia: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                             <Play className="w-3.5 h-3.5" />
                                             Controlar
                                         </button>
+                                        {juego.estado === 'finalizado' && (
+                                            <button
+                                                onClick={() => handleReiniciar(juego.id)}
+                                                disabled={reiniciandoId === juego.id}
+                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-green-200 text-green-700 bg-green-50 text-xs font-semibold hover:bg-green-100 transition-all disabled:opacity-40"
+                                                title="Volver a jugar"
+                                            >
+                                                {reiniciandoId === juego.id
+                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    : <RotateCcw className="w-3.5 h-3.5" />
+                                                }
+                                                Volver a jugar
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => navigate(`/trivia/admin/nuevo?edit=${juego.id}`)}
                                             className="w-9 h-9 rounded-xl border border-gray-200 text-gray-400 flex items-center justify-center hover:border-gray-400 hover:text-gray-700 transition-all"

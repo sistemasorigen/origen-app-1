@@ -77,11 +77,16 @@ const TriviaLanding: React.FC = () => {
                 transition={{ duration: 0.5 }}
                 className="text-center mb-12"
             >
-                <p className="text-white/40 text-[11px] font-semibold uppercase tracking-[0.4em] mb-3">
-                    Origen · Comunidad
-                </p>
+                <div className="flex justify-center mb-4">
+                    <img
+                        src="/origen-logo.png"
+                        alt="Origen"
+                        className="h-10 opacity-90"
+                        style={{ filter: 'brightness(0) invert(1)' }}
+                    />
+                </div>
                 <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-2">
-                    Trivia Origen
+                    Kahoot Origen
                 </h1>
                 <p className="text-white/50 text-base font-medium">
                     Ingresá el PIN del juego

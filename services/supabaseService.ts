@@ -5623,6 +5623,7 @@ export const supabaseService = {
         pin:               data.pin,
         estado:            data.estado,
         preguntaActualIdx: data.pregunta_actual_idx,
+        timerPausado:      false,
         createdBy:         data.created_by,
         createdAt:         data.created_at,
       };
@@ -5645,6 +5646,7 @@ export const supabaseService = {
         pin:               d.pin,
         estado:            d.estado,
         preguntaActualIdx: d.pregunta_actual_idx,
+        timerPausado:      d.timer_pausado ?? false,
         createdBy:         d.created_by,
         createdAt:         d.created_at,
         totalJugadores:    d.trivia_jugadores?.[0]?.count ?? 0,
@@ -5671,6 +5673,7 @@ export const supabaseService = {
         pin:               data.pin,
         estado:            data.estado,
         preguntaActualIdx: data.pregunta_actual_idx,
+        timerPausado:      data.timer_pausado ?? false,
         createdBy:         data.created_by,
         createdAt:         data.created_at,
         preguntas: (data.trivia_preguntas || [])
@@ -5718,6 +5721,7 @@ export const supabaseService = {
         pin:               data.pin,
         estado:            data.estado,
         preguntaActualIdx: data.pregunta_actual_idx,
+        timerPausado:      data.timer_pausado ?? false,
         createdBy:         data.created_by,
         createdAt:         data.created_at,
       };
@@ -5917,8 +5921,34 @@ export const supabaseService = {
     puntosGanados: number;
     rachaActual: number;
     puntajeTotal: number;
+    bloqueado?: boolean;
   }> {
     try {
+      // Verificar si el timer está pausado por el admin
+      const { data: preguntaCheck } = await supabase
+        .from('trivia_preguntas')
+        .select('juego_id')
+        .eq('id', preguntaId)
+        .single();
+
+      if (preguntaCheck?.juego_id) {
+        const { data: juegoCheck } = await supabase
+          .from('trivia_juegos')
+          .select('timer_pausado')
+          .eq('id', preguntaCheck.juego_id)
+          .single();
+
+        if (juegoCheck?.timer_pausado) {
+          return {
+            esCorrecta: false,
+            puntosGanados: 0,
+            rachaActual: 0,
+            puntajeTotal: 0,
+            bloqueado: true,
+          };
+        }
+      }
+
       const { data: opcion } = await supabase
         .from('trivia_opciones')
         .select('es_correcta')
@@ -6080,6 +6110,101 @@ export const supabaseService = {
     }
   },
 
+  async setTriviaTimerPausado(
+    juegoId: string,
+    pausado: boolean
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('trivia_juegos')
+        .update({ timer_pausado: pausado })
+        .eq('id', juegoId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Trivia] setTimerPausado:', err);
+      return false;
+    }
+  },
+
+  async saltarSiguientePregunta(
+    juegoId: string,
+    totalPreguntas: number
+  ): Promise<boolean> {
+    try {
+      const { data: juego } = await supabase
+        .from('trivia_juegos')
+        .select('pregunta_actual_idx')
+        .eq('id', juegoId)
+        .single();
+      if (!juego) return false;
+
+      const nextIdx = juego.pregunta_actual_idx + 1;
+      const esUltima = nextIdx >= totalPreguntas;
+
+      const { error } = await supabase
+        .from('trivia_juegos')
+        .update({
+          estado: esUltima ? 'finalizando' : 'en_curso',
+          pregunta_actual_idx: esUltima
+            ? juego.pregunta_actual_idx
+            : nextIdx,
+          timer_pausado: false,
+        })
+        .eq('id', juegoId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Trivia] saltarSiguiente:', err);
+      return false;
+    }
+  },
+
+  async reiniciarTriviaJuego(
+    juegoId: string
+  ): Promise<boolean> {
+    try {
+      const { data: jugadoresJuego } = await supabase
+        .from('trivia_jugadores')
+        .select('id')
+        .eq('juego_id', juegoId);
+
+      const jugadorIds = (jugadoresJuego || []).map(j => j.id);
+
+      if (jugadorIds.length > 0) {
+        await supabase
+          .from('trivia_respuestas')
+          .delete()
+          .in('jugador_id', jugadorIds);
+      }
+
+      await supabase
+        .from('trivia_jugadores')
+        .delete()
+        .eq('juego_id', juegoId);
+
+      await supabase
+        .from('trivia_estado_pregunta')
+        .delete()
+        .eq('juego_id', juegoId);
+
+      const { error } = await supabase
+        .from('trivia_juegos')
+        .update({
+          estado: 'esperando',
+          pregunta_actual_idx: -1,
+          timer_pausado: false,
+        })
+        .eq('id', juegoId);
+      if (error) throw error;
+
+      return true;
+    } catch (err) {
+      console.error('[Trivia] reiniciar:', err);
+      return false;
+    }
+  },
+
   async getTriviaRespuestaJugador(
     jugadorId: string,
     preguntaId: string
@@ -6121,4 +6246,5 @@ export const supabaseService = {
       return false;
     }
   },
+
 };

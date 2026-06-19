@@ -8,7 +8,8 @@ import {
 } from '../../types';
 import {
     ArrowLeft, Play, Eye, SkipForward, Award,
-    XCircle, Loader2, Users, Monitor
+    XCircle, Loader2, Users, Monitor,
+    PauseCircle, FastForward, RotateCcw
 } from 'lucide-react';
 
 interface Props {
@@ -33,8 +34,14 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
     const [accionando, setAccionando] = useState(false);
     const [error,      setError]      = useState<string | null>(null);
 
-    const juegoRef    = useRef<TriviaJuego | null>(null);
-    const iniciadoRef = useRef(false);
+    // Contador en vivo
+    const [respuestasCount, setRespuestasCount] = useState(0);
+    const [segundosPregunta, setSegundosPregunta] = useState(0);
+    const [confirmandoReset, setConfirmandoReset] = useState(false);
+
+    const juegoRef      = useRef<TriviaJuego | null>(null);
+    const iniciadoRef   = useRef(false);
+    const cronometroRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // ── Carga inicial ────────────────────────────────
     const cargarJuego = async () => {
@@ -67,11 +74,13 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
                     const nuevo = payload.new as any;
                     const updated: TriviaJuego = {
                         ...juegoRef.current!,
-                        estado:           nuevo.estado,
+                        estado:            nuevo.estado,
                         preguntaActualIdx: nuevo.pregunta_actual_idx,
+                        timerPausado:      nuevo.timer_pausado ?? false,
                     };
                     setJuego(updated);
                     juegoRef.current = updated;
+                    setRespuestasCount(0);
                 }
             )
             .on(
@@ -82,10 +91,41 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
                     setJugadores(jug);
                 }
             )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'trivia_estado_pregunta', filter: `juego_id=eq.${juego.id}` },
+                payload => {
+                    const row = payload.new as any;
+                    if (row?.total_respuestas !== undefined) {
+                        setRespuestasCount(row.total_respuestas);
+                    }
+                }
+            )
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
     }, [juego?.id]);
+
+    // ── Cronómetro pregunta actual ────────────────────
+    useEffect(() => {
+        if (cronometroRef.current) {
+            clearInterval(cronometroRef.current);
+            cronometroRef.current = null;
+        }
+        setSegundosPregunta(0);
+
+        if (juego?.estado === 'en_curso') {
+            cronometroRef.current = setInterval(() => {
+                setSegundosPregunta(s => s + 1);
+            }, 1000);
+        }
+
+        return () => {
+            if (cronometroRef.current) {
+                clearInterval(cronometroRef.current);
+            }
+        };
+    }, [juego?.estado, juego?.preguntaActualIdx]);
 
     // ── Acciones ─────────────────────────────────────
     // Mapeo: accion local → avanzarTriviaJuego(accion: 'iniciar'|'siguiente'|'revelar'|'finalizar')
@@ -127,6 +167,50 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
         } finally {
             setAccionando(false);
         }
+    };
+
+    const handlePausarTimer = async () => {
+        if (!juego || accionando) return;
+        setAccionando(true);
+        const nuevoEstado = !juego.timerPausado;
+        const ok = await supabaseService
+            .setTriviaTimerPausado(juego.id, nuevoEstado);
+        if (ok) {
+            setJuego(j => j
+                ? { ...j, timerPausado: nuevoEstado }
+                : j
+            );
+            juegoRef.current = juegoRef.current
+                ? { ...juegoRef.current, timerPausado: nuevoEstado }
+                : juegoRef.current;
+        }
+        setAccionando(false);
+    };
+
+    const handleSaltarPregunta = async () => {
+        const j = juegoRef.current;
+        if (!j || accionando) return;
+        setAccionando(true);
+        const pregs = j.preguntas || [];
+        await supabaseService.saltarSiguientePregunta(
+            j.id, pregs.length
+        );
+        setAccionando(false);
+    };
+
+    const handleReiniciar = async () => {
+        const j = juegoRef.current;
+        if (!j || accionando) return;
+        setAccionando(true);
+        const ok = await supabaseService
+            .reiniciarTriviaJuego(j.id);
+        if (ok) {
+            await cargarJuego();
+            setRespuestasCount(0);
+            setSegundosPregunta(0);
+        }
+        setConfirmandoReset(false);
+        setAccionando(false);
     };
 
     // ── Derivados ─────────────────────────────────────
@@ -193,6 +277,18 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
+                        {/* Contador en vivo */}
+                        {juego.estado === 'en_curso' && (
+                            <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100">
+                                <span className="text-xs font-mono text-slate-500 tabular-nums">
+                                    ⏱ {segundosPregunta}s
+                                </span>
+                                <span className="text-xs text-slate-300">|</span>
+                                <span className="text-xs font-semibold text-slate-600 tabular-nums">
+                                    {respuestasCount}/{jugadores.length} respondieron
+                                </span>
+                            </div>
+                        )}
                         <div className="flex items-center gap-1.5 text-slate-500 text-sm">
                             <Users className="w-4 h-4" />
                             <span className="font-semibold text-slate-700">{jugadores.length}</span>
@@ -250,6 +346,40 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
                                 </button>
                             )}
 
+                            {/* Pausar/Reanudar timer — solo durante 'en_curso' */}
+                            {juego.estado === 'en_curso' && (
+                                <button
+                                    onClick={handlePausarTimer}
+                                    disabled={accionando}
+                                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                        juego.timerPausado
+                                            ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    {accionando
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : juego.timerPausado
+                                            ? <Play className="w-4 h-4" />
+                                            : <PauseCircle className="w-4 h-4" />}
+                                    {juego.timerPausado ? 'Reanudar' : 'Pausar timer'}
+                                </button>
+                            )}
+
+                            {/* Saltar pregunta — durante 'en_curso' */}
+                            {juego.estado === 'en_curso' && (
+                                <button
+                                    onClick={handleSaltarPregunta}
+                                    disabled={accionando}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {accionando
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : <FastForward className="w-4 h-4" />}
+                                    Saltar pregunta
+                                </button>
+                            )}
+
                             {mostrarSiguiente && (
                                 <button
                                     onClick={() => handleAccion('siguiente')}
@@ -293,6 +423,45 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
                                 <p className="text-center py-3 text-slate-400 text-sm">
                                     Juego finalizado
                                 </p>
+                            )}
+
+                            {/* Hard reset — visible cuando el juego ya empezó */}
+                            {juego.estado !== 'esperando' && (
+                                <div className="pt-3 border-t border-gray-100">
+                                    {!confirmandoReset ? (
+                                        <button
+                                            onClick={() => setConfirmandoReset(true)}
+                                            disabled={accionando}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-red-200 text-red-500 font-bold text-sm hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <RotateCcw className="w-4 h-4" />
+                                            Reiniciar juego
+                                        </button>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-red-500 text-center font-medium">
+                                                Esto borra todos los jugadores y respuestas. ¿Seguro?
+                                            </p>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => setConfirmandoReset(false)}
+                                                    className="flex-1 px-3 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200 transition-colors"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                                <button
+                                                    onClick={handleReiniciar}
+                                                    disabled={accionando}
+                                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                                >
+                                                    {accionando
+                                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                        : 'Sí, reiniciar'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
 
                             {!hayPregs && juego.estado === 'esperando' && (

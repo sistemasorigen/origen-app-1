@@ -13,6 +13,7 @@ interface LeaderboardRanking {
   rank: number
   value: number
   avatarUrl?: string | null
+  avatarEmoji?: string
 }
 
 // Variants
@@ -29,7 +30,7 @@ const podiumVariants = cva("flex items-end justify-center gap-4", {
   },
 })
 
-// Podium styles for each position
+// Podium styles for each position — light theme
 const PODIUM_CONFIG = {
   1: {
     icon: Crown,
@@ -63,6 +64,13 @@ const PODIUM_CONFIG = {
   },
 } as const
 
+// Podium styles for each position — dark theme
+const PODIUM_DARK_CONFIG = {
+  1: { textColor: '#F59E0B',               blockBg: 'rgba(245,158,11,0.15)',  blockBorder: 'rgba(245,158,11,0.5)'   },
+  2: { textColor: 'rgba(148,163,184,0.9)', blockBg: 'rgba(255,255,255,0.07)', blockBorder: 'rgba(148,163,184,0.35)' },
+  3: { textColor: 'rgba(251,146,60,0.9)',  blockBg: 'rgba(255,255,255,0.05)', blockBorder: 'rgba(251,146,60,0.35)'  },
+} as const
+
 // Props
 interface LeaderboardPodiumProps
   extends
@@ -78,6 +86,8 @@ interface LeaderboardPodiumProps
   medalStyle?: "classic" | "modern" | "minimal"
   /** Label shown under the value (e.g. "pts") */
   valueLabel?: string
+  /** Color theme */
+  theme?: 'light' | 'dark'
 }
 
 const LeaderboardPodium = React.forwardRef<
@@ -93,10 +103,13 @@ const LeaderboardPodium = React.forwardRef<
       showAvatar = true,
       medalStyle = "classic",
       valueLabel,
+      theme = 'light',
       ...props
     },
     ref
   ) => {
+    const isDark = theme === 'dark'
+
     // Get top 3, reorder for podium display: 2nd, 1st, 3rd
     const top3 = rankings.slice(0, 3)
     const podiumOrder = [
@@ -115,10 +128,10 @@ const LeaderboardPodium = React.forwardRef<
       lg: "h-20 w-20 text-2xl",
     }[size ?? "default"]
 
-    const iconSize = {
-      sm: "h-4 w-4",
-      default: "h-5 w-5",
-      lg: "h-6 w-6",
+    const emojiSize = {
+      sm: "text-3xl",
+      default: "text-4xl",
+      lg: "text-5xl",
     }[size ?? "default"]
 
     const textSize = {
@@ -136,7 +149,8 @@ const LeaderboardPodium = React.forwardRef<
         {...props}
       >
         {podiumOrder.map((ranking) => {
-          const config = PODIUM_CONFIG[ranking.rank as 1 | 2 | 3]
+          const config     = PODIUM_CONFIG[ranking.rank as 1 | 2 | 3]
+          const darkConfig = PODIUM_DARK_CONFIG[ranking.rank as 1 | 2 | 3]
           if (!config) return null
 
           const displayName =
@@ -157,9 +171,13 @@ const LeaderboardPodium = React.forwardRef<
               aria-label={itemLabel}
               className="flex flex-col items-center"
             >
-              {/* Avatar with crown */}
+              {/* Avatar */}
               <div className="relative mb-2" aria-hidden="true">
-                {showAvatar && ranking.avatarUrl ? (
+                {ranking.avatarEmoji ? (
+                  <span className={cn("block text-center leading-none", emojiSize)}>
+                    {ranking.avatarEmoji}
+                  </span>
+                ) : showAvatar && ranking.avatarUrl ? (
                   <img
                     src={ranking.avatarUrl}
                     alt={`${displayName} avatar`}
@@ -174,20 +192,21 @@ const LeaderboardPodium = React.forwardRef<
                     className={cn(
                       "flex items-center justify-center rounded-full font-semibold ring-2 ring-offset-2",
                       avatarSize,
-                      config.bg,
-                      config.color,
-                      config.ringColor
+                      isDark
+                        ? "bg-white/10 text-white ring-white/20 ring-offset-transparent"
+                        : cn(config.bg, config.color, config.ringColor)
                     )}
                   >
                     {initial}
                   </div>
                 )}
 
-                {/* Crown badge */}
-                {medalStyle !== "minimal" && (
+                {/* Crown badge — only when no emoji */}
+                {!ranking.avatarEmoji && medalStyle !== "minimal" && (
                   <div
                     className={cn(
-                      "bg-white absolute -right-1 -bottom-1 flex items-center justify-center rounded-full shadow-sm border border-gray-100",
+                      "absolute -right-1 -bottom-1 flex items-center justify-center rounded-full shadow-sm",
+                      isDark ? "bg-white/10 border border-white/20" : "bg-white border border-gray-100",
                       size === "sm"
                         ? "h-5 w-5"
                         : size === "lg"
@@ -212,8 +231,9 @@ const LeaderboardPodium = React.forwardRef<
               {/* Name */}
               <span
                 className={cn(
-                  "max-w-24 truncate text-center font-semibold text-gray-900",
-                  textSize
+                  "max-w-24 truncate text-center font-semibold",
+                  textSize,
+                  isDark ? "text-white" : "text-gray-900"
                 )}
                 title={displayName}
               >
@@ -224,9 +244,11 @@ const LeaderboardPodium = React.forwardRef<
               {showValue && (
                 <span
                   className={cn(
-                    "text-gray-500 font-medium tabular-nums",
-                    size === "sm" ? "text-xs" : "text-sm"
+                    "font-medium tabular-nums",
+                    size === "sm" ? "text-xs" : "text-sm",
+                    !isDark && "text-gray-500"
                   )}
+                  style={isDark ? { color: darkConfig.textColor } : undefined}
                 >
                   {ranking.value.toLocaleString()}
                   {valueLabel ? ` ${valueLabel}` : ""}
@@ -234,27 +256,48 @@ const LeaderboardPodium = React.forwardRef<
               )}
 
               {/* Podium block */}
-              <div
-                aria-hidden="true"
-                className={cn(
-                  "mt-2 w-[5.5rem] rounded-t-lg border border-b-0",
-                  size === "sm" && "w-20",
-                  size === "lg" && "w-24",
-                  podiumHeight,
-                  config.block,
-                  ranking.rank === 1 ? "border-amber-200" : ranking.rank === 2 ? "border-gray-200" : "border-orange-200",
-                  medalStyle === "modern" && "rounded-t-xl"
-                )}
-              >
+              {isDark ? (
                 <div
+                  aria-hidden="true"
                   className={cn(
-                    "flex h-8 items-center justify-center font-bold",
-                    config.color
+                    "mt-2 w-[5.5rem] rounded-t-lg border border-b-0 flex flex-col",
+                    size === "sm" && "w-20",
+                    size === "lg" && "w-24",
+                    podiumHeight,
+                    medalStyle === "modern" && "rounded-t-xl"
+                  )}
+                  style={{ background: darkConfig.blockBg, borderColor: darkConfig.blockBorder }}
+                >
+                  <div
+                    className="flex h-8 items-center justify-center font-bold"
+                    style={{ color: darkConfig.textColor }}
+                  >
+                    {ranking.rank}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  aria-hidden="true"
+                  className={cn(
+                    "mt-2 w-[5.5rem] rounded-t-lg border border-b-0",
+                    size === "sm" && "w-20",
+                    size === "lg" && "w-24",
+                    podiumHeight,
+                    config.block,
+                    ranking.rank === 1 ? "border-amber-200" : ranking.rank === 2 ? "border-gray-200" : "border-orange-200",
+                    medalStyle === "modern" && "rounded-t-xl"
                   )}
                 >
-                  {ranking.rank}
+                  <div
+                    className={cn(
+                      "flex h-8 items-center justify-center font-bold",
+                      config.color
+                    )}
+                  >
+                    {ranking.rank}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )
         })}

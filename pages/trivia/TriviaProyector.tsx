@@ -9,6 +9,8 @@ import {
     TriviaEstadoJuego, TRIVIA_COLORES, TRIVIA_ICONOS
 } from '../../types';
 import { Users, Loader2 } from 'lucide-react';
+import { LeaderboardPodium } from '../../components/ui/leaderboard-podium';
+import { LeaderboardRankings } from '../../components/ui/leaderboard-rankings';
 
 type PantallaProyector =
     | 'cargando'
@@ -20,8 +22,6 @@ type PantallaProyector =
     | 'finalizando'
     | 'finalizado';
 
-const PODIO_COLORS = ['#F59E0B', '#94A3B8', '#D97706'];
-const PODIO_EMOJIS = ['🥇', '🥈', '🥉'];
 
 const TriviaProyector: React.FC = () => {
     const { pin }  = useParams<{ pin: string }>();
@@ -35,13 +35,53 @@ const TriviaProyector: React.FC = () => {
     const [cuentaRegresiva, setCuentaRegresiva]     = useState(3);
     const [respuestasCount, setRespuestasCount]     = useState(0);
     const [revelarRespuestas, setRevelarRespuestas] = useState(false);
+    const [tiempoRestante, setTiempoRestante]       = useState(0);
+    const [tiempoTotal, setTiempoTotal]             = useState(0);
 
-    const juegoRef    = useRef<TriviaJuego | null>(null);
-    const iniciadoRef = useRef(false);
+    const juegoRef          = useRef<TriviaJuego | null>(null);
+    const iniciadoRef       = useRef(false);
     const cuentaIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const timerRef          = useRef<ReturnType<typeof setInterval> | null>(null);
+    const entreTimeoutRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const autoRevelarCtxRef = useRef<{ juegoId: string; pregId: string } | null>(null);
+    const contadorRef       = useRef<number>(0);
 
-    const baseUrl    = window.location.origin + (window.location.pathname.includes('index.html') ? window.location.pathname : '');
-    const urlUnirse  = `${window.location.origin}/#/trivia`;
+    const urlUnirse = `${window.location.origin}/#/trivia`;
+
+    // ── Auto-reveal cuando se acaba el timer ─────
+    const autoRevelar = async (juegoId: string, pregId: string) => {
+        const j = juegoRef.current;
+        if (!j || j.estado !== 'en_curso' || j.timerPausado) return;
+        await supabaseService.setTriviaPreguntaEstado(juegoId, pregId, 'revelada');
+        await supabaseService.avanzarTriviaJuego(juegoId, 'revelar');
+    };
+
+    // ── Timer ────────────────────────────────────
+    const crearIntervalTimer = (fromCount: number) => {
+        let count = fromCount;
+        timerRef.current = setInterval(() => {
+            count--;
+            contadorRef.current = count;
+            if (count <= 0) {
+                clearInterval(timerRef.current!);
+                timerRef.current = null;
+                setTiempoRestante(0);
+                const ctx = autoRevelarCtxRef.current;
+                if (ctx) autoRevelar(ctx.juegoId, ctx.pregId);
+            } else {
+                setTiempoRestante(count);
+            }
+        }, 1000);
+    };
+
+    const iniciarTimer = (segundos: number, juegoId: string, pregId: string) => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        autoRevelarCtxRef.current = { juegoId, pregId };
+        contadorRef.current = segundos;
+        setTiempoTotal(segundos);
+        setTiempoRestante(segundos);
+        crearIntervalTimer(segundos);
+    };
 
     // ── Mostrar pregunta ──────────────────────────
     const mostrarPregunta = (
@@ -58,9 +98,13 @@ const TriviaProyector: React.FC = () => {
 
         if (conDoble && p.esDoble) {
             setPantalla('doble');
-            setTimeout(() => setPantalla('pregunta'), 2500);
+            setTimeout(() => {
+                setPantalla('pregunta');
+                iniciarTimer(p.tiempoLimite, juegoData.id, p.id);
+            }, 2500);
         } else {
             setPantalla('pregunta');
+            iniciarTimer(p.tiempoLimite, juegoData.id, p.id);
         }
     };
 
@@ -81,6 +125,24 @@ const TriviaProyector: React.FC = () => {
             }
         }, 1000);
     };
+
+    // ── Auto-avance desde entre_preguntas (5 s) ──
+    useEffect(() => {
+        if (pantalla !== 'entre_preguntas') return;
+        entreTimeoutRef.current = setTimeout(async () => {
+            const j = juegoRef.current;
+            if (!j || j.estado !== 'entre_preguntas') return;
+            const pregs   = j.preguntas || [];
+            const nextIdx = j.preguntaActualIdx + 1;
+            await supabaseService.avanzarTriviaJuego(j.id, 'siguiente', pregs.length);
+            if (nextIdx < pregs.length && pregs[nextIdx]) {
+                await supabaseService.setTriviaPreguntaEstado(j.id, pregs[nextIdx].id, 'abierta');
+            }
+        }, 5000);
+        return () => {
+            if (entreTimeoutRef.current) clearTimeout(entreTimeoutRef.current);
+        };
+    }, [pantalla]);
 
     // ── Inicialización ────────────────────────────
     useEffect(() => {
@@ -133,8 +195,9 @@ const TriviaProyector: React.FC = () => {
         init();
 
         return () => {
-            if (cuentaIntervalRef.current)
-                clearInterval(cuentaIntervalRef.current);
+            if (cuentaIntervalRef.current) clearInterval(cuentaIntervalRef.current);
+            if (timerRef.current)          clearInterval(timerRef.current);
+            if (entreTimeoutRef.current)   clearTimeout(entreTimeoutRef.current);
         };
     }, [pin]);
 
@@ -153,19 +216,36 @@ const TriviaProyector: React.FC = () => {
                     filter: `id=eq.${juego.id}`
                 },
                 async payload => {
-                    const nuevo  = payload.new as any;
-                    const estado = nuevo.estado as TriviaEstadoJuego;
-                    const idx    = nuevo.pregunta_actual_idx as number;
+                    const nuevo        = payload.new as any;
+                    const estado       = nuevo.estado as TriviaEstadoJuego;
+                    const idx          = nuevo.pregunta_actual_idx as number;
+                    const timerPausado = (nuevo.timer_pausado as boolean) ?? false;
 
                     const prev = juegoRef.current;
                     if (!prev) return;
 
-                    const updated = { ...prev, estado, preguntaActualIdx: idx };
+                    const updated = { ...prev, estado, preguntaActualIdx: idx, timerPausado };
                     setJuego(updated);
                     juegoRef.current = updated;
 
                     if (estado === 'en_curso') {
                         const esNuevaPregunta = idx !== prev.preguntaActualIdx;
+                        const prevPausado     = prev.timerPausado ?? false;
+
+                        // Pause / resume sin cambio de pregunta
+                        if (!esNuevaPregunta && timerPausado !== prevPausado) {
+                            if (timerPausado) {
+                                if (timerRef.current) {
+                                    clearInterval(timerRef.current);
+                                    timerRef.current = null;
+                                }
+                            } else {
+                                const remaining = contadorRef.current;
+                                if (remaining > 0) crearIntervalTimer(remaining);
+                            }
+                            return;
+                        }
+
                         if (prev.estado === 'esperando') {
                             iniciarCuentaRegresiva(updated);
                         } else if (esNuevaPregunta) {
@@ -173,6 +253,7 @@ const TriviaProyector: React.FC = () => {
                         }
 
                     } else if (estado === 'entre_preguntas') {
+                        if (timerRef.current) clearInterval(timerRef.current);
                         const pregs = prev.preguntas || [];
                         if (pregs[idx]) {
                             setPreguntaActual(pregs[idx]);
@@ -231,6 +312,44 @@ const TriviaProyector: React.FC = () => {
             className="min-h-screen overflow-hidden relative"
             style={{ background: '#1A0A2E' }}
         >
+            {/* Timer bar — arriba del todo, visible solo durante pregunta */}
+            <div className="absolute top-0 left-0 right-0 z-[60] h-2 bg-white/10">
+                {pantalla === 'pregunta' && tiempoTotal > 0 && (
+                    <div
+                        className={`h-full rounded-r-sm ${juego?.timerPausado ? '' : 'transition-all duration-1000 ease-linear'}`}
+                        style={{
+                            width: `${(tiempoRestante / tiempoTotal) * 100}%`,
+                            background: juego?.timerPausado
+                                ? '#F59E0B'
+                                : tiempoRestante / tiempoTotal > 0.5
+                                    ? '#22C55E'
+                                    : tiempoRestante / tiempoTotal > 0.25
+                                        ? '#F59E0B'
+                                        : '#EF4444',
+                            opacity: juego?.timerPausado ? 0.6 : 1,
+                        }}
+                    />
+                )}
+            </div>
+
+            {/* Logo — se mueve al centro al iniciar el juego */}
+            <motion.div
+                className="absolute top-6 z-50"
+                animate={
+                    pantalla === 'esperando' || pantalla === 'cargando'
+                        ? { left: '2rem', x: '0%' }
+                        : { left: '50%',  x: '-50%' }
+                }
+                transition={{ duration: 0.6, ease: 'easeInOut' }}
+            >
+                <img
+                    src="/origen-logo.png"
+                    alt="Origen"
+                    className="h-14 opacity-90"
+                    style={{ filter: 'brightness(0) invert(1)' }}
+                />
+            </motion.div>
+
             <AnimatePresence mode="wait">
 
                 {/* ── CARGANDO ──────────────────── */}
@@ -257,9 +376,18 @@ const TriviaProyector: React.FC = () => {
                                 Origen · Trivia
                             </p>
                             <h1 className="text-6xl md:text-8xl font-black text-white tracking-tight mb-4">
-                                {juego?.titulo || 'Trivia Origen'}
+                                {juego?.titulo || 'Kahoot Origen'}
                             </h1>
                         </div>
+
+                        {/* Instrucción de acceso */}
+                        <p className="text-white/60 text-xl md:text-2xl font-medium text-center">
+                            Ingresá a{' '}
+                            <span className="text-white font-bold">
+                                {window.location.host}/#/trivia
+                            </span>
+                            {' '}e ingresá el PIN:
+                        </p>
 
                         {/* PIN + QR */}
                         <div className="flex flex-col md:flex-row items-center gap-10">
@@ -291,7 +419,7 @@ const TriviaProyector: React.FC = () => {
                                 <div className="p-4 bg-white rounded-2xl inline-block">
                                     <QRCodeSVG
                                         value={urlUnirse}
-                                        size={140}
+                                        size={220}
                                         fgColor="#1A0A2E"
                                         bgColor="#FFFFFF"
                                         level="M"
@@ -299,11 +427,6 @@ const TriviaProyector: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-
-                        {/* URL */}
-                        <p className="text-white/40 text-lg font-medium">
-                            {window.location.host} → Trivia
-                        </p>
 
                         {/* Contador jugadores */}
                         <div
@@ -458,21 +581,21 @@ const TriviaProyector: React.FC = () => {
                 {pantalla === 'entre_preguntas' && preguntaActual && (
                     <motion.div
                         key="entre"
-                        className="min-h-screen flex flex-col px-8 py-8"
+                        className="min-h-screen flex flex-col px-6 pt-20 pb-6 gap-5"
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                     >
                         {/* Opciones reveladas */}
-                        <div className={`grid gap-3 mb-8 ${(preguntaActual.opciones || []).length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                        <div className={`grid gap-3 ${(preguntaActual.opciones || []).length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                             {(preguntaActual.opciones || []).map((op, i) => (
                                 <motion.div
                                     key={op.id}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.08 }}
-                                    className="flex items-center gap-4 px-6 py-5 rounded-2xl transition-all"
+                                    className="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all"
                                     style={{
-                                        background:   op.esCorrecta ? TRIVIA_COLORES[op.color] : 'rgba(255,255,255,0.06)',
-                                        opacity:      op.esCorrecta ? 1 : 0.4,
+                                        background: op.esCorrecta ? TRIVIA_COLORES[op.color] : 'rgba(255,255,255,0.06)',
+                                        opacity:    op.esCorrecta ? 1 : 0.35,
                                     }}
                                 >
                                     <span className="text-3xl shrink-0">
@@ -483,31 +606,40 @@ const TriviaProyector: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Ranking top 5 */}
-                        <div className="flex-1">
-                            <p className="text-white/30 text-xs font-semibold uppercase tracking-[0.3em] mb-4">
-                                Ranking
-                            </p>
-                            <div className="space-y-2">
-                                {ranking.slice(0, 5).map((j, idx) => (
-                                    <motion.div
-                                        key={j.id}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.2 + idx * 0.1 }}
-                                        className="flex items-center gap-4 px-5 py-3 rounded-2xl"
-                                        style={{ background: 'rgba(255,255,255,0.06)' }}
-                                    >
-                                        <span className="text-2xl font-black text-white/30 tabular-nums w-8 text-center">
-                                            {idx + 1}
-                                        </span>
-                                        <span className="text-2xl">{j.avatarEmoji}</span>
-                                        <span className="flex-1 text-white font-bold text-lg truncate">{j.nickname}</span>
-                                        <span className="text-white font-black text-2xl tabular-nums">{j.puntajeTotal}</span>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        </div>
+                        {/* Ranking */}
+                        {ranking.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 }}
+                                className="flex-1 flex flex-col gap-4 overflow-hidden"
+                            >
+                                <LeaderboardPodium
+                                    theme="dark"
+                                    size="sm"
+                                    showAvatar
+                                    valueLabel="pts"
+                                    rankings={ranking.slice(0, 3).map((j, idx) => ({
+                                        userId: j.id,
+                                        userName: j.nickname,
+                                        rank: idx + 1,
+                                        value: j.puntajeTotal,
+                                        avatarEmoji: j.avatarEmoji,
+                                    }))}
+                                />
+                                <LeaderboardRankings
+                                    theme="dark"
+                                    rankings={ranking.slice(0, 5).map((j, idx) => ({
+                                        userId: j.id,
+                                        userName: j.nickname,
+                                        rank: idx + 1,
+                                        value: j.puntajeTotal,
+                                        avatarEmoji: j.avatarEmoji,
+                                        displayed: true,
+                                    }))}
+                                />
+                            </motion.div>
+                        )}
                     </motion.div>
                 )}
 
@@ -515,72 +647,55 @@ const TriviaProyector: React.FC = () => {
                 {pantalla === 'finalizando' && (
                     <motion.div
                         key="finalizando"
-                        className="min-h-screen flex flex-col items-center justify-center px-8 py-12"
+                        className="min-h-screen flex flex-col items-center justify-center px-8 py-16 gap-6"
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                     >
-                        <p className="text-white/40 text-sm font-semibold uppercase tracking-[0.4em] mb-6">
+                        <p className="text-white/40 text-sm font-semibold uppercase tracking-[0.4em]">
                             Resultados finales
                         </p>
 
-                        {/* Podio top 3 — orden: 2°, 1°, 3° */}
-                        <div className="flex items-end gap-4 mb-12">
-                            {[1, 0, 2].map((rankPos, visualPos) => {
-                                const j = ranking[rankPos];
-                                if (!j) return null;
-                                const heights  = ['h-40', 'h-52', 'h-32'];
-                                const delays   = [0.3, 0.1, 0.5];
-                                const medalIdx = rankPos; // 0=oro,1=plata,2=bronce
-                                return (
-                                    <motion.div
-                                        key={j.id}
-                                        initial={{ opacity: 0, y: 60 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: delays[visualPos], type: 'spring', stiffness: 120 }}
-                                        className={`${heights[visualPos]} w-36 rounded-t-2xl flex flex-col items-center justify-end pb-4 gap-1`}
-                                        style={{
-                                            background: rankPos === 0
-                                                ? `${PODIO_COLORS[0]}30`
-                                                : 'rgba(255,255,255,0.06)',
-                                            border: rankPos === 0
-                                                ? `2px solid ${PODIO_COLORS[0]}60`
-                                                : '1px solid rgba(255,255,255,0.1)'
-                                        }}
-                                    >
-                                        <span className="text-4xl">{j.avatarEmoji}</span>
-                                        <span className="text-white font-bold text-sm text-center px-1 truncate w-full text-center">
-                                            {j.nickname}
-                                        </span>
-                                        <span className="font-black text-lg" style={{ color: PODIO_COLORS[medalIdx] }}>
-                                            {PODIO_EMOJIS[medalIdx]}
-                                        </span>
-                                        <span className="text-white/60 font-bold text-sm tabular-nums">
-                                            {j.puntajeTotal}
-                                        </span>
-                                    </motion.div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Top 4–10 */}
-                        <div className="w-full max-w-2xl space-y-1.5">
-                            {ranking.slice(3, 10).map((j, idx) => (
+                        {ranking.length > 0 && (
+                            <>
                                 <motion.div
-                                    key={j.id}
-                                    initial={{ opacity: 0, x: -15 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.8 + idx * 0.06 }}
-                                    className="flex items-center gap-4 px-4 py-2.5 rounded-xl"
-                                    style={{ background: 'rgba(255,255,255,0.04)' }}
+                                    initial={{ opacity: 0, y: 30 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.15, type: 'spring', stiffness: 120 }}
                                 >
-                                    <span className="text-white/30 font-black tabular-nums w-6 text-center">
-                                        {idx + 4}
-                                    </span>
-                                    <span className="text-lg">{j.avatarEmoji}</span>
-                                    <span className="flex-1 text-white/80 font-bold truncate">{j.nickname}</span>
-                                    <span className="text-white/60 font-bold tabular-nums">{j.puntajeTotal}</span>
+                                    <LeaderboardPodium
+                                        theme="dark"
+                                        size="lg"
+                                        showAvatar
+                                        valueLabel="pts"
+                                        rankings={ranking.slice(0, 3).map((j, idx) => ({
+                                            userId: j.id,
+                                            userName: j.nickname,
+                                            rank: idx + 1,
+                                            value: j.puntajeTotal,
+                                            avatarEmoji: j.avatarEmoji,
+                                        }))}
+                                    />
                                 </motion.div>
-                            ))}
-                        </div>
+
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.4 }}
+                                    className="w-full max-w-2xl"
+                                >
+                                    <LeaderboardRankings
+                                        theme="dark"
+                                        rankings={ranking.slice(0, 10).map((j, idx) => ({
+                                            userId: j.id,
+                                            userName: j.nickname,
+                                            rank: idx + 1,
+                                            value: j.puntajeTotal,
+                                            avatarEmoji: j.avatarEmoji,
+                                            displayed: true,
+                                        }))}
+                                    />
+                                </motion.div>
+                            </>
+                        )}
                     </motion.div>
                 )}
 
@@ -596,7 +711,7 @@ const TriviaProyector: React.FC = () => {
                             ¡Juego terminado!
                         </h2>
                         <p className="text-white/40 text-lg font-medium">
-                            Gracias por jugar Trivia Origen
+                            Gracias por jugar Kahoot Origen
                         </p>
                     </motion.div>
                 )}

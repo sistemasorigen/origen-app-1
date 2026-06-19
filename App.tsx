@@ -239,7 +239,7 @@ const AppContent: React.FC = () => {
             <Route path="/influos-acceso" element={<InfluosAcceso />} />
             <Route path="/id-dpadre" element={<InscripcionDPadre />} />
             <Route path="/eventos/ranking-diadelpadre" element={<RankingDPadre />} />
-            {/* Trivia Origen — rutas públicas de jugadores y proyector */}
+            {/* Kahoot Origen — rutas públicas de jugadores y proyector */}
             <Route path="/trivia" element={<TriviaLanding />} />
             <Route path="/trivia/unirse/:pin" element={<TriviaUnirse />} />
             <Route path="/trivia/jugar/:pin" element={<TriviaJugador />} />

@@ -1075,6 +1075,7 @@ export interface TriviaJuego {
     pin: string;
     estado: TriviaEstadoJuego;
     preguntaActualIdx: number; // -1 = no iniciado
+    timerPausado: boolean;
     createdBy: string | null;
     createdAt: string;
     // Enriquecidos
