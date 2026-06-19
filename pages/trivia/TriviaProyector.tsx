@@ -373,7 +373,7 @@ const TriviaProyector: React.FC = () => {
                         {/* Título */}
                         <div className="text-center">
                             <p className="text-white/40 text-sm font-semibold uppercase tracking-[0.4em] mb-3">
-                                Origen · Trivia
+                                Origen · Kahoot
                             </p>
                             <h1 className="text-6xl md:text-8xl font-black text-white tracking-tight mb-4">
                                 {juego?.titulo || 'Kahoot Origen'}
