@@ -362,12 +362,9 @@ const AppContent: React.FC = () => {
                                         ? <HostDashboard currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
-<<<<<<< HEAD
-=======
                                 <Route path="/gcx/calendario" element={
                                     user ? <CalendarioGCX currentUser={user} /> : <Navigate to="/" />
                                 } />
->>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
                                 <Route path="/coordinators" element={
                                     (user && hasRole(user, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN]))
                                         ? <Coordinators currentUser={user} />
@@ -392,8 +389,6 @@ const AppContent: React.FC = () => {
                                         ? <PastoralCareForm currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
-<<<<<<< HEAD
-=======
                                 <Route path="/prode" element={<Prode />} />
                                 <Route path="/prode/ranking" element={<ProdeRanking />} />
                                 <Route path="/prode/resultados" element={<ProdeResultados />} />
@@ -469,7 +464,6 @@ const AppContent: React.FC = () => {
                                         ? <TriviaControl currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
->>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
                                 <Route path="/notificaciones" element={<Notifications />} />
                                 <Route path="/perfil" element={<ProfilePage />} />
                                 <Route path="*" element={<Navigate to="/" />} />

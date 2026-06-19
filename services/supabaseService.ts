@@ -1630,13 +1630,9 @@ export const supabaseService = {
   // Re-open a finished/rejected group: Delete all registrations and attendance, reset members count
   async reopenGroup(groupId: string): Promise<boolean> {
     try {
-<<<<<<< HEAD
-
-=======
       // DEPRECADO: Usar cloneGroupForNewSeason para el flujo correcto de re-apertura.
       // Se mantiene para compatibilidad temporal.
       console.warn('[Groups] reopenGroup is deprecated. Use cloneGroupForNewSeason instead.');
->>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
 
       // 1. Delete all registrations for this group
       const { error: regError } = await supabase
