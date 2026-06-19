@@ -15,6 +15,7 @@ import { Loader2, Zap, Flame } from 'lucide-react';
 type Pantalla =
     | 'cargando'
     | 'espera'
+    | 'cuenta_regresiva'
     | 'doble'
     | 'pregunta'
     | 'respondida'
@@ -45,11 +46,13 @@ const TriviaJugador: React.FC = () => {
     const [tiempoRestante, setTiempoRestante]       = useState(0);
     const [tiempoTotal, setTiempoTotal]             = useState(0);
     const [mensajeBloqueado, setMensajeBloqueado]   = useState<string | null>(null);
+    const [cuentaRegresiva, setCuentaRegresiva]     = useState(3);
 
     const inicializadoRef    = useRef(false);
     const juegoRef           = useRef<TriviaJuego | null>(null);
     const jugadorRef         = useRef<TriviaJugadorType | null>(null);
     const dobleTimeoutRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const cuentaTimeoutRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
     const timerRef           = useRef<ReturnType<typeof setInterval> | null>(null);
     const tiempoRestanteRef  = useRef(0);
     const tiempoTotalRef     = useRef(0);
@@ -60,6 +63,43 @@ const TriviaJugador: React.FC = () => {
             timerRef.current = null;
         }
     };
+
+    // ── Cuenta regresiva sincronizada con started_at ──────
+    const iniciarCuentaRegresivaSync = useCallback((
+        startedAtIso: string | null,
+        juegoData: TriviaJuego,
+        idx: number
+    ) => {
+        const DURACION_MS = 3000;
+        const elapsed = startedAtIso
+            ? Math.max(0, Date.now() - new Date(startedAtIso).getTime())
+            : 0;
+
+        if (elapsed >= DURACION_MS) {
+            cargarPregunta(juegoData, idx);
+            return;
+        }
+
+        const remainingMs  = DURACION_MS - elapsed;
+        const currentCount = Math.ceil(remainingMs / 1000);
+        const msUntilNext  = remainingMs - (currentCount - 1) * 1000;
+
+        setPantalla('cuenta_regresiva');
+        setCuentaRegresiva(currentCount);
+        if (cuentaTimeoutRef.current) clearTimeout(cuentaTimeoutRef.current);
+
+        let count = currentCount;
+        const tick = () => {
+            count--;
+            if (count <= 0) {
+                cargarPregunta(juegoData, idx);
+            } else {
+                setCuentaRegresiva(count);
+                cuentaTimeoutRef.current = setTimeout(tick, 1000);
+            }
+        };
+        cuentaTimeoutRef.current = setTimeout(tick, msUntilNext);
+    }, [cargarPregunta]);
 
     // ── Cargar pregunta por índice ────────────────────────
     const cargarPregunta = useCallback(async (
@@ -214,7 +254,8 @@ const TriviaJugador: React.FC = () => {
         init();
 
         return () => {
-            if (dobleTimeoutRef.current) clearTimeout(dobleTimeoutRef.current);
+            if (dobleTimeoutRef.current)  clearTimeout(dobleTimeoutRef.current);
+            if (cuentaTimeoutRef.current) clearTimeout(cuentaTimeoutRef.current);
             detenerTimer();
         };
     }, [pin]);
@@ -238,6 +279,7 @@ const TriviaJugador: React.FC = () => {
                     const estado = nuevo.estado as TriviaEstadoJuego;
                     const idx    = nuevo.pregunta_actual_idx as number;
                     const timerPausado = (nuevo.timer_pausado as boolean) ?? false;
+                    const startedAt    = (nuevo.started_at as string | null) ?? null;
 
                     const juegoActual = juegoRef.current;
                     if (!juegoActual) return;
@@ -247,6 +289,7 @@ const TriviaJugador: React.FC = () => {
                         estado,
                         preguntaActualIdx: idx,
                         timerPausado,
+                        startedAt: startedAt ?? juegoActual.startedAt,
                     };
                     setJuego(juegoUpdated);
                     juegoRef.current = juegoUpdated;
@@ -286,7 +329,11 @@ const TriviaJugador: React.FC = () => {
                             return;
                         }
 
-                        await cargarPregunta(juegoUpdated, idx);
+                        if (juegoActual.estado === 'esperando') {
+                            iniciarCuentaRegresivaSync(startedAt, juegoUpdated, idx);
+                        } else {
+                            await cargarPregunta(juegoUpdated, idx);
+                        }
 
                     } else if (estado === 'entre_preguntas') {
                         detenerTimer();
@@ -501,6 +548,30 @@ const TriviaJugador: React.FC = () => {
                                 </div>
                             </div>
                         )}
+                    </motion.div>
+                )}
+
+                {/* ── CUENTA REGRESIVA ─────────────── */}
+                {pantalla === 'cuenta_regresiva' && (
+                    <motion.div
+                        key="cuenta"
+                        className="min-h-screen flex items-center justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={cuentaRegresiva}
+                                initial={{ scale: 0.3, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 2, opacity: 0 }}
+                                transition={{ duration: 0.35, ease: 'easeOut' }}
+                                className="text-[10rem] font-black text-white leading-none select-none"
+                            >
+                                {cuentaRegresiva}
+                            </motion.div>
+                        </AnimatePresence>
                     </motion.div>
                 )}
 

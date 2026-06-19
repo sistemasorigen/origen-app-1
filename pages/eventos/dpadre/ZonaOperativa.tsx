@@ -16,12 +16,22 @@ const ZonaOperativa: React.FC<ZonaOperativaProps> = ({ zona, titulo, currentUser
     const [searchTerm, setSearchTerm] = useState('');
     const [results, setResults]       = useState<DpadreFamilia[]>([]);
     const [searching, setSearching]   = useState(false);
+    const [loadingInicial, setLoadingInicial] = useState(true);
     const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+    // Carga inicial: traer TODAS las familias
+    // (buscarFamilias('') matchea todo con ilike '%%')
+    useEffect(() => {
+        supabaseService.buscarFamilias('')
+            .then(setResults)
+            .finally(() => setLoadingInicial(false));
+    }, []);
 
     useEffect(() => {
         clearTimeout(debounceRef.current);
         if (!searchTerm.trim()) {
-            setResults([]);
+            // Sin término: mostrar todas de nuevo
+            supabaseService.buscarFamilias('').then(setResults);
             return;
         }
         debounceRef.current = setTimeout(async () => {
@@ -96,8 +106,15 @@ const ZonaOperativa: React.FC<ZonaOperativaProps> = ({ zona, titulo, currentUser
                     </div>
                 )}
 
-                {/* Sin resultados */}
-                {searchTerm.trim() && !searching && results.length === 0 && (
+                {/* Loading inicial */}
+                {loadingInicial && (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="w-5 h-5 text-gray-300 animate-spin" />
+                    </div>
+                )}
+
+                {/* Sin resultados de búsqueda */}
+                {!loadingInicial && searchTerm.trim() && !searching && results.length === 0 && (
                     <div className="text-center py-12">
                         <Users className="w-10 h-10 text-gray-200 mx-auto mb-3" />
                         <p className="text-sm text-gray-400 font-medium">
@@ -106,11 +123,11 @@ const ZonaOperativa: React.FC<ZonaOperativaProps> = ({ zona, titulo, currentUser
                     </div>
                 )}
 
-                {/* Estado inicial */}
-                {!searchTerm.trim() && (
+                {/* Sin familias inscriptas todavía */}
+                {!loadingInicial && !searchTerm.trim() && results.length === 0 && (
                     <div className="text-center py-12">
                         <p className="text-sm text-gray-300 font-medium">
-                            Escribí el nombre o apellido para buscar
+                            Todavía no hay familias inscriptas
                         </p>
                     </div>
                 )}

@@ -7,13 +7,8 @@ interface Props {
     zona: 'trivia' | 'futbol';
 }
 
-const titulos: Record<'trivia' | 'futbol', string> = {
-    trivia: 'Buscador de familias',
-    futbol: 'Fútbol Tenis',
-};
-
 const Puntuacion: React.FC<Props> = ({ currentUser, zona }) => (
-    <ZonaOperativa zona={zona} titulo={titulos[zona]} currentUser={currentUser} />
+    <ZonaOperativa zona={zona} titulo="Buscador de padres" currentUser={currentUser} />
 );
 
 export default Puntuacion;

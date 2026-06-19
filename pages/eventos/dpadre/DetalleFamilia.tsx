@@ -73,9 +73,6 @@ const DetalleFamilia: React.FC<Props> = ({ currentUser }) => {
 
                 {/* Header */}
                 <div className="mb-8">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 mb-1.5">
-                        {zona === 'trivia' ? 'Zona de Trivia' : 'Fútbol Tenis'}
-                    </p>
                     <h1 className="text-3xl font-semibold text-gray-900 tracking-tight leading-tight">
                         {familia.padreNombre} {familia.padreApellido}
                     </h1>
@@ -156,21 +153,6 @@ const DetalleFamilia: React.FC<Props> = ({ currentUser }) => {
                         >
                             <Plus className="w-4 h-4" aria-hidden="true" />
                         </button>
-                    </div>
-
-                    {/* Shortcuts */}
-                    <div className="flex gap-2 mb-5 flex-wrap justify-center">
-                        {[5, 10, 25, 50].map(v => (
-                            <button
-                                key={v}
-                                type="button"
-                                onClick={() => setDelta(v)}
-                                aria-label={`Sumar ${v} puntos`}
-                                className="px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-xs font-semibold text-gray-500 hover:border-gray-400 hover:text-gray-900 active:scale-95 transition-all"
-                            >
-                                +{v}
-                            </button>
-                        ))}
                     </div>
 
                     {error && (

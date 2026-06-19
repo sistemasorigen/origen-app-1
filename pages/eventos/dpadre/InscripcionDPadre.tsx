@@ -36,6 +36,11 @@ const InscripcionDPadre: React.FC = () => {
 
         const hijosValidos = hijos.filter(h => h.nombre.trim() && h.apellido.trim());
 
+        if (hijosValidos.length === 0) {
+            setError('Completá el nombre y apellido de al menos un hijo.');
+            return;
+        }
+
         setLoading(true);
         const result = await supabaseService.inscribirFamilia(
             padreNombre,

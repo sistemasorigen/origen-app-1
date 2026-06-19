@@ -108,22 +108,37 @@ const TriviaProyector: React.FC = () => {
         }
     };
 
-    // ── Cuenta regresiva ──────────────────────────
-    const iniciarCuentaRegresiva = (juegoData: TriviaJuego) => {
+    // ── Cuenta regresiva sincronizada con started_at ─
+    const iniciarCuentaRegresivaSync = (startedAtIso: string | null, juegoData: TriviaJuego) => {
+        const DURACION_MS = 3000;
+        const elapsed = startedAtIso
+            ? Math.max(0, Date.now() - new Date(startedAtIso).getTime())
+            : 0;
+
+        if (elapsed >= DURACION_MS) {
+            mostrarPregunta(juegoData, juegoData.preguntaActualIdx, true);
+            return;
+        }
+
+        const remainingMs   = DURACION_MS - elapsed;
+        const currentCount  = Math.ceil(remainingMs / 1000); // 3, 2 o 1
+        const msUntilNext   = remainingMs - (currentCount - 1) * 1000;
+
         setPantalla('cuenta_regresiva');
-        setCuentaRegresiva(3);
-        let count = 3;
-        if (cuentaIntervalRef.current)
-            clearInterval(cuentaIntervalRef.current);
-        cuentaIntervalRef.current = setInterval(() => {
+        setCuentaRegresiva(currentCount);
+        if (cuentaIntervalRef.current) clearTimeout(cuentaIntervalRef.current as any);
+
+        let count = currentCount;
+        const tick = () => {
             count--;
             if (count <= 0) {
-                clearInterval(cuentaIntervalRef.current!);
                 mostrarPregunta(juegoData, juegoData.preguntaActualIdx, true);
             } else {
                 setCuentaRegresiva(count);
+                cuentaIntervalRef.current = setTimeout(tick, 1000) as any;
             }
-        }, 1500);
+        };
+        cuentaIntervalRef.current = setTimeout(tick, msUntilNext) as any;
     };
 
     // ── Auto-avance desde entre_preguntas (5 s) ──
@@ -195,7 +210,7 @@ const TriviaProyector: React.FC = () => {
         init();
 
         return () => {
-            if (cuentaIntervalRef.current) clearInterval(cuentaIntervalRef.current);
+            if (cuentaIntervalRef.current) clearTimeout(cuentaIntervalRef.current as any);
             if (timerRef.current)          clearInterval(timerRef.current);
             if (entreTimeoutRef.current)   clearTimeout(entreTimeoutRef.current);
         };
@@ -220,11 +235,12 @@ const TriviaProyector: React.FC = () => {
                     const estado       = nuevo.estado as TriviaEstadoJuego;
                     const idx          = nuevo.pregunta_actual_idx as number;
                     const timerPausado = (nuevo.timer_pausado as boolean) ?? false;
+                    const startedAt    = (nuevo.started_at as string | null) ?? null;
 
                     const prev = juegoRef.current;
                     if (!prev) return;
 
-                    const updated = { ...prev, estado, preguntaActualIdx: idx, timerPausado };
+                    const updated = { ...prev, estado, preguntaActualIdx: idx, timerPausado, startedAt: startedAt ?? prev.startedAt };
                     setJuego(updated);
                     juegoRef.current = updated;
 
@@ -247,7 +263,7 @@ const TriviaProyector: React.FC = () => {
                         }
 
                         if (prev.estado === 'esperando') {
-                            iniciarCuentaRegresiva(updated);
+                            iniciarCuentaRegresivaSync(startedAt, updated);
                         } else if (esNuevaPregunta) {
                             mostrarPregunta(updated, idx, true);
                         }

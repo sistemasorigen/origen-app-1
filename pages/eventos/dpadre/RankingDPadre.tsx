@@ -32,9 +32,7 @@ const RankingDPadre: React.FC = () => {
         userName: `${f.padreNombre} ${f.padreApellido}`,
         rank:     idx + 1,
         value:    f.totalPoints,
-        byline:   (f.hijos || []).length > 0
-            ? (f.hijos || []).map(h => h.nombre).join(', ')
-            : null,
+        byline:   null,
         displayed: true,
     }));
 
