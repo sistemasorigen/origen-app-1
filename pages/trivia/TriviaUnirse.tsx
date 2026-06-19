@@ -27,7 +27,8 @@ const TriviaUnirse: React.FC = () => {
 
         supabaseService.getTriviaJuegoPorPin(pin)
             .then(j => {
-                if (!j || j.estado !== 'esperando') {
+                // Solo redirigir si el juego ya terminó por completo
+                if (!j || j.estado === 'finalizado' || j.estado === 'finalizando') {
                     navigate('/trivia');
                     return;
                 }
@@ -98,6 +99,21 @@ const TriviaUnirse: React.FC = () => {
                         Elegí tu nickname y avatar
                     </p>
                 </div>
+
+                {/* Aviso si el juego ya empezó */}
+                {juego && juego.estado !== 'esperando' && (
+                    <div
+                        className="mb-6 px-4 py-3 rounded-2xl text-center"
+                        style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)' }}
+                    >
+                        <p className="text-amber-300 text-sm font-semibold">
+                            ⚡ El juego ya empezó
+                        </p>
+                        <p className="text-amber-300/70 text-xs mt-0.5">
+                            Las preguntas anteriores cuentan como incorrectas
+                        </p>
+                    </div>
+                )}
 
                 {/* Avatar grande */}
                 <div className="flex justify-center mb-4">

@@ -1,4 +1,4 @@
-﻿
+
 import { supabase } from './supabaseClient';
 import { db } from './dbService';
 import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant } from '../types';
@@ -5840,8 +5840,9 @@ export const supabaseService = {
         .eq('id', juegoId)
         .single();
 
-      if (juego?.estado !== 'esperando') {
-        return { success: false, error: 'El juego ya comenzó.' };
+      // Bloquear solo si el juego ya terminó o está finalizando
+      if (juego?.estado === 'finalizado' || juego?.estado === 'finalizando') {
+        return { success: false, error: 'El juego ya terminó.' };
       }
 
       const { data, error } = await supabase

@@ -53,12 +53,15 @@ const TriviaLanding: React.FC = () => {
             setLoading(false);
             return;
         }
-        if (juego.estado !== 'esperando') {
-            setError('El juego ya empezó. No podés unirte.');
-            setLoading(false);
+
+        // Si el jugador ya tiene sesión guardada, volver directo al juego
+        const sesionExistente = sessionStorage.getItem(`trivia_jugador_${cleanPin}`);
+        if (sesionExistente) {
+            navigate(`/trivia/jugar/${cleanPin}`);
             return;
         }
 
+        // Sin sesión previa → ir a la pantalla de unirse (funciona aunque el juego ya empezó)
         navigate(`/trivia/unirse/${cleanPin}`);
     };
 
