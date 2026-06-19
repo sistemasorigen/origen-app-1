@@ -46,11 +46,13 @@ const TriviaJugador: React.FC = () => {
     const [tiempoTotal, setTiempoTotal]             = useState(0);
     const [mensajeBloqueado, setMensajeBloqueado]   = useState<string | null>(null);
 
-    const inicializadoRef = useRef(false);
-    const juegoRef        = useRef<TriviaJuego | null>(null);
-    const jugadorRef      = useRef<TriviaJugadorType | null>(null);
-    const dobleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const timerRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+    const inicializadoRef    = useRef(false);
+    const juegoRef           = useRef<TriviaJuego | null>(null);
+    const jugadorRef         = useRef<TriviaJugadorType | null>(null);
+    const dobleTimeoutRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const timerRef           = useRef<ReturnType<typeof setInterval> | null>(null);
+    const tiempoRestanteRef  = useRef(0);
+    const tiempoTotalRef     = useRef(0);
 
     const detenerTimer = () => {
         if (timerRef.current) {
@@ -89,9 +91,12 @@ const TriviaJugador: React.FC = () => {
             if (timerRef.current) clearInterval(timerRef.current);
             setTiempoTotal(segundos);
             setTiempoRestante(segundos);
+            tiempoTotalRef.current = segundos;
+            tiempoRestanteRef.current = segundos;
             let count = segundos;
             timerRef.current = setInterval(() => {
                 count--;
+                tiempoRestanteRef.current = count;
                 if (count <= 0) {
                     clearInterval(timerRef.current!);
                     timerRef.current = null;
@@ -232,6 +237,7 @@ const TriviaJugador: React.FC = () => {
                     const nuevo  = payload.new as any;
                     const estado = nuevo.estado as TriviaEstadoJuego;
                     const idx    = nuevo.pregunta_actual_idx as number;
+                    const timerPausado = (nuevo.timer_pausado as boolean) ?? false;
 
                     const juegoActual = juegoRef.current;
                     if (!juegoActual) return;
@@ -239,7 +245,8 @@ const TriviaJugador: React.FC = () => {
                     const juegoUpdated = {
                         ...juegoActual,
                         estado,
-                        preguntaActualIdx: idx
+                        preguntaActualIdx: idx,
+                        timerPausado,
                     };
                     setJuego(juegoUpdated);
                     juegoRef.current = juegoUpdated;
@@ -248,6 +255,37 @@ const TriviaJugador: React.FC = () => {
                     const pregs  = juegoActual.preguntas || [];
 
                     if (estado === 'en_curso') {
+                        const esNuevaPregunta = idx !== juegoActual.preguntaActualIdx;
+                        const prevPausado     = juegoActual.timerPausado ?? false;
+
+                        // Pause / resume sin cambio de pregunta
+                        if (!esNuevaPregunta && timerPausado !== prevPausado) {
+                            if (timerPausado) {
+                                detenerTimer();
+                            } else {
+                                // Reanudar con el tiempo que quedaba (usar refs para valor actual)
+                                const remaining = tiempoRestanteRef.current;
+                                if (remaining > 0) {
+                                    if (timerRef.current) clearInterval(timerRef.current);
+                                    const totalSeg = tiempoTotalRef.current;
+                                    setTiempoInicioPregunta(Date.now() - ((totalSeg - remaining) * 1000));
+                                    let count = remaining;
+                                    timerRef.current = setInterval(() => {
+                                        count--;
+                                        tiempoRestanteRef.current = count;
+                                        if (count <= 0) {
+                                            clearInterval(timerRef.current!);
+                                            timerRef.current = null;
+                                            setTiempoRestante(0);
+                                        } else {
+                                            setTiempoRestante(count);
+                                        }
+                                    }, 1000);
+                                }
+                            }
+                            return;
+                        }
+
                         await cargarPregunta(juegoUpdated, idx);
 
                     } else if (estado === 'entre_preguntas') {

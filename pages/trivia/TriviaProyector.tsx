@@ -123,7 +123,7 @@ const TriviaProyector: React.FC = () => {
             } else {
                 setCuentaRegresiva(count);
             }
-        }, 1000);
+        }, 1500);
     };
 
     // ── Auto-avance desde entre_preguntas (5 s) ──
@@ -474,8 +474,11 @@ const TriviaProyector: React.FC = () => {
                                 key={cuentaRegresiva}
                                 initial={{ scale: 0.3, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 1.5, opacity: 0 }}
-                                transition={{ duration: 0.4, type: 'spring', stiffness: 200 }}
+                                exit={{ scale: 2, opacity: 0 }}
+                                transition={{
+                                    enter: { duration: 0.4, ease: 'easeOut' },
+                                    exit:  { duration: 0.35, ease: 'easeIn' },
+                                }}
                                 className="text-[20rem] font-black text-white leading-none select-none"
                             >
                                 {cuentaRegresiva}
