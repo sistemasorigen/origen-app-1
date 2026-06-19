@@ -64,43 +64,6 @@ const TriviaJugador: React.FC = () => {
         }
     };
 
-    // ── Cuenta regresiva sincronizada con started_at ──────
-    const iniciarCuentaRegresivaSync = useCallback((
-        startedAtIso: string | null,
-        juegoData: TriviaJuego,
-        idx: number
-    ) => {
-        const DURACION_MS = 3000;
-        const elapsed = startedAtIso
-            ? Math.max(0, Date.now() - new Date(startedAtIso).getTime())
-            : 0;
-
-        if (elapsed >= DURACION_MS) {
-            cargarPregunta(juegoData, idx);
-            return;
-        }
-
-        const remainingMs  = DURACION_MS - elapsed;
-        const currentCount = Math.ceil(remainingMs / 1000);
-        const msUntilNext  = remainingMs - (currentCount - 1) * 1000;
-
-        setPantalla('cuenta_regresiva');
-        setCuentaRegresiva(currentCount);
-        if (cuentaTimeoutRef.current) clearTimeout(cuentaTimeoutRef.current);
-
-        let count = currentCount;
-        const tick = () => {
-            count--;
-            if (count <= 0) {
-                cargarPregunta(juegoData, idx);
-            } else {
-                setCuentaRegresiva(count);
-                cuentaTimeoutRef.current = setTimeout(tick, 1000);
-            }
-        };
-        cuentaTimeoutRef.current = setTimeout(tick, msUntilNext);
-    }, [cargarPregunta]);
-
     // ── Cargar pregunta por índice ────────────────────────
     const cargarPregunta = useCallback(async (
         juegoData: TriviaJuego,
@@ -162,6 +125,43 @@ const TriviaJugador: React.FC = () => {
             startTimer();
         }
     }, []);
+
+    // ── Cuenta regresiva sincronizada con started_at ──────
+    const iniciarCuentaRegresivaSync = useCallback((
+        startedAtIso: string | null,
+        juegoData: TriviaJuego,
+        idx: number
+    ) => {
+        const DURACION_MS = 3000;
+        const elapsed = startedAtIso
+            ? Math.max(0, Date.now() - new Date(startedAtIso).getTime())
+            : 0;
+
+        if (elapsed >= DURACION_MS) {
+            cargarPregunta(juegoData, idx);
+            return;
+        }
+
+        const remainingMs  = DURACION_MS - elapsed;
+        const currentCount = Math.ceil(remainingMs / 1000);
+        const msUntilNext  = remainingMs - (currentCount - 1) * 1000;
+
+        setPantalla('cuenta_regresiva');
+        setCuentaRegresiva(currentCount);
+        if (cuentaTimeoutRef.current) clearTimeout(cuentaTimeoutRef.current);
+
+        let count = currentCount;
+        const tick = () => {
+            count--;
+            if (count <= 0) {
+                cargarPregunta(juegoData, idx);
+            } else {
+                setCuentaRegresiva(count);
+                cuentaTimeoutRef.current = setTimeout(tick, 1000);
+            }
+        };
+        cuentaTimeoutRef.current = setTimeout(tick, msUntilNext);
+    }, [cargarPregunta]);
 
     // ── Inicialización ────────────────────────────────────
     useEffect(() => {
