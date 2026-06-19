@@ -34,7 +34,7 @@ const TriviaProyector: React.FC = () => {
     const [ranking, setRanking]                     = useState<TriviaJugador[]>([]);
     const [cuentaRegresiva, setCuentaRegresiva]     = useState(3);
     const [respuestasCount, setRespuestasCount]     = useState(0);
-    const [revelarRespuestas, setRevelarRespuestas] = useState(false);
+    const [, setRevelarRespuestas] = useState(false);
     const [tiempoRestante, setTiempoRestante]       = useState(0);
     const [tiempoTotal, setTiempoTotal]             = useState(0);
 
@@ -475,10 +475,7 @@ const TriviaProyector: React.FC = () => {
                                 initial={{ scale: 0.3, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 2, opacity: 0 }}
-                                transition={{
-                                    enter: { duration: 0.4, ease: 'easeOut' },
-                                    exit:  { duration: 0.35, ease: 'easeIn' },
-                                }}
+                                transition={{ duration: 0.4, ease: 'easeOut' }}
                                 className="text-[20rem] font-black text-white leading-none select-none"
                             >
                                 {cuentaRegresiva}
@@ -546,20 +543,16 @@ const TriviaProyector: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Imagen */}
-                        {preguntaActual.imagenUrl && (
-                            <div className="flex justify-center px-8 mb-4">
+                        {/* Imagen + texto — zona central unificada */}
+                        <div className="flex-1 flex flex-col items-center justify-center px-10 gap-5">
+                            {preguntaActual.imagenUrl && (
                                 <img
                                     src={preguntaActual.imagenUrl}
                                     alt="pregunta"
-                                    className="max-h-48 rounded-2xl object-contain"
+                                    className="max-h-72 w-auto rounded-2xl object-contain"
                                 />
-                            </div>
-                        )}
-
-                        {/* Texto pregunta */}
-                        <div className="flex-1 flex items-center justify-center px-8 pb-4">
-                            <h2 className="text-4xl md:text-5xl font-black text-white text-center leading-tight max-w-4xl">
+                            )}
+                            <h2 className={`font-black text-white text-center leading-tight max-w-4xl ${preguntaActual.imagenUrl ? 'text-4xl md:text-5xl' : 'text-5xl md:text-6xl'}`}>
                                 {preguntaActual.texto}
                             </h2>
                         </div>
@@ -569,11 +562,11 @@ const TriviaProyector: React.FC = () => {
                             {(preguntaActual.opciones || []).map(op => (
                                 <div
                                     key={op.id}
-                                    className="flex items-center gap-4 px-6 py-5 rounded-2xl"
+                                    className="flex items-center gap-5 px-8 py-7 rounded-2xl"
                                     style={{ background: TRIVIA_COLORES[op.color] }}
                                 >
-                                    <span className="text-4xl shrink-0">{TRIVIA_ICONOS[op.color]}</span>
-                                    <span className="text-white font-bold text-xl leading-tight">{op.texto}</span>
+                                    <span className="text-5xl shrink-0">{TRIVIA_ICONOS[op.color]}</span>
+                                    <span className="text-white font-bold text-3xl leading-tight">{op.texto}</span>
                                 </div>
                             ))}
                         </div>

@@ -1078,6 +1078,9 @@ export interface TriviaJuego {
     timerPausado: boolean;
     createdBy: string | null;
     createdAt: string;
+    startedAt:  string | null;
+    finishedAt: string | null;
+    isTemplate: boolean;
     // Enriquecidos
     preguntas?: TriviaPreguntas[];
     totalJugadores?: number;

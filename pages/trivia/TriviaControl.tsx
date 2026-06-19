@@ -37,7 +37,8 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
     // Contador en vivo
     const [respuestasCount, setRespuestasCount] = useState(0);
     const [segundosPregunta, setSegundosPregunta] = useState(0);
-    const [confirmandoReset, setConfirmandoReset] = useState(false);
+    const [confirmandoReset, setConfirmandoReset]       = useState(false);
+    const [confirmandoTerminar, setConfirmandoTerminar] = useState(false);
 
     const juegoRef      = useRef<TriviaJuego | null>(null);
     const iniciadoRef   = useRef(false);
@@ -132,7 +133,7 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
     // 'finalizar' (podio) = llamar 'siguiente' en última pregunta → auto-transición a 'finalizando'
     // 'cerrar' (cerrar juego) = llamar 'finalizar' → 'finalizado'
     const handleAccion = async (
-        accion: 'iniciar' | 'revelar' | 'siguiente' | 'finalizar' | 'cerrar'
+        accion: 'iniciar' | 'revelar' | 'siguiente' | 'finalizar' | 'cerrar' | 'terminar'
     ) => {
         const j = juegoRef.current;
         if (!j || accionando) return;
@@ -163,6 +164,9 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
 
             } else if (accion === 'cerrar') {
                 await supabaseService.avanzarTriviaJuego(j.id, 'finalizar');
+
+            } else if (accion === 'terminar') {
+                await supabaseService.avanzarTriviaJuego(j.id, 'terminar');
             }
         } finally {
             setAccionando(false);
@@ -202,15 +206,10 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
         const j = juegoRef.current;
         if (!j || accionando) return;
         setAccionando(true);
-        const ok = await supabaseService
-            .reiniciarTriviaJuego(j.id);
-        if (ok) {
-            await cargarJuego();
-            setRespuestasCount(0);
-            setSegundosPregunta(0);
-        }
+        const nuevoId = await supabaseService.reiniciarTriviaJuego(j.id);
         setConfirmandoReset(false);
         setAccionando(false);
+        if (nuevoId) navigate(`/trivia/admin/${nuevoId}`);
     };
 
     // ── Derivados ─────────────────────────────────────
@@ -425,6 +424,48 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
                                 </p>
                             )}
 
+                            {/* Terminar anticipado → podio */}
+                            {(juego.estado === 'en_curso' || juego.estado === 'entre_preguntas') && (
+                                <div className="pt-3 border-t border-gray-100">
+                                    {!confirmandoTerminar ? (
+                                        <button
+                                            onClick={() => setConfirmandoTerminar(true)}
+                                            disabled={accionando}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-violet-200 text-violet-600 font-bold text-sm hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <Award className="w-4 h-4" />
+                                            Terminar y ver podio
+                                        </button>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-violet-600 text-center font-medium">
+                                                ¿Terminar el juego ahora y mostrar el podio?
+                                            </p>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => setConfirmandoTerminar(false)}
+                                                    className="flex-1 px-3 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200 transition-colors"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        setConfirmandoTerminar(false);
+                                                        await handleAccion('terminar');
+                                                    }}
+                                                    disabled={accionando}
+                                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50 transition-colors"
+                                                >
+                                                    {accionando
+                                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                        : 'Sí, al podio'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Hard reset — visible cuando el juego ya empezó */}
                             {juego.estado !== 'esperando' && (
                                 <div className="pt-3 border-t border-gray-100">
@@ -440,7 +481,7 @@ const TriviaControl: React.FC<Props> = ({ currentUser }) => {
                                     ) : (
                                         <div className="space-y-2">
                                             <p className="text-xs text-red-500 text-center font-medium">
-                                                Esto borra todos los jugadores y respuestas. ¿Seguro?
+                                                Se creará un nuevo juego. El historial de esta partida se conserva. ¿Seguro?
                                             </p>
                                             <div className="flex gap-2">
                                                 <button

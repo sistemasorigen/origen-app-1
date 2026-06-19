@@ -5613,6 +5613,7 @@ export const supabaseService = {
           estado:              'esperando',
           pregunta_actual_idx: -1,
           created_by:          createdBy,
+          is_template:         true,
         })
         .select()
         .single();
@@ -5626,6 +5627,9 @@ export const supabaseService = {
         timerPausado:      false,
         createdBy:         data.created_by,
         createdAt:         data.created_at,
+        startedAt:         null,
+        finishedAt:        null,
+        isTemplate:        true,
       };
     } catch (err) {
       console.error('[Trivia] crearJuego:', err);
@@ -5649,6 +5653,9 @@ export const supabaseService = {
         timerPausado:      d.timer_pausado ?? false,
         createdBy:         d.created_by,
         createdAt:         d.created_at,
+        startedAt:         d.started_at  ?? null,
+        finishedAt:        d.finished_at ?? null,
+        isTemplate:        d.is_template ?? false,
         totalJugadores:    d.trivia_jugadores?.[0]?.count ?? 0,
       }));
     } catch (err) {
@@ -5676,6 +5683,9 @@ export const supabaseService = {
         timerPausado:      data.timer_pausado ?? false,
         createdBy:         data.created_by,
         createdAt:         data.created_at,
+        startedAt:         data.started_at  ?? null,
+        finishedAt:        data.finished_at ?? null,
+        isTemplate:        data.is_template ?? false,
         preguntas: (data.trivia_preguntas || [])
           .sort((a: any, b: any) => a.orden - b.orden)
           .map((p: any) => ({
@@ -5724,6 +5734,9 @@ export const supabaseService = {
         timerPausado:      data.timer_pausado ?? false,
         createdBy:         data.created_by,
         createdAt:         data.created_at,
+        startedAt:         data.started_at  ?? null,
+        finishedAt:        data.finished_at ?? null,
+        isTemplate:        data.is_template ?? false,
       };
     } catch (err) {
       console.error('[Trivia] getJuegoPorPin:', err);
@@ -6035,7 +6048,7 @@ export const supabaseService = {
 
   async avanzarTriviaJuego(
     juegoId: string,
-    accion: 'iniciar' | 'siguiente' | 'revelar' | 'finalizar',
+    accion: 'iniciar' | 'siguiente' | 'revelar' | 'finalizar' | 'terminar',
     totalPreguntas?: number
   ): Promise<boolean> {
     try {
@@ -6051,7 +6064,7 @@ export const supabaseService = {
 
       switch (accion) {
         case 'iniciar':
-          updates = { estado: 'en_curso', pregunta_actual_idx: 0 };
+          updates = { estado: 'en_curso', pregunta_actual_idx: 0, started_at: new Date().toISOString() };
           break;
         case 'siguiente': {
           const nextIdx = juego.pregunta_actual_idx + 1;
@@ -6069,7 +6082,10 @@ export const supabaseService = {
           updates = { estado: 'entre_preguntas' };
           break;
         case 'finalizar':
-          updates = { estado: 'finalizado' };
+          updates = { estado: 'finalizado', finished_at: new Date().toISOString() };
+          break;
+        case 'terminar':
+          updates = { estado: 'finalizando' };
           break;
       }
 
@@ -6161,49 +6177,70 @@ export const supabaseService = {
     }
   },
 
-  async reiniciarTriviaJuego(
+  async clonarTriviaJuego(
     juegoId: string
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     try {
-      const { data: jugadoresJuego } = await supabase
-        .from('trivia_jugadores')
-        .select('id')
-        .eq('juego_id', juegoId);
+      const original = await this.getTriviaJuego(juegoId);
+      if (!original) return null;
 
-      const jugadorIds = (jugadoresJuego || []).map(j => j.id);
+      const pin = await this._generarPinUnico();
 
-      if (jugadorIds.length > 0) {
+      const { data: nuevo, error } = await supabase
+        .from('trivia_juegos')
+        .insert({
+          titulo:              original.titulo,
+          pin,
+          estado:              'esperando',
+          pregunta_actual_idx: -1,
+          timer_pausado:       false,
+          created_by:          original.createdBy,
+          is_template:         false,
+        })
+        .select()
+        .single();
+      if (error || !nuevo) throw error;
+
+      for (const p of original.preguntas || []) {
+        const { data: nuevaPrg } = await supabase
+          .from('trivia_preguntas')
+          .insert({
+            juego_id:        nuevo.id,
+            orden:           p.orden,
+            texto:           p.texto,
+            imagen_url:      p.imagenUrl || null,
+            tiempo_limite:   p.tiempoLimite,
+            es_doble_puntos: p.esDoble,
+          })
+          .select()
+          .single();
+
+        if (!nuevaPrg || !(p.opciones || []).length) continue;
+
         await supabase
-          .from('trivia_respuestas')
-          .delete()
-          .in('jugador_id', jugadorIds);
+          .from('trivia_opciones')
+          .insert(
+            (p.opciones || []).map((o: import('../types').TriviaOpcion) => ({
+              pregunta_id: nuevaPrg.id,
+              texto:       o.texto,
+              es_correcta: o.esCorrecta,
+              color:       o.color,
+              orden:       o.orden,
+            }))
+          );
       }
 
-      await supabase
-        .from('trivia_jugadores')
-        .delete()
-        .eq('juego_id', juegoId);
-
-      await supabase
-        .from('trivia_estado_pregunta')
-        .delete()
-        .eq('juego_id', juegoId);
-
-      const { error } = await supabase
-        .from('trivia_juegos')
-        .update({
-          estado: 'esperando',
-          pregunta_actual_idx: -1,
-          timer_pausado: false,
-        })
-        .eq('id', juegoId);
-      if (error) throw error;
-
-      return true;
+      return nuevo.id;
     } catch (err) {
-      console.error('[Trivia] reiniciar:', err);
-      return false;
+      console.error('[Trivia] clonarJuego:', err);
+      return null;
     }
+  },
+
+  async reiniciarTriviaJuego(
+    juegoId: string
+  ): Promise<string | null> {
+    return this.clonarTriviaJuego(juegoId);
   },
 
   async getTriviaRespuestaJugador(
@@ -6244,6 +6281,66 @@ export const supabaseService = {
       return true;
     } catch (err) {
       console.error('[Trivia] eliminarJuego:', err);
+      return false;
+    }
+  },
+
+  async renombrarTriviaJuego(
+    juegoId: string,
+    nuevoTitulo: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('trivia_juegos')
+        .update({ titulo: nuevoTitulo.trim() })
+        .eq('id', juegoId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Trivia] renombrarJuego:', err);
+      return false;
+    }
+  },
+
+  async editarTriviaJugador(
+    jugadorId: string,
+    cambios: { nickname?: string; puntajeTotal?: number }
+  ): Promise<boolean> {
+    try {
+      const updates: Record<string, any> = {};
+      if (cambios.nickname !== undefined) {
+        updates.nickname = cambios.nickname.trim();
+      }
+      if (cambios.puntajeTotal !== undefined) {
+        updates.puntaje_total = Math.max(0, cambios.puntajeTotal);
+      }
+      if (Object.keys(updates).length === 0) {
+        return true;
+      }
+      const { error } = await supabase
+        .from('trivia_jugadores')
+        .update(updates)
+        .eq('id', jugadorId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Trivia] editarJugador:', err);
+      return false;
+    }
+  },
+
+  async eliminarTriviaJugador(
+    jugadorId: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('trivia_jugadores')
+        .delete()
+        .eq('id', jugadorId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[Trivia] eliminarJugador:', err);
       return false;
     }
   },

@@ -43,6 +43,8 @@ import TriviaUnirse from './pages/trivia/TriviaUnirse';
 import TriviaJugador from './pages/trivia/TriviaJugador';
 import TriviaProyector from './pages/trivia/TriviaProyector';
 import TriviaControl from './pages/trivia/TriviaControl';
+import TriviaHistorial from './pages/trivia/TriviaHistorial';
+import TriviaPlanilla  from './pages/trivia/TriviaPlanilla';
 import SystemLoginModal from './components/modals/ModalLoginSistema';
 import CompleteProfileModal from './components/modals/ModalCompletarPerfil';
 import { User, UserRole, AppConfig } from './types';
@@ -466,6 +468,24 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <TriviaControl currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/trivia/historial" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <TriviaHistorial currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/trivia/historial/:id" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <TriviaPlanilla currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/notificaciones" element={<Notifications />} />

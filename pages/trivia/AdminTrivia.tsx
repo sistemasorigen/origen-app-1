@@ -1,51 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabaseService } from '../../services/supabaseService';
-import { User, TriviaJuego, TriviaEstadoJuego } from '../../types';
+import { User, TriviaJuego } from '../../types';
 import {
     Plus, Trash2, Edit2, Play,
-    Loader2, Trophy, Users, Clock,
-    CheckCircle, Circle, Zap, RotateCcw
+    Loader2, Trophy, Users, History
 } from 'lucide-react';
-
-const ESTADO_CONFIG: Record<TriviaEstadoJuego, {
-    label: string;
-    color: string;
-    bg: string;
-    icon: React.ReactNode;
-}> = {
-    esperando:       { label: 'Esperando',   color: 'text-blue-600',   bg: 'bg-blue-50',   icon: <Clock className="w-3 h-3" /> },
-    en_curso:        { label: 'En curso',    color: 'text-green-600',  bg: 'bg-green-50',  icon: <Zap className="w-3 h-3" /> },
-    entre_preguntas: { label: 'En pausa',    color: 'text-amber-600',  bg: 'bg-amber-50',  icon: <Circle className="w-3 h-3" /> },
-    finalizando:     { label: 'Finalizando', color: 'text-purple-600', bg: 'bg-purple-50', icon: <Trophy className="w-3 h-3" /> },
-    finalizado:      { label: 'Finalizado',  color: 'text-gray-400',   bg: 'bg-gray-50',   icon: <CheckCircle className="w-3 h-3" /> },
-};
 
 const AdminTrivia: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const navigate = useNavigate();
     const [juegos, setJuegos]         = useState<TriviaJuego[]>([]);
     const [loading, setLoading]       = useState(true);
-    const [deletingId,    setDeletingId]    = useState<string | null>(null);
-    const [reiniciandoId, setReiniciandoId] = useState<string | null>(null);
+    const [deletingId,   setDeletingId]   = useState<string | null>(null);
+    const [creandoSalaId, setCreandoSalaId] = useState<string | null>(null);
 
     useEffect(() => {
         supabaseService.getTriviaJuegos()
-            .then(setJuegos)
+            .then(todos => setJuegos(todos.filter(j => j.isTemplate)))
             .finally(() => setLoading(false));
     }, []);
 
-    const handleReiniciar = async (id: string) => {
-        if (!window.confirm(
-            '¿Reiniciar este juego? Se borrarán todos los jugadores y respuestas anteriores.'
-        )) return;
-        setReiniciandoId(id);
-        const ok = await supabaseService.reiniciarTriviaJuego(id);
-        if (ok) {
-            setJuegos(prev => prev.map(j =>
-                j.id === id ? { ...j, estado: 'esperando' as const, totalJugadores: 0 } : j
-            ));
-        }
-        setReiniciandoId(null);
+    const handleCrearSala = async (id: string) => {
+        setCreandoSalaId(id);
+        const nuevoId = await supabaseService.clonarTriviaJuego(id);
+        setCreandoSalaId(null);
+        if (nuevoId) navigate(`/trivia/admin/${nuevoId}`);
     };
 
     const handleEliminar = async (id: string) => {
@@ -71,13 +50,22 @@ const AdminTrivia: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight">
                             Mis juegos
                         </h1>
-                        <button
-                            onClick={() => navigate('/trivia/admin/nuevo')}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-black active:scale-[0.98] transition-all"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Nuevo juego
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => navigate('/trivia/historial')}
+                                className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-semibold hover:border-gray-400 hover:text-gray-900 transition-all"
+                            >
+                                <History className="w-4 h-4" />
+                                Historial
+                            </button>
+                            <button
+                                onClick={() => navigate('/trivia/admin/nuevo')}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-black active:scale-[0.98] transition-all"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Nuevo juego
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -109,9 +97,7 @@ const AdminTrivia: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                 {/* Lista */}
                 {!loading && juegos.length > 0 && (
                     <div className="space-y-3">
-                        {juegos.map(juego => {
-                            const cfg = ESTADO_CONFIG[juego.estado];
-                            return (
+                        {juegos.map(juego => (
                                 <div
                                     key={juego.id}
                                     className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-5 flex flex-col md:flex-row md:items-center gap-4"
@@ -122,15 +108,8 @@ const AdminTrivia: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                             <h3 className="font-semibold text-gray-900 text-base truncate">
                                                 {juego.titulo}
                                             </h3>
-                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.bg} ${cfg.color}`}>
-                                                {cfg.icon}
-                                                {cfg.label}
-                                            </span>
                                         </div>
                                         <div className="flex items-center gap-4 text-xs text-gray-400 font-medium">
-                                            <span className="font-mono font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-lg">
-                                                {juego.pin}
-                                            </span>
                                             <span className="flex items-center gap-1">
                                                 <Users className="w-3.5 h-3.5" />
                                                 {juego.totalJugadores ?? 0}
@@ -147,26 +126,16 @@ const AdminTrivia: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     {/* Acciones */}
                                     <div className="flex items-center gap-2 shrink-0">
                                         <button
-                                            onClick={() => navigate(`/trivia/admin/${juego.id}`)}
-                                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-900 text-white text-xs font-semibold hover:bg-black transition-all"
+                                            onClick={() => handleCrearSala(juego.id)}
+                                            disabled={creandoSalaId === juego.id}
+                                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-900 text-white text-xs font-semibold hover:bg-black transition-all disabled:opacity-50"
                                         >
-                                            <Play className="w-3.5 h-3.5" />
-                                            Controlar
+                                            {creandoSalaId === juego.id
+                                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                : <Play className="w-3.5 h-3.5" />
+                                            }
+                                            Crear sala
                                         </button>
-                                        {juego.estado === 'finalizado' && (
-                                            <button
-                                                onClick={() => handleReiniciar(juego.id)}
-                                                disabled={reiniciandoId === juego.id}
-                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-green-200 text-green-700 bg-green-50 text-xs font-semibold hover:bg-green-100 transition-all disabled:opacity-40"
-                                                title="Volver a jugar"
-                                            >
-                                                {reiniciandoId === juego.id
-                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                    : <RotateCcw className="w-3.5 h-3.5" />
-                                                }
-                                                Volver a jugar
-                                            </button>
-                                        )}
                                         <button
                                             onClick={() => navigate(`/trivia/admin/nuevo?edit=${juego.id}`)}
                                             className="w-9 h-9 rounded-xl border border-gray-200 text-gray-400 flex items-center justify-center hover:border-gray-400 hover:text-gray-700 transition-all"
@@ -187,8 +156,7 @@ const AdminTrivia: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                         </button>
                                     </div>
                                 </div>
-                            );
-                        })}
+                        ))}
                     </div>
                 )}
             </div>
