@@ -226,7 +226,11 @@ const AppContent: React.FC = () => {
                 element={
                     !user
                         ? <AuthScreen onLoginSuccess={handleAuthScreenLogin} />
-                        : <Navigate to="/" />
+                        : <Navigate to={
+                            (location.state as { from?: { pathname: string; search: string } })?.from
+                                ? `${(location.state as any).from.pathname}${(location.state as any).from.search || ''}`
+                                : '/'
+                          } />
                 }
             />
             <Route path="/update-password" element={<UpdatePassword />} />

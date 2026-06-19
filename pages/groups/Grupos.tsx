@@ -432,6 +432,16 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         const target = groups.find(g => g.id === targetId);
         if (!target) return;
 
+        // Si no hay sesión: redirigir al login
+        // conservando el groupId para volver acá
+        // después de autenticarse.
+        if (!currentUser) {
+            if (onLoginRequest) {
+                onLoginRequest();
+            }
+            return;
+        }
+
         setTimeout(() => {
             const el = document.getElementById(`group-card-${targetId}`);
             if (el) {
@@ -444,7 +454,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
             setSelectedGroup(target);
             setInquiryModalOpen(true);
         }, 300);
-    }, [searchParams, groups]);
+    }, [searchParams, groups, currentUser]);
 
     // Helper to check if a group is finished
     const isGroupFinished = (group: Group) => {
