@@ -187,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
 
             // Sort modules: Ensure Admin is last
             const sortedModules = [
-                ...visibleModules.filter(m => m.id !== 'admin'),
+                ...visibleModules.filter(m => m.id !== 'admin').sort((a, b) => a.title.localeCompare(b.title, 'es')),
                 ...visibleModules.filter(m => m.id === 'admin')
             ];
 
@@ -589,7 +589,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                 !hasRole(currentUser, system.allowedRoles);
 
                             const isConstruction = system.status === 'construction';
-                            const isFeatured = system.id === 'groups';
+                            const isFeatured = false;
                             const isAdmin = system.id === 'admin';
 
                             return (

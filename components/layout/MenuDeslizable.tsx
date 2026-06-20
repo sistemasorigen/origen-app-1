@@ -156,7 +156,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Audiencia Servicios',
             icon: HeartHandshake,
             path: '/audiencia-servicios',
-            roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL]
+            roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL],
+            subItems: [
+                { label: 'Inicio', path: '/audiencia-servicios' },
+                { label: 'Crear nuevo servicio', path: '/audiencia-servicios/new' },
+            ]
         },
         {
             label: 'Bienvenida',
@@ -164,6 +168,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             path: '/bienvenida',
             roles: [UserRole.SUPER_ADMIN, UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA],
             subItems: [
+                { label: 'Inicio', path: '/bienvenida' },
                 { label: 'Incompletos', path: '/bienvenida?stage=NEW' },
                 { label: 'Form Lleno', path: '/bienvenida?stage=FILLED_FORM' },
                 { label: '2° Contacto', path: '/bienvenida?stage=SECOND_CONTACT' },
@@ -181,6 +186,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             path: '/gcx',
             roles: [],
             subGroups: [
+                {
+                    label: 'Inicio',
+                    path: '/gcx',
+                    roles: []
+                },
                 {
                     label: 'Mis grupos',
                     path: '/mis-grupos',
@@ -232,7 +242,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Influos',
             icon: Star,
             path: '/influos',
-            roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR]
+            roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR],
+            subItems: [
+                { label: 'Inicio', path: '/influos' },
+                { label: 'Crear nuevo influo', path: '/influos?action=new' },
+            ]
         },
         {
             label: 'Prode Mundial',
@@ -241,6 +255,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             requiresAuth: true,
             roles: [],
             subItems: [
+                {
+                    label: 'Inicio',
+                    path: '/prode',
+                    roles: []
+                },
                 {
                     label: 'Ranking',
                     path: '/prode/ranking',
@@ -290,6 +309,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             requiresAuth: true,
             roles: [],
             subItems: [
+                {
+                    label: 'Inicio',
+                    path: '/eventos',
+                    roles: []
+                },
                 // ── ADMINISTRACIÓN ────────────────
                 {
                     label: 'Administración',
@@ -344,6 +368,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             path: '/punto-de-informacion',
             roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO],
             subItems: [
+                { label: 'Inicio', path: '/punto-de-informacion' },
                 { label: 'Dashboard', path: '/punto-de-informacion?view=PANEL' },
                 { label: 'Buscar', path: '/punto-de-informacion?view=SEARCH' },
                 { label: 'Inventario', path: '/punto-de-informacion?view=INVENTORY' },
@@ -450,9 +475,21 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 } ${isCollapsed ? 'justify-center mx-1' : ''}`}>
                                 <button
                                     onClick={() => {
-                                        if (item.path) handleNavigation(item.path);
-                                        if (hasChildren && !isCollapsed) toggleExpand(item.label);
-                                        if (hasChildren && isCollapsed && onToggleCollapse) onToggleCollapse();
+                                        if (hasChildren) {
+                                            // Tiene hijos: SOLO expande/colapsa,
+                                            // nunca navega. El "Inicio" dentro
+                                            // de los subItems es quien navega
+                                            // a la ruta raíz del módulo.
+                                            if (!isCollapsed) {
+                                                toggleExpand(item.label);
+                                            } else if (onToggleCollapse) {
+                                                onToggleCollapse();
+                                            }
+                                        } else if (item.path) {
+                                            // Sin hijos: navega directo,
+                                            // como siempre.
+                                            handleNavigation(item.path);
+                                        }
                                     }}
                                     className={`flex-1 flex items-center gap-3 py-2.5 text-left ${isCollapsed ? 'justify-center px-0' : 'px-3'}`}
                                 >

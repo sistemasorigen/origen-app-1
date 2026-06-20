@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../services/supabaseClient';
 import { InfluosAttendee } from '../../types';
 import { Plus, RefreshCw, Users, Star, Search, Edit2, Trash2, UserPlus } from 'lucide-react';
@@ -91,6 +92,21 @@ const InfluosContent: React.FC = () => {
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     const [filterType, setFilterType] = useState<'all' | 'first_time' | 'returning'>('all');
     const [tribeFilter, setTribeFilter] = useState<'all' | 'trueno' | 'garra'>('all');
+
+    // Detectar ?action=new en la URL para abrir
+    // el modal de creación automáticamente
+    // (usado por el menú lateral)
+    const [searchParams, setSearchParams] = useSearchParams();
+    useEffect(() => {
+        if (searchParams.get('action') === 'new') {
+            setIsNewModalOpen(true);
+            // Limpiar el query param para que no se
+            // reabra el modal si el usuario recarga
+            // o navega de vuelta
+            searchParams.delete('action');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [searchParams]);
 
     const fetchAttendees = async () => {
         setIsLoading(true);

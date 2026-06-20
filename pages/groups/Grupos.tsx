@@ -252,12 +252,6 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
                     )}
                 </div>
 
-                {/* CENTER SECTION: Title */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full pointer-events-none">
-                    <h1 className="text-lg md:text-xl font-bold tracking-tight text-black uppercase truncate px-12">
-                        GRUPOS DE CONEXIÓN
-                    </h1>
-                </div>
 
                 {/* RIGHT SECTION: Actions (Admin/Exit) */}
                 <div className="flex-1 flex justify-end items-center gap-2 md:gap-4 pointer-events-auto">
@@ -1301,19 +1295,21 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
     return (
         <div className="min-h-screen bg-white font-sans pb-20 groups-original-fonts">
-            {/* STICKY WRAPPER for navbar only */}
-            <div className={`relative z-40 bg-white shadow-sm transition-transform duration-300`}>
-                <GroupsNavbar
-                    view={view}
-                    setView={setView}
-                    canAccessAdmin={canAccessAdmin}
-                    isGroupLeader={!!isAnfitrion}
-                    isSuperAdmin={isSuperAdmin}
-                    activeSubTab={adminSubTab}
-                    setSubTab={setAdminSubTab}
-                    canSeeConfig={canSeeConfig}
-                />
-            </div>
+            {/* STICKY WRAPPER for navbar only — visible in admin mode */}
+            {view === 'admin' && (
+                <div className={`relative z-40 bg-white shadow-sm transition-transform duration-300`}>
+                    <GroupsNavbar
+                        view={view}
+                        setView={setView}
+                        canAccessAdmin={canAccessAdmin}
+                        isGroupLeader={!!isAnfitrion}
+                        isSuperAdmin={isSuperAdmin}
+                        activeSubTab={adminSubTab}
+                        setSubTab={setAdminSubTab}
+                        canSeeConfig={canSeeConfig}
+                    />
+                </div>
+            )}
 
             {/* Tutorial Components */}
             <TutorialInvitation
