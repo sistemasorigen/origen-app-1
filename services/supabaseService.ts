@@ -5938,31 +5938,9 @@ export const supabaseService = {
     bloqueado?: boolean;
   }> {
     try {
-      // Verificar si el timer está pausado por el admin
-      const { data: preguntaCheck } = await supabase
-        .from('trivia_preguntas')
-        .select('juego_id')
-        .eq('id', preguntaId)
-        .single();
-
-      if (preguntaCheck?.juego_id) {
-        const { data: juegoCheck } = await supabase
-          .from('trivia_juegos')
-          .select('timer_pausado')
-          .eq('id', preguntaCheck.juego_id)
-          .single();
-
-        if (juegoCheck?.timer_pausado) {
-          return {
-            esCorrecta: false,
-            puntosGanados: 0,
-            rachaActual: 0,
-            puntajeTotal: 0,
-            bloqueado: true,
-          };
-        }
-      }
-
+      // El timer_pausado es informativo para el admin
+      // (TriviaControl.tsx) — NO bloquea que los
+      // jugadores sigan respondiendo con normalidad.
       const { data: opcion } = await supabase
         .from('trivia_opciones')
         .select('es_correcta')

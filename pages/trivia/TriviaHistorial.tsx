@@ -78,6 +78,38 @@ const TriviaHistorial: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         if (nuevoId) navigate(`/trivia/admin/${nuevoId}`);
     };
 
+    const [terminandoId, setTerminandoId] = useState<string | null>(null);
+
+    const handleTerminarJuego = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (!window.confirm(
+            'Esto termina el juego para todos los jugadores ' +
+            'conectados ahora mismo y muestra el podio final. ' +
+            '¿Continuar?'
+        )) return;
+        setTerminandoId(id);
+        await supabaseService.avanzarTriviaJuego(id, 'finalizar');
+        setJuegos(prev => prev.map(j =>
+            j.id === id
+                ? { ...j, estado: 'finalizado', finishedAt: new Date().toISOString() }
+                : j
+        ));
+        setTerminandoId(null);
+    };
+
+    const handleEliminarEnProceso = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (!window.confirm(
+            'Este juego está EN CURSO. Eliminarlo desconecta ' +
+            'a todos los jugadores ahora mismo y borra todo. ' +
+            'Esta acción no se puede deshacer. ¿Seguro?'
+        )) return;
+        setDeletingId(id);
+        await supabaseService.eliminarTriviaJuego(id);
+        setJuegos(j => j.filter(x => x.id !== id));
+        setDeletingId(null);
+    };
+
     const juegoEnProceso = juegos.filter(j => j.estado !== 'finalizado');
     const juegoFinalizados = juegos.filter(j => j.estado === 'finalizado');
     const grupos = agruparPorFecha(juegoFinalizados);
@@ -155,13 +187,35 @@ const TriviaHistorial: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="shrink-0">
+                                    <div className="flex items-center gap-2 shrink-0">
                                         <button
                                             onClick={() => navigate(`/trivia/admin/${juego.id}`)}
                                             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-all"
                                         >
                                             <Zap className="w-3.5 h-3.5" />
                                             Volver a sala
+                                        </button>
+                                        <button
+                                            onClick={e => handleTerminarJuego(e, juego.id)}
+                                            disabled={terminandoId === juego.id}
+                                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 bg-white text-orange-600 text-xs font-semibold hover:border-orange-300 hover:bg-orange-50 transition-all disabled:opacity-40"
+                                        >
+                                            {terminandoId === juego.id
+                                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                : <Trophy className="w-3.5 h-3.5" />
+                                            }
+                                            Frenar
+                                        </button>
+                                        <button
+                                            onClick={e => handleEliminarEnProceso(e, juego.id)}
+                                            disabled={deletingId === juego.id}
+                                            className="w-9 h-9 rounded-xl border border-gray-200 text-red-400 flex items-center justify-center hover:border-red-300 hover:bg-red-50 transition-all disabled:opacity-40 shrink-0"
+                                            title="Eliminar juego en curso"
+                                        >
+                                            {deletingId === juego.id
+                                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                : <Trash2 className="w-4 h-4" />
+                                            }
                                         </button>
                                     </div>
                                 </div>

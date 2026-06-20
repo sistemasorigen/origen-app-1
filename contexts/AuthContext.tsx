@@ -323,10 +323,20 @@ const fullUser: User = {
 
     const signInWithGoogle = async () => {
         try {
+            // Si hay un destino guardado (ej: volver al
+            // modal de un grupo de conexión), Google debe
+            // devolver ahí en vez de a la raíz.
+            const destino = sessionStorage.getItem(
+                'post_login_redirect'
+            );
+            const redirectUrl = destino
+                ? `${window.location.origin}${destino}`
+                : `${window.location.origin}/`;
+
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/`
+                    redirectTo: redirectUrl
                 }
             });
             if (error) {

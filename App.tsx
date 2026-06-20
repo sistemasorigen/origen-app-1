@@ -138,6 +138,20 @@ const AppContent: React.FC = () => {
         window.scrollTo(0, 0);
     }, [location.pathname]); // location is derived from useLocation hook logic from react-router
 
+    // Redirigir post-login con Google usando el destino guardado en sessionStorage
+    useEffect(() => {
+        if (!user) return;
+        const destino = sessionStorage.getItem('post_login_redirect');
+        if (destino) {
+            sessionStorage.removeItem('post_login_redirect');
+            // Solo redirigir si estamos en una ruta "neutra"
+            // (auth, raíz) para no interrumpir navegación normal
+            if (location.pathname === '/auth' || location.pathname === '/') {
+                navigate(destino);
+            }
+        }
+    }, [user]);
+
     // Effects
     useEffect(() => {
         let timer: NodeJS.Timeout;
@@ -154,6 +168,7 @@ const AppContent: React.FC = () => {
     // Handlers
     const handleAuthScreenLogin = () => {
         const from = location.state?.from;
+        sessionStorage.removeItem('post_login_redirect');
         if (from && from.pathname) {
             navigate(`${from.pathname}${from.search || ''}${from.hash || ''}`);
         } else {
@@ -166,6 +181,13 @@ const AppContent: React.FC = () => {
     };
 
     const handleLogin = () => {
+        // sessionStorage sobrevive el redirect completo
+        // del login con Google (location.state se pierde
+        // en ese flujo porque el browser recarga la página)
+        sessionStorage.setItem(
+            'post_login_redirect',
+            `${location.pathname}${location.search || ''}`
+        );
         navigate('/auth', { state: { from: location } });
     };
 
