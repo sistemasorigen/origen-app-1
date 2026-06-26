@@ -109,6 +109,7 @@ const ProdeResultados: React.FC = () => {
 
     const ROUND_ORDER = [
         'FASE DE GRUPOS',
+        'DIECISEISAVO DE FINAL',
         'OCTAVOS DE FINAL',
         'CUARTOS DE FINAL',
         'SEMIFINAL',
@@ -155,8 +156,9 @@ const ProdeResultados: React.FC = () => {
         new Set(allPhaseMatches.map(m => m.groupName || m.round || 'Otros'))
     ).sort((a, b) => a.localeCompare(b));
 
-    // Si es fase de grupos usamos todos los grupos; de lo contrario solo los que tienen resultados
-    const groupKeys = currentPhase === 'FASE DE GRUPOS' ? allGroupKeys : Object.keys(matchesByGroup).sort((a, b) => a.localeCompare(b));
+    // Usamos todos los grupos/llaves existentes en la fase (con o sin resultados)
+    // para que las fases eliminatorias muestren sus partidos aunque aún no tengan resultado.
+    const groupKeys = allGroupKeys;
 
     const totalPages = Math.ceil(groupKeys.length / itemsPerPage);
 

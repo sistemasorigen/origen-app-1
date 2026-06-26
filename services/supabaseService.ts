@@ -5326,21 +5326,24 @@ export const supabaseService = {
         );
       }
 
-      // 3. Reset participantes + actualizar predicciones en paralelo
-      await Promise.all([
-        supabase
-          .from('prode_participants')
-          .update({ total_points: 0 })
-          .not('id', 'is', null),
-        ...predUpdates.map(({ id, points_earned }) =>
+      // 3. Ejecución secuencial para evitar race condition
+      // A. Actualizar predicciones
+      await Promise.all(
+        predUpdates.map(({ id, points_earned }) =>
           supabase
             .from('prode_predictions')
             .update({ points_earned })
             .eq('id', id)
-        ),
-      ]);
+        )
+      );
 
-      // 4. Actualizar totales de participantes en paralelo
+      // B. Resetear participantes a 0
+      await supabase
+        .from('prode_participants')
+        .update({ total_points: 0 })
+        .not('id', 'is', null);
+
+      // C. Actualizar totales finales
       await Promise.all(
         [...participantTotals.entries()].map(([participantId, total]) =>
           supabase

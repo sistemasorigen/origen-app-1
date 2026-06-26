@@ -91,9 +91,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     }
                 }
             )
-            .subscribe((status) => {
-                console.log(`[NotificationContext] Subscription status for ${channelName}:`, status);
-            });
+            .subscribe();
 
         return () => {
             console.log(`[NotificationContext] Cleaning up channel ${channelName}`);

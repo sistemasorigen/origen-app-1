@@ -579,7 +579,6 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     }
                 });
 
-                console.log("Groups.tsx: Fetched user registrations (Combined):", allRegs);
                 setUserRegistrations(allRegs);
             } catch (err) {
                 console.error("Error fetching my registrations:", err);
@@ -593,18 +592,6 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         fetchUserRegistrations();
     }, [currentUser]);
 
-    // Debugging registrations
-    useEffect(() => {
-        if (userRegistrations.length > 0) {
-            console.log('[Groups Debug] Current User ID:', currentUser?.id);
-            console.log('[Groups Debug] All Registrations:', userRegistrations);
-            userRegistrations.forEach(r => {
-                console.log(`[Groups Debug] Reg ID: ${r.id}, Group: ${r.groupId}, Status: ${r.status}`);
-                console.log(`[Groups Debug] - Main User: ${r.userId} (Match: ${r.userId === currentUser?.id})`);
-                console.log(`[Groups Debug] - Partner User: ${r.partnerUserId} (Match: ${r.partnerUserId === currentUser?.id})`);
-            });
-        }
-    }, [userRegistrations, currentUser]);
 
     const isSuperAdmin = currentUser ? hasRole(currentUser, UserRole.SUPER_ADMIN) : false;
     const isGroupsAdmin = currentUser ? hasRole(currentUser, UserRole.ADMIN_GROUPS) : false;
