@@ -4723,12 +4723,27 @@ export const supabaseService = {
       if (matchError) throw matchError;
 
       // 2. Traer todas las predicciones de ese partido
-      const { data: preds, error: predError } =
-        await supabase
+      // Traer todas las predicciones de este partido
+      // (límite alto por seguridad — un partido no debería
+      //  tener más de ~500 predicciones, pero protegemos
+      //  contra el default de 1000)
+      let allPreds: any[] = [];
+      let predFrom = 0;
+      const PRED_PAGE = 1000;
+      let predHasMore = true;
+      while (predHasMore) {
+        const { data: predPage, error: predPageErr } = await supabase
           .from('prode_predictions')
           .select('id, participant_id, home_score_pred, away_score_pred, points_earned')
-          .eq('match_id', matchId);
-      if (predError) throw predError;
+          .eq('match_id', matchId)
+          .range(predFrom, predFrom + PRED_PAGE - 1);
+        if (predPageErr) throw predPageErr;
+        const rows = predPage || [];
+        allPreds = allPreds.concat(rows);
+        predHasMore = rows.length === PRED_PAGE;
+        predFrom += PRED_PAGE;
+      }
+      const preds = allPreds;
       if (!preds?.length) return true;
 
       // 3. Calcular puntos por predicción en memoria
@@ -5009,8 +5024,7 @@ export const supabaseService = {
         .from('prode_participants')
         // El !inner hace que solo devuelva participantes que tengan al menos una predicción
         .select('*, prode_predictions!inner(id)')
-        .order('total_points', { ascending: false })
-        .limit(100);
+        .order('total_points', { ascending: false });
 
       if (error) throw error;
 
@@ -5085,37 +5099,54 @@ export const supabaseService = {
     createdAt: string;
   }[]> {
     try {
-      const { data, error } = await supabase
-        .from('prode_predictions')
-        .select(`
-          id,
-          participant_id,
-          match_id,
-          home_score_pred,
-          away_score_pred,
-          points_earned,
-          created_at,
-          prode_participants!inner (
-            id,
-            first_name,
-            last_name,
-            user_id
-          ),
-          prode_matches!inner (
-            id,
-            match_number,
-            home_team,
-            away_team,
-            home_flag,
-            away_flag,
-            is_finished
-          )
-        `)
-        .order('created_at', { ascending: false });
+      // Supabase devuelve máx 1000 filas por defecto.
+      // Paginamos para traer TODAS las predicciones.
+      const PAGE_SIZE = 1000;
+      let allData: any[] = [];
+      let from = 0;
+      let hasMore = true;
 
-      if (error) throw error;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('prode_predictions')
+          .select(`
+            id,
+            participant_id,
+            match_id,
+            home_score_pred,
+            away_score_pred,
+            points_earned,
+            created_at,
+            prode_participants!inner (
+              id,
+              first_name,
+              last_name,
+              user_id
+            ),
+            prode_matches!inner (
+              id,
+              match_number,
+              home_team,
+              away_team,
+              home_flag,
+              away_flag,
+              is_finished
+            )
+          `)
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
 
-      return (data || []).map((r: any) => ({
+        if (error) throw error;
+
+        const page = data || [];
+        allData = allData.concat(page);
+        hasMore = page.length === PAGE_SIZE;
+        from += PAGE_SIZE;
+      }
+
+      console.log(`[Prode] getAllPredictions: ${allData.length} predicciones cargadas`);
+
+      return allData.map((r: any) => ({
         predictionId:    r.id,
         participantId:   r.participant_id,
         participantName: `${r.prode_participants.first_name} ${r.prode_participants.last_name}`.trim(),
@@ -5272,19 +5303,34 @@ export const supabaseService = {
     pointsWrong: number
   ): Promise<boolean> {
     try {
-      // 1. Traer partidos finalizados y todas sus predicciones en paralelo
-      const [matchesRes, predsRes] = await Promise.all([
-        supabase
-          .from('prode_matches')
-          .select('id, home_score_real, away_score_real')
-          .eq('is_finished', true)
-          .not('home_score_real', 'is', null),
-        supabase
-          .from('prode_predictions')
-          .select('id, match_id, participant_id, home_score_pred, away_score_pred'),
-      ]);
+      // 1. Traer partidos finalizados
+      const matchesRes = await supabase
+        .from('prode_matches')
+        .select('id, home_score_real, away_score_real')
+        .eq('is_finished', true)
+        .not('home_score_real', 'is', null);
+
       const finishedMatches = matchesRes.data as { id: string; home_score_real: number; away_score_real: number }[] | null;
-      const allPreds = predsRes.data as { id: string; match_id: string; participant_id: string; home_score_pred: number; away_score_pred: number }[] | null;
+
+      // 2. Traer TODAS las predicciones con paginación
+      //    (Supabase devuelve máx 1000 filas por defecto)
+      const PAGE_SIZE = 1000;
+      let allPredsRaw: any[] = [];
+      let from = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data: page, error: pageErr } = await supabase
+          .from('prode_predictions')
+          .select('id, match_id, participant_id, home_score_pred, away_score_pred')
+          .range(from, from + PAGE_SIZE - 1);
+        if (pageErr) throw pageErr;
+        const rows = page || [];
+        allPredsRaw = allPredsRaw.concat(rows);
+        hasMore = rows.length === PAGE_SIZE;
+        from += PAGE_SIZE;
+      }
+      console.log(`[Prode] recalculate: ${allPredsRaw.length} predicciones cargadas`);
+      const allPreds = allPredsRaw as { id: string; match_id: string; participant_id: string; home_score_pred: number; away_score_pred: number }[] | null;
 
       if (!finishedMatches?.length || !allPreds?.length) {
         await supabase
