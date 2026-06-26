@@ -9,7 +9,7 @@ import {
 import {
     Trophy, Check, Loader2, Plus, Edit2, Trash2,
     ChevronLeft, X, CheckCircle, Medal, Search, RefreshCw,
-    ChevronRight
+    ChevronRight, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../services/supabaseClient';
@@ -345,6 +345,11 @@ const AdminProdeContent: React.FC = () => {
     const [editPredAway, setEditPredAway] = useState(0);
     const [savingEditPred, setSavingEditPred] = useState(false);
     const [deletingPredId, setDeletingPredId] = useState<string | null>(null);
+
+    // Toggle realizadas / faltantes
+    type PredViewMode = 'made' | 'missing';
+    const [predViewMode, setPredViewMode] = useState<PredViewMode>('made');
+    const [missingMatchFilter, setMissingMatchFilter] = useState<'all' | 'closed' | 'finished'>('all');
 
     // Carga inicial al montar el componente
     useEffect(() => {
@@ -1438,6 +1443,34 @@ const AdminProdeContent: React.FC = () => {
                             </button>
                         </div>
 
+                        {/* Toggle: Realizadas / Faltantes */}
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setPredViewMode('made')}
+                                className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
+                                    predViewMode === 'made'
+                                        ? 'bg-black text-white border-black'
+                                        : 'bg-white text-neutral-500 border-neutral-200 hover:border-neutral-400 hover:text-black'
+                                }`}
+                            >
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                Realizadas
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPredViewMode('missing')}
+                                className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
+                                    predViewMode === 'missing'
+                                        ? 'bg-amber-500 text-white border-amber-500'
+                                        : 'bg-white text-neutral-500 border-neutral-200 hover:border-amber-400 hover:text-amber-600'
+                                }`}
+                            >
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                Faltantes
+                            </button>
+                        </div>
+
                         {/* Formulario nueva prediccion */}
                         {showNewPredForm && (
                             <div className="border-2 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
@@ -1594,235 +1627,423 @@ const AdminProdeContent: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Buscador */}
-                        <div className="relative">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-                            <input
-                                type="text"
-                                placeholder="Buscar por participante, equipo..."
-                                value={predSearchTerm}
-                                onChange={e => setPredSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-10 h-11 border-2 border-neutral-300 font-semibold text-sm focus:outline-none focus:border-black transition-colors placeholder:text-neutral-400"
-                            />
-                            {predSearchTerm && (
-                                <button
-                                    type="button"
-                                    onClick={() => setPredSearchTerm('')}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
-                                    aria-label="Limpiar busqueda"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
+                        {/* ═══════ VISTA: REALIZADAS ═══════ */}
+                        {predViewMode === 'made' && (
+                            <>
+                                {/* Buscador */}
+                                <div className="relative">
+                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por participante, equipo..."
+                                        value={predSearchTerm}
+                                        onChange={e => setPredSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-10 h-11 border-2 border-neutral-300 font-semibold text-sm focus:outline-none focus:border-black transition-colors placeholder:text-neutral-400"
+                                    />
+                                    {predSearchTerm && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setPredSearchTerm('')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
+                                            aria-label="Limpiar busqueda"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
 
-                        {/* Lista */}
-                        {predsLoading ? (
-                            <div className="flex flex-col items-center justify-center py-20 gap-3">
-                                <Loader2 className="w-8 h-8 animate-spin text-neutral-300" />
-                                <p className="text-[11px] font-black uppercase tracking-widest text-neutral-400">
-                                    Cargando predicciones...
-                                </p>
-                            </div>
-                        ) : (() => {
-                            const filtered = allPredictions.filter(p => {
-                                if (!predSearchTerm.trim()) return true;
-                                const term = predSearchTerm.toLowerCase();
-                                return (
-                                    p.participantName.toLowerCase().includes(term) ||
-                                    p.homeTeam.toLowerCase().includes(term) ||
-                                    p.awayTeam.toLowerCase().includes(term)
-                                );
-                            });
-
-                            if (filtered.length === 0) {
-                                return (
-                                    <div className="py-20 border-2 border-dashed border-neutral-200 flex flex-col items-center gap-2">
-                                        <Search className="w-8 h-8 text-neutral-200" />
-                                        <p className="text-xs font-black text-neutral-400 uppercase tracking-widest">
-                                            {predSearchTerm ? 'Sin resultados para esa busqueda' : 'No hay predicciones cargadas'}
+                                {/* Lista */}
+                                {predsLoading ? (
+                                    <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                        <Loader2 className="w-8 h-8 animate-spin text-neutral-300" />
+                                        <p className="text-[11px] font-black uppercase tracking-widest text-neutral-400">
+                                            Cargando predicciones...
                                         </p>
-                                        {predSearchTerm && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setPredSearchTerm('')}
-                                                className="mt-1 text-[10px] font-black uppercase tracking-widest underline text-neutral-400 hover:text-black transition-colors"
-                                            >
-                                                Limpiar busqueda
-                                            </button>
-                                        )}
                                     </div>
-                                );
-                            }
-
-                            return (
-                                <div className="space-y-2">
-                                    {filtered.map(pred => {
-                                        const isEditing = editingPredId === pred.predictionId;
-                                        const isDeleting = deletingPredId === pred.predictionId;
-                                        const initial = pred.participantName.charAt(0).toUpperCase();
-
+                                ) : (() => {
+                                    const filtered = allPredictions.filter(p => {
+                                        if (!predSearchTerm.trim()) return true;
+                                        const term = predSearchTerm.toLowerCase();
                                         return (
-                                            <div
-                                                key={pred.predictionId}
-                                                className={`bg-white border-2 transition-all duration-200 ${
-                                                    isEditing
-                                                        ? 'border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                                                        : 'border-neutral-200 hover:border-neutral-400'
-                                                }`}
-                                            >
-                                                {/* Fila principal */}
-                                                <div className="flex items-center gap-3 px-4 py-3">
+                                            p.participantName.toLowerCase().includes(term) ||
+                                            p.homeTeam.toLowerCase().includes(term) ||
+                                            p.awayTeam.toLowerCase().includes(term)
+                                        );
+                                    });
 
-                                                    {/* Avatar */}
-                                                    <div className="w-9 h-9 rounded-full bg-neutral-100 flex items-center justify-center text-[13px] font-black text-neutral-600 shrink-0 select-none">
-                                                        {initial}
-                                                    </div>
-
-                                                    {/* Info */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-black text-sm leading-tight truncate">
-                                                            {pred.participantName}
-                                                        </p>
-                                                        <p className="text-[10px] font-semibold text-neutral-400 mt-0.5 truncate">
-                                                            #{pred.matchNumber} · {pred.homeTeam} vs {pred.awayTeam}
-                                                        </p>
-                                                    </div>
-
-                                                    {/* Vista normal */}
-                                                    {!isEditing && (
-                                                        <div className="flex items-center gap-2 shrink-0">
-                                                            <div className="flex items-center gap-1 bg-neutral-50 border border-neutral-200 px-2.5 py-1.5">
-                                                                <span className="font-black text-sm tabular-nums text-black leading-none">{pred.homeScorePred}</span>
-                                                                <span className="text-neutral-300 font-bold text-xs leading-none mx-0.5">-</span>
-                                                                <span className="font-black text-sm tabular-nums text-black leading-none">{pred.awayScorePred}</span>
-                                                            </div>
-
-                                                            {pred.pointsEarned !== null ? (
-                                                                <span className={`hidden sm:inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1.5 leading-none ${
-                                                                    pred.pointsEarned > 0
-                                                                        ? 'bg-emerald-600 text-white'
-                                                                        : 'bg-neutral-100 text-neutral-500'
-                                                                }`}>
-                                                                    {pred.pointsEarned > 0 ? `+${pred.pointsEarned}pts` : '0pts'}
-                                                                </span>
-                                                            ) : (
-                                                                <span className="hidden sm:inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1.5 leading-none bg-amber-50 text-amber-500 border border-amber-200">
-                                                                    Pendiente
-                                                                </span>
-                                                            )}
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setEditingPredId(pred.predictionId);
-                                                                    setEditPredHome(pred.homeScorePred);
-                                                                    setEditPredAway(pred.awayScorePred);
-                                                                }}
-                                                                className="w-9 h-9 flex items-center justify-center border border-neutral-200 text-neutral-400 hover:border-black hover:bg-black hover:text-white transition-all shrink-0"
-                                                                title="Editar prediccion"
-                                                                aria-label="Editar prediccion"
-                                                            >
-                                                                <Edit2 className="w-3.5 h-3.5" />
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleDeletePred(pred.predictionId)}
-                                                                disabled={isDeleting}
-                                                                className="w-9 h-9 flex items-center justify-center border border-neutral-200 text-red-400 hover:border-red-500 hover:bg-red-500 hover:text-white transition-all shrink-0 disabled:opacity-40"
-                                                                title="Eliminar prediccion"
-                                                                aria-label="Eliminar prediccion"
-                                                            >
-                                                                {isDeleting
-                                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                    : <Trash2 className="w-3.5 h-3.5" />
-                                                                }
-                                                            </button>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Modo edicion: botones en fila */}
-                                                    {isEditing && (
-                                                        <div className="flex items-center gap-1.5 shrink-0">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setEditingPredId(null)}
-                                                                className="h-9 px-3 border-2 border-neutral-200 text-xs font-black uppercase text-neutral-500 hover:border-black hover:text-black transition-all"
-                                                                aria-label="Cancelar edicion"
-                                                            >
-                                                                <X className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleSaveEditPred(pred.predictionId, pred.participantId, pred.matchId)}
-                                                                disabled={savingEditPred}
-                                                                className="h-9 px-3 bg-black text-white border-2 border-black text-xs font-black uppercase hover:bg-white hover:text-black transition-all disabled:opacity-40 flex items-center gap-1"
-                                                                aria-label="Guardar edicion"
-                                                            >
-                                                                {savingEditPred
-                                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                    : <Check className="w-3.5 h-3.5" />
-                                                                }
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Panel edicion inline */}
-                                                {isEditing && (
-                                                    <div className="border-t-2 border-black bg-neutral-50 px-4 py-4">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-3">
-                                                            Nuevo marcador
-                                                        </p>
-                                                        <div className="flex items-center gap-3">
-                                                            <input
-                                                                type="number" min={0} max={30}
-                                                                value={editPredHome}
-                                                                onChange={e => setEditPredHome(parseInt(e.target.value) || 0)}
-                                                                className="w-16 h-12 text-center border-2 border-black font-black text-2xl focus:outline-none bg-white"
-                                                                autoFocus
-                                                                aria-label="Goles local"
-                                                            />
-                                                            <span className="text-xl font-black text-neutral-300 select-none">-</span>
-                                                            <input
-                                                                type="number" min={0} max={30}
-                                                                value={editPredAway}
-                                                                onChange={e => setEditPredAway(parseInt(e.target.value) || 0)}
-                                                                className="w-16 h-12 text-center border-2 border-black font-black text-2xl focus:outline-none bg-white"
-                                                                aria-label="Goles visitante"
-                                                            />
-                                                            <p className="ml-2 text-[10px] text-neutral-400 font-semibold leading-snug hidden sm:block">
-                                                                Tocá el check<br />para guardar
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Badge puntos en mobile */}
-                                                {!isEditing && (
-                                                    <div className="sm:hidden px-4 pb-3 -mt-1">
-                                                        {pred.pointsEarned !== null ? (
-                                                            <span className={`inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1 leading-none ${
-                                                                pred.pointsEarned > 0
-                                                                    ? 'bg-emerald-600 text-white'
-                                                                    : 'bg-neutral-100 text-neutral-500'
-                                                            }`}>
-                                                                {pred.pointsEarned > 0 ? `+${pred.pointsEarned} pts` : '0 pts'}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1 leading-none bg-amber-50 text-amber-500 border border-amber-200">
-                                                                Pendiente
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                    if (filtered.length === 0) {
+                                        return (
+                                            <div className="py-20 border-2 border-dashed border-neutral-200 flex flex-col items-center gap-2">
+                                                <Search className="w-8 h-8 text-neutral-200" />
+                                                <p className="text-xs font-black text-neutral-400 uppercase tracking-widest">
+                                                    {predSearchTerm ? 'Sin resultados para esa busqueda' : 'No hay predicciones cargadas'}
+                                                </p>
+                                                {predSearchTerm && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPredSearchTerm('')}
+                                                        className="mt-1 text-[10px] font-black uppercase tracking-widest underline text-neutral-400 hover:text-black transition-colors"
+                                                    >
+                                                        Limpiar busqueda
+                                                    </button>
                                                 )}
                                             </div>
                                         );
-                                    })}
-                                </div>
-                            );
-                        })()}
+                                    }
+
+                                    return (
+                                        <div className="space-y-2">
+                                            {filtered.map(pred => {
+                                                const isEditing = editingPredId === pred.predictionId;
+                                                const isDeleting = deletingPredId === pred.predictionId;
+                                                const initial = pred.participantName.charAt(0).toUpperCase();
+
+                                                return (
+                                                    <div
+                                                        key={pred.predictionId}
+                                                        className={`bg-white border-2 transition-all duration-200 ${
+                                                            isEditing
+                                                                ? 'border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                                                                : 'border-neutral-200 hover:border-neutral-400'
+                                                        }`}
+                                                    >
+                                                        {/* Fila principal */}
+                                                        <div className="flex items-center gap-3 px-4 py-3">
+
+                                                            {/* Avatar */}
+                                                            <div className="w-9 h-9 rounded-full bg-neutral-100 flex items-center justify-center text-[13px] font-black text-neutral-600 shrink-0 select-none">
+                                                                {initial}
+                                                            </div>
+
+                                                            {/* Info */}
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="font-black text-sm leading-tight truncate">
+                                                                    {pred.participantName}
+                                                                </p>
+                                                                <p className="text-[10px] font-semibold text-neutral-400 mt-0.5 truncate">
+                                                                    #{pred.matchNumber} · {pred.homeTeam} vs {pred.awayTeam}
+                                                                </p>
+                                                            </div>
+
+                                                            {/* Vista normal */}
+                                                            {!isEditing && (
+                                                                <div className="flex items-center gap-2 shrink-0">
+                                                                    <div className="flex items-center gap-1 bg-neutral-50 border border-neutral-200 px-2.5 py-1.5">
+                                                                        <span className="font-black text-sm tabular-nums text-black leading-none">{pred.homeScorePred}</span>
+                                                                        <span className="text-neutral-300 font-bold text-xs leading-none mx-0.5">-</span>
+                                                                        <span className="font-black text-sm tabular-nums text-black leading-none">{pred.awayScorePred}</span>
+                                                                    </div>
+
+                                                                    {pred.pointsEarned !== null ? (
+                                                                        <span className={`hidden sm:inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1.5 leading-none ${
+                                                                            pred.pointsEarned > 0
+                                                                                ? 'bg-emerald-600 text-white'
+                                                                                : 'bg-neutral-100 text-neutral-500'
+                                                                        }`}>
+                                                                            {pred.pointsEarned > 0 ? `+${pred.pointsEarned}pts` : '0pts'}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="hidden sm:inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1.5 leading-none bg-amber-50 text-amber-500 border border-amber-200">
+                                                                            Pendiente
+                                                                        </span>
+                                                                    )}
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setEditingPredId(pred.predictionId);
+                                                                            setEditPredHome(pred.homeScorePred);
+                                                                            setEditPredAway(pred.awayScorePred);
+                                                                        }}
+                                                                        className="w-9 h-9 flex items-center justify-center border border-neutral-200 text-neutral-400 hover:border-black hover:bg-black hover:text-white transition-all shrink-0"
+                                                                        title="Editar prediccion"
+                                                                        aria-label="Editar prediccion"
+                                                                    >
+                                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                                    </button>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDeletePred(pred.predictionId)}
+                                                                        disabled={isDeleting}
+                                                                        className="w-9 h-9 flex items-center justify-center border border-neutral-200 text-red-400 hover:border-red-500 hover:bg-red-500 hover:text-white transition-all shrink-0 disabled:opacity-40"
+                                                                        title="Eliminar prediccion"
+                                                                        aria-label="Eliminar prediccion"
+                                                                    >
+                                                                        {isDeleting
+                                                                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                            : <Trash2 className="w-3.5 h-3.5" />
+                                                                        }
+                                                                    </button>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Modo edicion: botones en fila */}
+                                                            {isEditing && (
+                                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setEditingPredId(null)}
+                                                                        className="h-9 px-3 border-2 border-neutral-200 text-xs font-black uppercase text-neutral-500 hover:border-black hover:text-black transition-all"
+                                                                        aria-label="Cancelar edicion"
+                                                                    >
+                                                                        <X className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleSaveEditPred(pred.predictionId, pred.participantId, pred.matchId)}
+                                                                        disabled={savingEditPred}
+                                                                        className="h-9 px-3 bg-black text-white border-2 border-black text-xs font-black uppercase hover:bg-white hover:text-black transition-all disabled:opacity-40 flex items-center gap-1"
+                                                                        aria-label="Guardar edicion"
+                                                                    >
+                                                                        {savingEditPred
+                                                                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                            : <Check className="w-3.5 h-3.5" />
+                                                                        }
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Panel edicion inline */}
+                                                        {isEditing && (
+                                                            <div className="border-t-2 border-black bg-neutral-50 px-4 py-4">
+                                                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-3">
+                                                                    Nuevo marcador
+                                                                </p>
+                                                                <div className="flex items-center gap-3">
+                                                                    <input
+                                                                        type="number" min={0} max={30}
+                                                                        value={editPredHome}
+                                                                        onChange={e => setEditPredHome(parseInt(e.target.value) || 0)}
+                                                                        className="w-16 h-12 text-center border-2 border-black font-black text-2xl focus:outline-none bg-white"
+                                                                        autoFocus
+                                                                        aria-label="Goles local"
+                                                                    />
+                                                                    <span className="text-xl font-black text-neutral-300 select-none">-</span>
+                                                                    <input
+                                                                        type="number" min={0} max={30}
+                                                                        value={editPredAway}
+                                                                        onChange={e => setEditPredAway(parseInt(e.target.value) || 0)}
+                                                                        className="w-16 h-12 text-center border-2 border-black font-black text-2xl focus:outline-none bg-white"
+                                                                        aria-label="Goles visitante"
+                                                                    />
+                                                                    <p className="ml-2 text-[10px] text-neutral-400 font-semibold leading-snug hidden sm:block">
+                                                                        Tocá el check<br />para guardar
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Badge puntos en mobile */}
+                                                        {!isEditing && (
+                                                            <div className="sm:hidden px-4 pb-3 -mt-1">
+                                                                {pred.pointsEarned !== null ? (
+                                                                    <span className={`inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1 leading-none ${
+                                                                        pred.pointsEarned > 0
+                                                                            ? 'bg-emerald-600 text-white'
+                                                                            : 'bg-neutral-100 text-neutral-500'
+                                                                    }`}>
+                                                                        {pred.pointsEarned > 0 ? `+${pred.pointsEarned} pts` : '0 pts'}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-1 leading-none bg-amber-50 text-amber-500 border border-amber-200">
+                                                                        Pendiente
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })()}
+                            </>
+                        )}
+
+                        {/* ═══════ VISTA: FALTANTES ═══════ */}
+                        {predViewMode === 'missing' && (
+                            (() => {
+                                // Partidos cerrados o finalizados (ya no se puede predecir)
+                                const closedMatches = prodeMatches.filter(m => {
+                                    if (missingMatchFilter === 'closed') return !m.isOpen && !m.isFinished;
+                                    if (missingMatchFilter === 'finished') return m.isFinished;
+                                    return !m.isOpen; // 'all': cerrados + finalizados
+                                }).sort((a, b) => (a.matchNumber || 0) - (b.matchNumber || 0));
+
+                                // Set de "participantId_matchId" que ya tienen predicción
+                                const predSet = new Set(
+                                    allPredictions.map(p => `${p.participantId}_${p.matchId}`)
+                                );
+
+                                // Todos los participantes del ranking
+                                const participants = [...prodeRanking].sort((a, b) =>
+                                    `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`, 'es')
+                                );
+
+                                // Construir lista de faltantes
+                                type MissingRow = {
+                                    participant: typeof participants[0];
+                                    match: ProdeMatch;
+                                };
+                                let missingRows: MissingRow[] = [];
+                                for (const p of participants) {
+                                    for (const m of closedMatches) {
+                                        if (!predSet.has(`${p.id}_${m.id}`)) {
+                                            missingRows.push({ participant: p, match: m });
+                                        }
+                                    }
+                                }
+
+                                // Filtrar por búsqueda
+                                if (predSearchTerm.trim()) {
+                                    const term = predSearchTerm.toLowerCase();
+                                    missingRows = missingRows.filter(r =>
+                                        `${r.participant.firstName} ${r.participant.lastName}`.toLowerCase().includes(term) ||
+                                        r.match.homeTeam.toLowerCase().includes(term) ||
+                                        r.match.awayTeam.toLowerCase().includes(term)
+                                    );
+                                }
+
+                                // Agrupar por participante para el resumen
+                                const missingByParticipant = new Map<string, MissingRow[]>();
+                                for (const r of missingRows) {
+                                    const key = r.participant.id;
+                                    if (!missingByParticipant.has(key)) missingByParticipant.set(key, []);
+                                    missingByParticipant.get(key)!.push(r);
+                                }
+
+                                return (
+                                    <>
+                                        {/* Filtros de estado de partido */}
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {(['all', 'closed', 'finished'] as const).map(f => {
+                                                const labels = { all: 'Todos', closed: 'Cerrados', finished: 'Finalizados' };
+                                                return (
+                                                    <button
+                                                        key={f}
+                                                        type="button"
+                                                        onClick={() => setMissingMatchFilter(f)}
+                                                        className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
+                                                            missingMatchFilter === f
+                                                                ? 'bg-amber-500 text-white border-amber-500'
+                                                                : 'bg-white text-neutral-400 border-neutral-200 hover:border-amber-300 hover:text-amber-600'
+                                                        }`}
+                                                    >
+                                                        {labels[f]}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Buscador */}
+                                        <div className="relative">
+                                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                                            <input
+                                                type="text"
+                                                placeholder="Buscar participante o equipo..."
+                                                value={predSearchTerm}
+                                                onChange={e => setPredSearchTerm(e.target.value)}
+                                                className="w-full pl-10 pr-10 h-11 border-2 border-neutral-300 font-semibold text-sm focus:outline-none focus:border-black transition-colors placeholder:text-neutral-400"
+                                            />
+                                            {predSearchTerm && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPredSearchTerm('')}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
+                                                    aria-label="Limpiar busqueda"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Resumen */}
+                                        <div className="bg-amber-50 border-2 border-amber-200 px-4 py-3 flex items-center gap-3">
+                                            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                                            <div>
+                                                <p className="text-xs font-black text-amber-800">
+                                                    {missingRows.length} prediccion{missingRows.length !== 1 ? 'es' : ''} faltante{missingRows.length !== 1 ? 's' : ''}
+                                                </p>
+                                                <p className="text-[10px] font-semibold text-amber-600 mt-0.5">
+                                                    {missingByParticipant.size} participante{missingByParticipant.size !== 1 ? 's' : ''} con predicciones sin hacer
+                                                    {' · '}{closedMatches.length} partido{closedMatches.length !== 1 ? 's' : ''} evaluados
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Lista agrupada por participante */}
+                                        {missingRows.length === 0 ? (
+                                            <div className="py-20 border-2 border-dashed border-emerald-200 flex flex-col items-center gap-2">
+                                                <CheckCircle className="w-8 h-8 text-emerald-300" />
+                                                <p className="text-xs font-black text-emerald-500 uppercase tracking-widest">
+                                                    ¡Todos los participantes predijeron!
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {[...missingByParticipant.entries()].map(([participantId, rows]) => {
+                                                    const participant = rows[0].participant;
+                                                    const name = `${participant.firstName} ${participant.lastName}`;
+                                                    const initial = participant.firstName.charAt(0).toUpperCase();
+                                                    const totalClosedForThisFilter = closedMatches.length;
+                                                    const predsMade = totalClosedForThisFilter - rows.length;
+
+                                                    return (
+                                                        <div key={participantId} className="bg-white border-2 border-amber-200 hover:border-amber-400 transition-colors">
+                                                            {/* Cabecera participante */}
+                                                            <div className="flex items-center gap-3 px-4 py-3 border-b border-amber-100">
+                                                                <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center text-[13px] font-black text-amber-600 shrink-0 select-none">
+                                                                    {initial}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="font-black text-sm leading-tight truncate">
+                                                                        {name}
+                                                                    </p>
+                                                                    <p className="text-[10px] font-semibold text-neutral-400 mt-0.5">
+                                                                        {predsMade}/{totalClosedForThisFilter} predichos
+                                                                        {' · '}<span className="text-amber-500 font-black">{rows.length} faltante{rows.length !== 1 ? 's' : ''}</span>
+                                                                    </p>
+                                                                </div>
+                                                                <div className="shrink-0 flex items-center gap-1 bg-amber-500 text-white px-2.5 py-1.5">
+                                                                    <AlertTriangle className="w-3 h-3" />
+                                                                    <span className="text-[10px] font-black">{rows.length}</span>
+                                                                </div>
+                                                            </div>
+                                                            {/* Lista de partidos faltantes */}
+                                                            <div className="divide-y divide-neutral-100">
+                                                                {rows.map(r => (
+                                                                    <div key={r.match.id} className="flex items-center gap-3 px-4 py-2.5">
+                                                                        <span className="text-[10px] font-black text-neutral-300 tabular-nums w-8 shrink-0">
+                                                                            #{r.match.matchNumber}
+                                                                        </span>
+                                                                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                                                            <FlagImage teamName={r.match.homeTeam} size="sm" />
+                                                                            <span className="text-xs font-bold truncate">{r.match.homeTeam}</span>
+                                                                            <span className="text-[10px] text-neutral-300 font-bold mx-1">vs</span>
+                                                                            <FlagImage teamName={r.match.awayTeam} size="sm" />
+                                                                            <span className="text-xs font-bold truncate">{r.match.awayTeam}</span>
+                                                                        </div>
+                                                                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 leading-none shrink-0 ${
+                                                                            r.match.isFinished
+                                                                                ? 'bg-red-50 text-red-500 border border-red-200'
+                                                                                : 'bg-neutral-100 text-neutral-400'
+                                                                        }`}>
+                                                                            {r.match.isFinished ? 'No predijo' : 'Cerrado'}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()
+                        )}
                     </div>
                 )}
             </div>
