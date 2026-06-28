@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.prode_matches (
                         DEFAULT 'Fase de grupos'
                         CHECK (round IN (
                             'Fase de grupos',
+                            'Dieciseisavo de final',
                             'Octavos de final',
                             'Cuartos de final',
                             'Semifinal',

@@ -92,11 +92,28 @@ const Prode: React.FC = () => {
     const [poppedCell, setPoppedCell] = useState<string | null>(null);
     const [predictions, setPredictions] = useState<ProdePrediction[]>([]);
     const [now, setNow] = useState(Date.now());
+    const [pendingSaves, setPendingSaves] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(id);
     }, []);
+
+    useEffect(() => {
+        if (pendingSaves.size === 0) return;
+        
+        const timeout = setTimeout(() => {
+            pendingSaves.forEach(matchId => {
+                // If it's not saved yet and not currently saving, auto-save it
+                if (!savedMatches.has(matchId) && savingMatch !== matchId) {
+                    handleSavePrediction(matchId);
+                }
+            });
+            setPendingSaves(new Set());
+        }, 1200);
+        
+        return () => clearTimeout(timeout);
+    }, [pendingSaves, savedMatches, savingMatch, scores]); // Include scores to ensure latest state is used by handleSavePrediction
 
     useEffect(() => {
         const load = async () => {
@@ -225,6 +242,7 @@ const Prode: React.FC = () => {
             setSavedMatches(prev2 => {
                 const next = new Set(prev2); next.delete(matchId); return next;
             });
+            setPendingSaves(prev2 => new Set([...prev2, matchId]));
             return { ...prev, [matchId]: { ...current, [side]: newVal } };
         });
     }, []);
@@ -820,34 +838,26 @@ const Prode: React.FC = () => {
                                                     <p className="text-center text-[10px] text-slate-400 font-bold pb-5 px-4 -mt-2 uppercase tracking-wider">{match.venue}</p>
                                                 )}
 
-                                                {/* Save button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => !locked && handleSavePrediction(match.id)}
-                                                    disabled={isSaving || locked}
-                                                    className={`w-full flex items-center justify-center gap-2.5 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 disabled:opacity-60 ${
-                                                        locked
-                                                            ? 'text-slate-400 bg-slate-100 cursor-not-allowed'
+                                                {/* Auto-save status */}
+                                                <div className={`w-full flex items-center justify-center gap-2.5 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 border-t ${
+                                                    locked
+                                                        ? 'text-slate-400 bg-slate-100 border-slate-200'
+                                                        : pendingSaves.has(match.id) || isSaving
+                                                            ? 'text-amber-600 bg-amber-50 border-amber-100'
                                                             : isSaved
-                                                                ? 'text-teal-700 bg-teal-50 hover:bg-teal-100 border-t border-teal-100'
-                                                                : 'text-white bg-gradient-to-r from-teal-500 to-emerald-500 shadow-[0_4px_20px_-4px_rgba(16,185,129,0.3)] hover:shadow-[0_8px_25px_-4px_rgba(16,185,129,0.4)]'
-                                                    }`}
-                                                >
-                                                    {locked
-                                                        ? <Lock className="w-4 h-4" strokeWidth={2.5} />
-                                                        : isSaving
-                                                            ? <Loader2 className="w-5 h-5 animate-spin" />
-                                                            : isSaved
-                                                                ? <Check className="w-4 h-4 text-teal-600" strokeWidth={2.5} />
-                                                                : null}
-                                                    {locked
-                                                        ? 'Cerrado — quedan menos de 15 min'
-                                                        : isSaving
-                                                            ? 'Guardando...'
-                                                            : isSaved
-                                                                ? 'Actualizar Predicción'
-                                                                : 'Guardar Predicción'}
-                                                </button>
+                                                                ? 'text-teal-700 bg-teal-50 border-teal-100'
+                                                                : 'text-slate-500 bg-slate-50 border-slate-100'
+                                                }`}>
+                                                    {locked ? (
+                                                        <><Lock className="w-4 h-4" strokeWidth={2.5} /> Cerrado — quedan menos de 15 min</>
+                                                    ) : pendingSaves.has(match.id) || isSaving ? (
+                                                        <><Loader2 className="w-5 h-5 animate-spin" /> Guardando...</>
+                                                    ) : isSaved ? (
+                                                        <><Check className="w-4 h-4 text-teal-600" strokeWidth={2.5} /> Guardado automáticamente</>
+                                                    ) : (
+                                                        <><Target className="w-4 h-4" strokeWidth={2.5} /> Ajusta el marcador para predecir</>
+                                                    )}
+                                                </div>
                                             </div>
                                         );
                                     })
