@@ -14,8 +14,12 @@ export const useRole = () => {
     const isCoordinator = user?.roles?.includes(UserRole.COORDINATOR) ?? false;
 
     const isCoordinatorOf = (variant: CoordinatorVariant): boolean => {
-        if (!user) return false;
-        return isCoordinator && user.coordinatorVariant === variant;
+        if (!user || !isCoordinator) return false;
+        if (user.coordinatorVariants && user.coordinatorVariants.length > 0) {
+            return user.coordinatorVariants.includes(variant);
+        }
+        // Fallback legacy para usuarios aún no migrados en memoria
+        return user.coordinatorVariant === variant;
     };
 
     const canCreateGroup = isAnfitrion || isAdmin;

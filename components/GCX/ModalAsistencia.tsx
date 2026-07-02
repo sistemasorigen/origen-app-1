@@ -42,14 +42,31 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
-    // Extract members
+    // Extract members — una fila de registro puede
+    // representar 2 personas (pareja). Se expande
+    // cada fila a 1 o 2 entradas de Member, cada una
+    // con un id único derivado para poder marcarlas
+    // por separado en la asistencia.
     const members: Member[] = (group.registrations || [])
         .filter((r: any) => r.status === 'APPROVED')
-        .map((r: any) => ({
-            id: r.id, // Always use registration ID for consistent attendance tracking
-            name: `${r.first_name || r.firstName || ''} ${r.last_name || r.lastName || ''}`.trim() || 'Sin nombre',
-            email: r.email || ''
-        }));
+        .flatMap((r: any) => {
+            const titular: Member = {
+                id: r.id, // Se mantiene igual para no romper historial de asistencia ya guardado
+                name: `${r.first_name || r.firstName || ''} ${r.last_name || r.lastName || ''}`.trim() || 'Sin nombre',
+                email: r.email || ''
+            };
+
+            const partner = r.partnerData || r.partner_data;
+            if (!partner) return [titular];
+
+            const parejaMember: Member = {
+                id: `${r.id}-partner`, // ID derivado estable para el/la partner
+                name: `${partner.firstName || partner.first_name || ''} ${partner.lastName || partner.last_name || ''}`.trim() || 'Sin nombre',
+                email: partner.email || ''
+            };
+
+            return [titular, parejaMember];
+        });
 
     const presentCount = selectedMembers.size;
     const absentCount = members.length - presentCount;

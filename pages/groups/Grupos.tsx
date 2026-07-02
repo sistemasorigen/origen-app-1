@@ -293,14 +293,29 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const [view, setView] = useState<'public' | 'admin'>('public');
     const [adminSubTab, setAdminSubTab] = useState<'GROUPS' | 'CATEGORIES' | 'TAGS' | 'CONFIG' | 'HOSTS' | 'COORDINATORS' | 'SEASONS'>('GROUPS');
 
-    // Deep linking for admin tabs
+    // Redirect de links viejos: /gcx?tab=X ahora
+    // vive en /admingcx/*. Cualquier link guardado
+    // (favoritos, WhatsApp) redirige automáticamente
+    // a la ruta nueva correspondiente.
     useEffect(() => {
         const tab = searchParams.get('tab');
-        if (tab && ['GROUPS', 'CATEGORIES', 'TAGS', 'CONFIG', 'HOSTS', 'COORDINATORS', 'SEASONS'].includes(tab)) {
-            setAdminSubTab(tab as any);
-            setView('admin'); // Auto-switch to admin view if a tab is requested
+        if (!tab) return;
+
+        const TAB_TO_ADMINGCX_ROUTE: Record<string, string> = {
+            GROUPS: '/admingcx/gestion-de-grupos',
+            HOSTS: '/admingcx/gestion-de-anfitriones',
+            COORDINATORS: '/admingcx/gestion-de-coordinadores',
+            CATEGORIES: '/admingcx/categorias',
+            TAGS: '/admingcx/etiquetas',
+            CONFIG: '/admingcx/configuracion',
+            SEASONS: '/admingcx/temporadas',
+        };
+
+        const nuevaRuta = TAB_TO_ADMINGCX_ROUTE[tab];
+        if (nuevaRuta) {
+            navigate(nuevaRuta, { replace: true });
         }
-    }, [searchParams]);
+    }, [searchParams, navigate]);
 
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

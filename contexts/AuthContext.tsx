@@ -207,6 +207,11 @@ const fullUser: User = {
                         birthDate: profileData.birth_date,
                         assignedCategory: profileData.assigned_category || undefined,
                         coordinatorVariant: profileData.coordinator_variant as CoordinatorVariant | undefined,
+                        coordinatorVariants: (
+                          profileData.coordinator_variants && profileData.coordinator_variants.length > 0
+                            ? profileData.coordinator_variants
+                            : (profileData.coordinator_variant ? [profileData.coordinator_variant] : [])
+                        ) as CoordinatorVariant[],
                         tutorial_progress: profileData.tutorial_progress || {},
                         avatarUrl: profileData.avatar_url || undefined,
                     };

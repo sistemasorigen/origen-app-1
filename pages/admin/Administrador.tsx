@@ -56,8 +56,8 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     // Additional Volunteer Access
     const [additionalVolunteerRoles, setAdditionalVolunteerRoles] = useState<string[]>([]);
 
-    // Coordinator Variant State
-    const [coordinatorVariant, setCoordinatorVariant] = useState<CoordinatorVariant | undefined>(undefined);
+    // Coordinator Variant State — soporta múltiples departamentos por coordinador
+    const [coordinatorVariants, setCoordinatorVariants] = useState<CoordinatorVariant[]>([]);
 
     // Module States
     const [modules, setModules] = useState<SystemModule[]>([]);
@@ -153,7 +153,11 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     useEffect(() => {
         if (currentUserData.id) {
             setAdditionalVolunteerRoles(currentUserData.volunteerRoles || []);
-            setCoordinatorVariant(currentUserData.coordinatorVariant);
+            setCoordinatorVariants(
+                currentUserData.coordinatorVariants && currentUserData.coordinatorVariants.length > 0
+                    ? currentUserData.coordinatorVariants
+                    : (currentUserData.coordinatorVariant ? [currentUserData.coordinatorVariant] : [])
+            );
 
             const rolesToLoad = new Set<UserRole>();
             if (currentUserData.roles && currentUserData.roles.length > 0) {
@@ -166,7 +170,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             setSelectedRoles(rolesToLoad);
         } else {
             // New user defaults
-            setCoordinatorVariant(undefined);
+            setCoordinatorVariants([]);
         }
     }, [currentUserData]);
 
@@ -177,9 +181,15 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
         setLastName('');
         setNewUserPassword('');
         setAdditionalVolunteerRoles([]);
-        setCoordinatorVariant(undefined);
+        setCoordinatorVariants([]);
         setSelectedRoles(new Set([UserRole.VIEWER]));
         setSystemScope('GROUPS');
+    };
+
+    const toggleCoordinatorVariant = (variant: CoordinatorVariant) => {
+        setCoordinatorVariants(prev =>
+            prev.includes(variant) ? prev.filter(v => v !== variant) : [...prev, variant]
+        );
     };
 
     const toggleRole = (role: UserRole) => {
@@ -262,7 +272,10 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             isActive: currentUserData.isActive ?? true,
             linkedGroupId: linkedGroupId,
             volunteerRoles: additionalVolunteerRoles,
-            coordinatorVariant: finalRolesArray.includes(UserRole.COORDINATOR) ? coordinatorVariant : undefined
+            coordinatorVariants: finalRolesArray.includes(UserRole.COORDINATOR) ? coordinatorVariants : [],
+            coordinatorVariant: finalRolesArray.includes(UserRole.COORDINATOR) && coordinatorVariants.length > 0
+                ? coordinatorVariants[0]
+                : undefined
         };
 
 
@@ -718,22 +731,25 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                         </div>
                                     </div>
 
-                                    {/* Coordinator Variant Selector */}
+                                    {/* Coordinator Variant Selector — multi-select de departamentos */}
                                     {selectedRoles.has(UserRole.COORDINATOR) && (
                                         <div className="space-y-3 bg-emerald-50 p-4 border-2 border-emerald-300 animate-fadeIn">
-                                            <label className="text-xs font-bold uppercase text-emerald-700">Departamento de Coordinación</label>
-                                            <select
-                                                value={coordinatorVariant || ''}
-                                                onChange={e => setCoordinatorVariant(e.target.value as CoordinatorVariant || undefined)}
-                                                className="w-full p-3 border border-slate-200 bg-white text-sm font-bold uppercase focus:shadow-md focus:ring-0 outline-none"
-                                            >
-                                                <option value="">Seleccionar departamento...</option>
+                                            <label className="text-xs font-bold uppercase text-emerald-700">
+                                                Departamentos de Coordinación ({coordinatorVariants.length})
+                                            </label>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                                 {Object.values(CoordinatorVariant).map(v => (
-                                                    <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+                                                    <div
+                                                        key={v}
+                                                        onClick={() => toggleCoordinatorVariant(v)}
+                                                        className={`p-2 border-2 cursor-pointer transition-all text-center flex items-center justify-center min-h-[48px] ${coordinatorVariants.includes(v) ? 'border-black bg-black text-white' : 'border-emerald-300 bg-white text-black hover:border-black'}`}
+                                                    >
+                                                        <span className="block text-[10px] font-bold uppercase leading-tight">{v.replace(/_/g, ' ')}</span>
+                                                    </div>
                                                 ))}
-                                            </select>
+                                            </div>
                                             <p className="text-[10px] text-emerald-600 leading-tight">
-                                                Selecciona el departamento específico que coordina este usuario.
+                                                Selecciona uno o más departamentos que coordina este usuario.
                                             </p>
                                         </div>
                                     )}

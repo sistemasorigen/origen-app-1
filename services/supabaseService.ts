@@ -364,7 +364,12 @@ export const supabaseService = {
         gender: user.gender,
         birthDate: user.birth_date,
         assignedCategory: user.assigned_category || undefined,
-        coordinatorVariant: user.coordinator_variant as CoordinatorVariant | undefined
+        coordinatorVariant: user.coordinator_variant as CoordinatorVariant | undefined,
+        coordinatorVariants: (
+          user.coordinator_variants && user.coordinator_variants.length > 0
+            ? user.coordinator_variants
+            : (user.coordinator_variant ? [user.coordinator_variant] : [])
+        ) as CoordinatorVariant[]
       };
 
       return { user: appUser };
@@ -478,7 +483,12 @@ export const supabaseService = {
         age: u.age,
         gender: u.gender,
         birthDate: u.birth_date,
-        coordinatorVariant: u.coordinator_variant as CoordinatorVariant | undefined
+        coordinatorVariant: u.coordinator_variant as CoordinatorVariant | undefined,
+        coordinatorVariants: (
+          u.coordinator_variants && u.coordinator_variants.length > 0
+            ? u.coordinator_variants
+            : (u.coordinator_variant ? [u.coordinator_variant] : [])
+        ) as CoordinatorVariant[]
       }));
     } catch (error) {
       console.warn('Supabase Error (getAllUsers) - Using Local Fallback:', JSON.stringify(error));
@@ -510,7 +520,8 @@ export const supabaseService = {
         roles: user.roles && user.roles.length > 0 ? user.roles : [user.role],
         is_active: user.isActive,
         linked_group_id: user.linkedGroupId,
-        volunteer_roles: user.volunteerRoles
+        volunteer_roles: user.volunteerRoles,
+        coordinator_variants: user.coordinatorVariants || []
       })
       .select()
       .single();
@@ -551,7 +562,10 @@ export const supabaseService = {
       is_active: user.isActive,
       linked_group_id: user.linkedGroupId,
       volunteer_roles: user.volunteerRoles,
-      coordinator_variant: user.coordinatorVariant
+      coordinator_variants: user.coordinatorVariants || [],
+      coordinator_variant: user.coordinatorVariants && user.coordinatorVariants.length > 0
+        ? user.coordinatorVariants[0]
+        : user.coordinatorVariant
     };
 
     const { error } = await supabase
@@ -566,11 +580,12 @@ export const supabaseService = {
     return true;
   },
 
-  async updateUserRole(userId: string, role: string, variant?: string): Promise<{ success: boolean; error?: string }> {
+  async updateUserRole(userId: string, role: string, variant?: string, variants?: string[]): Promise<{ success: boolean; error?: string }> {
     const { error } = await supabase.rpc('admin_assign_role', {
       target_user_id: userId,
       new_role: role,
-      new_variant: variant || null
+      new_variant: variant || null,
+      new_variants: variants && variants.length > 0 ? variants : null
     });
 
     if (error) {

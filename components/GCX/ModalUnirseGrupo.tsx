@@ -85,6 +85,24 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
         setSuccessView(false);
     }, [isOpen, currentUser]);
 
+    // Estado de los campos de pareja: todos vacíos,
+    // todos completos, o parcial (inválido).
+    const partnerFieldsFilled = !!(
+        partnerData.firstName.trim() &&
+        partnerData.lastName.trim() &&
+        partnerData.phone.trim() &&
+        partnerData.email.trim()
+    );
+    const partnerFieldsEmpty = !(
+        partnerData.firstName.trim() ||
+        partnerData.lastName.trim() ||
+        partnerData.phone.trim() ||
+        partnerData.email.trim()
+    );
+    // Se envían datos de pareja solo si el grupo es
+    // de parejas Y la persona decidió completarlos.
+    const hasPartnerData = isCouplesGroup && partnerFieldsFilled;
+
     const handlePartnerEmailBlur = async () => {
         if (!isCouplesGroup || !partnerData.email) return;
 
@@ -119,13 +137,15 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
             return;
         }
 
-        if (isCouplesGroup) {
-            if (!partnerData.firstName || !partnerData.lastName || !partnerData.phone || !partnerData.email) {
-                setError("Los datos de tu pareja son obligatorios para este grupo.");
-                setIsSubmitting(false);
-                return;
-            }
+        if (isCouplesGroup && !partnerFieldsEmpty && !partnerFieldsFilled) {
+            // Estado parcial: empezó a cargar a la pareja
+            // pero no completó todos los campos.
+            setError("Completá todos los datos de tu pareja, o dejalos todos vacíos si te inscribís solo/a.");
+            setIsSubmitting(false);
+            return;
+        }
 
+        if (hasPartnerData) {
             if (partnerData.email.toLowerCase().trim() === formData.email.toLowerCase().trim()) {
                 setError("El email de tu pareja debe ser diferente al tuyo.");
                 setIsSubmitting(false);
@@ -144,7 +164,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
             return;
         }
 
-        if (isCouplesGroup) {
+        if (hasPartnerData) {
             const partnerExists = await supabaseService.checkPartnerEmailExists(group.id, partnerData.email);
             if (partnerExists) {
                 setError("El email de tu pareja ya está registrado en este grupo.");
@@ -163,19 +183,19 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
             groupId: group.id,
             status: 'PENDING',
             userId: currentUser?.id,
-            partnerData: isCouplesGroup ? partnerData : undefined,
-            partnerUserId: isCouplesGroup && partnerAccount ? partnerAccount.id : undefined
+            partnerData: hasPartnerData ? partnerData : undefined,
+            partnerUserId: hasPartnerData && partnerAccount ? partnerAccount.id : undefined
         };
 
         try {
             const success = await supabaseService.registerMemberToGroup(reg);
 
             if (success) {
-                const notifMessage = isCouplesGroup
+                const notifMessage = hasPartnerData
                     ? `${formData.firstName} ${formData.lastName} y ${partnerData.firstName} ${partnerData.lastName} se inscribieron como pareja en ${group.name}.`
                     : `${formData.firstName} ${formData.lastName} se unió a ${group.name}.`;
 
-                const notifTitle = isCouplesGroup ? `Nueva solicitud de pareja` : `Nueva solicitud de miembro`;
+                const notifTitle = hasPartnerData ? `Nueva solicitud de pareja` : `Nueva solicitud de miembro`;
                 const actionUrl = `/panel-admin/groups?groupId=${group.id}`;
 
                 // Notify host
@@ -226,7 +246,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                         <CheckCircle2 className="w-10 h-10 text-black" />
                     </div>
                     <p className="font-bold text-lg mb-6 leading-tight">
-                        {isCouplesGroup
+                        {hasPartnerData
                             ? 'La solicitud de pareja ha sido enviada al anfitrión.'
                             : 'Tu solicitud ha sido enviada al anfitrión.'}
                     </p>
@@ -242,7 +262,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
     }
 
     return (
-        <NeoModal isOpen={isOpen} onClose={onClose} title={isCouplesGroup ? 'Inscripción de Pareja' : 'Unirse al Grupo'}>
+        <NeoModal isOpen={isOpen} onClose={onClose} title={isCouplesGroup ? 'Inscripción al Grupo' : 'Unirse al Grupo'}>
             <div className="space-y-6 pb-2">
                 {/* Header Info */}
                 <div className="bg-neutral-100 border-l-4 border-black p-4">
@@ -255,7 +275,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                         <Heart className="w-5 h-5 text-black shrink-0 mt-0.5" />
                         <div>
                             <p className="text-xs font-black uppercase mb-1">Grupo para Parejas</p>
-                            <p className="text-xs font-medium">Completa los datos de ambos integrantes.</p>
+                            <p className="text-xs font-medium">Si tenés pareja, podés sumarla completando sus datos. Es opcional — también podés inscribirte solo/a.</p>
                         </div>
                     </div>
                 )}
@@ -293,6 +313,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                                 <div className="flex items-center gap-2">
                                     <Heart className="w-4 h-4 text-pink-600" />
                                     <span className="text-xs font-black uppercase tracking-widest">Datos de tu Pareja</span>
+                                    <span className="text-[10px] font-bold text-neutral-400 normal-case">(Opcional)</span>
                                 </div>
                                 {partnerAccount && (
                                     <span className="text-[10px] font-bold bg-green-200 px-2 py-0.5 border border-black">
@@ -327,7 +348,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                     >
                         {isSubmitting ? 'Enviando...' : (
                             <>
-                                {isCouplesGroup ? 'INSCRIBIR PAREJA' : 'ENVIAR SOLICITUD'}
+                                {hasPartnerData ? 'INSCRIBIR PAREJA' : 'ENVIAR SOLICITUD'}
                                 <ArrowRight className="w-5 h-5" />
                             </>
                         )}

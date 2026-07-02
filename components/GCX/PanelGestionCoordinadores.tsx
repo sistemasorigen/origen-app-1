@@ -25,7 +25,18 @@ const CoordinatorsManagementPanel: React.FC<CoordinatorsManagementPanelProps> = 
     // Edit Coordinator Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [editingVariant, setEditingVariant] = useState<CoordinatorVariant | undefined>(undefined);
+    const [editingVariants, setEditingVariants] = useState<CoordinatorVariant[]>([]);
+
+    const getUserVariants = (user: User): CoordinatorVariant[] =>
+        user.coordinatorVariants && user.coordinatorVariants.length > 0
+            ? user.coordinatorVariants
+            : (user.coordinatorVariant ? [user.coordinatorVariant] : []);
+
+    const toggleEditingVariant = (variant: CoordinatorVariant) => {
+        setEditingVariants(prev =>
+            prev.includes(variant) ? prev.filter(v => v !== variant) : [...prev, variant]
+        );
+    };
 
     // Fetch Coordinators
     const fetchCoordinators = async () => {
@@ -71,34 +82,34 @@ const CoordinatorsManagementPanel: React.FC<CoordinatorsManagementPanelProps> = 
         setIsNewModalOpen(false);
         setNewSearchTerm('');
         setEditingUser(user);
-        setEditingVariant(undefined);
+        setEditingVariants([]);
         setIsEditModalOpen(true);
     };
 
     // Open Edit for existing
     const handleEditClick = (user: User) => {
         setEditingUser(user);
-        setEditingVariant(user.coordinatorVariant);
+        setEditingVariants(getUserVariants(user));
         setIsEditModalOpen(true);
     };
 
     // Save (Add or Update)
     const handleSaveCoordinator = async () => {
         if (!editingUser) return;
-        if (!editingVariant) {
-            showToast('Debes seleccionar un departamento', 'error');
+        if (editingVariants.length === 0) {
+            showToast('Debes seleccionar al menos un departamento', 'error');
             return;
         }
 
         setIsLoading(true);
         try {
-            const result = await supabaseService.updateUserRole(editingUser.id, UserRole.COORDINATOR, editingVariant);
+            const result = await supabaseService.updateUserRole(editingUser.id, UserRole.COORDINATOR, editingVariants[0], editingVariants);
 
             if (result.success) {
                 showToast('Coordinador guardado exitosamente', 'success');
                 setIsEditModalOpen(false);
                 setEditingUser(null);
-                setEditingVariant(undefined);
+                setEditingVariants([]);
                 fetchCoordinators();
             } else {
                 showToast(result.error || 'Error al actualizar el usuario', 'error');
@@ -136,7 +147,7 @@ const CoordinatorsManagementPanel: React.FC<CoordinatorsManagementPanelProps> = 
     const filteredCoordinators = coordinators.filter(c => {
         const matchSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchVariant = variantFilter === 'ALL' || c.coordinatorVariant === variantFilter;
+        const matchVariant = variantFilter === 'ALL' || getUserVariants(c).includes(variantFilter);
         return matchSearch && matchVariant;
     });
 
@@ -233,10 +244,16 @@ const CoordinatorsManagementPanel: React.FC<CoordinatorsManagementPanelProps> = 
                                         </button>
                                     </div>
                                 </div>
-                                <div className="mt-1 pt-3 border-t border-slate-100">
-                                    <div className="inline-flex items-center px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-[10px] font-black uppercase text-emerald-700">
-                                        CATEGORÍA: {user.coordinatorVariant ? user.coordinatorVariant.replace(/_/g, ' ') : 'SIN ASIGNAR'}
-                                    </div>
+                                <div className="mt-1 pt-3 border-t border-slate-100 flex flex-wrap gap-1.5">
+                                    {getUserVariants(user).length > 0 ? getUserVariants(user).map(v => (
+                                        <div key={v} className="inline-flex items-center px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-[10px] font-black uppercase text-emerald-700">
+                                            {v.replace(/_/g, ' ')}
+                                        </div>
+                                    )) : (
+                                        <div className="inline-flex items-center px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-[10px] font-black uppercase text-emerald-700">
+                                            SIN ASIGNAR
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -253,11 +270,17 @@ const CoordinatorsManagementPanel: React.FC<CoordinatorsManagementPanelProps> = 
                                     </div>
                                 </div>
 
-                                {/* VARIANT BADGE */}
-                                <div className="col-span-5">
-                                    <span className="inline-block px-3 py-1.5 bg-emerald-50 text-emerald-800 border-2 border-emerald-200 text-[10px] font-black uppercase rounded-lg">
-                                        {user.coordinatorVariant ? user.coordinatorVariant.replace(/_/g, ' ') : 'SIN ASIGNAR'}
-                                    </span>
+                                {/* VARIANT BADGES */}
+                                <div className="col-span-5 flex flex-wrap gap-1.5">
+                                    {getUserVariants(user).length > 0 ? getUserVariants(user).map(v => (
+                                        <span key={v} className="inline-block px-3 py-1.5 bg-emerald-50 text-emerald-800 border-2 border-emerald-200 text-[10px] font-black uppercase rounded-lg">
+                                            {v.replace(/_/g, ' ')}
+                                        </span>
+                                    )) : (
+                                        <span className="inline-block px-3 py-1.5 bg-emerald-50 text-emerald-800 border-2 border-emerald-200 text-[10px] font-black uppercase rounded-lg">
+                                            SIN ASIGNAR
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* ACTIONS */}
@@ -344,19 +367,22 @@ const CoordinatorsManagementPanel: React.FC<CoordinatorsManagementPanelProps> = 
                         </div>
 
                         <div className="space-y-3">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-600 block">Categoría</label>
-                            <select
-                                value={editingVariant || ''}
-                                onChange={e => setEditingVariant(e.target.value as CoordinatorVariant)}
-                                className="w-full p-4 border-2 border-black bg-white font-black uppercase text-sm focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] outline-none rounded-lg focus:ring-0"
-                            >
-                                <option value="">Selecciona una categoría...</option>
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-600 block">
+                                Categorías ({editingVariants.length})
+                            </label>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                 {Object.values(CoordinatorVariant).map(v => (
-                                    <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+                                    <div
+                                        key={v}
+                                        onClick={() => toggleEditingVariant(v)}
+                                        className={`p-2 border-2 rounded-lg cursor-pointer transition-all text-center flex items-center justify-center min-h-[48px] ${editingVariants.includes(v) ? 'border-black bg-black text-white' : 'border-slate-200 bg-white text-black hover:border-black'}`}
+                                    >
+                                        <span className="block text-[10px] font-bold uppercase leading-tight">{v.replace(/_/g, ' ')}</span>
+                                    </div>
                                 ))}
-                            </select>
+                            </div>
                             <p className="text-[10px] text-slate-500 leading-tight pt-1">
-                                Selecciona el área sobre la cual este Coordinador tendrá autoridad.
+                                Selecciona una o más áreas sobre las cuales este Coordinador tendrá autoridad.
                             </p>
                         </div>
 

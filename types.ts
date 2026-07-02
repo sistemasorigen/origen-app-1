@@ -110,7 +110,8 @@ export interface User {
     gender?: string; // From public.users
     birthDate?: string; // Exact date of birth (YYYY-MM-DD format)
     assignedCategory?: string; // Category ID for COORDINATOR role filtering
-    coordinatorVariant?: CoordinatorVariant; // Specific department for coordinators
+    coordinatorVariant?: CoordinatorVariant; // @deprecated — usar coordinatorVariants (array). Se mantiene por compatibilidad.
+    coordinatorVariants?: CoordinatorVariant[]; // Departamentos asignados a un Coordinador (soporta múltiples)
     tutorial_progress?: Record<string, boolean>; // Tracks onboarding tour progress
     avatarUrl?: string; // URL pública de la foto de perfil
 }

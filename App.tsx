@@ -36,6 +36,13 @@ import Puntuacion from './pages/eventos/dpadre/Puntuacion';
 import AdminDPadre from './pages/eventos/dpadre/AdminDPadre';
 import DetalleFamilia from './pages/eventos/dpadre/DetalleFamilia';
 import CalendarioGCX from './pages/gcx/CalendarioGCX';
+import GestionDeGrupos from './pages/admingcx/GestionDeGrupos';
+import GestionDeAnfitriones from './pages/admingcx/GestionDeAnfitriones';
+import GestionDeCoordinadores from './pages/admingcx/GestionDeCoordinadores';
+import Categorias from './pages/admingcx/Categorias';
+import Etiquetas from './pages/admingcx/Etiquetas';
+import Configuracion from './pages/admingcx/Configuracion';
+import Temporadas from './pages/admingcx/Temporadas';
 import AdminTrivia from './pages/trivia/AdminTrivia';
 import CrearJuego from './pages/trivia/CrearJuego';
 import TriviaLanding from './pages/trivia/TriviaLanding';
@@ -392,6 +399,64 @@ const AppContent: React.FC = () => {
                                 } />
                                 <Route path="/gcx/calendario" element={
                                     user ? <CalendarioGCX currentUser={user} /> : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/gestion-de-grupos" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                    ]))
+                                        ? <GestionDeGrupos />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/gestion-de-anfitriones" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                    ]))
+                                        ? <GestionDeAnfitriones />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/gestion-de-coordinadores" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                    ]))
+                                        ? <GestionDeCoordinadores />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/categorias" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                    ]))
+                                        ? <Categorias />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/etiquetas" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                    ]))
+                                        ? <Etiquetas />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/configuracion" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                    ]))
+                                        ? <Configuracion />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/temporadas" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                    ]))
+                                        ? <Temporadas />
+                                        : <Navigate to="/" />
                                 } />
                                 <Route path="/coordinators" element={
                                     (user && hasRole(user, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN]))

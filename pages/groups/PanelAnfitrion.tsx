@@ -34,6 +34,19 @@ interface HostDashboardProps {
     currentUser: User | null;
 }
 
+// Cuenta personas reales, no filas de registro.
+// Una fila con partnerData representa 2 personas
+// (inscripción de pareja), no 1.
+function countApprovedPeople(registrations?: any[]): number {
+    if (!registrations) return 0;
+    return registrations
+        .filter((r: any) => r.status === 'APPROVED')
+        .reduce((total: number, r: any) => {
+            const esPareja = !!(r.partnerData || r.partner_data);
+            return total + (esPareja ? 2 : 1);
+        }, 0);
+}
+
 const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     const location = useLocation();
     const [myGroups, setMyGroups] = useState<Group[]>([]);
@@ -687,7 +700,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <Users className="w-3.5 h-3.5" />
-                                                    <span>{(group.registrations?.filter((r: any) => r.status === 'APPROVED').length) || 0}/{group.maxCapacity || 12}</span>
+                                                    <span>{countApprovedPeople(group.registrations)}/{group.maxCapacity || 12}</span>
                                                 </div>
                                             </div>
 
@@ -880,7 +893,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                 <td className="p-4 text-center">
                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-sm font-bold">
                                                         <Users className="w-4 h-4" />
-                                                        {(group.registrations?.filter((r: any) => r.status === 'APPROVED').length) || 0} / {group.maxCapacity || 12}
+                                                        {countApprovedPeople(group.registrations)} / {group.maxCapacity || 12}
                                                     </span>
                                                 </td>
                                                 <td className="p-4">

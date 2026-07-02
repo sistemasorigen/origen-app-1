@@ -222,19 +222,19 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 },
                 {
                     label: 'Gestión de grupos',
-                    path: '/gcx?tab=GROUPS',
+                    path: '/admingcx/gestion-de-grupos',
                     roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
                 },
                 {
                     label: 'Gestión de anfitriones',
-                    path: '/gcx?tab=HOSTS',
+                    path: '/admingcx/gestion-de-anfitriones',
                     roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
                 },
-                { label: 'Gestión de coordinadores', path: '/gcx?tab=COORDINATORS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Categorías', path: '/gcx?tab=CATEGORIES', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Etiquetas', path: '/gcx?tab=TAGS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Configuración', path: '/gcx?tab=CONFIG', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Temporadas', path: '/gcx?tab=SEASONS', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Gestión de coordinadores', path: '/admingcx/gestion-de-coordinadores', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Categorías', path: '/admingcx/categorias', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Etiquetas', path: '/admingcx/etiquetas', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Configuración', path: '/admingcx/configuracion', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
+                { label: 'Temporadas', path: '/admingcx/temporadas', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] }
             ]
         },
@@ -526,7 +526,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                                             if (hasGroupItems) toggleExpand(groupKey);
                                                         }}
                                                         className={`flex-1 text-left px-3 py-1.5 text-xs font-bold transition-colors rounded-lg ${isGroupActive
-                                                            ? 'text-black dark:text-white'
+                                                            ? (hasGroupItems
+                                                                ? 'text-black dark:text-white'
+                                                                : 'bg-black text-white dark:bg-white dark:text-black')
                                                             : 'text-gray-500 dark:text-zinc-500 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800'
                                                             }`}
                                                     >
