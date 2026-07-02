@@ -93,6 +93,7 @@ const Prode: React.FC = () => {
     const [predictions, setPredictions] = useState<ProdePrediction[]>([]);
     const [now, setNow] = useState(Date.now());
     const [pendingSaves, setPendingSaves] = useState<Set<string>>(new Set());
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 1000);
@@ -199,7 +200,14 @@ const Prode: React.FC = () => {
     const handleSavePrediction = async (matchId: string) => {
         if (!participant) return;
         const match = matches.find(m => m.id === matchId);
-        if (!match || isMatchLocked(match)) return;
+        if (!match || isMatchLocked(match)) {
+            // Puede pasar si el debounce de auto-guardado
+            // (1.2s) dispara justo después de que el
+            // partido arrancó. Antes era silencioso.
+            setSaveError('Este partido ya arrancó — tu último cambio no se guardó.');
+            setTimeout(() => setSaveError(null), 4000);
+            return;
+        }
         setSavingMatch(matchId);
         try {
             const score = scores[matchId] || { home: 0, away: 0 };
@@ -226,7 +234,14 @@ const Prode: React.FC = () => {
                         updatedAt: new Date().toISOString(),
                     }];
                 });
+            } else {
+                setSaveError('No se pudo guardar tu predicción. Probá de nuevo.');
+                setTimeout(() => setSaveError(null), 4000);
             }
+        } catch (err) {
+            console.error('[Prode] handleSavePrediction error:', err);
+            setSaveError('No se pudo guardar tu predicción. Probá de nuevo.');
+            setTimeout(() => setSaveError(null), 4000);
         } finally {
             setSavingMatch(null);
         }
@@ -942,6 +957,13 @@ const Prode: React.FC = () => {
                     )}
 
                 </AnimatePresence>
+            )}
+
+            {/* Aviso de guardado fallido */}
+            {saveError && (
+                <div className="fu fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-rose-500 text-white text-sm font-bold shadow-[0_8px_30px_-4px_rgba(244,63,94,0.4)] flex items-center gap-2">
+                    {saveError}
+                </div>
             )}
         </>
     );

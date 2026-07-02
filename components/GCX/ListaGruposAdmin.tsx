@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreVertical, ClipboardCheck, RotateCcw, Inbox, Eye, Edit2, Trash2, Users, Calendar, CheckCircle, XCircle, AlertCircle, Clock, X, MapPin, Phone, Tag, Info, User, Shield } from 'lucide-react';
+import { MoreVertical, ClipboardCheck, RotateCcw, Inbox, Eye, Edit2, Trash2, Users, Calendar, CheckCircle, XCircle, AlertCircle, Clock, X, MapPin, Phone, Tag, Info, User, Shield, Lock, Unlock } from 'lucide-react';
 import { Group, GroupCategory, GroupTag } from '../../types';
 import NeoModal from '../ui/NeoModal';
 
@@ -12,6 +12,7 @@ interface GroupsAdminListProps {
     onViewRegistrations: (group: Group) => void;
     onEdit: (group: Group) => void;
     onDelete: (groupId: string) => void;
+    onToggleCapacityLock: (group: Group) => void;
     openMenuGroupId: string | null;
     setOpenMenuGroupId: (id: string | null) => void;
     isLoading: boolean;
@@ -26,6 +27,7 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
     onViewRegistrations,
     onEdit,
     onDelete,
+    onToggleCapacityLock,
     openMenuGroupId,
     setOpenMenuGroupId,
     isLoading
@@ -297,6 +299,10 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                                                 <button onClick={() => { onViewRegistrations(group); setOpenMenuGroupId(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold uppercase text-indigo-700 hover:bg-indigo-50 transition-colors text-left border-b border-slate-100">
                                                     <Inbox className="w-4 h-4 shrink-0" /> VER INSCRIPTOS
                                                 </button>
+                                                <button onClick={() => { onToggleCapacityLock(group); setOpenMenuGroupId(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold uppercase text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-100">
+                                                    {group.capacityLocked ? <Lock className="w-4 h-4 shrink-0" /> : <Unlock className="w-4 h-4 shrink-0" />}
+                                                    {group.capacityLocked ? 'DESBLOQUEAR CUPOS' : 'BLOQUEAR CUPOS'}
+                                                </button>
                                                 <button onClick={() => { onEdit(group); setOpenMenuGroupId(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold uppercase text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-100">
                                                     <Edit2 className="w-4 h-4 shrink-0" /> EDITAR
                                                 </button>
@@ -446,6 +452,13 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                                                     title="Ver inscriptos"
                                                 >
                                                     <Inbox className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => onToggleCapacityLock(group)}
+                                                    className={`p-1.5 rounded-lg transition-colors border ${group.capacityLocked ? 'text-white bg-neutral-800 border-neutral-800 hover:bg-neutral-700' : 'text-slate-600 bg-slate-50 hover:bg-slate-100 border-slate-200'}`}
+                                                    title={group.capacityLocked ? 'Desbloquear cupos' : 'Bloquear cupos (mostrar como LLENO)'}
+                                                >
+                                                    {group.capacityLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                                                 </button>
                                                 <button
                                                     onClick={() => onEdit(group)}

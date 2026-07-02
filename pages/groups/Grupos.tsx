@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { db } from '../../services/dbService';
-import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect } from '../../services/supabaseService';
+import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, CalendarDays } from 'lucide-react';
@@ -1047,6 +1047,18 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         }
     };
 
+    const handleToggleCapacityLock = async (group: Group) => {
+        const nuevoEstado = !group.capacityLocked;
+        const ok = await toggleGroupCapacityLock(group.id, nuevoEstado);
+        if (ok) {
+            fetchGroups();
+            fetchAdminGroups();
+            showToast(nuevoEstado ? 'Cupos bloqueados — el grupo se muestra como LLENO' : 'Cupos desbloqueados');
+        } else {
+            showToast('Error al cambiar el bloqueo de cupos', 'error');
+        }
+    };
+
     const handleDeleteRegistration = async (registrationId: string, groupId: string) => {
         const success = await supabaseService.deleteGroupRegistration(registrationId, groupId);
         if (success) {
@@ -1601,6 +1613,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         onViewRegistrations={setViewingGroupRegistrations}
                                         onEdit={openEditModal}
                                         onDelete={handleDeleteGroup}
+                                        onToggleCapacityLock={handleToggleCapacityLock}
                                         openMenuGroupId={openMenuGroupId}
                                         setOpenMenuGroupId={setOpenMenuGroupId}
                                         isLoading={isLoading}

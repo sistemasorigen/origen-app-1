@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { User, UserRole, Group, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { hasRole } from '../../services/authUtils';
-import { supabaseService } from '../../services/supabaseService';
-import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus, Check, Link, ArrowLeftRight, X, AlertTriangle, Loader2 } from 'lucide-react';
+import { supabaseService, toggleGroupCapacityLock } from '../../services/supabaseService';
+import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus, Check, Link, ArrowLeftRight, X, AlertTriangle, Loader2, Lock, Unlock } from 'lucide-react';
 import CreateGroupModal from '../../components/GCX/ModalCrearGrupo';
 import ApplicantsModal from '../../components/GCX/ModalSolicitantes';
 import AttendanceModal from '../../components/GCX/ModalAsistencia';
@@ -145,6 +145,16 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     const handleOpenDropout = (group: Group) => {
         setSelectedGroupForDropout(group);
         setIsDropoutModalOpen(true);
+    };
+
+    const handleToggleCapacityLock = async (group: Group) => {
+        const nuevoEstado = !group.capacityLocked;
+        const ok = await toggleGroupCapacityLock(group.id, nuevoEstado);
+        if (ok) {
+            await fetchMyGroups();
+        } else {
+            alert('Error al cambiar el bloqueo de cupos. Intentá de nuevo.');
+        }
     };
 
     const handleTransferGroup = (group: Group) => {
@@ -764,6 +774,13 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                                         Asistencia
                                                                     </button>
                                                                     <button
+                                                                        onClick={() => handleToggleCapacityLock(group)}
+                                                                        className={`flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 transition-all rounded-lg text-xs font-bold uppercase ${group.capacityLocked ? 'border-neutral-800 bg-neutral-800 text-white' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                                                    >
+                                                                        {group.capacityLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                                                                        {group.capacityLocked ? 'Desbloquear cupos' : 'Bloquear cupos'}
+                                                                    </button>
+                                                                    <button
                                                                         id={isMobile ? `btn-host-dropout-${index}` : undefined}
                                                                         onClick={() => handleOpenDropout(group)}
                                                                         className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase"
@@ -933,6 +950,13 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                                         title="Control de Asistencia"
                                                                     >
                                                                         <ClipboardList className="w-4 h-4" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleToggleCapacityLock(group)}
+                                                                        className={`p-2 border-2 transition-all rounded-lg ${group.capacityLocked ? 'border-neutral-800 bg-neutral-800 text-white' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                                                        title={group.capacityLocked ? 'Desbloquear cupos' : 'Bloquear cupos (mostrar como LLENO)'}
+                                                                    >
+                                                                        {group.capacityLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                                                                     </button>
                                                                     <button
                                                                         id={!isMobile ? `btn-host-dropout-${index}` : undefined}

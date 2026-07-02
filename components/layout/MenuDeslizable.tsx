@@ -69,6 +69,13 @@ interface MenuItem {
     label: string;
     icon: React.ElementType;
     path?: string;
+    // Prefijos adicionales de ruta que también
+    // cuentan como "activo" para este ítem, además
+    // de `path`. Útil cuando una sección tiene
+    // páginas que viven bajo un prefijo distinto
+    // (ej: GCX tiene admin en /admingcx en vez de
+    // /gcx/admin).
+    activePaths?: string[];
     roles?: UserRole[];
     requiresAuth?: boolean;
     subItems?: SubMenuItem[];
@@ -184,6 +191,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'GCX',
             icon: BarChart,
             path: '/gcx',
+            activePaths: ['/admingcx', '/coordinators', '/mis-grupos'],
             roles: [],
             subGroups: [
                 {
@@ -446,7 +454,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     if (item.requiresAuth && !currentUser) return null;
 
                     const isActive = (item.path === '/' && location.pathname === '/') ||
-                        (item.path !== '/' && item.path && location.pathname.startsWith(item.path));
+                        (item.path !== '/' && item.path && location.pathname.startsWith(item.path)) ||
+                        (item.activePaths?.some(p => location.pathname.startsWith(p)) ?? false);
 
                     const visibleSubItems = item.subItems?.filter(sub => {
                         // Sin roles: público (separadores sin roles incluidos)

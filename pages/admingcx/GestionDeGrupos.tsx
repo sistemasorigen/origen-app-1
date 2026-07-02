@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Group, GroupCategory, GroupTag, User } from '../../types';
-import { supabaseService, deleteGroupDirect, updateGroupDirect, insertGroupDirect } from '../../services/supabaseService';
+import { supabaseService, deleteGroupDirect, updateGroupDirect, insertGroupDirect, toggleGroupCapacityLock } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 
 import GroupsAdminToolbar from '../../components/GCX/BarraHerramientasGruposAdmin';
@@ -253,6 +253,17 @@ const GestionDeGruposContent: React.FC = () => {
         }
     };
 
+    const handleToggleCapacityLock = async (group: Group) => {
+        const nuevoEstado = !group.capacityLocked;
+        const ok = await toggleGroupCapacityLock(group.id, nuevoEstado);
+        if (ok) {
+            fetchAdminGroups();
+            showToast(nuevoEstado ? 'Cupos bloqueados — el grupo se muestra como LLENO' : 'Cupos desbloqueados');
+        } else {
+            showToast('Error al cambiar el bloqueo de cupos', 'error');
+        }
+    };
+
     const openEditModal = (group?: Group) => {
         if (group) {
             setEditingGroup({ ...group });
@@ -345,6 +356,7 @@ const GestionDeGruposContent: React.FC = () => {
                         onViewRegistrations={setViewingGroupRegistrations}
                         onEdit={openEditModal}
                         onDelete={handleDeleteGroup}
+                        onToggleCapacityLock={handleToggleCapacityLock}
                         openMenuGroupId={openMenuGroupId}
                         setOpenMenuGroupId={setOpenMenuGroupId}
                         isLoading={isLoading}

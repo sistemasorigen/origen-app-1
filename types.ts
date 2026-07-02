@@ -537,6 +537,7 @@ export interface Group {
     location: string;
     membersCount: number;
     maxCapacity: number;
+    capacityLocked?: boolean; // Bloqueo manual: fuerza estado "LLENO" sin importar el cupo numérico
     description?: string;
     imageUrl?: string;
     registrations: GroupRegistration[];

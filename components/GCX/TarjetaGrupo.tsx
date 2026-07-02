@@ -76,14 +76,17 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
     const isStarted = startDate ? now >= startDate : false;
     const isFinished = endDate ? now > endDate : false;
     const isFull = group.membersCount >= group.maxCapacity;
+    const isCapacityLocked = !!group.capacityLocked;
 
     let status: 'AVAILABLE' | 'FULL' | 'IN_PROGRESS' | 'FINISHED' = 'AVAILABLE';
     if (isFinished) status = 'FINISHED';
+    else if (isCapacityLocked) status = 'FULL';
     else if (isStarted) status = 'IN_PROGRESS';
     else if (isFull) status = 'FULL';
 
     const handleAction = () => {
         if (status === 'FINISHED') return;
+        if (isCapacityLocked) return; // Bloqueo manual: no lleva a ningún modal
         if (!genderCompatible) return;
         if (!ageCompatible) return;
         if (userStatus === 'PENDING' || userStatus === 'APPROVED') return;
@@ -112,6 +115,9 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
         }
         if (status === 'FINISHED') {
             return { text: 'FINALIZADO', baseClass: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-500 cursor-not-allowed', icon: null, disabled: true };
+        }
+        if (isCapacityLocked) {
+            return { text: 'LLENO', baseClass: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 cursor-not-allowed', icon: <Lock className="w-3.5 h-3.5" />, disabled: true };
         }
         if (!genderCompatible) {
             return { text: getGenderLockText(), baseClass: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed', icon: <Lock className="w-3.5 h-3.5" />, disabled: true };

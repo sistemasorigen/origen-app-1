@@ -152,6 +152,19 @@ export async function updateGroupDirect(group: Group): Promise<Group | null> {
   return null;
 }
 
+// Toggle manual capacity lock (host, co-host, or admin)
+export async function toggleGroupCapacityLock(groupId: string, locked: boolean): Promise<boolean> {
+  const { error } = await supabase.rpc('toggle_group_capacity_lock', {
+    p_group_id: groupId,
+    p_locked: locked
+  });
+  if (error) {
+    console.error('[toggleGroupCapacityLock] Error:', error);
+    return false;
+  }
+  return true;
+}
+
 // Delete group - Uses RPC to bypass RLS and cascade delete
 export async function deleteGroupDirect(id: string): Promise<boolean> {
 
@@ -186,6 +199,7 @@ function transformDbRowToGroup(data: any): Group {
     location: data.location || '',
     membersCount: data.members_count || 0,
     maxCapacity: data.max_capacity || 12,
+    capacityLocked: data.capacity_locked || false,
     description: data.description || '',
     imageUrl: data.image_url || '',
     categoryId: data.category_id || '',
@@ -1459,6 +1473,7 @@ export const supabaseService = {
       location: row.location || '',
       membersCount: row.members_count || 0,
       maxCapacity: row.max_capacity || 12,
+      capacityLocked: row.capacity_locked || false,
       description: row.description || '',
       imageUrl: row.image_url || '',
       categoryId: row.category_id || '',
