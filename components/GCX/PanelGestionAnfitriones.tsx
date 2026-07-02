@@ -363,15 +363,15 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
             <div className="flex flex-col lg:flex-row gap-6 w-full items-start">
 
                 {/* --- LEFT COLUMN: HOSTS PANEL --- */}
-                <div className={`flex-1 w-full min-w-0 bg-white rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden ${mobileTab === 'hosts' ? 'block' : 'hidden lg:block'
+                <div className={`flex-1 w-full min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden ${mobileTab === 'hosts' ? 'block' : 'hidden lg:block'
                     }`}>
 
                     {/* TOOLBAR */}
-                    <div className="p-4 border-b-2 border-black bg-slate-50 flex flex-col md:flex-row gap-4 justify-between items-center rounded-t-xl">
+                    <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row gap-4 justify-between items-center rounded-t-xl">
                         <div className="flex items-center gap-2">
-                            <Shield className="w-6 h-6" />
-                            <h2 className="text-lg md:text-xl font-black uppercase tracking-tight">Gestión de Anfitriónes</h2>
-                            <span className="bg-black text-white px-2 py-0.5 text-xs rounded-full font-bold">{allHosts.length}</span>
+                            <Shield className="w-5 h-5 text-slate-700" />
+                            <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Gestión de Anfitriones</h2>
+                            <span className="bg-slate-900 text-white px-2 py-0.5 text-xs rounded-full font-bold">{allHosts.length}</span>
                         </div>
 
                         <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -380,10 +380,10 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder="BUSCAR..."
+                                    placeholder="Buscar..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-9 pr-3 py-2 text-xs font-bold border-2 border-black rounded-lg focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] outline-none uppercase"
+                                    className="w-full pl-9 pr-3 py-2 text-xs font-semibold border border-slate-200 rounded-lg outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-50 transition-all"
                                 />
                             </div>
 
@@ -391,7 +391,7 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                             <select
                                 value={roleFilter}
                                 onChange={(e) => setRoleFilter(e.target.value as any)}
-                                className="px-3 py-2 text-xs font-bold border-2 border-black rounded-lg bg-white uppercase focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] outline-none"
+                                className="px-3 py-2 text-xs font-semibold border border-slate-200 rounded-lg bg-white outline-none focus:border-slate-400 transition-all"
                             >
                                 <option value="ALL">Todos los Roles</option>
                                 <option value="HOST">Solo Anfitriones</option>
@@ -402,7 +402,7 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                                className="px-3 py-2 text-xs font-bold border-2 border-black rounded-lg bg-white uppercase focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] outline-none"
+                                className="px-3 py-2 text-xs font-semibold border border-slate-200 rounded-lg bg-white outline-none focus:border-slate-400 transition-all"
                             >
                                 <option value="ALL">Todos los Estados</option>
                                 <option value="ASSIGNED">Con Grupo</option>
@@ -412,7 +412,7 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                             {/* NEW BUTTON */}
                             <button
                                 onClick={() => setIsNewHostModalOpen(true)}
-                                className="bg-black text-white px-4 py-2 text-xs font-black uppercase rounded-lg hover:bg-zinc-800 transition-colors flex items-center gap-2"
+                                className="bg-slate-900 text-white px-4 py-2 text-xs font-semibold rounded-lg hover:bg-black transition-colors flex items-center gap-2"
                             >
                                 <UserPlus className="w-4 h-4" />
                                 <span className="hidden sm:inline">Nuevo</span>
@@ -420,77 +420,59 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                         </div>
                     </div>
 
-                    {/* TABLE HEADER - HIDDEN ON MOBILE */}
-                    <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-slate-100 border-b-2 border-black text-[10px] font-black uppercase tracking-wider text-slate-500">
-                        <div className="col-span-3">Usuario</div>
-                        <div className="col-span-2 text-center">Rol</div>
-                        <div className="col-span-4">Grupo Asignado</div>
-                        <div className="col-span-3 text-right">Acciones</div>
-                    </div>
+                    {/* Loading / Empty */}
+                    {isLoading ? (
+                        <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-300" /></div>
+                    ) : filteredHosts.length === 0 ? (
+                        <div className="py-12 text-center text-slate-400 text-sm font-medium italic">
+                            No se encontraron resultados
+                        </div>
+                    ) : (
+                        <>
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-3 p-4">
+                                {filteredHosts.map(item => {
+                                    const { user, isHost, isCoHost } = item;
+                                    const assignedGroups = groups.filter(g => g.host_id === user.id || g.co_host_id === user.id);
+                                    const isMenuOpen = activeMenuId === user.id;
 
-                    {/* TABLE BODY / MOBILE PRO CARDS */}
-                    <div className="divide-y divide-slate-100 max-h-[600px] lg:max-h-[700px] xl:max-h-[800px] overflow-y-auto min-h-[400px] pb-32">
-                        {isLoading ? (
-                            <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>
-                        ) : filteredHosts.length === 0 ? (
-                            <div className="py-12 text-center text-slate-400 text-sm font-medium italic">
-                                No se encontraron resultados
-                            </div>
-                        ) : (
-                            filteredHosts.map((item, index) => {
-                                const { user, isHost, isCoHost } = item;
-                                const assignedGroups = groups.filter(g => g.host_id === user.id || g.co_host_id === user.id);
-
-                                // Kebab Menu State
-                                const isMenuOpen = activeMenuId === user.id;
-                                const isLastItem = index >= filteredHosts.length - 2;
-
-                                return (
-                                    <div key={user.id} className="group transition-colors hover:bg-slate-50 relative">
-
-                                        {/* --- MOBILE LAYOUT (Stack) --- */}
-                                        <div className="md:hidden p-4 flex flex-col gap-3">
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-12 h-12 rounded-full border border-black/10 flex items-center justify-center font-bold text-lg shrink-0 ${isHost ? 'bg-yellow-100 text-yellow-800' : 'bg-slate-100 text-slate-600'}`}>
-                                                        {user.name.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-bold text-sm text-slate-900 leading-tight">{user.name}</h3>
-                                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                            {(isHost || (!isHost && !isCoHost)) && (
-                                                                <button onClick={(e) => { e.stopPropagation(); setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); }} className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1 px-2 py-1 rounded-md transition-all ${isHost ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                                                                    Anfitrión <div className="bg-white/50 p-0.5 rounded-full"><Edit2 className="w-2.5 h-2.5" /></div>
-                                                                </button>
-                                                            )}
-                                                            {isCoHost && (
-                                                                <button onClick={(e) => { e.stopPropagation(); setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); }} className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1 px-2 py-1 rounded-md transition-all bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700">
-                                                                    Co-Anfitrión <div className="bg-white/50 p-0.5 rounded-full"><Edit2 className="w-2.5 h-2.5" /></div>
-                                                                </button>
-                                                            )}
-                                                            <p className="text-[10px] text-slate-400 truncate max-w-[120px]">{user.email}</p>
-                                                        </div>
-                                                    </div>
+                                    return (
+                                        <div key={user.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {(isHost || (!isHost && !isCoHost)) && (
+                                                        <button
+                                                            onClick={() => { setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); }}
+                                                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border ${isHost ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
+                                                        >
+                                                            Anfitrión
+                                                        </button>
+                                                    )}
+                                                    {isCoHost && (
+                                                        <button
+                                                            onClick={() => { setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); }}
+                                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide bg-slate-100 text-slate-500 border border-slate-200"
+                                                        >
+                                                            Co-Anfitrión
+                                                        </button>
+                                                    )}
                                                 </div>
-
                                                 <div className="relative">
-                                                    <button onClick={(e) => { e.stopPropagation(); setActiveMenuId(isMenuOpen ? null : user.id); }} className="p-1 text-slate-400 hover:text-black transition-colors">
-                                                        <MoreVertical className="w-5 h-5" />
+                                                    <button
+                                                        onClick={() => setActiveMenuId(isMenuOpen ? null : user.id)}
+                                                        className={`p-1.5 rounded-lg transition-colors ${isMenuOpen ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-black hover:bg-slate-100'}`}
+                                                    >
+                                                        <MoreVertical className="w-4 h-4" />
                                                     </button>
                                                     {isMenuOpen && (
                                                         <>
                                                             <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
-                                                            {/* Mobile: Always open downwards unless explicitly at the very bottom with enough items to justify flip. 
-                                                                Actually, simple downward is better for mobile unless it hits the screen edge, but here we'll just force downward 
-                                                                on mobile card layout to avoid the "search result flip" issue. */}
-                                                            <div className={`absolute right-0 top-full mt-1 origin-top-right w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
-                                                                <button onClick={() => { openAssignmentModal(user, isHost ? 'HOST' : 'CO_HOST'); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                                    Editar Asignación
+                                                            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                                                                <button onClick={() => { openAssignmentModal(user, isHost ? 'HOST' : 'CO_HOST'); setActiveMenuId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100">
+                                                                    <Edit2 className="w-3.5 h-3.5" /> Editar asignación
                                                                 </button>
-                                                                <button onClick={() => { setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-t border-slate-100">
-                                                                    <Shield className="w-3.5 h-3.5" />
-                                                                    Administrar Roles
+                                                                <button onClick={() => { setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); setActiveMenuId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                                                    <Shield className="w-3.5 h-3.5" /> Administrar roles
                                                                 </button>
                                                             </div>
                                                         </>
@@ -498,155 +480,180 @@ const HostsManagementPanel: React.FC<HostsManagementPanelProps> = ({ groups, onU
                                                 </div>
                                             </div>
 
-                                            <div className="pl-[60px]">
-                                                <div className="flex flex-col gap-2">
-                                                    {assignedGroups.map(assignedGroup => {
-                                                        let groupStatusText = 'Pendiente';
-                                                        let groupStatusBadge = 'bg-yellow-100 text-yellow-700';
-                                                        let groupStatusDot = 'bg-yellow-500';
+                                            <h4 className="font-semibold text-slate-900 text-sm truncate">{user.name}</h4>
+                                            <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
 
-                                                        const isFinished = assignedGroup.status === 'finished' || (assignedGroup.endDate && assignedGroup.endDate < new Date().toISOString().split('T')[0]);
-                                                        if (isFinished) {
-                                                            groupStatusText = 'Finalizado';
-                                                            groupStatusBadge = 'bg-slate-100 text-slate-600';
-                                                            groupStatusDot = 'bg-slate-500';
-                                                        } else if (assignedGroup.status === 'approved') {
-                                                            groupStatusText = 'Activo';
-                                                            groupStatusBadge = 'bg-green-100 text-green-700';
-                                                            groupStatusDot = 'bg-green-500';
-                                                        } else if (assignedGroup.status === 'rejected') {
-                                                            groupStatusText = 'Rechazado';
-                                                            groupStatusBadge = 'bg-red-100 text-red-700';
-                                                            groupStatusDot = 'bg-red-500';
-                                                        }
+                                            <div className="mt-3 pt-3 border-t border-slate-100">
+                                                <p className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-1.5">Grupo asignado</p>
+                                                {assignedGroups.length === 0 ? (
+                                                    <p className="text-xs text-slate-400 italic">Sin grupo asignado</p>
+                                                ) : (
+                                                    <div className="space-y-1.5">
+                                                        {assignedGroups.map(assignedGroup => {
+                                                            let statusBadge = 'bg-amber-50 text-amber-700 border-amber-200';
+                                                            let statusText = 'Pendiente';
+                                                            const isFinished = assignedGroup.status === 'finished' || (assignedGroup.endDate && assignedGroup.endDate < new Date().toISOString().split('T')[0]);
+                                                            if (isFinished) { statusBadge = 'bg-slate-100 text-slate-500 border-slate-200'; statusText = 'Finalizado'; }
+                                                            else if (assignedGroup.status === 'approved') { statusBadge = 'bg-emerald-50 text-emerald-700 border-emerald-200'; statusText = 'Activo'; }
+                                                            else if (assignedGroup.status === 'rejected') { statusBadge = 'bg-red-50 text-red-600 border-red-200'; statusText = 'Rechazado'; }
 
-                                                        return (
-                                                            <div key={assignedGroup.id} className="flex items-center justify-between text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className={`w-2 h-2 rounded-full shrink-0 ${groupStatusDot}`} />
-                                                                    <div className="flex flex-col">
-                                                                        <div className="flex items-center gap-1">
-                                                                            <span className="font-medium truncate">{assignedGroup.name}</span>
-                                                                            <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-sm ${groupStatusBadge}`}>
-                                                                                {groupStatusText}
-                                                                            </span>
+                                                            return (
+                                                                <div key={assignedGroup.id} className="flex items-center justify-between gap-2 bg-slate-50 rounded-lg px-2.5 py-1.5">
+                                                                    <div className="min-w-0">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <span className="text-xs font-semibold text-slate-800 truncate">{assignedGroup.name}</span>
+                                                                            <span className={`shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase border ${statusBadge}`}>{statusText}</span>
                                                                         </div>
-                                                                        <span className="text-[10px] uppercase text-slate-400">
-                                                                            <span className="font-bold text-slate-600">{assignedGroup.host_id === user.id ? 'Anfitrión' : 'Co-Anfitrión'}</span> • {assignedGroup.meetingDay} {assignedGroup.meetingTime}
-                                                                        </span>
+                                                                        <p className="text-[10px] text-slate-400">
+                                                                            {assignedGroup.host_id === user.id ? 'Anfitrión' : 'Co-Anfitrión'} · {assignedGroup.meetingDay} {assignedGroup.meetingTime}
+                                                                        </p>
                                                                     </div>
+                                                                    <button
+                                                                        onClick={() => unassignGroup(user.id, assignedGroup.id, assignedGroup.host_id === user.id ? 'HOST' : 'CO_HOST')}
+                                                                        className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors shrink-0"
+                                                                    >
+                                                                        <X className="w-3.5 h-3.5" />
+                                                                    </button>
                                                                 </div>
-                                                                <button
-                                                                    onClick={() => unassignGroup(user.id, assignedGroup.id, assignedGroup.host_id === user.id ? 'HOST' : 'CO_HOST')}
-                                                                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                                                                    title="Quitar asignación"
-                                                                >
-                                                                    <X className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                    <button onClick={() => openAssignmentModal(user, isHost ? 'HOST' : 'CO_HOST')} className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 w-max mt-1">
-                                                        <Plus className="w-3 h-3" />
-                                                        {assignedGroups.length > 0 ? "Asignar a otro Grupo" : "Asignar a un Grupo"}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* --- DESKTOP LAYOUT (Table Row) --- */}
-                                        <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 items-center">
-                                            <div className="col-span-3 flex items-center gap-3 overflow-hidden">
-                                                <div className={`w-10 h-10 rounded-full border-2 border-black flex items-center justify-center font-bold text-sm shrink-0 ${isHost ? 'bg-black text-white' : 'bg-slate-200 text-black'}`}>
-                                                    {user.name.charAt(0)}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="font-bold text-sm uppercase truncate">{user.name}</p>
-                                                    <p className="text-[10px] text-slate-500 font-mono truncate">{user.email}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="col-span-2 flex flex-wrap justify-center gap-2">
-                                                {(isHost || (!isHost && !isCoHost)) && (
-                                                    <button onClick={() => { setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); }} className={`group relative px-2 md:px-3 py-1 rounded-full text-[10px] font-black uppercase border-2 transition-all duration-200 active:scale-95 flex items-center gap-1 ${isHost ? 'bg-yellow-300 border-black text-black hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]' : 'bg-white border-slate-300 text-slate-500 hover:border-black hover:text-black hover:bg-slate-50'}`} title="Clic para administrar rol">
-                                                        <span>Anfitrión</span>
-                                                    </button>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 )}
-                                                {isCoHost && (
-                                                    <button onClick={() => { setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); }} className={'group relative px-2 md:px-3 py-1 rounded-full text-[10px] font-black uppercase border-2 transition-all duration-200 active:scale-95 flex items-center gap-1 bg-white border-slate-300 text-slate-500 hover:border-black hover:text-black hover:bg-slate-50'} title="Clic para administrar rol">
-                                                        <span>Co-Anfitrión</span>
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            <div className="col-span-4 pl-0">
-                                                <div className="flex flex-col gap-1.5 w-full">
-                                                    {assignedGroups.map(assignedGroup => {
-                                                        let groupStatusText = 'Pendiente';
-                                                        let groupStatusBadge = 'bg-yellow-100 text-yellow-700';
-                                                        let groupStatusDot = 'bg-yellow-500';
-
-                                                        const isFinished = assignedGroup.status === 'finished' || (assignedGroup.endDate && assignedGroup.endDate < new Date().toISOString().split('T')[0]);
-                                                        if (isFinished) {
-                                                            groupStatusText = 'Finalizado';
-                                                            groupStatusBadge = 'bg-slate-100 text-slate-600';
-                                                            groupStatusDot = 'bg-slate-500';
-                                                        } else if (assignedGroup.status === 'approved') {
-                                                            groupStatusText = 'Activo';
-                                                            groupStatusBadge = 'bg-green-100 text-green-700';
-                                                            groupStatusDot = 'bg-green-500';
-                                                        } else if (assignedGroup.status === 'rejected') {
-                                                            groupStatusText = 'Rechazado';
-                                                            groupStatusBadge = 'bg-red-100 text-red-700';
-                                                            groupStatusDot = 'bg-red-500';
-                                                        }
-
-                                                        return (
-                                                            <div key={assignedGroup.id} className="group/item flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-black/20 hover:shadow-sm transition-all w-full">
-                                                                <div className={`w-2 h-2 rounded-full shrink-0 ${groupStatusDot}`} />
-                                                                <div className="min-w-0 flex-1">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <p className="text-xs font-bold uppercase truncate">{assignedGroup.name}</p>
-                                                                        <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-sm ${groupStatusBadge}`}>
-                                                                            {groupStatusText}
-                                                                        </span>
-                                                                    </div>
-                                                                    <p className="text-[9px] text-slate-500 uppercase">
-                                                                        <span className="font-bold text-slate-700">{assignedGroup.host_id === user.id ? 'Anfitrión' : 'Co-Anfitrión'}</span> • {assignedGroup.meetingDay} {assignedGroup.meetingTime}
-                                                                    </p>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => unassignGroup(user.id, assignedGroup.id, assignedGroup.host_id === user.id ? 'HOST' : 'CO_HOST')}
-                                                                    className="opacity-0 group-hover/item:opacity-100 p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all shrink-0"
-                                                                    title="Quitar de este grupo"
-                                                                >
-                                                                    <X className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            </div>
-                                                        );
-                                                    })}
-
-                                                    <button onClick={() => openAssignmentModal(user, isHost ? 'HOST' : 'CO_HOST')} className="px-3 py-1.5 bg-white border border-slate-300 text-slate-500 text-[10px] font-bold uppercase rounded-md hover:border-black hover:text-black hover:bg-slate-50 transition-all flex items-center gap-2 w-max mt-1">
-                                                        <Plus className="w-3 h-3" />
-                                                        {assignedGroups.length > 0 ? "Asignar Otro" : "Asignar a un Grupo"}
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div className="col-span-3 flex justify-end items-center gap-2">
-                                                <button onClick={() => openAssignmentModal(user, isHost ? 'HOST' : 'CO_HOST')} className="p-2 hover:bg-black/5 rounded-full text-slate-600 transition-colors" title="Editar Asignación">
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={() => { setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); }} className="p-2 hover:bg-black/5 rounded-full text-slate-600 transition-colors" title="Administrar Roles">
-                                                    <Shield className="w-4 h-4" />
+                                                <button
+                                                    onClick={() => openAssignmentModal(user, isHost ? 'HOST' : 'CO_HOST')}
+                                                    className="mt-2 text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                    {assignedGroups.length > 0 ? 'Asignar a otro grupo' : 'Asignar a un grupo'}
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })
-                        )}
-                    </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block p-4">
+                                <div className="rounded-xl border border-slate-200 overflow-hidden">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-200">
+                                                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 w-64">Usuario</th>
+                                                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 w-40 text-center">Rol</th>
+                                                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Grupo Asignado</th>
+                                                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right w-28">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {filteredHosts.map(item => {
+                                                const { user, isHost, isCoHost } = item;
+                                                const assignedGroups = groups.filter(g => g.host_id === user.id || g.co_host_id === user.id);
+
+                                                return (
+                                                    <tr key={user.id} className="hover:bg-slate-50/80 transition-colors align-top">
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${isHost ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
+                                                                    {user.name.charAt(0)}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="font-semibold text-sm text-slate-900 truncate">{user.name}</p>
+                                                                    <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex flex-wrap justify-center gap-1.5">
+                                                                {(isHost || (!isHost && !isCoHost)) && (
+                                                                    <button
+                                                                        onClick={() => { setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); }}
+                                                                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border transition-colors ${isHost ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                                                                    >
+                                                                        Anfitrión
+                                                                    </button>
+                                                                )}
+                                                                {isCoHost && (
+                                                                    <button
+                                                                        onClick={() => { setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); }}
+                                                                        className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition-colors"
+                                                                    >
+                                                                        Co-Anfitrión
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex flex-col gap-1.5">
+                                                                {assignedGroups.length === 0 && (
+                                                                    <span className="text-xs text-slate-400 italic">Sin grupo asignado</span>
+                                                                )}
+                                                                {assignedGroups.map(assignedGroup => {
+                                                                    let statusBadge = 'bg-amber-50 text-amber-700 border-amber-200';
+                                                                    let statusText = 'Pendiente';
+                                                                    const isFinished = assignedGroup.status === 'finished' || (assignedGroup.endDate && assignedGroup.endDate < new Date().toISOString().split('T')[0]);
+                                                                    if (isFinished) { statusBadge = 'bg-slate-100 text-slate-500 border-slate-200'; statusText = 'Finalizado'; }
+                                                                    else if (assignedGroup.status === 'approved') { statusBadge = 'bg-emerald-50 text-emerald-700 border-emerald-200'; statusText = 'Activo'; }
+                                                                    else if (assignedGroup.status === 'rejected') { statusBadge = 'bg-red-50 text-red-600 border-red-200'; statusText = 'Rechazado'; }
+
+                                                                    return (
+                                                                        <div key={assignedGroup.id} className="group/item flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-all w-full">
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <p className="text-xs font-semibold text-slate-800 truncate">{assignedGroup.name}</p>
+                                                                                    <span className={`shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase border ${statusBadge}`}>{statusText}</span>
+                                                                                </div>
+                                                                                <p className="text-[10px] text-slate-400">
+                                                                                    {assignedGroup.host_id === user.id ? 'Anfitrión' : 'Co-Anfitrión'} · {assignedGroup.meetingDay} {assignedGroup.meetingTime}
+                                                                                </p>
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => unassignGroup(user.id, assignedGroup.id, assignedGroup.host_id === user.id ? 'HOST' : 'CO_HOST')}
+                                                                                className="opacity-0 group-hover/item:opacity-100 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all shrink-0"
+                                                                            >
+                                                                                <X className="w-3.5 h-3.5" />
+                                                                            </button>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                                <button
+                                                                    onClick={() => openAssignmentModal(user, isHost ? 'HOST' : 'CO_HOST')}
+                                                                    className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1 w-max"
+                                                                >
+                                                                    <Plus className="w-3 h-3" />
+                                                                    {assignedGroups.length > 0 ? 'Asignar otro' : 'Asignar a un grupo'}
+                                                                </button>
+                                                            </div>
+                                                        </td>
+
+                                                        <td className="px-4 py-3 text-right">
+                                                            <div className="flex justify-end items-center gap-1">
+                                                                <button
+                                                                    onClick={() => openAssignmentModal(user, isHost ? 'HOST' : 'CO_HOST')}
+                                                                    className="p-1.5 text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                                                                    title="Editar asignación"
+                                                                >
+                                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => { setManageRolesTarget({ user, isHost, isCoHost }); setManageRolesModalOpen(true); }}
+                                                                    className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200"
+                                                                    title="Administrar roles"
+                                                                >
+                                                                    <Shield className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* --- RIGHT COLUMN: APPLICATIONS SIDEBAR --- */}
