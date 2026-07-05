@@ -96,8 +96,8 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                                 relative w-full md:w-auto md:min-w-[500px] ${maxWidth}
                                 bg-white !bg-white flex flex-col my-auto
                                 ${isMobile
-                                    ? 'rounded-t-2xl max-h-[90vh]'
-                                    : 'rounded-xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[90vh]'
+                                    ? 'rounded-3xl max-h-[90vh] shadow-2xl'
+                                    : 'rounded-2xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[90vh]'
                                 }
                             `}
                             style={{ backgroundColor: 'white', opacity: 1 }} // Removed isolation: isolate
@@ -116,7 +116,7 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                         >
 
                             {/* HEADER */}
-                            <div className={`flex items-start justify-between shrink-0 ${isMobile ? 'px-6 pt-2 pb-2' : 'px-6 md:px-8 lg:px-10 pt-6 pb-2'}`}>
+                            <div className={`flex items-start justify-between shrink-0 ${isMobile ? 'px-6 pt-5 pb-2' : 'px-6 md:px-8 lg:px-10 pt-6 pb-2'}`}>
                                 {title && (
                                     <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-black pr-4">
                                         {title}
@@ -125,7 +125,7 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                                 {!persistent && (
                                     <button
                                         onClick={onClose}
-                                        className="p-1 hover:bg-slate-100 rounded-md transition-colors shrink-0"
+                                        className="p-1 hover:bg-slate-100 rounded-md transition-colors shrink-0 ml-auto"
                                     >
                                         <X className="w-6 h-6" />
                                     </button>

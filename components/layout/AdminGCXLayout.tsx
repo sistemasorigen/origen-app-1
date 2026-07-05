@@ -20,9 +20,11 @@ export const useAdminGCXToast = (): ToastContextValue => {
 interface AdminGCXLayoutProps {
     title: string;
     children: React.ReactNode;
+    backTo?: string;
+    backLabel?: string;
 }
 
-const AdminGCXLayout: React.FC<AdminGCXLayoutProps> = ({ title, children }) => {
+const AdminGCXLayout: React.FC<AdminGCXLayoutProps> = ({ title, children, backTo = '/gcx', backLabel = 'Volver a GCX' }) => {
     const navigate = useNavigate();
 
     const [notification, setNotification] = useState<{
@@ -47,11 +49,11 @@ const AdminGCXLayout: React.FC<AdminGCXLayoutProps> = ({ title, children }) => {
                     {/* Header */}
                     <div className="mb-6">
                         <button
-                            onClick={() => navigate('/gcx')}
+                            onClick={() => navigate(backTo)}
                             className="flex items-center gap-2 text-sm text-slate-400 hover:text-black transition-colors mb-4 font-bold uppercase tracking-wide"
                         >
                             <ArrowLeft className="w-4 h-4" />
-                            Volver a GCX
+                            {backLabel}
                         </button>
                         <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-black">
                             {title}

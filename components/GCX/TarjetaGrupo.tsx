@@ -80,8 +80,8 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
 
     let status: 'AVAILABLE' | 'FULL' | 'IN_PROGRESS' | 'FINISHED' = 'AVAILABLE';
     if (isFinished) status = 'FINISHED';
-    else if (isCapacityLocked) status = 'FULL';
     else if (isStarted) status = 'IN_PROGRESS';
+    else if (isCapacityLocked) status = 'FULL';
     else if (isFull) status = 'FULL';
 
     const handleAction = () => {
@@ -104,20 +104,24 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
     };
 
     const getButtonState = () => {
+        if (status === 'FINISHED') {
+            return { text: 'FINALIZADO', baseClass: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-500 cursor-not-allowed', icon: null, disabled: true };
+        }
+        if (isCapacityLocked) {
+            return { text: 'LLENO', baseClass: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 cursor-not-allowed', icon: <Lock className="w-3.5 h-3.5" />, disabled: true };
+        }
+
         // Sin sesión: mostrar botón invitación igual de verde para atraer al click
         if (!currentUser) {
+            if (isFull) {
+                return { text: 'LLENO', baseClass: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 cursor-not-allowed', icon: <Lock className="w-3.5 h-3.5" />, disabled: true };
+            }
             return {
                 text: 'UNIRME',
                 baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white shadow-lg shadow-[#28a946]/20 active:scale-95',
                 icon: <ArrowRight className="w-3.5 h-3.5" />,
                 disabled: false
             };
-        }
-        if (status === 'FINISHED') {
-            return { text: 'FINALIZADO', baseClass: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-500 cursor-not-allowed', icon: null, disabled: true };
-        }
-        if (isCapacityLocked) {
-            return { text: 'LLENO', baseClass: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 cursor-not-allowed', icon: <Lock className="w-3.5 h-3.5" />, disabled: true };
         }
         if (!genderCompatible) {
             return { text: getGenderLockText(), baseClass: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed', icon: <Lock className="w-3.5 h-3.5" />, disabled: true };
@@ -204,13 +208,19 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                 <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
 
                 {/* Status Badge — top left */}
-                <div className="absolute top-3 left-3">
+                <div className="absolute top-3 left-3 flex items-center gap-1.5">
                     <span className={`${statusBadge.className} text-[11px] font-bold px-3 py-1.5 rounded-full tracking-wider flex items-center gap-1.5 shadow-lg`}>
                         {statusBadge.pulse && (
                             <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                         )}
                         {statusBadge.label}
                     </span>
+                    {isCapacityLocked && status !== 'FULL' && status !== 'FINISHED' && (
+                        <span className="bg-neutral-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-full tracking-wider shadow-lg flex items-center gap-1.5">
+                            <Lock className="w-3 h-3" />
+                            LLENO
+                        </span>
+                    )}
                 </div>
 
                 {/* Category Badge — top right */}

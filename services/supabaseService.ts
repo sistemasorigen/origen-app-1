@@ -218,13 +218,13 @@ function transformDbRowToGroup(data: any): Group {
 
 export const supabaseService = {
   // --- NOTIFICATIONS ---
-  async createAppNotification(userId: string, title: string, message: string, type: string, actionUrl: string | null = null, metadata: any = null): Promise<boolean> {
+  async createAppNotification(userId: string, title: string, message: string, type: string, actionUrl: string | null = null): Promise<boolean> {
     try {
       if (!userId) {
         console.warn('[Notifications] Cannot create notification without user_id');
         return false;
       }
-      
+
       const { error } = await supabase
         .from('app_notifications')
         .insert({
@@ -232,8 +232,7 @@ export const supabaseService = {
           title,
           message,
           type,
-          action_url: actionUrl,
-          metadata
+          action_url: actionUrl
         });
 
       if (error) {
@@ -3295,6 +3294,7 @@ export const supabaseService = {
         id: u.id,
         name: u.name,
         email: u.email,
+        phone: u.phone,
         role: u.role as UserRole,
         roles: (u.roles || [u.role]) as UserRole[],
         isActive: u.is_active,

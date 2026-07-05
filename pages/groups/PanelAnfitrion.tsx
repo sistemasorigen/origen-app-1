@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { User, UserRole, Group, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import { supabaseService, toggleGroupCapacityLock } from '../../services/supabaseService';
@@ -49,6 +49,7 @@ function countApprovedPeople(registrations?: any[]): number {
 
 const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     const location = useLocation();
+    const navigate = useNavigate();
     const [myGroups, setMyGroups] = useState<Group[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -254,8 +255,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     }, [location]);
 
     const handleCreateGroup = () => {
-        setEditingGroup(null);
-        setIsCreateModalOpen(true);
+        navigate('/mis-grupos/crear-grupo');
     };
 
     const handleEditGroup = (group: Group) => {
@@ -722,7 +722,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                 </div>
                                             )}
 
-                                            {/* Action Toggle Button */}
+                                            {/* Ver Grupo */}
                                             {pendingOutgoingGroupIds.has(group.id) ? (
                                                 <div className="flex items-center gap-2 mt-2 px-3 py-2.5 border-2 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950/30">
                                                     <ArrowLeftRight className="w-3.5 h-3.5 text-purple-500 shrink-0" aria-hidden="true" />
@@ -731,102 +731,14 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                     </p>
                                                 </div>
                                             ) : !(group.status === 'pending' || !group.status) && (
-                                                <div className="flex flex-col gap-2">
-                                                    <button
-                                                        id={isMobile ? `btn-host-actions-${index}` : undefined}
-                                                        onClick={() => setExpandedGroupId(expandedGroupId === group.id ? null : group.id)}
-                                                        className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all rounded-lg text-xs font-bold uppercase w-full"
-                                                    >
-                                                        <Settings className={`w-4 h-4 transition-transform ${expandedGroupId === group.id ? 'rotate-90' : ''}`} />
-                                                        {expandedGroupId === group.id ? 'Cerrar Acciones' : 'Acciones'}
-                                                    </button>
-                                                    {/* Expandable Actions */}
-                                                    {(expandedGroupId === group.id || isDemoMode) && ( // Always expand in Demo Mode? Or simulate click? Better to force expand for tutorial step? Actually, let's keep it collapsed but make the button targetable. Wait, if it's collapsed, inner buttons are hidden.
-                                                        // CRITICAL: For the tutorial to point to inner buttons (Attendance), the actions MUST be expanded.
-                                                        // We can force expand if isDemoMode is true.
-                                                        <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-200">
-                                                            {group.status === 'approved' && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={(e) => handleCopyGroupLink(e, group.id)}
-                                                                        className={`flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 transition-all rounded-lg text-xs font-bold uppercase ${copiedGroupId === group.id
-                                                                                ? 'border-[#28a946] bg-[#28a946]/10 text-[#28a946]'
-                                                                                : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                                                            }`}
-                                                                    >
-                                                                        {copiedGroupId === group.id ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-                                                                        {copiedGroupId === group.id ? '¡Copiado!' : 'Copiar Enlace'}
-                                                                    </button>
-                                                                    <button
-                                                                        id={isMobile ? `btn-host-applicants-${index}` : undefined}
-                                                                        onClick={() => handleOpenApplicants(group)}
-                                                                        className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase"
-                                                                    >
-                                                                        <Inbox className="w-4 h-4" />
-                                                                        Solicitudes
-                                                                    </button>
-                                                                    <button
-                                                                        id={isMobile ? `btn-host-attendance-${index}` : undefined}
-                                                                        onClick={() => handleOpenAttendance(group)}
-                                                                        className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-black dark:border-white text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all rounded-lg text-xs font-bold uppercase"
-                                                                    >
-                                                                        <ClipboardList className="w-4 h-4" />
-                                                                        Asistencia
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleToggleCapacityLock(group)}
-                                                                        className={`flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 transition-all rounded-lg text-xs font-bold uppercase ${group.capacityLocked ? 'border-neutral-800 bg-neutral-800 text-white' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                                                                    >
-                                                                        {group.capacityLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                                                                        {group.capacityLocked ? 'Desbloquear cupos' : 'Bloquear cupos'}
-                                                                    </button>
-                                                                    <button
-                                                                        id={isMobile ? `btn-host-dropout-${index}` : undefined}
-                                                                        onClick={() => handleOpenDropout(group)}
-                                                                        className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase"
-                                                                    >
-                                                                        <UserMinus className="w-4 h-4" />
-                                                                        Bajas
-                                                                    </button>
-                                                                    {/* Transferir — solo approved, solo host principal */}
-                                                                    {(group as any).co_host_id !== currentUser?.id && (
-                                                                        <button
-                                                                            onClick={() => handleTransferGroup(group)}
-                                                                            className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-purple-500 text-purple-500 hover:bg-purple-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase"
-                                                                        >
-                                                                            <ArrowLeftRight className="w-4 h-4" />
-                                                                            Transferir
-                                                                        </button>
-                                                                    )}
-                                                                </>
-                                                            )}
-
-                                                            {/* Edit - Visible for Approved (if not finished), Rejected, and ONLY for the main Host */}
-                                                            {!((group.endDate && group.endDate < new Date().toISOString().split('T')[0])) && (group.status === 'approved' || group.status === 'rejected') && (group as any).co_host_id !== currentUser?.id && (
-                                                                <button
-                                                                    id={isMobile ? `btn-host-edit-${index}` : undefined}
-                                                                    onClick={() => handleEditGroup(group)}
-                                                                    className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-black dark:border-white text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all rounded-lg text-xs font-bold uppercase"
-                                                                >
-                                                                    <Edit2 className="w-4 h-4" />
-                                                                    Editar
-                                                                </button>
-                                                            )}
-
-                                                            {/* Re-open - Only for Finished groups (Removed for Rejected) */}
-                                                            {(group.endDate && group.endDate < new Date().toISOString().split('T')[0]) && (
-                                                                <button
-                                                                    id={isMobile ? `btn-host-reopen-${index}` : undefined}
-                                                                    onClick={() => handleReopenGroup(group)}
-                                                                    className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase"
-                                                                >
-                                                                    <RotateCcw className="w-4 h-4" />
-                                                                    Re-abrir
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <button
+                                                    id={isMobile ? `btn-host-actions-${index}` : undefined}
+                                                    onClick={() => navigate(`/mis-grupos/${group.id}`)}
+                                                    className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-all rounded-lg text-xs font-bold uppercase w-full"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                    Ver Grupo
+                                                </button>
                                             )}
                                         </div>
                                     ))}
@@ -922,87 +834,14 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                             </span>
                                                         </div>
                                                     ) : !(group.status === 'pending' || !group.status) && (
-                                                        <div id={!isMobile ? `btn-host-actions-${index}` : undefined} className="flex justify-end gap-2">
-                                                            {group.status === 'approved' && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={(e) => handleCopyGroupLink(e, group.id)}
-                                                                        className={`p-2 border-2 transition-all rounded-lg ${copiedGroupId === group.id
-                                                                                ? 'border-[#28a946] bg-[#28a946]/10 text-[#28a946]'
-                                                                                : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                                                            }`}
-                                                                        title="Copiar enlace"
-                                                                    >
-                                                                        {copiedGroupId === group.id ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-                                                                    </button>
-                                                                    <button
-                                                                        id={!isMobile ? `btn-host-applicants-${index}` : undefined}
-                                                                        onClick={() => handleOpenApplicants(group)}
-                                                                        className="p-2 border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all rounded-lg"
-                                                                        title="Solicitudes"
-                                                                    >
-                                                                        <Inbox className="w-4 h-4" />
-                                                                    </button>
-                                                                    <button
-                                                                        id={!isMobile ? `btn-host-attendance-${index}` : undefined}
-                                                                        onClick={() => handleOpenAttendance(group)}
-                                                                        className="p-2 border-2 border-black dark:border-white text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all rounded-lg"
-                                                                        title="Control de Asistencia"
-                                                                    >
-                                                                        <ClipboardList className="w-4 h-4" />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleToggleCapacityLock(group)}
-                                                                        className={`p-2 border-2 transition-all rounded-lg ${group.capacityLocked ? 'border-neutral-800 bg-neutral-800 text-white' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                                                                        title={group.capacityLocked ? 'Desbloquear cupos' : 'Bloquear cupos (mostrar como LLENO)'}
-                                                                    >
-                                                                        {group.capacityLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                                                                    </button>
-                                                                    <button
-                                                                        id={!isMobile ? `btn-host-dropout-${index}` : undefined}
-                                                                        onClick={() => handleOpenDropout(group)}
-                                                                        className="p-2 border-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white transition-all rounded-lg"
-                                                                        title="Bajas"
-                                                                    >
-                                                                        <UserMinus className="w-4 h-4" />
-                                                                    </button>
-                                                                    {/* Transferir — solo host principal */}
-                                                                    {(group as any).co_host_id !== currentUser?.id && (
-                                                                        <button
-                                                                            onClick={() => handleTransferGroup(group)}
-                                                                            className="p-2 border-2 border-purple-500 text-purple-500 hover:bg-purple-500 hover:text-white transition-all rounded-lg"
-                                                                            title="Transferir grupo"
-                                                                        >
-                                                                            <ArrowLeftRight className="w-4 h-4" />
-                                                                        </button>
-                                                                    )}
-                                                                </>
-                                                            )}
-
-                                                            {/* Edit - Visible for Approved (if not finished), Rejected, and ONLY for the main Host */}
-                                                            {!((group.endDate && group.endDate < new Date().toISOString().split('T')[0])) && (group.status === 'approved' || group.status === 'rejected') && (group as any).co_host_id !== currentUser?.id && (
-                                                                <button
-                                                                    id={!isMobile ? `btn-host-edit-${index}` : undefined}
-                                                                    onClick={() => handleEditGroup(group)}
-                                                                    className="p-2 border-2 border-black dark:border-white text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all rounded-lg"
-                                                                    title="Editar"
-                                                                >
-                                                                    <Edit2 className="w-4 h-4" />
-                                                                </button>
-                                                            )}
-
-                                                            {/* Re-open - Only for Finished groups (Removed for Rejected) */}
-                                                            {(group.endDate && group.endDate < new Date().toISOString().split('T')[0]) && (
-                                                                <button
-                                                                    id={!isMobile ? `btn-host-reopen-${index}` : undefined}
-                                                                    onClick={() => handleReopenGroup(group)}
-                                                                    className="flex items-center gap-2 px-3 py-2 border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase"
-                                                                    title="Re-abrir grupo"
-                                                                >
-                                                                    <RotateCcw className="w-4 h-4" />
-                                                                    Re-abrir
-                                                                </button>
-                                                            )}
+                                                        <div className="flex justify-end">
+                                                            <button
+                                                                onClick={() => navigate(`/mis-grupos/${group.id}`)}
+                                                                className="flex items-center gap-2 px-4 py-2 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-all rounded-lg text-xs font-bold uppercase"
+                                                            >
+                                                                <Eye className="w-4 h-4" />
+                                                                Ver Grupo
+                                                            </button>
                                                         </div>
                                                     )}
                                                 </td>

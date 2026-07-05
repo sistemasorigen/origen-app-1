@@ -144,18 +144,8 @@ export const hostSteps: Step[] = [
         placement: 'top',
     },
     {
-        target: '#btn-host-actions-0', // Target the main action button (Settings/Mobile or Row/Desktop)
-        content: 'Usá este botón para acceder a las herramientas de gestión de tu grupo.',
-        placement: 'left',
-    },
-    {
-        target: '#btn-host-attendance-0',
-        content: 'Fundamental: Acá vas a poder tomar lista en cada reunión. Es vital para el seguimiento pastoral.',
-        placement: 'left',
-    },
-    {
-        target: '#btn-host-applicants-0',
-        content: 'Gestioná las solicitudes de personas que quieren unirse a tu grupo.',
+        target: '#btn-host-actions-0', // Ahora es el botón "Ver Grupo" — lleva a la página de detalle con todas las herramientas de gestión.
+        content: 'Tocá acá para ver el detalle de tu grupo: asistencia, solicitudes, integrantes y más.',
         placement: 'left',
     },
 ];

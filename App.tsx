@@ -12,6 +12,15 @@ import Store from './pages/primarias/Tienda';
 import Alabanza from './pages/primarias/Alabanza';
 import Pastores from './pages/audiencia/Pastores';
 import HostDashboard from './pages/groups/PanelAnfitrion';
+import DetalleGrupoAnfitrion from './pages/groups/DetalleGrupoAnfitrion';
+import PaginaAsistenciaGrupo from './pages/groups/PaginaAsistenciaGrupo';
+import PaginaBajaGrupo from './pages/groups/PaginaBajaGrupo';
+import PaginaSolicitudesGrupo from './pages/groups/PaginaSolicitudesGrupo';
+import PaginaTransferirGrupo from './pages/groups/PaginaTransferirGrupo';
+import PaginaCrearGrupo from './pages/groups/PaginaCrearGrupo';
+import PaginaEditarGrupo from './pages/groups/PaginaEditarGrupo';
+import PaginaReabrirGrupo from './pages/groups/PaginaReabrirGrupo';
+import PaginaInscribirParticipante from './pages/groups/PaginaInscribirParticipante';
 import UpdatePassword from './pages/auth/ActualizarContrasena';
 import VerifyEmail from './pages/auth/VerificarEmail';
 import Bienvenida from './pages/bienvenida/Bienvenida';
@@ -37,6 +46,12 @@ import AdminDPadre from './pages/eventos/dpadre/AdminDPadre';
 import DetalleFamilia from './pages/eventos/dpadre/DetalleFamilia';
 import CalendarioGCX from './pages/gcx/CalendarioGCX';
 import GestionDeGrupos from './pages/admingcx/GestionDeGrupos';
+import DetalleGrupoAdmin from './pages/admingcx/DetalleGrupoAdmin';
+import BajasGrupos from './pages/admingcx/BajasGrupos';
+import InscriptosGrupo from './pages/admingcx/InscriptosGrupo';
+import AgregarMiembroGrupo from './pages/admingcx/AgregarMiembroGrupo';
+import CrearGrupoAdmin from './pages/admingcx/CrearGrupoAdmin';
+import EditarGrupoAdmin from './pages/admingcx/EditarGrupoAdmin';
 import GestionDeAnfitriones from './pages/admingcx/GestionDeAnfitriones';
 import GestionDeCoordinadores from './pages/admingcx/GestionDeCoordinadores';
 import Categorias from './pages/admingcx/Categorias';
@@ -397,6 +412,96 @@ const AppContent: React.FC = () => {
                                         ? <HostDashboard currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
+                                <Route path="/mis-grupos/crear-grupo" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <PaginaCrearGrupo currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/mis-grupos/:groupId" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <DetalleGrupoAnfitrion currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/mis-grupos/:groupId/asistencia" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <PaginaAsistenciaGrupo currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/mis-grupos/:groupId/bajas" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <PaginaBajaGrupo currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/mis-grupos/:groupId/solicitudes" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <PaginaSolicitudesGrupo currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/mis-grupos/:groupId/transferir" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <PaginaTransferirGrupo currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/mis-grupos/:groupId/editar-grupo" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <PaginaEditarGrupo currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/mis-grupos/:groupId/reabrir-grupo" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <PaginaReabrirGrupo currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/mis-grupos/:groupId/inscribir" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <PaginaInscribirParticipante currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
                                 <Route path="/gcx/calendario" element={
                                     user ? <CalendarioGCX currentUser={user} /> : <Navigate to="/" />
                                 } />
@@ -407,6 +512,60 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <GestionDeGrupos />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/gestion-de-grupos/bajas" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                    ]))
+                                        ? <BajasGrupos />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/gestion-de-grupos/agregar-grupo" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                    ]))
+                                        ? <AgregarMiembroGrupo />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/gestion-de-grupos/crear-grupo" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                    ]))
+                                        ? <CrearGrupoAdmin />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/gestion-de-grupos/editar-grupo/:groupId" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                    ]))
+                                        ? <EditarGrupoAdmin />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/gestion-de-grupos/inscriptos/:groupId" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                    ]))
+                                        ? <InscriptosGrupo />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/gestion-de-grupos/detalles/:groupId" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                    ]))
+                                        ? <DetalleGrupoAdmin />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/admingcx/gestion-de-anfitriones" element={

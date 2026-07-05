@@ -63,6 +63,7 @@ interface SubGroup {
     path?: string;
     roles?: UserRole[];
     subItems?: SubMenuItem[];
+    separator?: boolean;
 }
 
 interface MenuItem {
@@ -194,57 +195,35 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             activePaths: ['/admingcx', '/coordinators', '/mis-grupos'],
             roles: [],
             subGroups: [
-                {
-                    label: 'Inicio',
-                    path: '/gcx',
-                    roles: []
-                },
-                {
-                    label: 'Mis grupos',
-                    path: '/mis-grupos',
-                    roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]
-                },
-                {
-                    label: 'Mi Calendario',
-                    path: '/gcx/calendario',
-                    roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION, UserRole.USUARIO, UserRole.VIEWER]
-                },
-            ],
-            subItems: [
+                // ── Acceso general ───────────────────────────
+                { label: 'Inicio', path: '/gcx', roles: [] },
+                { label: 'Mis grupos', path: '/mis-grupos', roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION] },
+                { label: 'Mi Calendario', path: '/gcx/calendario', roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION, UserRole.USUARIO, UserRole.VIEWER] },
                 // ── Separador: Coordinación ──────────────────
-                {
-                    label: 'Coordinación',
-                    separator: true,
-                    roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR]
-                },
-                {
-                    label: 'Coordinadores',
-                    path: '/coordinators?tab=dashboard',
-                    roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR]
-                },
-                // ── Separador: Administración ─────────────────
-                {
-                    label: 'Administración',
-                    separator: true,
-                    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
-                },
+                { label: 'Coordinación', separator: true, roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR] },
+                { label: 'Coordinadores', path: '/coordinators?tab=dashboard', roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR] },
+                // ── Separador: Administración ────────────────
+                { label: 'Administración', separator: true, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] },
                 {
                     label: 'Gestión de grupos',
                     path: '/admingcx/gestion-de-grupos',
-                    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
+                    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS],
+                    subItems: [
+                        { label: 'Ver todos los grupos', path: '/admingcx/gestion-de-grupos' },
+                        { label: 'Crear grupo', path: '/admingcx/gestion-de-grupos/crear-grupo' },
+                        { label: 'Agregar grupo', path: '/admingcx/gestion-de-grupos/agregar-grupo' },
+                        { label: 'Solicitudes de baja', path: '/admingcx/gestion-de-grupos/bajas' },
+                    ]
                 },
-                {
-                    label: 'Gestión de anfitriones',
-                    path: '/admingcx/gestion-de-anfitriones',
-                    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS]
-                },
+                { label: 'Gestión de anfitriones', path: '/admingcx/gestion-de-anfitriones', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] },
                 { label: 'Gestión de coordinadores', path: '/admingcx/gestion-de-coordinadores', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Categorías', path: '/admingcx/categorias', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Etiquetas', path: '/admingcx/etiquetas', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Configuración', path: '/admingcx/configuracion', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Temporadas', path: '/admingcx/temporadas', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] }
-            ]
+                { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] },
+            ],
+            subItems: []
         },
         {
             label: 'Influos',
@@ -519,12 +498,23 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 <div className="ml-6 pl-2 border-l border-gray-100 dark:border-zinc-800 mt-1 mb-2 space-y-1">
                                     {/* SubGroups: gray labeled sections, optionally expandable */}
                                     {visibleSubGroups.map((group, gi) => {
+                                        // ── Separator ─────────────────────────────
+                                        if (group.separator) {
+                                            return (
+                                                <div key={gi} className="px-3 pt-3 pb-1">
+                                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 dark:text-zinc-600 select-none">
+                                                        {group.label}
+                                                    </span>
+                                                </div>
+                                            );
+                                        }
+
                                         const groupKey = `${item.label}::${group.label}`;
-                                        const isGroupExpanded = expandedItems.includes(groupKey);
                                         const hasGroupItems = (group.subItems?.length ?? 0) > 0;
                                         const isGroupActive = group.path
                                             ? (location.pathname + location.search).startsWith(group.path)
                                             : group.subItems?.some(s => (location.pathname + location.search) === s.path);
+                                        const isGroupExpanded = expandedItems.includes(groupKey) || (!!isGroupActive && hasGroupItems);
 
                                         return (
                                             <div key={gi}>
@@ -534,10 +524,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                                             if (!hasGroupItems && group.path) handleNavigation(group.path);
                                                             if (hasGroupItems) toggleExpand(groupKey);
                                                         }}
-                                                        className={`flex-1 text-left px-3 py-1.5 text-xs font-bold transition-colors rounded-lg ${isGroupActive
-                                                            ? (hasGroupItems
-                                                                ? 'text-black dark:text-white'
-                                                                : 'bg-black text-white dark:bg-white dark:text-black')
+                                                        className={`flex-1 text-left px-3 py-1.5 text-xs font-bold transition-colors rounded-lg ${!hasGroupItems && isGroupActive
+                                                            ? 'bg-black text-white dark:bg-white dark:text-black'
                                                             : 'text-gray-500 dark:text-zinc-500 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800'
                                                             }`}
                                                     >

@@ -5,7 +5,7 @@ import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
-import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, CalendarDays } from 'lucide-react';
+import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, CalendarDays, Lock } from 'lucide-react';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
 import GroupCard from '../../components/GCX/TarjetaGrupo';
@@ -274,7 +274,7 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
 const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // --- NAVIGATION ---
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // --- TUTORIAL INTEGRATION ---
     const {
@@ -336,6 +336,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
     const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
     const [isInquiryModalOpen, setInquiryModalOpen] = useState(false);
+    const [restrictionModal, setRestrictionModal] = useState<{isOpen: boolean, message: string}>({isOpen: false, message: ''});
     // inquiryForm moved to JoinGroupModal
     const [notification, setNotification] = useState<{ show: boolean, message: string, type: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'success' });
 
@@ -451,6 +452,41 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
             return;
         }
 
+        // --- VALIDATIONS ---
+        let restriction = null;
+
+        // 1. Gender Validation
+        const targetGender = target.targetGender?.toLowerCase() || '';
+        const userGender = currentUser?.gender?.toLowerCase() || '';
+        const isMixto = !targetGender || targetGender.includes('mixto') || targetGender.includes('no especificar') || targetGender === '';
+        
+        let genderCompatible = true;
+        if (!isMixto && userGender) {
+            const isMaleGroup = targetGender.includes('hombre');
+            const isFemaleGroup = targetGender.includes('mujer');
+            const isUserMale = userGender.includes('hombre') || userGender.includes('masculino');
+            const isUserFemale = userGender.includes('mujer') || userGender.includes('femenino');
+            
+            if (isMaleGroup && !isUserMale) genderCompatible = false;
+            if (isFemaleGroup && !isUserFemale) genderCompatible = false;
+        }
+
+        if (!genderCompatible) {
+            const groupType = target.targetGender?.includes('Hombre') ? 'sólo para hombres' : 'sólo para mujeres';
+            restriction = `No puedes inscribirte porque este grupo es ${groupType}.`;
+        }
+
+        // 2. Age Validation
+        if (!restriction && currentUser.age) {
+            const minAge = target.minAge || 0;
+            const maxAge = target.maxAge || 100;
+            if (currentUser.age < minAge) {
+                restriction = `No puedes inscribirte porque debes tener al menos ${minAge} años.`;
+            } else if (currentUser.age > maxAge) {
+                restriction = `No puedes inscribirte porque la edad máxima es ${maxAge} años.`;
+            }
+        }
+
         setTimeout(() => {
             const el = document.getElementById(`group-card-${targetId}`);
             if (el) {
@@ -461,7 +497,18 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                 }, 2000);
             }
             setSelectedGroup(target);
-            setInquiryModalOpen(true);
+            
+            // Clean up the URL correctly using react-router-dom to prevent re-triggering
+            setSearchParams(prev => {
+                prev.delete('groupId');
+                return prev;
+            }, { replace: true });
+
+            if (restriction) {
+                setRestrictionModal({ isOpen: true, message: restriction });
+            } else {
+                setInquiryModalOpen(true);
+            }
         }, 300);
     }, [searchParams, groups, currentUser]);
 
@@ -889,10 +936,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // handleInquirySubmit removed - logic moved to JoinGroupModal
 
     const handleJoinClick = (g: Group) => {
-        // GUARD: Si no hay sesión, redirigir a /auth con retorno a /gcx
+        // GUARD: Si no hay sesión, redirigir a /auth con retorno a /gcx y el groupId
         if (!currentUser) {
             navigate('/auth', {
-                state: { from: { pathname: '/gcx' } }
+                state: { from: { pathname: '/gcx', search: `?groupId=${g.id}` } }
             });
             return;
         }
@@ -1504,7 +1551,13 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         tags={tags}
                                         categories={categories}
                                         onJoin={handleJoinClick}
-                                        onInquiry={(g) => { setSelectedGroup(g); setInquiryModalOpen(true); }}
+                                        onInquiry={(g) => {
+                                            if (!currentUser) {
+                                                navigate('/auth', { state: { from: { pathname: '/gcx', search: `?groupId=${g.id}` } } });
+                                                return;
+                                            }
+                                            setSelectedGroup(g); setInquiryModalOpen(true);
+                                        }}
                                         userStatus={getUserGroupStatus(group.id)}
                                         currentUser={currentUser}
                                     />
@@ -2595,6 +2648,36 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     <button
                         onClick={() => setIsSuccessModalOpen(false)}
                         className="mt-4 w-full py-4 bg-[#118f46] text-white font-black uppercase tracking-widest rounded-xl hover:bg-[#0d7036] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1"
+                    >
+                        Entendido
+                    </button>
+                </div>
+            </NeoModal>
+
+            {/* Restriction Modal */}
+            <NeoModal
+                isOpen={restrictionModal.isOpen}
+                onClose={() => setRestrictionModal({ isOpen: false, message: '' })}
+                maxWidth="max-w-md"
+            >
+                <div className="flex flex-col items-center justify-center p-8 md:p-10 text-center space-y-6">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-10"></div>
+                        <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center shadow-inner border-4 border-red-100 dark:border-red-900/30 relative z-10">
+                            <Lock className="w-10 h-10" strokeWidth={2.5} />
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-black dark:text-white">
+                            Acceso Restringido
+                        </h3>
+                        <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed text-lg max-w-sm mx-auto">
+                            {restrictionModal.message}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setRestrictionModal({ isOpen: false, message: '' })}
+                        className="mt-6 w-full py-4 bg-black text-white font-black uppercase tracking-widest rounded-2xl hover:bg-neutral-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1 text-sm"
                     >
                         Entendido
                     </button>
