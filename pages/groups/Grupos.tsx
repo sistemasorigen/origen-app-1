@@ -935,12 +935,26 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
     // handleInquirySubmit removed - logic moved to JoinGroupModal
 
+    // Mismo mecanismo de doble capa que handleLogin
+    // en App.tsx: sessionStorage sobrevive el
+    // redirect completo de Google (donde
+    // location.state se pierde), y el state de
+    // React Router sigue cubriendo el caso de
+    // email/contraseña sin recarga de página.
+    const redirectToLoginForGroup = (groupId: string) => {
+        sessionStorage.setItem(
+            'post_login_redirect',
+            `/gcx?groupId=${groupId}`
+        );
+        navigate('/auth', {
+            state: { from: { pathname: '/gcx', search: `?groupId=${groupId}` } }
+        });
+    };
+
     const handleJoinClick = (g: Group) => {
         // GUARD: Si no hay sesión, redirigir a /auth con retorno a /gcx y el groupId
         if (!currentUser) {
-            navigate('/auth', {
-                state: { from: { pathname: '/gcx', search: `?groupId=${g.id}` } }
-            });
+            redirectToLoginForGroup(g.id);
             return;
         }
 
@@ -1553,7 +1567,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         onJoin={handleJoinClick}
                                         onInquiry={(g) => {
                                             if (!currentUser) {
-                                                navigate('/auth', { state: { from: { pathname: '/gcx', search: `?groupId=${g.id}` } } });
+                                                redirectToLoginForGroup(g.id);
                                                 return;
                                             }
                                             setSelectedGroup(g); setInquiryModalOpen(true);
