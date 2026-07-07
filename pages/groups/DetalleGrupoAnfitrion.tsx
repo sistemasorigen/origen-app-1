@@ -272,6 +272,9 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                 {/* Descripción */}
                 {group.description && (
                     <div className="mb-6 max-w-2xl">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+                            Descripción
+                        </p>
                         <p
                             className={`text-sm text-slate-600 dark:text-slate-300 leading-relaxed break-words ${
                                 descripcionExpandida ? '' : 'line-clamp-3'
