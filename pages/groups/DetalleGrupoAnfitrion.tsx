@@ -270,29 +270,35 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                 </header>
 
                 {/* Descripción */}
-                {group.description && (
-                    <div className="mb-6 max-w-2xl">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                            Descripción
-                        </p>
-                        <p
-                            className={`text-sm text-slate-600 dark:text-slate-300 leading-relaxed break-words ${
-                                descripcionExpandida ? '' : 'line-clamp-3'
-                            }`}
+                {group.description && (() => {
+                    const canToggle = group.description.length > 140;
+                    return (
+                        <div
+                            className={`mb-6 max-w-2xl ${canToggle ? 'cursor-pointer' : ''}`}
+                            onClick={canToggle ? () => setDescripcionExpandida(prev => !prev) : undefined}
+                            role={canToggle ? 'button' : undefined}
+                            tabIndex={canToggle ? 0 : undefined}
+                            aria-expanded={canToggle ? descripcionExpandida : undefined}
+                            onKeyDown={canToggle ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDescripcionExpandida(prev => !prev); } } : undefined}
                         >
-                            {group.description}
-                        </p>
-                        {group.description.length > 140 && (
-                            <button
-                                type="button"
-                                onClick={() => setDescripcionExpandida(prev => !prev)}
-                                className="mt-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+                                Descripción
+                            </p>
+                            <p
+                                className={`text-sm text-slate-600 dark:text-slate-300 leading-relaxed break-words ${
+                                    descripcionExpandida ? '' : 'line-clamp-3'
+                                }`}
                             >
-                                {descripcionExpandida ? 'Ver menos' : 'Ver más'}
-                            </button>
-                        )}
-                    </div>
-                )}
+                                {group.description}
+                            </p>
+                            {canToggle && (
+                                <span className="mt-1.5 inline-block text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
+                                    {descripcionExpandida ? 'Ver menos' : 'Ver más'}
+                                </span>
+                            )}
+                        </div>
+                    );
+                })()}
 
                 {/* Motivo de rechazo — dirección, no adorno */}
                 {group.adminNote && isRejected && (

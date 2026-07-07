@@ -172,26 +172,32 @@ const DetalleGrupoAdminContent: React.FC = () => {
                 )}
             </div>
 
-            {group.description && (
-                <div className="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <p
-                        className={`text-sm text-slate-600 leading-relaxed italic break-words ${
-                            descripcionExpandida ? '' : 'line-clamp-3'
-                        }`}
+            {group.description && (() => {
+                const canToggle = group.description.length > 140;
+                return (
+                    <div
+                        className={`mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100 ${canToggle ? 'cursor-pointer' : ''}`}
+                        onClick={canToggle ? () => setDescripcionExpandida(prev => !prev) : undefined}
+                        role={canToggle ? 'button' : undefined}
+                        tabIndex={canToggle ? 0 : undefined}
+                        aria-expanded={canToggle ? descripcionExpandida : undefined}
+                        onKeyDown={canToggle ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDescripcionExpandida(prev => !prev); } } : undefined}
                     >
-                        "{group.description}"
-                    </p>
-                    {group.description.length > 140 && (
-                        <button
-                            type="button"
-                            onClick={() => setDescripcionExpandida(prev => !prev)}
-                            className="mt-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors"
+                        <p
+                            className={`text-sm text-slate-600 leading-relaxed italic break-words ${
+                                descripcionExpandida ? '' : 'line-clamp-3'
+                            }`}
                         >
-                            {descripcionExpandida ? 'Ver menos' : 'Ver más'}
-                        </button>
-                    )}
-                </div>
-            )}
+                            "{group.description}"
+                        </p>
+                        {canToggle && (
+                            <span className="mt-1.5 inline-block text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors">
+                                {descripcionExpandida ? 'Ver menos' : 'Ver más'}
+                            </span>
+                        )}
+                    </div>
+                );
+            })()}
 
             <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="p-4 bg-slate-50 rounded-xl">
