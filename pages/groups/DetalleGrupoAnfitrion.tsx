@@ -74,6 +74,7 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     const [copiedLink, setCopiedLink] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalMessage, setSuccessModalMessage] = useState('');
+    const [descripcionExpandida, setDescripcionExpandida] = useState(false);
 
     const fetchGroup = useCallback(async () => {
         if (!currentUser || !groupId) return;
@@ -270,9 +271,24 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
 
                 {/* Descripción */}
                 {group.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6 max-w-2xl">
-                        {group.description}
-                    </p>
+                    <div className="mb-6 max-w-2xl">
+                        <p
+                            className={`text-sm text-slate-600 dark:text-slate-300 leading-relaxed break-words ${
+                                descripcionExpandida ? '' : 'line-clamp-3'
+                            }`}
+                        >
+                            {group.description}
+                        </p>
+                        {group.description.length > 140 && (
+                            <button
+                                type="button"
+                                onClick={() => setDescripcionExpandida(prev => !prev)}
+                                className="mt-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                            >
+                                {descripcionExpandida ? 'Ver menos' : 'Ver más'}
+                            </button>
+                        )}
+                    </div>
                 )}
 
                 {/* Motivo de rechazo — dirección, no adorno */}

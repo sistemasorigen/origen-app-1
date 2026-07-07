@@ -75,7 +75,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const [localTourStep, setLocalTourStep] = useState(0);
     const [isSeasonMode] = useState(true);
 
-    const [coHostMode, setCoHostMode] = useState<'manual' | 'search'>('manual');
+    const [coHostMode, setCoHostMode] = useState<'manual' | 'search'>('search');
     const [coHostSearchTerm, setCoHostSearchTerm] = useState('');
     const [coHostId, setCoHostId] = useState<string | null>(null);
     const [coHostResults, setCoHostResults] = useState<User[]>([]);
@@ -493,8 +493,8 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-black uppercase tracking-widest text-neutral-400">Co-Anfitrión <span className="font-medium normal-case text-neutral-300">(Opcional)</span></p>
                             <div className="flex bg-neutral-100 p-1 rounded-full border border-neutral-200">
-                                <button type="button" onClick={() => { setCoHostMode('manual'); setCoHostId(null); setCoHostSearchTerm(''); }} className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${coHostMode === 'manual' ? 'bg-black text-white shadow-md' : 'text-neutral-500 hover:text-black'}`}>Manual</button>
                                 <button type="button" onClick={() => { setCoHostMode('search'); setForm(prev => ({ ...prev, coHostFirstName: '', coHostLastName: '' })); }} className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${coHostMode === 'search' ? 'bg-black text-white shadow-md' : 'text-neutral-500 hover:text-black'}`}>Buscar Usuario</button>
+                                <button type="button" onClick={() => { setCoHostMode('manual'); setCoHostId(null); setCoHostSearchTerm(''); }} className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${coHostMode === 'manual' ? 'bg-black text-white shadow-md' : 'text-neutral-500 hover:text-black'}`}>Manual</button>
                             </div>
                         </div>
 
