@@ -274,7 +274,7 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                     const canToggle = group.description.length > 140;
                     return (
                         <div
-                            className={`mb-6 max-w-2xl ${canToggle ? 'cursor-pointer' : ''}`}
+                            className={`mb-6 max-w-2xl ${canToggle ? 'cursor-pointer select-none touch-manipulation' : ''}`}
                             onClick={canToggle ? () => setDescripcionExpandida(prev => !prev) : undefined}
                             role={canToggle ? 'button' : undefined}
                             tabIndex={canToggle ? 0 : undefined}

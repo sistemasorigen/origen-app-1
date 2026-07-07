@@ -176,7 +176,7 @@ const DetalleGrupoAdminContent: React.FC = () => {
                 const canToggle = group.description.length > 140;
                 return (
                     <div
-                        className={`mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100 ${canToggle ? 'cursor-pointer' : ''}`}
+                        className={`mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100 ${canToggle ? 'cursor-pointer select-none touch-manipulation' : ''}`}
                         onClick={canToggle ? () => setDescripcionExpandida(prev => !prev) : undefined}
                         role={canToggle ? 'button' : undefined}
                         tabIndex={canToggle ? 0 : undefined}
