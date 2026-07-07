@@ -7,7 +7,7 @@ import { supabase } from '../../services/supabaseClient';
 import {
     MapPin, Calendar, Clock, Users, Phone, User, Tag,
     CheckCircle, XCircle, Image as ImageIcon, UserCheck, Target,
-    MessageSquare, Loader2, Inbox, Edit2, AlertCircle
+    MessageSquare, Loader2, AlertCircle
 } from 'lucide-react';
 
 const DetalleGrupoAdminContent: React.FC = () => {
@@ -22,6 +22,7 @@ const DetalleGrupoAdminContent: React.FC = () => {
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [adminNote, setAdminNote] = useState('');
     const [coHostDetails, setCoHostDetails] = useState<{ name: string; email: string } | null>(null);
+    const [descripcionExpandida, setDescripcionExpandida] = useState(false);
 
     const fetchGroup = useCallback(async () => {
         if (!groupId) return;
@@ -172,10 +173,23 @@ const DetalleGrupoAdminContent: React.FC = () => {
             </div>
 
             {group.description && (
-                <div className="mb-6">
-                    <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 italic">
+                <div className="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <p
+                        className={`text-sm text-slate-600 leading-relaxed italic break-words ${
+                            descripcionExpandida ? '' : 'line-clamp-3'
+                        }`}
+                    >
                         "{group.description}"
                     </p>
+                    {group.description.length > 140 && (
+                        <button
+                            type="button"
+                            onClick={() => setDescripcionExpandida(prev => !prev)}
+                            className="mt-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors"
+                        >
+                            {descripcionExpandida ? 'Ver menos' : 'Ver más'}
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -347,21 +361,6 @@ const DetalleGrupoAdminContent: React.FC = () => {
                             <p className="text-sm text-amber-800 leading-relaxed">{group.adminNote}</p>
                         </div>
                     )}
-
-                    <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
-                        <button
-                            onClick={() => navigate(`/admingcx/gestion-de-grupos/inscriptos/${group.id}`)}
-                            className="flex items-center gap-2 px-4 py-2 text-xs font-black uppercase text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"
-                        >
-                            <Inbox className="w-3.5 h-3.5" /> Ver inscriptos
-                        </button>
-                        <button
-                            onClick={() => navigate(`/admingcx/gestion-de-grupos/editar-grupo/${group.id}`)}
-                            className="flex items-center gap-2 px-4 py-2 text-xs font-black uppercase text-white bg-black hover:bg-slate-800 rounded-lg transition-colors"
-                        >
-                            <Edit2 className="w-3.5 h-3.5" /> Editar grupo
-                        </button>
-                    </div>
                 </>
             )}
         </div>
