@@ -576,7 +576,7 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                     >
                         {copiedLink
                             ? <><Check className="w-4 h-4" /> ¡Copiado!</>
-                            : <><Link className="w-4 h-4" /> Compartir enlace</>
+                            : <><Link className="w-4 h-4" /> Copiar enlace</>
                         }
                     </button>
 
