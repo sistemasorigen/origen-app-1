@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreVertical, ClipboardCheck, RotateCcw, Inbox, Eye, Edit2, Trash2, Users, Calendar, CheckCircle, XCircle, AlertCircle, Clock, Lock, Unlock } from 'lucide-react';
+import { MoreVertical, ClipboardCheck, RotateCcw, Inbox, Eye, EyeOff, Edit2, Trash2, Users, Calendar, CheckCircle, XCircle, AlertCircle, Clock, Lock, Unlock } from 'lucide-react';
 import { Group, GroupCategory, GroupTag } from '../../types';
 
 interface GroupsAdminListProps {
@@ -13,6 +13,7 @@ interface GroupsAdminListProps {
     onEdit: (group: Group) => void;
     onDelete: (groupId: string) => void;
     onToggleCapacityLock: (group: Group) => void;
+    onToggleVisibility: (group: Group) => void;
     openMenuGroupId: string | null;
     setOpenMenuGroupId: (id: string | null) => void;
     isLoading: boolean;
@@ -28,6 +29,7 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
     onEdit,
     onDelete,
     onToggleCapacityLock,
+    onToggleVisibility,
     openMenuGroupId,
     setOpenMenuGroupId,
     isLoading
@@ -163,6 +165,10 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                                                     {group.capacityLocked ? <Lock className="w-4 h-4 shrink-0" /> : <Unlock className="w-4 h-4 shrink-0" />}
                                                     {group.capacityLocked ? 'DESBLOQUEAR CUPOS' : 'BLOQUEAR CUPOS'}
                                                 </button>
+                                                <button onClick={() => { onToggleVisibility(group); setOpenMenuGroupId(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold uppercase text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-100">
+                                                    {group.isHidden ? <Eye className="w-4 h-4 shrink-0" /> : <EyeOff className="w-4 h-4 shrink-0" />}
+                                                    {group.isHidden ? 'MOSTRAR EN /GCX' : 'OCULTAR DE /GCX'}
+                                                </button>
                                                 <button onClick={() => { onEdit(group); setOpenMenuGroupId(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold uppercase text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-100">
                                                     <Edit2 className="w-4 h-4 shrink-0" /> EDITAR
                                                 </button>
@@ -175,32 +181,34 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                                 </div>
                             </div>
 
-                            <h4 className="font-black text-slate-900 text-base uppercase leading-tight">{group.name}</h4>
-                            <span className="inline-block mt-1 text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase font-bold tracking-wide border border-slate-200">
-                                {categories.find(c => c.id === group.categoryId)?.name || 'General'}
-                            </span>
+                            <div className={group.isHidden ? 'grayscale opacity-60' : ''}>
+                                <h4 className="font-black text-slate-900 text-base uppercase leading-tight">{group.name}</h4>
+                                <span className="inline-block mt-1 text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase font-bold tracking-wide border border-slate-200">
+                                    {categories.find(c => c.id === group.categoryId)?.name || 'General'}
+                                </span>
 
-                            <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-3">
-                                <div>
-                                    <p className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-0.5">Anfitrión</p>
-                                    <p className="text-xs font-bold text-slate-700 truncate">{group.leaderName} {group.leaderSurname}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-0.5">Horario</p>
-                                    <div className="flex items-center gap-1 text-xs font-bold text-slate-700">
-                                        <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
-                                        <span>{group.meetingDay} {group.meetingTime}</span>
+                                <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-3">
+                                    <div>
+                                        <p className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-0.5">Anfitrión</p>
+                                        <p className="text-xs font-bold text-slate-700 truncate">{group.leaderName} {group.leaderSurname}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-0.5">Horario</p>
+                                        <div className="flex items-center gap-1 text-xs font-bold text-slate-700">
+                                            <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                                            <span>{group.meetingDay} {group.meetingTime}</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="mt-3">
-                                <div className="flex justify-between text-[9px] uppercase font-black mb-1">
-                                    <span className="text-slate-400">Capacidad</span>
-                                    <span className="text-slate-600">{getCapacityCount(group)}/{group.maxCapacity} · {pct}%</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                    <div className={`h-full rounded-full transition-all duration-500 ${getCapacityColor(pct)}`} style={{ width: `${pct}%` }} />
+                                <div className="mt-3">
+                                    <div className="flex justify-between text-[9px] uppercase font-black mb-1">
+                                        <span className="text-slate-400">Capacidad</span>
+                                        <span className="text-slate-600">{getCapacityCount(group)}/{group.maxCapacity} · {pct}%</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                        <div className={`h-full rounded-full transition-all duration-500 ${getCapacityColor(pct)}`} style={{ width: `${pct}%` }} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -230,7 +238,7 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                                 return (
                                     <tr
                                         key={group.id}
-                                        className={`transition-colors hover:bg-slate-50/80 ${isPending ? 'bg-amber-50/30' : 'bg-white'}`}
+                                        className={`transition-colors hover:bg-slate-50/80 ${isPending ? 'bg-amber-50/30' : 'bg-white'} ${group.isHidden ? 'grayscale opacity-60' : ''}`}
                                     >
                                         {/* Estado */}
                                         <td className="px-4 py-3 align-middle">
@@ -319,6 +327,13 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                                                     title={group.capacityLocked ? 'Desbloquear cupos' : 'Bloquear cupos (mostrar como LLENO)'}
                                                 >
                                                     {group.capacityLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                                                </button>
+                                                <button
+                                                    onClick={() => onToggleVisibility(group)}
+                                                    className={`p-1.5 rounded-lg transition-colors border ${group.isHidden ? 'text-white bg-neutral-600 border-neutral-600 hover:bg-neutral-500' : 'text-slate-600 bg-slate-50 hover:bg-slate-100 border-slate-200'}`}
+                                                    title={group.isHidden ? 'Mostrar en /gcx' : 'Ocultar de /gcx'}
+                                                >
+                                                    {group.isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                                                 </button>
                                                 <button
                                                     onClick={() => onEdit(group)}

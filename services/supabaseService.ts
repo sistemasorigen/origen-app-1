@@ -165,6 +165,19 @@ export async function toggleGroupCapacityLock(groupId: string, locked: boolean):
   return true;
 }
 
+// Toggle group visibility on /gcx (admin roles only)
+export async function toggleGroupVisibility(groupId: string, hidden: boolean): Promise<boolean> {
+  const { error } = await supabase.rpc('toggle_group_visibility', {
+    p_group_id: groupId,
+    p_hidden: hidden
+  });
+  if (error) {
+    console.error('[toggleGroupVisibility] Error:', error);
+    return false;
+  }
+  return true;
+}
+
 // Delete group - Uses RPC to bypass RLS and cascade delete
 export async function deleteGroupDirect(id: string): Promise<boolean> {
 
@@ -200,6 +213,7 @@ function transformDbRowToGroup(data: any): Group {
     membersCount: data.members_count || 0,
     maxCapacity: data.max_capacity || 12,
     capacityLocked: data.capacity_locked || false,
+    isHidden: data.is_hidden || false,
     description: data.description || '',
     imageUrl: data.image_url || '',
     categoryId: data.category_id || '',
@@ -1473,6 +1487,7 @@ export const supabaseService = {
       membersCount: row.members_count || 0,
       maxCapacity: row.max_capacity || 12,
       capacityLocked: row.capacity_locked || false,
+      isHidden: row.is_hidden || false,
       description: row.description || '',
       imageUrl: row.image_url || '',
       categoryId: row.category_id || '',

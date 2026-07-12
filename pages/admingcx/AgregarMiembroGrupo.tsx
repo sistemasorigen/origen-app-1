@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Group, GroupCategory } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
-import { UserPlus, Search, CheckCircle, AlertCircle, Loader2, Heart } from 'lucide-react';
+import { UserPlus, Search, CheckCircle, AlertCircle, Loader2, Heart, X } from 'lucide-react';
 
 const AgregarMiembroGrupoContent: React.FC = () => {
     const navigate = useNavigate();
@@ -14,6 +14,9 @@ const AgregarMiembroGrupoContent: React.FC = () => {
     const [loadingData, setLoadingData] = useState(true);
 
     const [selectedGroupId, setSelectedGroupId] = useState('');
+    const [groupSearchTerm, setGroupSearchTerm] = useState('');
+    const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
+    const groupDropdownRef = useRef<HTMLDivElement>(null);
     const [email, setEmail] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -43,8 +46,27 @@ const AgregarMiembroGrupoContent: React.FC = () => {
         });
     }, []);
 
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (groupDropdownRef.current && !groupDropdownRef.current.contains(e.target as Node)) {
+                setIsGroupDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
+
+    const isGroupFinished = (group: Group) => {
+        if (!group.endDate) return false;
+        const today = new Date().toISOString().split('T')[0];
+        return group.endDate < today;
+    };
+
+    const activeGroups = groups.filter(g => g.status === 'approved' && !isGroupFinished(g));
+    const filteredGroups = activeGroups.filter(g => g.name.toLowerCase().includes(groupSearchTerm.toLowerCase().trim()));
+    const selectedGroup = groups.find(g => g.id === selectedGroupId);
+
     const isCouplesGroup = (): boolean => {
-        const selectedGroup = groups.find(g => g.id === selectedGroupId);
         if (!selectedGroup) return false;
         const cat = categories.find(c => c.id === selectedGroup.categoryId);
         const categoryName = cat?.name?.toLowerCase() || '';
@@ -149,20 +171,72 @@ const AgregarMiembroGrupoContent: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="space-y-6">
 
-                {/* GROUP SELECTOR */}
-                <div>
+                {/* GROUP SELECTOR — buscador en tiempo real, solo grupos activos */}
+                <div className="relative" ref={groupDropdownRef}>
                     <label className="text-xs font-black uppercase tracking-widest block mb-1">Grupo de Conexión</label>
-                    <select
-                        value={selectedGroupId}
-                        onChange={e => setSelectedGroupId(e.target.value)}
-                        className="w-full p-4 border-2 border-black font-bold outline-none bg-white appearance-none"
-                        required
-                    >
-                        <option value="">-- Seleccionar Grupo --</option>
-                        {groups.map(g => (
-                            <option key={g.id} value={g.id}>{g.name}</option>
-                        ))}
-                    </select>
+
+                    {selectedGroup ? (
+                        <div className="flex items-center justify-between p-4 border-2 border-green-600 bg-green-50 font-bold">
+                            <span className="flex items-center gap-3 min-w-0">
+                                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                                <span className="min-w-0">
+                                    <span className="block text-sm font-black text-neutral-900 truncate">{selectedGroup.name}</span>
+                                    <span className="block text-[11px] font-bold uppercase tracking-wide text-green-700/80 truncate">
+                                        Anfitrión: {selectedGroup.leaderName} {selectedGroup.leaderSurname}
+                                    </span>
+                                </span>
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => { setSelectedGroupId(''); setGroupSearchTerm(''); setIsGroupDropdownOpen(true); }}
+                                className="text-neutral-400 hover:text-black transition-colors shrink-0"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                            <input
+                                type="text"
+                                value={groupSearchTerm}
+                                onFocus={() => setIsGroupDropdownOpen(true)}
+                                onChange={e => {
+                                    setGroupSearchTerm(e.target.value);
+                                    setIsGroupDropdownOpen(true);
+                                }}
+                                placeholder="Buscar grupo por nombre..."
+                                className="w-full pl-11 p-4 border-2 border-black bg-white font-bold outline-none"
+                            />
+                        </div>
+                    )}
+
+                    {!selectedGroup && isGroupDropdownOpen && (
+                        <div className="absolute top-full left-0 w-full bg-white border-2 border-black mt-1 max-h-64 overflow-y-auto z-50">
+                            {filteredGroups.length > 0 ? (
+                                filteredGroups.map(g => (
+                                    <div
+                                        key={g.id}
+                                        onClick={() => {
+                                            setSelectedGroupId(g.id);
+                                            setGroupSearchTerm('');
+                                            setIsGroupDropdownOpen(false);
+                                        }}
+                                        className="p-3 hover:bg-neutral-100 cursor-pointer border-b border-neutral-100 last:border-0"
+                                    >
+                                        <p className="font-bold text-sm text-neutral-900">{g.name}</p>
+                                        <p className="text-[11px] text-neutral-400 font-medium mt-0.5">
+                                            Anfitrión: {g.leaderName} {g.leaderSurname}
+                                        </p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-3 text-center text-xs text-neutral-400 font-bold uppercase">
+                                    {groupSearchTerm.trim() ? `Sin resultados para "${groupSearchTerm}"` : 'No hay grupos activos'}
+                                </div>
+                            )}
+                        </div>
+                    )}
                     {couplesMode && (
                         <p className="text-[10px] text-pink-600 font-bold mt-1 uppercase flex items-center gap-1 border border-pink-200 bg-pink-50 p-1 inline-block">
                             <Heart className="w-3 h-3" /> Grupo de Parejas

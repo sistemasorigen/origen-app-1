@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { db } from '../../services/dbService';
-import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock } from '../../services/supabaseService';
+import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, CalendarDays, Lock } from 'lucide-react';
@@ -658,6 +658,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const isSuperAdmin = currentUser ? hasRole(currentUser, UserRole.SUPER_ADMIN) : false;
     const isGroupsAdmin = currentUser ? hasRole(currentUser, UserRole.ADMIN_GROUPS) : false;
     const isEncargadoGroups = currentUser ? hasRole(currentUser, UserRole.ENCARGADO_GRUPOS) : false;
+    const canSeeHiddenGroups = isSuperAdmin || isGroupsAdmin || isEncargadoGroups;
     const hasGroupsPrivilege = currentUser?.linkedGroupId === 'GROUPS' || (currentUser?.volunteerRoles && currentUser.volunteerRoles.includes('GROUPS'));
     const isAnfitrion = currentUser ? (hasRole(currentUser, UserRole.ANFITRION)) : false;
     const canAccessAdmin = isSuperAdmin || isGroupsAdmin || hasGroupsPrivilege || isEncargadoGroups;
@@ -927,6 +928,9 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         // 1. Public View: Hide expired groups
         if (view === 'public' && isExpired) return false;
 
+        // 2. Hide groups marked as hidden, unless the user is an admin who can see them
+        if (g.isHidden && !canSeeHiddenGroups) return false;
+
         const matchesSearch = g.name.toLowerCase().includes(searchTerm.toLowerCase()) || g.location.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'ALL' || g.categoryId === selectedCategory;
         const matchesTag = selectedTag === 'ALL' || (g.tags && g.tags.includes(selectedTag));
@@ -1117,6 +1121,18 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
             showToast(nuevoEstado ? 'Cupos bloqueados — el grupo se muestra como LLENO' : 'Cupos desbloqueados');
         } else {
             showToast('Error al cambiar el bloqueo de cupos', 'error');
+        }
+    };
+
+    const handleToggleVisibility = async (group: Group) => {
+        const nuevoEstado = !group.isHidden;
+        const ok = await toggleGroupVisibility(group.id, nuevoEstado);
+        if (ok) {
+            fetchGroups();
+            fetchAdminGroups();
+            showToast(nuevoEstado ? 'Grupo oculto de /gcx' : 'Grupo visible nuevamente');
+        } else {
+            showToast('Error al cambiar la visibilidad del grupo', 'error');
         }
     };
 
@@ -1681,6 +1697,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         onEdit={openEditModal}
                                         onDelete={handleDeleteGroup}
                                         onToggleCapacityLock={handleToggleCapacityLock}
+                                        onToggleVisibility={handleToggleVisibility}
                                         openMenuGroupId={openMenuGroupId}
                                         setOpenMenuGroupId={setOpenMenuGroupId}
                                         isLoading={isLoading}

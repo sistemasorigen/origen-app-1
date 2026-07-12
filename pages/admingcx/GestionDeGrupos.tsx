@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Group, GroupCategory, GroupTag } from '../../types';
-import { supabaseService, deleteGroupDirect, toggleGroupCapacityLock } from '../../services/supabaseService';
+import { supabaseService, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 
 import GroupsAdminToolbar from '../../components/GCX/BarraHerramientasGruposAdmin';
@@ -148,6 +148,17 @@ const GestionDeGruposContent: React.FC = () => {
         }
     };
 
+    const handleToggleVisibility = async (group: Group) => {
+        const nuevoEstado = !group.isHidden;
+        const ok = await toggleGroupVisibility(group.id, nuevoEstado);
+        if (ok) {
+            fetchAdminGroups();
+            showToast(nuevoEstado ? 'Grupo oculto de /gcx' : 'Grupo visible nuevamente');
+        } else {
+            showToast('Error al cambiar la visibilidad del grupo', 'error');
+        }
+    };
+
     return (
         <>
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -184,6 +195,7 @@ const GestionDeGruposContent: React.FC = () => {
                         onEdit={(group) => navigate(`/admingcx/gestion-de-grupos/editar-grupo/${group.id}`)}
                         onDelete={handleDeleteGroup}
                         onToggleCapacityLock={handleToggleCapacityLock}
+                        onToggleVisibility={handleToggleVisibility}
                         openMenuGroupId={openMenuGroupId}
                         setOpenMenuGroupId={setOpenMenuGroupId}
                         isLoading={isLoading}

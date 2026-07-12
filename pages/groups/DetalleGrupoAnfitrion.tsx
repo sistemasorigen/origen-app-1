@@ -1,13 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { User, Group, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
+import { User, Group, GroupCategory, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { supabaseService, toggleGroupCapacityLock } from '../../services/supabaseService';
 import {
-    ArrowLeft, Calendar, MapPin, Edit2, Inbox, ClipboardList,
+    ArrowLeft, ArrowRight, Calendar, MapPin, Edit2, Inbox, ClipboardList,
     RotateCcw, UserMinus, UserPlus, Check, Link, ArrowLeftRight, Lock, Unlock,
-    Loader2, ImageIcon
+    Loader2, ImageIcon, QrCode
 } from 'lucide-react';
 import NeoModal from '../../components/ui/NeoModal';
+import { QRCodeSVG } from 'qrcode.react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Lucide no incluye logos de marca — se embebe el
+// glifo real de WhatsApp como SVG inline (currentColor).
+const WhatsAppLogo: React.FC<{ className?: string }> = ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.993c-.003 5.45-4.437 9.885-9.885 9.885M20.52 3.449C18.24 1.245 15.24 0 12.05 0 5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.423-8.452" />
+    </svg>
+);
 
 // Cuenta personas reales, no filas de registro
 // (una pareja = 2 personas)
@@ -76,6 +86,10 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     const [successModalMessage, setSuccessModalMessage] = useState('');
     const [descripcionExpandida, setDescripcionExpandida] = useState(false);
 
+    // Categorías — usadas para tintar el QR con el color de la categoría del grupo
+    const [categories, setCategories] = useState<GroupCategory[]>([]);
+    const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+
     const fetchGroup = useCallback(async () => {
         if (!currentUser || !groupId) return;
         setLoading(true);
@@ -102,13 +116,23 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
         });
     }, []);
 
-    // ── Handlers — copiados de PanelAnfitrion.tsx ──
-    const handleCopyGroupLink = () => {
-        if (!group) return;
+    useEffect(() => {
+        supabaseService.getGroupCategories().then(setCategories);
+    }, []);
+
+    // URL compartida — usada tanto por "Compartir" como
+    // por el QR. Una sola fuente de verdad.
+    const buildGroupShareUrl = (groupId: string): string => {
         const origin = window.location.hostname.includes('localhost') || window.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/)
             ? 'https://app.origeniglesia.org'
             : window.location.origin;
-        const url = `${origin}/#/gcx?groupId=${group.id}`;
+        return `${origin}/#/gcx?groupId=${groupId}`;
+    };
+
+    // ── Handlers — copiados de PanelAnfitrion.tsx ──
+    const handleCopyGroupLink = () => {
+        if (!group) return;
+        const url = buildGroupShareUrl(group.id);
 
         const fallbackCopy = () => {
             const textArea = document.createElement("textarea");
@@ -138,6 +162,15 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
         } else {
             fallbackCopy();
         }
+    };
+
+    const handleShareWhatsapp = () => {
+        if (!group) return;
+        const url = buildGroupShareUrl(group.id);
+        const message = `¡Te invito a sumarte a nuestro grupo de conexión "${group.name}"! Anotate acá: ${url}`;
+        // Sin número de teléfono: abre el selector de
+        // contactos de WhatsApp para elegir a quién enviarlo.
+        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
     };
 
     const handleToggleCapacityLock = async () => {
@@ -171,6 +204,7 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     const capacityPct = maxCap > 0 ? Math.min(100, Math.round((approved / maxCap) * 100)) : 0;
     const pendingCount = (group.registrations || []).filter((r: any) => r.status === 'PENDING').length;
     const showActionBar = isApproved || isRejected || isFinished;
+    const categoryColor = categories.find(c => c.id === group.categoryId)?.color || '#64748b';
 
     // ── Vocabulario de botones (una sola escala, no un arcoíris) ──
     const primaryBtn = "group/attn relative flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 min-h-[52px] rounded-xl bg-[#118f46] text-white text-sm font-black uppercase tracking-wide border-2 border-[#0d7036] shadow-[4px_4px_0px_0px_#0a3d20] hover:bg-[#0d7036] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#118f46]/30";
@@ -346,10 +380,9 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                                             </span>
                                         )}
                                     </button>
-                                    <button onClick={handleCopyGroupLink} className={secondaryBtn}>
-                                        {copiedLink
-                                            ? <><Check className="w-4 h-4 text-[#28a946]" /> <span className="text-[#28a946]">¡Copiado!</span></>
-                                            : <><Link className="w-4 h-4" /> Compartir</>}
+                                    <button onClick={() => setIsQrModalOpen(true)} className={secondaryBtn}>
+                                        <QrCode className="w-4 h-4" />
+                                        Compartir grupo
                                     </button>
                                     <button onClick={() => navigate(`/mis-grupos/${group.id}/inscribir`)} className={secondaryBtn}>
                                         <UserPlus className="w-4 h-4" />
@@ -495,6 +528,67 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                         className="mt-4 w-full py-4 bg-[#118f46] text-white font-black uppercase tracking-widest rounded-xl hover:bg-[#0d7036] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1"
                     >
                         Entendido
+                    </button>
+                </div>
+            </NeoModal>
+
+            {/* Modal de QR — color según categoría del grupo */}
+            <NeoModal
+                isOpen={isQrModalOpen}
+                onClose={() => setIsQrModalOpen(false)}
+                maxWidth="max-w-sm"
+            >
+                <div className="flex flex-col items-center text-center px-2 py-2">
+                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">
+                        Grupo de Conexión
+                    </p>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-6 px-4">
+                        {group?.name}
+                    </h3>
+
+                    <AnimatePresence>
+                        {isQrModalOpen && (
+                            <motion.div
+                                initial={{ scale: 0.85, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                                className="p-5 rounded-2xl mb-6 border-2"
+                                style={{ backgroundColor: `${categoryColor}0d`, borderColor: categoryColor }}
+                            >
+                                <div className="p-4 bg-white rounded-xl">
+                                    {group && (
+                                        <QRCodeSVG
+                                            value={buildGroupShareUrl(group.id)}
+                                            size={200}
+                                            fgColor="#0f172a"
+                                            bgColor="#FFFFFF"
+                                            level="M"
+                                        />
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <button
+                        onClick={handleCopyGroupLink}
+                        className="flex items-center justify-center gap-2 w-full min-h-[48px] px-4 rounded-xl bg-[#118f46] text-white text-xs font-black uppercase tracking-wide hover:bg-[#0d7036] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#118f46]/30"
+                    >
+                        {copiedLink
+                            ? <><Check className="w-4 h-4" /> ¡Copiado!</>
+                            : <><Link className="w-4 h-4" /> Compartir enlace</>
+                        }
+                    </button>
+
+                    <button
+                        onClick={handleShareWhatsapp}
+                        className="flex items-center justify-center gap-2 w-full min-h-[48px] px-4 rounded-xl border-2 border-[#25D366] text-[#25D366] text-xs font-black uppercase tracking-wide hover:bg-[#25D366]/10 transition-all mt-3 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#25D366]/30"
+                    >
+                        <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0">
+                            <WhatsAppLogo className="w-4 h-4" />
+                            <ArrowRight className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 text-white bg-[#25D366] rounded-full" strokeWidth={3} />
+                        </span>
+                        Compartir por WhatsApp
                     </button>
                 </div>
             </NeoModal>

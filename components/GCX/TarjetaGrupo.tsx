@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, MapPin, Users, ArrowRight, CheckCircle2, Lock, ChevronDown, ChevronUp, Link, Check } from 'lucide-react';
+import { Clock, MapPin, Users, ArrowRight, CheckCircle2, Lock, ChevronDown, ChevronUp, Link, Check, EyeOff } from 'lucide-react';
 import { Group, GroupTag, GroupCategory, User as AppUser, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 
@@ -77,6 +77,12 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
     const isFinished = endDate ? now > endDate : false;
     const isFull = group.membersCount >= group.maxCapacity;
     const isCapacityLocked = !!group.capacityLocked;
+    const isHiddenGroup = !!group.isHidden;
+    const canSeeHidden = hasRole(currentUser || null, [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN_GROUPS,
+        UserRole.ENCARGADO_GRUPOS,
+    ]);
 
     let status: 'AVAILABLE' | 'FULL' | 'IN_PROGRESS' | 'FINISHED' = 'AVAILABLE';
     if (isFinished) status = 'FINISHED';
@@ -187,7 +193,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
     return (
         <div
             id={id}
-            className="group/card relative bg-white dark:bg-neutral-900 rounded-lg shadow-xl shadow-black/5 dark:shadow-black/30 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer flex flex-col"
+            className={`group/card relative bg-white dark:bg-neutral-900 rounded-lg shadow-xl shadow-black/5 dark:shadow-black/30 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer flex flex-col ${isHiddenGroup && canSeeHidden ? 'grayscale opacity-60' : ''}`}
             onClick={handleAction}
         >
             {/* ── HERO IMAGE ── */}
@@ -219,6 +225,12 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                         <span className="bg-neutral-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-full tracking-wider shadow-lg flex items-center gap-1.5">
                             <Lock className="w-3 h-3" />
                             LLENO
+                        </span>
+                    )}
+                    {isHiddenGroup && canSeeHidden && (
+                        <span className="bg-neutral-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-full tracking-wider shadow-lg flex items-center gap-1.5">
+                            <EyeOff className="w-3 h-3" />
+                            OCULTO
                         </span>
                     )}
                 </div>

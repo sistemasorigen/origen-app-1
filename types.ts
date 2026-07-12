@@ -538,6 +538,7 @@ export interface Group {
     membersCount: number;
     maxCapacity: number;
     capacityLocked?: boolean; // Bloqueo manual: fuerza estado "LLENO" sin importar el cupo numérico
+    isHidden?: boolean; // Oculta el grupo de /gcx excepto para SUPER_ADMIN, ADMIN_GROUPS y ENCARGADO_GRUPOS
     description?: string;
     imageUrl?: string;
     registrations: GroupRegistration[];
