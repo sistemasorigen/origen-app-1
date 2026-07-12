@@ -128,7 +128,14 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                     return (
                         <div key={group.id} className={`bg-white border rounded-xl p-4 shadow-sm relative transition-all ${group.status === 'pending' || !group.status ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200'}`}>
                             <div className="flex items-start justify-between mb-3">
-                                {getStatusBadge(group.status, group)}
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    {getStatusBadge(group.status, group)}
+                                    {group.isHidden && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-neutral-100 text-neutral-500 border border-neutral-300 tracking-wide">
+                                            <EyeOff className="w-2.5 h-2.5" /> Oculto por un administrador
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="relative flex items-center gap-1">
                                     <button
                                         onClick={() => navigate(`/admingcx/gestion-de-grupos/detalles/${group.id}`)}
@@ -242,7 +249,14 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                                     >
                                         {/* Estado */}
                                         <td className="px-4 py-3 align-middle">
-                                            {getStatusBadge(group.status, group)}
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                {getStatusBadge(group.status, group)}
+                                                {group.isHidden && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-neutral-100 text-neutral-500 border border-neutral-300 tracking-wide">
+                                                        <EyeOff className="w-2.5 h-2.5" /> Oculto por un administrador
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
 
                                         {/* Grupo */}
