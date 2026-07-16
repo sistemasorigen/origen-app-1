@@ -1,5 +1,5 @@
 # 🛸 Origen App — IA Instructions & Style Guide
-> Versión 3.0 · Obligatorio leer antes de cualquier intervención
+> Versión 5.0 · Obligatorio leer antes de cualquier intervención
 
 Este archivo es la **memoria central y autoridad arquitectónica** del proyecto.
 Todo agente de IA que trabaje en este repositorio debe leerlo completo antes
@@ -154,14 +154,18 @@ Redirigen a `/auth` con `state.from` si no hay sesión activa.
 | `/audiencia-servicios/new` | Formulario Pastoral | SUPER_ADMIN, PASTOR, ADMIN_CUIDADO_PASTORAL |
 | `/notificaciones` | Notificaciones | Todos (autenticados) |
 | `/perfil` | Perfil Personal | Todos (autenticados) |
-<<<<<<< HEAD
-=======
 | `/prode` | Prode Mundial | Solo gender='Masculino' |
 | `/prode/ranking` | Ranking Prode | Solo gender='Masculino' |
 | `/prode/resultados` | Resultados + Predicciones | Solo gender='Masculino' |
 | `/prode/administracion` | Admin Prode | SUPER_ADMIN, PASTOR, PRODE |
 | `/gcx/calendario` | Calendario GCX | Autenticados con grupos |
->>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
+| `/admingcx/*` (13 rutas) | Admin GCX | SUPER_ADMIN, ADMIN_GROUPS (+ ENCARGADO_GRUPOS en 7 de las 13) — ver sección 21 |
+| `/mis-grupos/*` (10 rutas) | Panel Anfitrión | SUPER_ADMIN, ADMIN_GROUPS, ANFITRION, CO_ANFITRION — ver sección 22 |
+| `/trivia/*` (públicas) | Trivia Origen (jugador/proyector) | Sin guard — ver sección 20 |
+| `/trivia/admin`, `/trivia/admin/nuevo`, `/trivia/admin/:id`, `/trivia/historial`, `/trivia/historial/:id` | Trivia Origen (admin) | SUPER_ADMIN, PASTOR, ENCARGADO_EVENTOS — ver sección 20 |
+| `/panel-eventos` | Panel de Eventos | SUPER_ADMIN, PASTOR, ENCARGADO_EVENTOS |
+| `/eventos` | Eventos (landing) | Autenticados, sin guard de rol |
+| `/eventos/admin/diadelpadre`, `/eventos/puntuacion`, `/eventos/futboltenis`, `/eventos/dpadre/:id` | Módulo Día del Padre | SUPER_ADMIN, PASTOR, ENCARGADO_EVENTOS (+ EVENTOS en 3 de las 4) |
 
 ---
 
@@ -175,14 +179,23 @@ enum UserRole {
     ENCARGADO_PUNTO, ENCARGADO_GRUPOS, ENCARGADO_STORE,
     ENCARGADO_ALABANZA, ENCARGADO_BIENVENIDA,
     VOLUNTARIO, VOLUNTARIO_INFO, VOLUNTARIO_GRUPOS, VOLUNTARIO_BIENVENIDA,
-    COORDINATOR,        // Usa coordinatorVariant para su especialidad
+    COORDINATOR,        // Usa coordinatorVariants (array) — ver sección 25
     ADMIN_CUIDADO_PASTORAL,
     INFLUOS,            // Módulo gestión de menores
     REPORTES,
     PRODE,              // Administración del Prode Mundial
+    EVENTOS, ENCARGADO_EVENTOS,  // Módulo Eventos + Trivia Origen — ver secciones 20 y 25
     USUARIO, VIEWER, VOLUNTEER  // Roles básicos / legacy
 }
 ```
+
+**⚠️ Desincronización conocida con el enum de Postgres (`user_role`):**
+`ADMIN_CUIDADO_PASTORAL` y `PRODE` existen en este enum de
+TypeScript pero **todavía no** en el enum `user_role` de la base de
+datos real — escribir esos valores en la columna `users.role`
+(singular, tipada) falla hasta correr un `ALTER TYPE ... ADD VALUE`
+manual. Ver sección 25 para el detalle y el patrón ya usado con
+`EVENTOS`/`ENCARGADO_EVENTOS` (`sql/fix_user_role_enum_eventos.sql`).
 
 Para verificar permisos usar siempre `hasRole()` de `services/authUtils.ts`:
 ```typescript
@@ -276,30 +289,6 @@ import ImageUpload from '../../components/media/SubidaImagen';
 import AvatarUpload from '../../components/media/SubidaAvatar';
 ```
 
-<<<<<<< HEAD
-=======
-### 7.7 MenuDeslizable — patrones extendidos
-
-La interfaz `SubMenuItem` soporta dos campos nuevos:
-
-```typescript
-interface SubMenuItem {
-    label: string;
-    path?: string;          // opcional: separadores no tienen path
-    roles?: UserRole[];
-    separator?: boolean;    // si true: etiqueta gris no clickeable
-}
-```
-
-Los **separadores** se usan para organizar secciones
-dentro de un grupo de sub-items (ej: GCX tiene
-separadores "Coordinación" y "Administración").
-
-La interfaz `MenuItem` soporta `requiresAuth?: boolean`
-para ocultar ítems a usuarios sin sesión aunque
-`roles: []` los haga visibles a todos los autenticados.
-
->>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
 ### 7.6 Páginas con modo público
 `Home (/)` y `Grupos (/gcx)` son accesibles sin login. `currentUser` puede
 ser `null` en estos componentes. Reglas:
@@ -329,6 +318,27 @@ const handleJoinClick = (g: Group) => {
     // ... lógica con usuario autenticado
 };
 ```
+
+### 7.7 MenuDeslizable — patrones extendidos
+
+La interfaz `SubMenuItem` soporta dos campos nuevos:
+
+```typescript
+interface SubMenuItem {
+    label: string;
+    path?: string;          // opcional: separadores no tienen path
+    roles?: UserRole[];
+    separator?: boolean;    // si true: etiqueta gris no clickeable
+}
+```
+
+Los **separadores** se usan para organizar secciones
+dentro de un grupo de sub-items (ej: GCX tiene
+separadores "Coordinación" y "Administración").
+
+La interfaz `MenuItem` soporta `requiresAuth?: boolean`
+para ocultar ítems a usuarios sin sesión aunque
+`roles: []` los haga visibles a todos los autenticados.
 
 ---
 
@@ -456,6 +466,19 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `prode_participants` | Prode | Participantes del prode (con o sin cuenta). Acumula total_points |
 | `prode_predictions` | Prode | Predicciones por participante por partido. points_earned null hasta que haya resultado |
 | `prode_sync_log` | Prode | Auditoría de sincronizaciones automáticas con API externa |
+| `trivia_juegos` | Trivia | Partidas/plantillas. Columnas: `pin`, `estado`, `pregunta_actual_idx`, `timer_pausado`, `started_at`, `finished_at`, `is_template` |
+| `trivia_preguntas` | Trivia | Preguntas por juego. `juego_id`, `orden`, `texto`, `tiempo_limite`, `es_doble_puntos` |
+| `trivia_opciones` | Trivia | Opciones por pregunta. `pregunta_id`, `texto`, `es_correcta`, `color`, `orden` |
+| `trivia_jugadores` | Trivia | Jugadores por partida. `juego_id`, `nickname`, `avatar_emoji`, `puntaje_total`, `racha_actual`, `max_racha` |
+| `trivia_respuestas` | Trivia | Respuestas registradas. `jugador_id`, `pregunta_id`, `opcion_id`, `tiempo_respuesta_ms`, `puntos_ganados` |
+| `trivia_estado_pregunta` | Trivia | Estado en vivo de cada pregunta. `juego_id`, `pregunta_id`, `estado`, `total_respuestas` |
+
+**Columnas nuevas en tablas existentes (v5.0):**
+- `groups.capacity_locked` (bool, default `false`) — bloqueo manual de cupo, ver sección 24
+- `groups.is_hidden` (bool, default `false`) — ocultar de `/gcx`, ver sección 24
+- `groups.co_host_id` (uuid) — co-anfitrión del grupo
+- `users.coordinator_variants` (`text[]`, NOT NULL) — multi-rol de coordinador, ver sección 25 (convive con `users.coordinator_variant` legacy singular)
+- `users.roles` (`text[]`) — array de roles, convive con `users.role` (singular, enum `user_role`)
 
 **Todas las tablas tienen RLS habilitado.** Al crear tablas nuevas siempre
 agregar policies correspondientes. Ver Sección 17 para tablas con acceso `anon`.
@@ -601,14 +624,6 @@ currentUser ? hasRole(currentUser, [...]) : false  // ✅
 
 ---
 
-<<<<<<< HEAD
-*Última actualización: Mayo 2026 — Versión 3.0*
-*Cambios v3.0: rutas corregidas al naming real del repo (zona 1/2/3),
- arquitectura de acceso público documentada (sección 17),
- patrón público agregado (sección 7.6), tablas actualizadas (group_categories,
- group_tags, group_attendance, columnas de welcome_visitors e influos_attendees),
- color GCX corregido a `#28a946`, checklist ampliado con regla de optional chaining*
-=======
 ---
 
 ## 18. MÓDULO PRODE MUNDIAL 2026
@@ -722,7 +737,524 @@ debajo del filtro de etiquetas en `/gcx`.
 
 ---
 
-*Última actualización: Junio 2026 — Versión 4.0*
+## 20. TRIVIA ORIGEN (clon de Kahoot)
+
+### Acceso y rutas
+
+Públicas, sin guard de roles (comentario en el código:
+`{/* Kahoot Origen — rutas públicas de jugadores y proyector */}`):
+
+| Ruta | Componente | Uso |
+|---|---|---|
+| `/trivia` | `TriviaLanding` | Landing: input de PIN de 6 dígitos |
+| `/trivia/unirse/:pin` | `TriviaUnirse` | Registro de nickname + avatar emoji |
+| `/trivia/jugar/:pin` | `TriviaJugador` | Vista del jugador en el celular |
+| `/trivia/pantalla/:pin` | `TriviaProyector` | Pantalla/proyector para TV (QR, preguntas, podio) |
+
+Protegidas — todas con el mismo guard
+`[SUPER_ADMIN, PASTOR, ENCARGADO_EVENTOS]`:
+
+| Ruta | Componente | Uso |
+|---|---|---|
+| `/trivia/admin` | `AdminTrivia` | Listado de plantillas, crear sala, eliminar |
+| `/trivia/admin/nuevo` | `CrearJuego` | Editor de preguntas/opciones/tiempo/imagen |
+| `/trivia/admin/:id` | `TriviaControl` | Control en vivo (iniciar, avanzar, pausar, saltar) |
+| `/trivia/historial` | `TriviaHistorial` | Listado histórico de partidas jugadas |
+| `/trivia/historial/:id` | `TriviaPlanilla` | Detalle/edición manual de una partida finalizada |
+
+### Tablas de Supabase (6 tablas `trivia_*`)
+
+| Tabla | Columnas clave |
+|---|---|
+| `trivia_juegos` | `pin`, `estado` (default `'esperando'`), `pregunta_actual_idx` (default `-1`), `timer_pausado` (bool), `started_at`, `finished_at`, `is_template` (bool) |
+| `trivia_preguntas` | `juego_id`, `orden`, `texto`, `imagen_url`, `tiempo_limite` (default `20`), `es_doble_puntos` (bool) |
+| `trivia_opciones` | `pregunta_id`, `texto`, `es_correcta` (bool), `color`, `orden` |
+| `trivia_jugadores` | `juego_id`, `nickname`, `avatar_emoji`, `puntaje_total`, `racha_actual`, `max_racha` |
+| `trivia_respuestas` | `jugador_id`, `pregunta_id`, `opcion_id`, `tiempo_respuesta_ms`, `puntos_ganados`, `es_correcta` |
+| `trivia_estado_pregunta` | `juego_id`, `pregunta_id`, `estado`, `total_respuestas` |
+
+Enums en `types.ts`:
+```typescript
+export type TriviaColor = 'rojo' | 'azul' | 'amarillo' | 'verde' | 'naranja' | 'violeta';
+export type TriviaEstadoJuego = 'esperando' | 'en_curso' | 'entre_preguntas' | 'finalizando' | 'finalizado';
+export type TriviaEstadoPregunta = 'esperando' | 'abierta' | 'cerrada' | 'revelada';
+```
+
+// TODO: confirmar políticas RLS de las tablas `trivia_*`
+(no se auditaron en este pase, solo `information_schema.columns`).
+No existe un `.sql` de migración versionado en `sql/` para estas
+tablas — el schema real solo se pudo confirmar contra la DB viva.
+
+### Funciones en `supabaseService.ts` (bloque `// TRIVIA ORIGEN`)
+
+`crearTriviaJuego`, `getTriviaJuegos`, `getTriviaJuego`,
+`getTriviaJuegoPorPin`, `guardarTriviaPreguntas`,
+`eliminarTriviaPreguntas`, `subirImagenTrivia`, `unirseTrivia`,
+`getTriviaRanking`, `responderTrivia`, `avanzarTriviaJuego`,
+`setTriviaPreguntaEstado`, `setTriviaTimerPausado`,
+`saltarSiguientePregunta`, `clonarTriviaJuego`,
+`reiniciarTriviaJuego` (alias de `clonarTriviaJuego`),
+`getTriviaRespuestaJugador`, `eliminarTriviaJuego`,
+`renombrarTriviaJuego`, `editarTriviaJugador`,
+`eliminarTriviaJugador`.
+
+### Sincronización de cronómetro — patrón híbrido
+
+**NO** es un `setInterval` puramente local. La cuenta regresiva
+inicial (3-2-1 antes de cada pregunta) se resincroniza contra un
+timestamp absoluto del servidor (`started_at`), comparado con
+`Date.now()`, para que un cliente que se conecta tarde o refresca
+la página calcule cuántos segundos ya pasaron en vez de arrancar
+siempre desde 3:
+
+```typescript
+// TriviaJugador.tsx / TriviaProyector.tsx (patrón idéntico)
+const DURACION_MS = 3000;
+const elapsed = startedAtIso
+    ? Math.max(0, Date.now() - new Date(startedAtIso).getTime())
+    : 0;
+if (elapsed >= DURACION_MS) { cargarPregunta(juegoData, idx); return; }
+const remainingMs = DURACION_MS - elapsed;
+```
+
+**Por qué:** evita el desfase típico entre dispositivos con
+`setInterval` sin ancla — dos celulares que se conectan en
+momentos distintos igual convergen en el mismo instante real de
+inicio de pregunta. El tick visual del contador de cada pregunta
+(los N segundos de `tiempoLimite`) sí usa un `setInterval` local
+de 1000ms una vez ya sincronizado el arranque. El anti-trampa real
+de puntaje no depende del display: se mide
+`tiempoRespuestaMs = Date.now() - tiempoInicioPregunta` y se
+valida server-side contra `tiempo_limite`.
+
+### Estética "Electric Communion"
+
+Fondo `#1A0A2E` (morado oscuro casi negro) + colores neón por
+opción (`TRIVIA_COLORES` en `types.ts`: rojo `#FF3B5C`, azul
+`#4B8BFF`, amarillo `#FFD700`, verde `#46D483`, naranja `#FF8C00`,
+violeta `#9B59B6`, con íconos de forma `▲ ◆ ● ■ ★ ♥`). Usado
+**exclusivamente** en las pantallas de juego en vivo (`TriviaLanding`,
+`TriviaUnirse`, `TriviaJugador`, `TriviaProyector`) — el panel admin
+(`AdminTrivia`, `CrearJuego`, `TriviaControl`, `TriviaHistorial`,
+`TriviaPlanilla`) usa la estética neo-brutalist clara estándar del
+resto de la app (sección 8). No mezclar ambos sistemas visuales.
+
+### Sistema de puntos
+
+```typescript
+// responderTrivia en supabaseService.ts
+const tiempoRestante = Math.max(0, tiempoLimiteMs - tiempoRespuestaMs);
+const ratio = tiempoRestante / tiempoLimiteMs;
+let puntos = esCorrecta ? Math.max(50, Math.round(1000 * ratio)) : 0;
+if (esDoble) puntos *= 2; // trivia_preguntas.es_doble_puntos
+```
+
+- Correcta: entre 50 (piso mínimo, respuesta justo al límite) y
+  ~1000 (respuesta instantánea) puntos, lineal según velocidad.
+- `es_doble_puntos` (flag por pregunta, editable en `CrearJuego.tsx`)
+  multiplica `×2` el resultado.
+- Racha (`racha_actual`/`max_racha`): se incrementa en respuesta
+  correcta y se resetea a 0 en incorrecta — es **puramente
+  informativa** (se muestra en UI con ícono `Flame`), NO multiplica
+  puntos. A diferencia de Kahoot original, el único multiplicador
+  de puntaje es el de "doble puntos" por pregunta.
+
+---
+
+## 21. ADMIN GCX (`/admingcx/*`)
+
+### Migración desde `/gcx?tab=X`
+
+Toda la administración de Grupos de Conexión vive hoy en páginas
+propias bajo `/admingcx/*` (13 rutas planas, sin nesting real de
+React Router). El menú principal (`components/layout/MenuDeslizable.tsx`)
+ya apunta directo a las rutas nuevas. Para compatibilidad con links
+viejos guardados (favoritos, mensajes de WhatsApp con
+`/gcx?tab=GROUPS` etc.), `pages/groups/Grupos.tsx` mantiene un
+redirect automático:
+
+```typescript
+// Grupos.tsx — redirect de links viejos: /gcx?tab=X ahora vive en /admingcx/*
+const TAB_TO_ADMINGCX_ROUTE: Record<string, string> = {
+    GROUPS: '/admingcx/gestion-de-grupos',
+    HOSTS: '/admingcx/gestion-de-anfitriones',
+    COORDINATORS: '/admingcx/gestion-de-coordinadores',
+    CATEGORIES: '/admingcx/categorias',
+    TAGS: '/admingcx/etiquetas',
+    CONFIG: '/admingcx/configuracion',
+    SEASONS: '/admingcx/temporadas',
+};
+```
+
+### Páginas reales (`pages/admingcx/`)
+
+Guard de roles `[SUPER_ADMIN, ADMIN_GROUPS, ENCARGADO_GRUPOS]` salvo
+donde se indica:
+
+| Ruta | Componente |
+|---|---|
+| `/admingcx/gestion-de-grupos` | `GestionDeGrupos` |
+| `/admingcx/gestion-de-grupos/bajas` | `BajasGrupos` |
+| `/admingcx/gestion-de-grupos/agregar-grupo` | `AgregarMiembroGrupo` |
+| `/admingcx/gestion-de-grupos/crear-grupo` | `CrearGrupoAdmin` |
+| `/admingcx/gestion-de-grupos/editar-grupo/:groupId` | `EditarGrupoAdmin` |
+| `/admingcx/gestion-de-grupos/inscriptos/:groupId` | `InscriptosGrupo` |
+| `/admingcx/gestion-de-grupos/detalles/:groupId` | `DetalleGrupoAdmin` |
+| `/admingcx/gestion-de-anfitriones` | `GestionDeAnfitriones` |
+| `/admingcx/gestion-de-coordinadores` | `GestionDeCoordinadores` — solo `[SUPER_ADMIN, ADMIN_GROUPS]` |
+| `/admingcx/categorias` | `Categorias` — solo `[SUPER_ADMIN, ADMIN_GROUPS]` |
+| `/admingcx/etiquetas` | `Etiquetas` — solo `[SUPER_ADMIN, ADMIN_GROUPS]` |
+| `/admingcx/configuracion` | `Configuracion` — solo `[SUPER_ADMIN, ADMIN_GROUPS]` |
+| `/admingcx/temporadas` | `Temporadas` — solo `[SUPER_ADMIN, ADMIN_GROUPS]` |
+
+### Patrón obligatorio `Content` + `Layout`
+
+Cada página se separa en un componente `XxxContent` (la lógica
+real) envuelto por un componente `Xxx` que renderiza
+`<AdminGCXLayout>`:
+
+```typescript
+const GestionDeAnfitrionesContent: React.FC = () => {
+    const { showToast } = useAdminGCXToast();
+    // ...lógica real, fetch, estado...
+};
+
+const GestionDeAnfitriones: React.FC = () => (
+    <AdminGCXLayout title="Gestión de Anfitriones">
+        <GestionDeAnfitrionesContent />
+    </AdminGCXLayout>
+);
+
+export default GestionDeAnfitriones;
+```
+
+**Por qué:** `AdminGCXLayout` define y exporta el hook
+`useAdminGCXToast`, que lee un `ToastContext.Provider` montado
+DENTRO del propio `AdminGCXLayout` (por encima de `children` en el
+árbol). Si `XxxContent` llamara a `useAdminGCXToast()` en el mismo
+componente que recién monta `<AdminGCXLayout>`, el hook se
+ejecutaría antes de que el Provider exista en el árbol y tira:
+`Error: useAdminGCXToast debe usarse dentro de AdminGCXLayout`.
+Separar en dos componentes garantiza que `Content` sea hijo, nunca
+hermano, del Provider.
+
+`AdminGCXLayout` acepta:
+```typescript
+interface AdminGCXLayoutProps {
+    title: string;
+    children: React.ReactNode;
+    backTo?: string;   // default '/gcx'
+    backLabel?: string; // default 'Volver a GCX'
+}
+```
+
+---
+
+## 22. PANEL DE ANFITRIÓN (`/mis-grupos/*`)
+
+### De acciones inline a páginas propias
+
+"Mis Grupos" pasó de expandir acciones inline por card a un botón
+único **"Ver Grupo"** que navega a `/mis-grupos/:groupId`
+(`DetalleGrupoAnfitrion.tsx`: foto, descripción, planilla de
+integrantes, botones de acción). Cada acción pesada tiene su propia
+página — ya NO son modales:
+
+| Ruta | Componente | Guard |
+|---|---|---|
+| `/mis-grupos` | `PanelAnfitrion.tsx` (`HostDashboard`) | `[SUPER_ADMIN, ADMIN_GROUPS, ANFITRION, CO_ANFITRION]` |
+| `/mis-grupos/crear-grupo` | `PaginaCrearGrupo` | ídem |
+| `/mis-grupos/:groupId` | `DetalleGrupoAnfitrion` | ídem |
+| `/mis-grupos/:groupId/asistencia` | `PaginaAsistenciaGrupo` | ídem |
+| `/mis-grupos/:groupId/bajas` | `PaginaBajaGrupo` | ídem |
+| `/mis-grupos/:groupId/solicitudes` | `PaginaSolicitudesGrupo` | ídem |
+| `/mis-grupos/:groupId/transferir` | `PaginaTransferirGrupo` | ídem |
+| `/mis-grupos/:groupId/editar-grupo` | `PaginaEditarGrupo` | ídem |
+| `/mis-grupos/:groupId/reabrir-grupo` | `PaginaReabrirGrupo` | ídem |
+| `/mis-grupos/:groupId/inscribir` | `PaginaInscribirParticipante` | ídem |
+
+### Patrón de fetch autónomo
+
+Cada página trae sus propios datos con `getGroupsByHost` + búsqueda
+por `groupId` de la URL, en vez de recibir `group` como prop:
+
+```typescript
+// Repetido literalmente en 7 de las 8 páginas de acción
+// (DetalleGrupoAnfitrion, PaginaInscribirParticipante, PaginaSolicitudesGrupo,
+//  PaginaAsistenciaGrupo, PaginaBajaGrupo, PaginaTransferirGrupo, PaginaEditarGrupo, PaginaReabrirGrupo)
+const fetchGroup = useCallback(async () => {
+    if (!currentUser || !groupId) return;
+    const owned = await supabaseService.getGroupsByHost(currentUser.id);
+    const found = owned.find(g => g.id === groupId);
+    if (!found) { navigate('/mis-grupos', { replace: true }); return; }
+    setGroup(found);
+}, [currentUser, groupId, navigate]);
+```
+
+### Modales originales (`components/GCX/Modal*.tsx`) — estado real
+
+Los 9 archivos de modal siguen existiendo en el repo; NO todos
+están vivos:
+
+| Modal | Estado |
+|---|---|
+| `ModalUnirseGrupo.tsx` | **Vivo** — inscripción pública desde `/gcx` (`Grupos.tsx`) |
+| `ModalCrearGrupoAdmin.tsx` | **Vivo** — crear grupo desde el panel admin embebido en `/gcx` |
+| `ModalAgregarMiembroAdmin.tsx` | **Vivo** — agregar miembro desde el panel admin embebido en `/gcx` |
+| `ModalSolicitantes.tsx` | **Vivo en `Grupos.tsx`** (reenvío masivo de emails); huérfano en `PanelAnfitrion.tsx` (sin `onClick` que lo dispare) |
+| `ModalCrearGrupo.tsx` | **Vivo**, doble uso: alta de grupo vía `?modal=createGroup` (link desde Tutoriales), y **reciclado con `isReopenRequest={true}`** como modal de re-apertura desde `Grupos.tsx`/`GestionDeGrupos.tsx` — no existe un `ModalReabrirGrupo.tsx` separado |
+| `ModalAsistencia.tsx`, `ModalSolicitudBaja.tsx`, `ModalTransferirGrupo.tsx` | **Huérfanos** — siguen importados y con estado (`useState`) en `PanelAnfitrion.tsx`, pero ningún botón visible los dispara ya (reemplazados por `PaginaAsistenciaGrupo`, `PaginaBajaGrupo`, `PaginaTransferirGrupo`). Código muerto pendiente de limpieza, no removido en la migración. `ModalTransferirGrupo.tsx` tampoco se usa desde `/admingcx/gestion-de-grupos`. |
+| `ModalCrearGrupo-IgnacioPC.tsx` | Archivo de desarrollo, no importado en ningún lado |
+
+---
+
+## 23. INSCRIPCIÓN DE PAREJAS (wizard)
+
+### Cómo se determina si un grupo es "de parejas"
+
+```typescript
+// Mismo cálculo replicado en ModalUnirseGrupo.tsx y PaginaInscribirParticipante.tsx
+const categoryName = (() => {
+    if (!group.categoryId) return '';
+    if (group.categoryId.toLowerCase() === 'parejas') return 'parejas';
+    const cat = categories.find(c => c.id === group.categoryId);
+    return cat?.name?.toLowerCase() || '';
+})();
+const hasParejasTag = group.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas') || false;
+const isCouplesGroup = (categoryName === 'parejas' || hasParejasTag) && group.targetGender === 'Mixto';
+```
+
+### Wizard de 2 preguntas
+
+1. "¿Querés inscribir a tu pareja?" (Sí/No)
+2. Si Sí: "¿Tu pareja tiene email?" (Sí/No)
+
+### Pareja sin email
+
+Si la pareja no tiene email, `partnerData` se guarda **sin la
+clave `email`** (no como string vacío), para evitar que dos
+inscripciones sin email hagan falso match entre sí:
+```typescript
+partnerData?: { firstName: string; lastName: string; email?: string; phone: string };
+```
+
+### Bloqueo de campos hasta confirmar email
+
+Cuando la pareja tiene email, nombre/apellido/teléfono quedan
+`disabled` hasta que el `onBlur` del campo email resuelva
+`findUserByEmail(email)` — si encuentra cuenta, autocompleta y
+muestra badge "Cuenta encontrada"; si no, desbloquea los campos
+vacíos para carga manual.
+
+### Duplicación deliberada
+
+La misma lógica (wizard + bloqueo + `findUserByEmail`) está
+**duplicada intencionalmente**, no compartida en un componente
+único, en 3 superficies:
+1. `components/GCX/ModalUnirseGrupo.tsx` — inscripción pública
+2. `pages/groups/PaginaInscribirParticipante.tsx` — anfitrión inscribe a un tercero
+3. `pages/groups/PaginaSolicitudesGrupo.tsx` / `pages/admingcx/InscriptosGrupo.tsx` — editar/agregar pareja post-inscripción (vía `supabaseService.updateRegistrationPartnerData`)
+
+---
+
+## 24. BLOQUEO DE CUPOS Y OCULTAR GRUPOS
+
+### Columnas y RPCs
+
+`groups.capacity_locked` y `groups.is_hidden` (ambas `boolean NOT
+NULL DEFAULT false`). Cada una tiene su propio RPC `SECURITY
+DEFINER` con el chequeo de rol adentro, en vez de reusar el RPC
+general de edición `admin_update_group_v2` — **por qué:** evita
+tocar un RPC delicado ya usado en muchos lugares, y permite un
+chequeo de autorización más granular por acción.
+
+```sql
+-- toggle_group_capacity_lock(p_group_id text, p_locked boolean)
+-- autoriza: host, co-host, O SUPER_ADMIN/ADMIN_GROUPS/ENCARGADO_GRUPOS
+
+-- toggle_group_visibility(p_group_id text, p_hidden boolean)
+-- autoriza SOLO: SUPER_ADMIN/ADMIN_GROUPS/ENCARGADO_GRUPOS (sin host/co-host)
+```
+
+Wrappers en `supabaseService.ts`: `toggleGroupCapacityLock(groupId,
+locked)`, `toggleGroupVisibility(groupId, hidden)`.
+
+### Roles
+
+- **Bloquear cupos:** host, co-host (desde `PanelAnfitrion.tsx` /
+  `DetalleGrupoAnfitrion.tsx`) O los 3 roles admin de grupos.
+- **Ocultar grupo:** SOLO `SUPER_ADMIN`/`ADMIN_GROUPS`/`ENCARGADO_GRUPOS`
+  — el botón únicamente existe en `ListaGruposAdmin.tsx`, no en el
+  panel de anfitrión.
+
+### Representación visual
+
+Card pública (`TarjetaGrupo.tsx`): badge "LLENO" cuando
+`capacityLocked || isFull` (no distingue visualmente bloqueo manual
+de cupo numérico agotado). Grupo oculto: badge "OCULTO" (ícono
+`EyeOff`) + `grayscale opacity-60`, visible solo si
+`canSeeHidden` (los 3 roles admin).
+
+### Enforcement real a nivel de base de datos
+
+El filtro de `is_hidden` en `Grupos.tsx` (`if (g.isHidden &&
+!canSeeHiddenGroups) return false;`) es una capa de UX, pero la
+protección real vive en RLS de Postgres sobre la tabla `groups`.
+
+**Historial del fix:** la tabla `groups` tenía 5 policies de SELECT
+permisivas (se combinan entre sí con OR — si UNA sola permite el
+acceso, alcanza). Dos de ellas no filtraban `is_hidden` en
+absoluto, incluyendo un duplicado exacto (`groups_select_approved`)
+que habría anulado en silencio cualquier fix aplicado a una sola
+policy. Se consolidaron en una migración
+(`fix_groups_rls_respect_is_hidden`):
+- `groups_select_approved` (duplicado sin filtro) → ELIMINADA.
+- `groups_public_select` → reescrita con
+  `is_hidden IS NOT TRUE OR [rol admin]`.
+- `Hosts and Co-Hosts can view their groups` → su rama
+  `OR status='approved'` corregida con el mismo criterio.
+- `groups_select_admin` y `groups_select_own` no necesitaron
+  cambios (ya eran correctas).
+
+**Roles con acceso a grupos ocultos vía RLS:** `SUPER_ADMIN`,
+`ADMIN_GROUPS`, `ENCARGADO_GRUPOS` (chequeado contra `users.role`
+con un `EXISTS` dentro de la policy — NO usar `'SUPERADMIN'`, ese
+valor no existe en el enum `user_role` de Postgres y rompería la
+migración).
+
+**Nota aparte, sin resolver:** `groups_select_admin` y la policy de
+Hosts/Co-Hosts también le dan a `PASTOR` visibilidad de todos los
+grupos sin importar `status`/`is_hidden` — comportamiento
+preexistente a este fix, no introducido por él. Queda pendiente
+decidir si se acota en el futuro.
+
+---
+
+## 25. ROLES NUEVOS Y MULTI-ROL
+
+### `ENCARGADO_EVENTOS` y Panel de Eventos
+
+Nuevo respecto a v4.0: `UserRole.EVENTOS` y
+`UserRole.ENCARGADO_EVENTOS`. Guardan `/panel-eventos`
+(`pages/eventos/PanelEventos.tsx`), `/eventos/admin/diadelpadre`,
+`/eventos/puntuacion`, `/eventos/futboltenis`, `/eventos/dpadre/:id`,
+y las rutas de Trivia Admin (sección 20). La ruta base `/eventos`
+no tiene guard de rol, solo requiere sesión.
+
+### Coordinador multi-rol
+
+`coordinatorVariant?: CoordinatorVariant` (singular, **@deprecated**,
+comentario explícito en `types.ts`) convive con
+`coordinatorVariants?: CoordinatorVariant[]` (plural, array — mismo
+patrón que `role`/`roles[]`). En DB: `users.coordinator_variant`
+(`text`) y `users.coordinator_variants` (`text[]`, `NOT NULL`).
+
+**✅ Conectado (resuelto en código, pendiente de
+verificación en navegador).** `Coordinadores.tsx`
+ya filtra por `currentUser.coordinatorVariants`
+(array, con fallback al campo legacy singular si
+un usuario todavía no fue migrado en memoria):
+
+```typescript
+const coordinatorVariants = (currentUser.coordinatorVariants && currentUser.coordinatorVariants.length > 0)
+    ? currentUser.coordinatorVariants
+    : (currentUser.coordinatorVariant ? [currentUser.coordinatorVariant] : []);
+
+const categoryFilters = Array.from(new Set(
+    coordinatorVariants
+        .map(v => coordinatorVariantToCategory(v))
+        .filter((c): c is string => !!c)
+));
+```
+
+Un coordinador con varios departamentos asignados
+ve los grupos de TODAS sus categorías combinadas
+en Dashboard, Grupos, Asistencia y Calendario
+(filtro por `categoryId` O `categoryName` contra
+CUALQUIERA de `categoryFilters`, no solo la
+primera). El título del panel muestra las
+categorías unidas con `" + "` (ej. "Biblia +
+Finanzas"). `tsc --noEmit` sin errores nuevos.
+
+`// TODO: confirmar` con prueba manual en
+navegador (no se pudo levantar el dev server en la
+sesión donde se aplicó este fix): coordinador con
+una sola categoría sin regresión, coordinador con
+varias viendo el combinado real, coordinador sin
+categoría sigue viendo la alerta, SUPER_ADMIN sigue
+sin filtro.
+
+### Enum `user_role` de Postgres — requiere `ALTER TYPE` manual
+
+Confirmado por comparación directa: `types.ts` define
+`ADMIN_CUIDADO_PASTORAL` y `PRODE` en el enum TypeScript, pero
+**ninguno de los dos existe todavía** en el enum `user_role` de
+Postgres. Si algún código intentara escribir
+`role = 'ADMIN_CUIDADO_PASTORAL'` o `'PRODE'` en la columna `role`
+(tipo enum singular), la escritura fallaría en la DB (la columna
+plural `roles`, al ser `text[]` sin enforcement de enum, no tiene
+este problema). **Regla:** cada rol nuevo agregado a `UserRole` en
+`types.ts` requiere correr manualmente
+`ALTER TYPE user_role ADD VALUE 'NUEVO_ROL';` contra la base — no
+es automático. Ver `sql/fix_user_role_enum_eventos.sql` como
+ejemplo del patrón ya usado para `EVENTOS`/`ENCARGADO_EVENTOS`.
+
+---
+
+## 26. LOGIN Y REDIRECTS SEGUROS PARA OAUTH
+
+### El problema de fondo
+
+El login con Google hace un redirect COMPLETO del navegador
+(`supabase.auth.signInWithOAuth`), no una navegación SPA — por lo
+que `location.state` de React Router se pierde. El login con
+email/contraseña es 100% SPA, así que `location.state` sí
+sobrevive.
+
+### La solución de doble capa
+
+```typescript
+// App.tsx — handleLogin
+const handleLogin = () => {
+    sessionStorage.setItem('post_login_redirect', `${location.pathname}${location.search || ''}`);
+    navigate('/auth', { state: { from: location } });
+};
+
+// App.tsx — useEffect que resuelve el redirect cuando `user` pasa a no-nulo
+useEffect(() => {
+    if (!user) return;
+    const destino = sessionStorage.getItem('post_login_redirect');
+    if (destino) {
+        sessionStorage.removeItem('post_login_redirect');
+        if (location.pathname === '/auth' || location.pathname === '/') navigate(destino);
+    }
+}, [user]);
+```
+
+`AuthContext.tsx` (`signInWithGoogle`) lee ese mismo
+`post_login_redirect` para construir el `redirectTo` que le pasa a
+Google. El caso email/contraseña usa `location.state.from`
+directamente en `handleAuthScreenLogin` (`App.tsx`), sin depender
+de `sessionStorage`.
+
+### Regla de oro
+
+Cualquier botón que redirija a `/auth` sin sesión DEBE usar este
+mismo mecanismo de doble capa (`sessionStorage` + `state`), no
+`navigate('/auth', { state })` solo — de lo contrario el regreso se
+rompe específicamente para usuarios que eligen Google. Implementado
+así hoy en `App.tsx:handleLogin` y en
+`Grupos.tsx:redirectToLoginForGroup` (botón UNIRME).
+
+**⚠️ Excepción conocida:** el guard automático de rutas protegidas
+(`<Route path="*">` en `App.tsx`, para un usuario anónimo que entra
+directo a una URL protegida) usa solo `location.state`, sin poblar
+`sessionStorage`. Si ese usuario elige login con Google desde ahí,
+pierde el destino original (cae en `/`). `// TODO: confirmar` si
+vale la pena unificarlo con el mecanismo de doble capa.
+
+---
+
 *Cambios v4.0: Módulo Prode Mundial 2026 completo (sección 18), features GCX 2026 (sección 19),
  BrowserRouter confirmado, rol PRODE agregado,
  tablas group_transfer_requests/prode_matches/prode_participants/prode_predictions/prode_sync_log,
@@ -730,5 +1262,16 @@ debajo del filtro de etiquetas en `/gcx`.
  re-apertura por temporada con parent_group_id,
  configuración de temporadas, transferencia de grupos,
  patrones SubMenuItem extendidos (sección 7.7)*
->>>>>>> 13689bc0aae33c0060db47d88fa891e44ccaeb01
+
+*Última actualización: Julio 2026 — Versión 5.0*
+*Cambios v5.0: Trivia Origen completo (sección 20),
+ migración completa de Gestión de Grupos y Panel de
+ Anfitrión de modales a páginas propias bajo
+ /admingcx y /mis-grupos (secciones 21-22), wizard
+ de inscripción de pareja con soporte de pareja sin
+ email (sección 23), bloqueo de cupos y ocultar
+ grupos (sección 24), coordinador multi-rol y rol
+ ENCARGADO_EVENTOS (sección 25), mecanismo de doble
+ capa para login seguro con Google OAuth (sección 26)*
+
 *Repositorio: github.com/sistemasorigen/origen-app-1*

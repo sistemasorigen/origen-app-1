@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, GroupRegistration } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import { ArrowLeft, Check, Search, Clock, Mail, Phone, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, Search, Clock, Mail, Phone, Loader2, Heart, X, UserPlus, Edit2 } from 'lucide-react';
 
 const getInitials = (firstName?: string, lastName?: string): string => {
     const a = (firstName || '').trim()[0] || '';
@@ -21,6 +21,86 @@ const PaginaSolicitudesGrupo: React.FC<{ currentUser: User }> = ({ currentUser }
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('PENDING');
     const [searchTerm, setSearchTerm] = useState('');
+
+    // ── Modal de agregar/editar pareja ──
+    const [editingPartnerFor, setEditingPartnerFor] = useState<GroupRegistration | null>(null);
+    const [partnerModalHasEmail, setPartnerModalHasEmail] = useState<boolean | null>(null);
+    const [partnerModalFirstName, setPartnerModalFirstName] = useState('');
+    const [partnerModalLastName, setPartnerModalLastName] = useState('');
+    const [partnerModalEmail, setPartnerModalEmail] = useState('');
+    const [partnerModalPhone, setPartnerModalPhone] = useState('');
+    const [partnerModalAccount, setPartnerModalAccount] = useState<{ id: string; name: string; phone?: string } | null>(null);
+    const [partnerModalChecked, setPartnerModalChecked] = useState(false);
+    const [partnerModalChecking, setPartnerModalChecking] = useState(false);
+    const [partnerModalSaving, setPartnerModalSaving] = useState(false);
+    const [partnerModalError, setPartnerModalError] = useState<string | null>(null);
+
+    const openPartnerModal = (app: GroupRegistration) => {
+        setEditingPartnerFor(app);
+        setPartnerModalError(null);
+        if (app.partnerData) {
+            setPartnerModalHasEmail(!!app.partnerData.email);
+            setPartnerModalFirstName(app.partnerData.firstName);
+            setPartnerModalLastName(app.partnerData.lastName);
+            setPartnerModalEmail(app.partnerData.email || '');
+            setPartnerModalPhone(app.partnerData.phone);
+            setPartnerModalChecked(true);
+        } else {
+            setPartnerModalHasEmail(null);
+            setPartnerModalFirstName(''); setPartnerModalLastName('');
+            setPartnerModalEmail(''); setPartnerModalPhone('');
+            setPartnerModalChecked(false);
+        }
+        setPartnerModalAccount(null);
+    };
+
+    const closePartnerModal = () => setEditingPartnerFor(null);
+
+    const handlePartnerModalEmailBlur = async () => {
+        if (!partnerModalEmail) return;
+        setPartnerModalChecking(true);
+        try {
+            const foundUser = await supabaseService.findUserByEmail(partnerModalEmail);
+            setPartnerModalAccount(foundUser);
+            if (foundUser) {
+                const parts = foundUser.name ? foundUser.name.split(' ') : [];
+                setPartnerModalFirstName(parts[0] || partnerModalFirstName);
+                setPartnerModalLastName(parts.slice(1).join(' ') || partnerModalLastName);
+                setPartnerModalPhone(foundUser.phone || partnerModalPhone);
+            }
+        } finally {
+            setPartnerModalChecking(false);
+            setPartnerModalChecked(true);
+        }
+    };
+
+    const handleSavePartner = async () => {
+        if (!editingPartnerFor) return;
+        setPartnerModalError(null);
+        if (!partnerModalFirstName.trim() || !partnerModalLastName.trim() || !partnerModalPhone.trim() || (partnerModalHasEmail && !partnerModalEmail.trim())) {
+            setPartnerModalError('Completá todos los campos.');
+            return;
+        }
+        setPartnerModalSaving(true);
+        const partnerData = partnerModalHasEmail
+            ? { firstName: partnerModalFirstName, lastName: partnerModalLastName, email: partnerModalEmail, phone: partnerModalPhone }
+            : { firstName: partnerModalFirstName, lastName: partnerModalLastName, phone: partnerModalPhone };
+        const success = await supabaseService.updateRegistrationPartnerData(
+            editingPartnerFor.id,
+            partnerData,
+            partnerModalAccount?.id || null
+        );
+        setPartnerModalSaving(false);
+        if (success) {
+            setApplicants(prev => prev.map(a => a.id === editingPartnerFor.id
+                ? { ...a, partnerData, partnerUserId: partnerModalAccount?.id }
+                : a
+            ));
+            closePartnerModal();
+        } else {
+            setPartnerModalError('Error al guardar. Intentá de nuevo.');
+        }
+    };
 
     const fetchGroupName = useCallback(async () => {
         if (!currentUser || !groupId) return;
@@ -162,12 +242,12 @@ const PaginaSolicitudesGrupo: React.FC<{ currentUser: User }> = ({ currentUser }
                                             <div className="flex items-center gap-1.5 opacity-70"><Clock className="w-3 h-3 shrink-0" /> {new Date(app.timestamp).toLocaleDateString('es-AR')}</div>
                                         </div>
 
-                                        {app.partnerData && (
+                                        {app.status === 'APPROVED' && app.partnerData && (
                                             <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-start gap-2.5">
                                                 <div className="w-7 h-7 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-500 text-[10px] font-black flex items-center justify-center shrink-0">
                                                     {getInitials(app.partnerData.firstName, app.partnerData.lastName)}
                                                 </div>
-                                                <div className="min-w-0">
+                                                <div className="min-w-0 flex-1">
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="text-[9px] font-black uppercase tracking-wide text-purple-500">Pareja</span>
                                                         {app.partnerUserId && <span className="text-[9px] font-black uppercase tracking-wide bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full">Vinculado</span>}
@@ -175,7 +255,17 @@ const PaginaSolicitudesGrupo: React.FC<{ currentUser: User }> = ({ currentUser }
                                                     <p className="text-sm font-bold text-black dark:text-white truncate">{app.partnerData.firstName} {app.partnerData.lastName}</p>
                                                     <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><Phone className="w-3 h-3 shrink-0" /> {app.partnerData.phone}</p>
                                                 </div>
+                                                {!app.partnerUserId && (
+                                                    <button onClick={() => openPartnerModal(app)} className="shrink-0 flex items-center gap-1 text-[10px] font-black uppercase text-slate-400 hover:text-black dark:hover:text-white transition-colors">
+                                                        <Edit2 className="w-3 h-3" /> Editar
+                                                    </button>
+                                                )}
                                             </div>
+                                        )}
+                                        {app.status === 'APPROVED' && !app.partnerData && (
+                                            <button onClick={() => openPartnerModal(app)} className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 w-full flex items-center gap-1.5 text-[10px] font-black uppercase text-purple-500 hover:text-purple-700 transition-colors">
+                                                <UserPlus className="w-3.5 h-3.5" /> Agregar pareja
+                                            </button>
                                         )}
                                     </div>
                                 </div>
@@ -201,6 +291,75 @@ const PaginaSolicitudesGrupo: React.FC<{ currentUser: User }> = ({ currentUser }
                     )}
                 </div>
             </div>
+
+            {/* Modal Agregar/Editar Pareja */}
+            {editingPartnerFor && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
+                    <div className="w-full sm:max-w-sm bg-white dark:bg-black rounded-t-2xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Heart className="w-4 h-4 text-purple-500" />
+                                <h3 className="font-black uppercase text-sm text-black dark:text-white">
+                                    {editingPartnerFor.partnerData ? 'Editar pareja' : 'Agregar pareja'}
+                                </h3>
+                            </div>
+                            <button onClick={closePartnerModal} className="text-slate-400 hover:text-black dark:hover:text-white">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div>
+                            <p className="text-[10px] font-black uppercase text-slate-400 mb-1.5">¿Tiene email?</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => { setPartnerModalHasEmail(true); setPartnerModalChecked(false); setPartnerModalAccount(null); }} className={`py-2 rounded-lg text-xs font-black uppercase border ${partnerModalHasEmail === true ? 'bg-purple-600 text-white border-purple-600' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>Sí</button>
+                                <button onClick={() => { setPartnerModalHasEmail(false); setPartnerModalChecked(true); setPartnerModalAccount(null); setPartnerModalEmail(''); }} className={`py-2 rounded-lg text-xs font-black uppercase border ${partnerModalHasEmail === false ? 'bg-black text-white border-black' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>No</button>
+                            </div>
+                        </div>
+
+                        {partnerModalHasEmail !== null && (
+                            <>
+                                {partnerModalHasEmail && (
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Email</label>
+                                        <input
+                                            type="email" value={partnerModalEmail}
+                                            onChange={e => { setPartnerModalEmail(e.target.value); setPartnerModalChecked(false); setPartnerModalAccount(null); }}
+                                            onBlur={handlePartnerModalEmailBlur}
+                                            className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-black text-sm font-medium outline-none focus:border-black dark:focus:border-white"
+                                        />
+                                        {partnerModalAccount && <p className="text-[10px] font-bold text-green-600 mt-1">Cuenta encontrada: {partnerModalAccount.name}</p>}
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Nombre</label>
+                                        <input type="text" value={partnerModalFirstName} onChange={e => setPartnerModalFirstName(e.target.value)} disabled={partnerModalHasEmail === true && (!partnerModalChecked || partnerModalChecking)} className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-black text-sm font-medium outline-none focus:border-black dark:focus:border-white disabled:bg-slate-100 disabled:text-slate-400" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Apellido</label>
+                                        <input type="text" value={partnerModalLastName} onChange={e => setPartnerModalLastName(e.target.value)} disabled={partnerModalHasEmail === true && (!partnerModalChecked || partnerModalChecking)} className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-black text-sm font-medium outline-none focus:border-black dark:focus:border-white disabled:bg-slate-100 disabled:text-slate-400" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Teléfono</label>
+                                    <input type="tel" value={partnerModalPhone} onChange={e => setPartnerModalPhone(e.target.value)} disabled={partnerModalHasEmail === true && (!partnerModalChecked || partnerModalChecking)} className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-black text-sm font-medium outline-none focus:border-black dark:focus:border-white disabled:bg-slate-100 disabled:text-slate-400" />
+                                </div>
+                            </>
+                        )}
+
+                        {partnerModalError && <p className="text-xs text-red-600 font-semibold">{partnerModalError}</p>}
+
+                        <button
+                            onClick={handleSavePartner}
+                            disabled={partnerModalSaving}
+                            className="w-full h-11 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wide flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {partnerModalSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                            Guardar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

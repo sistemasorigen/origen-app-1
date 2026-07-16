@@ -41,8 +41,8 @@ interface AppContextType {
     addLoan: (l: Loan) => Promise<void>;
     updateLoan: (l: Loan) => Promise<void>;
     deleteLoan: (id: string) => Promise<void>;
-    addAnnouncement: (a: Announcement) => Promise<void>;
-    updateAnnouncement: (a: Announcement) => Promise<void>;
+    addAnnouncement: (a: Announcement) => Promise<boolean>;
+    updateAnnouncement: (a: Announcement) => Promise<boolean>;
     deleteAnnouncement: (id: string) => Promise<void>;
 
     addEvent: (e: AppEvent) => Promise<void>;
@@ -268,16 +268,33 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
     };
 
     // --- ANNOUNCEMENTS CRUD (Supabase) ---
-    const addAnnouncement = async (a: Announcement) => {
+    const addAnnouncement = async (a: Announcement): Promise<boolean> => {
         setAnnouncements(prev => [...prev, a]); // optimistic update
-        await dbAPI.saveAnnouncement(a);
-        await refreshData();
+        try {
+            await dbAPI.saveAnnouncement(a);
+            await refreshData();
+            return true;
+        } catch (e) {
+            console.error('[addAnnouncement] Error:', e);
+            setAnnouncements(prev => prev.filter(item => item.id !== a.id)); // rollback
+            showNotification('Error al guardar el anuncio. Verificá los datos.', 'error');
+            return false;
+        }
     };
 
-    const updateAnnouncement = async (a: Announcement) => {
+    const updateAnnouncement = async (a: Announcement): Promise<boolean> => {
+        const previous = announcements;
         setAnnouncements(prev => prev.map(item => item.id === a.id ? a : item)); // optimistic update
-        await dbAPI.saveAnnouncement(a);
-        await refreshData();
+        try {
+            await dbAPI.saveAnnouncement(a);
+            await refreshData();
+            return true;
+        } catch (e) {
+            console.error('[updateAnnouncement] Error:', e);
+            setAnnouncements(previous); // rollback
+            showNotification('Error al guardar el anuncio. Verificá los datos.', 'error');
+            return false;
+        }
     };
 
     const deleteAnnouncement = async (id: string) => {

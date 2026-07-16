@@ -3232,11 +3232,14 @@ export const supabaseService = {
     lastName: string,
     email: string,
     phone: string,
-    // Partner data for couples groups
+    // Partner data for couples groups. Si la pareja
+    // no tiene email, se omite la clave por completo
+    // (no se manda como '') para no matchear por
+    // accidente con otra inscripción sin email.
     partnerData?: {
       firstName: string,
       lastName: string,
-      email: string,
+      email?: string,
       phone: string
     },
     partnerUserId?: string | null
@@ -3288,6 +3291,34 @@ export const supabaseService = {
       return true;
     } catch (error) {
       console.error('[Admin Add Member] Exception adding member:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Actualiza (o agrega) los datos de pareja de una inscripción existente
+   */
+  async updateRegistrationPartnerData(
+    registrationId: string,
+    partnerData: { firstName: string; lastName: string; email?: string; phone: string } | null,
+    partnerUserId?: string | null
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('group_registrations')
+        .update({
+          partner_data: partnerData,
+          partner_user_id: partnerUserId || null,
+        })
+        .eq('id', registrationId);
+
+      if (error) {
+        console.error('[updateRegistrationPartnerData] Error:', error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('[updateRegistrationPartnerData] Exception:', err);
       return false;
     }
   },
@@ -4516,8 +4547,8 @@ export const supabaseService = {
       id: row.id,
       title: row.title,
       description: row.description || '',
-      startDate: row.start_date,
-      endDate: row.end_date,
+      startDate: row.start_date || '',
+      endDate: row.end_date || '',
       isActive: row.is_active,
       isPermanent: row.is_permanent,
       link: row.link,
@@ -4531,8 +4562,10 @@ export const supabaseService = {
       id: announcement.id,
       title: announcement.title,
       description: announcement.description || '',
-      start_date: announcement.startDate,
-      end_date: announcement.endDate,
+      // En modo "Fijo" (isPermanent) no hay fechas — mandar null
+      // en vez de '' porque una columna date rechaza string vacío.
+      start_date: announcement.startDate || null,
+      end_date: announcement.endDate || null,
       is_active: announcement.isActive ?? true,
       is_permanent: announcement.isPermanent ?? false,
       link: announcement.link,

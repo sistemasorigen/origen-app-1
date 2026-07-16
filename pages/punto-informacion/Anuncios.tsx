@@ -65,7 +65,7 @@ const Announcements: React.FC = () => {
         return errs;
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const errs = validate();
         if (Object.keys(errs).length > 0) {
             setErrors(errs);
@@ -78,16 +78,17 @@ const Announcements: React.FC = () => {
         const encodedData = encodeURIComponent(qrData || 'https://origen.church');
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
 
+        let success = false;
+
         if (editingId) {
             const existing = announcements.find(a => a.id === editingId);
             if (existing) {
-                updateAnnouncement({
+                success = await updateAnnouncement({
                     ...existing,
                     ...form,
                     qrCodeUrl: qrUrl
                 });
             }
-            setEditingId(null);
         } else {
             const newAnn: Announcement = {
                 id: safeUUID(),
@@ -95,8 +96,15 @@ const Announcements: React.FC = () => {
                 ...form,
                 qrCodeUrl: qrUrl
             };
-            addAnnouncement(newAnn);
+            success = await addAnnouncement(newAnn);
         }
+
+        // Si falló (ej. la base rechazó los datos), se deja el
+        // formulario tal cual para que el usuario no pierda lo
+        // que escribió — el aviso de error ya lo muestra el store.
+        if (!success) return;
+
+        if (editingId) setEditingId(null);
         setForm(EMPTY_FORM);
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);

@@ -180,49 +180,12 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                     </div>
                 )}
 
-                {/* --- SUBNAV --- */}
-                <nav className="sticky top-16 z-50 bg-white border-b-4 border-black overflow-hidden select-none" style={{ touchAction: 'none' }}>
-                    {/* MOBILE: Two buttons layout (Title is provided by parent InfoPoint.tsx) */}
-                    <div className="flex flex-col md:hidden w-full overflow-hidden">
-                        {/* Buttons */}
-                        <div className="flex w-full h-11 overflow-hidden">
-                            <button
-                                onClick={onGoPublic}
-                                className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all border-r-4 border-black ${(viewMode as string) === 'PUBLIC' ? 'bg-black text-white' : 'bg-white text-black'}`}
-                            >
-                                <span className={(viewMode as string) === 'PUBLIC' ? 'text-white' : 'text-blue-500'}>🌐</span> WEB
-                            </button>
-                            <button
-                                onClick={onGoInternal}
-                                className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all ${(viewMode as string) === 'INTERNAL' ? 'bg-black text-white' : 'bg-white text-black'}`}
-                            >
-                                <span className={(viewMode as string) === 'INTERNAL' ? 'text-white' : 'text-slate-400'}>⚙️</span> PANEL
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* DESKTOP: Centered title + buttons on right */}
-                    <div className="hidden md:flex items-center w-full h-12 px-8 max-w-[1920px] mx-auto">
-                        <div className="flex-1" />
-                        <h1 className="flex-none text-base font-black tracking-widest uppercase text-black">
+                {/* --- SUBNAV (desktop only — el toggle Público/Panel se quitó tanto acá como en mobile) --- */}
+                <nav className="hidden md:block sticky top-16 z-50 bg-white border-b-4 border-black overflow-hidden select-none">
+                    <div className="flex items-center justify-center w-full h-12 px-8 max-w-[1920px] mx-auto">
+                        <h1 className="text-base font-black tracking-widest uppercase text-black">
                             Punto de Información
                         </h1>
-                        <div className="flex-1 flex justify-end">
-                            <div className="inline-flex border-2 border-black overflow-hidden" role="group">
-                                <button
-                                    onClick={onGoPublic}
-                                    className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all border-r-2 border-black ${viewMode === 'PUBLIC' ? 'bg-black text-white' : 'bg-white text-black hover:bg-slate-100'}`}
-                                >
-                                    Público
-                                </button>
-                                <button
-                                    onClick={onGoInternal}
-                                    className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all ${viewMode === 'INTERNAL' ? 'bg-black text-white' : 'bg-white text-black hover:bg-slate-100'}`}
-                                >
-                                    Panel
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </nav>
 

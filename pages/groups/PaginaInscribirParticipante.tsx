@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { User } from '../../types';
+import { User, Group, GroupCategory, GroupTag } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import { ArrowLeft, Search, UserCheck, UserPlus, ChevronLeft, Loader2, Check, Mail, Phone } from 'lucide-react';
+import { ArrowLeft, Search, UserCheck, UserPlus, ChevronLeft, Loader2, Check, Mail, Phone, Heart } from 'lucide-react';
 
 type TipoParticipante = 'USUARIO' | 'INVITADO';
 
@@ -16,12 +16,11 @@ const maskPhone = (phone?: string): string => {
     return masked + visible;
 };
 
-const StepIndicator: React.FC<{ current: 1 | 2 | 3 }> = ({ current }) => {
-    const steps = ['Tipo', 'Datos', 'Confirmar'];
+const StepIndicator: React.FC<{ current: number; steps: string[] }> = ({ current, steps }) => {
     return (
         <div className="flex items-center gap-0 mb-6" role="list" aria-label="Progreso del formulario">
             {steps.map((label, i) => {
-                const n = (i + 1) as 1 | 2 | 3;
+                const n = i + 1;
                 const done = n < current;
                 const active = n === current;
                 return (
@@ -34,7 +33,7 @@ const StepIndicator: React.FC<{ current: 1 | 2 | 3 }> = ({ current }) => {
                                 {label}
                             </span>
                         </div>
-                        {i < 2 && <div className={`flex-1 h-0.5 mb-4 transition-colors duration-300 ${done ? 'bg-black' : 'bg-neutral-200'}`} />}
+                        {i < steps.length - 1 && <div className={`flex-1 h-0.5 mb-4 transition-colors duration-300 ${done ? 'bg-black' : 'bg-neutral-200'}`} />}
                     </React.Fragment>
                 );
             })}
@@ -46,10 +45,12 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
     const { groupId } = useParams<{ groupId: string }>();
     const navigate = useNavigate();
 
-    const [groupName, setGroupName] = useState('');
+    const [group, setGroup] = useState<Group | null>(null);
+    const [categories, setCategories] = useState<GroupCategory[]>([]);
+    const [tags, setTags] = useState<GroupTag[]>([]);
     const [loadingGroup, setLoadingGroup] = useState(true);
 
-    const [step, setStep] = useState<1 | 2 | 3>(1);
+    const [step, setStep] = useState<number>(1);
     const [tipo, setTipo] = useState<TipoParticipante | null>(null);
 
     // Búsqueda de usuario del sistema
@@ -68,23 +69,96 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // ── Estado de pareja — mismo patrón que ModalUnirseGrupo.tsx ──
+    const [wantsPartner, setWantsPartner] = useState(false);
+    const [partnerHasEmail, setPartnerHasEmail] = useState<boolean | null>(null);
+    const [partnerFirstName, setPartnerFirstName] = useState('');
+    const [partnerLastName, setPartnerLastName] = useState('');
+    const [partnerEmail, setPartnerEmail] = useState('');
+    const [partnerPhone, setPartnerPhone] = useState('');
+    const [partnerAccount, setPartnerAccount] = useState<{ id: string; name: string; phone?: string } | null>(null);
+    const [hasCheckedPartnerEmail, setHasCheckedPartnerEmail] = useState(false);
+    const [partnerEmailError, setPartnerEmailError] = useState<string | null>(null);
+    const [checkingPartner, setCheckingPartner] = useState(false);
+
+    const resetPartnerData = () => {
+        setPartnerFirstName(''); setPartnerLastName(''); setPartnerEmail(''); setPartnerPhone('');
+        setPartnerAccount(null);
+        setHasCheckedPartnerEmail(false);
+        setPartnerEmailError(null);
+    };
+
+    const partnerFieldsFilled = !!(
+        partnerFirstName.trim() &&
+        partnerLastName.trim() &&
+        partnerPhone.trim() &&
+        (partnerHasEmail === false || partnerEmail.trim())
+    );
+    const hasPartnerData = wantsPartner && partnerHasEmail !== null && partnerFieldsFilled;
+    const partnerDataPending = wantsPartner && (partnerHasEmail === null || !partnerFieldsFilled);
+
+    const handlePartnerEmailBlur = async () => {
+        if (!partnerEmail) return;
+        if (partnerEmail.toLowerCase().trim() === email.toLowerCase().trim()) {
+            setPartnerEmailError('No podés poner el mismo email dos veces. Corregilo para continuar.');
+            setPartnerAccount(null);
+            return;
+        }
+        setPartnerEmailError(null);
+        setCheckingPartner(true);
+        try {
+            const foundUser = await supabaseService.findUserByEmail(partnerEmail);
+            setPartnerAccount(foundUser);
+            if (foundUser) {
+                const nameParts = foundUser.name ? foundUser.name.split(' ') : [];
+                setPartnerFirstName(nameParts[0] || partnerFirstName);
+                setPartnerLastName(nameParts.slice(1).join(' ') || partnerLastName);
+                setPartnerPhone((foundUser as any).phone || partnerPhone);
+            }
+        } catch (err) {
+            console.error('Error checking partner email:', err);
+        } finally {
+            setCheckingPartner(false);
+            setHasCheckedPartnerEmail(true);
+        }
+    };
+
     const fetchGroupName = useCallback(async () => {
         if (!currentUser || !groupId) return;
         setLoadingGroup(true);
         try {
-            const owned = await supabaseService.getGroupsByHost(currentUser.id);
+            const [owned, cats, tgs] = await Promise.all([
+                supabaseService.getGroupsByHost(currentUser.id),
+                supabaseService.getGroupCategories(),
+                supabaseService.getGroupTags(),
+            ]);
             const found = owned.find(g => g.id === groupId);
             if (!found) {
                 navigate('/mis-grupos', { replace: true });
                 return;
             }
-            setGroupName(found.name);
+            setGroup(found);
+            setCategories(cats);
+            setTags(tgs);
         } finally {
             setLoadingGroup(false);
         }
     }, [currentUser, groupId, navigate]);
 
     useEffect(() => { fetchGroupName(); }, [fetchGroupName]);
+
+    // Mismo cálculo que ModalUnirseGrupo.tsx
+    const isCouplesGroup = (() => {
+        if (!group) return false;
+        const categoryName = (() => {
+            if (!group.categoryId) return '';
+            if (group.categoryId.toLowerCase() === 'parejas') return 'parejas';
+            const cat = categories.find(c => c.id === group.categoryId);
+            return cat?.name?.toLowerCase() || '';
+        })();
+        const hasParejasTag = group.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas') || false;
+        return (categoryName === 'parejas' || hasParejasTag) && group.targetGender === 'Mixto';
+    })();
 
     // Búsqueda de usuarios del sistema (debounce 350ms)
     useEffect(() => {
@@ -117,7 +191,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
         setLastName(nameParts.slice(1).join(' ') || '');
         setEmail(user.email || '');
         setPhone((user as any).phone || '');
-        setStep(3);
+        setStep(3); // Paso 3 = Pareja (si aplica) o Confirmar
     };
 
     const handleGuestContinue = () => {
@@ -127,13 +201,29 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
             return;
         }
         setFoundUserId(null);
-        setStep(3);
+        setStep(3); // Paso 3 = Pareja (si aplica) o Confirmar
+    };
+
+    const handlePartnerContinue = () => {
+        setError(null);
+        if (partnerDataPending) {
+            setError("Completá todos los datos de tu pareja, o elegí 'No' si inscribís solo a esta persona.");
+            return;
+        }
+        setStep(4);
     };
 
     const handleConfirm = async () => {
         if (!groupId) return;
         setIsSubmitting(true);
         setError(null);
+
+        const partnerDataToSend = hasPartnerData
+            ? (partnerHasEmail
+                ? { firstName: partnerFirstName, lastName: partnerLastName, email: partnerEmail, phone: partnerPhone }
+                : { firstName: partnerFirstName, lastName: partnerLastName, phone: partnerPhone })
+            : undefined;
+
         const success = await supabaseService.adminAddMemberToGroup({
             groupId,
             userId: foundUserId,
@@ -141,6 +231,8 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
             lastName,
             email,
             phone,
+            partnerData: partnerDataToSend,
+            partnerUserId: hasPartnerData && partnerAccount ? partnerAccount.id : undefined,
         });
         setIsSubmitting(false);
         if (success) {
@@ -165,14 +257,17 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                     className="flex items-center gap-2 text-sm text-slate-400 hover:text-black dark:hover:text-white transition-colors mb-6 font-bold uppercase tracking-wide"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    {groupName}
+                    {group?.name}
                 </button>
 
                 <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-black dark:text-white mb-6">
                     Inscribir Participante
                 </h1>
 
-                <StepIndicator current={step} />
+                <StepIndicator
+                    current={step}
+                    steps={isCouplesGroup ? ['Tipo', 'Datos', 'Pareja', 'Confirmar'] : ['Tipo', 'Datos', 'Confirmar']}
+                />
 
                 {/* ─── PASO 1: Tipo ─────────────────────────── */}
                 {step === 1 && (
@@ -297,8 +392,141 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                     </div>
                 )}
 
-                {/* ─── PASO 3: Confirmar ─────────────────────── */}
-                {step === 3 && (
+                {/* ─── PASO 3 (solo si isCouplesGroup): Pareja ─── */}
+                {step === 3 && isCouplesGroup && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 border-b-2 border-black pb-2">
+                            <Heart className="w-4 h-4 text-pink-600" />
+                            <span className="text-xs font-black uppercase tracking-widest">¿Querés inscribir a la pareja?</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setWantsPartner(true)}
+                                className={`py-3 border-2 border-black font-black uppercase text-sm tracking-wide transition-all ${wantsPartner ? 'bg-pink-600 text-white' : 'bg-white text-black hover:bg-neutral-100'}`}
+                            >
+                                Sí
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setWantsPartner(false); resetPartnerData(); setPartnerHasEmail(null); }}
+                                className={`py-3 border-2 border-black font-black uppercase text-sm tracking-wide transition-all ${!wantsPartner ? 'bg-black text-white' : 'bg-white text-black hover:bg-neutral-100'}`}
+                            >
+                                No
+                            </button>
+                        </div>
+
+                        {wantsPartner && (
+                            <div className="space-y-4 pt-1">
+                                <div className="space-y-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-black">¿La pareja tiene email?</span>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setPartnerHasEmail(true); resetPartnerData(); }}
+                                            className={`py-2.5 border-2 border-black font-black uppercase text-sm tracking-wide transition-all ${partnerHasEmail === true ? 'bg-pink-600 text-white' : 'bg-white text-black hover:bg-neutral-100'}`}
+                                        >
+                                            Sí
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setPartnerHasEmail(false); resetPartnerData(); }}
+                                            className={`py-2.5 border-2 border-black font-black uppercase text-sm tracking-wide transition-all ${partnerHasEmail === false ? 'bg-black text-white' : 'bg-white text-black hover:bg-neutral-100'}`}
+                                        >
+                                            No
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {partnerHasEmail !== null && (
+                                    <div className="space-y-4 pt-1">
+                                        <div className="flex items-center justify-between border-b-2 border-black pb-2">
+                                            <span className="text-xs font-black uppercase tracking-widest">Datos de la pareja</span>
+                                            {partnerAccount && (
+                                                <span className="text-[10px] font-bold bg-green-200 px-2 py-0.5 border border-black">Cuenta encontrada</span>
+                                            )}
+                                        </div>
+
+                                        {partnerHasEmail && (
+                                            <div>
+                                                <label className="text-[10px] font-bold uppercase block mb-1">Email de la pareja</label>
+                                                <input
+                                                    type="email"
+                                                    value={partnerEmail}
+                                                    onChange={e => {
+                                                        if (e.target.value.trim() === '') resetPartnerData();
+                                                        else setPartnerEmail(e.target.value);
+                                                        setPartnerAccount(null);
+                                                        setHasCheckedPartnerEmail(false);
+                                                        setPartnerEmailError(null);
+                                                    }}
+                                                    onBlur={handlePartnerEmailBlur}
+                                                    className={`w-full h-11 px-3 border-2 font-bold ${partnerEmailError ? 'border-red-600 bg-red-50' : partnerAccount ? 'border-green-600 bg-green-50' : 'border-black'}`}
+                                                    placeholder="Email para vincular"
+                                                />
+                                                {partnerEmailError ? (
+                                                    <p className="text-[10px] font-bold text-red-600 uppercase mt-1">{partnerEmailError}</p>
+                                                ) : !hasCheckedPartnerEmail && (
+                                                    <p className="text-[10px] font-bold text-neutral-400 uppercase mt-1">
+                                                        {checkingPartner ? 'Buscando...' : 'Ingresá y confirmá el email para continuar'}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-[10px] font-bold uppercase block mb-1">Nombre</label>
+                                                <input
+                                                    type="text" value={partnerFirstName}
+                                                    onChange={e => setPartnerFirstName(e.target.value)}
+                                                    disabled={partnerHasEmail === true && (!hasCheckedPartnerEmail || checkingPartner)}
+                                                    className="w-full h-11 px-3 border-2 border-black font-bold disabled:bg-neutral-100 disabled:text-neutral-400"
+                                                    placeholder="Nombre"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold uppercase block mb-1">Apellido</label>
+                                                <input
+                                                    type="text" value={partnerLastName}
+                                                    onChange={e => setPartnerLastName(e.target.value)}
+                                                    disabled={partnerHasEmail === true && (!hasCheckedPartnerEmail || checkingPartner)}
+                                                    className="w-full h-11 px-3 border-2 border-black font-bold disabled:bg-neutral-100 disabled:text-neutral-400"
+                                                    placeholder="Apellido"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold uppercase block mb-1">Teléfono</label>
+                                            <input
+                                                type="tel" value={partnerPhone}
+                                                onChange={e => setPartnerPhone(e.target.value)}
+                                                disabled={partnerHasEmail === true && (!hasCheckedPartnerEmail || checkingPartner)}
+                                                className="w-full h-11 px-3 border-2 border-black font-bold disabled:bg-neutral-100 disabled:text-neutral-400"
+                                                placeholder="+54 9 11 ..."
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {error && <p className="text-sm text-red-600 font-semibold">{error}</p>}
+
+                        <div className="flex gap-3 pt-2">
+                            <button type="button" onClick={() => setStep(2)} className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border-2 border-black dark:border-white text-black dark:text-white font-black uppercase tracking-widest text-xs hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-150">
+                                <ChevronLeft className="w-4 h-4" /> Volver
+                            </button>
+                            <button type="button" onClick={handlePartnerContinue} className="flex-[2] min-h-[44px] bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white border-2 border-black dark:border-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-150">
+                                Continuar →
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── PASO 3: Confirmar (o 4 si hay pareja) ─── */}
+                {step === (isCouplesGroup ? 4 : 3) && (
                     <div>
                         <p className="text-[11px] font-black uppercase tracking-widest text-neutral-400 mb-4">
                             Confirmá los datos del participante
@@ -323,12 +551,34 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                             </div>
                         </div>
 
+                        {hasPartnerData && (
+                            <div className="border-2 border-pink-300 bg-pink-50 dark:bg-pink-950/20 p-4 mb-5 space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <Heart className="w-4 h-4 text-pink-600" />
+                                    <p className="font-black text-sm uppercase text-black dark:text-white">
+                                        {partnerFirstName} {partnerLastName}
+                                    </p>
+                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-pink-600 text-white shrink-0">Pareja</span>
+                                </div>
+                                {partnerHasEmail && (
+                                    <div className="flex items-center gap-2 text-sm text-black dark:text-white">
+                                        <Mail className="w-4 h-4 text-neutral-400 shrink-0" />
+                                        <span className="break-all">{partnerEmail}</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2 text-sm text-black dark:text-white">
+                                    <Phone className="w-4 h-4 text-neutral-400 shrink-0" />
+                                    <span className="font-mono">{maskPhone(partnerPhone)}</span>
+                                </div>
+                            </div>
+                        )}
+
                         {error && <p className="text-sm text-red-600 font-semibold mb-4">{error}</p>}
 
                         <div className="flex gap-3">
                             <button
                                 type="button"
-                                onClick={() => setStep(2)}
+                                onClick={() => setStep(isCouplesGroup ? 3 : 2)}
                                 disabled={isSubmitting}
                                 className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border-2 border-black dark:border-white text-black dark:text-white font-black uppercase tracking-widest text-xs hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-150"
                             >

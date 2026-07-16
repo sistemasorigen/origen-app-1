@@ -50,11 +50,23 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     const [attendanceData, setAttendanceData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Coordinator's variant -> category mapping
-    const categoryFilter = coordinatorVariantToCategory(currentUser.coordinatorVariant);
+    // Coordinator's variants -> categories mapping.
+    // Fallback al campo legacy singular si coordinatorVariants
+    // todavía no está poblado en memoria (usuario no migrado).
+    const coordinatorVariants = (currentUser.coordinatorVariants && currentUser.coordinatorVariants.length > 0)
+        ? currentUser.coordinatorVariants
+        : (currentUser.coordinatorVariant ? [currentUser.coordinatorVariant] : []);
 
-    // Find category name for display
-    const categoryName = categoryFilter || (hasRole(currentUser, [UserRole.SUPER_ADMIN]) ? 'Todas las Categorías (Global)' : '') || '';
+    const categoryFilters = Array.from(new Set(
+        coordinatorVariants
+            .map(v => coordinatorVariantToCategory(v))
+            .filter((c): c is string => !!c)
+    ));
+
+    // Find category name(s) for display
+    const categoryName = categoryFilters.length > 0
+        ? categoryFilters.join(' + ')
+        : (hasRole(currentUser, [UserRole.SUPER_ADMIN]) ? 'Todas las Categorías (Global)' : '');
 
     // Load all data
     useEffect(() => {
@@ -76,20 +88,22 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
             setCategories(categoriesData);
             setTags(tagsData);
 
-            // Filter by coordinator's variant -> category
-            if (categoryFilter) {
-                // 1. Encontrar el UUID real de la categoría basándonos en el nombre
-                const matchedCategory = categoriesData.find(
-                    c => c.name.toLowerCase().trim() === categoryFilter.toLowerCase().trim()
-                );
+            // Filter by coordinator's variants -> categories (combinadas)
+            if (categoryFilters.length > 0) {
+                // 1. Encontrar los UUIDs reales de cada categoría según su nombre
+                const targetCategoryIds = categoryFilters.map(catName => {
+                    const matchedCategory = categoriesData.find(
+                        c => c.name.toLowerCase().trim() === catName.toLowerCase().trim()
+                    );
+                    // Usar el ID encontrado, o el string original como respaldo de seguridad
+                    return matchedCategory ? matchedCategory.id : catName;
+                });
+                const targetCategoryIdsLower = categoryFilters.map(c => c.toLowerCase().trim());
 
-                // Usar el ID encontrado, o el string original como respaldo de seguridad
-                const targetCategoryId = matchedCategory ? matchedCategory.id : categoryFilter;
-
-                // 2. Filtrar usando el UUID
+                // 2. Filtrar usando CUALQUIERA de los UUIDs/nombres
                 const filtered = groupsData.filter(g =>
-                    g.categoryId === targetCategoryId ||
-                    (g.categoryName && g.categoryName.toLowerCase().trim() === categoryFilter.toLowerCase().trim())
+                    targetCategoryIds.includes(g.categoryId) ||
+                    (g.categoryName && targetCategoryIdsLower.includes(g.categoryName.toLowerCase().trim()))
                 );
 
                 setGroups(filtered);
@@ -120,7 +134,7 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     ];
 
     // No variant assigned alert
-    if (!categoryFilter && !hasRole(currentUser, [UserRole.SUPER_ADMIN])) {
+    if (categoryFilters.length === 0 && !hasRole(currentUser, [UserRole.SUPER_ADMIN])) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#fdfdfd] p-4">
                 <div className="bg-white border-2 border-black p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] max-w-md text-center">
