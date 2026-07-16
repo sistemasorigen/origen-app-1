@@ -5,7 +5,8 @@ import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
-import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, ChevronDown, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, CalendarDays, Lock } from 'lucide-react';
+import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
 import GroupCard from '../../components/GCX/TarjetaGrupo';
@@ -1384,6 +1385,50 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         }))
         : defaultSlides;
 
+    // Scroll animado y controlado (no el "smooth" nativo del navegador,
+    // que en distancias largas puede sentirse instantáneo) — así se ve
+    // pasar por las tarjetas de grupos en el camino hacia la postulación.
+    //
+    // CRÍTICO: se desactiva el "scroll anchoring" del navegador mientras
+    // dura la animación. Sin esto, a medida que las imágenes de las
+    // tarjetas terminan de cargar (cambiando su altura) por encima del
+    // viewport, el navegador "corrige" la posición de scroll para
+    // compensar — y esa corrección pelea contra nuestros scrollTo(),
+    // dando exactamente el efecto de teletransporte/salto que se ve acá.
+    const scrollToWithFlythrough = (elementId: string, duration = 900) => {
+        const target = document.getElementById(elementId);
+        if (!target) return;
+
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReducedMotion) {
+            target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            return;
+        }
+
+        const htmlEl = document.documentElement;
+        const previousOverflowAnchor = htmlEl.style.overflowAnchor;
+        htmlEl.style.overflowAnchor = 'none';
+
+        const startY = window.scrollY;
+        const targetY = target.getBoundingClientRect().top + window.scrollY;
+        const distance = targetY - startY;
+        const startTime = performance.now();
+
+        const easeInOutQuad = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+        const step = (now: number) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            window.scrollTo(0, Math.round(startY + distance * easeInOutQuad(progress)));
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                htmlEl.style.overflowAnchor = previousOverflowAnchor;
+            }
+        };
+        requestAnimationFrame(step);
+    };
+
     return (
         <div className="min-h-screen bg-white font-sans pb-20 groups-original-fonts">
             {/* STICKY WRAPPER for navbar only — visible in admin mode */}
@@ -1421,6 +1466,16 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
             {view === 'public' ? (
                 <>
+                    {/* FAB — salto directo a la postulación de anfitrión */}
+                    <button
+                        type="button"
+                        onClick={() => scrollToWithFlythrough('leader-postulation-card')}
+                        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-[#28a946] text-white border-2 border-black rounded-full font-black text-xs uppercase tracking-wide shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-[#1f8a39] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
+                    >
+                        <UserPlus className="w-4 h-4 shrink-0" />
+                        ¿Querés ser anfitrión?
+                    </button>
+
                     {/* HERO CAROUSEL - Grupos de Conexión */}
                     <section className="relative border-b-4 border-black">
                         <HeroCarousel
@@ -1433,61 +1488,86 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
                     {/* BENTO GRID */}
                     <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 xl:px-20 py-12 md:py-16 lg:py-20 font-['Helvetica_Neue',sans-serif]">
-                        {/* Search and Filter Bar - Organic Neo-Brutalism */}
-                        <div className="mb-8 md:mb-10 lg:mb-12 space-y-4">
-                            {/* Top Row: Search + Clear Filters */}
-                            <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between lg:gap-6">
-                                {/* Search */}
-                                <div id="groups-search-bar" className="relative flex-1 md:max-w-md lg:max-w-lg">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black" />
-                                    <input
-                                        type="text"
-                                        placeholder="BUSCAR GRUPO..."
-                                        value={searchTerm}
-                                        onChange={e => setSearchTerm(e.target.value)}
-                                        className="w-full pl-12 pr-4 py-2.5 bg-white border-2 border-black rounded-lg text-sm font-bold uppercase tracking-wide text-black placeholder:text-black/40 focus:outline-none focus:shadow-[inset_0_0_0_1px_black] transition-all"
-                                    />
+                        {/* Section Header */}
+                        <div className="mb-8 md:mb-12 pb-4 border-b-4 border-black">
+                            <p className="text-sm lg:text-base font-medium italic text-[#118f46] mb-2">// grupos de conexión //</p>
+                            <h2 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold uppercase tracking-tight text-black">
+                                ENCONTRÁ TU GRUPO
+                            </h2>
+                            <p className="text-sm lg:text-base font-medium uppercase tracking-wide mt-2 text-black/50">
+                                {filteredGroups.length} grupos disponibles
+                            </p>
+                        </div>
+
+                        {/* Search + Filter — one bordered capsule, one visual line */}
+                        <div className="mb-8 md:mb-10 lg:mb-12">
+                            {/* Wrapper is the positioning context for the dropdown —
+                                kept separate from the capsule below because the capsule's
+                                own overflow-hidden (used to clip the rounded corners around
+                                the active black segment) would otherwise clip the dropdown too. */}
+                            <div className="relative w-full md:max-w-xl">
+                                <div className="flex items-stretch border-2 border-black rounded-lg overflow-hidden bg-white">
+                                    {/* Search */}
+                                    <div id="groups-search-bar" className="relative flex-1 min-w-0">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black pointer-events-none" />
+                                        <input
+                                            type="text"
+                                            placeholder="BUSCAR GRUPO..."
+                                            value={searchTerm}
+                                            onChange={e => setSearchTerm(e.target.value)}
+                                            className="w-full h-full pl-12 pr-3 py-2.5 bg-transparent text-sm font-bold uppercase tracking-wide text-black placeholder:text-black/40 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    <div className="w-[2px] bg-black shrink-0" aria-hidden="true" />
+
+                                    {/* Tag Filter Trigger */}
+                                    <div id="groups-filter-bar" className="shrink-0">
+                                        <button
+                                            onClick={() => {
+                                                setIsTagFilterOpen(!isTagFilterOpen);
+                                                setIsCategoryFilterOpen(false);
+                                            }}
+                                            aria-label={selectedTag !== 'ALL'
+                                                ? `Filtro activo: ${tags.find(t => t.id === selectedTag)?.name || 'etiqueta'}`
+                                                : 'Filtrar por etiqueta'
+                                            }
+                                            title={selectedTag !== 'ALL'
+                                                ? tags.find(t => t.id === selectedTag)?.name || 'Filtro'
+                                                : 'Filtrar por etiqueta'
+                                            }
+                                            aria-expanded={isTagFilterOpen}
+                                            className={`h-full px-3.5 md:px-5 flex items-center justify-center transition-colors ${selectedTag !== 'ALL'
+                                                ? 'bg-black text-white'
+                                                : 'bg-white text-black hover:bg-black hover:text-white'
+                                                }`}
+                                        >
+                                            <Filter className="w-4 h-4 shrink-0" />
+                                        </button>
+                                    </div>
+
+                                    {/* Clear Filters — only when active, same capsule */}
+                                    {(selectedCategory !== 'ALL' || selectedTag !== 'ALL' || searchTerm) && (
+                                        <>
+                                            <div className="w-[2px] bg-black shrink-0" aria-hidden="true" />
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedCategory('ALL');
+                                                    setSelectedTag('ALL');
+                                                    setSearchTerm('');
+                                                }}
+                                                aria-label="Limpiar filtros"
+                                                title="Limpiar filtros"
+                                                className="shrink-0 px-3.5 md:px-4 flex items-center justify-center bg-white text-black hover:bg-black hover:text-white transition-colors"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
 
-                                {/* Clear Filters Button - Only show when filters active */}
-                                {(selectedCategory !== 'ALL' || selectedTag !== 'ALL' || searchTerm) && (
-                                    <button
-                                        onClick={() => {
-                                            setSelectedCategory('ALL');
-                                            setSelectedTag('ALL');
-                                            setSearchTerm('');
-                                        }}
-                                        className="flex items-center gap-2 px-4 py-2.5 bg-black text-white text-xs font-bold uppercase tracking-wide rounded-lg border-2 border-black hover:bg-white hover:text-black transition-all"
-                                    >
-                                        <X className="w-4 h-4" />
-                                        LIMPIAR
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Filter Dropdown Row */}
-                            <div id="groups-filter-bar" className="flex gap-3 md:max-w-md lg:max-w-lg">
-                                {/* Tag Filter Dropdown */}
-                                <div className="relative flex-1">
-                                    <button
-                                        onClick={() => {
-                                            setIsTagFilterOpen(!isTagFilterOpen);
-                                            setIsCategoryFilterOpen(false);
-                                        }}
-                                        className={`w-full px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border-2 flex items-center justify-center gap-2 ${selectedTag !== 'ALL'
-                                            ? 'bg-black text-white border-black'
-                                            : 'bg-white text-black border-black hover:bg-black hover:text-white'
-                                            }`}
-                                    >
-                                        <Filter className="w-4 h-4" />
-                                        {selectedTag !== 'ALL'
-                                            ? tags.find(t => t.id === selectedTag)?.name || 'FILTRO'
-                                            : 'FILTRAR POR TIPO'
-                                        }
-                                        <ChevronDown className={`w-4 h-4 transition-transform ${isTagFilterOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {/* Tag Filter Dropdown Panel */}
+                                {/* Tag Filter Dropdown Panel — slides down from the bar */}
+                                <AnimatePresence>
                                     {isTagFilterOpen && (
                                         <>
                                             {/* Backdrop */}
@@ -1496,7 +1576,13 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                 onClick={() => setIsTagFilterOpen(false)}
                                             />
                                             {/* Panel */}
-                                            <div className="absolute top-full left-0 mt-2 z-50 min-w-[220px] bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -8 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -8 }}
+                                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                className="absolute top-full right-0 mt-2 z-50 min-w-[220px] bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] origin-top"
+                                            >
                                                 <div className="p-3 border-b-2 border-black bg-black">
                                                     <span className="text-xs font-bold uppercase tracking-wide text-white">
                                                         FILTRAR POR ETIQUETA
@@ -1534,37 +1620,11 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                         </button>
                                                     ))}
                                                 </div>
-                                            </div>
+                                            </motion.div>
                                         </>
                                     )}
-                                </div>
+                                </AnimatePresence>
                             </div>
-                        </div>
-
-                        {/* Mi Calendario shortcut — mobile only */}
-                        {currentUser && (
-                            <div className="md:hidden mb-4">
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/gcx/calendario')}
-                                    aria-label="Ir a mi calendario de grupos"
-                                    className="w-full flex items-center justify-center gap-2 px-4 min-h-[44px] bg-[#28a946] text-white border-2 border-[#28a946] font-black text-xs uppercase tracking-widest shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-[#28a946] transition-colors duration-150 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#28a946]"
-                                >
-                                    <CalendarDays className="w-4 h-4" aria-hidden="true" />
-                                    Mi Calendario
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Section Header */}
-                        <div className="mb-8 md:mb-12 pb-4 border-b-4 border-black">
-                            <p className="text-sm lg:text-base font-medium italic text-[#118f46] mb-2">// grupos de conexión //</p>
-                            <h2 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold uppercase tracking-tight text-black">
-                                ENCONTRÁ TU GRUPO
-                            </h2>
-                            <p className="text-sm lg:text-base font-medium uppercase tracking-wide mt-2 text-black/50">
-                                {filteredGroups.length} grupos disponibles
-                            </p>
                         </div>
 
                         {isLoading ? (

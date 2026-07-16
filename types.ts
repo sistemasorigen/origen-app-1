@@ -486,7 +486,7 @@ export interface GroupRegistration {
     partnerData?: {
         firstName: string;
         lastName: string;
-        email: string;
+        email?: string; // La pareja puede no tener email
         phone: string;
     };
     // Partner's user ID if they have an account in the system

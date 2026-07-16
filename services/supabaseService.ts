@@ -2136,7 +2136,11 @@ export const supabaseService = {
   // Check if partner email already exists in a group (for couples registration duplicate protection)
   async checkPartnerEmailExists(groupId: string, partnerEmail: string): Promise<boolean> {
     try {
-      const emailLower = partnerEmail.toLowerCase().trim();
+      const emailLower = (partnerEmail || '').toLowerCase().trim();
+
+      // Sin email no hay nada que verificar — y evita falsos positivos
+      // contra otras inscripciones de pareja que tampoco tienen email.
+      if (!emailLower) return false;
 
       // Check if email exists as main user OR in partner_data
       // Only check PENDING and APPROVED registrations (ignore REJECTED)
@@ -2175,11 +2179,11 @@ export const supabaseService = {
   },
 
   // Find a user by email to link partner accounts
-  async findUserByEmail(email: string): Promise<{ id: string; name: string } | null> {
+  async findUserByEmail(email: string): Promise<{ id: string; name: string; phone?: string } | null> {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, name')
+        .select('id, name, phone')
         .eq('email', email.toLowerCase().trim())
         .maybeSingle();
 
@@ -2190,7 +2194,7 @@ export const supabaseService = {
 
       if (data) {
 
-        return { id: data.id, name: data.name };
+        return { id: data.id, name: data.name, phone: data.phone || undefined };
       }
 
       return null;

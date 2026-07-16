@@ -144,15 +144,15 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
         if (status === 'AVAILABLE') {
             return { text: 'UNIRME', baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white shadow-lg shadow-[#28a946]/20 active:scale-95', icon: <ArrowRight className="w-3.5 h-3.5" />, disabled: false };
         }
-        return { text: 'VER INFO', baseClass: 'bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:border-[#28a946] hover:text-[#28a946]', icon: <ArrowRight className="w-3.5 h-3.5" />, disabled: false };
+        // Mismo look que "UNIRME" (cosmético): esta rama sigue
+        // ejecutando onInquiry en handleAction, no onJoin — no se
+        // tocó la lógica de negocio, solo texto/color del botón.
+        return { text: 'UNIRME', baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white shadow-lg shadow-[#28a946]/20 active:scale-95', icon: <ArrowRight className="w-3.5 h-3.5" />, disabled: false };
     };
 
     const btnState = getButtonState();
 
-    const shouldTruncate = group.description && group.description.length > 100;
-    const truncatedDescription = shouldTruncate && !isDescriptionExpanded
-        ? group.description.slice(0, 100) + '...'
-        : group.description;
+    const shouldTruncate = !!(group.description && group.description.length > 100);
 
     const handleDescriptionToggle = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -183,6 +183,8 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
     const resolvedTags = tags && group.tags && group.tags.length > 0
         ? tags.filter(tag => group.tags?.includes(tag.id))
         : [];
+    const hasAgeRange = !!((group.minAge && group.minAge > 0) || (group.maxAge && group.maxAge < 100));
+    const hasTagsSection = resolvedTags.length > 0 || hasAgeRange;
 
     // Resolve category name
     const categoryName = categories && group.categoryId
@@ -193,8 +195,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
     return (
         <div
             id={id}
-            className={`group/card relative bg-white dark:bg-neutral-900 rounded-lg shadow-xl shadow-black/5 dark:shadow-black/30 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer flex flex-col ${isHiddenGroup && canSeeHidden ? 'grayscale opacity-60' : ''}`}
-            onClick={handleAction}
+            className={`group/card relative bg-white dark:bg-neutral-900 rounded-lg shadow-xl shadow-black/5 dark:shadow-black/30 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col ${isHiddenGroup && canSeeHidden ? 'grayscale opacity-60' : ''}`}
         >
             {/* ── HERO IMAGE ── */}
             <div className="relative h-56 overflow-hidden">
@@ -279,55 +280,85 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
 
                 {/* Description */}
                 {group.description && (
-                    <div className="space-y-1.5 flex-1">
+                    <div
+                        className={`space-y-1.5 flex-1 ${shouldTruncate ? 'cursor-pointer select-none touch-manipulation' : ''}`}
+                        onClick={shouldTruncate ? handleDescriptionToggle : undefined}
+                        role={shouldTruncate ? 'button' : undefined}
+                        tabIndex={shouldTruncate ? 0 : undefined}
+                        aria-expanded={shouldTruncate ? isDescriptionExpanded : undefined}
+                        onKeyDown={shouldTruncate ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDescriptionExpanded(prev => !prev); } } : undefined}
+                    >
                         <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                            {truncatedDescription}
+                            {shouldTruncate ? group.description.slice(0, 100) : group.description}
+                            {shouldTruncate && !isDescriptionExpanded && '...'}
                         </p>
+
+                        {/* Resto de la descripción — mismo efecto de desplazamiento que el panel de etiquetas */}
                         {shouldTruncate && (
-                            <button
-                                onClick={handleDescriptionToggle}
-                                className="inline-flex items-center text-[#28a946] font-bold text-sm hover:underline"
-                            >
-                                {isDescriptionExpanded ? (
-                                    <>Ver menos <ChevronUp className="w-4 h-4 ml-0.5" /></>
-                                ) : (
-                                    <>Ver más detalles <ArrowRight className="w-4 h-4 ml-0.5 transition-transform group-hover/card:translate-x-0.5" /></>
-                                )}
-                            </button>
+                            <div className={`grid transition-all duration-300 ease-out ${isDescriptionExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                                <div className="overflow-hidden">
+                                    <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                                        {group.description.slice(100)}
+                                    </p>
+                                </div>
+                            </div>
                         )}
                     </div>
                 )}
 
-                {/* Tags / Chips - Collapsible */}
-                {(resolvedTags.length > 0 || ((group.minAge && group.minAge > 0) || (group.maxAge && group.maxAge < 100))) && (
-                    <div className="border-t border-neutral-100 dark:border-neutral-700/60 pt-3">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsTagsExpanded(!isTagsExpanded);
-                            }}
-                            className="flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:text-[#28a946] dark:hover:text-[#28a946] transition-colors"
-                        >
-                            <ChevronDown
-                                className={`w-4 h-4 transition-transform duration-200 ${isTagsExpanded ? 'rotate-180' : ''}`}
-                            />
-                        </button>
+                {/* "Ver más detalles" + toggle de etiquetas — misma línea, chevron pegado al borde derecho */}
+                {(shouldTruncate || hasTagsSection) && (
+                    <div>
+                        <div className="flex items-center gap-3">
+                            {shouldTruncate && (
+                                <button
+                                    onClick={handleDescriptionToggle}
+                                    className="inline-flex items-center text-[#28a946] font-bold text-sm hover:underline"
+                                >
+                                    {isDescriptionExpanded ? (
+                                        <>Ver menos <ChevronUp className="w-4 h-4 ml-0.5" /></>
+                                    ) : (
+                                        <>Ver más detalles <ArrowRight className="w-4 h-4 ml-0.5 transition-transform group-hover/card:translate-x-0.5" /></>
+                                    )}
+                                </button>
+                            )}
+                            {hasTagsSection && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsTagsExpanded(!isTagsExpanded);
+                                    }}
+                                    className="ml-auto shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-[#28a946] hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                                    aria-label={isTagsExpanded ? 'Ocultar etiquetas' : 'Mostrar etiquetas'}
+                                    aria-expanded={isTagsExpanded}
+                                >
+                                    <ChevronDown
+                                        className={`w-4 h-4 transition-transform duration-200 ${isTagsExpanded ? 'rotate-180' : ''}`}
+                                    />
+                                </button>
+                            )}
+                        </div>
 
-                        {isTagsExpanded && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                {resolvedTags.map((tag) => (
-                                    <span
-                                        key={tag.id}
-                                        className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold"
-                                    >
-                                        {tag.name}
-                                    </span>
-                                ))}
-                                {((group.minAge && group.minAge > 0) || (group.maxAge && group.maxAge < 100)) && (
-                                    <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold">
-                                        {group.minAge || 0}–{group.maxAge || 99} años
-                                    </span>
-                                )}
+                        {/* Panel de etiquetas — sin espacio reservado; se desliza hacia abajo solo al expandir */}
+                        {hasTagsSection && (
+                            <div className={`grid transition-all duration-300 ease-out ${isTagsExpanded ? 'grid-rows-[1fr] opacity-100 mt-3' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
+                                <div className="overflow-hidden">
+                                    <div className="flex flex-wrap gap-2 pb-0.5">
+                                        {resolvedTags.map((tag) => (
+                                            <span
+                                                key={tag.id}
+                                                className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold"
+                                            >
+                                                {tag.name}
+                                            </span>
+                                        ))}
+                                        {hasAgeRange && (
+                                            <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold">
+                                                {group.minAge || 0}–{group.maxAge || 99} años
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -338,14 +369,9 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
             <div className="px-5 py-4 bg-neutral-50/80 dark:bg-neutral-800/50 border-t border-neutral-100 dark:border-neutral-700/60 flex items-center justify-between gap-3">
                 {/* Organizer */}
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 bg-[#28a946]/10 dark:bg-[#28a946]/20 flex items-center justify-center rounded-lg border border-[#28a946]/20 shrink-0">
-                        <span className="text-[#28a946] font-bold text-sm">
-                            {group.leaderName.charAt(0)}{group.leaderSurname.charAt(0)}
-                        </span>
-                    </div>
                     <div className="min-w-0">
                         <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-widest leading-none block">
-                            Organiza
+                            Anfitrionado por
                         </span>
                         <span className="text-sm font-bold text-neutral-800 dark:text-white truncate block uppercase">
                             {group.leaderName} {group.leaderSurname}
@@ -361,8 +387,9 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                 {/* Acciones: botón CTA */}
                 <div className="flex items-center gap-2 shrink-0">
                     <button
+                        onClick={handleAction}
                         disabled={btnState.disabled}
-                        className={`shrink-0 px-5 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2 transition-all ${btnState.baseClass}`}
+                        className={`shrink-0 px-5 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed ${btnState.baseClass}`}
                     >
                         {btnState.text}
                         {btnState.icon}
