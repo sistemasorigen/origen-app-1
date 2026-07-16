@@ -5,7 +5,7 @@ import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
-import { Search, Calendar, MapPin, Users, X, ArrowRight, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock } from 'lucide-react';
+import { Search, Calendar, MapPin, Users, X, ArrowRight, ArrowUp, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
@@ -1385,9 +1385,14 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         }))
         : defaultSlides;
 
+    // Alterna el FAB entre "bajar a postularme" y "volver arriba"
+    // cada vez que se lo toca.
+    const [isHostCtaAtBottom, setIsHostCtaAtBottom] = useState(false);
+
     // Scroll animado y controlado (no el "smooth" nativo del navegador,
     // que en distancias largas puede sentirse instantáneo) — así se ve
-    // pasar por las tarjetas de grupos en el camino hacia la postulación.
+    // pasar por las tarjetas de grupos en el camino hacia la postulación
+    // (o de vuelta hacia arriba).
     //
     // CRÍTICO: se desactiva el "scroll anchoring" del navegador mientras
     // dura la animación. Sin esto, a medida que las imágenes de las
@@ -1395,13 +1400,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // viewport, el navegador "corrige" la posición de scroll para
     // compensar — y esa corrección pelea contra nuestros scrollTo(),
     // dando exactamente el efecto de teletransporte/salto que se ve acá.
-    const scrollToWithFlythrough = (elementId: string, duration = 900) => {
-        const target = document.getElementById(elementId);
-        if (!target) return;
-
+    const animateScrollTo = (targetY: number, duration = 900) => {
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (prefersReducedMotion) {
-            target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            window.scrollTo({ top: targetY, behavior: 'auto' });
             return;
         }
 
@@ -1410,7 +1412,6 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         htmlEl.style.overflowAnchor = 'none';
 
         const startY = window.scrollY;
-        const targetY = target.getBoundingClientRect().top + window.scrollY;
         const distance = targetY - startY;
         const startTime = performance.now();
 
@@ -1428,6 +1429,15 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         };
         requestAnimationFrame(step);
     };
+
+    const scrollToWithFlythrough = (elementId: string, duration = 900) => {
+        const target = document.getElementById(elementId);
+        if (!target) return;
+        const targetY = target.getBoundingClientRect().top + window.scrollY;
+        animateScrollTo(targetY, duration);
+    };
+
+    const scrollToTopWithFlythrough = (duration = 900) => animateScrollTo(0, duration);
 
     return (
         <div className="min-h-screen bg-white font-sans pb-20 groups-original-fonts">
@@ -1466,14 +1476,21 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
             {view === 'public' ? (
                 <>
-                    {/* FAB — salto directo a la postulación de anfitrión */}
+                    {/* FAB — alterna entre bajar a la postulación de anfitrión y volver arriba */}
                     <button
                         type="button"
-                        onClick={() => scrollToWithFlythrough('leader-postulation-card')}
+                        onClick={() => {
+                            if (isHostCtaAtBottom) {
+                                scrollToTopWithFlythrough();
+                            } else {
+                                scrollToWithFlythrough('leader-postulation-card');
+                            }
+                            setIsHostCtaAtBottom(prev => !prev);
+                        }}
                         className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-[#28a946] text-white border-2 border-black rounded-full font-black text-xs uppercase tracking-wide shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-[#1f8a39] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
                     >
-                        <UserPlus className="w-4 h-4 shrink-0" />
-                        ¿Querés ser anfitrión?
+                        {isHostCtaAtBottom ? <ArrowUp className="w-4 h-4 shrink-0" /> : <UserPlus className="w-4 h-4 shrink-0" />}
+                        {isHostCtaAtBottom ? 'Volver arriba del todo' : '¿Querés ser anfitrión?'}
                     </button>
 
                     {/* HERO CAROUSEL - Grupos de Conexión */}

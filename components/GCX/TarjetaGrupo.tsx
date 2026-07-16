@@ -293,14 +293,19 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                             {shouldTruncate && !isDescriptionExpanded && '...'}
                         </p>
 
-                        {/* Resto de la descripción — mismo efecto de desplazamiento que el panel de etiquetas */}
+                        {/* Resto de la descripción — mismo efecto de desplazamiento que el panel de etiquetas.
+                            NOTA: se usa max-height (no grid-template-rows) porque en iOS/Safari animar
+                            grid-template-rows fuerza un recálculo de layout completo por frame y se
+                            siente con lag; max-height es una ruta mucho mejor optimizada en WebKit.
+                            [contain:layout] evita que ese recálculo se propague a las tarjetas vecinas
+                            del grid. */}
                         {shouldTruncate && (
-                            <div className={`grid transition-all duration-300 ease-out ${isDescriptionExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-                                <div className="overflow-hidden">
-                                    <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                                        {group.description.slice(100)}
-                                    </p>
-                                </div>
+                            <div
+                                className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-out [contain:layout] ${isDescriptionExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}
+                            >
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                                    {group.description.slice(100)}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -339,25 +344,28 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                             )}
                         </div>
 
-                        {/* Panel de etiquetas — sin espacio reservado; se desliza hacia abajo solo al expandir */}
+                        {/* Panel de etiquetas — sin espacio reservado; se desliza hacia abajo solo al expandir.
+                            Mismo motivo que la descripción: max-height en vez de grid-template-rows
+                            para que no haya lag en iOS/Safari, con [contain:layout] para no afectar
+                            al resto de las tarjetas del grid mientras anima. */}
                         {hasTagsSection && (
-                            <div className={`grid transition-all duration-300 ease-out ${isTagsExpanded ? 'grid-rows-[1fr] opacity-100 mt-3' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
-                                <div className="overflow-hidden">
-                                    <div className="flex flex-wrap gap-2 pb-0.5">
-                                        {resolvedTags.map((tag) => (
-                                            <span
-                                                key={tag.id}
-                                                className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold"
-                                            >
-                                                {tag.name}
-                                            </span>
-                                        ))}
-                                        {hasAgeRange && (
-                                            <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold">
-                                                {group.minAge || 0}–{group.maxAge || 99} años
-                                            </span>
-                                        )}
-                                    </div>
+                            <div
+                                className={`overflow-hidden transition-[max-height,opacity,margin-top] duration-300 ease-out [contain:layout] ${isTagsExpanded ? 'max-h-[600px] opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0'}`}
+                            >
+                                <div className="flex flex-wrap gap-2 pb-0.5">
+                                    {resolvedTags.map((tag) => (
+                                        <span
+                                            key={tag.id}
+                                            className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold"
+                                        >
+                                            {tag.name}
+                                        </span>
+                                    ))}
+                                    {hasAgeRange && (
+                                        <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-3 py-1.5 rounded-md text-xs font-semibold">
+                                            {group.minAge || 0}–{group.maxAge || 99} años
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         )}
