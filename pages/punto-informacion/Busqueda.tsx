@@ -15,10 +15,6 @@ const Search: React.FC = () => {
 
     return (
         <div className="max-w-xl mx-auto space-y-8 animate-fadeIn pt-10 p-1">
-            <h2 className="text-3xl font-black text-center text-black uppercase tracking-tight">
-                Consulta Rápida
-            </h2>
-
             <div className="bg-white border-2 md:border-4 border-black p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all">
                 <div className="grid grid-cols-2 gap-4 mb-8">
                     <div>

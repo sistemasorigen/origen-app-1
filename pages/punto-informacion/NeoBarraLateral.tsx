@@ -81,11 +81,14 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                 <div className={`p-4 border-b-4 border-black flex items-center bg-white ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
                     {/* Title — hidden when collapsed */}
                     {!isCollapsed && (
-                        <div>
-                            <h1 className="text-2xl font-black text-black uppercase tracking-tighter">
-                                Panel
-                            </h1>
-                            <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mt-1">Punto de Info</p>
+                        <div className="flex items-center gap-2.5">
+                            <span className="w-2.5 h-8 shrink-0" style={{ backgroundColor: '#FACC15', outline: '2px solid #000' }} />
+                            <div>
+                                <h1 className="text-2xl font-black text-black uppercase tracking-tighter leading-none">
+                                    Panel
+                                </h1>
+                                <p className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mt-1">Punto de Info</p>
+                            </div>
                         </div>
                     )}
 
@@ -137,7 +140,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                                 className={`w-full flex items-center gap-3 text-sm font-bold uppercase tracking-tight transition-all border-b border-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                                     ${isCollapsed ? 'justify-center px-0 py-4' : 'px-6 py-4'}
                                     ${isActive
-                                        ? 'bg-black text-white font-black tracking-widest border-y-2 border-black -my-px relative z-10'
+                                        ? 'bg-black text-white font-black tracking-widest border-y-2 border-black border-l-4 border-l-[#FACC15] -my-px relative z-10'
                                         : 'text-black bg-white hover:bg-neutral-100'
                                     }`}
                             >

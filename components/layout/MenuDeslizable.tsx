@@ -56,6 +56,8 @@ interface SubMenuItem {
     path?: string;
     roles?: UserRole[];
     separator?: boolean;
+    // Solo visible en el drawer mobile (se oculta en el sidebar desktop).
+    mobileOnly?: boolean;
 }
 
 interface SubGroup {
@@ -151,6 +153,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     const handleNavigation = (path: string) => {
         navigate(path);
         onClose();
+        // Subir al tope al navegar desde el menú. Sin esto, cambiar de vista dentro
+        // de la misma ruta (ej. Punto de Información: de un panel admin a "Inicio")
+        // deja la página a mitad de scroll. El pequeño delay espera a que el drawer
+        // libere el bloqueo de scroll del body (overflow: hidden) antes de hacer scroll.
+        setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }), 60);
     };
 
     const menuData: MenuItem[] = [
@@ -356,17 +363,19 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO],
             subItems: [
                 { label: 'Inicio', path: '/punto-de-informacion' },
-                { label: 'Dashboard', path: '/punto-de-informacion?view=PANEL' },
-                { label: 'Buscar', path: '/punto-de-informacion?view=SEARCH' },
-                { label: 'Inventario', path: '/punto-de-informacion?view=INVENTORY' },
-                { label: 'Nuevo Producto', path: '/punto-de-informacion?view=NEW_PRODUCT' },
-                { label: 'Movimientos', path: '/punto-de-informacion?view=MOVEMENTS' },
-                { label: 'Eventos', path: '/punto-de-informacion?view=EVENTS' },
-                { label: 'Préstamos', path: '/punto-de-informacion?view=LOANS' },
-                { label: 'Bautismos', path: '/punto-de-informacion?view=BAPTISMS' },
-                { label: 'Presentaciones', path: '/punto-de-informacion?view=PRESENTATIONS' },
+                { label: 'Administración', separator: true },
+                { label: 'Dashboard', path: '/punto-de-informacion?view=SUMMARY' },
+                { label: 'Menú principal', path: '/punto-de-informacion?view=PANEL', mobileOnly: true },
                 { label: 'Anuncios', path: '/punto-de-informacion?view=ANNOUNCEMENTS' },
+                { label: 'Bautismos', path: '/punto-de-informacion?view=BAPTISMS' },
+                { label: 'Buscar', path: '/punto-de-informacion?view=SEARCH' },
                 { label: 'Configuración', path: '/punto-de-informacion?view=ADMIN_PANEL', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
+                { label: 'Eventos', path: '/punto-de-informacion?view=EVENTS' },
+                { label: 'Inventario', path: '/punto-de-informacion?view=INVENTORY' },
+                { label: 'Movimientos', path: '/punto-de-informacion?view=MOVEMENTS' },
+                { label: 'Nuevo Producto', path: '/punto-de-informacion?view=NEW_PRODUCT' },
+                { label: 'Presentaciones', path: '/punto-de-informacion?view=PRESENTATIONS' },
+                { label: 'Préstamos', path: '/punto-de-informacion?view=LOANS' },
                 { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
             ]
         },
@@ -437,6 +446,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         (item.activePaths?.some(p => location.pathname.startsWith(p)) ?? false);
 
                     const visibleSubItems = item.subItems?.filter(sub => {
+                        // "Menú principal" es exclusivo de mobile: ocultar en el sidebar desktop.
+                        if (sub.mobileOnly && isSidebar) return false;
                         // Sin roles: público (separadores sin roles incluidos)
                         if (!sub.roles || sub.roles.length === 0) return true;
                         // Con roles: requiere login y el rol (aplica a items y separadores)

@@ -5,7 +5,7 @@ import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
-import { Search, Calendar, MapPin, Users, X, ArrowRight, ArrowUp, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock } from 'lucide-react';
+import { Search, Calendar, MapPin, Users, X, ArrowRight, ArrowUp, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock, Instagram, Facebook, Youtube, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
@@ -1734,6 +1734,65 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                         </div>
 
                     </div>
+
+                    {/* --- FOOTER --- */}
+                    <footer className="bg-white border-t-4 border-black mt-16">
+                        <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                                <div className="flex items-center gap-4">
+                                    <img src="/origen-logo.png" alt="Logo" className="h-14 w-auto object-contain" />
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    {config.footerLinks?.instagram && (
+                                        <button
+                                            onClick={() => window.open(config.footerLinks!.instagram, '_blank')}
+                                            className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                            title="Instagram"
+                                        >
+                                            <Instagram className="w-6 h-6" />
+                                        </button>
+                                    )}
+                                    {config.footerLinks?.facebook && (
+                                        <button
+                                            onClick={() => window.open(config.footerLinks!.facebook, '_blank')}
+                                            className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                            title="Facebook"
+                                        >
+                                            <Facebook className="w-6 h-6" />
+                                        </button>
+                                    )}
+                                    {config.footerLinks?.youtube && (
+                                        <button
+                                            onClick={() => window.open(config.footerLinks!.youtube, '_blank')}
+                                            className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                            title="YouTube"
+                                        >
+                                            <Youtube className="w-6 h-6" />
+                                        </button>
+                                    )}
+                                    {config.footerLinks?.spotify && (
+                                        <button
+                                            onClick={() => window.open(config.footerLinks!.spotify, '_blank')}
+                                            className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                            title="Spotify"
+                                        >
+                                            <Music className="w-6 h-6" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="text-center md:text-right">
+                                    <p className="text-sm font-bold text-neutral-500 uppercase tracking-wider">
+                                        © {new Date().getFullYear()} Sistema Origen
+                                    </p>
+                                    <p className="text-xs font-bold text-neutral-300 uppercase tracking-wider mt-1">
+                                        Todos los derechos reservados
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>
                 </>
             ) : (
                 <div className="w-full py-8 lg:py-10 animate-fadeIn">

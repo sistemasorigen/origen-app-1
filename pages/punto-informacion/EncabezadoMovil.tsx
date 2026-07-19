@@ -2,7 +2,6 @@
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useStore } from '../../store';
-import SidebarDropdown from '../../components/info-point/MenuDesplegableBarraLateral';
 import { ViewState, User } from '../../types';
 
 interface MobileHeaderProps {
@@ -37,16 +36,8 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({ title, isRoot, onBack, onOp
                 </h1>
             </div>
 
-            {/* Right Slot - Navigation Dropdown */}
-            <div className="flex items-center justify-end w-10">
-                {currentView && onNavigate ? (
-                    <SidebarDropdown
-                        currentView={currentView}
-                        onNavigate={onNavigate}
-                        currentUser={currentUser}
-                    />
-                ) : null}
-            </div>
+            {/* Right Slot - espaciador para mantener el título centrado */}
+            <div className="w-10" aria-hidden="true" />
         </div>
     );
 };

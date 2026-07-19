@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppProvider, useStore } from '../../store';
 import { ViewState, User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
@@ -31,42 +32,29 @@ interface InfoPointProps {
     currentUser: User | null;
 }
 
-// --- NEO-BRUTALIST SWITCH TOGGLE ---
-interface ViewSwitchProps {
-    viewMode: 'PUBLIC' | 'INTERNAL';
-    canEnterPanel: boolean;
-    onGoPublic: () => void;
-    onGoInternal: () => void;
-}
-
-const ViewSwitch: React.FC<ViewSwitchProps> = ({ viewMode, canEnterPanel, onGoPublic, onGoInternal }) => {
-    return (
-        <div className="inline-flex border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden" role="group">
-            <button
-                onClick={onGoPublic}
-                className={`px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-200 border-r-2 border-black ${viewMode === 'PUBLIC'
-                    ? 'bg-black text-white'
-                    : 'bg-white text-black hover:bg-slate-100'
-                    }`}
-            >
-                Público
-            </button>
-            <button
-                onClick={onGoInternal}
-                className={`px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-200 ${viewMode === 'INTERNAL'
-                    ? 'bg-black text-white'
-                    : 'bg-white text-black hover:bg-slate-100'
-                    }`}
-            >
-                {canEnterPanel ? 'Panel' : '🔒 Panel'}
-            </button>
-        </div>
-    );
-};
+// Orden y roles de las funciones del panel para la navegación por flechas
+// (solo desktop). MISMO ORDEN que el menú lateral (MenuDeslizable): Dashboard
+// primero y el resto alfabético. "Reportes" se excluye a propósito: navega
+// fuera del panel (/reportes), no es una vista interna por la que "desplazarse".
+const DESKTOP_NAV: { id: ViewState; label: string; roles: UserRole[] }[] = [
+    // Usa SUMMARY (no PANEL) para que la URL ?view=SUMMARY coincida con el ítem
+    // "Dashboard" del menú lateral y quede marcado. Ambos renderizan el Dashboard.
+    { id: 'SUMMARY', label: 'Dashboard', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
+    { id: 'ANNOUNCEMENTS', label: 'Anuncios', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
+    { id: 'BAPTISMS', label: 'Bautismos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
+    { id: 'SEARCH', label: 'Búsqueda de Stock', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
+    { id: 'ADMIN_PANEL', label: 'Configuración', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
+    { id: 'EVENTS', label: 'Eventos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
+    { id: 'INVENTORY', label: 'Inventario Total', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
+    { id: 'MOVEMENTS', label: 'Registrar Movimiento', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
+    { id: 'NEW_PRODUCT', label: 'Nuevo Producto', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
+    { id: 'PRESENTATIONS', label: 'Presentación', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
+    { id: 'LOANS', label: 'Préstamos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
+];
 
 const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const { settings, isLoading, notification } = useStore();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [viewMode, setViewMode] = useState<'PUBLIC' | 'INTERNAL'>('PUBLIC');
     const [currentView, setCurrentView] = useState<ViewState>('PANEL');
 
@@ -78,6 +66,12 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             if (currentUser && viewMode === 'PUBLIC') {
                 setViewMode('INTERNAL');
             }
+        } else {
+            // Sin ?view= (ej: "Inicio" del menú) — volver al HOME público
+            // de Punto de Información, no dejar el panel interno congelado.
+            // PANEL es el Dashboard, así que resetear la vista Y el modo.
+            setViewMode('PUBLIC');
+            setCurrentView('PANEL');
         }
     }, [searchParams, currentUser]);
 
@@ -233,24 +227,36 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         }
     };
 
-    // The switch shown in the internal panel header
-    const switchEl = (
-        <ViewSwitch
-            viewMode={viewMode}
-            canEnterPanel={canEnterPanel}
-            onGoPublic={handleGoPublic}
-            onGoInternal={handleGoInternal}
-        />
-    );
+    // --- NAVEGACIÓN POR FLECHAS (solo desktop) ---
+    // Funciones visibles según el rol, en el orden definido.
+    const visibleNav = DESKTOP_NAV.filter(item => !!authorizedUser && hasRole(authorizedUser, item.roles));
+    // PANEL y SUMMARY renderizan el mismo Dashboard; al entrar al panel la vista
+    // arranca en PANEL, así que lo tratamos como SUMMARY para ubicar el índice.
+    const normalizedView = currentView === 'PANEL' ? 'SUMMARY' : currentView;
+    const navIndex = visibleNav.findIndex(item => item.id === normalizedView);
+    // Título centrado: usa el label del menú; si la vista no está en la lista
+    // cae al título genérico.
+    const currentNavLabel = navIndex >= 0 ? visibleNav[navIndex].label : getViewTitle(currentView);
+    // Se desplaza de forma circular actualizando la URL (?view=XXX). El efecto de
+    // deep-linking sincroniza currentView, y el menú lateral marca el ítem activo
+    // por coincidencia exacta de URL. Se usa replace para no llenar el historial.
+    const goToNav = (dir: -1 | 1) => {
+        if (visibleNav.length === 0) return;
+        const base = navIndex >= 0 ? navIndex : 0;
+        const next = (base + dir + visibleNav.length) % visibleNav.length;
+        setSearchParams({ view: visibleNav[next].id }, { replace: true });
+    };
 
     return (
         <div className="flex flex-col md:flex-row h-screen md:h-[calc(100vh-64px)] bg-slate-50 md:bg-transparent overflow-hidden relative">
 
             {/* --- MOBILE LAYOUT --- */}
             <div className="md:hidden fixed inset-x-0 top-16 bottom-0 z-30 flex flex-col bg-white overflow-hidden">
-                <header className="flex-none z-40 bg-white border-b-4 border-black select-none overflow-hidden" style={{ touchAction: 'none' }}>
-                    {/* Header bar only when NOT at root for back button, otherwise title is in the subnav div */}
-                    {currentView !== 'PANEL' && (
+                {/* Header solo en sub-vistas (back + título + dropdown).
+                    En la raíz del panel (PANEL) no hay barra: el toggle
+                    Web/Panel se eliminó. */}
+                {currentView !== 'PANEL' && (
+                    <header className="flex-none z-40 bg-white border-b-4 border-black select-none overflow-hidden" style={{ touchAction: 'none' }}>
                         <MobileHeader
                             title={getViewTitle(currentView)}
                             isRoot={false}
@@ -259,35 +265,8 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                             onNavigate={setCurrentView}
                             currentUser={authorizedUser}
                         />
-                    )}
-
-                    {/* SUBNAV design matching PublicHome screenshot */}
-                    <div className="flex flex-col w-full overflow-hidden" style={{ touchAction: 'none' }}>
-                        {/* Title (Only shown for PUBLIC view to match desired design, removed for Admin Panel as requested) */}
-                        {viewMode as string === 'PUBLIC' && (
-                            <div className="h-10 flex items-center justify-center border-b-4 border-black">
-                                <h1 className="text-sm font-black tracking-widest uppercase text-black">
-                                    Punto de Información
-                                </h1>
-                            </div>
-                        )}
-                        {/* Switch Buttons */}
-                        <div className="flex w-full h-11 overflow-hidden" style={{ touchAction: 'none' }}>
-                            <button
-                                onClick={handleGoPublic}
-                                className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all border-r-4 border-black ${(viewMode as string) === 'PUBLIC' ? 'bg-black text-white' : 'bg-white text-black'}`}
-                            >
-                                <span className={(viewMode as string) === 'PUBLIC' ? 'text-white' : 'text-blue-500'}>🌐</span> WEB
-                            </button>
-                            <button
-                                onClick={handleGoInternal}
-                                className={`flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all ${(viewMode as string) === 'INTERNAL' ? 'bg-black text-white' : 'bg-white text-black'}`}
-                            >
-                                <span className={(viewMode as string) === 'INTERNAL' ? 'text-white' : 'text-slate-400'}>⚙️</span> PANEL
-                            </button>
-                        </div>
-                    </div>
-                </header>
+                    </header>
+                )}
 
                 <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-white">
                     {currentView === 'PANEL' ? (
@@ -310,22 +289,39 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             </div>
 
             {/* --- DESKTOP LAYOUT --- */}
-            <div className="hidden md:flex flex-1 h-full overflow-hidden relative">
-                <NeoSidebar
-                    currentView={currentView}
-                    setView={setCurrentView}
-                    settings={settings}
-                    isOpen={isSidebarOpen}
-                    onClose={() => setIsSidebarOpen(false)}
-                    currentUser={authorizedUser}
-                />
+            <div className="hidden md:flex flex-col flex-1 h-full overflow-hidden relative">
+
+                {/* Cabecera de navegación: nombre de la vista centrado con
+                    flechas a los costados para desplazarse entre funciones.
+                    Reemplaza al menú lateral (exclusivo de desktop). */}
+                <header className="flex-none border-b-4 border-black bg-white">
+                    <div className="flex items-center justify-center gap-6 px-8 py-5">
+                        <button
+                            onClick={() => goToNav(-1)}
+                            aria-label="Función anterior"
+                            className="flex items-center justify-center w-12 h-12 border-4 border-black bg-white text-black hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                        >
+                            <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
+                        </button>
+
+                        <div className="flex flex-col items-center min-w-[16rem]">
+                            <h1 className="text-2xl lg:text-3xl font-black uppercase tracking-tighter text-black text-center leading-none">
+                                {currentNavLabel}
+                            </h1>
+                            <span className="mt-2 h-1.5 w-20 border-2 border-black" style={{ backgroundColor: '#FACC15' }} />
+                        </div>
+
+                        <button
+                            onClick={() => goToNav(1)}
+                            aria-label="Función siguiente"
+                            className="flex items-center justify-center w-12 h-12 border-4 border-black bg-white text-black hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                        >
+                            <ChevronRight className="w-6 h-6" strokeWidth={2.5} />
+                        </button>
+                    </div>
+                </header>
 
                 <main className="flex-1 overflow-y-auto p-8 relative">
-                    {/* Desktop: switch at top-right of content header */}
-                    <div className="absolute top-6 right-8 z-20">
-                        {switchEl}
-                    </div>
-
                     {renderView()}
 
                     {/* Global Notification Toast */}

@@ -36,8 +36,6 @@ const Inventory: React.FC = () => {
                     <option value="Remeras">Remeras</option>
                     <option value="Buzos">Buzos</option>
                 </select>
-
-                <h2 className="hidden md:block text-3xl font-black uppercase tracking-tight text-black">Inventario Total</h2>
             </div>
 
             {/* Desktop Table (Hidden on Mobile) */}

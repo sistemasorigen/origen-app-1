@@ -40,10 +40,6 @@ const NewProduct: React.FC = () => {
 
     return (
         <div className="max-w-xl mx-auto animate-fadeIn p-1">
-            <h2 className="text-3xl font-black text-black uppercase tracking-tight mb-8">
-                Nuevo Producto
-            </h2>
-
             <div className="bg-white border-2 md:border-4 border-black p-6 md:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">

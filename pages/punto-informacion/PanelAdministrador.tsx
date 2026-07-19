@@ -73,10 +73,6 @@ const AdminPanel: React.FC = () => {
                 </div>
             )}
 
-            <h2 className="text-2xl md:text-3xl font-black text-black uppercase tracking-tight border-b-4 border-black inline-block pb-1">
-                Panel de Configuración
-            </h2>
-
             {/* MASS PRICE UPDATE */}
             <div className="bg-white border-2 border-black rounded-xl p-4 md:p-6 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
                 <h3 className="text-lg font-black mb-4 text-black uppercase tracking-tight border-b-2 border-black pb-2 flex items-center gap-2">

@@ -4,7 +4,7 @@ import { useStore } from '../../store';
 import { Announcement } from '../../types';
 import { Megaphone, Plus, Pencil, Trash2, X, Save, CheckCircle, AlertCircle, QrCode, Link as LinkIcon } from 'lucide-react';
 import { safeUUID } from '../../services/uuidUtils';
-import QRCodeModal from '../../components/modals/ModalCodigoQR';
+import ModalCompartirQR from '../../components/modals/ModalCompartirQR';
 
 const EMPTY_FORM: Omit<Announcement, 'id' | 'createdAt'> = {
     title: '',
@@ -22,7 +22,7 @@ const Announcements: React.FC = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saved, setSaved] = useState(false);
-    const [qrModal, setQrModal] = useState<{ open: boolean, title: string, url: string }>({ open: false, title: '', url: '' });
+    const [qrModal, setQrModal] = useState<{ open: boolean, title: string, url: string, link: string }>({ open: false, title: '', url: '', link: '' });
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
     const today = new Date().toISOString().slice(0, 10);
@@ -146,11 +146,12 @@ const Announcements: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <QRCodeModal
+            <ModalCompartirQR
                 isOpen={qrModal.open}
                 onClose={() => setQrModal({ ...qrModal, open: false })}
                 title={qrModal.title}
                 qrUrl={qrModal.url}
+                link={qrModal.link}
             />
 
             {/* --- DELETE CONFIRM MODAL --- */}
@@ -179,17 +180,6 @@ const Announcements: React.FC = () => {
                     </div>
                 </div>
             )}
-
-            {/* --- HEADER --- */}
-            <div className="flex items-center gap-3 pb-4 border-b-4 border-black">
-                <div className="p-3 bg-yellow-100 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                    <Megaphone className="w-6 h-6 text-black" />
-                </div>
-                <div>
-                    <h1 className="text-2xl font-black uppercase tracking-tighter">Gestor de Anuncios</h1>
-                    <p className="text-sm font-bold text-slate-500 uppercase tracking-wide">Tablero público del Punto de Info</p>
-                </div>
-            </div>
 
             {/* --- FORM --- */}
             <div className="bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-6 space-y-4">
@@ -356,7 +346,7 @@ const Announcements: React.FC = () => {
                                         <div className="flex items-center gap-2 pt-1">
                                             {a.qrCodeUrl && (
                                                 <button
-                                                    onClick={() => setQrModal({ open: true, title: a.title, url: getSafeQrUrl(a.qrCodeUrl, a.title, a.link) })}
+                                                    onClick={() => setQrModal({ open: true, title: a.title, url: getSafeQrUrl(a.qrCodeUrl, a.title, a.link), link: a.link || window.location.href })}
                                                     className="flex items-center gap-1.5 px-3 py-2 border-2 border-black bg-white text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all active:shadow-none"
                                                 >
                                                     <QrCode className="w-3.5 h-3.5" /> QR
@@ -434,7 +424,7 @@ const Announcements: React.FC = () => {
                                                 <div className="flex items-center justify-center gap-2">
                                                     {a.qrCodeUrl && (
                                                         <button
-                                                            onClick={() => setQrModal({ open: true, title: a.title, url: getSafeQrUrl(a.qrCodeUrl, a.title, a.link) })}
+                                                            onClick={() => setQrModal({ open: true, title: a.title, url: getSafeQrUrl(a.qrCodeUrl, a.title, a.link), link: a.link || window.location.href })}
                                                             className="p-2 border-2 border-black hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none active:translate-y-0.5"
                                                             title="Ver QR"
                                                         >

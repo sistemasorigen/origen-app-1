@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-import { Package, Droplets, Baby, CalendarDays, BarChart3 } from 'lucide-react';
+import { Package, Droplets, Baby, CalendarDays, BarChart3, ArrowLeft } from 'lucide-react';
 import { ProductType, INFO_POINT_SIZES, User, UserRole } from '../../types';
 import SkeletonLoader from '../../components/ui/CargadorEsqueleto';
 import { useAuth } from '../../contexts/AuthContext';
@@ -47,18 +47,30 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
         };
     });
 
-    const StatCard = ({ title, value, icon: Icon, colorClass, bgClass, onClick }: any) => (
+    // Un solo acento en todo el módulo: amarillo marcador. Acá lo usamos
+    // con sentido — el chip amarillo señala "esto requiere tu atención"
+    // (pendientes), no es decoración. El resto queda en negro/blanco.
+    const StatCard = ({ title, value, icon: Icon, highlight, onClick }: {
+        title: string; value: React.ReactNode; icon: any; highlight?: boolean; onClick?: () => void;
+    }) => (
         <div
             onClick={onClick}
-            className={`p-6 border-2 md:border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col justify-between h-36 ${bgClass || 'bg-white'} ${onClick ? 'cursor-pointer' : ''}`}
+            className={`p-5 md:p-6 bg-white border-2 md:border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col justify-between h-36 ${onClick ? 'cursor-pointer' : ''}`}
         >
-            <div className="flex justify-between items-start">
-                <span className="text-xs font-black uppercase tracking-widest border-b-2 border-black pb-1 mb-2">{title}</span>
-                <div className={`p-2 border-2 border-black ${colorClass || 'bg-black text-white'}`}>
+            <div className="flex justify-between items-start gap-2">
+                <span className="text-[11px] font-black uppercase tracking-widest text-neutral-500 leading-tight">{title}</span>
+                <div className={`p-2 border-2 border-black shrink-0 ${highlight ? 'text-black' : 'bg-black text-white'}`} style={highlight ? { backgroundColor: '#FACC15' } : undefined}>
                     <Icon className="w-5 h-5" />
                 </div>
             </div>
-            <span className="text-4xl font-black tracking-tighter">{value}</span>
+            <div className="flex items-end gap-2">
+                <span className="text-4xl md:text-5xl font-black tracking-tighter tabular-nums leading-none">{value}</span>
+                {highlight && (
+                    <span className="mb-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 border-2 border-black text-black" style={{ backgroundColor: '#FACC15' }}>
+                        Pendiente
+                    </span>
+                )}
+            </div>
         </div>
     );
 
@@ -80,62 +92,36 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
 
     return (
         <div className="space-y-8 animate-fadeIn p-1">
-            {/* Header con título y botón de Reportes (solo desktop) */}
-            <div className="flex flex-col gap-3">
-                <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-black">
-                    Resumen General
-                </h2>
-                {canViewReports && (
-                    <div>
-                        <button
-                            id="reports-btn"
-                            onClick={() => navigate('/reportes')}
-                            className="hidden md:flex items-center gap-2 px-4 py-2 bg-white text-black border-2 border-black font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none transition-all"
-                        >
-                            <BarChart3 size={18} />
-                            REPORTES
-                        </button>
-                    </div>
-                )}
-            </div>
+            <button
+                onClick={() => navigate('/punto-de-informacion')}
+                className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-black hover:opacity-70 transition-opacity"
+            >
+                <ArrowLeft className="w-4 h-4" />
+                Volver al Inicio
+            </button>
+
+            {/* Acceso rápido a Reportes (solo desktop, roles con permiso).
+                El título de la vista ya lo muestra el header del panel. */}
+            {canViewReports && (
+                <div className="hidden md:flex justify-end">
+                    <button
+                        id="reports-btn"
+                        onClick={() => navigate('/reportes')}
+                        className="flex items-center gap-2 px-4 py-2 bg-white text-black border-2 border-black font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                    >
+                        <BarChart3 size={18} />
+                        Reportes
+                    </button>
+                </div>
+            )}
 
             {/* Top Cards Grid */}
             <div id="stats-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-                <StatCard
-                    title="Stock Remeras"
-                    value={stockRemeras}
-                    icon={Package}
-                    colorClass="bg-indigo-600 text-white"
-                />
-
-
-
-                <StatCard
-                    title="Stock Buzos"
-                    value={stockBuzos}
-                    icon={Package}
-                    colorClass="bg-pink-600 text-white"
-                />
-                <StatCard
-                    title="Eventos Activos"
-                    value={activeEvents}
-                    icon={CalendarDays}
-                    colorClass="bg-orange-500 text-white"
-                />
-                <StatCard
-                    title="Bautismos Pend."
-                    value={pendingBaptisms}
-                    icon={Droplets}
-                    colorClass="bg-cyan-500 text-white"
-                    bgClass="bg-cyan-50"
-                />
-                <StatCard
-                    title="Present. Pend."
-                    value={pendingPresentations}
-                    icon={Baby}
-                    colorClass="bg-purple-500 text-white"
-                    bgClass="bg-purple-50"
-                />
+                <StatCard title="Stock remeras" value={stockRemeras} icon={Package} />
+                <StatCard title="Stock buzos" value={stockBuzos} icon={Package} />
+                <StatCard title="Eventos activos" value={activeEvents} icon={CalendarDays} />
+                <StatCard title="Bautismos pend." value={pendingBaptisms} icon={Droplets} highlight={pendingBaptisms > 0} />
+                <StatCard title="Present. pend." value={pendingPresentations} icon={Baby} highlight={pendingPresentations > 0} />
             </div>
 
             {/* Stock Chart */}
@@ -174,7 +160,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                             <Bar
                                 dataKey="Remeras"
                                 name="REMERAS"
-                                fill="#4f46e5"
+                                fill="#000000"
                                 radius={[0, 0, 0, 0]}
                                 barSize={40}
                                 stroke="#000"
@@ -183,7 +169,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                             <Bar
                                 dataKey="Buzos"
                                 name="BUZOS"
-                                fill="#db2777"
+                                fill="#FACC15"
                                 radius={[0, 0, 0, 0]}
                                 barSize={40}
                                 stroke="#000"

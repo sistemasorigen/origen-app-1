@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store';
 import { AppEvent } from '../../types';
-import QRCodeModal from '../../components/modals/ModalCodigoQR';
+import ModalCompartirQR from '../../components/modals/ModalCompartirQR';
 import { QrCode, Trash2, Calendar, Link as LinkIcon, ExternalLink, Plus, Clock, Edit2, X } from 'lucide-react';
 import { formatDateForInput, formatDateForDisplay } from '../../services/dateUtils';
 import { safeUUID } from '../../services/uuidUtils';
 
 const Events: React.FC = () => {
     const { events, addEvent, updateEvent, deleteEvent, showNotification } = useStore();
-    const [qrModal, setQrModal] = useState<{ open: boolean, title: string, url: string }>({ open: false, title: '', url: '' });
+    const [qrModal, setQrModal] = useState<{ open: boolean, title: string, url: string, link: string }>({ open: false, title: '', url: '', link: '' });
 
     // Form State
     const [form, setForm] = useState({
@@ -120,14 +120,13 @@ const Events: React.FC = () => {
 
     return (
         <div className="space-y-8 animate-fadeIn p-1">
-            <QRCodeModal
+            <ModalCompartirQR
                 isOpen={qrModal.open}
                 onClose={() => setQrModal({ ...qrModal, open: false })}
                 title={qrModal.title}
                 qrUrl={qrModal.url}
+                link={qrModal.link}
             />
-
-            <h2 className="text-3xl font-black text-black uppercase tracking-tight">Gestión de Eventos</h2>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* FORM CARD */}
@@ -265,7 +264,7 @@ const Events: React.FC = () => {
                         {sortedEvents.map(ev => (
                             <div
                                 key={ev.id}
-                                onClick={() => setQrModal({ open: true, title: ev.name, url: getSafeQrUrl(ev.qrCodeUrl, ev.name, ev.link) })}
+                                onClick={() => setQrModal({ open: true, title: ev.name, url: getSafeQrUrl(ev.qrCodeUrl, ev.name, ev.link), link: ev.link || window.location.href })}
                                 className={`bg-white p-5 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all cursor-pointer group flex items-start gap-4 relative ${editingId === ev.id ? 'bg-neutral-50 border-dashed' : ''}`}
                             >
                                 {/* QR Preview */}
