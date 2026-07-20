@@ -41,30 +41,30 @@ const AdminPanel: React.FC = () => {
 
             {/* CONFIRM MODAL */}
             {confirmOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 w-full max-w-sm mx-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white border border-slate-200 rounded-lg shadow-xl p-6 w-full max-w-sm">
                         <div className="flex items-center gap-3 mb-4">
-                            <AlertTriangle className="w-6 h-6 text-yellow-500 flex-shrink-0" />
-                            <h2 className="text-lg font-black uppercase tracking-tighter">Confirmar actualización</h2>
+                            <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><AlertTriangle className="w-5 h-5" /></div>
+                            <h2 className="text-lg font-black uppercase tracking-tight text-slate-900">Confirmar actualización</h2>
                         </div>
-                        <p className="text-sm font-bold text-slate-600 mb-2">
-                            Se actualizarán <span className="text-black font-black">todos</span> los productos de tipo:
+                        <p className="text-sm font-medium text-slate-500 mb-2">
+                            Se actualizarán <span className="text-slate-900 font-bold">todos</span> los productos de tipo:
                         </p>
-                        <div className="flex items-center gap-3 mb-6 p-3 border-4 border-black bg-slate-50">
-                            <span className="text-base font-black uppercase">{priceUpdate.type}</span>
+                        <div className="flex items-center gap-3 mb-6 p-3 rounded-lg border border-slate-200 bg-slate-50">
+                            <span className="text-base font-black uppercase text-slate-900">{priceUpdate.type}</span>
                             <span className="text-slate-400 font-bold">→</span>
-                            <span className="text-base font-black">${priceUpdate.price.toLocaleString('es-AR')}</span>
+                            <span className="text-base font-black text-slate-900">${priceUpdate.price.toLocaleString('es-AR')}</span>
                         </div>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setConfirmOpen(false)}
-                                className="flex-1 py-3 border-4 border-black font-black uppercase text-sm hover:bg-slate-100 transition-all"
+                                className="flex-1 py-2.5 border border-slate-200 rounded-lg font-bold uppercase text-xs tracking-widest text-slate-700 hover:bg-slate-100 transition-colors"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={executeUpdate}
-                                className="flex-1 py-3 bg-black text-white border-4 border-black font-black uppercase text-sm hover:bg-neutral-800 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]"
+                                className="flex-1 py-2.5 bg-black text-white rounded-lg font-bold uppercase text-xs tracking-widest hover:bg-slate-800 transition-colors"
                             >
                                 Confirmar
                             </button>
@@ -74,56 +74,56 @@ const AdminPanel: React.FC = () => {
             )}
 
             {/* MASS PRICE UPDATE */}
-            <div className="bg-white border-2 border-black rounded-xl p-4 md:p-6 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                <h3 className="text-lg font-black mb-4 text-black uppercase tracking-tight border-b-2 border-black pb-2 flex items-center gap-2">
-                    <RefreshCw className="w-5 h-5" />
-                    Actualización Masiva
+            <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-base font-black mb-4 text-slate-900 uppercase tracking-tight border-b border-slate-200 pb-3 flex items-center gap-2">
+                    <RefreshCw className="w-5 h-5 text-slate-400" />
+                    Actualización masiva
                 </h3>
                 <div className="space-y-4">
-                    <p className="text-xs font-bold uppercase text-neutral-500">Selecciona el tipo y el nuevo precio:</p>
+                    <p className="text-xs font-medium uppercase text-slate-500">Selecciona el tipo y el nuevo precio:</p>
                     <div className="flex flex-col gap-3">
                         <div>
-                            <label className="text-xs font-black uppercase tracking-widest mb-1 block">Tipo</label>
+                            <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">Tipo</label>
                             <select
                                 value={priceUpdate.type}
                                 onChange={e => setPriceUpdate({ ...priceUpdate, type: e.target.value as ProductType })}
-                                className="w-full h-12 px-3 border-2 border-black rounded-lg bg-white text-black font-bold outline-none focus:ring-2 focus:ring-black transition-all cursor-pointer"
+                                className="w-full h-11 px-3 border border-slate-300 rounded-lg bg-white text-sm text-slate-900 font-bold outline-none focus:border-black transition-colors cursor-pointer"
                             >
                                 {Object.values(ProductType).map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="text-xs font-black uppercase tracking-widest mb-1 block">Precio ($)</label>
+                            <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">Precio ($)</label>
                             <input
                                 type="number"
                                 value={priceUpdate.price}
                                 onChange={e => setPriceUpdate({ ...priceUpdate, price: parseInt(e.target.value) })}
-                                className="w-full h-12 px-3 border-2 border-black rounded-lg bg-white text-black font-bold outline-none focus:ring-2 focus:ring-black transition-all"
+                                className="w-full h-11 px-3 border border-slate-300 rounded-lg bg-white text-sm text-slate-900 font-bold outline-none focus:border-black transition-colors"
                             />
                         </div>
                     </div>
                     <button
                         onClick={() => setConfirmOpen(true)}
-                        className="w-full h-12 bg-black text-white border-2 border-black rounded-lg font-black uppercase tracking-widest active:scale-[0.98] transition-all"
+                        className="w-full h-11 bg-black text-white rounded-lg font-bold uppercase text-xs tracking-widest hover:bg-slate-800 transition-colors"
                     >
-                        Ejecutar Actualización
+                        Ejecutar actualización
                     </button>
                 </div>
             </div>
 
             {/* EXPORT DATA */}
-            <div className="bg-white border-2 border-black rounded-xl p-4 md:p-6 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                <h3 className="text-lg font-black mb-4 text-black uppercase tracking-tight border-b-2 border-black pb-2 flex items-center gap-2">
-                    <Download className="w-5 h-5" />
-                    Exportar Datos
+            <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+                <h3 className="text-base font-black mb-4 text-slate-900 uppercase tracking-tight border-b border-slate-200 pb-3 flex items-center gap-2">
+                    <Download className="w-5 h-5 text-slate-400" />
+                    Exportar datos
                 </h3>
-                <p className="text-xs font-bold uppercase text-neutral-500 mb-4">Descarga el inventario completo en formato CSV compatible con Excel.</p>
+                <p className="text-xs font-medium uppercase text-slate-500 mb-4">Descarga el inventario completo en formato CSV compatible con Excel.</p>
                 <button
                     onClick={downloadCSV}
-                    className="w-full h-12 bg-emerald-600 text-white border-2 border-black rounded-lg font-black uppercase tracking-widest active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    className="w-full h-11 bg-[#118f46] text-white rounded-lg font-bold uppercase text-xs tracking-widest hover:bg-[#0f7a3c] transition-colors flex items-center justify-center gap-2"
                 >
                     <Download className="w-4 h-4" />
-                    Descargar Inventario CSV
+                    Descargar inventario CSV
                 </button>
             </div>
         </div>

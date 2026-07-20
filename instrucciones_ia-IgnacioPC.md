@@ -210,7 +210,7 @@ const MiPagina = () => (
 );
 
 // Dentro del componente hijo:
-const { toast } = useToast();
+const toast = useToast();
 toast.success('Operación exitosa');
 toast.error('Algo salió mal');
 toast.neutral('Información');
@@ -250,7 +250,7 @@ if (error) throw error;
 ### 7.4 Componente de página con ToastProvider
 ```typescript
 const MiPaginaContenido: React.FC = () => {
-    const { toast } = useToast();
+    const toast = useToast();
     // lógica...
     return <div>...</div>;
 };

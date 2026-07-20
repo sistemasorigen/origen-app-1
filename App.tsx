@@ -5,6 +5,12 @@ import Layout from './components/layout/Estructura';
 import ErrorBoundary from './components/ui/LimiteError';
 import Dashboard from './pages/home/Home';
 import InfoPoint from './pages/primarias/PuntoInformacion';
+import PaginaNuevoBautismo from './pages/punto-informacion/PaginaNuevoBautismo';
+import PaginaNuevoPrestamo from './pages/punto-informacion/PaginaNuevoPrestamo';
+import PaginaNuevaPresentacion from './pages/punto-informacion/PaginaNuevaPresentacion';
+import PaginaNuevoMovimiento from './pages/punto-informacion/PaginaNuevoMovimiento';
+import PaginaNuevoEvento from './pages/punto-informacion/PaginaNuevoEvento';
+import PaginaNuevoAnuncio from './pages/punto-informacion/PaginaNuevoAnuncio';
 import Groups from './pages/groups/Grupos';
 import Admin from './pages/admin/Administrador';
 import AuthScreen from './pages/auth/PantallaAutenticacion';
@@ -364,6 +370,12 @@ const AppContent: React.FC = () => {
                             />
                             <Routes>
                                 <Route path="/punto-de-informacion" element={<InfoPoint currentUser={user} />} />
+                                <Route path="/punto-de-informacion/bautismos/nuevo" element={<PaginaNuevoBautismo />} />
+                                <Route path="/punto-de-informacion/prestamos/nuevo" element={<PaginaNuevoPrestamo />} />
+                                <Route path="/punto-de-informacion/presentacion-ninos/nuevo" element={<PaginaNuevaPresentacion />} />
+                                <Route path="/punto-de-informacion/movimientos/nuevo" element={<PaginaNuevoMovimiento />} />
+                                <Route path="/punto-de-informacion/eventos/nuevo" element={<PaginaNuevoEvento />} />
+                                <Route path="/punto-de-informacion/anuncios/nuevo" element={<PaginaNuevoAnuncio />} />
                                 <Route path="/panel-admin" element={
                                     isSuperAdmin(user)
                                         ? <Admin currentUser={user} onConfigUpdate={refreshConfig} />

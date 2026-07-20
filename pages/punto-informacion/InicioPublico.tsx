@@ -185,7 +185,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
         <>
             <style>{animationStyles}</style>
 
-            <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white">
+            <div className="min-h-screen bg-slate-50 text-black font-sans selection:bg-black selection:text-white">
 
                 <ModalCompartirQR
                     isOpen={qrModal.open}
@@ -283,19 +283,19 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                     SIGNATURE — MASTHEAD / PORTADA DE LA CARTELERA
                     El hero es la tesis: de un vistazo, qué pasa en Origen hoy.
                    ============================================================ */}
-                <section className="bg-neutral-50 border-b-4 border-black">
+                <section className="bg-slate-50">
                     <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
-                        <div className="pi-reveal border-4 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                        <div className="pi-reveal border border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
 
                             {/* Top rule: identidad + fecha en vivo */}
-                            <div className="flex items-stretch justify-between border-b-4 border-black">
+                            <div className="flex items-stretch justify-between border-b border-slate-200">
                                 <div className="flex items-center gap-3 px-4 md:px-6 py-3 min-w-0">
                                     <img src={LOGO_URL} alt="Origen" className="h-6 md:h-7 w-auto object-contain shrink-0" />
                                     <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.25em] text-neutral-400 truncate">
                                         Cartelera Origen
                                     </span>
                                 </div>
-                                <div className="flex items-center px-4 md:px-6 border-l-4 border-black" style={{ backgroundColor: MARKER }}>
+                                <div className="flex items-center px-4 md:px-6 border-l border-slate-200" style={{ backgroundColor: MARKER }}>
                                     <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.15em] text-black whitespace-nowrap">
                                         {todayLabel}
                                     </span>
@@ -310,9 +310,9 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                             </div>
 
                             {/* What's-on — resumen derivado de datos reales */}
-                            <div className="flex flex-wrap border-t-4 border-black">
+                            <div className="flex flex-wrap border-t border-slate-200">
                                 {/* Los dos contadores comparten fila siempre */}
-                                <div className="flex shrink-0 divide-x-4 divide-black">
+                                <div className="flex shrink-0 divide-x divide-slate-200">
                                     <div className="flex items-baseline gap-2 px-4 md:px-6 py-4">
                                         <span className="text-3xl font-black tracking-tighter tabular-nums">{activeAnnouncements.length}</span>
                                         <span className="text-[11px] font-black uppercase tracking-widest text-neutral-500">
@@ -329,7 +329,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                 {nextEvent && (
                                     <a
                                         href="#agenda-section"
-                                        className="group flex items-center justify-between gap-3 basis-full sm:basis-0 sm:flex-1 px-4 md:px-6 py-4 border-t-4 sm:border-t-0 sm:border-l-4 border-black hover:bg-black hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-inset"
+                                        className="group flex items-center justify-between gap-3 basis-full sm:basis-0 sm:flex-1 px-4 md:px-6 py-4 border-t sm:border-t-0 sm:border-l border-slate-200 hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-inset"
                                     >
                                         <span className="min-w-0">
                                             <span className="block text-[10px] font-black uppercase tracking-[0.25em] text-neutral-400 group-hover:text-neutral-300">Próximo</span>
@@ -344,18 +344,13 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
 
                             {/* Acceso rápido a redes — cada una despliega su QR + compartir */}
                             {socialButtons.length > 0 && (
-                                <div className="flex items-stretch border-t-4 border-black">
-                                    <div className="hidden sm:flex items-center px-4 md:px-6 border-r-4 border-black shrink-0" style={{ backgroundColor: MARKER }}>
-                                        <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.25em] text-black whitespace-nowrap">
-                                            Seguinos
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-1 divide-x-4 divide-black">
+                                <div className="flex items-stretch border-t border-slate-200">
+                                    <div className="flex flex-1 divide-x divide-slate-200">
                                         {socialButtons.map(({ key, label, url, Icon }) => (
                                             <button
                                                 key={key}
                                                 onClick={() => setSocialShare({ label, url, Icon })}
-                                                className="group flex-1 flex flex-col items-center justify-center gap-1.5 px-2 py-4 hover:bg-black hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-inset"
+                                                className="group flex-1 flex flex-col items-center justify-center gap-1.5 px-2 py-4 hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-inset"
                                                 aria-label={`Compartir ${label} de la iglesia`}
                                             >
                                                 <Icon className="w-5 h-5" />
@@ -372,11 +367,11 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                 {/* ============================================================
                     LA CARTELERA — ANUNCIOS
                    ============================================================ */}
-                <section className="py-12 md:py-16 bg-neutral-50 border-b-4 border-black">
+                <section className="py-12 md:py-16 bg-white">
                     <div className="max-w-7xl mx-auto px-4 md:px-8">
-                        <div className="pi-reveal mb-8 flex items-end justify-between gap-4 border-b-4 border-black pb-4" style={{ animationDelay: '.05s' }}>
+                        <div className="pi-reveal mb-8 flex items-end justify-between gap-4 border-b border-slate-200 pb-4" style={{ animationDelay: '.05s' }}>
                             <div className="flex items-center gap-3">
-                                <div className="p-2 border-2 border-black" style={{ backgroundColor: MARKER }}>
+                                <div className="p-2 rounded-lg" style={{ backgroundColor: MARKER }}>
                                     <Megaphone className="w-5 h-5 text-black" />
                                 </div>
                                 <div>
@@ -392,7 +387,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                         </div>
 
                         {activeAnnouncements.length === 0 ? (
-                            <div className="pi-reveal py-16 text-center border-4 border-dashed border-black bg-white" style={{ animationDelay: '.1s' }}>
+                            <div className="pi-reveal py-16 text-center border border-dashed border-slate-200 rounded-xl bg-white" style={{ animationDelay: '.1s' }}>
                                 <Pin className="w-12 h-12 mx-auto mb-4 text-neutral-300" />
                                 <p className="text-neutral-500 font-black uppercase tracking-widest text-sm">El tablero está despejado</p>
                                 <p className="text-neutral-400 font-bold text-xs mt-1 uppercase tracking-wide">Los anuncios se publican desde el panel interno</p>
@@ -402,11 +397,11 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                 {activeAnnouncements.map((ann, idx) => (
                                     <div
                                         key={ann.id}
-                                        className="pi-reveal group relative bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all duration-200 flex flex-col"
+                                        className="pi-reveal group relative bg-white border border-slate-200 rounded-xl shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-200 flex flex-col"
                                         style={{ animationDelay: `${0.1 + idx * 0.06}s` }}
                                     >
                                         {/* Push-pin — la nota clavada al tablero */}
-                                        <div className="absolute -top-3 left-6 w-6 h-6 border-2 border-black rounded-full flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" style={{ backgroundColor: MARKER }}>
+                                        <div className="absolute -top-3 left-6 w-6 h-6 border border-slate-200 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: MARKER }}>
                                             <div className="w-1.5 h-1.5 rounded-full bg-black" />
                                         </div>
 
@@ -416,14 +411,14 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                             </h3>
 
                                             {ann.description && (
-                                                <p className="text-sm font-medium text-neutral-600 leading-relaxed mb-4 flex-1 border-l-4 pl-3" style={{ borderColor: MARKER }}>
+                                                <p className="text-sm font-medium text-slate-600 leading-relaxed mb-4 flex-1 border-l-2 pl-3" style={{ borderColor: MARKER }}>
                                                     {ann.description}
                                                 </p>
                                             )}
 
-                                            <div className="mt-auto pt-4 border-t-2 border-black flex items-center justify-between gap-3 flex-wrap">
+                                            <div className="mt-auto pt-4 border-t border-slate-200 flex items-center justify-between gap-3 flex-wrap">
                                                 {ann.isPermanent ? (
-                                                    <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2 py-1 border-2 border-black bg-black text-white">
+                                                    <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-black text-white">
                                                         ∞ Permanente
                                                     </span>
                                                 ) : (
@@ -437,7 +432,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                                 {ann.qrCodeUrl && (
                                                     <button
                                                         onClick={() => setQrModal({ open: true, title: ann.title, url: getQrUrl(ann.qrCodeUrl!), link: ann.link || window.location.href })}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-[10px] font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                                     >
                                                         <QrCode className="w-3.5 h-3.5" /> QR
                                                     </button>
@@ -454,11 +449,11 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                 {/* ============================================================
                     AGENDA — PRÓXIMOS EVENTOS (sobre negro)
                    ============================================================ */}
-                <section className="py-12 md:py-16 bg-black text-white border-b-4 border-black">
+                <section className="py-12 md:py-16 bg-slate-900 text-white">
                     <div className="max-w-7xl mx-auto px-4 md:px-8">
-                        <div className="pi-reveal mb-8 flex items-end justify-between gap-4 border-b-4 border-white/20 pb-4">
+                        <div className="pi-reveal mb-8 flex items-end justify-between gap-4 border-b border-white/10 pb-4">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 border-2 border-black text-black" style={{ backgroundColor: MARKER }}>
+                                <div className="p-2 rounded-lg text-black" style={{ backgroundColor: MARKER }}>
                                     <Calendar className="w-5 h-5" />
                                 </div>
                                 <div>
@@ -474,7 +469,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                         </div>
 
                         {upcomingEvents.length === 0 ? (
-                            <div className="pi-reveal py-16 text-center border-4 border-white/20 border-dashed" style={{ animationDelay: '.05s' }}>
+                            <div className="pi-reveal py-16 text-center border border-white/10 border-dashed rounded-xl" style={{ animationDelay: '.05s' }}>
                                 <Calendar className="w-12 h-12 mx-auto mb-4 text-white/20" />
                                 <p className="text-white/50 font-black uppercase tracking-widest text-sm">Sin eventos próximos</p>
                                 <p className="text-white/30 font-bold text-xs mt-1 uppercase tracking-wide">Los eventos se cargan desde el panel interno</p>
@@ -489,13 +484,13 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                     return (
                                         <div
                                             key={ev.id}
-                                            className="pi-reveal border-4 border-white bg-white/5 hover:bg-white/10 transition-all duration-200 hover:-translate-y-1 flex flex-col"
+                                            className="pi-reveal border border-white/20 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-200 hover:-translate-y-1 flex flex-col"
                                             style={{ animationDelay: `${0.05 + idx * 0.06}s` }}
                                         >
                                             <div className="p-5 flex flex-col flex-1">
                                                 {/* Fecha — dato que sí importa para un evento */}
                                                 <div className="flex items-start justify-between gap-3 mb-4">
-                                                    <div className="flex-none text-center border-2 px-3 py-2 min-w-[56px] text-black" style={{ backgroundColor: MARKER, borderColor: '#000' }}>
+                                                    <div className="flex-none text-center rounded-lg px-3 py-2 min-w-[56px] text-black" style={{ backgroundColor: MARKER }}>
                                                         <p className="text-[10px] font-black uppercase tracking-widest">{dayName.slice(0, 3)}</p>
                                                         <p className="text-3xl font-black leading-none tabular-nums">{dayNum}</p>
                                                         <p className="text-[10px] font-black uppercase tracking-wider mt-0.5">{monthName.slice(0, 3)}</p>
@@ -562,10 +557,10 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                 {/* ============================================================
                     CALENDARIO
                    ============================================================ */}
-                <section id="agenda-section" className="py-12 md:py-16 bg-white border-b-4 border-black scroll-mt-20">
+                <section id="agenda-section" className="py-12 md:py-16 bg-white scroll-mt-20">
                     <div className="max-w-7xl mx-auto px-4 md:px-8">
-                        <div className="pi-reveal mb-8 flex items-center gap-3 border-b-4 border-black pb-4">
-                            <div className="p-2 border-2 border-black bg-black text-white">
+                        <div className="pi-reveal mb-8 flex items-center gap-3 border-b border-slate-200 pb-4">
+                            <div className="p-2 rounded-lg bg-black text-white">
                                 <Calendar className="w-5 h-5" />
                             </div>
                             <div>
@@ -580,7 +575,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                     href={appConfig.infoPointConfig?.heroCtaLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 px-5 py-3 bg-white font-black text-sm uppercase tracking-widest border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                    className="inline-flex items-center gap-2 px-5 py-3 bg-white font-black text-sm uppercase tracking-widest border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                 >
                                     {appConfig.infoPointConfig?.heroCtaText}
                                     <ArrowRight className="w-4 h-4" />
@@ -593,7 +588,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                 </section>
 
                 {/* --- FOOTER --- */}
-                <footer className="bg-white border-t-4 border-black">
+                <footer className="bg-white border-t border-slate-200">
                     <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
                         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                             <div className="flex items-center gap-4">
@@ -608,7 +603,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                 {footerLinks?.instagram && (
                                     <button
                                         onClick={() => window.open(footerLinks.instagram, '_blank')}
-                                        className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                        className="w-12 h-12 border border-slate-200 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                         title="Instagram"
                                     >
                                         <Instagram className="w-6 h-6" />
@@ -617,7 +612,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                 {footerLinks?.facebook && (
                                     <button
                                         onClick={() => window.open(footerLinks.facebook, '_blank')}
-                                        className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                        className="w-12 h-12 border border-slate-200 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                         title="Facebook"
                                     >
                                         <Facebook className="w-6 h-6" />
@@ -626,7 +621,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                 {footerLinks?.youtube && (
                                     <button
                                         onClick={() => window.open(footerLinks.youtube, '_blank')}
-                                        className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                        className="w-12 h-12 border border-slate-200 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                         title="YouTube"
                                     >
                                         <Youtube className="w-6 h-6" />
@@ -635,7 +630,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                 {footerLinks?.spotify && (
                                     <button
                                         onClick={() => window.open(footerLinks.spotify, '_blank')}
-                                        className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                        className="w-12 h-12 border border-slate-200 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                         title="Spotify"
                                     >
                                         <Music className="w-6 h-6" />

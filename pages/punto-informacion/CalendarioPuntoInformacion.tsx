@@ -175,7 +175,7 @@ const InfoPointCalendar: React.FC = () => {
         for (let i = 0; i < firstDayOfMonth; i++) {
             const dayNum = prevMonthDays - firstDayOfMonth + 1 + i;
             cells.push(
-                <div key={`prev-${i}`} className="min-h-[70px] md:min-h-[100px] p-2 border-b-2 border-r-2 border-black bg-gray-100 opacity-40">
+                <div key={`prev-${i}`} className="min-h-[70px] md:min-h-[100px] p-2 border-b border-r border-slate-200 bg-slate-50/50">
                     <span className="text-gray-400 font-bold text-sm">{dayNum}</span>
                 </div>
             );
@@ -197,12 +197,12 @@ const InfoPointCalendar: React.FC = () => {
                 <div
                     key={`curr-${d}`}
                     onClick={() => setSelectedDate(new Date(year, month, d))}
-                    className={`min-h-[70px] md:min-h-[100px] p-2 border-b-2 border-r-2 border-black transition-all cursor-pointer group relative hover:bg-yellow-50 ${isSelected ? 'bg-black text-white' : 'bg-white'}`}
+                    className={`min-h-[70px] md:min-h-[100px] p-2 border-b border-r border-slate-200 transition-all cursor-pointer group relative hover:bg-slate-50 ${isSelected ? 'bg-slate-50' : 'bg-white'}`}
                 >
                     <div className="flex justify-between items-start">
-                        <span className={`w-7 h-7 flex items-center justify-center font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${isToday ? 'bg-emerald-400 text-black' :
-                            isSelected ? 'bg-white text-black' :
-                                'bg-white text-black group-hover:bg-black group-hover:text-white'
+                        <span className={`w-7 h-7 flex items-center justify-center font-bold text-sm rounded-full transition-all ${isToday ? 'bg-black text-white' :
+                            isSelected ? 'bg-slate-200 text-black' :
+                                'text-slate-700 group-hover:bg-slate-200'
                             }`}>
                             {d}
                         </span>
@@ -212,7 +212,7 @@ const InfoPointCalendar: React.FC = () => {
                         {dayItems.slice(0, 2).map((item, idx) => (
                             <div
                                 key={idx}
-                                className="text-[8px] md:text-[10px] px-1 py-0.5 border border-black font-bold truncate flex items-center gap-1"
+                                className="text-[8px] md:text-[10px] px-1.5 py-0.5 rounded font-medium truncate flex items-center gap-1"
                                 style={{
                                     backgroundColor: isSelected ? '#ffffff' : item.colorBg,
                                     color: isSelected ? '#000000' : item.colorText
@@ -223,7 +223,7 @@ const InfoPointCalendar: React.FC = () => {
                             </div>
                         ))}
                         {dayItems.length > 2 && (
-                            <div className={`text-[8px] font-bold pl-1 ${isSelected ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <div className="text-[8px] font-bold pl-1 text-slate-500">
                                 +{dayItems.length - 2} más
                             </div>
                         )}
@@ -236,13 +236,13 @@ const InfoPointCalendar: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col lg:flex-row border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white overflow-hidden">
+        <div className="flex flex-col lg:flex-row border border-slate-200 rounded-2xl shadow-sm bg-white overflow-hidden">
             {/* Main Calendar */}
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Calendar Header */}
-                <header className="flex items-center justify-between px-6 py-4 border-b-4 border-black bg-white gap-4 flex-wrap">
+                <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white gap-4 flex-wrap">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-black text-white border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.2)]">
+                        <div className="p-2 bg-black text-white rounded-lg shadow-sm">
                             <CalendarIcon className="w-5 h-5" strokeWidth={2.5} />
                         </div>
                         <h2 className="text-2xl font-black text-black uppercase tracking-tighter">
@@ -253,19 +253,19 @@ const InfoPointCalendar: React.FC = () => {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handlePrevMonth}
-                            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-black bg-white hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none active:translate-y-0.5"
+                            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center border border-slate-200 rounded-lg bg-white hover:bg-slate-100 transition-all shadow-sm active:translate-y-0.5 text-slate-600"
                         >
                             <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
                         </button>
                         <button
                             onClick={handleToday}
-                            className="px-3 py-2 min-h-[40px] flex items-center justify-center text-xs font-black uppercase tracking-wider border-2 border-black bg-white hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none"
+                            className="px-3 py-2 min-h-[40px] flex items-center justify-center text-xs font-bold uppercase tracking-wider border border-slate-200 rounded-lg bg-white hover:bg-slate-100 transition-all shadow-sm text-slate-600"
                         >
                             Hoy
                         </button>
                         <button
                             onClick={handleNextMonth}
-                            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-black bg-white hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none active:translate-y-0.5"
+                            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center border border-slate-200 rounded-lg bg-white hover:bg-slate-100 transition-all shadow-sm active:translate-y-0.5 text-slate-600"
                         >
                             <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
                         </button>
@@ -273,7 +273,7 @@ const InfoPointCalendar: React.FC = () => {
                 </header>
 
                 {/* Day headers */}
-                <div className="grid grid-cols-7 border-b-2 border-black bg-black text-white">
+                <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-slate-500">
                     {DAYS_ES.map(day => (
                         <div key={day} className="py-2 text-center text-xs font-black uppercase tracking-widest">{day}</div>
                     ))}
@@ -286,13 +286,13 @@ const InfoPointCalendar: React.FC = () => {
             </div>
 
             {/* Right Sidebar */}
-            <aside className="w-full lg:w-80 bg-white border-t-4 lg:border-t-0 lg:border-l-4 border-black flex-shrink-0 flex flex-col">
-                <div className="p-5 border-b-4 border-black bg-yellow-400">
+            <aside className="w-full lg:w-80 bg-slate-50 border-t lg:border-t-0 lg:border-l border-slate-200 flex-shrink-0 flex flex-col">
+                <div className="p-5 border-b border-slate-200 bg-white">
                     <h3 className="text-xl font-black text-black uppercase tracking-tighter flex items-center gap-2">
                         Agenda
-                        <span className="text-xs bg-black text-white px-2 py-0.5 border-2 border-black tracking-widest relative -top-1">HOY</span>
+                        <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full tracking-widest relative -top-1 font-bold">HOY</span>
                     </h3>
-                    <div className="flex items-center gap-2 mt-2 text-black font-bold border-2 border-black bg-white p-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                    <div className="flex items-center gap-2 mt-2 text-slate-700 font-bold bg-slate-100 rounded-lg p-2">
                         <Clock className="w-4 h-4 text-black flex-shrink-0" strokeWidth={2.5} />
                         <span className="text-xs uppercase tracking-wide truncate">
                             {selectedDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -302,7 +302,7 @@ const InfoPointCalendar: React.FC = () => {
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[320px] lg:max-h-none">
                     {selectedDateItems.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 border-4 border-dashed border-slate-200">
+                        <div className="flex flex-col items-center justify-center py-10 border border-dashed border-slate-200 rounded-xl bg-white">
                             <CalendarIcon className="w-10 h-10 text-slate-200 mb-3" />
                             <p className="text-slate-400 font-bold uppercase text-center text-xs tracking-widest">
                                 Sin eventos<br />este día
@@ -312,7 +312,7 @@ const InfoPointCalendar: React.FC = () => {
                         selectedDateItems.map(item => (
                             <div
                                 key={item.id}
-                                className="border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden"
+                                className="border border-slate-200 rounded-xl shadow-sm overflow-hidden bg-white"
                             >
                                 {/* Color header */}
                                 <div
@@ -321,7 +321,7 @@ const InfoPointCalendar: React.FC = () => {
                                 >
                                     <div className="flex items-center justify-between gap-2 mb-1">
                                         {item.type && (
-                                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 border border-black ${item.isAnnouncement ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                                            <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${item.isAnnouncement ? 'bg-white/20 text-white' : 'bg-black/10 text-black'}`}>
                                                 {item.type}
                                             </span>
                                         )}
@@ -335,7 +335,7 @@ const InfoPointCalendar: React.FC = () => {
                                 <div className="p-4 bg-white space-y-2">
                                     {item.startTime && (
                                         <div className="flex items-center gap-2">
-                                            <div className="w-7 h-7 border-2 border-black flex items-center justify-center bg-slate-100">
+                                            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-50 text-slate-500">
                                                 <Clock className="w-3.5 h-3.5" />
                                             </div>
                                             <span className="font-bold text-sm uppercase">
@@ -345,7 +345,7 @@ const InfoPointCalendar: React.FC = () => {
                                     )}
                                     {item.description && (
                                         <div className="flex items-start gap-2">
-                                            <div className="w-7 h-7 border-2 border-black flex items-center justify-center bg-slate-100 flex-shrink-0 mt-0.5">
+                                            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-50 text-slate-500 flex-shrink-0 mt-0.5">
                                                 <Tag className="w-3.5 h-3.5" />
                                             </div>
                                             <span className="text-xs font-bold text-slate-600 leading-relaxed">{item.description}</span>
@@ -354,9 +354,9 @@ const InfoPointCalendar: React.FC = () => {
                                     {!item.isAnnouncement && (
                                         <button
                                             onClick={(e) => handleCopyEventLink(item.id, e)}
-                                            className={`w-full mt-2 py-2 flex items-center justify-center gap-2 border-2 border-black text-xs font-black uppercase tracking-widest transition-all ${copiedEventId === item.id
-                                                ? 'bg-black text-white'
-                                                : 'bg-white text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none'
+                                            className={`w-full mt-2 py-2 flex items-center justify-center gap-2 border border-slate-200 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${copiedEventId === item.id
+                                                ? 'bg-emerald-500 text-white border-emerald-500'
+                                                : 'bg-white text-slate-600 hover:bg-slate-50 shadow-sm'
                                             }`}
                                         >
                                             {copiedEventId === item.id

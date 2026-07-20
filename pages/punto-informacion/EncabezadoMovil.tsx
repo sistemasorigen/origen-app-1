@@ -16,7 +16,7 @@ interface MobileHeaderProps {
 
 const MobileHeader: React.FC<MobileHeaderProps> = ({ title, isRoot, onBack, onOpenSidebar, currentView, onNavigate, currentUser }) => {
     return (
-        <div className="flex items-center justify-between w-full h-12 px-4 py-2 bg-white border-b-2 border-black shadow-sm lg:hidden">
+        <div className="flex items-center justify-between w-full h-12 px-4 py-2 bg-white border-b border-slate-200 shadow-sm lg:hidden">
             {/* Left Slot */}
             <div className="flex items-center w-10">
                 {!isRoot && (

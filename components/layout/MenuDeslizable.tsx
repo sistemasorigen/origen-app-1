@@ -58,6 +58,13 @@ interface SubMenuItem {
     separator?: boolean;
     // Solo visible en el drawer mobile (se oculta en el sidebar desktop).
     mobileOnly?: boolean;
+    // Prefijos adicionales de ruta que también cuentan
+    // como "activo" para este sub-ítem, además del
+    // match exacto de `path`. Útil cuando una sección
+    // tiene una página secundaria bajo otro prefijo
+    // (ej: Bautismos vive en /punto-de-informacion?view=BAPTISMS
+    // pero su alta/edición vive en /punto-de-informacion/bautismos/nuevo).
+    activePaths?: string[];
 }
 
 interface SubGroup {
@@ -364,18 +371,18 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             subItems: [
                 { label: 'Inicio', path: '/punto-de-informacion' },
                 { label: 'Administración', separator: true },
-                { label: 'Dashboard', path: '/punto-de-informacion?view=SUMMARY' },
                 { label: 'Menú principal', path: '/punto-de-informacion?view=PANEL', mobileOnly: true },
-                { label: 'Anuncios', path: '/punto-de-informacion?view=ANNOUNCEMENTS' },
-                { label: 'Bautismos', path: '/punto-de-informacion?view=BAPTISMS' },
-                { label: 'Buscar', path: '/punto-de-informacion?view=SEARCH' },
+                { label: 'Dashboard', path: '/punto-de-informacion?view=SUMMARY' },
+                { label: 'Anuncios', path: '/punto-de-informacion?view=ANNOUNCEMENTS', activePaths: ['/punto-de-informacion/anuncios'] },
+                { label: 'Bautismos', path: '/punto-de-informacion?view=BAPTISMS', activePaths: ['/punto-de-informacion/bautismos'] },
+
                 { label: 'Configuración', path: '/punto-de-informacion?view=ADMIN_PANEL', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
-                { label: 'Eventos', path: '/punto-de-informacion?view=EVENTS' },
+                { label: 'Eventos', path: '/punto-de-informacion?view=EVENTS', activePaths: ['/punto-de-informacion/eventos'] },
                 { label: 'Inventario', path: '/punto-de-informacion?view=INVENTORY' },
-                { label: 'Movimientos', path: '/punto-de-informacion?view=MOVEMENTS' },
-                { label: 'Nuevo Producto', path: '/punto-de-informacion?view=NEW_PRODUCT' },
-                { label: 'Presentaciones', path: '/punto-de-informacion?view=PRESENTATIONS' },
-                { label: 'Préstamos', path: '/punto-de-informacion?view=LOANS' },
+                { label: 'Movimientos', path: '/punto-de-informacion?view=MOVEMENTS', activePaths: ['/punto-de-informacion/movimientos'] },
+
+                { label: 'Presentaciones', path: '/punto-de-informacion?view=PRESENTATIONS', activePaths: ['/punto-de-informacion/presentacion-ninos'] },
+                { label: 'Préstamos', path: '/punto-de-informacion?view=LOANS', activePaths: ['/punto-de-informacion/prestamos'] },
                 { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
             ]
         },
@@ -554,7 +561,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                                 {hasGroupItems && isGroupExpanded && (
                                                     <div className="ml-3 pl-2 border-l border-gray-100 dark:border-zinc-800 mt-0.5 mb-1 space-y-0.5">
                                                         {group.subItems!.map((sub, si) => {
-                                                            const isSubActive = (location.pathname + location.search) === sub.path;
+                                                            const isSubActive = (location.pathname + location.search) === sub.path
+                                                                || (sub.activePaths?.some(p => location.pathname.startsWith(p)) ?? false);
                                                             return (
                                                                 <button
                                                                     key={si}
@@ -587,6 +595,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                         }
                                         const isSubActive = sub.path
                                             ? (location.pathname + location.search) === sub.path
+                                                || (sub.activePaths?.some(p => location.pathname.startsWith(p)) ?? false)
                                             : false;
                                         return (
                                             <button

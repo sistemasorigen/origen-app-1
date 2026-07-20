@@ -39,9 +39,9 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
     const allMenuItems = [
         { id: 'PANEL', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'ANNOUNCEMENTS', label: 'Anuncios', icon: Megaphone, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
-        { id: 'SEARCH', label: 'Búsqueda de Stock', icon: Search, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
+
         { id: 'INVENTORY', label: 'Inventario Total', icon: Package, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
-        { id: 'NEW_PRODUCT', label: 'Nuevo Producto', icon: PlusCircle, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
+
         { id: 'MOVEMENTS', label: 'Registrar Movimiento', icon: ArrowLeftRight, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'LOANS', label: 'Préstamos', icon: Shirt, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'BAPTISMS', label: 'Bautismos', icon: Droplets, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
@@ -70,7 +70,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
             {/* Sidebar Container */}
             <div
                 className={`
-                    fixed inset-y-0 left-0 z-50 bg-white border-r-4 border-black h-screen
+                    fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 h-screen
                     transform transition-all duration-300 ease-in-out
                     md:translate-x-0 md:static md:inset-auto md:flex md:flex-col md:h-full
                     ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -78,17 +78,14 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                 `}
             >
                 {/* Header */}
-                <div className={`p-4 border-b-4 border-black flex items-center bg-white ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+                <div className={`p-4 border-b border-slate-200 flex items-center bg-white ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
                     {/* Title — hidden when collapsed */}
                     {!isCollapsed && (
-                        <div className="flex items-center gap-2.5">
-                            <span className="w-2.5 h-8 shrink-0" style={{ backgroundColor: '#FACC15', outline: '2px solid #000' }} />
-                            <div>
-                                <h1 className="text-2xl font-black text-black uppercase tracking-tighter leading-none">
-                                    Panel
-                                </h1>
-                                <p className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mt-1">Punto de Info</p>
-                            </div>
+                        <div>
+                            <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">
+                                Panel
+                            </h1>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Punto de Info</p>
                         </div>
                     )}
 
@@ -99,7 +96,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                             aria-label={isCollapsed ? 'Expandir menú de navegación' : 'Colapsar menú de navegación'}
                             aria-expanded={!isCollapsed}
                             title={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
-                            className="hidden md:flex items-center justify-center w-8 h-8 border-2 border-black text-black hover:bg-black hover:text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            className="hidden md:flex items-center justify-center w-8 h-8 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
                         >
                             {isCollapsed
                                 ? <PanelLeftOpen className="w-4 h-4" strokeWidth={2.5} />
@@ -111,7 +108,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                         <button
                             onClick={onClose}
                             aria-label="Cerrar menú de navegación"
-                            className="md:hidden flex items-center justify-center w-8 h-8 border-2 border-black text-black hover:bg-black hover:text-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            className="md:hidden flex items-center justify-center w-8 h-8 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -119,7 +116,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                 </div>
 
                 {/* Nav Items */}
-                <nav id="neo-sidebar-menu" className="flex-1 overflow-y-auto overflow-x-hidden p-0 space-y-0">
+                <nav id="neo-sidebar-menu" className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1">
                     {visibleItems.map((item) => {
                         const isActive = currentView === item.id;
                         return (
@@ -137,15 +134,15 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                                 aria-current={isActive ? 'page' : undefined}
                                 aria-label={`${item.label}${isActive ? ' (actual)' : ''}`}
                                 title={isCollapsed ? item.label : undefined}
-                                className={`w-full flex items-center gap-3 text-sm font-bold uppercase tracking-tight transition-all border-b border-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                                    ${isCollapsed ? 'justify-center px-0 py-4' : 'px-6 py-4'}
+                                className={`w-full flex items-center gap-3 text-sm font-bold uppercase tracking-tight rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2
+                                    ${isCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3'}
                                     ${isActive
-                                        ? 'bg-black text-white font-black tracking-widest border-y-2 border-black border-l-4 border-l-[#FACC15] -my-px relative z-10'
-                                        : 'text-black bg-white hover:bg-neutral-100'
+                                        ? 'bg-black text-white'
+                                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                                     }`}
                             >
                                 <item.icon
-                                    className={`flex-shrink-0 w-5 h-5 ${isActive ? 'text-white' : 'text-black'}`}
+                                    className={`flex-shrink-0 w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`}
                                     strokeWidth={2.5}
                                 />
                                 {/* Label — hidden when collapsed */}

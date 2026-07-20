@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
-import { AlertCircle, Trash2, Package, Shirt } from 'lucide-react';
+import { AlertCircle, Trash2, Package, Shirt, PlusCircle, Search } from 'lucide-react';
 import { ProductType } from '../../types';
 
 const Inventory: React.FC = () => {
+    const navigate = useNavigate();
     const { products, deleteProduct } = useStore();
     const [filterType, setFilterType] = useState('ALL');
 
@@ -23,54 +25,73 @@ const Inventory: React.FC = () => {
             {/* Header Controls */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 px-1 md:px-0 pt-4 md:pt-0">
                 <div className="md:hidden w-full">
-                    <h2 className="text-xl font-black uppercase tracking-tight mb-2 text-black">Filtros</h2>
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Filtros</span>
                 </div>
 
                 {/* Filter */}
                 <select
                     value={filterType}
                     onChange={e => setFilterType(e.target.value)}
-                    className="w-full md:w-auto px-4 py-3 rounded-lg border-2 border-black bg-white text-black font-black uppercase tracking-tight outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:translate-y-1 focus:shadow-none transition-all cursor-pointer"
+                    className="w-full md:w-auto px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-bold outline-none focus:border-black shadow-sm transition-colors cursor-pointer"
                 >
                     <option value="ALL">Todo el Inventario</option>
                     <option value="Remeras">Remeras</option>
                     <option value="Buzos">Buzos</option>
                 </select>
+
+                {/* Acciones — antes vivían como ítems sueltos
+                    del Menú Principal, ahora integradas acá */}
+                <div className="flex gap-2 w-full md:w-auto">
+                    <button
+                        onClick={() => navigate('/punto-de-informacion?view=SEARCH')}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 bg-white text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 hover:border-slate-400 transition-colors"
+                    >
+                        <Search className="w-4 h-4" />
+                        Buscar
+                    </button>
+                    <button
+                        onClick={() => navigate('/punto-de-informacion?view=NEW_PRODUCT')}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 border border-black bg-black text-white text-sm font-bold rounded-lg shadow-sm hover:bg-slate-800 transition-colors"
+                    >
+                        <PlusCircle className="w-4 h-4" />
+                        Nuevo Producto
+                    </button>
+                </div>
             </div>
 
             {/* Desktop Table (Hidden on Mobile) */}
-            <div className="hidden md:block bg-white border-2 lg:border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+            <div className="hidden md:block bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
                 <table className="w-full text-left">
-                    <thead className="bg-black text-white text-xs uppercase font-black tracking-widest">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-bold text-slate-500">
                         <tr>
-                            <th className="px-6 py-4">Producto (Tipo)</th>
-                            <th className="px-6 py-4">Talle</th>
-                            <th className="px-6 py-4">Stock</th>
-                            <th className="px-6 py-4">Precio</th>
-                            <th className="px-6 py-4 text-right">Acciones</th>
+                            <th className="px-6 py-3">Producto (Tipo)</th>
+                            <th className="px-6 py-3">Talle</th>
+                            <th className="px-6 py-3">Stock</th>
+                            <th className="px-6 py-3">Precio</th>
+                            <th className="px-6 py-3 text-right">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y-2 divide-neutral-200">
+                    <tbody className="divide-y divide-slate-100">
                         {filtered.map(p => (
-                            <tr key={p.code} className="hover:bg-yellow-50 transition-colors">
-                                <td className="px-6 py-4 font-black uppercase text-black">{p.type}</td>
+                            <tr key={p.code} className="hover:bg-slate-50 transition-colors">
+                                <td className="px-6 py-4 font-bold uppercase text-slate-900 text-sm">{p.type}</td>
                                 <td className="px-6 py-4">
-                                    <span className="inline-block px-3 py-1 border-2 border-black bg-white text-black text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                    <span className="inline-block px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold uppercase">
                                         Talle {p.size}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <div className={`flex items-center gap-2 font-black text-lg ${p.stock <= p.minStock ? 'text-red-600' : 'text-black'}`}>
+                                    <div className={`flex items-center gap-2 font-black text-lg ${p.stock <= p.minStock ? 'text-red-600' : 'text-slate-900'}`}>
                                         {p.stock <= p.minStock && <AlertCircle className="w-5 h-5" />}
                                         {p.stock}
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 font-black text-lg">${p.price}</td>
+                                <td className="px-6 py-4 font-black text-lg text-slate-900">${p.price}</td>
                                 <td className="px-6 py-4 text-right">
                                     <button
                                         type="button"
                                         onClick={(e) => handleDelete(p.code, e)}
-                                        className="p-2 border-2 border-transparent hover:border-black hover:bg-black hover:text-white rounded-none transition-all"
+                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                                         title="Eliminar Producto"
                                     >
                                         <Trash2 className="w-5 h-5" />
@@ -82,30 +103,30 @@ const Inventory: React.FC = () => {
                 </table>
             </div>
 
-            {/* MOBILE FEED (Neo-Brutalist Cards) */}
-            <div className="md:hidden space-y-4 px-1">
+            {/* MOBILE FEED */}
+            <div className="md:hidden space-y-3 px-1">
                 {filtered.map(p => (
-                    <div key={p.code} className="w-full bg-white border-2 border-black p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <div key={p.code} className="w-full bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
                         {/* Header: Type and Price */}
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 border-2 border-black flex items-center justify-center bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                                    {p.type === ProductType.REMERA ? <Shirt className="w-6 h-6 text-black" /> : <Package className="w-6 h-6 text-black" />}
+                                <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600">
+                                    {p.type === ProductType.REMERA ? <Shirt className="w-6 h-6" /> : <Package className="w-6 h-6" />}
                                 </div>
                                 <div>
-                                    <h3 className="font-black text-xl uppercase leading-none mb-1 text-black">{p.type}</h3>
-                                    <span className="inline-block px-2 py-0.5 border-2 border-black bg-black text-white text-[10px] font-bold uppercase tracking-wider">
+                                    <h3 className="font-black text-xl uppercase leading-none mb-1 text-slate-900">{p.type}</h3>
+                                    <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold uppercase tracking-wider">
                                         Talle {p.size}
                                     </span>
                                 </div>
                             </div>
-                            <span className="font-black text-2xl">${p.price}</span>
+                            <span className="font-black text-2xl text-slate-900">${p.price}</span>
                         </div>
 
                         {/* Footer: Stock & Actions */}
-                        <div className="flex justify-between items-end pt-4 border-t-2 border-black border-dashed">
-                            <div className={`flex flex-col ${p.stock <= p.minStock ? 'text-red-600' : 'text-black'}`}>
-                                <span className="text-[10px] uppercase font-black text-neutral-500 mb-1">Stock Actual</span>
+                        <div className="flex justify-between items-end pt-4 border-t border-slate-200">
+                            <div className={`flex flex-col ${p.stock <= p.minStock ? 'text-red-600' : 'text-slate-900'}`}>
+                                <span className="text-[10px] uppercase font-bold text-slate-500 mb-1">Stock Actual</span>
                                 <div className="flex items-center gap-2 font-black text-3xl leading-none">
                                     {p.stock <= p.minStock && <AlertCircle className="w-6 h-6" />}
                                     {p.stock}
@@ -114,7 +135,7 @@ const Inventory: React.FC = () => {
 
                             <button
                                 onClick={(e) => handleDelete(p.code, e)}
-                                className="p-3 bg-white text-black border-2 border-black hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"
+                                className="p-3 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors"
                             >
                                 <Trash2 className="w-5 h-5" />
                             </button>
@@ -124,8 +145,8 @@ const Inventory: React.FC = () => {
             </div>
 
             {filtered.length === 0 && (
-                <div className="p-12 text-center border-4 border-dashed border-neutral-300">
-                    <p className="text-neutral-400 font-bold uppercase tracking-widest">No se encontraron productos</p>
+                <div className="p-12 text-center border border-dashed border-slate-200 rounded-lg bg-white">
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No se encontraron productos</p>
                 </div>
             )}
         </div>

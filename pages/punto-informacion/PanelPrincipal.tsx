@@ -47,26 +47,25 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
         };
     });
 
-    // Un solo acento en todo el módulo: amarillo marcador. Acá lo usamos
-    // con sentido — el chip amarillo señala "esto requiere tu atención"
-    // (pendientes), no es decoración. El resto queda en negro/blanco.
+    // El chip ámbar señala "esto requiere tu atención" (pendientes),
+    // no es decoración. El resto queda en slate neutro (estilo GCX).
     const StatCard = ({ title, value, icon: Icon, highlight, onClick }: {
         title: string; value: React.ReactNode; icon: any; highlight?: boolean; onClick?: () => void;
     }) => (
         <div
             onClick={onClick}
-            className={`p-5 md:p-6 bg-white border-2 md:border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all flex flex-col justify-between h-36 ${onClick ? 'cursor-pointer' : ''}`}
+            className={`p-5 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-36 ${onClick ? 'cursor-pointer' : ''}`}
         >
             <div className="flex justify-between items-start gap-2">
-                <span className="text-[11px] font-black uppercase tracking-widest text-neutral-500 leading-tight">{title}</span>
-                <div className={`p-2 border-2 border-black shrink-0 ${highlight ? 'text-black' : 'bg-black text-white'}`} style={highlight ? { backgroundColor: '#FACC15' } : undefined}>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 leading-tight">{title}</span>
+                <div className={`p-2 rounded-lg shrink-0 ${highlight ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'}`}>
                     <Icon className="w-5 h-5" />
                 </div>
             </div>
             <div className="flex items-end gap-2">
-                <span className="text-4xl md:text-5xl font-black tracking-tighter tabular-nums leading-none">{value}</span>
+                <span className="text-4xl md:text-5xl font-black tracking-tight tabular-nums leading-none text-slate-900">{value}</span>
                 {highlight && (
-                    <span className="mb-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 border-2 border-black text-black" style={{ backgroundColor: '#FACC15' }}>
+                    <span className="mb-1 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
                         Pendiente
                     </span>
                 )}
@@ -80,10 +79,10 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                 <SkeletonLoader width="200px" height="32px" />
                 <div id="info-stats-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="h-32 border-2 border-black bg-neutral-100 animate-pulse shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" />
+                        <div key={i} className="h-36 border border-slate-200 bg-white rounded-lg shadow-sm animate-pulse" />
                     ))}
                 </div>
-                <div className="border-4 border-black bg-white h-96 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-6">
+                <div className="border border-slate-200 bg-white rounded-lg h-96 shadow-sm p-6">
                     <SkeletonLoader className="w-full h-full" />
                 </div>
             </div>
@@ -94,10 +93,10 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
         <div className="space-y-8 animate-fadeIn p-1">
             <button
                 onClick={() => navigate('/punto-de-informacion')}
-                className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-black hover:opacity-70 transition-opacity"
+                className="flex items-center gap-2 text-sm text-slate-400 hover:text-black transition-colors font-bold uppercase tracking-wide"
             >
                 <ArrowLeft className="w-4 h-4" />
-                Volver al Inicio
+                Volver al inicio
             </button>
 
             {/* Acceso rápido a Reportes (solo desktop, roles con permiso).
@@ -107,7 +106,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                     <button
                         id="reports-btn"
                         onClick={() => navigate('/reportes')}
-                        className="flex items-center gap-2 px-4 py-2 bg-white text-black border-2 border-black font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                        className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-lg shadow-sm font-bold uppercase tracking-widest text-xs hover:bg-slate-100 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                     >
                         <BarChart3 size={18} />
                         Reportes
@@ -125,55 +124,51 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
             </div>
 
             {/* Stock Chart */}
-            <div className="bg-white border-2 md:border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                <h3 className="font-black text-xl uppercase tracking-tight mb-6 border-b-4 border-black inline-block pb-1">
-                    Distribución de Stock
+            <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+                <h3 className="font-black text-lg uppercase tracking-tight text-slate-900 mb-6">
+                    Distribución de stock
                 </h3>
                 <div style={{ width: '100%', height: 320 }}>
                     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                         <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#000" opacity={0.1} />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                             <XAxis
                                 dataKey="name"
-                                axisLine={{ stroke: '#000', strokeWidth: 2 }}
+                                axisLine={{ stroke: '#e2e8f0' }}
                                 tickLine={false}
-                                tick={{ fill: '#000', fontSize: 12, fontWeight: 700 }}
+                                tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }}
                                 dy={10}
                             />
                             <YAxis
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#000', fontSize: 12, fontWeight: 700 }}
+                                tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }}
                             />
                             <Tooltip
                                 contentStyle={{
-                                    backgroundColor: '#000',
-                                    border: '2px solid black',
-                                    borderRadius: '0px',
-                                    color: '#fff',
-                                    boxShadow: '4px 4px 0px 0px rgba(0,0,0,0.2)'
+                                    backgroundColor: '#fff',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '8px',
+                                    color: '#0f172a',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
                                 }}
-                                itemStyle={{ color: '#fff' }}
-                                cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                itemStyle={{ color: '#0f172a' }}
+                                cursor={{ fill: 'rgba(0,0,0,0.04)' }}
                             />
-                            <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="square" />
+                            <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
                             <Bar
                                 dataKey="Remeras"
                                 name="REMERAS"
-                                fill="#000000"
-                                radius={[0, 0, 0, 0]}
+                                fill="#118f46"
+                                radius={[4, 4, 0, 0]}
                                 barSize={40}
-                                stroke="#000"
-                                strokeWidth={2}
                             />
                             <Bar
                                 dataKey="Buzos"
                                 name="BUZOS"
-                                fill="#FACC15"
-                                radius={[0, 0, 0, 0]}
+                                fill="#94a3b8"
+                                radius={[4, 4, 0, 0]}
                                 barSize={40}
-                                stroke="#000"
-                                strokeWidth={2}
                             />
                         </BarChart>
                     </ResponsiveContainer>

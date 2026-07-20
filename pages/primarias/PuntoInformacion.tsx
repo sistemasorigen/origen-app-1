@@ -42,12 +42,12 @@ const DESKTOP_NAV: { id: ViewState; label: string; roles: UserRole[] }[] = [
     { id: 'SUMMARY', label: 'Dashboard', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
     { id: 'ANNOUNCEMENTS', label: 'Anuncios', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
     { id: 'BAPTISMS', label: 'Bautismos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-    { id: 'SEARCH', label: 'Búsqueda de Stock', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
+
     { id: 'ADMIN_PANEL', label: 'Configuración', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
     { id: 'EVENTS', label: 'Eventos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
     { id: 'INVENTORY', label: 'Inventario Total', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
     { id: 'MOVEMENTS', label: 'Registrar Movimiento', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-    { id: 'NEW_PRODUCT', label: 'Nuevo Producto', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
+
     { id: 'PRESENTATIONS', label: 'Presentación', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
     { id: 'LOANS', label: 'Préstamos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
 ];
@@ -248,15 +248,15 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     };
 
     return (
-        <div className="flex flex-col md:flex-row h-screen md:h-[calc(100vh-64px)] bg-slate-50 md:bg-transparent overflow-hidden relative">
+        <div className="flex flex-col md:flex-row h-screen md:h-[calc(100vh-64px)] bg-slate-50 overflow-hidden relative">
 
             {/* --- MOBILE LAYOUT --- */}
-            <div className="md:hidden fixed inset-x-0 top-16 bottom-0 z-30 flex flex-col bg-white overflow-hidden">
+            <div className="md:hidden fixed inset-x-0 top-16 bottom-0 z-30 flex flex-col bg-slate-50 overflow-hidden">
                 {/* Header solo en sub-vistas (back + título + dropdown).
                     En la raíz del panel (PANEL) no hay barra: el toggle
                     Web/Panel se eliminó. */}
                 {currentView !== 'PANEL' && (
-                    <header className="flex-none z-40 bg-white border-b-4 border-black select-none overflow-hidden" style={{ touchAction: 'none' }}>
+                    <header className="flex-none z-40 bg-white border-b border-slate-200 select-none overflow-hidden" style={{ touchAction: 'none' }}>
                         <MobileHeader
                             title={getViewTitle(currentView)}
                             isRoot={false}
@@ -268,7 +268,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                     </header>
                 )}
 
-                <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-white">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-slate-50">
                     {currentView === 'PANEL' ? (
                         <InfoPointMenu onNavigate={setCurrentView} currentUser={authorizedUser} />
                     ) : (
@@ -294,39 +294,38 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 {/* Cabecera de navegación: nombre de la vista centrado con
                     flechas a los costados para desplazarse entre funciones.
                     Reemplaza al menú lateral (exclusivo de desktop). */}
-                <header className="flex-none border-b-4 border-black bg-white">
+                <header className="flex-none border-b border-slate-200 bg-white">
                     <div className="flex items-center justify-center gap-6 px-8 py-5">
                         <button
                             onClick={() => goToNav(-1)}
                             aria-label="Función anterior"
-                            className="flex items-center justify-center w-12 h-12 border-4 border-black bg-white text-black hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="flex items-center justify-center w-11 h-11 border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                         >
                             <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
                         </button>
 
                         <div className="flex flex-col items-center min-w-[16rem]">
-                            <h1 className="text-2xl lg:text-3xl font-black uppercase tracking-tighter text-black text-center leading-none">
+                            <h1 className="text-2xl lg:text-3xl font-black uppercase tracking-tight text-slate-900 text-center leading-none">
                                 {currentNavLabel}
                             </h1>
-                            <span className="mt-2 h-1.5 w-20 border-2 border-black" style={{ backgroundColor: '#FACC15' }} />
                         </div>
 
                         <button
                             onClick={() => goToNav(1)}
                             aria-label="Función siguiente"
-                            className="flex items-center justify-center w-12 h-12 border-4 border-black bg-white text-black hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="flex items-center justify-center w-11 h-11 border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                         >
                             <ChevronRight className="w-6 h-6" strokeWidth={2.5} />
                         </button>
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-8 relative">
+                <main className="flex-1 overflow-y-auto p-8 relative bg-slate-50">
                     {renderView()}
 
                     {/* Global Notification Toast */}
                     {notification.show && (
-                        <div className={`fixed top-24 right-8 z-[100] px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slideIn ${notification.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+                        <div className={`fixed top-24 right-8 z-[100] px-6 py-4 rounded-lg shadow-xl flex items-center gap-3 animate-slideIn ${notification.type === 'success' ? 'bg-[#118f46] text-white' : 'bg-red-600 text-white'}`}>
                             <div className="p-1 bg-white/20 rounded-full">
                                 {notification.type === 'success' ? (
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>

@@ -61,16 +61,17 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/95 backdrop-blur-xl"
+            className="fixed inset-x-0 top-0 z-[100] flex items-center justify-center p-4 bg-white/95 backdrop-blur-xl"
+            style={{ height: '100dvh' }}
             onClick={onClose}
         >
             <div
-                className="relative bg-white border-4 border-black w-full max-w-sm overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+                className="relative bg-white border border-slate-200 rounded-2xl w-full max-w-sm overflow-hidden shadow-xl"
                 onClick={e => e.stopPropagation()}
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 border-2 border-black hover:bg-black hover:text-white transition-all z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                    className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-all z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                     aria-label="Cerrar"
                 >
                     <X className="w-5 h-5" />
@@ -81,20 +82,20 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
                     <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-6">
                         {subtitle || 'Escaneá o compartí'}
                     </p>
-                    <div className="bg-white border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 shadow-sm">
                         <img src={qrUrl} alt={`QR ${title}`} className="w-44 h-44 object-contain" />
                     </div>
                     <div className="w-full space-y-3">
                         <button
                             onClick={copyLink}
-                            className="w-full py-4 px-6 border-4 border-black font-black uppercase text-sm tracking-widest hover:bg-neutral-100 transition-all flex items-center justify-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="w-full py-4 px-6 border border-slate-200 rounded-lg font-black uppercase text-sm tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-3 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
-                            {isCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                            {isCopied ? <Check className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5 text-slate-500" />}
                             {isCopied ? '¡Copiado!' : 'Copiar link'}
                         </button>
                         <button
                             onClick={shareWhatsApp}
-                            className="w-full py-4 px-6 bg-[#25D366] text-white border-4 border-black font-black uppercase text-sm tracking-widest hover:bg-[#1eb958] transition-all flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="w-full py-4 px-6 bg-[#25D366] text-white rounded-lg font-black uppercase text-sm tracking-widest hover:bg-[#1eb958] transition-all flex items-center justify-center gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             <WhatsAppIcon className="w-5 h-5" />
                             Compartir vía WhatsApp

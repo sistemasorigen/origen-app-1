@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ViewState, UserRole, User as UserType } from '../../types';
-import { Package, CalendarRange, ArrowLeftRight, Search, PlusCircle, Baby, User, Settings, Layers, Tag, FileText, Megaphone } from 'lucide-react';
+import { Package, CalendarRange, ArrowLeftRight, Baby, User, Settings, Layers, Tag, FileText, Megaphone } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasRole } from '../../services/authUtils';
 
@@ -33,8 +33,6 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: 
         { id: 'MOVEMENTS', label: 'Movimientos', icon: ArrowLeftRight, color: 'bg-blue-100' },
         { id: 'LOANS', label: 'Préstamos', icon: Tag, color: 'bg-orange-100' },
         { id: 'EVENTS', label: 'Eventos', icon: CalendarRange, color: 'bg-amber-100' },
-        { id: 'NEW_PRODUCT', label: 'Nuevo Producto', icon: PlusCircle, color: 'bg-rose-100' },
-        { id: 'SEARCH', label: 'Buscar', icon: Search, color: 'bg-slate-100' },
         { id: 'BAPTISMS', label: 'Bautismos', icon: User, color: 'bg-cyan-100' },
         { id: 'PRESENTATIONS', label: 'Presentaciones', icon: Baby, color: 'bg-purple-100' },
         {
@@ -85,9 +83,9 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: 
     };
 
     return (
-        <div className="space-y-6 pt-4 pb-20 overflow-x-hidden">
+        <div className="space-y-6 pt-4 pb-20 overflow-x-hidden bg-slate-50 min-h-full">
             <div className="px-4">
-                <h2 className="text-2xl font-black uppercase tracking-tighter mb-1">Menú Principal</h2>
+                <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900 mb-1">Menú Principal</h2>
                 <p className="text-slate-500 text-sm font-medium">Selecciona una opción para gestionar</p>
             </div>
 
@@ -97,12 +95,12 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: 
                         key={item.id}
                         id={`tour-infopoint-${item.id.toLowerCase()}`}
                         onClick={() => handleItemClick(item)}
-                        className="flex flex-col items-center justify-center p-5 bg-white border-2 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:scale-95 active:shadow-none transition-all"
+                        className="flex flex-col items-center justify-center p-5 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-slate-300 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
                     >
-                        <div className={`p-3 rounded-full ${item.color} border-2 border-black mb-3`}>
-                            <item.icon className="w-6 h-6 text-black" />
+                        <div className={`p-3 rounded-full ${item.color} mb-3`}>
+                            <item.icon className="w-6 h-6 text-slate-700" />
                         </div>
-                        <span className="font-bold text-xs uppercase tracking-wide text-black text-center">
+                        <span className="font-bold text-xs uppercase tracking-wide text-slate-700 text-center">
                             {item.label}
                         </span>
                     </button>

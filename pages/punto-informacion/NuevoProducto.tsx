@@ -6,7 +6,7 @@ import { useToast } from './context/ContextoToast';
 
 const NewProduct: React.FC = () => {
     const { addProduct, products } = useStore();
-    const { toast } = useToast();
+    const toast = useToast();
     const [form, setForm] = useState({
         type: ProductType.REMERA,
         size: '1',
@@ -40,25 +40,25 @@ const NewProduct: React.FC = () => {
 
     return (
         <div className="max-w-xl mx-auto animate-fadeIn p-1">
-            <div className="bg-white border-2 md:border-4 border-black p-6 md:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="bg-white border border-slate-200 rounded-lg p-6 md:p-8 shadow-sm">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-xs font-black uppercase tracking-widest border-b-2 border-black mb-2 inline-block">Tipo</label>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Tipo</label>
                             <select
                                 value={form.type}
                                 onChange={e => setForm({ ...form, type: e.target.value as ProductType })}
-                                className="w-full p-3 bg-white border-2 border-black rounded-lg text-black font-bold outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all appearance-none cursor-pointer"
+                                className="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-black transition-colors cursor-pointer"
                             >
                                 {Object.values(ProductType).map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-black uppercase tracking-widest border-b-2 border-black mb-2 inline-block">Talle</label>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Talle</label>
                             <select
                                 value={form.size}
                                 onChange={e => setForm({ ...form, size: e.target.value })}
-                                className="w-full p-3 bg-white border-2 border-black rounded-lg text-black font-bold outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all appearance-none cursor-pointer"
+                                className="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-black transition-colors cursor-pointer"
                             >
                                 {INFO_POINT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
@@ -67,46 +67,46 @@ const NewProduct: React.FC = () => {
 
                     <div className="grid grid-cols-3 gap-6">
                         <div>
-                            <label className="block text-xs font-black uppercase tracking-widest border-b-2 border-black mb-2 inline-block">Precio</label>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Precio</label>
                             <input
                                 type="number"
                                 required
                                 value={form.price}
                                 onChange={e => setForm({ ...form, price: parseInt(e.target.value) })}
-                                className="w-full p-3 bg-white border-2 border-black rounded-lg text-black font-bold outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                                className="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-black transition-colors"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-black uppercase tracking-widest border-b-2 border-black mb-2 inline-block">Stock Inicial</label>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Stock inicial</label>
                             <input
                                 type="number"
                                 required
                                 value={form.stock}
                                 onChange={e => setForm({ ...form, stock: parseInt(e.target.value) })}
-                                className="w-full p-3 bg-white border-2 border-black rounded-lg text-black font-bold outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                                className="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-black transition-colors"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-black uppercase tracking-widest border-b-2 border-black mb-2 inline-block">Min. Alerta</label>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Min. alerta</label>
                             <input
                                 type="number"
                                 required
                                 value={form.minStock}
                                 onChange={e => setForm({ ...form, minStock: parseInt(e.target.value) })}
-                                className="w-full p-3 bg-white border-2 border-black rounded-lg text-black font-bold outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                                className="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-black transition-colors"
                             />
                         </div>
                     </div>
 
-                    <div className="p-4 border-2 border-dashed border-black bg-neutral-50 text-sm font-bold text-center">
-                        Se creará: <span className="uppercase font-black">{form.type} Talle {form.size}</span>
+                    <div className="p-4 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-sm font-medium text-slate-600 text-center">
+                        Se creará: <span className="uppercase font-bold text-slate-900">{form.type} Talle {form.size}</span>
                     </div>
 
                     <button
                         type="submit"
-                        className="w-full py-4 bg-black text-white font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]"
+                        className="w-full py-3 bg-black text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-slate-800 transition-colors"
                     >
-                        Crear Producto
+                        Crear producto
                     </button>
                 </form>
             </div>
