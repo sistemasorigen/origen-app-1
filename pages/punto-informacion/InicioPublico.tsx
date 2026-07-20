@@ -425,16 +425,22 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                                     <div className="flex items-center gap-1.5">
                                                         <Calendar className="w-3.5 h-3.5 text-black" />
                                                         <span className="text-[10px] font-black uppercase tracking-widest">
-                                                            Hasta {new Date(ann.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                                                            {ann.startDate && ann.endDate
+                                                                ? `Del ${new Date(ann.startDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })} al ${new Date(ann.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}`
+                                                                : ann.startDate
+                                                                ? `Desde el ${new Date(ann.startDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}`
+                                                                : ann.endDate
+                                                                ? `Hasta el ${new Date(ann.endDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}`
+                                                                : 'Activo'}
                                                         </span>
                                                     </div>
                                                 )}
                                                 {ann.qrCodeUrl && (
                                                     <button
                                                         onClick={() => setQrModal({ open: true, title: ann.title, url: getQrUrl(ann.qrCodeUrl!), link: ann.link || window.location.href })}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-black text-white text-xs font-black uppercase tracking-widest rounded-lg hover:bg-slate-800 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                                     >
-                                                        <QrCode className="w-3.5 h-3.5" /> QR
+                                                        <QrCode className="w-4 h-4" /> Ver QR
                                                     </button>
                                                 )}
                                             </div>
@@ -519,31 +525,14 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                                 )}
 
                                                 <div className="flex gap-2 mt-auto pt-4 border-t-2 border-white/10">
-                                                    {ev.link && (
-                                                        <a
-                                                            href={ev.link}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 border-2 border-white/30 text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                                                        >
-                                                            <ExternalLink className="w-3.5 h-3.5" /> Ver más
-                                                        </a>
-                                                    )}
                                                     {(ev.qrCodeUrl || ev.link) && (
                                                         <button
                                                             onClick={() => setQrModal({ open: true, title: ev.name, url: getEventQrUrl(ev), link: ev.link || window.location.href })}
-                                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-white text-black border-2 border-white text-xs font-black uppercase tracking-widest transition-all hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                                                            className="w-full flex items-center justify-center gap-1.5 py-2 bg-white text-black border-2 border-white text-xs font-black uppercase tracking-widest transition-all hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                                                         >
                                                             <QrCode className="w-3.5 h-3.5" /> QR
                                                         </button>
                                                     )}
-                                                    <button
-                                                        onClick={() => setSharingEvent(ev)}
-                                                        className="flex items-center justify-center gap-1.5 py-2 px-3 border-2 border-white/30 text-xs font-black uppercase hover:bg-white hover:text-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                                                        aria-label="Compartir evento"
-                                                    >
-                                                        <Share2 className="w-3.5 h-3.5" />
-                                                    </button>
                                                 </div>
                                             </div>
                                         </div>

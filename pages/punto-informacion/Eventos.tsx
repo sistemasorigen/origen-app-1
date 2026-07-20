@@ -85,30 +85,33 @@ const Events: React.FC = () => {
                                 )}
                             </div>
 
-                            {ev.link && (
-                                <div className="mt-3 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-[#118f46] hover:text-slate-900 transition-colors">
-                                    <ExternalLink className="w-3 h-3" /> Link externo
+                            <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                                <div>
+                                    {ev.link && (
+                                        <div className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-[#118f46] hover:text-slate-900 transition-colors">
+                                            <ExternalLink className="w-3 h-3" /> Link externo
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-
-                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/punto-de-informacion/eventos/nuevo?id=${ev.id}`); }}
-                                className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-colors shadow-sm"
-                                title="Editar"
-                            >
-                                <Edit2 className="w-4 h-4 pointer-events-none" />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={(e) => handleDelete(ev.id, e)}
-                                className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors shadow-sm"
-                                title="Eliminar"
-                            >
-                                <Trash2 className="w-4 h-4 pointer-events-none" />
-                            </button>
+                                <div className="flex gap-1 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/punto-de-informacion/eventos/nuevo?id=${ev.id}`); }}
+                                        className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-colors shadow-sm"
+                                        title="Editar"
+                                    >
+                                        <Edit2 className="w-4 h-4 pointer-events-none" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => handleDelete(ev.id, e)}
+                                        className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors shadow-sm"
+                                        title="Eliminar"
+                                    >
+                                        <Trash2 className="w-4 h-4 pointer-events-none" />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 ))}

@@ -5,8 +5,9 @@ import { hasRole } from '../../services/authUtils';
 import { AppEvent, User, UserRole } from '../../types';
 import {
     Calendar, MapPin, ArrowRight,
-    CalendarDays, Trophy, Users
+    CalendarDays, Trophy, Users, QrCode
 } from 'lucide-react';
+import ModalCompartirQR from '../../components/modals/ModalCompartirQR';
 
 interface EventosProps {
     currentUser: User | null;
@@ -16,6 +17,29 @@ const Eventos: React.FC<EventosProps> = ({ currentUser }) => {
     const navigate = useNavigate();
     const [events, setEvents] = useState<AppEvent[]>([]);
     const [loading, setLoading] = useState(true);
+    const [qrModal, setQrModal] = useState<{ open: boolean, title: string, url: string, link: string }>({ open: false, title: '', url: '', link: '' });
+
+    const getEventQrUrl = (event: AppEvent) => {
+        const data = event.qrCodeUrl || event.link || `${event.name} - ${event.date}`;
+        return getQrUrl(data);
+    };
+
+    const getQrUrl = (textOrUrl: string) => {
+        if (!textOrUrl) return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Forigen.church`;
+
+        if (textOrUrl.includes('quickchart.io')) {
+            const match = textOrUrl.match(/[?&]text=([^&]+)/);
+            if (match && match[1]) {
+                return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${match[1]}`;
+            }
+        }
+
+        if (textOrUrl.includes('api.qrserver.com')) {
+            return textOrUrl;
+        }
+
+        return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(textOrUrl)}`;
+    };
 
     useEffect(() => {
         supabaseService.getEvents()
@@ -47,6 +71,14 @@ const Eventos: React.FC<EventosProps> = ({ currentUser }) => {
 
     return (
         <div className="min-h-screen bg-white">
+            <ModalCompartirQR
+                isOpen={qrModal.open}
+                onClose={() => setQrModal({ ...qrModal, open: false })}
+                title={qrModal.title}
+                qrUrl={qrModal.url}
+                link={qrModal.link}
+            />
+
             <div className="max-w-4xl mx-auto px-4 md:px-8 py-10 md:py-14">
 
                 {/* Header */}
@@ -179,9 +211,17 @@ const Eventos: React.FC<EventosProps> = ({ currentUser }) => {
                                         )}
                                     </div>
 
-                                    {featured.link && (
-                                        <div className="mt-4 flex items-center gap-1.5 text-white/80 text-sm font-medium">
-                                            Ver evento <ArrowRight className="w-4 h-4" />
+                                    {(featured.qrCodeUrl || featured.link) && (
+                                        <div className="mt-4 flex items-center">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setQrModal({ open: true, title: featured.name, url: getEventQrUrl(featured), link: featured.link || window.location.href });
+                                                }}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-black text-xs font-black uppercase tracking-widest rounded transition-all hover:bg-neutral-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                                            >
+                                                <QrCode className="w-4 h-4" /> QR
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -218,9 +258,17 @@ const Eventos: React.FC<EventosProps> = ({ currentUser }) => {
                                     )}
                                 </div>
 
-                                {featured.link && (
-                                    <div className="flex items-center gap-1.5 text-gray-900 text-sm font-medium">
-                                        Ver evento <ArrowRight className="w-4 h-4" />
+                                {(featured.qrCodeUrl || featured.link) && (
+                                    <div className="mt-4 flex items-center">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setQrModal({ open: true, title: featured.name, url: getEventQrUrl(featured), link: featured.link || window.location.href });
+                                            }}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-xs font-black uppercase tracking-widest rounded transition-all hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                        >
+                                            <QrCode className="w-4 h-4" /> QR
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -284,9 +332,17 @@ const Eventos: React.FC<EventosProps> = ({ currentUser }) => {
                                             </p>
                                         )}
 
-                                        {event.link && (
-                                            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-gray-900">
-                                                Ver más <ArrowRight className="w-3.5 h-3.5" />
+                                        {(event.qrCodeUrl || event.link) && (
+                                            <div className="mt-4 flex items-center">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setQrModal({ open: true, title: event.name, url: getEventQrUrl(event), link: event.link || window.location.href });
+                                                    }}
+                                                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-black text-white text-xs font-black uppercase tracking-widest rounded-lg transition-all hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                                >
+                                                    <QrCode className="w-4 h-4" /> QR
+                                                </button>
                                             </div>
                                         )}
                                     </div>

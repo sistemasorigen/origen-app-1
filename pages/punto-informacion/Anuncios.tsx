@@ -79,20 +79,20 @@ const Announcements: React.FC = () => {
             )}
 
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
-                    <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500">Anuncios registrados</h2>
+                <div className="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold bg-slate-200 text-slate-600 px-2 py-1 rounded-full">
-                            {announcements.length} total
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500 leading-tight">Anuncios registrados</h2>
+                        <span className="text-[11px] font-black bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
+                            {announcements.length} TOTAL
                         </span>
-                        <button
-                            onClick={() => navigate('/punto-de-informacion/anuncios/nuevo')}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white font-bold uppercase text-xs tracking-widest rounded-lg hover:bg-slate-800 transition-colors"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                            Nuevo anuncio
-                        </button>
                     </div>
+                    <button
+                        onClick={() => navigate('/punto-de-informacion/anuncios/nuevo')}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-black text-white font-bold uppercase text-[11px] tracking-widest rounded-lg hover:bg-slate-800 transition-colors shrink-0 flex-1 sm:flex-none whitespace-nowrap"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Nuevo anuncio
+                    </button>
                 </div>
 
                 {announcements.length === 0 ? (
