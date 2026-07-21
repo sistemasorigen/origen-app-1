@@ -56,8 +56,14 @@ const PaginaNuevoPrestamoContent: React.FC = () => {
 
                     <form onSubmit={handleCreate} className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <input type="text" placeholder="Nombre" required value={form.lenderName} onChange={e => setForm({ ...form, lenderName: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                            <input type="text" placeholder="Apellido" required value={form.lenderSurname} onChange={e => setForm({ ...form, lenderSurname: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                            <div>
+                                <label htmlFor="prestamo-lenderName" className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">Nombre</label>
+                                <input id="prestamo-lenderName" type="text" autoComplete="given-name" placeholder="Nombre" required value={form.lenderName} onChange={e => setForm({ ...form, lenderName: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                            </div>
+                            <div>
+                                <label htmlFor="prestamo-lenderSurname" className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">Apellido</label>
+                                <input id="prestamo-lenderSurname" type="text" autoComplete="family-name" placeholder="Apellido" required value={form.lenderSurname} onChange={e => setForm({ ...form, lenderSurname: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

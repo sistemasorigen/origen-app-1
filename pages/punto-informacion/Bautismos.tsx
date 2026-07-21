@@ -20,6 +20,7 @@ const Baptisms: React.FC = () => {
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        if (!window.confirm('¿Eliminar este registro de bautismo? Esta acción no se puede deshacer.')) return;
         await deleteBaptism(id);
         showNotification('Registro eliminado.');
     };
@@ -56,14 +57,14 @@ const Baptisms: React.FC = () => {
                         <div className="flex gap-1.5 items-center w-full md:w-auto justify-end">
                             {b.isPending ? (
                                 <>
-                                    <button onClick={() => toggleStatus(b, PendingStatus.COMPLETED)} className="p-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors" title="Marcar Realizado"><CheckSquare className="w-5 h-5" /></button>
-                                    <button onClick={() => navigate(`/punto-de-informacion/bautismos/nuevo?id=${b.id}`)} className="p-2 text-slate-400 hover:text-black hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors" title="Editar"><Edit2 className="w-5 h-5" /></button>
-                                    <button type="button" onClick={(e) => handleDelete(b.id, e)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors"><Trash2 className="w-5 h-5 pointer-events-none" /></button>
+                                    <button onClick={() => toggleStatus(b, PendingStatus.COMPLETED)} className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors" title="Marcar realizado" aria-label={`Marcar bautismo de ${b.firstName} ${b.lastName} como realizado`}><CheckSquare className="w-5 h-5" /></button>
+                                    <button onClick={() => navigate(`/punto-de-informacion/bautismos/nuevo?id=${b.id}`)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-black hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors" title="Editar" aria-label={`Editar ${b.firstName} ${b.lastName}`}><Edit2 className="w-5 h-5" /></button>
+                                    <button type="button" onClick={(e) => handleDelete(b.id, e)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors" aria-label={`Eliminar ${b.firstName} ${b.lastName}`}><Trash2 className="w-5 h-5 pointer-events-none" /></button>
                                 </>
                             ) : (
                                 <>
                                     <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-full border ${b.status === PendingStatus.COMPLETED ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{b.status}</span>
-                                    <button type="button" onClick={(e) => handleDelete(b.id, e)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4 pointer-events-none" /></button>
+                                    <button type="button" onClick={(e) => handleDelete(b.id, e)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" aria-label={`Eliminar ${b.firstName} ${b.lastName}`}><Trash2 className="w-4 h-4 pointer-events-none" /></button>
                                 </>
                             )}
                         </div>

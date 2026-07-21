@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { MovementType } from '../../types';
-import { ArrowUpRight, ArrowDownLeft, RefreshCw, Trash2, Plus } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, RefreshCw, Trash2, Plus, CreditCard } from 'lucide-react';
 
 const Movements: React.FC = () => {
     const navigate = useNavigate();
@@ -11,6 +11,7 @@ const Movements: React.FC = () => {
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        if (!window.confirm('¿Eliminar este movimiento? El stock revertido no se puede deshacer.')) return;
         await deleteMovement(id);
         showNotification('Movimiento eliminado y stock revertido.');
     };
@@ -43,8 +44,8 @@ const Movements: React.FC = () => {
                                     <h4 className="font-bold text-sm text-slate-900 uppercase tracking-tight leading-tight">{m.productName}</h4>
                                     <p className="text-xs font-medium text-slate-500 uppercase mt-0.5">{new Date(m.date).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</p>
                                     {m.paymentMethod && (
-                                        <p className="text-[10px] font-bold text-slate-600 uppercase mt-1.5 bg-slate-100 inline-block px-2 py-0.5 rounded-full">
-                                            💳 {m.paymentMethod}
+                                        <p className="text-[10px] font-bold text-slate-600 uppercase mt-1.5 bg-slate-100 inline-flex items-center gap-1 px-2 py-0.5 rounded-full">
+                                            <CreditCard className="w-3 h-3" /> {m.paymentMethod}
                                         </p>
                                     )}
                                 </div>
@@ -56,8 +57,9 @@ const Movements: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={(e) => handleDelete(m.id, e)}
-                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    title="Eliminar Registro"
+                                    className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Eliminar registro"
+                                    aria-label={`Eliminar movimiento de ${m.productName}`}
                                 >
                                     <Trash2 className="w-4 h-4 pointer-events-none" />
                                 </button>

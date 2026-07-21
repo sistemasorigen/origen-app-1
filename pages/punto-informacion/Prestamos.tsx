@@ -25,6 +25,7 @@ const Loans: React.FC = () => {
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        if (!window.confirm('¿Eliminar este registro de préstamo? Esta acción no se puede deshacer.')) return;
         await deleteLoan(id);
         showNotification('Registro eliminado.');
     };
@@ -63,15 +64,16 @@ const Loans: React.FC = () => {
                                     e.preventDefault();
                                     handleReturn(l);
                                 }}
-                                className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-bold text-xs uppercase hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center gap-2 transition-colors"
+                                className="px-4 min-h-[44px] bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-bold text-xs uppercase hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center gap-2 transition-colors"
                             >
                                 <CheckCircle className="w-4 h-4" /> Devolver
                             </button>
                             <button
                                 type="button"
                                 onClick={(e) => handleDelete(l.id, e)}
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors"
+                                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors"
                                 title="Eliminar"
+                                aria-label={`Eliminar préstamo de ${l.lenderName} ${l.lenderSurname}`}
                             >
                                 <Trash2 className="w-4 h-4 pointer-events-none" />
                             </button>
@@ -99,7 +101,11 @@ const Loans: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            <button onClick={(e) => handleDelete(l.id, e)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors p-2 cursor-pointer">
+                            <button
+                                onClick={(e) => handleDelete(l.id, e)}
+                                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                aria-label={`Eliminar préstamo de ${l.lenderName} ${l.lenderSurname}`}
+                            >
                                 <Trash2 className="w-4 h-4 pointer-events-none" />
                             </button>
                         </div>

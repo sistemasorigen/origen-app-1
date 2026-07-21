@@ -74,11 +74,23 @@ const PaginaNuevoBautismoContent: React.FC = () => {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
-                            <input type="text" placeholder="Nombre" required value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                            <input type="text" placeholder="Apellido" required value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                            <div>
+                                <label htmlFor="bautismo-firstName" className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Nombre</label>
+                                <input id="bautismo-firstName" type="text" autoComplete="given-name" placeholder="Nombre" required value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                            </div>
+                            <div>
+                                <label htmlFor="bautismo-lastName" className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Apellido</label>
+                                <input id="bautismo-lastName" type="text" autoComplete="family-name" placeholder="Apellido" required value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                            </div>
                         </div>
-                        <input type="email" placeholder="Email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                        <input type="tel" placeholder="Teléfono" required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                        <div>
+                            <label htmlFor="bautismo-email" className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Email</label>
+                            <input id="bautismo-email" type="email" autoComplete="email" placeholder="Email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                        </div>
+                        <div>
+                            <label htmlFor="bautismo-phone" className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Teléfono</label>
+                            <input id="bautismo-phone" type="tel" autoComplete="tel" placeholder="Teléfono" required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                        </div>
 
                         <div className="flex gap-2 pt-2">
                             <button

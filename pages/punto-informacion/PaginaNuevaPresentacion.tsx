@@ -81,32 +81,51 @@ const PaginaNuevaPresentacionContent: React.FC = () => {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-1 border-b border-dashed border-slate-200 pb-3">
-                            <label className="text-xs font-bold text-slate-900 uppercase tracking-widest">Datos del Niño/a</label>
+                            <span className="text-xs font-bold text-slate-900 uppercase tracking-widest">Datos del Niño/a</span>
                             <div className="grid grid-cols-2 gap-2 mt-1">
-                                <input type="text" placeholder="Nombre" required value={form.childName} onChange={e => setForm({ ...form, childName: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                <input type="text" placeholder="Apellido" required value={form.childSurname} onChange={e => setForm({ ...form, childSurname: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                                <div>
+                                    <label htmlFor="pres-childName" className="sr-only">Nombre del niño/a</label>
+                                    <input id="pres-childName" type="text" autoComplete="off" placeholder="Nombre" required value={form.childName} onChange={e => setForm({ ...form, childName: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                                </div>
+                                <div>
+                                    <label htmlFor="pres-childSurname" className="sr-only">Apellido del niño/a</label>
+                                    <input id="pres-childSurname" type="text" autoComplete="off" placeholder="Apellido" required value={form.childSurname} onChange={e => setForm({ ...form, childSurname: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                                </div>
                             </div>
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Madre</label>
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Madre</span>
                             <div className="grid grid-cols-2 gap-2">
-                                <input type="text" placeholder="Nombre" value={form.motherName} onChange={e => setForm({ ...form, motherName: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                <input type="text" placeholder="Apellido" value={form.motherSurname} onChange={e => setForm({ ...form, motherSurname: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                                <div>
+                                    <label htmlFor="pres-motherName" className="sr-only">Nombre de la madre</label>
+                                    <input id="pres-motherName" type="text" autoComplete="off" placeholder="Nombre" value={form.motherName} onChange={e => setForm({ ...form, motherName: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                                </div>
+                                <div>
+                                    <label htmlFor="pres-motherSurname" className="sr-only">Apellido de la madre</label>
+                                    <input id="pres-motherSurname" type="text" autoComplete="off" placeholder="Apellido" value={form.motherSurname} onChange={e => setForm({ ...form, motherSurname: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                                </div>
                             </div>
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Padre</label>
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Padre</span>
                             <div className="grid grid-cols-2 gap-2">
-                                <input type="text" placeholder="Nombre" value={form.fatherName} onChange={e => setForm({ ...form, fatherName: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                <input type="text" placeholder="Apellido" value={form.fatherSurname} onChange={e => setForm({ ...form, fatherSurname: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                                <div>
+                                    <label htmlFor="pres-fatherName" className="sr-only">Nombre del padre</label>
+                                    <input id="pres-fatherName" type="text" autoComplete="off" placeholder="Nombre" value={form.fatherName} onChange={e => setForm({ ...form, fatherName: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                                </div>
+                                <div>
+                                    <label htmlFor="pres-fatherSurname" className="sr-only">Apellido del padre</label>
+                                    <input id="pres-fatherSurname" type="text" autoComplete="off" placeholder="Apellido" value={form.fatherSurname} onChange={e => setForm({ ...form, fatherSurname: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                                </div>
                             </div>
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Fecha Agendada</label>
+                            <label htmlFor="pres-scheduledDate" className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Fecha Agendada</label>
                             <input
+                                id="pres-scheduledDate"
                                 type="date"
                                 required
                                 value={form.scheduledDate}
@@ -117,9 +136,15 @@ const PaginaNuevaPresentacionContent: React.FC = () => {
 
                         <div className="pt-2 space-y-2 border-t border-dashed border-slate-200">
                             <div className="space-y-1 mt-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Contacto</label>
-                                <input type="email" placeholder="Email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                <input type="tel" placeholder="Teléfono" required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors mt-2" />
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Contacto</span>
+                                <div>
+                                    <label htmlFor="pres-email" className="sr-only">Email de contacto</label>
+                                    <input id="pres-email" type="email" autoComplete="email" placeholder="Email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
+                                </div>
+                                <div>
+                                    <label htmlFor="pres-phone" className="sr-only">Teléfono de contacto</label>
+                                    <input id="pres-phone" type="tel" autoComplete="tel" placeholder="Teléfono" required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors mt-2" />
+                                </div>
                             </div>
                         </div>
 

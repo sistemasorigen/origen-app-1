@@ -96,7 +96,7 @@ const ToastItem = ({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
                 border-2 ${styles.borderColor}
                 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]
                 px-4 py-3
-                min-w-[300px] max-w-[90vw]
+                w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[300px] max-w-sm
                 transform transition-all duration-300 ease-out
                 ${isVisible && !isExiting ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}
             `}
@@ -110,7 +110,7 @@ const ToastItem = ({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
             </p>
             <button
                 onClick={handleDismiss}
-                className="text-neutral-400 hover:text-black transition-colors"
+                className="shrink-0 min-w-[44px] min-h-[44px] -my-3 -mr-2 flex items-center justify-center text-neutral-400 hover:text-black transition-colors"
                 aria-label="Cerrar notificación"
             >
                 <X className="w-4 h-4" />

@@ -96,7 +96,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                             aria-label={isCollapsed ? 'Expandir menú de navegación' : 'Colapsar menú de navegación'}
                             aria-expanded={!isCollapsed}
                             title={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
-                            className="hidden md:flex items-center justify-center w-8 h-8 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                            className="hidden md:flex items-center justify-center w-11 h-11 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
                         >
                             {isCollapsed
                                 ? <PanelLeftOpen className="w-4 h-4" strokeWidth={2.5} />
@@ -108,7 +108,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                         <button
                             onClick={onClose}
                             aria-label="Cerrar menú de navegación"
-                            className="md:hidden flex items-center justify-center w-8 h-8 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                            className="md:hidden flex items-center justify-center w-11 h-11 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
                         >
                             <X className="w-5 h-5" />
                         </button>

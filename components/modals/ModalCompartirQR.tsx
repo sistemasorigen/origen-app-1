@@ -61,43 +61,42 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
 
     return (
         <div
-            className="fixed inset-x-0 top-0 z-[100] flex items-center justify-center p-4 bg-white/95 backdrop-blur-xl"
-            style={{ height: '100dvh' }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
             onClick={onClose}
         >
             <div
-                className="relative bg-white border border-slate-200 rounded-2xl w-full max-w-sm overflow-hidden shadow-xl"
+                className="relative bg-white border border-slate-200 rounded-lg w-full max-w-sm overflow-hidden shadow-xl"
                 onClick={e => e.stopPropagation()}
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-all z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                    className="absolute top-2 right-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-colors z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                     aria-label="Cerrar"
                 >
                     <X className="w-5 h-5" />
                 </button>
-                <div className="p-8 flex flex-col items-center text-center">
-                    <img src={LOGO_URL} alt="Logo" className="h-16 w-auto object-contain mb-4" />
-                    <h3 className="text-2xl font-black uppercase tracking-tight mb-1 break-words max-w-full">{title}</h3>
-                    <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-6">
+                <div className="px-8 pb-8 pt-6 flex flex-col items-center text-center">
+                    <img src={LOGO_URL} alt="Logo" className="h-14 w-auto object-contain mb-4" />
+                    <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 mb-1 break-words max-w-full">{title}</h3>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">
                         {subtitle || 'Escaneá o compartí'}
                     </p>
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 shadow-sm">
+                    <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6 shadow-sm">
                         <img src={qrUrl} alt={`QR ${title}`} className="w-44 h-44 object-contain" />
                     </div>
                     <div className="w-full space-y-3">
                         <button
                             onClick={copyLink}
-                            className="w-full py-4 px-6 border border-slate-200 rounded-lg font-black uppercase text-sm tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-3 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="w-full py-3 px-6 border border-slate-200 rounded-lg font-bold uppercase text-xs tracking-widest text-slate-700 hover:bg-slate-100 transition-colors flex items-center justify-center gap-3"
                         >
-                            {isCopied ? <Check className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5 text-slate-500" />}
+                            {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
                             {isCopied ? '¡Copiado!' : 'Copiar link'}
                         </button>
                         <button
                             onClick={shareWhatsApp}
-                            className="w-full py-4 px-6 bg-[#25D366] text-white rounded-lg font-black uppercase text-sm tracking-widest hover:bg-[#1eb958] transition-all flex items-center justify-center gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="w-full py-3 px-6 bg-[#25D366] text-white rounded-lg font-bold uppercase text-xs tracking-widest hover:bg-[#1eb958] transition-colors flex items-center justify-center gap-3"
                         >
-                            <WhatsAppIcon className="w-5 h-5" />
+                            <WhatsAppIcon className="w-4 h-4" />
                             Compartir vía WhatsApp
                         </button>
                     </div>

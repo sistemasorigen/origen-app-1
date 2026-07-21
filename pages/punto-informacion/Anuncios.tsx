@@ -115,8 +115,9 @@ const Announcements: React.FC = () => {
                                             <h3 className="font-bold uppercase tracking-tight text-sm leading-tight flex-1 text-slate-900">{a.title}</h3>
                                             <button
                                                 onClick={() => handleToggleActive(a)}
-                                                className={`flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-bold uppercase transition-colors ${active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
+                                                className={`flex-shrink-0 min-h-[44px] inline-flex items-center gap-1 px-3 py-1 rounded-full border text-[10px] font-bold uppercase transition-colors ${active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
                                                 title={active ? 'Click para desactivar' : 'Click para activar'}
+                                                aria-label={active ? `Desactivar ${a.title}` : `Activar ${a.title}`}
                                             >
                                                 {active ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
                                                 {active ? 'Activo' : 'Inactivo'}
@@ -142,20 +143,23 @@ const Announcements: React.FC = () => {
                                             {a.qrCodeUrl && (
                                                 <button
                                                     onClick={() => setQrModal({ open: true, title: a.title, url: getSafeQrUrl(a.qrCodeUrl, a.title, a.link), link: a.link || window.location.href })}
-                                                    className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg bg-white text-xs font-bold uppercase text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                                                    className="flex items-center justify-center gap-1.5 px-3 min-h-[44px] border border-slate-200 rounded-lg bg-white text-xs font-bold uppercase text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                                                    aria-label={`Ver código QR de ${a.title}`}
                                                 >
                                                     <QrCode className="w-3.5 h-3.5" /> QR
                                                 </button>
                                             )}
                                             <button
                                                 onClick={() => navigate(`/punto-de-informacion/anuncios/nuevo?id=${a.id}`)}
-                                                className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg bg-white text-xs font-bold uppercase text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                                                className="flex items-center justify-center gap-1.5 px-3 min-h-[44px] border border-slate-200 rounded-lg bg-white text-xs font-bold uppercase text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                                                aria-label={`Editar ${a.title}`}
                                             >
                                                 <Pencil className="w-3.5 h-3.5" /> Editar
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(a.id)}
-                                                className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg bg-white text-xs font-bold uppercase text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                                                className="flex items-center justify-center gap-1.5 px-3 min-h-[44px] border border-slate-200 rounded-lg bg-white text-xs font-bold uppercase text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                                                aria-label={`Eliminar ${a.title}`}
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" /> Eliminar
                                             </button>
@@ -219,23 +223,26 @@ const Announcements: React.FC = () => {
                                                     {a.qrCodeUrl && (
                                                         <button
                                                             onClick={() => setQrModal({ open: true, title: a.title, url: getSafeQrUrl(a.qrCodeUrl, a.title, a.link), link: a.link || window.location.href })}
-                                                            className="p-2 text-slate-400 hover:text-black hover:bg-slate-100 rounded transition-colors"
+                                                            className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-slate-400 hover:text-black hover:bg-slate-100 rounded transition-colors"
                                                             title="Ver QR"
+                                                            aria-label={`Ver código QR de ${a.title}`}
                                                         >
                                                             <QrCode className="w-4 h-4" />
                                                         </button>
                                                     )}
                                                     <button
                                                         onClick={() => navigate(`/punto-de-informacion/anuncios/nuevo?id=${a.id}`)}
-                                                        className="p-2 text-slate-400 hover:text-black hover:bg-slate-100 rounded transition-colors"
+                                                        className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-slate-400 hover:text-black hover:bg-slate-100 rounded transition-colors"
                                                         title="Editar"
+                                                        aria-label={`Editar ${a.title}`}
                                                     >
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(a.id)}
-                                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                        className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                                                         title="Eliminar"
+                                                        aria-label={`Eliminar ${a.title}`}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>

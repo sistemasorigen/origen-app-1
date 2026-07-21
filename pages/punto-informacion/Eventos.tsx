@@ -59,12 +59,16 @@ const Events: React.FC = () => {
                 {sortedEvents.map(ev => (
                     <div
                         key={ev.id}
-                        onClick={() => setQrModal({ open: true, title: ev.name, url: getSafeQrUrl(ev.qrCodeUrl, ev.name, ev.link), link: ev.link || window.location.href })}
-                        className="bg-white p-5 border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group flex items-start gap-4 relative"
+                        className="bg-white p-5 border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-slate-300 transition-all group flex items-start gap-4 relative"
                     >
-                        <div className="w-24 h-24 bg-white border border-slate-200 rounded-lg flex-shrink-0 p-1">
-                            <img src={getSafeQrUrl(ev.qrCodeUrl, ev.name, ev.link)} alt="QR" className="w-full h-full object-contain" />
-                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setQrModal({ open: true, title: ev.name, url: getSafeQrUrl(ev.qrCodeUrl, ev.name, ev.link), link: ev.link || window.location.href })}
+                            aria-label={`Ver código QR de ${ev.name}`}
+                            className="w-24 h-24 bg-white border border-slate-200 rounded-lg flex-shrink-0 p-1 hover:border-slate-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+                        >
+                            <img src={getSafeQrUrl(ev.qrCodeUrl, ev.name, ev.link)} alt="" className="w-full h-full object-contain pointer-events-none" />
+                        </button>
 
                         <div className="flex-1 min-w-0">
                             <h4 className="font-black text-slate-900 uppercase tracking-tight text-lg leading-tight mb-2 line-clamp-2">{ev.name}</h4>
@@ -97,16 +101,18 @@ const Events: React.FC = () => {
                                     <button
                                         type="button"
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/punto-de-informacion/eventos/nuevo?id=${ev.id}`); }}
-                                        className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-colors shadow-sm"
+                                        className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-colors shadow-sm"
                                         title="Editar"
+                                        aria-label={`Editar ${ev.name}`}
                                     >
                                         <Edit2 className="w-4 h-4 pointer-events-none" />
                                     </button>
                                     <button
                                         type="button"
                                         onClick={(e) => handleDelete(ev.id, e)}
-                                        className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors shadow-sm"
+                                        className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors shadow-sm"
                                         title="Eliminar"
+                                        aria-label={`Eliminar ${ev.name}`}
                                     >
                                         <Trash2 className="w-4 h-4 pointer-events-none" />
                                     </button>

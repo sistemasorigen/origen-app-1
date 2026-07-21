@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store';
 import {
-    X, Copy, Check, QrCode, Share2,
+    QrCode,
     Instagram, Facebook, Youtube, Music,
     ArrowRight, Megaphone, Calendar, Clock, ExternalLink, Pin
 } from 'lucide-react';
@@ -12,14 +12,6 @@ import InfoPointCalendar from './CalendarioPuntoInformacion';
 import ModalCompartirQR from '../../components/modals/ModalCompartirQR';
 
 const LOGO_URL = '/origen-logo.png';
-
-// lucide-react no trae íconos de marca, así que definimos los logos oficiales
-// (con sus formas y colores reales) inline como componentes SVG.
-const WhatsAppIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.359.101 11.892c0 2.096.546 4.142 1.588 5.945L0 24l6.335-1.652a11.96 11.96 0 005.71 1.454h.006c6.585 0 11.946-5.36 11.949-11.945a11.87 11.87 0 00-3.495-8.408" />
-    </svg>
-);
 
 // Instagram — insignia con gradiente oficial + cámara blanca.
 const InstagramIcon: React.FC<{ className?: string }> = ({ className }) => {
@@ -83,7 +75,6 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
     const [appConfig, setAppConfig] = useState<AppConfig>(db.getAppConfig());
     const [sharingEvent, setSharingEvent] = useState<AppEvent | null>(null);
     const [qrModal, setQrModal] = useState<{ open: boolean, title: string, url: string, link: string }>({ open: false, title: '', url: '', link: '' });
-    const [isCopied, setIsCopied] = useState(false);
     // Acceso rápido a redes: al tocar una red se despliega su QR + acciones de compartir.
     const [socialShare, setSocialShare] = useState<{ label: string, url: string, Icon: React.ComponentType<{ className?: string }> } | null>(null);
 
@@ -99,8 +90,14 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
     const nextEvent = upcomingEvents[0];
 
     // Fecha de hoy — la portada del tablero se fecha en vivo.
+    // Formato corto en mobile: el largo ("miércoles, 25 de diciembre") con
+    // whitespace-nowrap puede no entrar en 320-375px y el contenedor recorta
+    // (overflow-hidden) — se ve una fecha cortada. Versión corta siempre entra.
     const todayLabel = new Date().toLocaleDateString('es-AR', {
         weekday: 'long', day: 'numeric', month: 'long'
+    });
+    const todayLabelShort = new Date().toLocaleDateString('es-AR', {
+        day: 'numeric', month: 'short'
     });
 
     const getEventQrUrl = (event: AppEvent) => {
@@ -113,33 +110,6 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
         if (!dateStr) return new Date();
         const parts = dateStr.split('-');
         return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-    };
-
-    // --- SHARE ACTIONS ---
-    const handleCopyLink = (text: string) => {
-        navigator.clipboard.writeText(text);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-    };
-
-    const handleWebShare = async (event: AppEvent) => {
-        const dateObj = parseLocalDate(event.date);
-        const shareData = {
-            title: event.name,
-            text: `Te invito a: ${event.name} el ${dateObj.toLocaleDateString()}`,
-            url: event.link || window.location.href
-        };
-        if (navigator.share) {
-            try { await navigator.share(shareData); } catch { handleCopyLink(shareData.url); }
-        } else {
-            handleCopyLink(shareData.url);
-        }
-    };
-
-    // WhatsApp: abre el compositor con el link de la red ya cargado.
-    const handleWhatsAppShare = (url: string, label: string) => {
-        const text = `Seguí a Origen en ${label}: ${url}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
     };
 
     const getQrUrl = (textOrUrl: string) => {
@@ -195,89 +165,24 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                     link={qrModal.link}
                 />
 
-                {/* --- SHARE MODAL --- */}
-                {sharingEvent && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/95 backdrop-blur-xl">
-                        <div className="relative bg-white border-4 border-black w-full max-w-sm overflow-hidden pi-pop shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                            <button
-                                onClick={() => setSharingEvent(null)}
-                                className="absolute top-4 right-4 p-2 border-2 border-black hover:bg-black hover:text-white transition-all z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
-                                aria-label="Cerrar"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                            <div className="p-8 flex flex-col items-center text-center">
-                                <img src={LOGO_URL} alt="Logo" className="h-16 w-auto object-contain mb-4" />
-                                <h3 className="text-2xl font-black uppercase tracking-tight mb-1">{sharingEvent.name}</h3>
-                                <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-6">
-                                    {parseLocalDate(sharingEvent.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                </p>
-                                <div className="bg-white border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <img src={getQrUrl(sharingEvent.link || `${sharingEvent.name} - ${sharingEvent.date}`)} alt="QR" className="w-44 h-44 object-contain" />
-                                </div>
-                                <div className="w-full space-y-3">
-                                    <button
-                                        onClick={() => handleCopyLink(sharingEvent.link || window.location.href)}
-                                        className="w-full py-4 px-6 border-4 border-black font-black uppercase text-sm tracking-widest hover:bg-neutral-100 transition-all flex items-center justify-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
-                                    >
-                                        {isCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                                        {isCopied ? '¡Copiado!' : 'Copiar link'}
-                                    </button>
-                                    {navigator.share && (
-                                        <button
-                                            onClick={() => handleWebShare(sharingEvent)}
-                                            className="w-full py-4 px-6 bg-black text-white font-black uppercase text-sm tracking-widest hover:bg-neutral-800 transition-all flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
-                                        >
-                                            <Share2 className="w-5 h-5" />
-                                            Compartir
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* --- SHARE MODAL (evento) --- */}
+                <ModalCompartirQR
+                    isOpen={!!sharingEvent}
+                    onClose={() => setSharingEvent(null)}
+                    title={sharingEvent?.name || ''}
+                    subtitle={sharingEvent ? parseLocalDate(sharingEvent.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) : undefined}
+                    qrUrl={sharingEvent ? getQrUrl(sharingEvent.link || `${sharingEvent.name} - ${sharingEvent.date}`) : ''}
+                    link={sharingEvent?.link || window.location.href}
+                />
 
-                {/* --- SOCIAL SHARE MODAL — QR + copiar + WhatsApp --- */}
-                {socialShare && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/95 backdrop-blur-xl">
-                        <div className="relative bg-white border-4 border-black w-full max-w-sm overflow-hidden pi-pop shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                            <button
-                                onClick={() => setSocialShare(null)}
-                                className="absolute top-4 right-4 p-2 border-2 border-black hover:bg-black hover:text-white transition-all z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
-                                aria-label="Cerrar"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                            <div className="p-8 flex flex-col items-center text-center">
-                                <socialShare.Icon className="w-16 h-16 mb-4" />
-                                <h3 className="text-2xl font-black uppercase tracking-tight mb-1">{socialShare.label}</h3>
-                                <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-6">
-                                    Escaneá o compartí
-                                </p>
-                                <div className="bg-white border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <img src={getQrUrl(socialShare.url)} alt={`QR ${socialShare.label}`} className="w-44 h-44 object-contain" />
-                                </div>
-                                <div className="w-full space-y-3">
-                                    <button
-                                        onClick={() => handleCopyLink(socialShare.url)}
-                                        className="w-full py-4 px-6 border-4 border-black font-black uppercase text-sm tracking-widest hover:bg-neutral-100 transition-all flex items-center justify-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
-                                    >
-                                        {isCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                                        {isCopied ? '¡Copiado!' : 'Copiar link'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleWhatsAppShare(socialShare.url, socialShare.label)}
-                                        className="w-full py-4 px-6 bg-[#25D366] text-white border-4 border-black font-black uppercase text-sm tracking-widest hover:bg-[#1eb958] transition-all flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
-                                    >
-                                        <WhatsAppIcon className="w-5 h-5" />
-                                        Compartir vía WhatsApp
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* --- SOCIAL SHARE MODAL (redes del footer) --- */}
+                <ModalCompartirQR
+                    isOpen={!!socialShare}
+                    onClose={() => setSocialShare(null)}
+                    title={socialShare?.label || ''}
+                    qrUrl={socialShare ? getQrUrl(socialShare.url) : ''}
+                    link={socialShare?.url || ''}
+                />
 
                 {/* ============================================================
                     SIGNATURE — MASTHEAD / PORTADA DE LA CARTELERA
@@ -297,7 +202,8 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                 </div>
                                 <div className="flex items-center px-4 md:px-6 border-l border-slate-200" style={{ backgroundColor: MARKER }}>
                                     <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.15em] text-black whitespace-nowrap">
-                                        {todayLabel}
+                                        <span className="md:hidden">{todayLabelShort}</span>
+                                        <span className="hidden md:inline">{todayLabel}</span>
                                     </span>
                                 </div>
                             </div>
@@ -311,8 +217,10 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
 
                             {/* What's-on — resumen derivado de datos reales */}
                             <div className="flex flex-wrap border-t border-slate-200">
-                                {/* Los dos contadores comparten fila siempre */}
-                                <div className="flex shrink-0 divide-x divide-slate-200">
+                                {/* Los dos contadores comparten fila siempre (grid en mobile:
+                                    con shrink-0 puro, el texto sin achicar podía no entrar en
+                                    320-375px y el card padre (overflow-hidden) lo recortaba) */}
+                                <div className="grid grid-cols-2 w-full sm:w-auto sm:flex sm:shrink-0 divide-x divide-slate-200">
                                     <div className="flex items-baseline gap-2 px-4 md:px-6 py-4">
                                         <span className="text-3xl font-black tracking-tighter tabular-nums">{activeAnnouncements.length}</span>
                                         <span className="text-[11px] font-black uppercase tracking-widest text-neutral-500">
@@ -594,6 +502,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                         onClick={() => window.open(footerLinks.instagram, '_blank')}
                                         className="w-12 h-12 border border-slate-200 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                         title="Instagram"
+                                        aria-label="Abrir Instagram de Origen (nueva pestaña)"
                                     >
                                         <Instagram className="w-6 h-6" />
                                     </button>
@@ -603,6 +512,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                         onClick={() => window.open(footerLinks.facebook, '_blank')}
                                         className="w-12 h-12 border border-slate-200 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                         title="Facebook"
+                                        aria-label="Abrir Facebook de Origen (nueva pestaña)"
                                     >
                                         <Facebook className="w-6 h-6" />
                                     </button>
@@ -612,6 +522,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                         onClick={() => window.open(footerLinks.youtube, '_blank')}
                                         className="w-12 h-12 border border-slate-200 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                         title="YouTube"
+                                        aria-label="Abrir YouTube de Origen (nueva pestaña)"
                                     >
                                         <Youtube className="w-6 h-6" />
                                     </button>
@@ -621,6 +532,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                         onClick={() => window.open(footerLinks.spotify, '_blank')}
                                         className="w-12 h-12 border border-slate-200 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                                         title="Spotify"
+                                        aria-label="Abrir Spotify de Origen (nueva pestaña)"
                                     >
                                         <Music className="w-6 h-6" />
                                     </button>

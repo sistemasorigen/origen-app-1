@@ -194,10 +194,13 @@ const InfoPointCalendar: React.FC = () => {
                 new Date().getFullYear() === year;
 
             cells.push(
-                <div
+                <button
                     key={`curr-${d}`}
+                    type="button"
                     onClick={() => setSelectedDate(new Date(year, month, d))}
-                    className={`min-h-[70px] md:min-h-[100px] p-2 border-b border-r border-slate-200 transition-all cursor-pointer group relative hover:bg-slate-50 ${isSelected ? 'bg-slate-50' : 'bg-white'}`}
+                    aria-current={isToday ? 'date' : undefined}
+                    aria-label={`${d} de ${MONTHS_ES[month]}${dayItems.length > 0 ? `, ${dayItems.length} evento${dayItems.length > 1 ? 's' : ''}` : ''}`}
+                    className={`min-h-[70px] md:min-h-[100px] w-full p-2 border-b border-r border-slate-200 transition-all cursor-pointer group relative hover:bg-slate-50 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400 ${isSelected ? 'bg-slate-50' : 'bg-white'}`}
                 >
                     <div className="flex justify-between items-start">
                         <span className={`w-7 h-7 flex items-center justify-center font-bold text-sm rounded-full transition-all ${isToday ? 'bg-black text-white' :
@@ -228,7 +231,7 @@ const InfoPointCalendar: React.FC = () => {
                             </div>
                         )}
                     </div>
-                </div>
+                </button>
             );
         }
 
@@ -253,19 +256,21 @@ const InfoPointCalendar: React.FC = () => {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handlePrevMonth}
-                            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center border border-slate-200 rounded-lg bg-white hover:bg-slate-100 transition-all shadow-sm active:translate-y-0.5 text-slate-600"
+                            aria-label="Mes anterior"
+                            className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center border border-slate-200 rounded-lg bg-white hover:bg-slate-100 transition-all shadow-sm active:translate-y-0.5 text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                         >
                             <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
                         </button>
                         <button
                             onClick={handleToday}
-                            className="px-3 py-2 min-h-[40px] flex items-center justify-center text-xs font-bold uppercase tracking-wider border border-slate-200 rounded-lg bg-white hover:bg-slate-100 transition-all shadow-sm text-slate-600"
+                            className="px-3 min-h-[44px] flex items-center justify-center text-xs font-bold uppercase tracking-wider border border-slate-200 rounded-lg bg-white hover:bg-slate-100 transition-all shadow-sm text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                         >
                             Hoy
                         </button>
                         <button
                             onClick={handleNextMonth}
-                            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center border border-slate-200 rounded-lg bg-white hover:bg-slate-100 transition-all shadow-sm active:translate-y-0.5 text-slate-600"
+                            aria-label="Mes siguiente"
+                            className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center border border-slate-200 rounded-lg bg-white hover:bg-slate-100 transition-all shadow-sm active:translate-y-0.5 text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                         >
                             <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
                         </button>
