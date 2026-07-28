@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 
 const LOGO_URL = '/origen-logo.png';
@@ -25,6 +25,18 @@ interface ModalCompartirQRProps {
 // Reutilizable — se usa en la cartelera pública y en el panel de anuncios.
 const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, title, link, qrUrl, subtitle }) => {
     const [isCopied, setIsCopied] = useState(false);
+
+    // Bloquea el scroll de fondo mientras el modal está abierto — sin esto,
+    // en InicioPublico.tsx (página larga, con scroll) el usuario podía seguir
+    // scrolleando el fondo detrás del modal.
+    useEffect(() => {
+        if (!isOpen) return;
+        const original = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = original;
+        };
+    }, [isOpen]);
 
     if (!isOpen) return null;
 

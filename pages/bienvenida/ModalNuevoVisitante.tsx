@@ -151,8 +151,10 @@ Gracias por tomarte unos minutos.
             const { error } = await supabase
                 .from('welcome_visitors')
                 .insert({
-                    first_name: formData.firstName,
-                    last_name: formData.lastName,
+                    // trim obligatorio: un espacio sobrante acá rompe la
+                    // búsqueda del visitante en el formulario público
+                    first_name: formData.firstName.trim(),
+                    last_name: formData.lastName.trim(),
                     age: formData.age
                         ? parseInt(formData.age)
                         : null,

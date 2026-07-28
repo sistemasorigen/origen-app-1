@@ -146,14 +146,15 @@ const Formulario: React.FC = () => {
             const dialDigits = selectedCountry.dialCode.replace(/\D/g, '');
             const phoneNormalized = `${dialDigits}${localDigits}`;
 
-            // PASO A: buscar por nombre (ilike = case-insensitive)
+            // PASO A: buscar por nombre vía RPC. El .ilike() que había antes
+            // era un match exacto: no toleraba un espacio sobrante en el dato
+            // cargado en recepción, y la persona no se encontraba a sí misma.
+            // El RPC compara con btrim() + lower() de los dos lados.
             const { data: byName, error: nameSearchError } = await supabase
-                .from('welcome_visitors')
-                .select('id, first_name, last_name, phone')
-                .ilike('first_name', formData.firstName.trim())
-                .ilike('last_name', formData.lastName.trim())
-                .order('created_at', { ascending: false })
-                .limit(10);
+                .rpc('search_welcome_visitor', {
+                    p_first_name: formData.firstName.trim(),
+                    p_last_name: formData.lastName.trim()
+                });
 
             if (nameSearchError) {
                 console.error('Search error', nameSearchError);

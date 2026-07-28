@@ -48,8 +48,10 @@ const VisitorDetailModal: React.FC<VisitorDetailModalProps> = ({ visitor, isOpen
             const { error } = await supabase
                 .from('welcome_visitors')
                 .update({
-                    first_name: formData.first_name,
-                    last_name: formData.last_name,
+                    // mismo trim que en el alta: un espacio sobrante acá
+                    // rompe la búsqueda en el formulario público
+                    first_name: formData.first_name.trim(),
+                    last_name: formData.last_name.trim(),
                     age: formData.age,
                     phone: formData.phone,
                     localidad: formData.localidad,
