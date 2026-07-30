@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import QrScanner from 'qr-scanner';
+import { Html5Qrcode } from 'html5-qrcode';
 import { checkinDianinoTicket } from '../../../services/supabaseService';
 import { ChevronLeft, Camera, CameraOff, Keyboard, CheckCircle2, AlertTriangle, Clock, XCircle, RotateCcw } from 'lucide-react';
 
@@ -33,8 +33,7 @@ const playBeep = (ok: boolean) => {
 
 const EscanerDiaNino: React.FC = () => {
     const navigate = useNavigate();
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const scannerRef = useRef<QrScanner | null>(null);
+    const scannerRef = useRef<Html5Qrcode | null>(null);
 
     const [cameraError, setCameraError] = useState<string | null>(null);
     // ── DIAGNÓSTICO TEMPORAL — sacar una vez resuelto el bug del escáner ──
@@ -103,28 +102,27 @@ const EscanerDiaNino: React.FC = () => {
 
     // ── Inicializar escáner de cámara ──
     useEffect(() => {
-        if (!videoRef.current) return;
-
-        const scanner = new QrScanner(
-            videoRef.current,
-            (scanResult) => { handleTicketCode(scanResult.data); },
-            {
-                preferredCamera: 'environment',
-                highlightScanRegion: true,
-                highlightCodeOutline: true,
-                onDecodeError: (err) => {
-                    // Temporal para diagnóstico — ver PASO 2.
-                    // "No QR code found" es NORMAL y se dispara
-                    // todo el tiempo que no hay QR en cuadro.
-                    // Cualquier otro tipo de error acá es la
-                    // pista real.
-                    setLastDecodeAttempt({ at: Date.now(), message: String(err) });
-                },
-            }
-        );
+        const containerId = 'dianino-qr-reader';
+        const scanner = new Html5Qrcode(containerId, { verbose: false });
         scannerRef.current = scanner;
 
-        scanner.start()
+        scanner.start(
+            { facingMode: 'user' },
+            {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+            },
+            (decodedText) => {
+                setScannerStarted(true);
+                handleTicketCode(decodedText);
+            },
+            () => {
+                // Se dispara constantemente mientras no hay QR
+                // en cuadro — no es un error real, solo feedback
+                // de "sigo buscando".
+                setLastDecodeAttempt({ at: Date.now(), message: 'buscando QR...' });
+            }
+        )
             .then(() => setScannerStarted(true))
             .catch((err) => {
                 setCameraError('No pudimos acceder a la cámara. Revisá los permisos del navegador e intentá de nuevo.');
@@ -132,14 +130,10 @@ const EscanerDiaNino: React.FC = () => {
             });
 
         return () => {
-            scanner.stop();
-            scanner.destroy();
+            scanner.stop().then(() => scanner.clear()).catch(() => {});
             scannerRef.current = null;
         };
-        // handleTicketCode es estable de por vida (deps [] + refs) — la cámara
-        // se inicializa una sola vez al montar, no en cada escaneo.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [handleTicketCode]);
 
     const handleContinue = () => {
         if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
@@ -209,7 +203,7 @@ const EscanerDiaNino: React.FC = () => {
                         <p className="text-sm">{cameraError}</p>
                     </div>
                 ) : (
-                    <video ref={videoRef} className="w-full max-w-md rounded-2xl" muted playsInline />
+                    <div id="dianino-qr-reader" className="w-full max-w-md rounded-2xl overflow-hidden" />
                 )}
 
                 {/* ── DIAGNÓSTICO TEMPORAL — panel visible, sacar cuando se confirme el fix ── */}
