@@ -157,7 +157,9 @@ const EscanerDiaNino: React.FC = () => {
     };
 
     // ── Resultado a pantalla completa ──
-    if (result) {
+    // ── Resultado a pantalla completa (overlay, sin desmontar la cámara) ──
+    const resultOverlay = (() => {
+        if (!result) return null;
         const config: Record<ResultType, { bg: string; icon: React.ReactNode; title: string; subtitle?: string }> = {
             SUCCESS: { bg: 'bg-emerald-500', icon: <CheckCircle2 className="w-24 h-24" />, title: 'Puede pasar' },
             WAIVER_REJECTED: { bg: 'bg-amber-500', icon: <AlertTriangle className="w-24 h-24" />, title: 'No aceptó la declaración', subtitle: 'Decidí si puede ingresar' },
@@ -166,7 +168,6 @@ const EscanerDiaNino: React.FC = () => {
             INVALID: { bg: 'bg-red-600', icon: <XCircle className="w-24 h-24" />, title: 'QR inválido', subtitle: 'No es de este evento' },
         };
         const c = config[result.type];
-
         return (
             <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center text-white p-6 text-center ${c.bg}`}>
                 {c.icon}
@@ -183,10 +184,13 @@ const EscanerDiaNino: React.FC = () => {
                 </button>
             </div>
         );
-    }
+    })();
 
     return (
         <div className="min-h-screen bg-black flex flex-col">
+            {/* Overlay de resultado — se muestra encima sin desmontar la cámara */}
+            {resultOverlay}
+
             <div className="flex items-center justify-between p-4">
                 <button
                     onClick={() => navigate('/eventos/admin/diadelnino')}
