@@ -109,7 +109,7 @@ const EscanerDiaNino: React.FC = () => {
             videoRef.current,
             (scanResult) => { handleTicketCode(scanResult.data); },
             {
-                preferredCamera: 'user',
+                preferredCamera: 'environment',
                 highlightScanRegion: true,
                 highlightCodeOutline: true,
                 onDecodeError: (err) => {
