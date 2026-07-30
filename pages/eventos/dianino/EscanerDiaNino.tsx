@@ -107,7 +107,7 @@ const EscanerDiaNino: React.FC = () => {
         scannerRef.current = scanner;
 
         scanner.start(
-            { facingMode: 'user' },
+            { facingMode: 'environment' },
             {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
