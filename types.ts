@@ -298,6 +298,75 @@ export interface AppEvent {
     location?: string;  // Ubicación del evento
 }
 
+// ── Evento "Día del Niño" ──────────────────────
+
+export interface DiaNinoSession {
+    id: string;
+    email: string;
+    declaracionJuradaAceptada: boolean;
+    createdAt: string;
+}
+
+export interface DiaNinoTicket {
+    id: string;
+    sessionId: string;
+    firstName: string;
+    lastName: string;
+    dni: string;
+    isAdult: boolean;
+    status: 'PENDING' | 'CHECKED_IN';
+    checkedInAt?: string;
+    checkedInBy?: string;
+    createdAt: string;
+}
+
+// Fila combinada que devuelve search_dianino_session
+// (no incluye todos los campos de DiaNinoTicket,
+// solo lo que ese RPC puntual selecciona)
+export interface DiaNinoSearchResult {
+    ticketId: string;
+    firstName: string;
+    lastName: string;
+    isAdult: boolean;
+    status: 'PENDING' | 'CHECKED_IN';
+}
+
+// Resultado de checkin_dianino_ticket — usado por
+// la pantalla del escáner
+export interface DiaNinoCheckinResult {
+    result: 'SUCCESS' | 'ALREADY_CHECKED_IN' | 'NOT_FOUND';
+    firstName: string | null;
+    lastName: string | null;
+    isAdult: boolean | null;
+    declaracionJuradaAceptada: boolean | null;
+    checkedInAt: string | null;
+}
+
+// Payload de un niño en el formulario de
+// inscripción (antes de mandarlo al RPC)
+export interface DiaNinoChildInput {
+    firstName: string;
+    lastName: string;
+    dni: string;
+}
+
+// Fila de la planilla admin: 1 por sesión, con el
+// nombre del adulto ya resuelto y el conteo de
+// niños (se arma en el servicio combinando
+// dianino_sessions + dianino_tickets, no es 1:1
+// con ninguna tabla)
+export interface DiaNinoSessionRow {
+    sessionId: string;
+    adultFirstName: string;
+    adultLastName: string;
+    adultDni: string;
+    email: string;
+    childrenCount: number;
+    declaracionJuradaAceptada: boolean;
+    allCheckedIn: boolean;
+    createdAt: string;
+}
+
 export interface Announcement {
     id: string;
     title: string;

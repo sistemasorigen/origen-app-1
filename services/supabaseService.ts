@@ -178,6 +178,214 @@ export async function toggleGroupVisibility(groupId: string, hidden: boolean): P
   return true;
 }
 
+// ── Evento "Día del Niño" ──────────────────────
+
+export async function checkDianinoDniAvailable(dni: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('check_dianino_dni_available', {
+    p_dni: dni
+  });
+  if (error) {
+    console.error('[checkDianinoDniAvailable] Error:', error);
+    return false; // ante la duda, bloquear como "no disponible" en vez de dejar pasar un duplicado
+  }
+  return data as boolean;
+}
+
+export interface RegisterDianinoResult {
+  sessionId: string | null;
+  errorDni: string | null;
+}
+
+export async function registerDianinoSession(
+  email: string,
+  declaracionAceptada: boolean,
+  adult: { firstName: string; lastName: string; dni: string },
+  children: { firstName: string; lastName: string; dni: string }[]
+): Promise<RegisterDianinoResult> {
+  const { data, error } = await supabase.rpc('register_dianino_session', {
+    p_email: email,
+    p_declaracion_aceptada: declaracionAceptada,
+    p_adult: adult,
+    p_children: children
+  });
+  if (error) {
+    console.error('[registerDianinoSession] Error:', error);
+    return { sessionId: null, errorDni: null };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    sessionId: row?.session_id ?? null,
+    errorDni: row?.error_dni ?? null
+  };
+}
+
+export interface DianinoSearchResultRow {
+  ticketId: string;
+  firstName: string;
+  lastName: string;
+  isAdult: boolean;
+  status: 'PENDING' | 'CHECKED_IN';
+}
+
+export async function searchDianinoSession(
+  firstName: string,
+  lastName: string,
+  dni: string
+): Promise<DianinoSearchResultRow[]> {
+  const { data, error } = await supabase.rpc('search_dianino_session', {
+    p_first_name: firstName,
+    p_last_name: lastName,
+    p_dni: dni
+  });
+  if (error) {
+    console.error('[searchDianinoSession] Error:', error);
+    return [];
+  }
+  return (data || []).map((row: any) => ({
+    ticketId: row.ticket_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    isAdult: row.is_adult,
+    status: row.status
+  }));
+}
+
+export interface DianinoCheckinResultRow {
+  result: 'SUCCESS' | 'ALREADY_CHECKED_IN' | 'NOT_FOUND';
+  firstName: string | null;
+  lastName: string | null;
+  isAdult: boolean | null;
+  declaracionJuradaAceptada: boolean | null;
+  checkedInAt: string | null;
+}
+
+export async function checkinDianinoTicket(ticketId: string): Promise<DianinoCheckinResultRow | null> {
+  const { data, error } = await supabase.rpc('checkin_dianino_ticket', {
+    p_ticket_id: ticketId
+  });
+  if (error) {
+    console.error('[checkinDianinoTicket] Error:', error);
+    return null;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return {
+    result: row.result,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    isAdult: row.is_adult,
+    declaracionJuradaAceptada: row.declaracion_jurada_aceptada,
+    checkedInAt: row.checked_in_at
+  };
+}
+
+// ── Planilla admin: trae todas las sesiones con
+// el adulto ya resuelto y el conteo de niños.
+// NO pasa por RPC — el staff autenticado ya tiene
+// acceso directo vía la policy dianino_staff_all_*.
+export async function getDianinoSessions(): Promise<import('../types').DiaNinoSessionRow[]> {
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('dianino_sessions')
+    .select('id, email, declaracion_jurada_aceptada, created_at')
+    .order('created_at', { ascending: false });
+
+  if (sessionsError) {
+    console.error('[getDianinoSessions] Error (sessions):', sessionsError);
+    return [];
+  }
+
+  const { data: tickets, error: ticketsError } = await supabase
+    .from('dianino_tickets')
+    .select('session_id, first_name, last_name, dni, is_adult, status');
+
+  if (ticketsError) {
+    console.error('[getDianinoSessions] Error (tickets):', ticketsError);
+    return [];
+  }
+
+  return (sessions || []).map(s => {
+    const sessionTickets = (tickets || []).filter(t => t.session_id === s.id);
+    const adultTicket = sessionTickets.find(t => t.is_adult);
+    const childrenCount = sessionTickets.filter(t => !t.is_adult).length;
+    const allCheckedIn = sessionTickets.length > 0 && sessionTickets.every(t => t.status === 'CHECKED_IN');
+
+    return {
+      sessionId: s.id,
+      adultFirstName: adultTicket?.first_name || '',
+      adultLastName: adultTicket?.last_name || '',
+      adultDni: adultTicket?.dni || '',
+      email: s.email,
+      childrenCount,
+      declaracionJuradaAceptada: s.declaracion_jurada_aceptada,
+      allCheckedIn,
+      createdAt: s.created_at
+    };
+  });
+}
+
+// ── Detalle de una sesión puntual (adulto + cada
+// niño con todos sus datos, para la página "Ver")
+export async function getDianinoSessionDetail(sessionId: string): Promise<{
+  session: import('../types').DiaNinoSession;
+  tickets: import('../types').DiaNinoTicket[];
+} | null> {
+  const { data: session, error: sessionError } = await supabase
+    .from('dianino_sessions')
+    .select('id, email, declaracion_jurada_aceptada, created_at')
+    .eq('id', sessionId)
+    .single();
+
+  if (sessionError || !session) {
+    console.error('[getDianinoSessionDetail] Error:', sessionError);
+    return null;
+  }
+
+  const { data: tickets, error: ticketsError } = await supabase
+    .from('dianino_tickets')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('is_adult', { ascending: false });
+
+  if (ticketsError) {
+    console.error('[getDianinoSessionDetail] Error (tickets):', ticketsError);
+    return null;
+  }
+
+  return {
+    session: {
+      id: session.id,
+      email: session.email,
+      declaracionJuradaAceptada: session.declaracion_jurada_aceptada,
+      createdAt: session.created_at
+    },
+    tickets: (tickets || []).map((t: any) => ({
+      id: t.id,
+      sessionId: t.session_id,
+      firstName: t.first_name,
+      lastName: t.last_name,
+      dni: t.dni,
+      isAdult: t.is_adult,
+      status: t.status,
+      checkedInAt: t.checked_in_at,
+      checkedInBy: t.checked_in_by,
+      createdAt: t.created_at
+    }))
+  };
+}
+
+// ── Borrar una sesión completa (admin, planilla)
+export async function deleteDianinoSession(sessionId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('dianino_sessions')
+    .delete()
+    .eq('id', sessionId);
+  if (error) {
+    console.error('[deleteDianinoSession] Error:', error);
+    return false;
+  }
+  return true; // dianino_tickets se borra solo por el ON DELETE CASCADE de la FK
+}
+
 // Delete group - Uses RPC to bypass RLS and cascade delete
 export async function deleteGroupDirect(id: string): Promise<boolean> {
 

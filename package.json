@@ -22,6 +22,7 @@
     "idb": "^8.0.0",
     "lucide-react": "^0.555.0",
     "matter-js": "^0.20.0",
+    "qr-scanner": "^1.4.2",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",

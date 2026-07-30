@@ -47,6 +47,12 @@ import Eventos from './pages/eventos/Eventos';
 import PanelEventos from './pages/eventos/PanelEventos';
 import InscripcionDPadre from './pages/eventos/dpadre/InscripcionDPadre';
 import RankingDPadre from './pages/eventos/dpadre/RankingDPadre';
+import InscripcionDiaNino from './pages/eventos/dianino/InscripcionDiaNino';
+import BuscarDiaNino from './pages/eventos/dianino/BuscarDiaNino';
+import AdminDiaNino from './pages/eventos/dianino/AdminDiaNino';
+import DetalleDiaNino from './pages/eventos/dianino/DetalleDiaNino';
+import NuevaDiaNino from './pages/eventos/dianino/NuevaDiaNino';
+import EscanerDiaNino from './pages/eventos/dianino/EscanerDiaNino';
 import Puntuacion from './pages/eventos/dpadre/Puntuacion';
 import AdminDPadre from './pages/eventos/dpadre/AdminDPadre';
 import DetalleFamilia from './pages/eventos/dpadre/DetalleFamilia';
@@ -288,6 +294,8 @@ const AppContent: React.FC = () => {
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/form" element={<Formulario />} />
+            <Route path="/dia-del-nino" element={<InscripcionDiaNino />} />
+            <Route path="/dia-del-nino/buscar" element={<BuscarDiaNino />} />
             <Route path="/influos-acceso" element={<InfluosAcceso />} />
             <Route path="/id-dpadre" element={<InscripcionDPadre />} />
             <Route path="/eventos/ranking-diadelpadre" element={<RankingDPadre />} />
@@ -684,6 +692,42 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <AdminDPadre currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/admin/diadelnino" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <AdminDiaNino currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/admin/diadelnino/nueva" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <NuevaDiaNino />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/admin/diadelnino/escaner" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <EscanerDiaNino />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/admin/diadelnino/:sessionId" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <DetalleDiaNino />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/eventos/puntuacion" element={
