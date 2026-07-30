@@ -29,6 +29,11 @@ const TicketResult: React.FC<{ row: DianinoSearchResultRow }> = ({ row }) => {
                     <QRCodeSVG value={buildQrValue(row.ticketId)} size={160} />
                 </div>
 
+                <div className="w-full border-2 border-dashed border-black px-3 py-2 text-center">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-0.5">Código de ingreso manual</p>
+                    <p className="font-mono font-black text-sm text-black tracking-widest break-all">{row.ticketId}</p>
+                </div>
+
                 {row.status === 'CHECKED_IN' && (
                     <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-white bg-black px-3 py-1.5">
                         <Check className="w-3.5 h-3.5" strokeWidth={3} /> Ya ingresó al evento

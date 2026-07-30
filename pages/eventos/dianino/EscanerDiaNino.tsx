@@ -36,9 +36,6 @@ const EscanerDiaNino: React.FC = () => {
     const scannerRef = useRef<Html5Qrcode | null>(null);
 
     const [cameraError, setCameraError] = useState<string | null>(null);
-    // ── DIAGNÓSTICO TEMPORAL — sacar una vez resuelto el bug del escáner ──
-    const [lastDecodeAttempt, setLastDecodeAttempt] = useState<{ at: number; message: string } | null>(null);
-    const [scannerStarted, setScannerStarted] = useState(false);
     const [showManualInput, setShowManualInput] = useState(false);
     const [manualValue, setManualValue] = useState('');
 
@@ -113,17 +110,12 @@ const EscanerDiaNino: React.FC = () => {
                 qrbox: { width: 250, height: 250 },
             },
             (decodedText) => {
-                setScannerStarted(true);
                 handleTicketCode(decodedText);
             },
             () => {
-                // Se dispara constantemente mientras no hay QR
-                // en cuadro — no es un error real, solo feedback
-                // de "sigo buscando".
-                setLastDecodeAttempt({ at: Date.now(), message: 'buscando QR...' });
+                // No-QR-in-frame — no es un error real
             }
         )
-            .then(() => setScannerStarted(true))
             .catch((err) => {
                 setCameraError('No pudimos acceder a la cámara. Revisá los permisos del navegador e intentá de nuevo.');
                 console.error('[EscanerDiaNino] Camera error:', err);
@@ -214,16 +206,7 @@ const EscanerDiaNino: React.FC = () => {
                     <div id="dianino-qr-reader" className="w-full max-w-md rounded-2xl overflow-hidden" />
                 )}
 
-                {/* ── DIAGNÓSTICO TEMPORAL — panel visible, sacar cuando se confirme el fix ── */}
-                <div className="absolute bottom-2 left-2 right-2 bg-black/80 text-white text-[10px] font-mono p-2 rounded-lg space-y-1 pointer-events-none">
-                    <p>Cámara iniciada: {scannerStarted ? '✅ SÍ' : '⏳ esperando...'}</p>
-                    <p>
-                        Último intento de decodificación:{' '}
-                        {lastDecodeAttempt
-                            ? `hace ${Math.round((Date.now() - lastDecodeAttempt.at) / 1000)}s — "${lastDecodeAttempt.message}"`
-                            : 'ninguno todavía'}
-                    </p>
-                </div>
+
             </div>
 
             <div className="p-4">
