@@ -95,7 +95,83 @@ const AdminDiaNino: React.FC<AdminDiaNinoProps> = () => {
                     />
                 </div>
 
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                {/* ── Mobile: tarjetas ── */}
+                <div className="md:hidden space-y-3">
+                    {loading ? (
+                        <div className="flex justify-center py-16">
+                            <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div className="py-16 text-center text-slate-400 text-sm">
+                            {searchTerm ? 'Sin resultados para esa búsqueda' : 'Todavía no hay inscripciones'}
+                        </div>
+                    ) : filtered.map(s => (
+                        <div key={s.sessionId} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                            {/* Nombre + email */}
+                            <div className="flex items-start justify-between gap-2 mb-3">
+                                <div>
+                                    <p className="font-bold text-sm text-slate-900">{s.adultFirstName} {s.adultLastName}</p>
+                                    <p className="text-xs text-slate-400">{s.email}</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">DNI {s.adultDni}</p>
+                                </div>
+                                <span className="inline-flex items-center justify-center px-2.5 py-1 bg-slate-100 rounded-full text-xs font-black text-slate-700 shrink-0">
+                                    {s.childrenCount} {s.childrenCount === 1 ? 'niño' : 'niños'}
+                                </span>
+                            </div>
+
+                            {/* Badges */}
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {s.declaracionJuradaAceptada ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
+                                        <CheckCircle2 className="w-3 h-3" /> Declaración aceptada
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                                        <Circle className="w-3 h-3" /> No aceptó
+                                    </span>
+                                )}
+                                {s.allCheckedIn ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
+                                        <CheckCircle2 className="w-3 h-3" /> Escaneo completo
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                                        <Circle className="w-3 h-3" /> Pendiente escaneo
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Acciones */}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => navigate(`/eventos/admin/diadelnino/${s.sessionId}`)}
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                                >
+                                    <Eye className="w-3.5 h-3.5" /> Ver detalle
+                                </button>
+                                {confirmDeleteId === s.sessionId ? (
+                                    <button
+                                        onClick={() => handleDelete(s.sessionId)}
+                                        disabled={deletingId === s.sessionId}
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black uppercase text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                                    >
+                                        {deletingId === s.sessionId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '¿Confirmar borrado?'}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => setConfirmDeleteId(s.sessionId)}
+                                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Desktop: tabla ── */}
+                <div className="hidden md:block bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                     {loading ? (
                         <div className="flex justify-center py-16">
                             <Loader2 className="w-6 h-6 animate-spin text-slate-300" />

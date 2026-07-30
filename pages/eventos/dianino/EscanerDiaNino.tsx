@@ -169,7 +169,10 @@ const EscanerDiaNino: React.FC = () => {
         };
         const c = config[result.type];
         return (
-            <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center text-white p-6 text-center ${c.bg}`}>
+            <div
+                className={`fixed inset-0 z-50 flex flex-col items-center justify-center text-white p-6 text-center ${c.bg}`}
+                onPointerDown={handleContinue}
+            >
                 {c.icon}
                 <h1 className="text-3xl font-black uppercase tracking-tight mt-6">{c.title}</h1>
                 {result.name && <p className="text-xl font-semibold mt-2">{result.name}</p>}
@@ -177,7 +180,8 @@ const EscanerDiaNino: React.FC = () => {
                 {c.subtitle && <p className="text-sm opacity-90 mt-2">{c.subtitle}</p>}
 
                 <button
-                    onClick={handleContinue}
+                    onPointerDown={(e) => { e.stopPropagation(); handleContinue(); }}
+                    style={{ touchAction: 'manipulation' }}
                     className="mt-10 flex items-center gap-2 px-6 py-3 bg-white/20 hover:bg-white/30 rounded-full font-bold text-sm transition-colors"
                 >
                     <RotateCcw className="w-4 h-4" /> Escanear otro
