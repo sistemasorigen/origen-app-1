@@ -412,15 +412,14 @@ const InscripcionDiaNino: React.FC = () => {
                                             onClick={() => handleFinalSubmit(false)}
                                             className={`flex-1 ${secondaryBtn} disabled:opacity-50`}
                                         >
-                                            <X className="w-4 h-4" /> Rechazar
+                                            Rechazar
                                         </button>
                                         <button
                                             disabled={isSubmitting}
                                             onClick={() => handleFinalSubmit(true)}
                                             className={`flex-[2] ${primaryBtn}`}
                                         >
-                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                            Aceptar
+                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Aceptar'}
                                         </button>
                                     </div>
                                     <button onClick={() => setStep(3)} className="w-full text-xs font-black uppercase tracking-widest text-neutral-400 hover:text-black transition-colors focus-visible:outline-none">
