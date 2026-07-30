@@ -45,20 +45,31 @@ const EscanerDiaNino: React.FC = () => {
     const [processing, setProcessing] = useState(false);
     const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Refs espejo de processing/result — permiten que handleTicketCode
+    // lea el valor más reciente sin que la función cambie de referencia
+    // (evita reinicializar la cámara en cada escaneo).
+    const processingRef = useRef(false);
+    const resultRef = useRef<ScanResult | null>(null);
+    useEffect(() => { processingRef.current = processing; }, [processing]);
+    useEffect(() => { resultRef.current = result; }, [result]);
+
     const handleTicketCode = useCallback(async (rawValue: string) => {
-        if (processing || result) return;
+        if (processingRef.current || resultRef.current) return;
         setProcessing(true);
+        processingRef.current = true;
 
         if (!rawValue.startsWith(QR_PREFIX)) {
             playBeep(false);
             setResult({ type: 'INVALID' });
             setProcessing(false);
+            processingRef.current = false;
             return;
         }
 
         const ticketId = rawValue.slice(QR_PREFIX.length);
         const res = await checkinDianinoTicket(ticketId);
         setProcessing(false);
+        processingRef.current = false;
 
         if (!res || res.result === 'NOT_FOUND') {
             playBeep(false);
@@ -86,7 +97,7 @@ const EscanerDiaNino: React.FC = () => {
 
         playBeep(true);
         setResult({ type: 'SUCCESS', name: fullName });
-    }, [processing, result]);
+    }, []);
 
     // ── Inicializar escáner de cámara ──
     useEffect(() => {
@@ -116,7 +127,10 @@ const EscanerDiaNino: React.FC = () => {
             scanner.destroy();
             scannerRef.current = null;
         };
-    }, [handleTicketCode]);
+        // handleTicketCode es estable de por vida (deps [] + refs) — la cámara
+        // se inicializa una sola vez al montar, no en cada escaneo.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleCameraChange = (cameraId: string) => {
         scannerRef.current?.setCamera(cameraId);
