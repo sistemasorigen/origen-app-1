@@ -37,7 +37,9 @@ const EscanerDiaNino: React.FC = () => {
     const scannerRef = useRef<QrScanner | null>(null);
 
     const [cameraError, setCameraError] = useState<string | null>(null);
-    const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
+    // ── DIAGNÓSTICO TEMPORAL — sacar una vez resuelto el bug del escáner ──
+    const [lastDecodeAttempt, setLastDecodeAttempt] = useState<{ at: number; message: string } | null>(null);
+    const [scannerStarted, setScannerStarted] = useState(false);
     const [showManualInput, setShowManualInput] = useState(false);
     const [manualValue, setManualValue] = useState('');
 
@@ -107,20 +109,27 @@ const EscanerDiaNino: React.FC = () => {
             videoRef.current,
             (scanResult) => { handleTicketCode(scanResult.data); },
             {
-                preferredCamera: 'environment',
+                preferredCamera: 'user',
                 highlightScanRegion: true,
                 highlightCodeOutline: true,
-                onDecodeError: () => { /* silencioso — se dispara constantemente mientras no hay QR en cuadro */ },
+                onDecodeError: (err) => {
+                    // Temporal para diagnóstico — ver PASO 2.
+                    // "No QR code found" es NORMAL y se dispara
+                    // todo el tiempo que no hay QR en cuadro.
+                    // Cualquier otro tipo de error acá es la
+                    // pista real.
+                    setLastDecodeAttempt({ at: Date.now(), message: String(err) });
+                },
             }
         );
         scannerRef.current = scanner;
 
-        scanner.start().catch((err) => {
-            setCameraError('No pudimos acceder a la cámara. Revisá los permisos del navegador e intentá de nuevo.');
-            console.error('[EscanerDiaNino] Camera error:', err);
-        });
-
-        QrScanner.listCameras(true).then(setCameras).catch(() => {});
+        scanner.start()
+            .then(() => setScannerStarted(true))
+            .catch((err) => {
+                setCameraError('No pudimos acceder a la cámara. Revisá los permisos del navegador e intentá de nuevo.');
+                console.error('[EscanerDiaNino] Camera error:', err);
+            });
 
         return () => {
             scanner.stop();
@@ -131,10 +140,6 @@ const EscanerDiaNino: React.FC = () => {
         // se inicializa una sola vez al montar, no en cada escaneo.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    const handleCameraChange = (cameraId: string) => {
-        scannerRef.current?.setCamera(cameraId);
-    };
 
     const handleContinue = () => {
         if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
@@ -195,14 +200,6 @@ const EscanerDiaNino: React.FC = () => {
                 >
                     <ChevronLeft className="w-4 h-4" /> Día del Niño
                 </button>
-                {cameras.length > 1 && (
-                    <select
-                        onChange={e => handleCameraChange(e.target.value)}
-                        className="bg-white/10 text-white text-xs rounded-lg px-2 py-1.5 outline-none"
-                    >
-                        {cameras.map(cam => <option key={cam.id} value={cam.id}>{cam.label}</option>)}
-                    </select>
-                )}
             </div>
 
             <div className="flex-1 relative flex items-center justify-center px-4">
@@ -214,6 +211,17 @@ const EscanerDiaNino: React.FC = () => {
                 ) : (
                     <video ref={videoRef} className="w-full max-w-md rounded-2xl" muted playsInline />
                 )}
+
+                {/* ── DIAGNÓSTICO TEMPORAL — panel visible, sacar cuando se confirme el fix ── */}
+                <div className="absolute bottom-2 left-2 right-2 bg-black/80 text-white text-[10px] font-mono p-2 rounded-lg space-y-1 pointer-events-none">
+                    <p>Cámara iniciada: {scannerStarted ? '✅ SÍ' : '⏳ esperando...'}</p>
+                    <p>
+                        Último intento de decodificación:{' '}
+                        {lastDecodeAttempt
+                            ? `hace ${Math.round((Date.now() - lastDecodeAttempt.at) / 1000)}s — "${lastDecodeAttempt.message}"`
+                            : 'ninguno todavía'}
+                    </p>
+                </div>
             </div>
 
             <div className="p-4">
