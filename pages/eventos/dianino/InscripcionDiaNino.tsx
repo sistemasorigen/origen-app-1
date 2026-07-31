@@ -27,7 +27,7 @@ interface ChildForm extends DiaNinoChildInput {
 const STEPS = [
     { label: 'Adulto', icon: User },
     { label: 'Niños', icon: Baby },
-    { label: 'Declaración', icon: ShieldCheck },
+    { label: 'Conformidad', icon: ShieldCheck },
     { label: 'Confirmar', icon: Ticket },
 ];
 
@@ -94,6 +94,9 @@ const InscripcionDiaNino: React.FC = () => {
     const [adult, setAdult] = useState<AdultForm>({ firstName: '', lastName: '', email: '', dni: '' });
     const [adultDniError, setAdultDniError] = useState<string | null>(null);
     const [adultDniChecking, setAdultDniChecking] = useState(false);
+    // Guarda el último valor de DNI que ya fue verificado para no re-disparar el
+    // check en onBlur si el valor no cambió (evita el bug de "doble click" en Continuar).
+    const [adultDniLastChecked, setAdultDniLastChecked] = useState('');
 
     const [children, setChildren] = useState<ChildForm[]>([
         { localId: safeUUID(), firstName: '', lastName: '', dni: '' }
@@ -105,19 +108,26 @@ const InscripcionDiaNino: React.FC = () => {
     const [done, setDone] = useState(false);
 
     const handleAdultDniBlur = async () => {
-        if (!adult.dni.trim()) return;
+        const val = adult.dni.trim();
+        // Si el DNI ya fue verificado y no cambió, no volver a disparar el check.
+        if (!val || val === adultDniLastChecked) return;
         setAdultDniChecking(true);
-        const available = await checkDianinoDniAvailable(adult.dni.trim());
+        const available = await checkDianinoDniAvailable(val);
         setAdultDniChecking(false);
+        setAdultDniLastChecked(val);
         setAdultDniError(available ? null : 'Este DNI ya está inscripto.');
     };
 
     const handleChildDniBlur = async (localId: string, dni: string) => {
-        if (!dni.trim()) return;
+        const val = dni.trim();
+        if (!val) return;
+        // Verificar si el DNI ya fue validado previamente (guardado en dniLastChecked)
+        const current = children.find(c => c.localId === localId);
+        if (current && (current as ChildForm & { dniLastChecked?: string }).dniLastChecked === val) return;
         setChildren(prev => prev.map(c => c.localId === localId ? { ...c, dniChecking: true } : c));
-        const available = await checkDianinoDniAvailable(dni.trim());
+        const available = await checkDianinoDniAvailable(val);
         setChildren(prev => prev.map(c => c.localId === localId
-            ? { ...c, dniChecking: false, dniError: available ? undefined : 'Este DNI ya está inscripto.' }
+            ? { ...c, dniChecking: false, dniLastChecked: val, dniError: available ? undefined : 'Este DNI ya está inscripto.' }
             : c
         ));
     };
@@ -131,7 +141,11 @@ const InscripcionDiaNino: React.FC = () => {
     };
 
     const updateChild = (localId: string, field: keyof DiaNinoChildInput, value: string) => {
-        setChildren(prev => prev.map(c => c.localId === localId ? { ...c, [field]: value, dniError: field === 'dni' ? undefined : c.dniError } : c));
+        setChildren(prev => prev.map(c => c.localId === localId
+            // Al cambiar el DNI, resetear también dniLastChecked para forzar re-verificación
+            ? { ...c, [field]: value, dniError: field === 'dni' ? undefined : c.dniError, ...(field === 'dni' ? { dniLastChecked: '' } : {}) }
+            : c
+        ));
     };
 
     const canAdvanceStep1 = adult.firstName.trim() && adult.lastName.trim() && adult.email.trim() && adult.dni.trim() && !adultDniError && !adultDniChecking;
@@ -152,6 +166,15 @@ const InscripcionDiaNino: React.FC = () => {
         setIsSubmitting(false);
 
         if (result.sessionId) {
+            if (!accepted) {
+                // La inscripción quedó guardada igual (con
+                // declaracionJuradaAceptada: false) y el email
+                // ya se mandó — pero acá no mostramos la pantalla
+                // festiva de "¡Listo!", volvemos directo al
+                // inicio del formulario.
+                navigate('/dia-del-nino', { replace: true });
+                return;
+            }
             setDone(true);
             return;
         }
@@ -256,7 +279,7 @@ const InscripcionDiaNino: React.FC = () => {
                                     <label htmlFor="dn-adult-dni" className={labelClass}>DNI</label>
                                     <input
                                         id="dn-adult-dni" type="text" placeholder="DNI" inputMode="numeric" value={adult.dni}
-                                        onChange={e => { setAdult({ ...adult, dni: e.target.value }); setAdultDniError(null); }}
+                                        onChange={e => { setAdult({ ...adult, dni: e.target.value }); setAdultDniError(null); setAdultDniLastChecked(''); }}
                                         onBlur={handleAdultDniBlur}
                                         className={`${inputClass} ${adultDniError ? 'border-red-600' : ''}`}
                                     />
@@ -350,22 +373,31 @@ const InscripcionDiaNino: React.FC = () => {
                             </motion.div>
                         )}
 
-                        {/* PASO 3 — Declaración jurada */}
+                        {/* PASO 3 — Declaración de Conformidad */}
                         {step === 3 && (
                             <motion.div key="step3" {...stepTransition} className="space-y-4">
-                                <h2 className="font-black uppercase text-black border-b-2 border-black pb-3">Declaración jurada</h2>
+                                <h2 className="font-black uppercase text-black border-b-2 border-black pb-3">Declaración de Conformidad</h2>
                                 <div className="p-6 bg-neutral-50 border-2 border-black min-h-[160px] flex flex-col items-center justify-center text-center gap-2">
                                     <ShieldCheck className="w-6 h-6 text-neutral-300" aria-hidden="true" />
                                     <p className="text-sm font-bold text-neutral-400 uppercase tracking-wide">
                                         El texto de la declaración se agrega antes del evento.
                                     </p>
                                 </div>
+                                <p className="text-sm text-neutral-500 text-center">
+                                    ¿Aceptás la Declaración de Conformidad?
+                                </p>
                                 <div className="flex gap-3 pt-2">
-                                    <button onClick={() => setStep(2)} className={`flex-1 ${secondaryBtn}`}>
-                                        <ChevronLeft className="w-4 h-4" /> Volver
+                                    <button
+                                        onClick={() => { setDeclaracionAceptada(false); setStep(4); }}
+                                        className={`flex-1 ${secondaryBtn}`}
+                                    >
+                                        No
                                     </button>
-                                    <button onClick={() => setStep(4)} className={`flex-[2] ${primaryBtn}`}>
-                                        Continuar
+                                    <button
+                                        onClick={() => { setDeclaracionAceptada(true); setStep(4); }}
+                                        className={`flex-[2] ${primaryBtn}`}
+                                    >
+                                        Sí
                                     </button>
                                 </div>
                             </motion.div>
@@ -399,7 +431,7 @@ const InscripcionDiaNino: React.FC = () => {
 
                                 <div className="border-t-2 border-black pt-4 space-y-3">
                                     <p className="text-sm font-bold text-neutral-600">
-                                        ¿Aceptás la declaración jurada del paso anterior?
+                                        ¿Confirmás la Declaración de Conformidad del paso anterior?
                                     </p>
 
                                     {submitError && (
@@ -409,7 +441,7 @@ const InscripcionDiaNino: React.FC = () => {
                                     <div className="flex gap-3">
                                         <button
                                             disabled={isSubmitting}
-                                            onClick={() => handleFinalSubmit(false)}
+                                            onClick={() => navigate('/dia-del-nino', { replace: true })}
                                             className={`flex-1 ${secondaryBtn} disabled:opacity-50`}
                                         >
                                             Rechazar

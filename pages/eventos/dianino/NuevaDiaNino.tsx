@@ -161,7 +161,7 @@ const NuevaDiaNino: React.FC = () => {
                                 onChange={e => setDeclaracionAceptada(e.target.checked)}
                                 className="w-4 h-4 accent-black"
                             />
-                            <span className="text-sm text-slate-700">¿Aceptó la declaración jurada?</span>
+                            <span className="text-sm text-slate-700">¿Aceptó la Declaración de Conformidad?</span>
                         </label>
                     </div>
 

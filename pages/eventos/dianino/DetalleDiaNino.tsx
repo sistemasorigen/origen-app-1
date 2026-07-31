@@ -93,7 +93,7 @@ const DetalleDiaNino: React.FC = () => {
                         </p>
                     </div>
                     <div className={`rounded-lg border p-4 ${session.declaracionJuradaAceptada ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Declaración jurada</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Declaración de Conformidad</p>
                         <p className={`font-bold text-sm flex items-center gap-1.5 ${session.declaracionJuradaAceptada ? 'text-emerald-700' : 'text-red-700'}`}>
                             {session.declaracionJuradaAceptada ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
                             {session.declaracionJuradaAceptada ? 'Aceptó' : 'No aceptó'}
