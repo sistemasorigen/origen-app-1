@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
@@ -107,30 +107,60 @@ const InscripcionDiaNino: React.FC = () => {
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [done, setDone] = useState(false);
 
-    const handleAdultDniBlur = async () => {
+    // ── Verificación de DNI en tiempo real (debounce 600 ms) ─────────────
+    const adultDniTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const childDniTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+    // Adulto: se dispara cada vez que cambia adult.dni
+    useEffect(() => {
         const val = adult.dni.trim();
-        // Si el DNI ya fue verificado y no cambió, no volver a disparar el check.
-        if (!val || val === adultDniLastChecked) return;
-        setAdultDniChecking(true);
-        const available = await checkDianinoDniAvailable(val);
+        if (adultDniTimerRef.current) clearTimeout(adultDniTimerRef.current);
+        if (!val) { setAdultDniError(null); setAdultDniChecking(false); return; }
+        adultDniTimerRef.current = setTimeout(async () => {
+            setAdultDniChecking(true);
+            const available = await checkDianinoDniAvailable(val);
+            setAdultDniChecking(false);
+            setAdultDniError(available ? null : 'Este DNI ya está inscripto.');
+        }, 600);
+        return () => { if (adultDniTimerRef.current) clearTimeout(adultDniTimerRef.current); };
+    }, [adult.dni]);
+
+    // Niños: se dispara cuando cambia el DNI de cualquier niño
+    const childDniKey = children.map(c => `${c.localId}:${c.dni}`).join('|');
+    useEffect(() => {
+        children.forEach(child => {
+            const val = child.dni.trim();
+            const prev = childDniTimersRef.current.get(child.localId);
+            if (prev) clearTimeout(prev);
+            if (!val) {
+                setChildren(p => p.map(c => c.localId === child.localId ? { ...c, dniError: undefined, dniChecking: false } : c));
+                return;
+            }
+            const timer = setTimeout(async () => {
+                setChildren(p => p.map(c => c.localId === child.localId ? { ...c, dniChecking: true } : c));
+                const available = await checkDianinoDniAvailable(val);
+                setChildren(p => p.map(c => c.localId === child.localId
+                    ? { ...c, dniChecking: false, dniError: available ? undefined : 'Este DNI ya está inscripto.' }
+                    : c
+                ));
+            }, 600);
+            childDniTimersRef.current.set(child.localId, timer);
+        });
+        return () => { childDniTimersRef.current.forEach(t => clearTimeout(t)); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [childDniKey]);
+    // ────────────────────────────────────────────────────────────────────
+
+    const resetForm = () => {
+        setStep(1);
+        setAdult({ firstName: '', lastName: '', email: '', dni: '' });
+        setAdultDniError(null);
         setAdultDniChecking(false);
-        setAdultDniLastChecked(val);
-        setAdultDniError(available ? null : 'Este DNI ya está inscripto.');
+        setChildren([{ localId: safeUUID(), firstName: '', lastName: '', dni: '' }]);
+        setDeclaracionAceptada(null);
+        setSubmitError(null);
     };
 
-    const handleChildDniBlur = async (localId: string, dni: string) => {
-        const val = dni.trim();
-        if (!val) return;
-        // Verificar si el DNI ya fue validado previamente (guardado en dniLastChecked)
-        const current = children.find(c => c.localId === localId);
-        if (current && (current as ChildForm & { dniLastChecked?: string }).dniLastChecked === val) return;
-        setChildren(prev => prev.map(c => c.localId === localId ? { ...c, dniChecking: true } : c));
-        const available = await checkDianinoDniAvailable(val);
-        setChildren(prev => prev.map(c => c.localId === localId
-            ? { ...c, dniChecking: false, dniLastChecked: val, dniError: available ? undefined : 'Este DNI ya está inscripto.' }
-            : c
-        ));
-    };
 
     const addChild = () => {
         setChildren(prev => [...prev, { localId: safeUUID(), firstName: '', lastName: '', dni: '' }]);
@@ -142,8 +172,7 @@ const InscripcionDiaNino: React.FC = () => {
 
     const updateChild = (localId: string, field: keyof DiaNinoChildInput, value: string) => {
         setChildren(prev => prev.map(c => c.localId === localId
-            // Al cambiar el DNI, resetear también dniLastChecked para forzar re-verificación
-            ? { ...c, [field]: value, dniError: field === 'dni' ? undefined : c.dniError, ...(field === 'dni' ? { dniLastChecked: '' } : {}) }
+            ? { ...c, [field]: value, dniError: field === 'dni' ? undefined : c.dniError }
             : c
         ));
     };
@@ -279,8 +308,7 @@ const InscripcionDiaNino: React.FC = () => {
                                     <label htmlFor="dn-adult-dni" className={labelClass}>DNI</label>
                                     <input
                                         id="dn-adult-dni" type="text" placeholder="DNI" inputMode="numeric" value={adult.dni}
-                                        onChange={e => { setAdult({ ...adult, dni: e.target.value }); setAdultDniError(null); setAdultDniLastChecked(''); }}
-                                        onBlur={handleAdultDniBlur}
+                                        onChange={e => { setAdult({ ...adult, dni: e.target.value }); setAdultDniError(null); }}
                                         className={`${inputClass} ${adultDniError ? 'border-red-600' : ''}`}
                                     />
                                     {adultDniChecking && <p className="text-xs font-bold text-neutral-400 mt-1.5">Verificando...</p>}
@@ -344,7 +372,6 @@ const InscripcionDiaNino: React.FC = () => {
                                                         id={`dn-child-dni-${child.localId}`} type="text" placeholder="DNI" inputMode="numeric"
                                                         value={child.dni}
                                                         onChange={e => updateChild(child.localId, 'dni', e.target.value)}
-                                                        onBlur={() => handleChildDniBlur(child.localId, child.dni)}
                                                         className={`${inputClass} ${child.dniError ? 'border-red-600' : ''}`}
                                                     />
                                                     {child.dniChecking && <p className="text-xs font-bold text-neutral-400 mt-1.5">Verificando...</p>}
@@ -441,7 +468,7 @@ const InscripcionDiaNino: React.FC = () => {
                                     <div className="flex gap-3">
                                         <button
                                             disabled={isSubmitting}
-                                            onClick={() => navigate('/dia-del-nino', { replace: true })}
+                                            onClick={resetForm}
                                             className={`flex-1 ${secondaryBtn} disabled:opacity-50`}
                                         >
                                             Rechazar
