@@ -177,7 +177,14 @@ const EscanerDiaNino: React.FC = () => {
             });
 
         return () => {
-            scanner.stop().then(() => scanner.clear()).catch(() => {});
+            try {
+                // html5-qrcode lanza un throw sincrónico (no una promesa rechazada)
+                // si el scanner nunca llegó a arrancar (p.ej. falló el acceso a cámara) —
+                // el .catch() no lo atrapa, por eso el try/catch alrededor.
+                scanner.stop().then(() => scanner.clear()).catch(() => {});
+            } catch {
+                // no-op: no había nada corriendo que detener
+            }
             scannerRef.current = null;
         };
     }, [handleTicketCode]);
