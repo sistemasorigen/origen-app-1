@@ -91,7 +91,54 @@ const AdminInfluosDia: React.FC<AdminInfluosDiaProps> = () => {
                     />
                 </div>
 
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                {/* ── Mobile: tarjetas (la tabla no entra en el ancho y
+                    "Acciones" quedaba recortado por el overflow-hidden
+                    del contenedor) ── */}
+                <div className="md:hidden space-y-3">
+                    {loading ? (
+                        <div className="flex justify-center py-16">
+                            <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div className="py-16 text-center text-slate-400 text-sm">
+                            {searchTerm ? 'Sin resultados para esa búsqueda' : 'Todavía no hay inscripciones'}
+                        </div>
+                    ) : filtered.map(r => (
+                        <div key={r.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                            <div className="flex items-start justify-between gap-2 mb-3">
+                                <div>
+                                    <p className="font-bold text-sm text-slate-900">{r.firstName} {r.lastName}</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">{r.age} años</p>
+                                </div>
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase shrink-0 ${tribuBadgeColor(r.tribu)}`}>
+                                    {r.tribu}
+                                </span>
+                            </div>
+
+                            <div className="flex gap-2">
+                                {confirmDeleteId === r.id ? (
+                                    <button
+                                        onClick={() => handleDelete(r.id)}
+                                        disabled={deletingId === r.id}
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black uppercase text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                                    >
+                                        {deletingId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '¿Confirmar borrado?'}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => setConfirmDeleteId(r.id)}
+                                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Desktop: tabla ── */}
+                <div className="hidden md:block bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                     {loading ? (
                         <div className="flex justify-center py-16">
                             <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
