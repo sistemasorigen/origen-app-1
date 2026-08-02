@@ -386,6 +386,100 @@ export async function deleteDianinoSession(sessionId: string): Promise<boolean> 
   return true; // dianino_tickets se borra solo por el ON DELETE CASCADE de la FK
 }
 
+// ── Evento "Día de Influos" ─────────────────────
+
+export async function checkInfluosNameExists(firstName: string, lastName: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('check_influos_name_exists', {
+    p_first_name: firstName,
+    p_last_name: lastName
+  });
+  if (error) {
+    console.error('[checkInfluosNameExists] Error:', error);
+    return false;
+  }
+  return data as boolean;
+}
+
+export async function registerInfluosDia(
+  firstName: string,
+  lastName: string,
+  age: number,
+  tribu: 'Garra' | 'Trueno' | 'No tengo'
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc('register_influos_dia', {
+    p_first_name: firstName,
+    p_last_name: lastName,
+    p_age: age,
+    p_tribu: tribu
+  });
+  if (error) {
+    console.error('[registerInfluosDia] Error:', error);
+    return null;
+  }
+  return data as string;
+}
+
+export interface InfluosDiaSearchResult {
+  id: string;
+  firstName: string;
+  lastName: string;
+  age: number;
+  tribu: string;
+}
+
+export async function searchInfluosDia(firstName: string, lastName: string): Promise<InfluosDiaSearchResult[]> {
+  const { data, error } = await supabase.rpc('search_influos_dia', {
+    p_first_name: firstName,
+    p_last_name: lastName
+  });
+  if (error) {
+    console.error('[searchInfluosDia] Error:', error);
+    return [];
+  }
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    age: row.age,
+    tribu: row.tribu
+  }));
+}
+
+// ── Planilla admin: acceso directo (staff autenticado
+// ya tiene permiso vía la policy influos_dia_staff_all)
+export async function getInfluosDiaRegistrations(): Promise<import('../types').InfluosDiaRegistration[]> {
+  const { data, error } = await supabase
+    .from('influos_dia_registrations')
+    .select('id, first_name, last_name, age, tribu, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[getInfluosDiaRegistrations] Error:', error);
+    return [];
+  }
+
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    age: row.age,
+    tribu: row.tribu,
+    createdAt: row.created_at
+  }));
+}
+
+export async function deleteInfluosDiaRegistration(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('influos_dia_registrations')
+    .delete()
+    .eq('id', id);
+  if (error) {
+    console.error('[deleteInfluosDiaRegistration] Error:', error);
+    return false;
+  }
+  return true;
+}
+
 // Delete group - Uses RPC to bypass RLS and cascade delete
 export async function deleteGroupDirect(id: string): Promise<boolean> {
 

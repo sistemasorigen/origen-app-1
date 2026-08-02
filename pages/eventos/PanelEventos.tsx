@@ -4,7 +4,7 @@ import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import {
     CalendarDays, ChevronRight,
-    Users, LayoutDashboard, Trophy, PartyPopper
+    Users, LayoutDashboard, Trophy, PartyPopper, Flame
 } from 'lucide-react';
 
 interface PanelEventosProps {
@@ -34,6 +34,19 @@ const PANELES_EVENTOS = [
         ruta: '/eventos/admin/diadelnino',
         icono: PartyPopper,
         color: '#F97316',  // orange
+        roles: [
+            UserRole.SUPER_ADMIN,
+            UserRole.PASTOR,
+            UserRole.ENCARGADO_EVENTOS,
+        ]
+    },
+    {
+        id: 'dia-de-influos',
+        titulo: 'Día de Influos',
+        descripcion: 'Gestión de inscripciones por tribu del evento.',
+        ruta: '/eventos/admin/dia-de-influos',
+        icono: Flame,
+        color: '#0D9488',  // teal
         roles: [
             UserRole.SUPER_ADMIN,
             UserRole.PASTOR,

@@ -48,6 +48,10 @@ import PanelEventos from './pages/eventos/PanelEventos';
 import InscripcionDPadre from './pages/eventos/dpadre/InscripcionDPadre';
 import RankingDPadre from './pages/eventos/dpadre/RankingDPadre';
 import InscripcionDiaNino from './pages/eventos/dianino/InscripcionDiaNino';
+import InscripcionInfluosDia from './pages/eventos/influos/InscripcionInfluosDia';
+import BuscarInfluosDia from './pages/eventos/influos/BuscarInfluosDia';
+import AdminInfluosDia from './pages/eventos/influos/AdminInfluosDia';
+import NuevaInfluosDia from './pages/eventos/influos/NuevaInfluosDia';
 import BuscarDiaNino from './pages/eventos/dianino/BuscarDiaNino';
 import AdminDiaNino from './pages/eventos/dianino/AdminDiaNino';
 import DetalleDiaNino from './pages/eventos/dianino/DetalleDiaNino';
@@ -295,6 +299,8 @@ const AppContent: React.FC = () => {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/form" element={<Formulario />} />
             <Route path="/dia-del-nino" element={<InscripcionDiaNino />} />
+            <Route path="/dia-de-influos" element={<InscripcionInfluosDia />} />
+            <Route path="/dia-de-influos/buscar" element={<BuscarInfluosDia />} />
             <Route path="/dia-del-nino/buscar" element={<BuscarDiaNino />} />
             <Route path="/influos-acceso" element={<InfluosAcceso />} />
             <Route path="/id-dpadre" element={<InscripcionDPadre />} />
@@ -701,6 +707,24 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <AdminDiaNino currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/admin/dia-de-influos" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <AdminInfluosDia currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/admin/dia-de-influos/nueva" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <NuevaInfluosDia />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/eventos/admin/diadelnino/nueva" element={

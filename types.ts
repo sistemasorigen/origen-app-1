@@ -367,6 +367,19 @@ export interface DiaNinoSessionRow {
     createdAt: string;
 }
 
+// ── Evento "Día de Influos" ─────────────────────
+
+export type InfluosDiaTribu = 'Garra' | 'Trueno' | 'No tengo';
+
+export interface InfluosDiaRegistration {
+    id: string;
+    firstName: string;
+    lastName: string;
+    age: number;
+    tribu: InfluosDiaTribu;
+    createdAt: string;
+}
+
 export interface Announcement {
     id: string;
     title: string;
