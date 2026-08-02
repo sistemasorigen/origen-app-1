@@ -404,27 +404,30 @@ const InscripcionDiaNino: React.FC = () => {
                         {step === 3 && (
                             <motion.div key="step3" {...stepTransition} className="space-y-4">
                                 <h2 className="font-black uppercase text-black border-b-2 border-black pb-3">Declaración de Conformidad</h2>
-                                <div className="p-6 bg-neutral-50 border-2 border-black min-h-[160px] flex flex-col items-center justify-center text-center gap-2">
-                                    <ShieldCheck className="w-6 h-6 text-neutral-300" aria-hidden="true" />
-                                    <p className="text-sm font-bold text-neutral-400 uppercase tracking-wide">
-                                        El texto de la declaración se agrega antes del evento.
+                                <div className="p-5 bg-neutral-50 border-2 border-black space-y-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <ShieldCheck className="w-5 h-5 text-black shrink-0" aria-hidden="true" />
+                                        <span className="text-[11px] font-black uppercase tracking-widest text-black">Aviso sobre registro fotográfico y audiovisual</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-neutral-700 leading-relaxed">
+                                        Te informamos que durante el evento se tomarán fotografías y grabaciones de video de las distintas actividades. Este material será utilizado exclusivamente por <span className="font-black text-black">Origen Iglesia</span> con fines de difusión, comunicación y registro informativo en nuestros canales oficiales (redes sociales, sitio web y material impreso de la iglesia).
                                     </p>
                                 </div>
                                 <p className="text-sm text-neutral-500 text-center">
-                                    ¿Aceptás la Declaración de Conformidad?
+                                    ¿Autorizas la Declaración de Conformidad?
                                 </p>
                                 <div className="flex gap-3 pt-2">
                                     <button
                                         onClick={() => { setDeclaracionAceptada(false); setStep(4); }}
                                         className={`flex-1 ${secondaryBtn}`}
                                     >
-                                        No
+                                        NO AUTORIZO
                                     </button>
                                     <button
                                         onClick={() => { setDeclaracionAceptada(true); setStep(4); }}
                                         className={`flex-[2] ${primaryBtn}`}
                                     >
-                                        Sí
+                                        AUTORIZO
                                     </button>
                                 </div>
                             </motion.div>
@@ -458,7 +461,7 @@ const InscripcionDiaNino: React.FC = () => {
 
                                 <div className="border-t-2 border-black pt-4 space-y-3">
                                     <p className="text-sm font-bold text-neutral-600">
-                                        ¿Confirmás la Declaración de Conformidad del paso anterior?
+                                        Chequea bien los datos antes de confirmar
                                     </p>
 
                                     {submitError && (
@@ -471,14 +474,14 @@ const InscripcionDiaNino: React.FC = () => {
                                             onClick={resetForm}
                                             className={`flex-1 ${secondaryBtn} disabled:opacity-50`}
                                         >
-                                            Rechazar
+                                            Editar datos
                                         </button>
                                         <button
                                             disabled={isSubmitting}
                                             onClick={() => handleFinalSubmit(true)}
                                             className={`flex-[2] ${primaryBtn}`}
                                         >
-                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Aceptar'}
+                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar datos'}
                                         </button>
                                     </div>
                                     <button onClick={() => setStep(3)} className="w-full text-xs font-black uppercase tracking-widest text-neutral-400 hover:text-black transition-colors focus-visible:outline-none">
