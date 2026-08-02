@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
-import { checkinDianinoTicket } from '../../../services/supabaseService';
-import { ChevronLeft, Camera, CameraOff, Keyboard, CheckCircle2, AlertTriangle, Clock, XCircle, RotateCcw } from 'lucide-react';
+import { checkinDianinoTicket, getDianinoSessionForCheckin, DianinoSessionCheckinTicket } from '../../../services/supabaseService';
+import { ChevronLeft, Camera, CameraOff, Keyboard, CheckCircle2, AlertTriangle, Clock, XCircle, RotateCcw, User, Baby, X, Users, ListChecks, QrCode } from 'lucide-react';
 
 const QR_PREFIX = 'ORIGEN-DIANINO-';
 
@@ -43,6 +43,18 @@ const EscanerDiaNino: React.FC = () => {
     const [processing, setProcessing] = useState(false);
     const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const [scanMode, setScanMode] = useState<'simple' | 'individual'>('individual');
+    const scanModeRef = useRef<'simple' | 'individual'>('individual');
+    useEffect(() => { scanModeRef.current = scanMode; }, [scanMode]);
+
+    // Dropdown de Escaneo Simple (aparece al escanear al adulto responsable)
+    const [familyDropdown, setFamilyDropdown] = useState<{
+        sessionId: string;
+        declaracionJuradaAceptada: boolean;
+        tickets: DianinoSessionCheckinTicket[];
+    } | null>(null);
+    const [checkingInId, setCheckingInId] = useState<string | null>(null);
+
     // Refs espejo de processing/result — permiten que handleTicketCode
     // lea el valor más reciente sin que la función cambie de referencia
     // (evita reinicializar la cámara en cada escaneo).
@@ -65,6 +77,24 @@ const EscanerDiaNino: React.FC = () => {
         }
 
         const ticketId = rawValue.slice(QR_PREFIX.length);
+
+        // ── Escaneo Simple: si es el adulto, mostrar el dropdown familiar en vez de hacer check-in directo ──
+        if (scanModeRef.current === 'simple') {
+            const sessionInfo = await getDianinoSessionForCheckin(ticketId);
+            if (sessionInfo?.isAdultScan && sessionInfo.sessionId && sessionInfo.tickets) {
+                setProcessing(false);
+                processingRef.current = false;
+                setFamilyDropdown({
+                    sessionId: sessionInfo.sessionId,
+                    declaracionJuradaAceptada: !!sessionInfo.declaracionJuradaAceptada,
+                    tickets: sessionInfo.tickets
+                });
+                return;
+            }
+            // Si no es el adulto (es un niño, o no se pudo resolver la sesión),
+            // sigue el flujo normal de check-in individual más abajo.
+        }
+
         const res = await checkinDianinoTicket(ticketId);
         setProcessing(false);
         processingRef.current = false;
@@ -96,6 +126,31 @@ const EscanerDiaNino: React.FC = () => {
         playBeep(true);
         setResult({ type: 'SUCCESS', name: fullName });
     }, []);
+
+    const handleFamilyCheckIn = async (ticketId: string) => {
+        setCheckingInId(ticketId);
+        const res = await checkinDianinoTicket(ticketId);
+        setCheckingInId(null);
+
+        if (res && (res.result === 'SUCCESS' || res.result === 'ALREADY_CHECKED_IN')) {
+            playBeep(res.result === 'SUCCESS');
+            setFamilyDropdown(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    tickets: prev.tickets.map(t =>
+                        t.id === ticketId
+                            ? { ...t, status: 'CHECKED_IN', checkedInAt: res.checkedInAt || new Date().toISOString() }
+                            : t
+                    )
+                };
+            });
+        } else {
+            playBeep(false);
+        }
+    };
+
+    const closeFamilyDropdown = () => setFamilyDropdown(null);
 
     // ── Inicializar escáner de cámara ──
     useEffect(() => {
@@ -187,13 +242,87 @@ const EscanerDiaNino: React.FC = () => {
             {/* Overlay de resultado — se muestra encima sin desmontar la cámara */}
             {resultOverlay}
 
-            <div className="flex items-center justify-between p-4">
+            {/* Dropdown familiar — Escaneo Simple */}
+            {familyDropdown && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4">
+                    <div className="w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Users className="w-5 h-5 text-slate-700" />
+                                <h3 className="font-black uppercase text-sm text-black">Marcar ingresos</h3>
+                            </div>
+                            <button onClick={closeFamilyDropdown} className="text-slate-400 hover:text-black">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {!familyDropdown.declaracionJuradaAceptada && (
+                            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-300 rounded-lg">
+                                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                <p className="text-xs font-bold text-amber-700">
+                                    Esta familia NO aceptó la Declaración de Conformidad. Decidí si pueden ingresar.
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            {familyDropdown.tickets.map(t => {
+                                const isChecked = t.status === 'CHECKED_IN';
+                                const isLoading = checkingInId === t.id;
+                                return (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => !isChecked && !isLoading && handleFamilyCheckIn(t.id)}
+                                        disabled={isChecked || isLoading}
+                                        className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${isChecked ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                                    >
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isChecked ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                            {isLoading ? <RotateCcw className="w-4 h-4 animate-spin" /> : isChecked ? <CheckCircle2 className="w-4 h-4" /> : (t.isAdult ? <User className="w-4 h-4" /> : <Baby className="w-4 h-4" />)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-sm text-slate-900 truncate">{t.firstName} {t.lastName}</p>
+                                            <p className="text-xs text-slate-400">
+                                                {t.isAdult ? 'Adulto responsable' : 'Niño/a'}
+                                                {isChecked && t.checkedInAt && ` · Ingresó a las ${new Date(t.checkedInAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`}
+                                            </p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <button
+                            onClick={closeFamilyDropdown}
+                            className="w-full py-3 bg-black text-white font-semibold rounded-lg text-sm hover:bg-slate-800 transition-colors"
+                        >
+                            Listo
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <div className="flex items-center justify-between p-4 gap-3 flex-wrap">
                 <button
                     onClick={() => navigate('/eventos/admin/diadelnino')}
                     className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-white/60 hover:text-white transition-colors"
                 >
                     <ChevronLeft className="w-4 h-4" /> Día del Niño
                 </button>
+
+                <div className="flex bg-white/10 rounded-full p-1">
+                    <button
+                        onClick={() => setScanMode('simple')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors ${scanMode === 'simple' ? 'bg-white text-black' : 'text-white/60'}`}
+                    >
+                        <ListChecks className="w-3.5 h-3.5" /> Simple
+                    </button>
+                    <button
+                        onClick={() => setScanMode('individual')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors ${scanMode === 'individual' ? 'bg-white text-black' : 'text-white/60'}`}
+                    >
+                        <QrCode className="w-3.5 h-3.5" /> Individual
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 relative flex items-center justify-center px-4">

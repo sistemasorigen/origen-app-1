@@ -51,6 +51,8 @@ import InscripcionDiaNino from './pages/eventos/dianino/InscripcionDiaNino';
 import InscripcionInfluosDia from './pages/eventos/influos/InscripcionInfluosDia';
 import BuscarInfluosDia from './pages/eventos/influos/BuscarInfluosDia';
 import AdminInfluosDia from './pages/eventos/influos/AdminInfluosDia';
+import AdminEventosGeneral from './pages/eventos/general/AdminEventosGeneral';
+import CrearEventoGeneral from './pages/eventos/general/CrearEventoGeneral';
 import NuevaInfluosDia from './pages/eventos/influos/NuevaInfluosDia';
 import BuscarDiaNino from './pages/eventos/dianino/BuscarDiaNino';
 import AdminDiaNino from './pages/eventos/dianino/AdminDiaNino';
@@ -680,7 +682,7 @@ const AppContent: React.FC = () => {
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/eventos" element={
-                                    user ? <Eventos currentUser={user} /> : <Navigate to="/" />
+                                    user ? <Eventos /> : <Navigate to="/" />
                                 } />
                                 <Route path="/panel-eventos" element={
                                     (user && hasRole(user, [
@@ -716,6 +718,21 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <AdminInfluosDia currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                {/* Guard EXCLUSIVO de ENCARGADO_EVENTOS — sin SUPER_ADMIN ni PASTOR, decisión explícita */}
+                                <Route path="/eventos/admin/general/crear-evento" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <CrearEventoGeneral />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/admin/general" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ENCARGADO_EVENTOS,
+                                    ]))
+                                        ? <AdminEventosGeneral currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/eventos/admin/dia-de-influos/nueva" element={

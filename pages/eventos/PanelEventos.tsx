@@ -54,6 +54,17 @@ const PANELES_EVENTOS = [
         ]
     },
     {
+        id: 'general',
+        titulo: 'General',
+        descripcion: 'Crear, editar y publicar eventos en /eventos.',
+        ruta: '/eventos/admin/general',
+        icono: CalendarDays,
+        color: '#334155',  // slate
+        roles: [
+            UserRole.ENCARGADO_EVENTOS,
+        ]
+    },
+    {
         id:          'trivia',
         titulo:      'Kahoot Origen',
         descripcion: 'Crear y gestionar juegos de trivia en vivo con PIN.',

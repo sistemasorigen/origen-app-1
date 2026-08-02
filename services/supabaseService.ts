@@ -279,6 +279,80 @@ export async function checkinDianinoTicket(ticketId: string): Promise<DianinoChe
   };
 }
 
+export interface DianinoSessionCheckinTicket {
+  id: string;
+  firstName: string;
+  lastName: string;
+  isAdult: boolean;
+  status: 'PENDING' | 'CHECKED_IN';
+  checkedInAt?: string;
+}
+
+export interface DianinoSessionCheckinResult {
+  isAdultScan: boolean;
+  sessionId?: string;
+  declaracionJuradaAceptada?: boolean;
+  tickets?: DianinoSessionCheckinTicket[];
+}
+
+// Usada por el Escaneo Simple: si el ticket
+// escaneado es del adulto responsable, trae TODA
+// la familia de esa sesión para el dropdown. Si es
+// de un niño, devuelve isAdultScan: false para que
+// el escáner haga un check-in individual normal.
+export async function getDianinoSessionForCheckin(ticketId: string): Promise<DianinoSessionCheckinResult | null> {
+  const { data: ticket, error: ticketError } = await supabase
+    .from('dianino_tickets')
+    .select('session_id, is_adult')
+    .eq('id', ticketId)
+    .single();
+
+  if (ticketError || !ticket) {
+    console.error('[getDianinoSessionForCheckin] Ticket no encontrado:', ticketError);
+    return null;
+  }
+
+  if (!ticket.is_adult) {
+    return { isAdultScan: false };
+  }
+
+  const { data: session, error: sessionError } = await supabase
+    .from('dianino_sessions')
+    .select('id, declaracion_jurada_aceptada')
+    .eq('id', ticket.session_id)
+    .single();
+
+  if (sessionError || !session) {
+    console.error('[getDianinoSessionForCheckin] Sesión no encontrada:', sessionError);
+    return null;
+  }
+
+  const { data: tickets, error: ticketsError } = await supabase
+    .from('dianino_tickets')
+    .select('id, first_name, last_name, is_adult, status, checked_in_at')
+    .eq('session_id', ticket.session_id)
+    .order('is_adult', { ascending: false });
+
+  if (ticketsError) {
+    console.error('[getDianinoSessionForCheckin] Error trayendo tickets:', ticketsError);
+    return null;
+  }
+
+  return {
+    isAdultScan: true,
+    sessionId: session.id,
+    declaracionJuradaAceptada: session.declaracion_jurada_aceptada,
+    tickets: (tickets || []).map((t: any) => ({
+      id: t.id,
+      firstName: t.first_name,
+      lastName: t.last_name,
+      isAdult: t.is_adult,
+      status: t.status,
+      checkedInAt: t.checked_in_at
+    }))
+  };
+}
+
 // ── Planilla admin: trae todas las sesiones con
 // el adulto ya resuelto y el conteo de niños.
 // NO pasa por RPC — el staff autenticado ya tiene
@@ -475,6 +549,149 @@ export async function deleteInfluosDiaRegistration(id: string): Promise<boolean>
     .eq('id', id);
   if (error) {
     console.error('[deleteInfluosDiaRegistration] Error:', error);
+    return false;
+  }
+  return true;
+}
+
+// ── Gestión de Eventos (Panel "General") ────────
+
+function mapEventoGeneralRow(row: any): import('../types').EventoGeneral {
+  return {
+    id: row.id,
+    name: row.name,
+    imageUrl: row.image_url || undefined,
+    startDate: row.start_date,
+    startTime: row.start_time || undefined,
+    endTime: row.end_time || undefined,
+    description: row.description || undefined,
+    registrationLink: row.registration_link || undefined,
+    isVisible: row.is_visible,
+    createdAt: row.created_at
+  };
+}
+
+// Admin: trae TODOS los eventos (visibles y
+// ocultos) — solo funciona para ENCARGADO_EVENTOS,
+// la RLS ya lo garantiza.
+export async function getEventosGeneralAdmin(): Promise<import('../types').EventoGeneral[]> {
+  const { data, error } = await supabase
+    .from('eventos_general')
+    .select('*')
+    .order('start_date', { ascending: true });
+
+  if (error) {
+    console.error('[getEventosGeneralAdmin] Error:', error);
+    return [];
+  }
+  return (data || []).map(mapEventoGeneralRow);
+}
+
+// Público: solo trae los visibles (la RLS también
+// lo garantiza, pero se ordena por fecha para el
+// listado de /eventos).
+export async function getEventosGeneralPublic(): Promise<import('../types').EventoGeneral[]> {
+  const { data, error } = await supabase
+    .from('eventos_general')
+    .select('*')
+    .eq('is_visible', true)
+    .order('start_date', { ascending: true });
+
+  if (error) {
+    console.error('[getEventosGeneralPublic] Error:', error);
+    return [];
+  }
+  return (data || []).map(mapEventoGeneralRow);
+}
+
+export async function getEventoGeneralById(id: string): Promise<import('../types').EventoGeneral | null> {
+  const { data, error } = await supabase
+    .from('eventos_general')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) {
+    console.error('[getEventoGeneralById] Error:', error);
+    return null;
+  }
+  return mapEventoGeneralRow(data);
+}
+
+export interface EventoGeneralInput {
+  name: string;
+  imageUrl?: string;
+  startDate: string;
+  startTime?: string;
+  endTime?: string;
+  description?: string;
+  registrationLink?: string;
+}
+
+export async function createEventoGeneral(input: EventoGeneralInput): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('eventos_general')
+    .insert({
+      name: input.name,
+      image_url: input.imageUrl || null,
+      start_date: input.startDate,
+      start_time: input.startTime || null,
+      end_time: input.endTime || null,
+      description: input.description || null,
+      registration_link: input.registrationLink || null,
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    console.error('[createEventoGeneral] Error:', error);
+    return null;
+  }
+  return data.id;
+}
+
+export async function updateEventoGeneral(id: string, input: EventoGeneralInput): Promise<boolean> {
+  const { error } = await supabase
+    .from('eventos_general')
+    .update({
+      name: input.name,
+      image_url: input.imageUrl || null,
+      start_date: input.startDate,
+      start_time: input.startTime || null,
+      end_time: input.endTime || null,
+      description: input.description || null,
+      registration_link: input.registrationLink || null,
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('[updateEventoGeneral] Error:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function toggleEventoGeneralVisibility(id: string, isVisible: boolean): Promise<boolean> {
+  const { error } = await supabase
+    .from('eventos_general')
+    .update({ is_visible: isVisible })
+    .eq('id', id);
+
+  if (error) {
+    console.error('[toggleEventoGeneralVisibility] Error:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function deleteEventoGeneral(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('eventos_general')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('[deleteEventoGeneral] Error:', error);
     return false;
   }
   return true;

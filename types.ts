@@ -380,6 +380,21 @@ export interface InfluosDiaRegistration {
     createdAt: string;
 }
 
+// ── Gestión de Eventos (Panel "General") ────────
+
+export interface EventoGeneral {
+    id: string;
+    name: string;
+    imageUrl?: string;
+    startDate: string;
+    startTime?: string;
+    endTime?: string;
+    description?: string;
+    registrationLink?: string;
+    isVisible: boolean;
+    createdAt: string;
+}
+
 export interface Announcement {
     id: string;
     title: string;
