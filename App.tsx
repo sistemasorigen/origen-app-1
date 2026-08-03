@@ -703,6 +703,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN,
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.PRODE,
                                     ]))
                                         ? <PanelEventos currentUser={user} />
                                         : <Navigate to="/" />

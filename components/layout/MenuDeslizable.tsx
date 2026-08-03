@@ -110,11 +110,13 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     const [shouldRender, setShouldRender] = useState(false);
     // Estado del evento Día del Padre (visible/oculto en el menú). Activo por defecto.
     const [dpadreActivo, setDpadreActivo] = useState(true);
+    const [prodeActivo, setProdeActivo] = useState(true);
 
     useEffect(() => {
         supabaseService.getAppConfig()
             .then(cfg => {
                 if (cfg?.dpadreConfig) setDpadreActivo(cfg.dpadreConfig.isActive);
+                if (cfg?.prodeConfig) setProdeActivo(cfg.prodeConfig.isActive);
             })
             .catch(() => { /* fallback: queda activo */ });
     }, []);
@@ -243,11 +245,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Influos',
             icon: Star,
             path: '/influos',
-            roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR],
-            subItems: [
-                { label: 'Inicio', path: '/influos' },
-                { label: 'Crear nuevo influo', path: '/influos?action=new' },
-            ]
+            roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR]
         },
         {
             label: 'Prode Mundial',
@@ -404,8 +402,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             requiresAuth: true
         }
     ].filter(item => {
-        // Excluir Prode explícitamente para mujeres
-        if (item.label === 'Prode Mundial' && currentUser?.gender === 'Femenino') return false;
+        // Excluir Prode si está inactivo, o para mujeres
+        if (item.label === 'Prode Mundial') {
+            if (!prodeActivo) return false;
+            if (currentUser?.gender === 'Femenino') return false;
+        }
         return true;
     });
 

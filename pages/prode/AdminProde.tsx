@@ -772,13 +772,26 @@ const AdminProdeContent: React.FC = () => {
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setProdeConfig(p => ({ ...p, isActive: !p.isActive }))}
-                                className={`px-4 py-2 border-2 text-xs font-black uppercase tracking-widest transition-all ${
+                                onClick={async () => {
+                                    const newState = !prodeConfig.isActive;
+                                    setProdeConfig(p => ({ ...p, isActive: newState }));
+                                    // Auto-save the toggle
+                                    setProdeSavingConfig(true);
+                                    try {
+                                        const currentConfig = await supabaseService.getAppConfig();
+                                        const updatedConfig = { ...currentConfig, prodeConfig: { ...prodeConfig, isActive: newState } };
+                                        await supabaseService.saveAppConfig(updatedConfig as any);
+                                    } finally {
+                                        setProdeSavingConfig(false);
+                                    }
+                                }}
+                                className={`px-4 py-2 border-2 text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                                     prodeConfig.isActive
                                         ? 'bg-black border-black text-white'
                                         : 'bg-white border-black text-black hover:bg-neutral-100'
                                 }`}
                             >
+                                {prodeSavingConfig ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                                 {prodeConfig.isActive ? 'Activo' : 'Inactivo'}
                             </button>
                         </div>

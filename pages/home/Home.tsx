@@ -159,9 +159,18 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
         const init = async () => {
             const loadedModules = db.getModules();
 
+            // Load Config first to use it for filtering
+            const remoteConfig = await supabaseService.getAppConfig();
+            const activeConfig = remoteConfig || db.getAppConfig();
+
             // --- STRICT VISIBILITY FILTER ---
             // Only render cards that the user has explicit access to.
             const visibleModules = loadedModules.filter(m => {
+                // If Prode is deactivated globally, hide it for everyone
+                if (m.id === 'prode' && activeConfig.prodeConfig && !activeConfig.prodeConfig.isActive) {
+                    return false;
+                }
+
                 // 1. Module is Public -> Always Visible
                 if (m.publicAccess) return true;
 
@@ -192,10 +201,6 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
             ];
 
             setSystems(sortedModules);
-
-            // Load Config
-            const remoteConfig = await supabaseService.getAppConfig();
-            const activeConfig = remoteConfig || db.getAppConfig();
 
             setConfig(activeConfig);
             setFooterLinks(activeConfig.footerLinks || { instagram: '', facebook: '', youtube: '', spotify: '' });

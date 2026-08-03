@@ -78,6 +78,19 @@ const PANELES_EVENTOS = [
             UserRole.ENCARGADO_EVENTOS,
         ]
     },
+    {
+        id: 'prode-mundial',
+        titulo: 'Prode Mundial',
+        descripcion: 'Gestión de configuración, partidos y resultados del Prode.',
+        ruta: '/prode/administracion',
+        icono: Trophy,
+        color: '#10B981', // emerald
+        roles: [
+            UserRole.SUPER_ADMIN,
+            UserRole.PASTOR,
+            UserRole.PRODE,
+        ]
+    },
 ];
 
 const PanelEventos: React.FC<PanelEventosProps> = ({
