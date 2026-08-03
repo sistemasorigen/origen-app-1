@@ -720,9 +720,10 @@ const AppContent: React.FC = () => {
                                         ? <AdminInfluosDia currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
-                                {/* Guard EXCLUSIVO de ENCARGADO_EVENTOS — sin SUPER_ADMIN ni PASTOR, decisión explícita */}
+                                {/* Guard de SUPER_ADMIN + ENCARGADO_EVENTOS — sin PASTOR, decisión explícita */}
                                 <Route path="/eventos/admin/general/crear-evento" element={
                                     (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <CrearEventoGeneral />
@@ -730,6 +731,7 @@ const AppContent: React.FC = () => {
                                 } />
                                 <Route path="/eventos/admin/general" element={
                                     (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <AdminEventosGeneral currentUser={user} />

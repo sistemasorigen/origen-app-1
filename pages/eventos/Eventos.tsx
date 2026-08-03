@@ -61,68 +61,39 @@ const Eventos: React.FC = () => {
                     </div>
                 )}
 
-                {/* Card destacada */}
+                {/* Card destacada — el flyer se muestra completo y sin recortar
+                    (w-full h-auto, sin object-cover): es arte que trae su propio
+                    texto, así que la metadata va aparte, nunca superpuesta. */}
                 {!loading && featured && (
-                    <div className="mb-10">
-                        {featured.imageUrl ? (
-                            <div
-                                className="relative rounded-2xl overflow-hidden"
-                                style={{ minHeight: 280 }}
-                            >
-                                <img
-                                    src={featured.imageUrl}
-                                    alt={featured.name}
-                                    className="absolute inset-0 w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-                                <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 280 }}>
-                                    <span className="inline-flex self-start items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 text-[11px] font-semibold text-gray-800 mb-3">
+                    <div className="mb-10 rounded-2xl border border-gray-100 shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden bg-white">
+                        <div className="flex flex-col sm:flex-row">
+                            {featured.imageUrl && (
+                                <div className="relative sm:w-64 md:w-80 shrink-0 bg-gray-50">
+                                    <img
+                                        src={featured.imageUrl}
+                                        alt={featured.name}
+                                        className="block w-full h-auto"
+                                    />
+                                    <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm text-[11px] font-semibold text-gray-800">
                                         <span className="w-1.5 h-1.5 rounded-full bg-gray-800 shrink-0" aria-hidden="true" />
                                         Próximo
                                     </span>
-
-                                    <h2 className="text-2xl md:text-3xl font-semibold text-white tracking-tight leading-tight mb-3">
-                                        {featured.name}
-                                    </h2>
-
-                                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-white/70 text-sm mb-5">
-                                        <span className="flex items-center gap-1.5">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                            {formatDate(featured.startDate)}
-                                        </span>
-                                        {featured.startTime && (
-                                            <span className="flex items-center gap-1.5">
-                                                <Clock className="w-3.5 h-3.5" />
-                                                {featured.startTime}{featured.endTime && ` – ${featured.endTime}`}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {featured.registrationLink && (
-                                        <a
-                                            href={featured.registrationLink}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex self-start items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-900 text-sm font-semibold hover:bg-gray-100 active:scale-[0.98] transition-all"
-                                        >
-                                            Inscribirse al evento <ExternalLink className="w-3.5 h-3.5" />
-                                        </a>
-                                    )}
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="rounded-2xl border border-gray-100 shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-8 md:p-10">
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-900 text-[11px] font-semibold text-white mb-4">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" aria-hidden="true" />
-                                    Próximo
-                                </span>
+                            )}
+
+                            <div className="p-6 md:p-8 flex-1 min-w-0 flex flex-col justify-center">
+                                {!featured.imageUrl && (
+                                    <span className="inline-flex self-start items-center gap-1.5 px-3 py-1 rounded-full bg-gray-900 text-[11px] font-semibold text-white mb-4">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" aria-hidden="true" />
+                                        Próximo
+                                    </span>
+                                )}
 
                                 <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight leading-tight mb-3">
                                     {featured.name}
                                 </h2>
 
-                                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-gray-400 text-sm mb-5">
+                                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-gray-400 text-sm mb-4">
                                     <span className="flex items-center gap-1.5">
                                         <Calendar className="w-3.5 h-3.5" />
                                         {formatDate(featured.startDate)}
@@ -146,19 +117,13 @@ const Eventos: React.FC = () => {
                                         href={featured.registrationLink}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-black active:scale-[0.98] transition-all"
+                                        className="inline-flex self-start items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-black active:scale-[0.98] transition-all"
                                     >
                                         Inscribirse al evento <ExternalLink className="w-3.5 h-3.5" />
                                     </a>
                                 )}
                             </div>
-                        )}
-
-                        {featured.imageUrl && featured.description && (
-                            <p className="mt-4 text-sm text-gray-500 leading-relaxed">
-                                {featured.description}
-                            </p>
-                        )}
+                        </div>
                     </div>
                 )}
 

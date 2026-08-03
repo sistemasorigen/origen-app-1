@@ -61,6 +61,7 @@ const PANELES_EVENTOS = [
         icono: CalendarDays,
         color: '#334155',  // slate
         roles: [
+            UserRole.SUPER_ADMIN,
             UserRole.ENCARGADO_EVENTOS,
         ]
     },
