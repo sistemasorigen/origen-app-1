@@ -102,7 +102,7 @@ function buildEmailHtml(adultName: string, cards: string): string {
             <td style="background-color: #000000; padding: 36px 40px; text-align: center;">
               <p style="margin: 0 0 8px 0; font-size: 32px;">🎉🎈</p>
               <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px;">
-                ¡Nos vemos en el Día del Niño!
+                ¡Nos vemos el sábado 15/08 a las 4pm!!
               </h1>
             </td>
           </tr>
@@ -110,12 +110,12 @@ function buildEmailHtml(adultName: string, cards: string): string {
           <tr>
             <td style="padding: 32px 40px 8px 40px;">
               <p style="margin: 0; font-size: 16px; color: #333333; line-height: 1.6;">
-                Hola <strong style="color: #000000;">${adultName}</strong>, ¡ya está todo listo! 🥳
+                Hola <strong style="color: #000000;">${adultName}</strong>, ¡ya está todo listo!
                 Acá abajo tenés la entrada de cada persona inscripta — cada una con su propio código QR.
               </p>
               <p style="margin: 16px 0 0 0; font-size: 14px; color: #666666; line-height: 1.6;">
                 Mostralas en la puerta el día del evento, una por una. Si perdiste este email, podés
-                volver a buscarlas en cualquier momento desde <strong>origeniglesia.org/#/dia-del-nino/buscar</strong>.
+                volver a buscarlas en cualquier momento desde <strong>app.origeniglesia.org/#/dia-del-nino/buscar</strong>.
               </p>
             </td>
           </tr>
