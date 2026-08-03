@@ -233,7 +233,7 @@ const InscripcionInfluosDia: React.FC = () => {
                         >
                             {sinTribu
                                 ? 'Te sumamos a una cuando llegues al evento.'
-                                : '¡Te esperamos en el Día de Influos!'}
+                                : '¡Te esperamos en Tribal Wars!'}
                         </motion.p>
 
                         <motion.button
@@ -271,7 +271,7 @@ const InscripcionInfluosDia: React.FC = () => {
                             Influos 2026
                         </p>
                         <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white leading-none">
-                            Día de Influos
+                            Tribal Wars
                         </h1>
                     </div>
 

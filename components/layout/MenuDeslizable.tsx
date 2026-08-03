@@ -307,7 +307,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Eventos',
             icon: CalendarDays,
             path: '/eventos',
-            requiresAuth: true,
             roles: [],
             subItems: [
                 {
@@ -407,13 +406,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     ].filter(item => {
         // Excluir Prode explícitamente para mujeres
         if (item.label === 'Prode Mundial' && currentUser?.gender === 'Femenino') return false;
-        // Día del Padre desactivado: ocultar "Eventos" salvo a administradores del evento
-        if (item.label === 'Eventos' && !dpadreActivo) {
-            const isEventAdmin = !!currentUser && hasRole(currentUser, [
-                UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS
-            ]);
-            if (!isEventAdmin) return false;
-        }
         return true;
     });
 

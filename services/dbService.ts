@@ -258,7 +258,7 @@ const MODULES: SystemModule[] = [
             UserRole.ADMIN_GROUPS,
             UserRole.ADMIN_PUNTO,
         ],
-        publicAccess: false,
+        publicAccess: true,
         useImage: false,
         gradientFrom: 'gray-100',
         gradientTo: 'gray-200',

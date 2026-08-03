@@ -358,6 +358,22 @@ const AppContent: React.FC = () => {
                 </Layout>
             } />
 
+            <Route path="/eventos" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                    onVolunteerClick={
+                        user && showVolunteerAccess
+                            ? () => setIsVolunteerModalOpen(true)
+                            : undefined
+                    }
+                >
+                    <Eventos />
+                </Layout>
+            } />
+
             {/* ── RUTAS PROTEGIDAS CON LAYOUT ──────── */}
             <Route path="*" element={
                 !user
@@ -681,9 +697,7 @@ const AppContent: React.FC = () => {
                                         ? <AdminProde />
                                         : <Navigate to="/" />
                                 } />
-                                <Route path="/eventos" element={
-                                    user ? <Eventos /> : <Navigate to="/" />
-                                } />
+
                                 <Route path="/panel-eventos" element={
                                     (user && hasRole(user, [
                                         UserRole.SUPER_ADMIN,

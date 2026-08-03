@@ -3,6 +3,72 @@ import { getEventosGeneralPublic } from '../../services/supabaseService';
 import { EventoGeneral } from '../../types';
 import { Calendar, Clock, CalendarDays, ExternalLink } from 'lucide-react';
 
+const formatDate = (dateStr: string): string =>
+    new Date(dateStr + 'T12:00:00')
+        .toLocaleDateString('es-AR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+        });
+
+interface EventCardProps {
+    event: EventoGeneral;
+}
+
+// Card de evento — el flyer se muestra completo y sin recortar (w-full h-auto):
+// es arte que trae su propio texto, así que la metadata va aparte, nunca superpuesta.
+const EventCard: React.FC<EventCardProps> = ({ event }) => (
+    <div className="rounded-2xl border border-gray-100 shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden bg-white">
+        <div className="flex flex-col sm:flex-row">
+            {event.imageUrl && (
+                <div className="relative sm:w-64 md:w-80 shrink-0 bg-gray-50">
+                    <img
+                        src={event.imageUrl}
+                        alt={event.name}
+                        className="block w-full h-auto"
+                    />
+                </div>
+            )}
+
+            <div className="p-6 md:p-8 flex-1 min-w-0 flex flex-col justify-center">
+                <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight leading-tight mb-3">
+                    {event.name}
+                </h2>
+
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-gray-400 text-sm mb-4">
+                    <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {formatDate(event.startDate)}
+                    </span>
+                    {event.startTime && (
+                        <span className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" />
+                            {event.startTime}{event.endTime && ` – ${event.endTime}`}
+                        </span>
+                    )}
+                </div>
+
+                {event.description && (
+                    <p className="text-sm text-gray-500 leading-relaxed mb-5">
+                        {event.description}
+                    </p>
+                )}
+
+                {event.registrationLink && (
+                    <a
+                        href={event.registrationLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex self-start items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-black active:scale-[0.98] transition-all"
+                    >
+                        Inscribirse al evento <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                )}
+            </div>
+        </div>
+    </div>
+);
+
 const Eventos: React.FC = () => {
     const [events, setEvents] = useState<EventoGeneral[]>([]);
     const [loading, setLoading] = useState(true);
@@ -16,17 +82,6 @@ const Eventos: React.FC = () => {
             })
             .finally(() => setLoading(false));
     }, []);
-
-    const formatDate = (dateStr: string): string =>
-        new Date(dateStr + 'T12:00:00')
-            .toLocaleDateString('es-AR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long'
-            });
-
-    const featured = events[0] ?? null;
-    const rest = events.slice(1);
 
     return (
         <div className="min-h-screen bg-white">
@@ -61,131 +116,16 @@ const Eventos: React.FC = () => {
                     </div>
                 )}
 
-                {/* Card destacada — el flyer se muestra completo y sin recortar
-                    (w-full h-auto, sin object-cover): es arte que trae su propio
-                    texto, así que la metadata va aparte, nunca superpuesta. */}
-                {!loading && featured && (
-                    <div className="mb-10 rounded-2xl border border-gray-100 shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden bg-white">
-                        <div className="flex flex-col sm:flex-row">
-                            {featured.imageUrl && (
-                                <div className="relative sm:w-64 md:w-80 shrink-0 bg-gray-50">
-                                    <img
-                                        src={featured.imageUrl}
-                                        alt={featured.name}
-                                        className="block w-full h-auto"
-                                    />
-                                    <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm text-[11px] font-semibold text-gray-800">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-800 shrink-0" aria-hidden="true" />
-                                        Próximo
-                                    </span>
-                                </div>
-                            )}
-
-                            <div className="p-6 md:p-8 flex-1 min-w-0 flex flex-col justify-center">
-                                {!featured.imageUrl && (
-                                    <span className="inline-flex self-start items-center gap-1.5 px-3 py-1 rounded-full bg-gray-900 text-[11px] font-semibold text-white mb-4">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" aria-hidden="true" />
-                                        Próximo
-                                    </span>
-                                )}
-
-                                <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight leading-tight mb-3">
-                                    {featured.name}
-                                </h2>
-
-                                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-gray-400 text-sm mb-4">
-                                    <span className="flex items-center gap-1.5">
-                                        <Calendar className="w-3.5 h-3.5" />
-                                        {formatDate(featured.startDate)}
-                                    </span>
-                                    {featured.startTime && (
-                                        <span className="flex items-center gap-1.5">
-                                            <Clock className="w-3.5 h-3.5" />
-                                            {featured.startTime}{featured.endTime && ` – ${featured.endTime}`}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {featured.description && (
-                                    <p className="text-sm text-gray-500 leading-relaxed mb-5">
-                                        {featured.description}
-                                    </p>
-                                )}
-
-                                {featured.registrationLink && (
-                                    <a
-                                        href={featured.registrationLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex self-start items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-black active:scale-[0.98] transition-all"
-                                    >
-                                        Inscribirse al evento <ExternalLink className="w-3.5 h-3.5" />
-                                    </a>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Grid de eventos */}
-                {!loading && rest.length > 0 && (
+                {/* Todos los eventos — apilados en una sola lista */}
+                {!loading && events.length > 0 && (
                     <div>
                         <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 mb-5">
                             Próximos eventos
                         </p>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {rest.map(event => (
-                                <div
-                                    key={event.id}
-                                    className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-200 hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:-translate-y-[2px]"
-                                >
-                                    {event.imageUrl && (
-                                        <div className="aspect-square overflow-hidden">
-                                            <img
-                                                src={event.imageUrl}
-                                                alt={event.name}
-                                                className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                                            />
-                                        </div>
-                                    )}
-
-                                    <div className="p-5">
-                                        <h3 className="text-base font-semibold text-gray-900 tracking-tight leading-snug mb-3 line-clamp-2">
-                                            {event.name}
-                                        </h3>
-
-                                        <div className="space-y-1.5">
-                                            <div className="flex items-center gap-2 text-gray-400 text-xs">
-                                                <Calendar className="w-3.5 h-3.5 shrink-0" />
-                                                <span>{formatDate(event.startDate)}</span>
-                                            </div>
-                                            {event.startTime && (
-                                                <div className="flex items-center gap-2 text-gray-400 text-xs">
-                                                    <Clock className="w-3.5 h-3.5 shrink-0" />
-                                                    <span>{event.startTime}{event.endTime && ` – ${event.endTime}`}</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {event.description && (
-                                            <p className="mt-3 text-xs text-gray-400 leading-relaxed line-clamp-2">
-                                                {event.description}
-                                            </p>
-                                        )}
-
-                                        {event.registrationLink && (
-                                            <a
-                                                href={event.registrationLink}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="mt-4 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-900 text-white text-xs font-semibold rounded-lg transition-all hover:bg-black"
-                                            >
-                                                Inscribirse al evento <ExternalLink className="w-3 h-3" />
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
+                        <div className="flex flex-col gap-5">
+                            {events.map(event => (
+                                <EventCard key={event.id} event={event} />
                             ))}
                         </div>
                     </div>
