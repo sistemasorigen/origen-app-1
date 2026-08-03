@@ -111,11 +111,12 @@ function buildEmailHtml(adultName: string, cards: string): string {
             <td style="padding: 32px 40px 8px 40px;">
               <p style="margin: 0; font-size: 16px; color: #333333; line-height: 1.6;">
                 Hola <strong style="color: #000000;">${adultName}</strong>, ¡ya está todo listo!
-                Acá abajo tenés la entrada de cada persona inscripta — cada una con su propio código QR.
+                Acá abajo tenés tu entrada. Mostrala en la puerta el día del evento —
+                con este único código se acredita a toda tu familia.
               </p>
               <p style="margin: 16px 0 0 0; font-size: 14px; color: #666666; line-height: 1.6;">
-                Mostralas en la puerta el día del evento, una por una. Si perdiste este email, podés
-                volver a buscarlas en cualquier momento desde <strong>app.origeniglesia.org/#/dia-del-nino/buscar</strong>.
+                Si perdiste este email, podés
+                volver a buscarla en cualquier momento desde <strong>app.origeniglesia.org/#/dia-del-nino/buscar</strong>.
               </p>
             </td>
           </tr>
@@ -201,18 +202,19 @@ serve(async (req: Request) => {
       });
     }
 
-    const cardsHtml = (
-      await Promise.all(
-        (tickets as DianinoTicket[]).map(async (t) => {
-          const qrUrl = await generateQrPublicUrl(supabase, t.id);
-          const roleLabel = t.is_adult ? "Adulto responsable" : "Niño/a";
-          return buildTicketCardHtml(`${t.first_name} ${t.last_name}`, roleLabel, qrUrl);
-        })
-      )
-    ).join("");
-
     const adultTicket = (tickets as DianinoTicket[]).find((t) => t.is_adult);
-    const adultName = adultTicket ? `${adultTicket.first_name} ${adultTicket.last_name}` : "familia";
+
+    if (!adultTicket) {
+      console.error("No se encontró ticket de adulto para la sesión:", session.id);
+      return new Response(JSON.stringify({ error: "Sin ticket de adulto para esta sesión", sessionId: session.id }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const adultName = `${adultTicket.first_name} ${adultTicket.last_name}`;
+    const qrUrl = await generateQrPublicUrl(supabase, adultTicket.id);
+    const cardsHtml = buildTicketCardHtml(adultName, "Entrada familiar", qrUrl);
 
     const emailHtml = buildEmailHtml(adultName, cardsHtml);
 

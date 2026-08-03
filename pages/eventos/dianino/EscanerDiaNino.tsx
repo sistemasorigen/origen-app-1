@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { checkinDianinoTicket, getDianinoSessionForCheckin, DianinoSessionCheckinTicket } from '../../../services/supabaseService';
-import { ChevronLeft, Camera, CameraOff, Keyboard, CheckCircle2, AlertTriangle, Clock, XCircle, RotateCcw, User, Baby, X, Users, ListChecks, QrCode } from 'lucide-react';
+import { ChevronLeft, Camera, CameraOff, Keyboard, CheckCircle2, AlertTriangle, Clock, XCircle, RotateCcw, User, Baby, X, Users } from 'lucide-react';
 
 const QR_PREFIX = 'ORIGEN-DIANINO-';
 
@@ -43,11 +43,7 @@ const EscanerDiaNino: React.FC = () => {
     const [processing, setProcessing] = useState(false);
     const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const [scanMode, setScanMode] = useState<'simple' | 'individual'>('individual');
-    const scanModeRef = useRef<'simple' | 'individual'>('individual');
-    useEffect(() => { scanModeRef.current = scanMode; }, [scanMode]);
-
-    // Dropdown de Escaneo Simple (aparece al escanear al adulto responsable)
+    // Dropdown de acreditación (aparece al escanear el QR maestro del adulto)
     const [familyDropdown, setFamilyDropdown] = useState<{
         sessionId: string;
         declaracionJuradaAceptada: boolean;
@@ -78,22 +74,33 @@ const EscanerDiaNino: React.FC = () => {
 
         const ticketId = rawValue.slice(QR_PREFIX.length);
 
-        // ── Escaneo Simple: si es el adulto, mostrar el dropdown familiar en vez de hacer check-in directo ──
-        if (scanModeRef.current === 'simple') {
-            const sessionInfo = await getDianinoSessionForCheckin(ticketId);
-            if (sessionInfo?.isAdultScan && sessionInfo.sessionId && sessionInfo.tickets) {
-                setProcessing(false);
-                processingRef.current = false;
-                setFamilyDropdown({
-                    sessionId: sessionInfo.sessionId,
-                    declaracionJuradaAceptada: !!sessionInfo.declaracionJuradaAceptada,
-                    tickets: sessionInfo.tickets
-                });
-                return;
+        // Si es el QR maestro (el adulto), abrir el dropdown
+        // familiar. El adulto se acredita solo, de fondo, sin
+        // pedirle a nadie que lo tilde — el dropdown solo
+        // muestra a los niños para acreditar.
+        const sessionInfo = await getDianinoSessionForCheckin(ticketId);
+        if (sessionInfo?.isAdultScan && sessionInfo.sessionId && sessionInfo.tickets) {
+            const adultTicket = sessionInfo.tickets.find(t => t.isAdult);
+            if (adultTicket) {
+                // Fire-and-forget: no bloquea la apertura del
+                // dropdown esperando esta respuesta.
+                checkinDianinoTicket(adultTicket.id).catch(() => {});
             }
-            // Si no es el adulto (es un niño, o no se pudo resolver la sesión),
-            // sigue el flujo normal de check-in individual más abajo.
+
+            setProcessing(false);
+            processingRef.current = false;
+            setFamilyDropdown({
+                sessionId: sessionInfo.sessionId,
+                declaracionJuradaAceptada: !!sessionInfo.declaracionJuradaAceptada,
+                tickets: sessionInfo.tickets.filter(t => !t.isAdult)
+            });
+            return;
         }
+        // Si no es el adulto (QR viejo de un niño de algún
+        // email anterior a este cambio, o no se pudo resolver
+        // la sesión), sigue el flujo normal de check-in
+        // individual — se mantiene por compatibilidad hacia
+        // atrás, no por diseño nuevo.
 
         const res = await checkinDianinoTicket(ticketId);
         setProcessing(false);
@@ -315,21 +322,6 @@ const EscanerDiaNino: React.FC = () => {
                 >
                     <ChevronLeft className="w-4 h-4" /> Día del Niño
                 </button>
-
-                <div className="flex bg-white/10 rounded-full p-1">
-                    <button
-                        onClick={() => setScanMode('simple')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors ${scanMode === 'simple' ? 'bg-white text-black' : 'text-white/60'}`}
-                    >
-                        <ListChecks className="w-3.5 h-3.5" /> Simple
-                    </button>
-                    <button
-                        onClick={() => setScanMode('individual')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors ${scanMode === 'individual' ? 'bg-white text-black' : 'text-white/60'}`}
-                    >
-                        <QrCode className="w-3.5 h-3.5" /> Individual
-                    </button>
-                </div>
             </div>
 
             <div className="flex-1 relative flex items-center justify-center px-4">

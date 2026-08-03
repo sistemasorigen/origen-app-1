@@ -56,9 +56,11 @@ const DetalleDiaNino: React.FC = () => {
 
     if (!session) return null;
 
-    const allCheckedIn = tickets.length > 0 && tickets.every(t => t.status === 'CHECKED_IN');
-    const adultTicket = tickets.find(t => t.isAdult);
     const childTickets = tickets.filter(t => !t.isAdult);
+    // El adulto no necesita acreditarse — "todos
+    // escaneados" se mide solo contra los niños.
+    const allCheckedIn = childTickets.length > 0 && childTickets.every(t => t.status === 'CHECKED_IN');
+    const adultTicket = tickets.find(t => t.isAdult);
 
     const formatTime = (iso?: string) => {
         if (!iso) return '';
@@ -89,7 +91,7 @@ const DetalleDiaNino: React.FC = () => {
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Escaneo</p>
                         <p className={`font-bold text-sm flex items-center gap-1.5 ${allCheckedIn ? 'text-emerald-700' : 'text-amber-700'}`}>
                             {allCheckedIn ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
-                            {allCheckedIn ? 'Todos escaneados' : `${tickets.filter(t => t.status === 'CHECKED_IN').length} de ${tickets.length}`}
+                            {allCheckedIn ? 'Todos escaneados' : `${childTickets.filter(t => t.status === 'CHECKED_IN').length} de ${childTickets.length}`}
                         </p>
                     </div>
                     <div className={`rounded-lg border p-4 ${session.declaracionJuradaAceptada ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>

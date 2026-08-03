@@ -380,8 +380,11 @@ export async function getDianinoSessions(): Promise<import('../types').DiaNinoSe
   return (sessions || []).map(s => {
     const sessionTickets = (tickets || []).filter(t => t.session_id === s.id);
     const adultTicket = sessionTickets.find(t => t.is_adult);
-    const childrenCount = sessionTickets.filter(t => !t.is_adult).length;
-    const allCheckedIn = sessionTickets.length > 0 && sessionTickets.every(t => t.status === 'CHECKED_IN');
+    const childTickets = sessionTickets.filter(t => !t.is_adult);
+    const childrenCount = childTickets.length;
+    // El adulto no necesita acreditarse — "todos
+    // escaneados" se mide solo contra los niños.
+    const allCheckedIn = childTickets.length > 0 && childTickets.every(t => t.status === 'CHECKED_IN');
 
     return {
       sessionId: s.id,
