@@ -112,7 +112,7 @@ const BuscarInfluosDia: React.FC = () => {
 
                 <div className="relative z-10 max-w-md mx-auto">
                     <button
-                        onClick={() => navigate('/dia-de-influos')}
+                        onClick={() => navigate('/tribal-wars')}
                         className="min-h-[44px] px-3 -mx-3 -my-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-neutral-600 hover:text-white transition-colors mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
                     >
                         <ArrowLeft className="w-3.5 h-3.5" /> Volver a la inscripción

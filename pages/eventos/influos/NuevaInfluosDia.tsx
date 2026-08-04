@@ -43,7 +43,7 @@ const NuevaInfluosDia: React.FC = () => {
         setSaving(false);
 
         if (id) {
-            navigate('/eventos/admin/dia-de-influos');
+            navigate('/eventos/admin/tribal-wars');
             return;
         }
 
@@ -54,7 +54,7 @@ const NuevaInfluosDia: React.FC = () => {
         <div className="min-h-screen bg-slate-50 p-4 md:p-8">
             <div className="max-w-md mx-auto">
                 <button
-                    onClick={() => navigate('/eventos/admin/dia-de-influos')}
+                    onClick={() => navigate('/eventos/admin/tribal-wars')}
                     className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-400 hover:text-black transition-colors mb-4"
                 >
                     <ChevronLeft className="w-4 h-4" /> Día de Influos

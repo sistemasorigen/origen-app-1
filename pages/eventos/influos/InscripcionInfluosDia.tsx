@@ -240,7 +240,7 @@ const InscripcionInfluosDia: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.9 }}
-                            onClick={() => navigate('/dia-de-influos/buscar')}
+                            onClick={() => navigate('/tribal-wars/buscar')}
                             className={`mt-2 min-h-[44px] px-3 -mx-3 flex items-center justify-center text-xs font-black uppercase tracking-widest ${theme.text} opacity-70 hover:opacity-100 underline underline-offset-4 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white`}
                         >
                             Buscar mi inscripción

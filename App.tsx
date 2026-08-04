@@ -301,8 +301,8 @@ const AppContent: React.FC = () => {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/form" element={<Formulario />} />
             <Route path="/dia-del-nino" element={<InscripcionDiaNino />} />
-            <Route path="/dia-de-influos" element={<InscripcionInfluosDia />} />
-            <Route path="/dia-de-influos/buscar" element={<BuscarInfluosDia />} />
+            <Route path="/tribal-wars" element={<InscripcionInfluosDia />} />
+            <Route path="/tribal-wars/buscar" element={<BuscarInfluosDia />} />
             <Route path="/dia-del-nino/buscar" element={<BuscarDiaNino />} />
             <Route path="/influos-acceso" element={<InfluosAcceso />} />
             <Route path="/id-dpadre" element={<InscripcionDPadre />} />
@@ -726,7 +726,7 @@ const AppContent: React.FC = () => {
                                         ? <AdminDiaNino currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
-                                <Route path="/eventos/admin/dia-de-influos" element={
+                                <Route path="/eventos/admin/tribal-wars" element={
                                     (user && hasRole(user, [
                                         UserRole.SUPER_ADMIN,
                                         UserRole.PASTOR,
@@ -752,7 +752,7 @@ const AppContent: React.FC = () => {
                                         ? <AdminEventosGeneral currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
-                                <Route path="/eventos/admin/dia-de-influos/nueva" element={
+                                <Route path="/eventos/admin/tribal-wars/nueva" element={
                                     (user && hasRole(user, [
                                         UserRole.SUPER_ADMIN,
                                         UserRole.PASTOR,

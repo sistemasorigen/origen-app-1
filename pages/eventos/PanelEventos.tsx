@@ -41,10 +41,10 @@ const PANELES_EVENTOS = [
         ]
     },
     {
-        id: 'dia-de-influos',
+        id: 'tribal-wars',
         titulo: 'Día de Influos',
         descripcion: 'Gestión de inscripciones por tribu del evento.',
-        ruta: '/eventos/admin/dia-de-influos',
+        ruta: '/eventos/admin/tribal-wars',
         icono: Flame,
         color: '#0D9488',  // teal
         roles: [

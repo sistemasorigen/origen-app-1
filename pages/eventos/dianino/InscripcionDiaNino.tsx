@@ -180,8 +180,8 @@ const InscripcionDiaNino: React.FC = () => {
     const canAdvanceStep1 = adult.firstName.trim() && adult.lastName.trim() && adult.email.trim() && adult.dni.trim() && !adultDniError && !adultDniChecking;
     const canAdvanceStep2 = children.length > 0 && children.every(c => c.firstName.trim() && c.lastName.trim() && c.dni.trim() && !c.dniError && !c.dniChecking);
 
-    const handleFinalSubmit = async (accepted: boolean) => {
-        setDeclaracionAceptada(accepted);
+    const handleFinalSubmit = async () => {
+        const accepted = declaracionAceptada ?? false;
         setIsSubmitting(true);
         setSubmitError(null);
 
@@ -324,7 +324,7 @@ const InscripcionDiaNino: React.FC = () => {
                         {/* PASO 2 — Niños */}
                         {step === 2 && (
                             <motion.div key="step2" {...stepTransition} className="space-y-4">
-                                <h2 className="font-black uppercase text-black border-b-2 border-black pb-3">Datos de cada niño/a</h2>
+                                <h2 className="font-black uppercase text-black border-b-2 border-black pb-3">Datos de cada niño</h2>
                                 <div className="space-y-3">
                                     <AnimatePresence initial={false}>
                                         {children.map((child, idx) => (
@@ -337,11 +337,11 @@ const InscripcionDiaNino: React.FC = () => {
                                                 className="p-4 bg-neutral-50 border-2 border-black space-y-3"
                                             >
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] font-black uppercase tracking-widest text-black">Niño/a {idx + 1}</span>
+                                                    <span className="text-[11px] font-black uppercase tracking-widest text-black">Niño {idx + 1}</span>
                                                     {children.length > 1 && (
                                                         <button
                                                             onClick={() => removeChild(child.localId)}
-                                                            aria-label={`Eliminar niño/a ${idx + 1}`}
+                                                            aria-label={`Eliminar niño ${idx + 1}`}
                                                             className="w-9 h-9 -my-2 -mr-2 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-black transition-colors focus-visible:outline-none"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -452,7 +452,7 @@ const InscripcionDiaNino: React.FC = () => {
                                             key={child.localId}
                                             name={`${child.firstName} ${child.lastName}`.trim()}
                                             dni={child.dni}
-                                            roleLabel="Niño/a"
+                                            roleLabel="Niño"
                                             icon={Baby}
                                             index={idx + 1}
                                         />
@@ -471,14 +471,14 @@ const InscripcionDiaNino: React.FC = () => {
                                     <div className="flex gap-3">
                                         <button
                                             disabled={isSubmitting}
-                                            onClick={resetForm}
+                                            onClick={() => { setStep(1); setSubmitError(null); }}
                                             className={`flex-1 ${secondaryBtn} disabled:opacity-50`}
                                         >
                                             Editar datos
                                         </button>
                                         <button
                                             disabled={isSubmitting}
-                                            onClick={() => handleFinalSubmit(true)}
+                                            onClick={() => handleFinalSubmit()}
                                             className={`flex-[2] ${primaryBtn}`}
                                         >
                                             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar datos'}

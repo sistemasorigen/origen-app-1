@@ -73,7 +73,7 @@ const AdminInfluosDia: React.FC<AdminInfluosDiaProps> = () => {
                     </div>
 
                     <button
-                        onClick={() => navigate('/eventos/admin/dia-de-influos/nueva')}
+                        onClick={() => navigate('/eventos/admin/tribal-wars/nueva')}
                         className="flex items-center gap-2 px-4 py-2.5 bg-black text-white font-semibold text-sm rounded-lg hover:bg-slate-800 transition-colors"
                     >
                         <Plus className="w-4 h-4" /> Inscripción manual
