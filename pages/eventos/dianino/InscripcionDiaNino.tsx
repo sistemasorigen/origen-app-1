@@ -7,9 +7,42 @@ import {
 } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
 import { DiaNinoChildInput } from '../../../types';
-import { ArrowLeft, ChevronLeft, Plus, Trash2, Check, X, Loader2, User, Baby, ShieldCheck, Ticket } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, Plus, Trash2, Check, Loader2, User, Baby, ShieldCheck, Ticket, Calendar, Clock } from 'lucide-react';
 
 const LOGO_URL = '/origen-logo-full.png';
+
+// ── Sistema de color "Día del Niño" ───────────────────────────────
+// Paleta tomada del flyer real del evento. El naranja es EXCLUSIVO
+// de acciones/CTA (nunca aparece en la tipografía crayón ni en la
+// tira de datos) — así se mantiene como el único acento que de
+// verdad llama la atención, en vez de saturar toda la pantalla.
+const INK = '#2A211B';
+const CREAM_CARD = '#FFFFFF';
+const CRAYON_RED = '#E63B2E';
+const CRAYON_BLUE = '#4A7FC9';
+const CRAYON_GREEN = '#4CAF50';
+const CRAYON_MUSTARD = '#F5B942';
+const CRAYON_PINK = '#F2A9C4';
+const BRAND_ORANGE = '#F0703A';
+
+// Cada palabra del título en un color de crayón distinto + una
+// leve rotación alternada — sin textura de trazo real (no es
+// viable en una interfaz con formularios), esto alcanza para que
+// se sienta parte del mismo mundo que el flyer.
+const TITLE_WORDS: { text: string; color: string; rotate: number }[] = [
+    { text: 'Día', color: CRAYON_RED, rotate: -4 },
+    { text: 'del', color: CRAYON_BLUE, rotate: 3 },
+    { text: 'Niño', color: CRAYON_GREEN, rotate: -3 },
+];
+
+const TICKET_TAB_COLORS: { bg: string; fg: string }[] = [
+    { bg: CRAYON_BLUE, fg: '#FFFFFF' },
+    { bg: CRAYON_RED, fg: '#FFFFFF' },
+    { bg: CRAYON_GREEN, fg: '#FFFFFF' },
+    { bg: CRAYON_MUSTARD, fg: INK },
+    { bg: BRAND_ORANGE, fg: '#FFFFFF' },
+    { bg: CRAYON_PINK, fg: INK },
+];
 
 interface AdultForm {
     firstName: string;
@@ -25,31 +58,38 @@ interface ChildForm extends DiaNinoChildInput {
 }
 
 const STEPS = [
-    { label: 'Adulto', icon: User },
-    { label: 'Niños', icon: Baby },
-    { label: 'Conformidad', icon: ShieldCheck },
-    { label: 'Confirmar', icon: Ticket },
+    { label: 'Adulto', icon: User, color: CRAYON_BLUE, iconOn: '#FFFFFF' },
+    { label: 'Niños', icon: Baby, color: CRAYON_GREEN, iconOn: '#FFFFFF' },
+    { label: 'Conformidad', icon: ShieldCheck, color: CRAYON_MUSTARD, iconOn: INK },
+    { label: 'Confirmar', icon: Ticket, color: BRAND_ORANGE, iconOn: '#FFFFFF' },
 ];
 
 const StepIndicator: React.FC<{ current: number }> = ({ current }) => (
-    <div className="flex items-start gap-0 mb-8" role="list" aria-label="Progreso de la inscripción">
+    <div className="flex items-start gap-0 mb-6" role="list" aria-label="Progreso de la inscripción">
         {STEPS.map((s, i) => {
             const n = i + 1;
             const done = n < current;
             const active = n === current;
+            const filled = done || active;
             const Icon = s.icon;
             return (
                 <React.Fragment key={s.label}>
                     <div className="flex flex-col items-center gap-1.5 min-w-0" role="listitem" aria-current={active ? 'step' : undefined}>
-                        <div className={`w-9 h-9 border-2 border-black flex items-center justify-center transition-colors ${done || active ? 'bg-black text-white' : 'bg-white text-neutral-300'}`}>
+                        <div
+                            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors shadow-sm"
+                            style={filled ? { backgroundColor: s.color, color: s.iconOn } : { backgroundColor: '#FFFFFF', color: '#C9B79A', border: '2px solid #EAD9BE' }}
+                        >
                             {done ? <Check className="w-4 h-4" strokeWidth={3} /> : <Icon className="w-4 h-4" />}
                         </div>
-                        <span className={`text-[10px] font-black uppercase tracking-wide ${active ? 'text-black' : 'text-neutral-400'}`}>
+                        <span className="text-[10px] font-black uppercase tracking-wide" style={{ color: active ? INK : '#C9B79A' }}>
                             {s.label}
                         </span>
                     </div>
                     {i < STEPS.length - 1 && (
-                        <div className={`flex-1 h-0.5 mt-4 mx-1 transition-colors ${done ? 'bg-black' : 'bg-neutral-200'}`} />
+                        <div
+                            className="flex-1 h-1 mt-4 mx-1 rounded-full transition-colors"
+                            style={{ backgroundColor: done ? BRAND_ORANGE : '#EAD9BE' }}
+                        />
                     )}
                 </React.Fragment>
             );
@@ -59,32 +99,74 @@ const StepIndicator: React.FC<{ current: number }> = ({ current }) => (
 
 // El signature element de la página: cada persona inscripta es
 // literalmente un ticket individual con su propio QR (dianino_tickets,
-// 1 por fila) — el stub blanco/negro con línea de perforación no es
-// decorativo, encodea esa estructura real del dato.
+// 1 por fila) — el stub con línea de perforación no es decorativo,
+// encodea esa estructura real del dato, ahora en el lenguaje de
+// "boletos de feria" del flyer.
 const TicketStub: React.FC<{
     name: string;
     dni: string;
     roleLabel: string;
-    icon: React.ComponentType<{ className?: string }>;
+    icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
     index: number;
-}> = ({ name, dni, roleLabel, icon: Icon, index }) => (
-    <div className="flex items-stretch border-2 border-black">
-        <div className="flex-1 min-w-0 p-3.5 bg-white">
-            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{roleLabel}</p>
-            <p className="font-black uppercase text-black truncate">{name || '—'}</p>
-            <p className="text-xs font-bold text-neutral-500">DNI {dni || '—'}</p>
+}> = ({ name, dni, roleLabel, icon: Icon, index }) => {
+    const tab = TICKET_TAB_COLORS[index % TICKET_TAB_COLORS.length];
+    return (
+        <div className="flex items-stretch rounded-2xl overflow-hidden shadow-sm" style={{ border: '2px solid #EAD9BE' }}>
+            <div className="flex-1 min-w-0 p-3.5" style={{ backgroundColor: CREAM_CARD }}>
+                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#B9A88C' }}>{roleLabel}</p>
+                <p className="font-black uppercase truncate" style={{ color: INK }}>{name || '—'}</p>
+                <p className="text-xs font-bold" style={{ color: '#8A7857' }}>DNI {dni || '—'}</p>
+            </div>
+            <div
+                className="w-16 shrink-0 flex flex-col items-center justify-center gap-1"
+                style={{ backgroundColor: tab.bg, borderLeft: `2px dashed ${CREAM_CARD}` }}
+            >
+                <Icon className="w-4 h-4" style={{ color: tab.fg }} />
+                <span className="text-[10px] font-black tabular-nums" style={{ color: tab.fg }}>#{index + 1}</span>
+            </div>
         </div>
-        <div className="w-16 shrink-0 flex flex-col items-center justify-center gap-1 bg-black border-l-2 border-dashed border-white">
-            <Icon className="w-4 h-4 text-white" />
-            <span className="text-[10px] font-black text-white tabular-nums">#{index + 1}</span>
-        </div>
+    );
+};
+
+// Tira de datos del evento en bloques de color sólido — el
+// elemento más reconocible y reutilizable del flyer real. No hay
+// un paso de "info del evento" propio acá, así que vive en el
+// header y queda visible en TODOS los pasos, a modo de
+// recordatorio persistente.
+const EventFactsStrip: React.FC = () => (
+    <div className="flex flex-wrap justify-center gap-2 mb-7" aria-label="Datos del evento">
+        <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[11px] font-black uppercase tracking-wide" style={{ backgroundColor: CRAYON_MUSTARD, color: INK }}>
+            <Calendar className="w-3.5 h-3.5" /> Sáb 15/08
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[11px] font-black uppercase tracking-wide" style={{ backgroundColor: CRAYON_BLUE, color: '#FFFFFF' }}>
+            <Clock className="w-3.5 h-3.5" /> 16 a 19 hs
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[11px] font-black uppercase tracking-wide" style={{ backgroundColor: CRAYON_GREEN, color: '#FFFFFF' }}>
+            <Ticket className="w-3.5 h-3.5" /> Entrada gratis
+        </span>
     </div>
 );
 
-const primaryBtn = 'w-full py-3 bg-black text-white font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:bg-black disabled:hover:text-white focus-visible:outline-none';
-const secondaryBtn = 'flex items-center justify-center gap-2 py-3 border-2 border-black bg-white text-black font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all focus-visible:outline-none';
-const inputClass = 'w-full p-3 border-2 border-black font-bold text-black bg-white outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow placeholder:text-neutral-300';
-const labelClass = 'block text-[11px] font-black uppercase tracking-widest text-black mb-1.5';
+// Título estilo "marcador sobre cartulina": cada palabra en un
+// color de crayón + leve rotación alternada.
+const CrayonHeading: React.FC<{ words: { text: string; color: string; rotate: number }[]; className?: string }> = ({ words, className }) => (
+    <h1 className={`flex flex-wrap justify-center gap-x-2.5 gap-y-1 ${className || ''}`}>
+        {words.map((w, i) => (
+            <span
+                key={i}
+                className="inline-block font-black uppercase tracking-tight"
+                style={{ color: w.color, transform: `rotate(${w.rotate}deg)` }}
+            >
+                {w.text}
+            </span>
+        ))}
+    </h1>
+);
+
+const primaryBtn = 'w-full py-3.5 rounded-full bg-[#F0703A] text-white font-black uppercase tracking-wide shadow-[0_8px_20px_-6px_rgba(240,112,58,0.55)] hover:bg-[#E4652F] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#F0703A]/25';
+const secondaryBtn = 'flex items-center justify-center gap-2 py-3.5 rounded-full border-2 border-[#2A211B]/15 bg-white text-[#2A211B] font-black uppercase tracking-wide hover:bg-[#2A211B]/[0.04] active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2A211B]/10';
+const inputClass = 'w-full px-4 py-3 rounded-xl border-2 border-[#EAD9BE] bg-white font-semibold text-[#2A211B] placeholder:text-[#C9B79A] outline-none focus:border-[#F0703A] focus:ring-4 focus:ring-[#F0703A]/15 transition-all';
+const labelClass = 'block text-[11px] font-black uppercase tracking-widest text-[#8A7857] mb-1.5';
 
 const InscripcionDiaNino: React.FC = () => {
     const navigate = useNavigate();
@@ -106,6 +188,7 @@ const InscripcionDiaNino: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [done, setDone] = useState(false);
+    const [registeredNoReveal, setRegisteredNoReveal] = useState(false);
 
     // ── Verificación de DNI en tiempo real (debounce 600 ms) ─────────────
     const adultDniTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -198,10 +281,11 @@ const InscripcionDiaNino: React.FC = () => {
             if (!accepted) {
                 // La inscripción quedó guardada igual (con
                 // declaracionJuradaAceptada: false) y el email
-                // ya se mandó — pero acá no mostramos la pantalla
-                // festiva de "¡Listo!", volvemos directo al
-                // inicio del formulario.
-                navigate('/dia-del-nino', { replace: true });
+                // ya se mandó — se muestra una confirmación breve
+                // y NEUTRA (no la pantalla festiva) antes de
+                // volver al inicio, para que quede claro que sí
+                // se registró y no parezca que no pasó nada.
+                setRegisteredNoReveal(true);
                 return;
             }
             setDone(true);
@@ -224,26 +308,29 @@ const InscripcionDiaNino: React.FC = () => {
 
     if (done) {
         return (
-            <div className="min-h-screen bg-neutral-100 flex items-center justify-center p-4">
+            <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#FDF6E9' }}>
                 <motion.div
                     initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.4, type: 'spring', stiffness: 200, damping: 20 }}
-                    className="max-w-md w-full bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-8 text-center"
+                    className="max-w-md w-full bg-white rounded-3xl shadow-[0_10px_40px_-12px_rgba(42,33,27,0.18)] p-8 text-center"
                 >
                     <img src={LOGO_URL} alt="Origen" className="h-8 mx-auto mb-6 object-contain" />
-                    <div className="w-16 h-16 border-2 border-black bg-black flex items-center justify-center mx-auto mb-5">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style={{ backgroundColor: BRAND_ORANGE }}>
                         <Ticket className="w-8 h-8 text-white" aria-hidden="true" />
                     </div>
-                    <h1 className="text-2xl font-black uppercase tracking-tighter text-black mb-2">¡Listo, {adult.firstName}!</h1>
-                    <p className="text-neutral-600 font-medium leading-relaxed mb-6">
-                        Generamos <span className="font-black text-black">{totalTickets} {totalTickets === 1 ? 'entrada' : 'entradas'}</span> para
-                        tu familia. En los próximos minutos te llega un email a <span className="font-black text-black">{adult.email}</span> con
+                    <h1 className="text-2xl font-black uppercase tracking-tight mb-2" style={{ color: INK }}>
+                        <span className="inline-block" style={{ color: CRAYON_RED, transform: 'rotate(-2deg)' }}>¡Listo</span>, {adult.firstName}!
+                    </h1>
+                    <p className="font-medium leading-relaxed mb-6" style={{ color: '#5C4E3D' }}>
+                        Generamos <span className="font-black" style={{ color: INK }}>{totalTickets} {totalTickets === 1 ? 'entrada' : 'entradas'}</span> para
+                        tu familia. En los próximos minutos te llega un email a <span className="font-black" style={{ color: INK }}>{adult.email}</span> con
                         el ticket de cada uno. Si no lo ves, revisá spam.
                     </p>
                     <button
                         onClick={() => navigate('/dia-del-nino/buscar')}
-                        className="text-sm font-black uppercase tracking-widest text-black hover:underline focus-visible:outline-none"
+                        className="text-sm font-black uppercase tracking-widest hover:underline focus-visible:outline-none"
+                        style={{ color: BRAND_ORANGE }}
                     >
                         ¿No te llegó? Buscá tu inscripción acá
                     </button>
@@ -252,32 +339,55 @@ const InscripcionDiaNino: React.FC = () => {
         );
     }
 
+    if (registeredNoReveal) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#FDF6E9' }}>
+                <div className="max-w-md w-full bg-white rounded-3xl shadow-lg p-8 text-center space-y-4">
+                    <img src={LOGO_URL} alt="Origen" className="h-8 mx-auto object-contain" />
+                    <p className="text-lg font-bold text-neutral-800">
+                        Tu inscripción quedó registrada.
+                    </p>
+                    <p className="text-sm text-neutral-500">
+                        Te avisamos por email cualquier novedad.
+                    </p>
+                    <button
+                        onClick={() => navigate('/')}
+                        className={`w-full ${secondaryBtn}`}
+                    >
+                        Volver al Inicio
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-neutral-100 py-8 px-4">
+        <div className="min-h-screen py-8 px-4" style={{ backgroundColor: '#FDF6E9' }}>
             <div className="max-w-lg mx-auto">
                 <button
                     onClick={() => navigate('/')}
-                    className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black hover:underline mb-6 focus-visible:outline-none"
+                    className="flex items-center gap-2 text-xs font-black uppercase tracking-widest mb-6 hover:opacity-70 transition-opacity focus-visible:outline-none"
+                    style={{ color: INK }}
                 >
                     <ArrowLeft className="w-4 h-4" /> Inicio
                 </button>
 
-                <div className="text-center mb-8">
+                <div className="text-center mb-6">
                     <img src={LOGO_URL} alt="Origen" className="h-8 md:h-9 mx-auto mb-5 object-contain" />
-                    <h1 className="text-3xl font-black uppercase tracking-tighter text-black">Día del Niño</h1>
-                    <div className="h-1 w-16 bg-black mx-auto my-3" />
-                    <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">Inscribí a tu familia para el evento</p>
+                    <CrayonHeading words={TITLE_WORDS} className="text-4xl sm:text-5xl mb-2" />
+                    <p className="text-xs font-bold uppercase tracking-widest mb-6" style={{ color: '#B9A88C' }}>Inscribí a tu familia para el evento</p>
+                    <EventFactsStrip />
                 </div>
 
                 <StepIndicator current={step} />
 
-                <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 md:p-8 overflow-hidden">
+                <div className="bg-white rounded-3xl shadow-[0_10px_40px_-12px_rgba(42,33,27,0.18)] p-6 md:p-8 overflow-hidden">
                     <AnimatePresence mode="wait">
 
                         {/* PASO 1 — Adulto */}
                         {step === 1 && (
                             <motion.div key="step1" {...stepTransition} className="space-y-4">
-                                <h2 className="font-black uppercase text-black border-b-2 border-black pb-3">Tus datos (adulto responsable)</h2>
+                                <h2 className="font-black uppercase border-b-2 pb-3" style={{ color: INK, borderColor: '#EAD9BE' }}>Tus datos (adulto responsable)</h2>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label htmlFor="dn-adult-firstName" className={labelClass}>Nombre</label>
@@ -309,10 +419,11 @@ const InscripcionDiaNino: React.FC = () => {
                                     <input
                                         id="dn-adult-dni" type="text" placeholder="DNI" inputMode="numeric" value={adult.dni}
                                         onChange={e => { setAdult({ ...adult, dni: e.target.value }); setAdultDniError(null); }}
-                                        className={`${inputClass} ${adultDniError ? 'border-red-600' : ''}`}
+                                        className={inputClass}
+                                        style={adultDniError ? { borderColor: CRAYON_RED } : undefined}
                                     />
-                                    {adultDniChecking && <p className="text-xs font-bold text-neutral-400 mt-1.5">Verificando...</p>}
-                                    {adultDniError && <p className="text-xs font-bold text-red-600 mt-1.5">{adultDniError}</p>}
+                                    {adultDniChecking && <p className="text-xs font-bold mt-1.5" style={{ color: '#B9A88C' }}>Verificando...</p>}
+                                    {adultDniError && <p className="text-xs font-bold mt-1.5" style={{ color: CRAYON_RED }}>{adultDniError}</p>}
                                 </div>
 
                                 <button disabled={!canAdvanceStep1} onClick={() => setStep(2)} className={`${primaryBtn} mt-2`}>
@@ -324,7 +435,7 @@ const InscripcionDiaNino: React.FC = () => {
                         {/* PASO 2 — Niños */}
                         {step === 2 && (
                             <motion.div key="step2" {...stepTransition} className="space-y-4">
-                                <h2 className="font-black uppercase text-black border-b-2 border-black pb-3">Datos de cada niño</h2>
+                                <h2 className="font-black uppercase border-b-2 pb-3" style={{ color: INK, borderColor: '#EAD9BE' }}>Datos de cada niño</h2>
                                 <div className="space-y-3">
                                     <AnimatePresence initial={false}>
                                         {children.map((child, idx) => (
@@ -334,15 +445,19 @@ const InscripcionDiaNino: React.FC = () => {
                                                 animate={{ opacity: 1, height: 'auto' }}
                                                 exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
                                                 transition={{ duration: 0.2 }}
-                                                className="p-4 bg-neutral-50 border-2 border-black space-y-3"
+                                                className="p-4 rounded-2xl space-y-3"
+                                                style={{ backgroundColor: '#FBF6EC', border: '2px solid #EAD9BE' }}
                                             >
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] font-black uppercase tracking-widest text-black">Niño {idx + 1}</span>
+                                                    <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: INK }}>Niño {idx + 1}</span>
                                                     {children.length > 1 && (
                                                         <button
                                                             onClick={() => removeChild(child.localId)}
                                                             aria-label={`Eliminar niño ${idx + 1}`}
-                                                            className="w-9 h-9 -my-2 -mr-2 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-black transition-colors focus-visible:outline-none"
+                                                            className="w-9 h-9 -my-2 -mr-2 flex items-center justify-center rounded-full transition-colors focus-visible:outline-none"
+                                                            style={{ color: '#C9B79A' }}
+                                                            onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; e.currentTarget.style.backgroundColor = CRAYON_RED; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.color = '#C9B79A'; e.currentTarget.style.backgroundColor = 'transparent'; }}
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
@@ -372,10 +487,11 @@ const InscripcionDiaNino: React.FC = () => {
                                                         id={`dn-child-dni-${child.localId}`} type="text" placeholder="DNI" inputMode="numeric"
                                                         value={child.dni}
                                                         onChange={e => updateChild(child.localId, 'dni', e.target.value)}
-                                                        className={`${inputClass} ${child.dniError ? 'border-red-600' : ''}`}
+                                                        className={inputClass}
+                                                        style={child.dniError ? { borderColor: CRAYON_RED } : undefined}
                                                     />
-                                                    {child.dniChecking && <p className="text-xs font-bold text-neutral-400 mt-1.5">Verificando...</p>}
-                                                    {child.dniError && <p className="text-xs font-bold text-red-600 mt-1.5">{child.dniError}</p>}
+                                                    {child.dniChecking && <p className="text-xs font-bold mt-1.5" style={{ color: '#B9A88C' }}>Verificando...</p>}
+                                                    {child.dniError && <p className="text-xs font-bold mt-1.5" style={{ color: CRAYON_RED }}>{child.dniError}</p>}
                                                 </div>
                                             </motion.div>
                                         ))}
@@ -384,7 +500,10 @@ const InscripcionDiaNino: React.FC = () => {
 
                                 <button
                                     onClick={addChild}
-                                    className="w-full py-2.5 flex items-center justify-center gap-2 text-sm font-black uppercase tracking-widest text-black bg-white border-2 border-dashed border-black hover:bg-black hover:text-white transition-colors focus-visible:outline-none"
+                                    className="w-full py-2.5 flex items-center justify-center gap-2 text-sm font-black uppercase tracking-widest rounded-xl border-2 border-dashed transition-colors focus-visible:outline-none"
+                                    style={{ color: INK, borderColor: '#EAD9BE' }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = CRAYON_GREEN; e.currentTarget.style.borderColor = CRAYON_GREEN; }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = INK; e.currentTarget.style.borderColor = '#EAD9BE'; }}
                                 >
                                     <Plus className="w-4 h-4" /> Agregar otro niño
                                 </button>
@@ -403,17 +522,17 @@ const InscripcionDiaNino: React.FC = () => {
                         {/* PASO 3 — Declaración de Conformidad */}
                         {step === 3 && (
                             <motion.div key="step3" {...stepTransition} className="space-y-4">
-                                <h2 className="font-black uppercase text-black border-b-2 border-black pb-3">Declaración de Conformidad</h2>
-                                <div className="p-5 bg-neutral-50 border-2 border-black space-y-3">
+                                <h2 className="font-black uppercase border-b-2 pb-3" style={{ color: INK, borderColor: '#EAD9BE' }}>Declaración de Conformidad</h2>
+                                <div className="p-5 rounded-2xl space-y-3" style={{ backgroundColor: '#FBF0D9', border: '2px solid rgba(245,185,66,0.5)' }}>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <ShieldCheck className="w-5 h-5 text-black shrink-0" aria-hidden="true" />
-                                        <span className="text-[11px] font-black uppercase tracking-widest text-black">Aviso sobre registro fotográfico y audiovisual</span>
+                                        <ShieldCheck className="w-5 h-5 shrink-0" style={{ color: INK }} aria-hidden="true" />
+                                        <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: INK }}>Aviso sobre registro fotográfico y audiovisual</span>
                                     </div>
-                                    <p className="text-sm font-medium text-neutral-700 leading-relaxed">
-                                        Te informamos que durante el evento se tomarán fotografías y grabaciones de video de las distintas actividades. Este material será utilizado exclusivamente por <span className="font-black text-black">Origen Iglesia</span> con fines de difusión, comunicación y registro informativo en nuestros canales oficiales (redes sociales, sitio web y material impreso de la iglesia).
+                                    <p className="text-sm font-medium leading-relaxed" style={{ color: '#5C4E3D' }}>
+                                        Te informamos que durante el evento se tomarán fotografías y grabaciones de video de las distintas actividades. Este material será utilizado exclusivamente por <span className="font-black" style={{ color: INK }}>Origen Iglesia</span> con fines de difusión, comunicación y registro informativo en nuestros canales oficiales (redes sociales, sitio web y material impreso de la iglesia).
                                     </p>
                                 </div>
-                                <p className="text-sm text-neutral-500 text-center">
+                                <p className="text-sm text-center" style={{ color: '#8A7857' }}>
                                     ¿Autorizas la Declaración de Conformidad?
                                 </p>
                                 <div className="flex gap-3 pt-2">
@@ -436,8 +555,8 @@ const InscripcionDiaNino: React.FC = () => {
                         {/* PASO 4 — Confirmar */}
                         {step === 4 && (
                             <motion.div key="step4" {...stepTransition} className="space-y-4">
-                                <h2 className="font-black uppercase text-black border-b-2 border-black pb-3">Confirmá los datos</h2>
-                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">Así van a quedar tus {totalTickets} {totalTickets === 1 ? 'entrada' : 'entradas'}:</p>
+                                <h2 className="font-black uppercase border-b-2 pb-3" style={{ color: INK, borderColor: '#EAD9BE' }}>Confirmá los datos</h2>
+                                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#B9A88C' }}>Así van a quedar tus {totalTickets} {totalTickets === 1 ? 'entrada' : 'entradas'}:</p>
 
                                 <div className="space-y-2.5">
                                     <TicketStub
@@ -459,13 +578,13 @@ const InscripcionDiaNino: React.FC = () => {
                                     ))}
                                 </div>
 
-                                <div className="border-t-2 border-black pt-4 space-y-3">
-                                    <p className="text-sm font-bold text-neutral-600">
+                                <div className="pt-4 space-y-3" style={{ borderTop: '2px solid #EAD9BE' }}>
+                                    <p className="text-sm font-bold" style={{ color: '#5C4E3D' }}>
                                         Chequea bien los datos antes de confirmar
                                     </p>
 
                                     {submitError && (
-                                        <p className="text-sm font-bold text-red-600 bg-red-50 border-2 border-red-600 px-4 py-3">{submitError}</p>
+                                        <p className="text-sm font-bold rounded-xl px-4 py-3" style={{ color: CRAYON_RED, backgroundColor: '#FDEDEB', border: `2px solid ${CRAYON_RED}` }}>{submitError}</p>
                                     )}
 
                                     <div className="flex gap-3">
@@ -484,7 +603,11 @@ const InscripcionDiaNino: React.FC = () => {
                                             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar datos'}
                                         </button>
                                     </div>
-                                    <button onClick={() => setStep(3)} className="w-full text-xs font-black uppercase tracking-widest text-neutral-400 hover:text-black transition-colors focus-visible:outline-none">
+                                    <button
+                                        onClick={() => setStep(3)}
+                                        className="w-full text-xs font-black uppercase tracking-widest hover:opacity-70 transition-opacity focus-visible:outline-none"
+                                        style={{ color: '#C9B79A' }}
+                                    >
                                         ← Volver a la declaración
                                     </button>
                                 </div>
