@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/generate-version.js && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "start": "vite preview --host --port ${PORT:-8080}",
-    "deploy": "git pull upstream main && npm run build && git add -f dist && git add -A && git commit -m \"chore: deploy\" --allow-empty && git push upstream main"
+    "deploy": "git pull upstream main && npm run build && git add -f dist && git add -A && git commit -m \"chore: deploy\" --allow-empty && git push upstream main && node scripts/notify-deploy.js"
   },
   "dependencies": {
     "@google/genai": "^1.31.0",
@@ -36,6 +36,7 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "dotenv": "^17.4.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

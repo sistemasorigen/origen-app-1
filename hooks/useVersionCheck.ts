@@ -1,55 +1,47 @@
 import { useState, useEffect, useRef } from 'react';
-
-const CHECK_INTERVAL_MS = 3 * 60 * 1000; // cada 3 minutos
+import { supabase } from '../services/supabaseClient';
 
 export function useVersionCheck() {
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const baselineVersionRef = useRef<string | null>(null);
 
-    const fetchVersion = async (): Promise<string | null> => {
-        try {
-            const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
-            if (!res.ok) return null;
-            const data = await res.json();
-            return data.version as string;
-        } catch {
-            return null;
-        }
-    };
-
     useEffect(() => {
         let cancelled = false;
 
         const init = async () => {
-            const v = await fetchVersion();
-            if (!cancelled && v) baselineVersionRef.current = v;
+            const { data, error } = await supabase
+                .from('app_version')
+                .select('version')
+                .eq('id', 1)
+                .single();
+
+            if (!cancelled && !error && data) {
+                baselineVersionRef.current = data.version;
+            }
         };
         init();
 
-        const interval = setInterval(async () => {
-            if (!baselineVersionRef.current) return;
-            const v = await fetchVersion();
-            if (v && v !== baselineVersionRef.current) {
-                setUpdateAvailable(true);
-            }
-        }, CHECK_INTERVAL_MS);
-
-        // También chequear cuando la pestaña vuelve a
-        // primer plano — cubre el caso de alguien que
-        // dejó la app minimizada varias horas.
-        const handleVisibility = async () => {
-            if (document.visibilityState !== 'visible' || !baselineVersionRef.current) return;
-            const v = await fetchVersion();
-            if (v && v !== baselineVersionRef.current) {
-                setUpdateAvailable(true);
-            }
-        };
-        document.addEventListener('visibilitychange', handleVisibility);
+        const channel = supabase
+            .channel('app-version-check')
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'app_version' },
+                (payload) => {
+                    const newVersion = (payload.new as any)?.version;
+                    if (
+                        newVersion &&
+                        baselineVersionRef.current &&
+                        newVersion !== baselineVersionRef.current
+                    ) {
+                        setUpdateAvailable(true);
+                    }
+                }
+            )
+            .subscribe();
 
         return () => {
             cancelled = true;
-            clearInterval(interval);
-            document.removeEventListener('visibilitychange', handleVisibility);
+            supabase.removeChannel(channel);
         };
     }, []);
 
@@ -62,15 +54,13 @@ export function useVersionCheck() {
         } catch {
             // Si falla la limpieza de caché, igual seguimos con el reload.
         }
-        // Cache-busting explícito además del reload — algunos
-        // navegadores/hosts igual sirven HTML cacheado en un
-        // reload simple. IMPORTANTE: el param tiene que ir en el
-        // query string real, ANTES del hash — esta app usa
-        // HashRouter, y el navegador solo hace una recarga de
-        // red de verdad cuando cambia algo antes del "#". Ponerlo
-        // después del hash (como quedaba antes) es un cambio de
-        // fragmento "en el mismo documento": no dispara ninguna
-        // petición nueva, así que nunca recargaba nada.
+        // El param de cache-busting va en el query string real, ANTES
+        // del hash — esta app usa HashRouter, y el navegador solo hace
+        // una recarga de red de verdad cuando cambia algo antes del
+        // "#". Ponerlo después del hash es un cambio de fragmento "en
+        // el mismo documento": no dispara ninguna petición nueva, y el
+        // modal se queda trabado en "Actualizando..." para siempre
+        // (bug real, ya visto y confirmado con un test).
         const bustParam = '_r=' + Date.now();
         const search = window.location.search
             ? `${window.location.search}&${bustParam}`
