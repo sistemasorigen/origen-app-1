@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, Sparkles } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 interface ModalActualizacionProps {
     onConfirm: () => void;
@@ -21,9 +21,7 @@ const ModalActualizacion: React.FC<ModalActualizacionProps> = ({ onConfirm }) =>
             aria-labelledby="modal-actualizacion-titulo"
         >
             <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 text-center space-y-4">
-                <div className="w-14 h-14 rounded-full bg-slate-100 text-black flex items-center justify-center mx-auto">
-                    <Sparkles className="w-7 h-7" />
-                </div>
+                <img src="/origen-logo-full.png" alt="Origen" className="h-8 mx-auto object-contain" />
                 <h2 id="modal-actualizacion-titulo" className="text-lg font-bold text-slate-900">
                     Hay una actualización disponible
                 </h2>

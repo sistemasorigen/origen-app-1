@@ -13,6 +13,20 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("ORIGEN_SERVICE_ROLE_KEY");
 const FROM_EMAIL = "'Origen' <team@app.origeniglesia.org>";
 const QR_PREFIX = "ORIGEN-DIANINO-";
 
+// ── Paleta "Día del Niño" (misma que pages/eventos/dianino/InscripcionDiaNino.tsx) ──
+const INK = "#2A211B";
+const BG_OUTER = "#F5F0E6";
+const BG_CARD = "#FFFFFF";
+const BG_HEADER = "#FDF6E9";
+const BORDER_MUTED = "#EAD9BE";
+const CRAYON_RED = "#E63B2E";
+const CRAYON_BLUE = "#4A7FC9";
+const CRAYON_GREEN = "#4CAF50";
+const CRAYON_MUSTARD = "#F5B942";
+const BRAND_ORANGE = "#F0703A";
+const TEXT_BODY = "#5C4E3D";
+const TEXT_MUTED = "#8A7857";
+
 interface DianinoTicket {
   id: string;
   first_name: string;
@@ -61,19 +75,19 @@ async function generateQrPublicUrl(
 function buildTicketCardHtml(name: string, roleLabel: string, qrUrl: string | null): string {
   return `
     <tr>
-      <td style="padding: 24px 40px; border-bottom: 3px dashed #000000;">
-        <table width="100%" cellpadding="0" cellspacing="0">
+      <td style="background-color: ${BG_CARD}; padding: 8px 40px 24px 40px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${BG_CARD}; border: 3px solid ${BRAND_ORANGE}; border-radius: 20px;">
           <tr>
-            <td align="center">
-              <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 900; color: #888888; text-transform: uppercase; letter-spacing: 1.5px;">
+            <td align="center" style="padding: 24px;">
+              <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 900; color: ${BRAND_ORANGE}; text-transform: uppercase; letter-spacing: 1.5px;">
                 ${roleLabel}
               </p>
-              <p style="margin: 0 0 16px 0; font-size: 20px; font-weight: 900; color: #000000; text-transform: uppercase;">
+              <p style="margin: 0 0 16px 0; font-size: 20px; font-weight: 900; color: ${INK}; text-transform: uppercase;">
                 ${name}
               </p>
               ${qrUrl
-                ? `<img src="${qrUrl}" alt="QR de entrada de ${name}" width="220" height="220" style="display: block; border: 4px solid #000000; margin: 0 auto;" />`
-                : `<p style="color: #dc2626; font-size: 13px; font-weight: 700;">No pudimos generar este QR — contactanos.</p>`
+                ? `<img src="${qrUrl}" alt="QR de entrada de ${name}" width="220" height="220" style="display: block; border: 3px solid ${BORDER_MUTED}; border-radius: 16px; margin: 0 auto;" />`
+                : `<p style="color: ${CRAYON_RED}; font-size: 13px; font-weight: 700;">No pudimos generar este QR — contactanos.</p>`
               }
             </td>
           </tr>
@@ -92,48 +106,77 @@ function buildEmailHtml(adultName: string, cards: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>¡Tus entradas para el Día del Niño!</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: ${BG_OUTER};">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${BG_OUTER}; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border: 4px solid #000000; box-shadow: 8px 8px 0px #000000;">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: ${BG_CARD}; border: 2px solid ${BORDER_MUTED}; border-radius: 24px;">
 
           <tr>
-            <td style="background-color: #000000; padding: 36px 40px; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: 32px;">🎉🎈</p>
-              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px;">
-                ¡Nos vemos el sábado 15/08 a las 4pm!!
+            <td style="background-color: ${BG_HEADER}; padding: 36px 40px 28px 40px; text-align: center; border-radius: 24px 24px 0 0;">
+              <p style="margin: 0 0 10px 0; font-size: 32px; line-height: 1;">🎉🎈</p>
+              <h1 style="margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
+                <span style="color: ${CRAYON_RED};">¡Nos</span>
+                <span style="color: ${CRAYON_BLUE};">vemos</span>
+                <span style="color: ${CRAYON_GREEN};">el</span>
+                <span style="color: ${BRAND_ORANGE};">sábado</span>
+                <span style="color: ${CRAYON_RED};">15/08</span>
+                <span style="color: ${CRAYON_BLUE};">a</span>
+                <span style="color: ${CRAYON_GREEN};">las</span>
+                <span style="color: ${BRAND_ORANGE};">4pm!!</span>
               </h1>
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 32px 40px 8px 40px;">
-              <p style="margin: 0; font-size: 16px; color: #333333; line-height: 1.6;">
-                Hola <strong style="color: #000000;">${adultName}</strong>, ¡ya está todo listo!
+            <td style="background-color: ${BG_CARD}; padding: 24px 40px 4px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="33%" align="center" style="background-color: ${CRAYON_MUSTARD}; color: ${INK}; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 4px; border-radius: 999px;">SÁB 15/08</td>
+                  <td width="10">&nbsp;</td>
+                  <td width="33%" align="center" style="background-color: ${CRAYON_BLUE}; color: #FFFFFF; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 4px; border-radius: 999px;">16 A 19HS</td>
+                  <td width="10">&nbsp;</td>
+                  <td width="34%" align="center" style="background-color: ${CRAYON_GREEN}; color: #FFFFFF; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 4px; border-radius: 999px;">ENTRADA GRATIS</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color: ${BG_CARD}; padding: 20px 40px 8px 40px;">
+              <p style="margin: 0; font-size: 16px; color: ${TEXT_BODY}; line-height: 1.6;">
+                Hola <strong style="color: ${INK};">${adultName}</strong>, ¡ya está todo listo!
                 Acá abajo tenés tu entrada. Mostrala en la puerta el día del evento —
                 con este único código se acredita a toda tu familia.
               </p>
-              <p style="margin: 16px 0 0 0; font-size: 14px; color: #666666; line-height: 1.6;">
-                Si perdiste este email, podés
-                volver a buscarla en cualquier momento desde <strong>app.origeniglesia.org/#/dia-del-nino/buscar</strong>.
+              <p style="margin: 16px 0 0 0; font-size: 14px; color: ${TEXT_MUTED}; line-height: 1.6;">
+                Si perdiste este email, podés volver a buscarla en cualquier momento:
               </p>
+              <table cellpadding="0" cellspacing="0" style="margin: 14px auto 0 auto;">
+                <tr>
+                  <td align="center" style="background-color: ${BRAND_ORANGE}; border-radius: 999px;">
+                    <a href="https://app.origeniglesia.org/#/dia-del-nino/buscar" style="display: inline-block; padding: 12px 28px; font-size: 13px; font-weight: 900; color: #FFFFFF; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; border-radius: 999px;">
+                      Buscar mi entrada
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
           ${cards}
 
           <tr>
-            <td style="padding: 28px 40px; text-align: center;">
-              <p style="margin: 0; font-size: 13px; color: #666666;">
+            <td style="background-color: ${BG_CARD}; padding: 12px 40px 28px 40px; text-align: center;">
+              <p style="margin: 0; font-size: 13px; color: ${TEXT_MUTED};">
                 ¡Te esperamos con muchas ganas de festejar! 🎊
               </p>
             </td>
           </tr>
 
           <tr>
-            <td style="background-color: #000000; padding: 24px 40px; text-align: center;">
-              <p style="margin: 0; font-size: 13px; color: #888888;">
+            <td style="background-color: ${BG_HEADER}; padding: 20px 40px; text-align: center; border-radius: 0 0 24px 24px;">
+              <p style="margin: 0; font-size: 12px; color: ${TEXT_MUTED};">
                 © 2026 Origen App · Día del Niño
               </p>
             </td>
