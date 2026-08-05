@@ -64,8 +64,18 @@ export function useVersionCheck() {
         }
         // Cache-busting explícito además del reload — algunos
         // navegadores/hosts igual sirven HTML cacheado en un
-        // reload simple.
-        window.location.href = window.location.pathname + window.location.hash + (window.location.hash.includes('?') ? '&' : '?') + '_r=' + Date.now();
+        // reload simple. IMPORTANTE: el param tiene que ir en el
+        // query string real, ANTES del hash — esta app usa
+        // HashRouter, y el navegador solo hace una recarga de
+        // red de verdad cuando cambia algo antes del "#". Ponerlo
+        // después del hash (como quedaba antes) es un cambio de
+        // fragmento "en el mismo documento": no dispara ninguna
+        // petición nueva, así que nunca recargaba nada.
+        const bustParam = '_r=' + Date.now();
+        const search = window.location.search
+            ? `${window.location.search}&${bustParam}`
+            : `?${bustParam}`;
+        window.location.href = window.location.pathname + search + window.location.hash;
     };
 
     return { updateAvailable, forceHardReset };
