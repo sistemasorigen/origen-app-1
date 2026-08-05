@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
     checkDianinoDniAvailable,
+    checkDianinoNameAvailable,
+    checkDianinoEmailAvailable,
     registerDianinoSession
 } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
@@ -55,6 +57,8 @@ interface ChildForm extends DiaNinoChildInput {
     localId: string;
     dniError?: string;
     dniChecking?: boolean;
+    nameError?: string;
+    nameChecking?: boolean;
 }
 
 const STEPS = [
@@ -176,6 +180,10 @@ const InscripcionDiaNino: React.FC = () => {
     const [adult, setAdult] = useState<AdultForm>({ firstName: '', lastName: '', email: '', dni: '' });
     const [adultDniError, setAdultDniError] = useState<string | null>(null);
     const [adultDniChecking, setAdultDniChecking] = useState(false);
+    const [adultNameError, setAdultNameError] = useState<string | null>(null);
+    const [adultNameChecking, setAdultNameChecking] = useState(false);
+    const [adultEmailError, setAdultEmailError] = useState<string | null>(null);
+    const [adultEmailChecking, setAdultEmailChecking] = useState(false);
     // Guarda el último valor de DNI que ya fue verificado para no re-disparar el
     // check en onBlur si el valor no cambió (evita el bug de "doble click" en Continuar).
     const [adultDniLastChecked, setAdultDniLastChecked] = useState('');
@@ -190,11 +198,14 @@ const InscripcionDiaNino: React.FC = () => {
     const [done, setDone] = useState(false);
     const [registeredNoReveal, setRegisteredNoReveal] = useState(false);
 
-    // ── Verificación de DNI en tiempo real (debounce 600 ms) ─────────────
+    // ── Verificación de datos en tiempo real (debounce 600 ms) ─────────────
     const adultDniTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const adultNameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const adultEmailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const childDniTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+    const childNameTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-    // Adulto: se dispara cada vez que cambia adult.dni
+    // Adulto DNI
     useEffect(() => {
         const val = adult.dni.trim();
         if (adultDniTimerRef.current) clearTimeout(adultDniTimerRef.current);
@@ -208,7 +219,36 @@ const InscripcionDiaNino: React.FC = () => {
         return () => { if (adultDniTimerRef.current) clearTimeout(adultDniTimerRef.current); };
     }, [adult.dni]);
 
-    // Niños: se dispara cuando cambia el DNI de cualquier niño
+    // Adulto Nombre/Apellido
+    useEffect(() => {
+        const fn = adult.firstName.trim();
+        const ln = adult.lastName.trim();
+        if (adultNameTimerRef.current) clearTimeout(adultNameTimerRef.current);
+        if (!fn || !ln) { setAdultNameError(null); setAdultNameChecking(false); return; }
+        adultNameTimerRef.current = setTimeout(async () => {
+            setAdultNameChecking(true);
+            const available = await checkDianinoNameAvailable(fn, ln);
+            setAdultNameChecking(false);
+            setAdultNameError(available ? null : 'Esta persona ya está inscripta.');
+        }, 600);
+        return () => { if (adultNameTimerRef.current) clearTimeout(adultNameTimerRef.current); };
+    }, [adult.firstName, adult.lastName]);
+
+    // Adulto Email
+    useEffect(() => {
+        const val = adult.email.trim();
+        if (adultEmailTimerRef.current) clearTimeout(adultEmailTimerRef.current);
+        if (!val || !val.includes('@')) { setAdultEmailError(null); setAdultEmailChecking(false); return; }
+        adultEmailTimerRef.current = setTimeout(async () => {
+            setAdultEmailChecking(true);
+            const available = await checkDianinoEmailAvailable(val);
+            setAdultEmailChecking(false);
+            setAdultEmailError(available ? null : 'Este email ya está inscripto.');
+        }, 600);
+        return () => { if (adultEmailTimerRef.current) clearTimeout(adultEmailTimerRef.current); };
+    }, [adult.email]);
+
+    // Niños DNI
     const childDniKey = children.map(c => `${c.localId}:${c.dni}`).join('|');
     useEffect(() => {
         children.forEach(child => {
@@ -232,6 +272,32 @@ const InscripcionDiaNino: React.FC = () => {
         return () => { childDniTimersRef.current.forEach(t => clearTimeout(t)); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [childDniKey]);
+
+    // Niños Nombre/Apellido
+    const childNameKey = children.map(c => `${c.localId}:${c.firstName}:${c.lastName}`).join('|');
+    useEffect(() => {
+        children.forEach(child => {
+            const fn = child.firstName.trim();
+            const ln = child.lastName.trim();
+            const prev = childNameTimersRef.current.get(child.localId);
+            if (prev) clearTimeout(prev);
+            if (!fn || !ln) {
+                setChildren(p => p.map(c => c.localId === child.localId ? { ...c, nameError: undefined, nameChecking: false } : c));
+                return;
+            }
+            const timer = setTimeout(async () => {
+                setChildren(p => p.map(c => c.localId === child.localId ? { ...c, nameChecking: true } : c));
+                const available = await checkDianinoNameAvailable(fn, ln);
+                setChildren(p => p.map(c => c.localId === child.localId
+                    ? { ...c, nameChecking: false, nameError: available ? undefined : 'Esta persona ya está inscripta.' }
+                    : c
+                ));
+            }, 600);
+            childNameTimersRef.current.set(child.localId, timer);
+        });
+        return () => { childNameTimersRef.current.forEach(t => clearTimeout(t)); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [childNameKey]);
     // ────────────────────────────────────────────────────────────────────
 
     const resetForm = () => {
@@ -239,6 +305,10 @@ const InscripcionDiaNino: React.FC = () => {
         setAdult({ firstName: '', lastName: '', email: '', dni: '' });
         setAdultDniError(null);
         setAdultDniChecking(false);
+        setAdultNameError(null);
+        setAdultNameChecking(false);
+        setAdultEmailError(null);
+        setAdultEmailChecking(false);
         setChildren([{ localId: safeUUID(), firstName: '', lastName: '', dni: '' }]);
         setDeclaracionAceptada(null);
         setSubmitError(null);
@@ -255,13 +325,18 @@ const InscripcionDiaNino: React.FC = () => {
 
     const updateChild = (localId: string, field: keyof DiaNinoChildInput, value: string) => {
         setChildren(prev => prev.map(c => c.localId === localId
-            ? { ...c, [field]: value, dniError: field === 'dni' ? undefined : c.dniError }
+            ? { 
+                ...c, 
+                [field]: value, 
+                dniError: field === 'dni' ? undefined : c.dniError,
+                nameError: (field === 'firstName' || field === 'lastName') ? undefined : c.nameError
+              }
             : c
         ));
     };
 
-    const canAdvanceStep1 = adult.firstName.trim() && adult.lastName.trim() && adult.email.trim() && adult.dni.trim() && !adultDniError && !adultDniChecking;
-    const canAdvanceStep2 = children.length > 0 && children.every(c => c.firstName.trim() && c.lastName.trim() && c.dni.trim() && !c.dniError && !c.dniChecking);
+    const canAdvanceStep1 = adult.firstName.trim() && adult.lastName.trim() && adult.email.trim() && adult.dni.trim() && !adultDniError && !adultDniChecking && !adultNameError && !adultNameChecking && !adultEmailError && !adultEmailChecking;
+    const canAdvanceStep2 = children.length > 0 && children.every(c => c.firstName.trim() && c.lastName.trim() && c.dni.trim() && !c.dniError && !c.dniChecking && !c.nameError && !c.nameChecking);
 
     const handleFinalSubmit = async () => {
         const accepted = declaracionAceptada ?? false;
@@ -393,32 +468,41 @@ const InscripcionDiaNino: React.FC = () => {
                                         <label htmlFor="dn-adult-firstName" className={labelClass}>Nombre</label>
                                         <input
                                             id="dn-adult-firstName" type="text" placeholder="Nombre" autoComplete="given-name"
-                                            value={adult.firstName} onChange={e => setAdult({ ...adult, firstName: e.target.value })}
+                                            value={adult.firstName} onChange={e => { setAdult({ ...adult, firstName: e.target.value }); setAdultNameError(null); }}
                                             className={inputClass}
+                                            style={adultNameError ? { borderColor: CRAYON_RED } : undefined}
                                         />
                                     </div>
                                     <div>
                                         <label htmlFor="dn-adult-lastName" className={labelClass}>Apellido</label>
                                         <input
                                             id="dn-adult-lastName" type="text" placeholder="Apellido" autoComplete="family-name"
-                                            value={adult.lastName} onChange={e => setAdult({ ...adult, lastName: e.target.value })}
+                                            value={adult.lastName} onChange={e => { setAdult({ ...adult, lastName: e.target.value }); setAdultNameError(null); }}
                                             className={inputClass}
+                                            style={adultNameError ? { borderColor: CRAYON_RED } : undefined}
                                         />
+                                    </div>
+                                    <div className="col-span-2 -mt-1">
+                                        {adultNameChecking && <p className="text-xs font-bold" style={{ color: '#B9A88C' }}>Verificando nombre...</p>}
+                                        {adultNameError && <p className="text-xs font-bold" style={{ color: CRAYON_RED }}>{adultNameError}</p>}
                                     </div>
                                 </div>
                                 <div>
                                     <label htmlFor="dn-adult-email" className={labelClass}>Email (ahí te llega la entrada)</label>
                                     <input
                                         id="dn-adult-email" type="email" placeholder="tu@email.com" autoComplete="email"
-                                        value={adult.email} onChange={e => setAdult({ ...adult, email: e.target.value })}
+                                        value={adult.email} onChange={e => { setAdult({ ...adult, email: e.target.value }); setAdultEmailError(null); }}
                                         className={inputClass}
+                                        style={adultEmailError ? { borderColor: CRAYON_RED } : undefined}
                                     />
+                                    {adultEmailChecking && <p className="text-xs font-bold mt-1.5" style={{ color: '#B9A88C' }}>Verificando email...</p>}
+                                    {adultEmailError && <p className="text-xs font-bold mt-1.5" style={{ color: CRAYON_RED }}>{adultEmailError}</p>}
                                 </div>
                                 <div>
                                     <label htmlFor="dn-adult-dni" className={labelClass}>DNI</label>
                                     <input
                                         id="dn-adult-dni" type="text" placeholder="DNI" inputMode="numeric" value={adult.dni}
-                                        onChange={e => { setAdult({ ...adult, dni: e.target.value }); setAdultDniError(null); }}
+                                        onChange={e => { setAdult({ ...adult, dni: e.target.value.replace(/\D/g, '') }); setAdultDniError(null); }}
                                         className={inputClass}
                                         style={adultDniError ? { borderColor: CRAYON_RED } : undefined}
                                     />
@@ -470,6 +554,7 @@ const InscripcionDiaNino: React.FC = () => {
                                                             id={`dn-child-fn-${child.localId}`} type="text" placeholder="Nombre" autoComplete="given-name"
                                                             value={child.firstName} onChange={e => updateChild(child.localId, 'firstName', e.target.value)}
                                                             className={inputClass}
+                                                            style={child.nameError ? { borderColor: CRAYON_RED } : undefined}
                                                         />
                                                     </div>
                                                     <div>
@@ -478,15 +563,22 @@ const InscripcionDiaNino: React.FC = () => {
                                                             id={`dn-child-ln-${child.localId}`} type="text" placeholder="Apellido" autoComplete="family-name"
                                                             value={child.lastName} onChange={e => updateChild(child.localId, 'lastName', e.target.value)}
                                                             className={inputClass}
+                                                            style={child.nameError ? { borderColor: CRAYON_RED } : undefined}
                                                         />
                                                     </div>
+                                                    {(child.nameChecking || child.nameError) && (
+                                                        <div className="col-span-2 -mt-1">
+                                                            {child.nameChecking && <p className="text-xs font-bold" style={{ color: '#B9A88C' }}>Verificando nombre...</p>}
+                                                            {child.nameError && <p className="text-xs font-bold" style={{ color: CRAYON_RED }}>{child.nameError}</p>}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <label htmlFor={`dn-child-dni-${child.localId}`} className={labelClass}>DNI</label>
                                                     <input
                                                         id={`dn-child-dni-${child.localId}`} type="text" placeholder="DNI" inputMode="numeric"
                                                         value={child.dni}
-                                                        onChange={e => updateChild(child.localId, 'dni', e.target.value)}
+                                                        onChange={e => updateChild(child.localId, 'dni', e.target.value.replace(/\D/g, ''))}
                                                         className={inputClass}
                                                         style={child.dniError ? { borderColor: CRAYON_RED } : undefined}
                                                     />

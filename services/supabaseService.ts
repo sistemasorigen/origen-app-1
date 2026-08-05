@@ -191,6 +191,29 @@ export async function checkDianinoDniAvailable(dni: string): Promise<boolean> {
   return data as boolean;
 }
 
+export async function checkDianinoNameAvailable(firstName: string, lastName: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('check_dianino_name_available', {
+    p_first_name: firstName,
+    p_last_name: lastName
+  });
+  if (error) {
+    console.error('[checkDianinoNameAvailable] Error:', error);
+    return false;
+  }
+  return data as boolean;
+}
+
+export async function checkDianinoEmailAvailable(email: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('check_dianino_email_available', {
+    p_email: email
+  });
+  if (error) {
+    console.error('[checkDianinoEmailAvailable] Error:', error);
+    return false;
+  }
+  return data as boolean;
+}
+
 export interface RegisterDianinoResult {
   sessionId: string | null;
   errorDni: string | null;

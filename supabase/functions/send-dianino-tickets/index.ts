@@ -114,7 +114,17 @@ function buildEmailHtml(adultName: string, cards: string): string {
 
           <tr>
             <td style="background-color: ${BG_HEADER}; padding: 32px 40px 28px 40px; text-align: center; border-radius: 24px 24px 0 0;">
-              <img src="https://app.origeniglesia.org/origen-logo-full.png" alt="Origen" width="150" style="display: block; margin: 0 auto; max-width: 150px; height: auto;" />
+              <img src="https://app.origeniglesia.org/origen-logo-full.png" alt="Origen" width="150" style="display: block; margin: 0 auto 18px auto; max-width: 150px; height: auto;" />
+              <h1 style="margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
+                <span style="color: ${CRAYON_RED};">¡Nos</span>
+                <span style="color: ${CRAYON_BLUE};">vemos</span>
+                <span style="color: ${CRAYON_GREEN};">el</span>
+                <span style="color: ${BRAND_ORANGE};">sábado</span>
+                <span style="color: ${CRAYON_RED};">15/08</span>
+                <span style="color: ${CRAYON_BLUE};">a</span>
+                <span style="color: ${CRAYON_GREEN};">las</span>
+                <span style="color: ${BRAND_ORANGE};">4pm!!</span>
+              </h1>
             </td>
           </tr>
 
