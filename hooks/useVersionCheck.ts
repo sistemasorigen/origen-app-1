@@ -54,18 +54,11 @@ export function useVersionCheck() {
         } catch {
             // Si falla la limpieza de caché, igual seguimos con el reload.
         }
-        // El param de cache-busting va en el query string real, ANTES
-        // del hash — esta app usa HashRouter, y el navegador solo hace
-        // una recarga de red de verdad cuando cambia algo antes del
-        // "#". Ponerlo después del hash es un cambio de fragmento "en
-        // el mismo documento": no dispara ninguna petición nueva, y el
-        // modal se queda trabado en "Actualizando..." para siempre
-        // (bug real, ya visto y confirmado con un test).
-        const bustParam = '_r=' + Date.now();
-        const search = window.location.search
-            ? `${window.location.search}&${bustParam}`
-            : `?${bustParam}`;
-        window.location.href = window.location.pathname + search + window.location.hash;
+        // Usamos location.reload() nativo para recargar la página.
+        // Ya hemos limpiado el cache local arriba (si estaba disponible).
+        // Como la app está en Netlify/Vite, el index.html nunca se cachea 
+        // fuertemente y cargará los assets nuevos con hash de archivo.
+        window.location.reload();
     };
 
     return { updateAvailable, forceHardReset };
