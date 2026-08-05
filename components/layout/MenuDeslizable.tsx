@@ -308,7 +308,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             roles: [],
             subItems: [
                 {
-                    label: 'Inicio',
+                    label: 'Próximos eventos',
                     path: '/eventos',
                     roles: []
                 },
@@ -325,15 +325,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 {
                     label: 'Panel de eventos',
                     path: '/panel-eventos',
-                    roles: [
-                        UserRole.SUPER_ADMIN,
-                        UserRole.PASTOR,
-                        UserRole.ENCARGADO_EVENTOS,
-                    ]
-                },
-                {
-                    label: 'Kahoot Origen',
-                    path: '/trivia/admin',
                     roles: [
                         UserRole.SUPER_ADMIN,
                         UserRole.PASTOR,

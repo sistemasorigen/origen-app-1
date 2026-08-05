@@ -4,7 +4,7 @@ import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import {
     CalendarDays, ChevronRight,
-    Users, LayoutDashboard, Trophy, PartyPopper, Flame
+    Users, LayoutDashboard, Trophy, PartyPopper, Swords
 } from 'lucide-react';
 
 interface PanelEventosProps {
@@ -42,10 +42,10 @@ const PANELES_EVENTOS = [
     },
     {
         id: 'tribal-wars',
-        titulo: 'Día de Influos',
+        titulo: 'Tribal Wars',
         descripcion: 'Gestión de inscripciones por tribu del evento.',
         ruta: '/eventos/admin/tribal-wars',
-        icono: Flame,
+        icono: Swords,
         color: '#0D9488',  // teal
         roles: [
             UserRole.SUPER_ADMIN,

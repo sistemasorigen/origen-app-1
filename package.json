@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/generate-version.js && vite build",
     "preview": "vite preview",
     "start": "vite preview --host --port ${PORT:-8080}",
     "deploy": "git pull upstream main && npm run build && git add -f dist && git add -A && git commit -m \"chore: deploy\" --allow-empty && git push upstream main"

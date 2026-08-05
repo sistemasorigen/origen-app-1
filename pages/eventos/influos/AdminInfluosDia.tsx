@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getInfluosDiaRegistrations, deleteInfluosDiaRegistration } from '../../../services/supabaseService';
 import { InfluosDiaRegistration, User } from '../../../types';
-import { ChevronLeft, Search, Plus, Trash2, Loader2, Flame } from 'lucide-react';
+import { ChevronLeft, Search, Plus, Trash2, Loader2, Swords } from 'lucide-react';
 
 interface AdminInfluosDiaProps {
     currentUser: User;
@@ -64,8 +64,8 @@ const AdminInfluosDia: React.FC<AdminInfluosDiaProps> = () => {
                 <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                     <div>
                         <h1 className="text-3xl font-black uppercase tracking-tight text-black flex items-center gap-2">
-                            <Flame className="w-7 h-7 text-teal-600" />
-                            Día de Influos
+                            <Swords className="w-7 h-7 text-teal-600" />
+                            Tribal Wars
                         </h1>
                         <p className="text-sm text-slate-500 mt-1">
                             {registrations.length} inscripción{registrations.length !== 1 ? 'es' : ''}
@@ -155,6 +155,7 @@ const AdminInfluosDia: React.FC<AdminInfluosDiaProps> = () => {
                                     <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Apellido</th>
                                     <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Edad</th>
                                     <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Tribu</th>
+                                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Comprobante</th>
                                     <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Acciones</th>
                                 </tr>
                             </thead>
@@ -168,6 +169,20 @@ const AdminInfluosDia: React.FC<AdminInfluosDiaProps> = () => {
                                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${tribuBadgeColor(r.tribu)}`}>
                                                 {r.tribu}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {r.comprobanteUrl ? (
+                                                <a
+                                                    href={r.comprobanteUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-800 hover:underline"
+                                                >
+                                                    Ver comprobante
+                                                </a>
+                                            ) : (
+                                                <span className="text-xs text-slate-300">—</span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex justify-end">

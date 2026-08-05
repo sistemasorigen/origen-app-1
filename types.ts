@@ -377,6 +377,7 @@ export interface InfluosDiaRegistration {
     lastName: string;
     age: number;
     tribu: InfluosDiaTribu;
+    comprobanteUrl?: string;
     createdAt: string;
 }
 

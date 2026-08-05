@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { checkInfluosNameExists, registerInfluosDia } from '../../../services/supabaseService';
+import { checkInfluosNameExists, registerInfluosDia, supabaseService } from '../../../services/supabaseService';
 import { InfluosDiaTribu } from '../../../types';
 import { ArrowLeft, Check, Loader2, AlertCircle, Pencil, CheckCircle } from 'lucide-react';
 
@@ -66,7 +66,7 @@ const TRIBU_THEMES: Record<InfluosDiaTribu, {
 
 const TRIBUS: InfluosDiaTribu[] = ['Garra', 'Trueno', 'No tengo'];
 
-const STEP_LABELS = ['Datos', 'Tribu', 'Confirmar'];
+const STEP_LABELS = ['Datos', 'Tribu', 'Comprobante', 'Confirmar'];
 
 // Tres barras finas que se van llenando. Reemplaza los cuadrados
 // con borde negro del sistema neo-brutalist — sobre fondo negro
@@ -116,6 +116,10 @@ const InscripcionInfluosDia: React.FC = () => {
 
     const [tribu, setTribu] = useState<InfluosDiaTribu | null>(null);
 
+    const [comprobanteUrl, setComprobanteUrl] = useState<string | null>(null);
+    const [uploadingComprobante, setUploadingComprobante] = useState(false);
+    const [comprobanteError, setComprobanteError] = useState<string | null>(null);
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [done, setDone] = useState(false);
@@ -147,12 +151,39 @@ const InscripcionInfluosDia: React.FC = () => {
 
     const canAdvanceStep1 = firstName.trim() && lastName.trim() && age.trim() && Number(age) > 0 && Number(age) < 100;
 
+    const handleComprobanteChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setComprobanteError(null);
+        setUploadingComprobante(true);
+
+        try {
+            const base64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            const url = await supabaseService.uploadBase64Image(base64, 'influos-comprobantes');
+            setComprobanteUrl(url);
+        } catch (err) {
+            console.error('[Comprobante] Error al subir:', err);
+            setComprobanteError('No pudimos subir el comprobante. Probá de nuevo.');
+        } finally {
+            setUploadingComprobante(false);
+        }
+    };
+
+    const canAdvanceStep3 = !!comprobanteUrl && !uploadingComprobante;
+
     const handleSubmit = async () => {
         if (!tribu) return;
         setIsSubmitting(true);
         setSubmitError(null);
 
-        const id = await registerInfluosDia(firstName.trim(), lastName.trim(), Number(age), tribu);
+        const id = await registerInfluosDia(firstName.trim(), lastName.trim(), Number(age), tribu, comprobanteUrl || undefined);
 
         setIsSubmitting(false);
 
@@ -399,9 +430,89 @@ const InscripcionInfluosDia: React.FC = () => {
                             </motion.div>
                         )}
 
-                        {/* PASO 3 — Confirmar */}
-                        {step === 3 && tribu && (
-                            <motion.div key="step3" {...stepTransition} className="space-y-5">
+                        {/* PASO 3 — Comprobante */}
+                        {step === 3 && (
+                            <motion.div key="step3-comprobante" {...stepTransition} className="space-y-5">
+                                <h2 className="text-2xl font-black uppercase tracking-tight text-white leading-tight">
+                                    Tribal Wars
+                                </h2>
+
+                                <div className="border-2 border-neutral-800 bg-neutral-900/80 p-6 space-y-3">
+                                    <p className="text-base font-black uppercase tracking-tight text-white">
+                                        Sábado 15/08 de 8.30-11pm
+                                    </p>
+                                    <p className="text-sm font-bold text-neutral-300 leading-relaxed">
+                                        Juegos inflables + guerra de tribus + comida y postre
+                                    </p>
+                                    <div className="pt-2 border-t border-neutral-800 space-y-1">
+                                        <p className="text-lg font-black text-white">
+                                            Entrada: $15.000
+                                        </p>
+                                        <p className="text-sm font-bold text-neutral-400">
+                                            Alias de transferencia: <span className="text-violet-300">tribal.wars</span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className={labelClass}>Comprobante de transferencia</label>
+                                    <label
+                                        htmlFor="inf-comprobante"
+                                        className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed px-6 py-8 cursor-pointer transition-colors ${comprobanteUrl ? 'border-emerald-500 bg-emerald-950/20' : 'border-neutral-700 bg-neutral-900/60 hover:border-violet-400'}`}
+                                    >
+                                        {uploadingComprobante ? (
+                                            <>
+                                                <Loader2 className="w-6 h-6 text-neutral-400 animate-spin" />
+                                                <span className="text-xs font-black uppercase tracking-widest text-neutral-400">Subiendo...</span>
+                                            </>
+                                        ) : comprobanteUrl ? (
+                                            <>
+                                                <img src={comprobanteUrl} alt="Comprobante" className="max-h-40 object-contain mb-2" />
+                                                <span className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-emerald-400">
+                                                    <Check className="w-3.5 h-3.5" /> Comprobante subido
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-xs font-black uppercase tracking-widest text-neutral-400">Tocá para subir tu comprobante</span>
+                                                <span className="text-[10px] text-neutral-600">JPG o PNG</span>
+                                            </>
+                                        )}
+                                        <input
+                                            id="inf-comprobante" type="file" accept="image/*" className="hidden"
+                                            onChange={handleComprobanteChange}
+                                        />
+                                    </label>
+                                    {comprobanteError && (
+                                        <p className="text-xs font-bold text-red-400 mt-2">{comprobanteError}</p>
+                                    )}
+                                    {!comprobanteUrl && !uploadingComprobante && (
+                                        <p className="text-[10px] text-neutral-600 mt-2">
+                                            No podés continuar sin adjuntar el comprobante.
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button onClick={() => setStep(2)} className={`flex-1 ${secondaryBtn}`}>
+                                        Volver
+                                    </button>
+                                    <motion.button
+                                        disabled={!canAdvanceStep3}
+                                        onClick={() => setStep(4)}
+                                        whileHover={canAdvanceStep3 && !shouldReduceMotion ? { scale: 1.02, y: -2 } : undefined}
+                                        whileTap={canAdvanceStep3 ? { scale: 0.98 } : undefined}
+                                        className={`flex-[2] ${primaryBtn}`}
+                                    >
+                                        Continuar
+                                    </motion.button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* PASO 4 — Confirmar */}
+                        {step === 4 && tribu && (
+                            <motion.div key="step4" {...stepTransition} className="space-y-5">
                                 <h2 className="text-2xl font-black uppercase tracking-tight text-white leading-tight">
                                     Revisá tus datos
                                 </h2>
@@ -442,7 +553,7 @@ const InscripcionInfluosDia: React.FC = () => {
                                 <div className="flex gap-3">
                                     <button
                                         disabled={isSubmitting}
-                                        onClick={() => setStep(1)}
+                                        onClick={() => setStep(3)}
                                         className={`flex-1 ${secondaryBtn}`}
                                     >
                                         <Pencil className="w-4 h-4" /> Editar

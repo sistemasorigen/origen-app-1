@@ -92,6 +92,8 @@ import { db } from './services/dbService';
 import { supabaseService } from './services/supabaseService';
 import { hasRole } from './services/authUtils';
 import { AudioProvider } from './contexts/AudioContext';
+import { useVersionCheck } from './hooks/useVersionCheck';
+import ModalActualizacion from './components/ui/ModalActualizacion';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ToastProvider } from './pages/punto-informacion/context/ContextoToast';
@@ -860,6 +862,8 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+    const { updateAvailable, forceHardReset } = useVersionCheck();
+
     return (
         <ErrorBoundary>
             <AudioProvider>
@@ -869,6 +873,7 @@ const App: React.FC = () => {
                             <HashRouter>
                                 <AppContent />
                             </HashRouter>
+                            {updateAvailable && <ModalActualizacion onConfirm={forceHardReset} />}
                         </ToastProvider>
                     </NotificationProvider>
                 </AuthProvider>

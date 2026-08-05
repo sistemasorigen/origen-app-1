@@ -279,6 +279,29 @@ export async function checkinDianinoTicket(ticketId: string): Promise<DianinoChe
   };
 }
 
+export interface DianinoUncheckinResult {
+  result: 'SUCCESS' | 'ALREADY_PENDING' | 'NOT_FOUND';
+  firstName: string | null;
+  lastName: string | null;
+}
+
+export async function uncheckinDianinoTicket(ticketId: string): Promise<DianinoUncheckinResult | null> {
+  const { data, error } = await supabase.rpc('uncheckin_dianino_ticket', {
+    p_ticket_id: ticketId
+  });
+  if (error) {
+    console.error('[uncheckinDianinoTicket] Error:', error);
+    return null;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return {
+    result: row.result,
+    firstName: row.first_name,
+    lastName: row.last_name
+  };
+}
+
 export interface DianinoSessionCheckinTicket {
   id: string;
   firstName: string;
@@ -481,13 +504,15 @@ export async function registerInfluosDia(
   firstName: string,
   lastName: string,
   age: number,
-  tribu: 'Garra' | 'Trueno' | 'No tengo'
+  tribu: 'Garra' | 'Trueno' | 'No tengo',
+  comprobanteUrl?: string
 ): Promise<string | null> {
   const { data, error } = await supabase.rpc('register_influos_dia', {
     p_first_name: firstName,
     p_last_name: lastName,
     p_age: age,
-    p_tribu: tribu
+    p_tribu: tribu,
+    p_comprobante_url: comprobanteUrl || null
   });
   if (error) {
     console.error('[registerInfluosDia] Error:', error);
@@ -527,7 +552,7 @@ export async function searchInfluosDia(firstName: string, lastName: string): Pro
 export async function getInfluosDiaRegistrations(): Promise<import('../types').InfluosDiaRegistration[]> {
   const { data, error } = await supabase
     .from('influos_dia_registrations')
-    .select('id, first_name, last_name, age, tribu, created_at')
+    .select('id, first_name, last_name, age, tribu, comprobante_url, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -541,6 +566,7 @@ export async function getInfluosDiaRegistrations(): Promise<import('../types').I
     lastName: row.last_name,
     age: row.age,
     tribu: row.tribu,
+    comprobanteUrl: row.comprobante_url || undefined,
     createdAt: row.created_at
   }));
 }
@@ -3538,11 +3564,23 @@ export const supabaseService = {
    */
   async uploadBase64Image(base64: string, folder: string = ''): Promise<string> {
     try {
-      const fetchResponse = await fetch(base64);
-      const blob = await fetchResponse.blob();
+      // Decodificar el data: URI a mano en vez de fetch(base64) — el
+      // CSP del sitio (connect-src) no incluye el esquema "data:" y
+      // bloquea ese fetch. Esto no toca la red, así que no depende del CSP.
+      const commaIndex = base64.indexOf(',');
+      const header = base64.slice(0, commaIndex);
+      const base64Data = base64.slice(commaIndex + 1);
+      const mimeMatch = header.match(/data:([^;]+);base64/);
+      const mimeType = mimeMatch?.[1] || 'image/png';
+
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: mimeType });
 
       // Determine file extension from MIME type
-      const mimeType = blob.type || 'image/png';
       const ext = mimeType.split('/')[1] || 'png';
 
       // Generate unique filename

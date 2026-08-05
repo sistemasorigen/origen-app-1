@@ -57,7 +57,7 @@ const NuevaInfluosDia: React.FC = () => {
                     onClick={() => navigate('/eventos/admin/tribal-wars')}
                     className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-400 hover:text-black transition-colors mb-4"
                 >
-                    <ChevronLeft className="w-4 h-4" /> Día de Influos
+                    <ChevronLeft className="w-4 h-4" /> Tribal Wars
                 </button>
 
                 <h1 className="text-2xl font-black uppercase tracking-tight text-black mb-6">
