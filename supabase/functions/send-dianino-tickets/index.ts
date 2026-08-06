@@ -52,7 +52,7 @@ async function generateQrPublicUrl(
 ): Promise<string | null> {
   try {
     const qrText = `${QR_PREFIX}${ticketId}`;
-    const buffer = await QRCode.toBuffer(qrText, { type: "png", width: 300, margin: 1 });
+    const buffer = await QRCode.toBuffer(qrText, { type: "png", width: 500, margin: 1 });
 
     const path = `dianino-tickets/${ticketId}.png`;
     const { error: uploadError } = await supabase.storage
@@ -75,8 +75,8 @@ async function generateQrPublicUrl(
 function buildTicketCardHtml(name: string, roleLabel: string, qrUrl: string | null): string {
   return `
     <tr>
-      <td style="background-color: ${BG_CARD}; padding: 8px 40px 24px 40px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${BG_CARD}; border: 3px solid ${BRAND_ORANGE}; border-radius: 20px;">
+      <td style="background-color: ${BG_CARD}; padding: 8px 40px 24px 40px;" bgcolor="${BG_CARD}">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${BG_CARD}; border: 3px solid ${BRAND_ORANGE}; border-radius: 20px;" bgcolor="${BG_CARD}">
           <tr>
             <td align="center" style="padding: 24px;">
               <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 900; color: ${BRAND_ORANGE}; text-transform: uppercase; letter-spacing: 1.5px;">
@@ -86,7 +86,7 @@ function buildTicketCardHtml(name: string, roleLabel: string, qrUrl: string | nu
                 ${name}
               </p>
               ${qrUrl
-                ? `<img src="${qrUrl}" alt="QR de entrada de ${name}" width="220" height="220" style="display: block; border: 3px solid ${BORDER_MUTED}; border-radius: 16px; margin: 0 auto;" />`
+                ? `<img src="${qrUrl}" alt="QR de entrada de ${name}" width="320" height="320" style="display: block; width: 100%; max-width: 320px; height: auto; border: 3px solid ${BORDER_MUTED}; border-radius: 16px; margin: 0 auto;" />`
                 : `<p style="color: ${CRAYON_RED}; font-size: 13px; font-weight: 700;">No pudimos generar este QR — contactanos.</p>`
               }
             </td>
@@ -104,16 +104,29 @@ function buildEmailHtml(adultName: string, cards: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <title>¡Tus entradas para el Día del Niño!</title>
+  <style>
+    /* Fuerza modo claro en clientes que sí respetan
+       @media (prefers-color-scheme) dentro del email
+       (Apple Mail, algunos Outlook) — Gmail no lo
+       respeta acá, por eso además reforzamos con
+       bgcolor= en los CAMBIOS 2-4. */
+    :root { color-scheme: light only; }
+    @media (prefers-color-scheme: dark) {
+      body, table, td { background-color: ${BG_OUTER} !important; }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: ${BG_OUTER};">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${BG_OUTER}; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: ${BG_OUTER};" bgcolor="${BG_OUTER}">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${BG_OUTER}; padding: 40px 20px;" bgcolor="${BG_OUTER}">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: ${BG_CARD}; border: 2px solid ${BORDER_MUTED}; border-radius: 24px;">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: ${BG_CARD}; border: 2px solid ${BORDER_MUTED}; border-radius: 24px;" bgcolor="${BG_CARD}">
 
           <tr>
-            <td style="background-color: ${BG_HEADER}; padding: 32px 40px 28px 40px; text-align: center; border-radius: 24px 24px 0 0;">
+            <td style="background-color: ${BG_HEADER}; padding: 32px 40px 28px 40px; text-align: center; border-radius: 24px 24px 0 0;" bgcolor="${BG_HEADER}">
               <img src="https://app.origeniglesia.org/origen-logo-full.png" alt="Origen" width="150" style="display: block; margin: 0 auto 18px auto; max-width: 150px; height: auto;" />
               <h1 style="margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
                 <span style="color: ${CRAYON_RED};">¡Nos</span>
@@ -129,21 +142,21 @@ function buildEmailHtml(adultName: string, cards: string): string {
           </tr>
 
           <tr>
-            <td style="background-color: ${BG_CARD}; padding: 24px 40px 4px 40px;">
+            <td style="background-color: ${BG_CARD}; padding: 24px 40px 4px 40px;" bgcolor="${BG_CARD}">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td width="33%" align="center" style="background-color: ${CRAYON_MUSTARD}; color: ${INK}; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 4px; border-radius: 999px;">SÁB 15/08</td>
+                  <td width="33%" align="center" style="background-color: ${CRAYON_MUSTARD}; color: ${INK}; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 4px; border-radius: 999px;" bgcolor="${CRAYON_MUSTARD}">SÁB 15/08</td>
                   <td width="10">&nbsp;</td>
-                  <td width="33%" align="center" style="background-color: ${CRAYON_BLUE}; color: #FFFFFF; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 4px; border-radius: 999px;">16 A 19HS</td>
+                  <td width="33%" align="center" style="background-color: ${CRAYON_BLUE}; color: #FFFFFF; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 4px; border-radius: 999px;" bgcolor="${CRAYON_BLUE}">16 A 19HS</td>
                   <td width="10">&nbsp;</td>
-                  <td width="34%" align="center" style="background-color: ${CRAYON_GREEN}; color: #FFFFFF; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 4px; border-radius: 999px;">ENTRADA GRATIS</td>
+                  <td width="34%" align="center" style="background-color: ${CRAYON_GREEN}; color: #FFFFFF; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 4px; border-radius: 999px;" bgcolor="${CRAYON_GREEN}">ENTRADA GRATIS</td>
                 </tr>
               </table>
             </td>
           </tr>
 
           <tr>
-            <td style="background-color: ${BG_CARD}; padding: 20px 40px 8px 40px;">
+            <td style="background-color: ${BG_CARD}; padding: 20px 40px 8px 40px;" bgcolor="${BG_CARD}">
               <p style="margin: 0; font-size: 16px; color: ${TEXT_BODY}; line-height: 1.6;">
                 Hola <strong style="color: ${INK};">${adultName}</strong>, ¡ya está todo listo!
                 Acá abajo tenés tu entrada. Mostrala en la puerta el día del evento —
@@ -154,7 +167,7 @@ function buildEmailHtml(adultName: string, cards: string): string {
               </p>
               <table cellpadding="0" cellspacing="0" style="margin: 14px auto 0 auto;">
                 <tr>
-                  <td align="center" style="background-color: ${BRAND_ORANGE}; border-radius: 999px;">
+                  <td align="center" style="background-color: ${BRAND_ORANGE}; border-radius: 999px;" bgcolor="${BRAND_ORANGE}">
                     <a href="https://app.origeniglesia.org/#/dia-del-nino/buscar" style="display: inline-block; padding: 12px 28px; font-size: 13px; font-weight: 900; color: #FFFFFF; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; border-radius: 999px;">
                       Buscar mi entrada
                     </a>
@@ -167,7 +180,7 @@ function buildEmailHtml(adultName: string, cards: string): string {
           ${cards}
 
           <tr>
-            <td style="background-color: ${BG_CARD}; padding: 12px 40px 28px 40px; text-align: center;">
+            <td style="background-color: ${BG_CARD}; padding: 12px 40px 28px 40px; text-align: center;" bgcolor="${BG_CARD}">
               <p style="margin: 0; font-size: 13px; color: ${TEXT_MUTED};">
                 ¡Te esperamos con muchas ganas de festejar! 🎊
               </p>
@@ -175,7 +188,7 @@ function buildEmailHtml(adultName: string, cards: string): string {
           </tr>
 
           <tr>
-            <td style="background-color: ${BG_HEADER}; padding: 20px 40px; text-align: center; border-radius: 0 0 24px 24px;">
+            <td style="background-color: ${BG_HEADER}; padding: 20px 40px; text-align: center; border-radius: 0 0 24px 24px;" bgcolor="${BG_HEADER}">
               <p style="margin: 0; font-size: 12px; color: ${TEXT_MUTED};">
                 © 2026 Origen App · Día del Niño
               </p>
