@@ -19,7 +19,8 @@ import {
     UserCircle,
     Star,
     Trophy,
-    CalendarDays
+    CalendarDays,
+    Baby
 } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
@@ -349,6 +350,38 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.EVENTOS, UserRole.ENCARGADO_EVENTOS]
                     },
                 ] : []),
+            ]
+        },
+        {
+            label: 'Niñez',
+            icon: Baby,
+            path: '/ninez',
+            roles: [],
+            subItems: [
+                {
+                    label: 'Panel Niñez',
+                    path: '/ninez',
+                    roles: []
+                },
+                // ── ADMINISTRACIÓN ────────────────
+                {
+                    label: 'Administración',
+                    separator: true,
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_NINEZ,
+                    ]
+                },
+                {
+                    label: 'Configuración',
+                    path: '/admin-ninez/configuracion',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_NINEZ,
+                    ]
+                },
             ]
         },
         {

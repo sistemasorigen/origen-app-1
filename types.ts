@@ -30,6 +30,7 @@ export enum UserRole {
     PRODE = 'PRODE',       // Administración del Prode Mundial
     EVENTOS = 'EVENTOS',   // Gestión / acceso a Eventos
     ENCARGADO_EVENTOS = 'ENCARGADO_EVENTOS', // Gestión de eventos
+    ENCARGADO_NINEZ = 'ENCARGADO_NINEZ', // Gestión del módulo Niñez
 }
 
 export enum CoordinatorVariant {
@@ -393,6 +394,17 @@ export interface EventoGeneral {
     description?: string;
     registrationLink?: string;
     isVisible: boolean;
+    createdAt: string;
+}
+
+// ── Módulo Niñez ────────────────────────────────
+
+export interface NinezBannerSlide {
+    id: string;
+    imageUrl: string;
+    title?: string;
+    subtitle?: string;
+    displayOrder: number;
     createdAt: string;
 }
 

@@ -13,6 +13,7 @@ const AdminDiaNino: React.FC<AdminDiaNinoProps> = () => {
     const [sessions, setSessions] = useState<DiaNinoSessionRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [declaracionFilter, setDeclaracionFilter] = useState<'all' | 'accepted' | 'rejected'>('all');
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -36,6 +37,9 @@ const AdminDiaNino: React.FC<AdminDiaNinoProps> = () => {
     };
 
     const filtered = sessions.filter(s => {
+        if (declaracionFilter === 'accepted' && !s.declaracionJuradaAceptada) return false;
+        if (declaracionFilter === 'rejected' && s.declaracionJuradaAceptada) return false;
+
         const term = searchTerm.toLowerCase().trim();
         if (!term) return true;
         return (
@@ -84,15 +88,56 @@ const AdminDiaNino: React.FC<AdminDiaNinoProps> = () => {
                     </div>
                 </div>
 
-                <div className="relative mb-4 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                        type="text"
-                        placeholder="Buscar por nombre, apellido o DNI..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg outline-none focus:border-black text-sm bg-white"
-                    />
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+                    <div className="relative flex-1 max-w-sm">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre, apellido o DNI..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-full outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 text-sm bg-white transition-all"
+                        />
+                    </div>
+
+                    {/* Segmentado — los colores activos calcan los mismos
+                        badges de "Declaración" que aparecen en cada fila,
+                        así el filtro anticipa visualmente lo que va a mostrar. */}
+                    <div className="inline-flex items-center gap-1 p-1 bg-slate-100 rounded-full w-fit">
+                        <button
+                            type="button"
+                            onClick={() => setDeclaracionFilter('all')}
+                            aria-pressed={declaracionFilter === 'all'}
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${declaracionFilter === 'all'
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            Todos
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setDeclaracionFilter('accepted')}
+                            aria-pressed={declaracionFilter === 'accepted'}
+                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${declaracionFilter === 'accepted'
+                                ? 'bg-emerald-600 text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Aceptaron
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setDeclaracionFilter('rejected')}
+                            aria-pressed={declaracionFilter === 'rejected'}
+                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${declaracionFilter === 'rejected'
+                                ? 'bg-red-600 text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            <Circle className="w-3.5 h-3.5" /> No aceptaron
+                        </button>
+                    </div>
                 </div>
 
                 {/* ── Mobile: tarjetas ── */}

@@ -44,6 +44,8 @@ import AdminProde from './pages/prode/AdminProde';
 import ProdeRanking from './pages/prode/ProdeRanking';
 import ProdeResultados from './pages/prode/ProdeResultados';
 import Eventos from './pages/eventos/Eventos';
+import Ninez from './pages/ninez/Ninez';
+import ConfiguracionNinez from './pages/ninez/admin/ConfiguracionNinez';
 import PanelEventos from './pages/eventos/PanelEventos';
 import InscripcionDPadre from './pages/eventos/dpadre/InscripcionDPadre';
 import RankingDPadre from './pages/eventos/dpadre/RankingDPadre';
@@ -373,6 +375,22 @@ const AppContent: React.FC = () => {
                     }
                 >
                     <Eventos />
+                </Layout>
+            } />
+
+            <Route path="/ninez" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                    onVolunteerClick={
+                        user && showVolunteerAccess
+                            ? () => setIsVolunteerModalOpen(true)
+                            : undefined
+                    }
+                >
+                    <Ninez currentUser={user} />
                 </Layout>
             } />
 
@@ -803,6 +821,15 @@ const AppContent: React.FC = () => {
                                 <Route path="/eventos/dpadre/:id" element={
                                     (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.EVENTOS, UserRole.ENCARGADO_EVENTOS]))
                                         ? <DetalleFamilia currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admin-ninez/configuracion" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_NINEZ,
+                                    ]))
+                                        ? <ConfiguracionNinez />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/trivia/admin" element={

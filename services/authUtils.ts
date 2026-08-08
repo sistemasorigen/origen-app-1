@@ -177,7 +177,8 @@ export function getRoleDisplayNames(roles: UserRole[]): string[] {
         [UserRole.ADMIN_CUIDADO_PASTORAL]: 'Admin Cuidado Pastoral',
         [UserRole.PRODE]: 'Admin Prode',
         [UserRole.EVENTOS]: 'Eventos',
-        [UserRole.ENCARGADO_EVENTOS]: 'Encargado Eventos'
+        [UserRole.ENCARGADO_EVENTOS]: 'Encargado Eventos',
+        [UserRole.ENCARGADO_NINEZ]: 'Encargado Niñez'
     };
 
     return roles.map(role => displayNames[role] || role);

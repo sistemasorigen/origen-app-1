@@ -749,6 +749,89 @@ export async function deleteEventoGeneral(id: string): Promise<boolean> {
   return true;
 }
 
+// ── Módulo Niñez ────────────────────────────────
+
+function mapNinezSlideRow(row: any): import('../types').NinezBannerSlide {
+  return {
+    id: row.id,
+    imageUrl: row.image_url,
+    title: row.title || undefined,
+    subtitle: row.subtitle || undefined,
+    displayOrder: row.display_order,
+    createdAt: row.created_at
+  };
+}
+
+export async function getNinezBannerSlides(): Promise<import('../types').NinezBannerSlide[]> {
+  const { data, error } = await supabase
+    .from('ninez_banner_slides')
+    .select('*')
+    .order('display_order', { ascending: true });
+
+  if (error) {
+    console.error('[getNinezBannerSlides] Error:', error);
+    return [];
+  }
+  return (data || []).map(mapNinezSlideRow);
+}
+
+export interface NinezBannerSlideInput {
+  imageUrl: string;
+  title?: string;
+  subtitle?: string;
+  displayOrder: number;
+}
+
+export async function createNinezBannerSlide(input: NinezBannerSlideInput): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('ninez_banner_slides')
+    .insert({
+      image_url: input.imageUrl,
+      title: input.title || null,
+      subtitle: input.subtitle || null,
+      display_order: input.displayOrder
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    console.error('[createNinezBannerSlide] Error:', error);
+    return null;
+  }
+  return data.id;
+}
+
+export async function updateNinezBannerSlide(id: string, input: NinezBannerSlideInput): Promise<boolean> {
+  const { error } = await supabase
+    .from('ninez_banner_slides')
+    .update({
+      image_url: input.imageUrl,
+      title: input.title || null,
+      subtitle: input.subtitle || null,
+      display_order: input.displayOrder
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('[updateNinezBannerSlide] Error:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function deleteNinezBannerSlide(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('ninez_banner_slides')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('[deleteNinezBannerSlide] Error:', error);
+    return false;
+  }
+  return true;
+}
+
 // Delete group - Uses RPC to bypass RLS and cascade delete
 export async function deleteGroupDirect(id: string): Promise<boolean> {
 
