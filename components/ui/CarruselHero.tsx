@@ -5,6 +5,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 export interface HeroSlideData {
     id: string;
     imageUrl: string;
+    mediaType?: 'image' | 'video';  // Ausente = 'image'
+    videoUrl?: string;
+    focalX?: number;
+    focalY?: number;
+    zoom?: number;
+    eyebrow?: string;
     title?: string;           // New: Main headline
     subtitle?: string;        // New: Sub-headline
     titlePrefix?: string;     // Legacy
@@ -19,64 +25,185 @@ interface HeroCarouselProps {
     slides: HeroSlideData[];
     autoPlayInterval?: number;
     heightClass?: string;
-    theme?: 'default' | 'alabanza' | 'store' | 'infopoint' | 'groups' | 'prode';
+    /** Proporción del encuadre, ej "1920 / 640". Si viene, reemplaza a heightClass. */
+    aspectRatio?: string;
+    theme?: 'default' | 'alabanza' | 'store' | 'infopoint' | 'groups' | 'prode' | 'soft';
 }
+
+/**
+ * Texto blanco con contorno negro, para leerse sobre cualquier foto.
+ *
+ * La clave es `paint-order: stroke fill`: el trazo se pinta POR DETRÁS del
+ * relleno. Sin eso el navegador lo dibuja encima y se come el interior de
+ * las letras — a estos tamaños las deja sucias y más finas.
+ *
+ * Es lo que reemplaza al velo oscuro sobre la imagen: el banner se ve limpio
+ * de punta a punta y el texto igual se lee, venga la foto clara u oscura.
+ * El grosor va por parámetro porque un trazo fijo que funciona en un titular
+ * de 60px ahoga a un subtítulo de 16px.
+ */
+const outlinedText = (strokeWidth: number): React.CSSProperties => ({
+    color: '#ffffff',
+    WebkitTextStroke: `${strokeWidth}px rgba(0,0,0,0.55)`,
+    paintOrder: 'stroke fill',
+    textShadow: '0 2px 10px rgba(0,0,0,0.3)'
+} as React.CSSProperties);
+
+/**
+ * Traduce el encuadre de un slide a CSS.
+ *
+ * El medio siempre llena el marco (object-cover) y sobra por algún lado; el
+ * punto focal decide qué borde se sacrifica. El zoom escala desde ese mismo
+ * punto, no desde el centro: si no, alejarte del centro y después ampliar
+ * movería el encuadre a un lugar que nadie eligió.
+ *
+ * Se exporta para que el editor del admin previsualice con exactamente la
+ * misma fórmula que usa el banner real.
+ */
+export const getMediaFrameStyle = (
+    slide: Pick<HeroSlideData, 'focalX' | 'focalY' | 'zoom'>
+): React.CSSProperties => {
+    const x = slide.focalX ?? 50;
+    const y = slide.focalY ?? 50;
+    const zoom = slide.zoom ?? 1;
+    return {
+        objectPosition: `${x}% ${y}%`,
+        transform: zoom !== 1 ? `scale(${zoom})` : undefined,
+        transformOrigin: `${x}% ${y}%`
+    };
+};
 
 const HeroCarousel: React.FC<HeroCarouselProps> = ({
     slides,
     autoPlayInterval = 6000,
     heightClass = 'h-screen',
+    aspectRatio,
     theme = 'default'
 }) => {
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const [activeIndex, setActiveIndex] = useState(0);
+    const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
+    const touchStartXRef = useRef<number | null>(null);
+    // Posición dentro de la pista (puede caer en el clon del final, ver abajo).
+    const [index, setIndex] = useState(0);
+    const [animate, setAnimate] = useState(true);
     const [isPaused, setIsPaused] = useState(false);
 
+    const total = slides.length;
+    // Con más de un slide se agrega al final un clon del primero. Avanzar del
+    // último al primero pasa por el clon —o sea, sigue desplazándose hacia la
+    // izquierda— y recién ahí se vuelve al índice 0 sin animación, en el
+    // fotograma en que el clon está a la vista. Sin esto, el salto de vuelta
+    // se vería como un barrido hacia la derecha recorriendo todo al revés.
+    const hasLoop = total > 1;
+    const track = hasLoop ? [...slides, slides[0]] : slides;
+    // El clon representa al primer slide, así que para los dots vale como 0.
+    const activeIndex = total > 0 ? index % total : 0;
+
+    /**
+     * Salta a una posición sin animar y devuelve la transición en el
+     * fotograma siguiente. Los dos requestAnimationFrame son necesarios: con
+     * uno solo el navegador todavía no pintó el salto, y al reactivar la
+     * transición lo animaría — que es justo lo que se quiere evitar.
+     */
+    const jumpTo = (target: number, then?: () => void) => {
+        setAnimate(false);
+        setIndex(target);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            setAnimate(true);
+            then?.();
+        }));
+    };
+
+    // Sólo reproduce el slide visible. El atributo autoPlay no alcanza: los
+    // elementos persisten entre slides, así que sin esto los videos que ya
+    // pasaron seguirían corriendo detrás gastando batería. El play() devuelve
+    // una promesa que se rechaza si el navegador bloquea la reproducción —
+    // sin catch quedaría un unhandled rejection en consola.
+    // Las refs van por posición en la pista y no por id: el clon comparte el
+    // id del primer slide y se pisarían entre sí en el Map.
     useEffect(() => {
-        if (!autoPlayInterval || isPaused || slides.length <= 1) return;
-        const interval = setInterval(() => {
-            if (scrollRef.current) {
-                const nextIndex = (activeIndex + 1) % slides.length;
-                scrollToIndex(nextIndex);
+        videoRefs.current.forEach((video, position) => {
+            if (position === index) {
+                video.play().catch(() => { /* el navegador decidió no reproducir */ });
+            } else {
+                video.pause();
             }
-        }, autoPlayInterval);
+        });
+    }, [index]);
+
+    useEffect(() => () => {
+        if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    }, []);
+
+    useEffect(() => {
+        if (!autoPlayInterval || isPaused || total <= 1) return;
+        const interval = setInterval(() => setIndex(i => i + 1), autoPlayInterval);
         return () => clearInterval(interval);
-    }, [activeIndex, isPaused, slides.length, autoPlayInterval]);
+    }, [isPaused, total, autoPlayInterval]);
 
-    const handleScroll = () => {
-        if (scrollRef.current) {
-            const container = scrollRef.current;
-            const newIndex = Math.round(container.scrollLeft / container.clientWidth);
-            if (newIndex !== activeIndex) {
-                setActiveIndex(newIndex);
-            }
-        }
-    };
-
-    const scrollToIndex = (index: number) => {
-        if (scrollRef.current) {
-            const container = scrollRef.current;
-            container.scrollTo({
-                left: container.clientWidth * index,
-                behavior: 'smooth'
-            });
-        }
-    };
-
-    const handlePrev = () => {
+    // Pausa mientras el usuario interactúa, y se reanuda sola. Antes
+    // `isPaused` se activaba con el primer hover o toque y nada lo volvía
+    // a apagar: el autoplay moría para siempre apenas tocabas el banner.
+    const pauseTemporarily = () => {
         setIsPaused(true);
-        const nextIndex = activeIndex === 0 ? slides.length - 1 : activeIndex - 1;
-        scrollToIndex(nextIndex);
+        if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = setTimeout(() => setIsPaused(false), 8000);
+    };
+
+    const resumeNow = () => {
+        if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+        setIsPaused(false);
+    };
+
+    // Al terminar de entrar el clon se vuelve al original sin animación. El
+    // clon es idéntico al primer slide, así que el cambio es invisible.
+    const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
+        if (e.propertyName !== 'transform' || e.target !== e.currentTarget) return;
+        if (hasLoop && index === total) jumpTo(0);
     };
 
     const handleNext = () => {
-        setIsPaused(true);
-        const nextIndex = (activeIndex + 1) % slides.length;
-        scrollToIndex(nextIndex);
+        pauseTemporarily();
+        setIndex(i => (i >= total ? i : i + 1));
+    };
+
+    const handlePrev = () => {
+        pauseTemporarily();
+        if (index === 0 && hasLoop) {
+            // Mismo truco al revés: se salta al clon del final sin animar y
+            // desde ahí se retrocede un paso. "Anterior" mueve un solo slide
+            // en vez de barrer todo el carrusel.
+            jumpTo(total, () => setIndex(total - 1));
+            return;
+        }
+        setIndex(i => Math.max(0, i - 1));
+    };
+
+    const goToIndex = (target: number) => {
+        pauseTemporarily();
+        setIndex(target);
     };
 
     const handleUserInteraction = () => {
-        setIsPaused(true);
+        pauseTemporarily();
+    };
+
+    // El swipe se maneja a mano porque la pista ya no es un contenedor con
+    // scroll horizontal: sin esto el hero dejaría de ser deslizable en el
+    // teléfono. El umbral distingue un swipe de un toque al pasar el dedo.
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartXRef.current = e.touches[0].clientX;
+        handleUserInteraction();
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        const start = touchStartXRef.current;
+        touchStartXRef.current = null;
+        if (start === null || !hasLoop) return;
+        const delta = e.changedTouches[0].clientX - start;
+        if (Math.abs(delta) < 50) return;
+        if (delta < 0) handleNext();
+        else handlePrev();
     };
 
     if (!slides || slides.length === 0) return null;
@@ -89,6 +216,8 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
         if (theme === 'infopoint') return 'bg-gradient-to-t from-black/60 via-black/20 to-transparent';
         if (theme === 'groups') return 'bg-gradient-to-t from-black/70 via-black/30 to-transparent';
         if (theme === 'prode') return 'bg-transparent';
+        // Sin velo: la foto se ve limpia de punta a punta.
+        if (theme === 'soft') return 'bg-transparent';
         return 'bg-gradient-to-b from-black/70 via-black/40 to-slate-900';
     };
 
@@ -99,35 +228,92 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
 
     return (
         <div
-            className={`relative w-full ${heightClass} group overflow-hidden bg-black`}
+            // Con encuadre configurado manda la proporción; el min-height evita
+            // que un marco panorámico (ej 1920×480) colapse a una franja de
+            // 90px en un teléfono. Ahí el recorte lo resuelve el punto focal.
+            className={`relative w-full ${aspectRatio ? '' : heightClass} group overflow-hidden bg-black`}
+            style={aspectRatio ? { aspectRatio, minHeight: '240px' } : undefined}
             onMouseEnter={handleUserInteraction}
+            onMouseLeave={resumeNow}
             onTouchStart={handleUserInteraction}
         >
-            {/* SCROLL CONTAINER */}
+            {/* TRACK — pista con translateX.
+                No usa scroll nativo porque prefers-reduced-motion convierte
+                scroll-behavior:smooth en salto instantáneo; transform en
+                cambio siempre se anima porque esa preferencia no lo toca. */}
             <div
-                ref={scrollRef}
-                onScroll={handleScroll}
-                className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth"
-                style={{ scrollBehavior: 'smooth', touchAction: 'pan-x' }}
+                className="w-full h-full"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
             >
-                {slides.map((slide, idx) => {
-                    const isActive = idx === activeIndex;
+                <div
+                    className="flex w-full h-full"
+                    style={{
+                        transform: `translateX(-${index * 100}%)`,
+                        transition: animate ? 'transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none',
+                        willChange: 'transform'
+                    }}
+                    onTransitionEnd={handleTransitionEnd}
+                >
+                    {track.map((slide, idx) => {
+                        const isActive = idx === activeIndex;
 
-                    return (
-                        <div key={slide.id} className="w-full h-full flex-shrink-0 snap-center relative">
-                            {/* Image Layer */}
-                            <img
-                                src={slide.imageUrl}
-                                alt={slide.titlePrefix}
-                                className={`w-full h-full ${theme === 'prode' ? 'object-contain bg-white' : 'object-cover'} transition-transform duration-700 ${getImageClass()}`}
-                            />
+                        return (
+                            <div key={`${slide.id}-${idx}`} className="w-full h-full flex-shrink-0 relative">
+                                {/* Media Layer — imagen o video según mediaType.
+                                    El video va muted + playsInline porque sin eso
+                                    ningún navegador lo reproduce solo, y en iOS se
+                                    abriría a pantalla completa. Sólo el slide
+                                    visible reproduce: mantener tres videos corriendo
+                                    en segundo plano quema batería sin que nadie los
+                                    vea. `imageUrl` queda de poster, así que si el
+                                    video tarda o falla igual se ve algo. */}
+                            {slide.mediaType === 'video' && slide.videoUrl ? (
+                                <video
+                                    ref={el => {
+                                        if (el) videoRefs.current.set(idx, el);
+                                        else videoRefs.current.delete(idx);
+                                    }}
+                                    src={slide.videoUrl}
+                                    poster={slide.imageUrl || undefined}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                    preload="auto"
+                                    // Es decorado de fondo, no una pieza para mirar: sin
+                                    // controles, sin menú contextual, sin picture-in-picture
+                                    // y sin foco de teclado. `pointer-events-none` deja pasar
+                                    // el click a lo que haya encima.
+                                    disablePictureInPicture
+                                    controlsList="nodownload noplaybackrate nofullscreen"
+                                    tabIndex={-1}
+                                    aria-hidden="true"
+                                    style={getMediaFrameStyle(slide)}
+                                    className={`w-full h-full pointer-events-none select-none ${theme === 'prode' ? 'object-contain bg-white' : 'object-cover'} ${getImageClass()}`}
+                                />
+                            ) : (
+                                <img
+                                    src={slide.imageUrl}
+                                    alt={slide.title || slide.titlePrefix || ''}
+                                    style={getMediaFrameStyle(slide)}
+                                    className={`w-full h-full ${theme === 'prode' ? 'object-contain bg-white' : 'object-cover'} ${getImageClass()}`}
+                                />
+                            )}
 
                             {/* Overlay */}
                             <div className={`absolute inset-0 ${slide.overlayColor || getOverlayClass()}`}></div>
 
                             {/* Content */}
-                            <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
-                                <div className="max-w-5xl relative z-10">
+                            {/* El tema soft ancla su contenido abajo a la izquierda y
+                                resuelve su propio layout a pantalla completa. Envuelto
+                                en el centrador de los demás temas (items-center +
+                                justify-center + max-w-5xl) su `items-end` no tenía
+                                ninguna altura contra la cual medir —el contenedor era
+                                tan alto como el texto— y el bloque terminaba flotando
+                                en el medio del banner. */}
+                            <div className={`absolute inset-0 ${theme === 'soft' ? '' : 'flex items-center justify-center p-6 text-center'}`}>
+                                <div className={`relative z-10 ${theme === 'soft' ? 'w-full h-full' : 'max-w-5xl'}`}>
                                     {theme === 'store' ? (
                                         <div className="bg-white/90 p-8 md:p-12 backdrop-blur-sm border border-white/50 inline-block shadow-xl">
                                             <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-4 text-black">
@@ -259,12 +445,94 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                                                 )}
                                             </div>
                                         </div>
+                                    ) : theme === 'soft' ? (
+                                        // Soft Layout — contenido anclado abajo a la izquierda
+                                        // sobre el velo de pie: eyebrow en píldora, titular en
+                                        // Black 900, bajada y CTA. La foto respira arriba.
+                                        <div className="w-full h-full flex items-end">
+                                            {/* El hero va a sangre, pero su texto se alinea con
+                                                el contenedor del resto de la página (mismo
+                                                max-w y mismo padding lateral que las tarjetas
+                                                de abajo), así el margen izquierdo es uno solo
+                                                de punta a punta. */}
+                                            <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 md:pb-10">
+                                                {/* Cuatro escalones de tamaño, de mayor a menor:
+                                                    principal → destacado → descripción → etiqueta.
+                                                    Antes principal y destacado compartían el mismo
+                                                    tamaño dentro de un solo h1 partido por un <br>,
+                                                    así que no había jerarquía: eran dos renglones
+                                                    del mismo peso. */}
+                                                <div className="max-w-2xl text-left">
+
+                                                    {/* 4 · ETIQUETA SUPERIOR — la más chica. Mantiene
+                                                        su píldora clara: al tener fondo propio se
+                                                        lee sobre cualquier foto sin depender del
+                                                        contorno. */}
+                                                    <span className={`inline-block py-1 px-3 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-[11px] font-semibold tracking-[0.08em] uppercase mb-3 ${animBase} ${isActive ? animActive : ''}`}>
+                                                        {slide.eyebrow || '¡Qué bueno que estés en casa!'}
+                                                    </span>
+
+                                                    <h1 className={`uppercase tracking-[-0.03em] ${animBase} ${isActive ? `${animActive} animation-delay-200` : ''}`}>
+                                                        {/* 1 · TEXTO PRINCIPAL — el más grande, Black 900 */}
+                                                        <span
+                                                            className="block text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-[0.95]"
+                                                            style={outlinedText(2.5)}
+                                                        >
+                                                            {slide.title || slide.titlePrefix}
+                                                        </span>
+                                                        {/* 2 · TEXTO DESTACADO — un escalón abajo en
+                                                            tamaño y en peso (Bold 700) */}
+                                                        {slide.titleHighlight && (
+                                                            <span
+                                                                className="block mt-1 text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-[1.05]"
+                                                                style={outlinedText(2)}
+                                                            >
+                                                                {slide.titleHighlight}
+                                                            </span>
+                                                        )}
+                                                    </h1>
+
+                                                    {/* 3 · DESCRIPCIÓN — Semibold, no Regular: sobre
+                                                        una foto un trazo fino con contorno se
+                                                        empasta y deja de leerse. */}
+                                                    {(slide.subtitle || slide.description) && (
+                                                        <p
+                                                            className={`mt-3 text-sm sm:text-base md:text-lg font-semibold max-w-xl ${animBase} ${isActive ? `${animActive} animation-delay-400` : ''}`}
+                                                            style={outlinedText(1)}
+                                                        >
+                                                            {slide.subtitle || slide.description}
+                                                        </p>
+                                                    )}
+
+                                                    {slide.buttonText && (
+                                                        <div className={`mt-4 sm:mt-5 ${animBase} ${isActive ? `${animActive} animation-delay-600` : ''}`}>
+                                                            {/* CTA — bloque blanco con borde y letra
+                                                                negra. Es lo único de la composición
+                                                                que no depende del contorno para
+                                                                leerse: trae su propio fondo, así que
+                                                                se sostiene sobre cualquier foto.
+
+                                                                Al hover se invierte a negro en vez de
+                                                                aclararse. El borde queda siempre, así
+                                                                que la caja no cambia de tamaño y nada
+                                                                se corre. */}
+                                                            <button
+                                                                onClick={slide.onButtonClick}
+                                                                className="px-5 py-2.5 bg-white text-slate-900 border-2 border-slate-900 font-bold text-sm uppercase tracking-[0.08em] rounded-[10px] shadow-[0_2px_12px_rgba(0,0,0,0.28)] hover:bg-slate-900 hover:text-white active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                                                            >
+                                                                {slide.buttonText}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
                                     ) : (
                                         // Default / Dashboard Layout
                                         <>
                                             <div className={`${animBase} ${isActive ? animActive : ''}`}>
                                                 <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs sm:text-xs font-bold tracking-[0.2em] uppercase mb-2 sm:mb-6">
-                                                    ¡Qué bueno que estés en casa!
+                                                    {slide.eyebrow || '¡Qué bueno que estés en casa!'}
                                                 </span>
                                             </div>
                                             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-tighter mb-2 sm:mb-6 drop-shadow-2xl leading-tight">
@@ -299,6 +567,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                         </div>
                     );
                 })}
+                </div>
             </div>
 
             {/* CONTROLS */}
@@ -318,12 +587,13 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                         <ChevronRight className="w-6 h-6" />
                     </button>
 
-                    {/* Pagination Dots */}
-                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">
+                    {/* Pagination Dots — en el tema soft van abajo a la derecha,
+                        para no chocar con el contenido anclado abajo a la izquierda. */}
+                    <div className={`absolute z-20 flex ${theme === 'soft' ? 'bottom-4 right-4 gap-1.5' : 'bottom-8 left-1/2 -translate-x-1/2 gap-3'}`}>
                         {slides.map((_, idx) => (
                             <button
                                 key={idx}
-                                onClick={() => { setIsPaused(true); scrollToIndex(idx); }}
+                                onClick={() => goToIndex(idx)}
                                 className={`h-1.5 rounded-full transition-all duration-300 ${idx === activeIndex
                                     ? `w-8 ${theme === 'alabanza' || theme === 'store' || theme === 'infopoint' ? 'bg-black' : 'bg-white'}`
                                     : `w-2 ${theme === 'alabanza' || theme === 'store' || theme === 'infopoint' ? 'bg-black/40 hover:bg-black/60' : 'bg-white/40 hover:bg-white/60'}`

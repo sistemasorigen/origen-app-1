@@ -94,11 +94,6 @@ export const dashboardSteps: Step[] = [
         content: 'Bienvenido a tu panel principal. Acá vas a encontrar notificaciones importantes y accesos directos.',
         placement: 'bottom',
     },
-    {
-        target: '#systems-grid',
-        content: 'Estos son los módulos del sistema. Cada tarjeta te lleva a una herramienta diferente: Grupos, Info Point, Reportes, etc.',
-        placement: 'top',
-    },
 ];
 
 // 3. Groups Explorer Tour

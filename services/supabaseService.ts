@@ -3662,6 +3662,56 @@ export const supabaseService = {
   },
 
   /**
+   * Sube un video al bucket 'images' (el bucket no restringe MIME ni tamaño,
+   * así que sirve para cualquier media; el nombre es histórico).
+   *
+   * El límite de 25MB es propio, no del bucket: un video de fondo del hero se
+   * descarga entero antes de reproducirse, y arriba de eso el banner tarda
+   * más que la página. Para piezas más largas conviene un embed externo.
+   *
+   * @param file - Archivo de video
+   * @param folder - Carpeta dentro del bucket (ej: 'banners')
+   * @returns URL pública del video
+   * @throws Error si el archivo no es válido o la subida falla
+   */
+  async uploadVideo(file: File, folder: string = ''): Promise<string> {
+    if (!file.type.startsWith('video/')) {
+      throw new Error('El archivo debe ser un video');
+    }
+
+    const maxSize = 25 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error(`El video no puede superar los 25MB (este pesa ${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+    }
+
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 10);
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'mp4';
+    const uniqueFileName = `${timestamp}_${randomString}.${fileExt}`;
+    const filePath = folder ? `${folder}/${uniqueFileName}` : uniqueFileName;
+
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type
+      });
+
+    if (uploadError) {
+      console.error('[uploadVideo] Upload failed:', uploadError);
+      throw new Error(`Error al subir el video: ${uploadError.message}`);
+    }
+
+    const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+    if (!data?.publicUrl) {
+      throw new Error('No se pudo obtener la URL pública del video');
+    }
+
+    return data.publicUrl;
+  },
+
+  /**
    * Uploads a base64 encoded image to Supabase Storage
    * @param base64 - Base64 data URL string
    * @param folder - Optional folder path within the 'images' bucket

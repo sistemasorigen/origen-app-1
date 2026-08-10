@@ -800,13 +800,38 @@ export interface SystemModule {
 
 export interface BannerSlide {
     id: string;
+    /**
+     * Imagen del slide. Cuando mediaType es 'video' sigue usándose como
+     * poster: es lo que se ve mientras el video carga, si el navegador
+     * bloquea la reproducción automática, o si el usuario pidió
+     * `prefers-reduced-motion`. Por eso conviene cargarla siempre.
+     */
     imageUrl: string;
+    mediaType?: 'image' | 'video';  // Ausente = 'image' (slides ya existentes)
+    videoUrl?: string;              // Sólo se usa si mediaType === 'video'
+    /**
+     * Encuadre. La proporción del archivo casi nunca coincide con la del
+     * banner, así que sobra imagen y hay que decidir qué parte se recorta.
+     * El punto focal (0-100 %) es lo que se mantiene visible; el zoom recorta
+     * más todavía. Sirve igual para imagen y para video — a un video no se lo
+     * puede recortar de verdad sin recodificarlo, pero sí elegir qué se ve.
+     */
+    focalX?: number;   // 0-100, default 50
+    focalY?: number;   // 0-100, default 50
+    zoom?: number;     // 1-3, default 1
+    /** Píldora chica arriba del titular. Vacío = "¡Qué bueno que estés en casa!" */
+    eyebrow?: string;
     title?: string;           // New: Main headline
     subtitle?: string;        // New: Sub-headline
     titlePrefix?: string;     // Legacy
     titleHighlight?: string;  // Legacy
     description?: string;     // Legacy
     buttonText?: string;
+    /**
+     * Destino del CTA. Interno ('/eventos') o externo ('https://...').
+     * Sin esto el botón se dibujaba pero no llevaba a ningún lado.
+     */
+    buttonLink?: string;
     overlayColor?: string;
 }
 
@@ -818,6 +843,14 @@ export interface BannerConfig {
     imageUrl?: string; // Fallback/Single image
     slides?: BannerSlide[]; // New: Array of slides
     slideInterval?: number; // New: Time in ms
+    /**
+     * Medidas del encuadre en píxeles. Definen la proporción del banner
+     * (no su tamaño real: el hero es fluido y usa aspect-ratio). Es global
+     * porque todos los slides comparten el mismo carrusel — alturas
+     * distintas por slide harían saltar la página en cada transición.
+     */
+    frameWidth?: number;
+    frameHeight?: number;
     gradientClass: string; // Tailwind gradient class if no image
 }
 

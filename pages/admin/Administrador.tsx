@@ -6,8 +6,10 @@ import { useSearchParams } from 'react-router-dom';
 import { db } from '../../services/dbService';
 import { supabaseService } from '../../services/supabaseService';
 import { User, UserRole, Log, SystemModule, AppConfig, BannerSlide, ValuesSectionConfig, Group, FooterLinks, CoordinatorVariant } from '../../types';
-import { Users, Shield, Home, Database, CloudUpload, Save, Search, X, Check, Book, Palette, Globe, Plus, Edit2, Trash2, Info, UserCheck, ClipboardList, CheckCircle, XCircle, Share2, Instagram, Facebook, Youtube, Music, Eye, Loader2, Medal } from 'lucide-react';
+import { Users, Shield, Home, Database, CloudUpload, Save, Search, X, Check, Book, Palette, Globe, Plus, Edit2, Trash2, Info, UserCheck, ClipboardList, CheckCircle, XCircle, Share2, Instagram, Facebook, Youtube, Music, Eye, Loader2, Medal, Film } from 'lucide-react';
 import ImageUpload from '../../components/media/SubidaImagen';
+import VideoUpload from '../../components/media/SubidaVideo';
+import EncuadreMedia from '../../components/media/EncuadreMedia';
 import AdminAuditLogs from '../../components/admin/RegistroAuditoriaAdmin';
 import NeoModal from '../../components/ui/NeoModal';
 import AdminDropdown from '../../components/admin/MenuDesplegableAdmin';
@@ -353,13 +355,29 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
 
         let updatedSlides;
 
+        // Si eligió video pero no cargó ninguno, el slide vuelve a imagen: un
+        // slide marcado como video sin videoUrl se vería en negro.
+        const mediaType: 'image' | 'video' =
+            editingSlide.mediaType === 'video' && editingSlide.videoUrl ? 'video' : 'image';
+
         const slideToSave: BannerSlide = {
             id: editingSlide.id || safeUUID(),
             imageUrl: editingSlide.imageUrl || '',
+            mediaType,
+            videoUrl: mediaType === 'video' ? editingSlide.videoUrl : undefined,
+            focalX: editingSlide.focalX ?? 50,
+            focalY: editingSlide.focalY ?? 50,
+            zoom: editingSlide.zoom ?? 1,
+            eyebrow: editingSlide.eyebrow,
             titlePrefix: editingSlide.titlePrefix,
             titleHighlight: editingSlide.titleHighlight,
             description: editingSlide.description,
             buttonText: editingSlide.buttonText,
+            buttonLink: editingSlide.buttonLink,
+            // Se preservan aunque el editor no los toque: son los campos
+            // nuevos del tipo y otros temas del carrusel ya los leen.
+            title: editingSlide.title,
+            subtitle: editingSlide.subtitle,
             // Brutalist style for Info Point if not present
             overlayColor: editingSlide.overlayColor || (isInfoPoint ? 'bg-white/30 mix-blend-overlay' : undefined)
         };
@@ -1189,25 +1207,89 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                         {configSubTab === 'BANNERS' ? 'Slides Principal' : 'Banners Punto'}
                                     </h3>
                                     <button
-                                        onClick={() => { setEditingSlide({ titlePrefix: '', titleHighlight: '', description: '', imageUrl: '' }); setIsSlideModalOpen(true); }}
+                                        onClick={() => { setEditingSlide({ mediaType: 'image', titlePrefix: '', titleHighlight: '', description: '', imageUrl: '' }); setIsSlideModalOpen(true); }}
                                         className="px-4 md:px-6 py-2 bg-black text-white text-[10px] md:text-xs font-bold uppercase rounded-lg hover:bg-slate-800 flex items-center gap-2 whitespace-nowrap"
                                     >
                                         <Plus className="w-3 md:w-4 h-3 md:h-4" /> Agregar
                                     </button>
                                 </div>
+                                {/* MEDIDAS DEL MARCO — globales, no por slide: todos los
+                                    slides comparten el mismo carrusel, y alturas distintas
+                                    harían saltar la página en cada transición. Definen la
+                                    proporción, no el tamaño real: el banner es fluido. */}
+                                <div className="bg-off-white p-4 md:p-6 rounded-xl border border-slate-200">
+                                    <h4 className="text-xs font-bold uppercase text-neutral-500 mb-1">Encuadre del Banner</h4>
+                                    <p className="text-[11px] text-neutral-500 mb-4">
+                                        Proporción del hero. El banner se adapta al ancho de la pantalla; estas medidas fijan la forma, no el tamaño.
+                                    </p>
+                                    <div className="flex flex-wrap items-end gap-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold uppercase text-neutral-500 mb-1 block">Ancho (px)</label>
+                                            <input
+                                                type="number"
+                                                min={320}
+                                                value={config.banner?.frameWidth || 1920}
+                                                onChange={e => setConfig({ ...config, banner: { ...config.banner, frameWidth: Number(e.target.value) } })}
+                                                className="w-28 p-2.5 border border-slate-200 text-sm font-bold tabular-nums outline-none focus:shadow-md"
+                                            />
+                                        </div>
+                                        <span className="pb-3 text-neutral-400 font-bold">×</span>
+                                        <div>
+                                            <label className="text-[10px] font-bold uppercase text-neutral-500 mb-1 block">Alto (px)</label>
+                                            <input
+                                                type="number"
+                                                min={120}
+                                                value={config.banner?.frameHeight || 720}
+                                                onChange={e => setConfig({ ...config, banner: { ...config.banner, frameHeight: Number(e.target.value) } })}
+                                                className="w-28 p-2.5 border border-slate-200 text-sm font-bold tabular-nums outline-none focus:shadow-md"
+                                            />
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 pb-0.5">
+                                            {([[1920, 1080, '16:9'], [1920, 720, '8:3'], [1920, 640, '3:1']] as const).map(([w, h, label]) => (
+                                                <button
+                                                    key={label}
+                                                    type="button"
+                                                    onClick={() => setConfig({ ...config, banner: { ...config.banner, frameWidth: w, frameHeight: h } })}
+                                                    className="px-3 py-2.5 border-2 border-slate-200 text-[10px] font-bold uppercase text-neutral-600 hover:border-black hover:text-black transition-colors"
+                                                >
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button
+                                            onClick={() => saveConfig(config)}
+                                            className="px-5 py-2.5 bg-black text-white text-[10px] font-bold uppercase hover:bg-slate-800 flex items-center gap-2"
+                                        >
+                                            <Save className="w-3 h-3" /> Guardar
+                                        </button>
+                                    </div>
+                                    <p className="text-[11px] text-amber-700 font-semibold mt-3">
+                                        Cuanto más panorámico, más se recorta en el teléfono. Revisá el encuadre de cada slide después de cambiarlo.
+                                    </p>
+                                </div>
+
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                                     {(configSubTab === 'BANNERS' ? (config.banner.slides || []) : (config.infoPointConfig?.banners || [])).map(slide => (
                                         <div key={slide.id} className="bg-off-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group">
                                             <div className="aspect-video bg-slate-100 relative">
-                                                <img src={slide.imageUrl} className="w-full h-full object-cover" />
+                                                {slide.mediaType === 'video' && slide.videoUrl ? (
+                                                    <video src={slide.videoUrl} poster={slide.imageUrl || undefined} className="w-full h-full object-cover" muted loop playsInline />
+                                                ) : (
+                                                    <img src={slide.imageUrl} className="w-full h-full object-cover" />
+                                                )}
+                                                {slide.mediaType === 'video' && (
+                                                    <span className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-black/70 text-white text-[10px] font-bold uppercase tracking-wider rounded">
+                                                        <Film className="w-3 h-3" /> Video
+                                                    </span>
+                                                )}
                                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                                     <button onClick={() => { setEditingSlide(slide); setIsSlideModalOpen(true); }} className="p-2 bg-white text-black rounded hover:bg-slate-200"><Edit2 className="w-4 h-4" /></button>
                                                     <button onClick={() => handleDeleteSlide(slide.id)} className="p-2 bg-red-600 text-white rounded hover:bg-red-700"><Trash2 className="w-4 h-4" /></button>
                                                 </div>
                                             </div>
                                             <div className="p-4">
-                                                <h4 className="font-bold text-sm uppercase">{slide.titlePrefix} <span className="text-slate-400">{slide.titleHighlight}</span></h4>
-                                                <p className="text-xs text-slate-500 mt-1 line-clamp-2">{slide.description}</p>
+                                                <h4 className="font-bold text-sm uppercase">{slide.title || slide.titlePrefix} <span className="text-slate-400">{slide.titleHighlight}</span></h4>
+                                                <p className="text-xs text-slate-500 mt-1 line-clamp-2">{slide.subtitle || slide.description}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -1317,8 +1399,42 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                         title="Editor Slide"
                     >
                         <div className="flex flex-col gap-6">
+
+                            {/* Selector de medio. El video no reemplaza a la imagen:
+                                la imagen sigue haciendo de poster mientras el video
+                                carga, si el navegador bloquea el autoplay o si el
+                                usuario tiene activado "reducir movimiento". */}
                             <div>
-                                <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">Imagen del Slide</label>
+                                <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">Tipo de Medio</label>
+                                <div className="flex gap-2">
+                                    {([['image', 'Imagen'], ['video', 'Video']] as const).map(([value, label]) => {
+                                        const isSelected = (editingSlide.mediaType || 'image') === value;
+                                        return (
+                                            <button
+                                                key={value}
+                                                type="button"
+                                                onClick={() => setEditingSlide({ ...editingSlide, mediaType: value })}
+                                                className={`px-5 py-2.5 text-xs font-bold uppercase border-2 transition-all ${isSelected
+                                                    ? 'bg-black text-white border-black'
+                                                    : 'bg-white text-neutral-500 border-slate-200 hover:border-black hover:text-black'
+                                                    }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">
+                                    {editingSlide.mediaType === 'video' ? 'Imagen de Respaldo (Poster)' : 'Imagen del Slide'}
+                                </label>
+                                {editingSlide.mediaType === 'video' && (
+                                    <p className="text-[11px] text-neutral-500 mb-2">
+                                        Se ve mientras carga el video y en dispositivos que no lo reproducen. Cargala siempre.
+                                    </p>
+                                )}
                                 <ImageUpload
                                     currentImage={editingSlide.imageUrl || ''}
                                     folder="banners"
@@ -1326,12 +1442,59 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     aspectRatio="wide"
                                 />
                             </div>
+
+                            {editingSlide.mediaType === 'video' && (
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">Video del Slide</label>
+                                    <VideoUpload
+                                        currentVideo={editingSlide.videoUrl || ''}
+                                        folder="banners"
+                                        onVideoUpload={(url) => setEditingSlide({ ...editingSlide, videoUrl: url })}
+                                    />
+                                    <p className="text-[11px] text-neutral-500 mt-2">
+                                        Se reproduce solo, sin sonido y en bucle. El visitante no puede pausarlo ni controlarlo.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* ENCUADRE — el archivo casi nunca tiene la proporción del
+                                banner, así que sobra imagen y el navegador recortaría por
+                                el centro. Acá se elige qué parte sobrevive. */}
+                            <div>
+                                <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">Encuadre</label>
+                                <EncuadreMedia
+                                    mediaType={editingSlide.mediaType}
+                                    imageUrl={editingSlide.imageUrl}
+                                    videoUrl={editingSlide.videoUrl}
+                                    frameWidth={config.banner?.frameWidth || 1920}
+                                    frameHeight={config.banner?.frameHeight || 720}
+                                    value={{
+                                        focalX: editingSlide.focalX ?? 50,
+                                        focalY: editingSlide.focalY ?? 50,
+                                        zoom: editingSlide.zoom ?? 1
+                                    }}
+                                    onChange={(frame) => setEditingSlide({ ...editingSlide, ...frame })}
+                                />
+                            </div>
+
+                            <div><label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Etiqueta Superior</label><input type="text" value={editingSlide.eyebrow || ''} onChange={e => setEditingSlide({ ...editingSlide, eyebrow: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-bold uppercase focus:shadow-md outline-none" placeholder="¡Qué bueno que estés en casa!" /></div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div><label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Texto Principal</label><input type="text" value={editingSlide.titlePrefix || ''} onChange={e => setEditingSlide({ ...editingSlide, titlePrefix: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-bold uppercase focus:shadow-md outline-none" placeholder="Ej: PLATAFORMA" /></div>
                                 <div><label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Texto del Medio (Destacado)</label><input type="text" value={editingSlide.titleHighlight || ''} onChange={e => setEditingSlide({ ...editingSlide, titleHighlight: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-bold uppercase focus:shadow-md outline-none" placeholder="Ej: ORIGEN" /></div>
                             </div>
                             <div><label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Descripción (Subtítulo)</label><textarea value={editingSlide.description || ''} onChange={e => setEditingSlide({ ...editingSlide, description: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-medium h-24 focus:shadow-md outline-none resize-none" placeholder="Breve descripción..." /></div>
-                            <div><label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Texto Botón (CTA)</label><input type="text" value={editingSlide.buttonText || ''} onChange={e => setEditingSlide({ ...editingSlide, buttonText: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-bold uppercase focus:shadow-md outline-none" placeholder="Ej: VER MÓDULOS" /></div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Texto Botón (CTA)</label><input type="text" value={editingSlide.buttonText || ''} onChange={e => setEditingSlide({ ...editingSlide, buttonText: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-bold uppercase focus:shadow-md outline-none" placeholder="Ej: VER MÓDULOS" /></div>
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Destino del Botón</label>
+                                    <input type="text" value={editingSlide.buttonLink || ''} onChange={e => setEditingSlide({ ...editingSlide, buttonLink: e.target.value })} className="w-full p-3 border border-slate-200 text-sm font-medium focus:shadow-md outline-none" placeholder="/eventos o https://..." />
+                                    {editingSlide.buttonText && !editingSlide.buttonLink && (
+                                        <p className="text-[11px] text-amber-700 mt-1.5 font-semibold">
+                                            Sin destino el botón no se muestra.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
 
                             <div className="pt-4 border-t-2 border-black flex justify-end gap-3 bg-white">
                                 <button onClick={() => { setIsSlideModalOpen(false); setEditingSlide(null); }} className="px-6 py-3 text-xs font-bold uppercase border border-slate-200 hover:bg-neutral-100">Cancelar</button>

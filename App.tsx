@@ -378,20 +378,29 @@ const AppContent: React.FC = () => {
                 </Layout>
             } />
 
+            {/* Niñez es un módulo interno: ocultarlo del menú no alcanzaba,
+                porque /ninez seguía abierta a cualquiera que tuviera el link.
+                Mismos roles que el ítem del menú y que /admin-ninez/*. */}
             <Route path="/ninez" element={
-                <Layout
-                    userRole={user?.role || null}
-                    currentUser={user}
-                    onLogout={onLogoutClick}
-                    appConfig={config}
-                    onVolunteerClick={
-                        user && showVolunteerAccess
-                            ? () => setIsVolunteerModalOpen(true)
-                            : undefined
-                    }
-                >
-                    <Ninez currentUser={user} />
-                </Layout>
+                (user && hasRole(user, [
+                    UserRole.SUPER_ADMIN,
+                    UserRole.PASTOR,
+                    UserRole.ENCARGADO_NINEZ,
+                ]))
+                    ? <Layout
+                        userRole={user?.role || null}
+                        currentUser={user}
+                        onLogout={onLogoutClick}
+                        appConfig={config}
+                        onVolunteerClick={
+                            user && showVolunteerAccess
+                                ? () => setIsVolunteerModalOpen(true)
+                                : undefined
+                        }
+                    >
+                        <Ninez currentUser={user} />
+                    </Layout>
+                    : <Navigate to="/" />
             } />
 
             {/* ── RUTAS PROTEGIDAS CON LAYOUT ──────── */}

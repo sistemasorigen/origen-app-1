@@ -264,16 +264,26 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
 
 interface NotificationBellProps {
     onToggleDrawer: () => void;
+    /**
+     * La campana va montada sobre una foto o video, sin fondo de navbar
+     * detrás: pasa a blanco con un halo que la sostiene también sobre
+     * imágenes claras. Mismo criterio que HamburgerButton.
+     */
+    onMedia?: boolean;
 }
 
-export const NotificationBell: React.FC<NotificationBellProps> = ({ onToggleDrawer }) => {
+export const NotificationBell: React.FC<NotificationBellProps> = ({ onToggleDrawer, onMedia = false }) => {
     const { unreadCount } = useNotifications();
 
     return (
         <button
             onClick={onToggleDrawer}
             aria-label="Abrir notificaciones"
-            className="relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-800 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all group"
+            style={{ transition: 'color 600ms ease-out, filter 600ms ease-out' }}
+            className={`relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full focus-visible:outline-none focus-visible:ring-2 group ${onMedia
+                ? 'text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.5)] focus-visible:ring-white/60'
+                : 'text-slate-700 dark:text-zinc-200 drop-shadow-none hover:text-black dark:hover:text-white focus-visible:ring-slate-900/30 dark:focus-visible:ring-white/30'
+                }`}
         >
             <Bell className="w-5 h-5 transition-transform group-hover:scale-110" />
 

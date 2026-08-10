@@ -1,93 +1,35 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, UserRole, SystemModule, AppConfig, FooterLinks } from '../../types';
-import SystemLoginModal from '../../components/modals/ModalLoginSistema';
+import { User, AppConfig, FooterLinks, EventoGeneral, Group, GroupCategory } from '../../types';
 import { db } from '../../services/dbService';
-import { supabaseService } from '../../services/supabaseService';
-import { hasRole } from '../../services/authUtils';
+import { supabaseService, getEventosGeneralPublic } from '../../services/supabaseService';
 import {
-    ArrowRight,
-    Info,
-    ShoppingCart,
-    Users,
-    Music,
-    Settings,
-    Construction,
-    Lock,
-    AlertTriangle,
     Instagram,
     Facebook,
     Youtube,
     Music as MusicIcon,
-    HeartHandshake,
-    ClipboardList,
-    BarChart3,
-    CalendarDays as CalendarCoord,
     ChevronRight,
-    Book,
-    Star,
-    Trophy
+    ChevronLeft,
+    Calendar,
+    Clock,
+    MapPin,
+    ExternalLink,
+    Quote
 } from 'lucide-react';
-import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
+import HeroCarousel from '../../components/ui/CarruselHero';
 
 // --- TUTORIAL INTEGRATION ---
 import { useTutorial } from '../../src/hooks/useTutorial';
 import TutorialController from '../../components/onboarding/ControladorTutorial';
 import TutorialInvitation from '../../components/onboarding/InvitacionTutorial';
-import TourBeaconOverlay from '../../components/onboarding/SuperposicionTour';
 import { tours } from '../../src/config/tours';
-
-// Matter.js types (only used when physics is enabled)
-type MatterEngine = any;
-type MatterWorld = any;
-type MatterRender = any;
-type MatterBodies = any;
-type MatterBody = any;
-type MatterRunner = any;
 
 interface DashboardProps {
     currentUser: User | null;
     onLoginRequest: (email: string, pass: string) => Promise<boolean>;
 }
 
-// Helper to generate UUID with fallback
-const generateUUID = (): string => {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        return crypto.randomUUID();
-    }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-};
-
-// Neo-Brutalist Icon Component
-const getModuleIcon = (id: string, defaultIcon: string, isConstruction?: boolean, isRestricted?: boolean) => {
-    const iconClass = "w-8 h-8 md:w-10 md:h-10";
-
-    if (isRestricted) return <Lock className={`${iconClass}`} />;
-    if (isConstruction) return <Construction className={`${iconClass}`} />;
-
-    switch (id) {
-        case 'info-point': return <Info className={iconClass} />;
-        case 'store': return <ShoppingCart className={iconClass} />;
-        case 'groups': return <Users className={iconClass} />;
-        case 'welcome-system': return <HeartHandshake className={iconClass} />;
-        case 'alabanza': return <Music className={iconClass} />;
-        case 'pastores': return <AlertTriangle className={iconClass} />;
-        case 'tutorials': return <Book className={iconClass} />;
-        case 'admin': return <Settings className={iconClass} />;
-        case 'coordinators': return <ClipboardList className={iconClass} />;
-        case 'pastoral': return <HeartHandshake className={iconClass} />;
-        case 'influos': return <Star className={iconClass} />;
-        case 'prode': return <Trophy className={iconClass} />;
-        case 'eventos': return <CalendarCoord className={iconClass} />;
-        default: return <span className="text-3xl">{defaultIcon}</span>;
-    }
-};
-
-// Animation Keyframes for Neo-Brutalist Effects
+// Animation Keyframes
 const animationStyles = `
     @keyframes slideUp {
         from { opacity: 0; transform: translateY(30px); }
@@ -107,14 +49,509 @@ const animationStyles = `
     .stagger-6 { animation-delay: 0.3s; opacity: 0; }
 `;
 
+const pad = (n: number) => String(n).padStart(2, '0');
+
+// ── Cuenta regresiva ────────────────────────────────────────────────────
+// El contador cambia de resolución según cuánto falta, en vez de mostrar
+// siempre cuatro unidades. Los segundos de un evento que es dentro de cinco
+// días son precisión falsa: nadie los lee y le roban lugar a lo que sí
+// importa. Aparecen recién abajo de la hora, que es cuando empiezan a
+// significar algo. Las unidades en cero a la izquierda directamente no se
+// muestran — "00 días" es ruido.
+type CountdownPart = { value: number; short: string; long: string };
+
+const buildCountdown = (diffMs: number): CountdownPart[] => {
+    const total = Math.max(0, Math.floor(diffMs / 1000));
+    const d = Math.floor(total / 86400);
+    const h = Math.floor(total / 3600) % 24;
+    const m = Math.floor(total / 60) % 60;
+    const s = total % 60;
+
+    const dias: CountdownPart = { value: d, short: d === 1 ? 'día' : 'días', long: d === 1 ? 'día' : 'días' };
+    const horas: CountdownPart = { value: h, short: 'hs', long: h === 1 ? 'hora' : 'horas' };
+    const minutos: CountdownPart = { value: m, short: 'min', long: m === 1 ? 'minuto' : 'minutos' };
+    const segundos: CountdownPart = { value: s, short: 'seg', long: s === 1 ? 'segundo' : 'segundos' };
+
+    if (d > 0) return [dias, horas, minutos];
+    if (h > 0) return [horas, minutos, segundos];
+    if (m > 0) return [minutos, segundos];
+    return [segundos];
+};
+
+// Las abreviaturas ("h", "min") se leen mal en voz alta, así que la versión
+// para lectores de pantalla se arma aparte, como frase.
+const countdownPhrase = (parts: CountdownPart[]): string => {
+    const words = parts.map(p => `${p.value} ${p.long}`);
+    const last = words.pop() as string;
+    const verb = parts.length === 1 && parts[0].value === 1 ? 'Falta' : 'Faltan';
+    return words.length > 0 ? `${verb} ${words.join(', ')} y ${last}` : `${verb} ${last}`;
+};
+
+// Espejo del formateo de fecha de pages/eventos/Eventos.tsx — la card es
+// la misma, la fecha tiene que leerse igual. Se duplica a propósito en vez
+// de importar entre páginas: es un formateador puro de display.
+const formatEventDate = (dateStr: string): string =>
+    new Date(dateStr + 'T12:00:00')
+        .toLocaleDateString('es-AR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+        });
+
+// Postgres devuelve las columnas `time` como "HH:MM:SS". Los segundos de
+// un horario de evento son ruido: nadie programa una actividad a las
+// 16:00:07. Se recortan para mostrar "16:00".
+const formatEventTime = (time?: string): string => (time || '').slice(0, 5);
+
+// Descripción de un evento, recortada por defecto con "Ver más".
+//
+// El botón sólo aparece si el texto realmente no entra: se mide el recorte
+// (scrollHeight > clientHeight) en vez de contar caracteres, porque cuántas
+// líneas ocupa depende del ancho de la columna — al lado de la miniatura en
+// mobile son ~185px, en desktop el doble. Un "Ver más" debajo de una
+// descripción de seis palabras es ruido.
+const EventoDescripcion: React.FC<{
+    text: string;
+    expanded: boolean;
+    onToggle: () => void;
+}> = ({ text, expanded, onToggle }) => {
+    const ref = useRef<HTMLParagraphElement>(null);
+    const [isClamped, setIsClamped] = useState(false);
+
+    useEffect(() => {
+        // Sólo se mide recortado: expandido, scrollHeight y clientHeight
+        // coinciden y "Ver menos" desaparecería justo cuando hace falta.
+        if (expanded) return;
+        const el = ref.current;
+        if (!el) return;
+        const measure = () => setIsClamped(el.scrollHeight > el.clientHeight + 1);
+        measure();
+        // El recorte depende del ancho: rotar el teléfono o cruzar un
+        // breakpoint cambia la cantidad de líneas.
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [text, expanded]);
+
+    return (
+        <div className="flex flex-col items-start gap-1">
+            <p
+                ref={ref}
+                className={`text-sm sm:text-base font-normal text-slate-500 dark:text-zinc-400 leading-relaxed ${expanded ? '' : 'line-clamp-2 sm:line-clamp-3'}`}
+            >
+                {text}
+            </p>
+            {(isClamped || expanded) && (
+                <button
+                    onClick={onToggle}
+                    aria-expanded={expanded}
+                    className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 transition-colors"
+                >
+                    {expanded ? 'Ver menos' : 'Ver más'}
+                </button>
+            )}
+        </div>
+    );
+};
+
+// Carrusel "Próximos eventos" — estructura lateral: portada a la izquierda,
+// texto + contador + CTA a la derecha. El marco (borde + sombra + radio) vive
+// en el viewport del carrusel, no en cada slide, para que la sombra no la
+// recorte el overflow.
+const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ eventos, now }) => {
+    const navigate = useNavigate();
+    const [index, setIndex] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+    // Una sola descripción expandida a la vez: sólo hay un evento visible.
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+
+    useEffect(() => {
+        setIndex(0);
+    }, [eventos.length]);
+
+    // Al cambiar de evento la descripción vuelve a recortarse. Todos los
+    // slides comparten altura (son items de un mismo flex), así que un
+    // texto expandido que ya no se ve dejaría la card alta y vacía.
+    useEffect(() => {
+        setExpandedId(null);
+    }, [index]);
+
+    // Pausa el auto-avance mientras el puntero o el foco están dentro:
+    // la card tiene un CTA, y que se deslice sola mientras alguien va a
+    // hacer click es hostil. Mismo criterio que HeroCarousel. Expandir una
+    // descripción también congela el carrusel: deslizarse mientras alguien
+    // recién empieza a leer es peor todavía.
+    useEffect(() => {
+        if (eventos.length <= 1 || isPaused || expandedId) return;
+        const id = setInterval(() => setIndex(i => (i + 1) % eventos.length), 5000);
+        return () => clearInterval(id);
+    }, [eventos.length, isPaused, expandedId]);
+
+    if (eventos.length === 0) return null;
+
+    const safeIndex = Math.min(index, eventos.length - 1);
+
+    // CTA al ancho de la columna de acción, igual que el contador: los dos
+    // son bloques de la misma familia (uno mide la urgencia, el otro la
+    // resuelve), así que comparten ancho y quedan alineados.
+    const ctaClass = 'w-full inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-base font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
+
+    return (
+        <div>
+            <div
+                className="rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden bg-white dark:bg-zinc-900"
+                onMouseEnter={() => setIsPaused(true)}
+                onMouseLeave={() => setIsPaused(false)}
+                onFocusCapture={() => setIsPaused(true)}
+                onBlurCapture={() => setIsPaused(false)}
+            >
+                <div
+                    className="flex"
+                    style={{
+                        transform: `translateX(-${safeIndex * 100}%)`,
+                        // Misma curva que el fadeInUp global (index.html): el
+                        // desplazamiento arranca rápido y frena suave.
+                        // No usa clases Tailwind de transición porque
+                        // motion-reduce:transition-none la anula y con
+                        // prefers-reduced-motion el slide saltaba sin animar.
+                        // Un inline style de transform no se ve afectado.
+                        transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1)',
+                        willChange: 'transform'
+                    }}
+                >
+                    {eventos.map(ev => {
+                        const target = new Date(`${ev.startDate}T${ev.startTime || '00:00'}`).getTime();
+                        const diff = Math.max(0, target - now);
+                        const cd = buildCountdown(diff);
+                        return (
+                            <div key={ev.id} className="w-full shrink-0">
+                                <div className="flex flex-col sm:flex-row">
+                                    {/* PORTADA (desktop) — el flyer es arte que trae su propio
+                                        texto (dirección, precios, edades), así que se muestra
+                                        entero: ocupa el ancho de la columna y su alto sale de
+                                        su propia proporción (w-full h-auto), nunca se recorta.
+                                        Sin fondo desenfocado. El max-h es sólo una red para
+                                        formatos extremos (tipo story 9:16). */}
+                                    {ev.imageUrl && (
+                                        <div className="hidden sm:flex shrink-0 w-52 md:w-56 lg:w-64 items-center justify-center bg-slate-100 dark:bg-zinc-800 border-r border-slate-200 dark:border-zinc-800">
+                                            <img
+                                                src={ev.imageUrl}
+                                                alt={ev.name}
+                                                className="block w-full h-auto max-h-[380px] object-contain"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* PANEL — se parte en dos: información a la izquierda,
+                                        acción a la derecha. Separa lo que se lee de lo que se
+                                        toca, y evita que en desktop el CTA quede estirado a
+                                        900px por un texto de dos palabras. */}
+                                    <div className="flex-1 min-w-0 p-4 sm:p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
+
+                                        {/* INFORMACIÓN — en mobile arranca con una miniatura
+                                            del flyer al costado. A 170px el flyer no se leía:
+                                            su texto (precio, dirección, edad) quedaba hecho
+                                            puré y los bordes contra el fondo gris parecían
+                                            difuminados. Reducida a 96px la caja abraza la
+                                            imagen exacta (w-full + h-auto), sin fondo visible
+                                            ni recorte, y el resto de la card queda libre para
+                                            los datos que sí se leen. */}
+                                        <div className="flex-1 min-w-0 flex flex-row gap-3 sm:gap-0">
+                                            {ev.imageUrl && (
+                                                <div className="sm:hidden shrink-0 w-24 self-start rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800">
+                                                    <img src={ev.imageUrl} alt={ev.name} className="block w-full h-auto" />
+                                                </div>
+                                            )}
+                                            <div className="min-w-0 flex-1 flex flex-col gap-1.5 sm:gap-2">
+                                                {/* TÍTULO — Bold (700). Es el único 700 de la
+                                                    card: antes compartía Semibold con la
+                                                    etiqueta, el enlace, las unidades y el
+                                                    botón, y el nombre del evento terminaba
+                                                    pesando lo mismo que un "Ver más". */}
+                                                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                                                    {ev.name}
+                                                </h3>
+                                                {/* FECHA Y HORA — Semibold y más oscuras que la
+                                                    descripción. En una card de evento el "cuándo"
+                                                    es el segundo dato en importancia después del
+                                                    nombre; venía en gris claro y regular, o sea
+                                                    por debajo de un párrafo secundario.
+
+                                                    En mobile van una debajo de la otra: al lado
+                                                    de la miniatura la columna es angosta y en
+                                                    fila se cortaban igual, pero sin alineación. */}
+                                                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-x-4 gap-y-1 text-sm sm:text-base font-semibold text-slate-600 dark:text-zinc-300">
+                                                    <span className="flex items-center gap-1.5">
+                                                        <Calendar className="w-4 h-4 shrink-0" />
+                                                        {formatEventDate(ev.startDate)}
+                                                    </span>
+                                                    {ev.startTime && (
+                                                        <span className="flex items-center gap-1.5">
+                                                            <Clock className="w-4 h-4 shrink-0" />
+                                                            {formatEventTime(ev.startTime)}{ev.endTime && ` – ${formatEventTime(ev.endTime)}`}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {ev.description && (
+                                                    <EventoDescripcion
+                                                        text={ev.description}
+                                                        expanded={expandedId === ev.id}
+                                                        onToggle={() => setExpandedId(cur => (cur === ev.id ? null : ev.id))}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* ACCIÓN — contador y CTA comparten ancho y se leen
+                                            como un bloque: uno mide la urgencia, el otro la
+                                            resuelve. */}
+                                        {/* La línea reemplaza a la placa: en mobile y tablet el
+                                            bloque de acción va apilado bajo la descripción y
+                                            necesita su propio piso. Un filete de 1px separa
+                                            igual de bien que una caja, sin agregar un segundo
+                                            objeto negro. En desktop es una columna aparte, así
+                                            que la separación ya la da el espacio. */}
+                                        <div className="shrink-0 w-full md:w-52 lg:w-60 flex flex-col gap-4 border-t border-slate-100 dark:border-zinc-800 pt-4 md:border-t-0 md:pt-0">
+
+                                            {/* CONTADOR — el mismo reloj, sobre el papel.
+                                                Contador y CTA no son la misma clase de cosa:
+                                                uno se lee, el otro se toca. Con los dos en negro
+                                                el pie de la card eran dos bloques macizos y el
+                                                botón perdía su condición de único objeto que
+                                                responde. Ahora la tinta queda reservada para
+                                                lo que se toca.
+
+                                                Los dos puntos son lo que hace que se lea como
+                                                UN reloj y no como tres estadísticas sueltas: es
+                                                una sola magnitud partida en unidades. Van en
+                                                Regular y gris claro: son separadores, no datos.
+
+                                                Black (900) se usa acá y en ningún otro lugar de
+                                                la card. El tamaño se mide contra el título, no
+                                                solo: a 1.5× el contador se comía la card. Queda
+                                                apenas un escalón arriba (1.2×) — el nombre del
+                                                evento es lo primero que hay que leer, no cuánto
+                                                falta. */}
+                                            <div>
+                                                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-zinc-400 text-center">
+                                                    Empieza en
+                                                </div>
+
+                                                {/* items-baseline alinea el número de cada unidad
+                                                    con los dos puntos: la baseline de una columna
+                                                    flex es la de su primer hijo, o sea el número. */}
+                                                <div className="mt-2 flex items-baseline justify-center gap-2" aria-hidden="true">
+                                                    {cd.map((p, i) => (
+                                                        <React.Fragment key={p.short}>
+                                                            {i > 0 && (
+                                                                <span className="text-lg sm:text-xl font-normal leading-none text-slate-300 dark:text-zinc-600">:</span>
+                                                            )}
+                                                            <div className="flex flex-col items-center">
+                                                                <span className="text-2xl sm:text-3xl font-black tabular-nums tracking-[-0.03em] leading-none text-slate-900 dark:text-white">
+                                                                    {i === 0 ? p.value : pad(p.value)}
+                                                                </span>
+                                                                <span className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-zinc-400">
+                                                                    {p.short}
+                                                                </span>
+                                                            </div>
+                                                        </React.Fragment>
+                                                    ))}
+                                                </div>
+                                                <span className="sr-only">{countdownPhrase(cd)}</span>
+                                            </div>
+
+                                            {ev.registrationLink ? (
+                                                <a
+                                                    href={ev.registrationLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={ctaClass}
+                                                >
+                                                    Inscribite ahora <ExternalLink className="w-4 h-4" />
+                                                </a>
+                                            ) : (
+                                                <button onClick={() => navigate('/eventos')} className={ctaClass}>
+                                                    Ver el evento <ChevronRight className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {eventos.length > 1 && (
+                <div className="flex justify-center gap-1.5 mt-4">
+                    {eventos.map((_, i) => (
+                        <button
+                            key={i}
+                            onClick={() => setIndex(i)}
+                            aria-label={`Evento ${i + 1}`}
+                            aria-current={i === safeIndex}
+                            className={`h-1.5 rounded-full transition-all ${i === safeIndex ? 'w-6 bg-slate-900 dark:bg-white' : 'w-1.5 bg-slate-300 dark:bg-zinc-600 hover:bg-slate-400'}`}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Carrusel "Grupos para vos" — scroll horizontal nativo con snap
+// (mismo criterio que HeroCarousel: scroll-snap-type + botones de flecha
+// que desplazan una tarjeta por click) sobre grupos reales con lugar
+// disponible (supabaseService.getGroups() + getGroupCategories()).
+// `categoryWeights` viene del algoritmo de recomendación en Dashboard:
+// cuenta cuántos grupos APPROVED tiene el usuario por categoría, y acá
+// solo se usa para decidir si una tarjeta se gana el badge "Para vos".
+const GruposCarousel: React.FC<{ groups: Group[]; categories: GroupCategory[]; categoryWeights: Map<string, number> }> = ({ groups, categories, categoryWeights }) => {
+    const navigate = useNavigate();
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const getCategoryName = (categoryId?: string) => categories.find(c => c.id === categoryId)?.name || 'Grupo';
+
+    const getCupoLabel = (g: Group) => {
+        const left = g.maxCapacity - g.membersCount;
+        if (g.capacityLocked || left <= 0) return { label: 'Lleno', bg: '#fef2f2', color: '#b91c1c' };
+        if (left <= 3) return { label: `${left} lugar${left === 1 ? '' : 'es'}`, bg: '#fffbeb', color: '#b45309' };
+        return { label: 'Abierto', bg: '#ecfdf5', color: '#047857' };
+    };
+
+    const scrollByCard = (dir: 1 | -1) => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const card = el.querySelector<HTMLElement>('[data-group-card]');
+        const amount = card ? card.offsetWidth + 16 : el.clientWidth * 0.8;
+        el.scrollBy({ left: amount * dir, behavior: 'smooth' });
+    };
+
+    // /gcx ya sabe abrir un grupo puntual por query param (ver
+    // `redirectToLoginForGroup` y el deep-link `?groupId=` en Grupos.tsx):
+    // si hay sesión abre directo el modal de inscripción real (con
+    // validación de edad y cupo incluida); si no, manda a /auth y vuelve
+    // acá solo después de loguearse. Es el mismo flujo de "Unirme" que ya
+    // usa toda la app — no uno nuevo.
+    const goToJoin = (groupId: string) => navigate(`/gcx?groupId=${groupId}`);
+
+    if (groups.length === 0) return null;
+
+    return (
+        <div className="relative group/carousel">
+            <div
+                ref={scrollRef}
+                className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide pb-1"
+            >
+                {groups.map(g => {
+                    const cupo = getCupoLabel(g);
+                    const isMatch = !!g.categoryId && (categoryWeights.get(g.categoryId) || 0) > 0;
+                    const isFull = cupo.label === 'Lleno';
+                    return (
+                        <div
+                            key={g.id}
+                            data-group-card
+                            className="snap-start shrink-0 w-[280px] sm:w-[320px] flex flex-col bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-lg hover:border-slate-300 dark:hover:border-zinc-700 transition-all overflow-hidden"
+                        >
+                            <div className="relative h-44 sm:h-52 shrink-0 bg-slate-100 dark:bg-zinc-800">
+                                {g.imageUrl && <img src={g.imageUrl} alt="" className="w-full h-full object-cover" />}
+                                <span className="absolute top-3 left-3 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm text-slate-700 dark:text-zinc-200 text-xs font-semibold tracking-[0.02em] px-3 py-1.5 rounded-full">
+                                    {getCategoryName(g.categoryId)}
+                                </span>
+                                {isMatch && (
+                                    <span className="absolute top-3 right-3 bg-emerald-600 text-white text-[11px] font-semibold tracking-[0.04em] px-3 py-1.5 rounded-full">
+                                        Para vos
+                                    </span>
+                                )}
+                            </div>
+                            <div className="p-4 sm:p-5 flex flex-col flex-1">
+                                <div className="font-bold tracking-[-0.01em] text-slate-900 dark:text-white text-base sm:text-lg leading-tight">{g.name}</div>
+                                <div className="flex flex-col gap-1 mt-2.5">
+                                    <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-zinc-400 font-normal">
+                                        <Clock className="w-4 h-4 text-emerald-600 shrink-0" /> {g.meetingDay} {g.meetingTime}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-zinc-400 font-normal">
+                                        <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                                        <span className="truncate">{g.location}</span>
+                                    </div>
+                                </div>
+                                <span
+                                    className="self-start text-[11px] font-semibold px-2.5 py-1 rounded-full mt-3"
+                                    style={{ backgroundColor: cupo.bg, color: cupo.color }}
+                                >
+                                    {cupo.label}
+                                </span>
+
+                                <button
+                                    onClick={() => goToJoin(g.id)}
+                                    disabled={isFull}
+                                    className="mt-4 w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20"
+                                >
+                                    {isFull ? 'Sin lugar' : 'Unirme'}
+                                    {!isFull && <ChevronRight className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {groups.length > 1 && (
+                <>
+                    <button
+                        onClick={() => scrollByCard(-1)}
+                        aria-label="Grupos anteriores"
+                        className="hidden sm:flex absolute -left-3 top-[96px] -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md items-center justify-center text-slate-600 dark:text-zinc-300 opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-slate-50 dark:hover:bg-zinc-700"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => scrollByCard(1)}
+                        aria-label="Más grupos"
+                        className="hidden sm:flex absolute -right-3 top-[96px] -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md items-center justify-center text-slate-600 dark:text-zinc-300 opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-slate-50 dark:hover:bg-zinc-700"
+                    >
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+                </>
+            )}
+        </div>
+    );
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) => {
     const navigate = useNavigate();
-    const [modalOpen, setModalOpen] = useState(false);
-    const [selectedSystem, setSelectedSystem] = useState<{ name: string, id: string, route: string } | null>(null);
-    const [systems, setSystems] = useState<SystemModule[]>([]);
+
+    // El CTA del banner lo carga un admin y puede apuntar adentro o afuera
+    // de la app. Un link externo pasado a navigate() rompe (React Router lo
+    // trataría como ruta interna y caería en 404), así que se separan.
+    const openBannerLink = (link: string) => {
+        if (/^(https?:)?\/\//i.test(link) || link.startsWith('mailto:') || link.startsWith('tel:')) {
+            window.open(link, '_blank', 'noopener,noreferrer');
+        } else {
+            navigate(link.startsWith('/') ? link : `/${link}`);
+        }
+    };
     const [config, setConfig] = useState<AppConfig>(db.getAppConfig());
     const [footerLinks, setFooterLinks] = useState<FooterLinks>({ instagram: '', facebook: '', youtube: '', spotify: '' });
     const [isLoaded, setIsLoaded] = useState(false);
+
+    // --- Datos reales para "Próximos eventos" y "Grupos para vos" ---
+    const [eventos, setEventos] = useState<EventoGeneral[]>([]);
+    const [groups, setGroups] = useState<Group[]>([]);
+    const [categories, setCategories] = useState<GroupCategory[]>([]);
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        getEventosGeneralPublic().then(setEventos);
+        supabaseService.getGroups().then(setGroups);
+        supabaseService.getGroupCategories().then(setCategories);
+    }, []);
+
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, []);
 
     // --- TUTORIAL INTEGRATION ---
     const {
@@ -126,412 +563,91 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
         dismissTutorial
     } = useTutorial('dashboard');
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // PHYSICS ENGINE - SAFETY-FIRST, LAZY-LOAD ARCHITECTURE
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    // State: Physics only enabled after auth + idle delay
-    const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(false);
-    const [physicsError, setPhysicsError] = useState(false);
-
-    // Refs: Avoid useState in physics loop (prevents re-renders that block network requests)
-    const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-    const engineRef = useRef<MatterEngine | null>(null);
-    const worldRef = useRef<MatterWorld | null>(null);
-    const renderRef = useRef<MatterRender | null>(null);
-    const runnerRef = useRef<MatterRunner | null>(null);
-    const bodiesRef = useRef<Map<string, MatterBody>>(new Map());
-    const containerRef = useRef<HTMLDivElement>(null);
-    const physicsInitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const fpsMonitorRef = useRef<number[]>([]);
-    const lastFrameTimeRef = useRef<number>(Date.now());
-
-    // Store card ref by system ID
-    const setCardRef = useCallback((systemId: string, el: HTMLDivElement | null) => {
-        if (el) {
-            cardRefs.current.set(systemId, el);
-        } else {
-            cardRefs.current.delete(systemId);
-        }
-    }, []);
-
     useEffect(() => {
         const init = async () => {
-            const loadedModules = db.getModules();
-
-            // Load Config first to use it for filtering
             const remoteConfig = await supabaseService.getAppConfig();
             const activeConfig = remoteConfig || db.getAppConfig();
-
-            // --- STRICT VISIBILITY FILTER ---
-            // Only render cards that the user has explicit access to.
-            const visibleModules = loadedModules.filter(m => {
-                // If Prode is deactivated globally, hide it for everyone
-                if (m.id === 'prode' && activeConfig.prodeConfig && !activeConfig.prodeConfig.isActive) {
-                    return false;
-                }
-
-                // 1. Module is Public -> Always Visible
-                if (m.publicAccess) return true;
-
-                // 2. Not Public -> Must be logged in
-                if (!currentUser) return false;
-
-                // 3. Super Admin -> See All
-                if (hasRole(currentUser, UserRole.SUPER_ADMIN)) {
-                    if (m.id === 'prode' && currentUser?.gender === 'Femenino') return false;
-                    return true;
-                }
-
-                // Excluir Prode explícitamente para mujeres
-                if (m.id === 'prode' && currentUser?.gender === 'Femenino') return false;
-
-                // 4. Check Allowed Roles overlap
-                // If user has ANY of the allowed roles for this module
-                const userRoles = currentUser.roles || [currentUser.role]; // Fallback if roles array is missing
-                const hasAccess = userRoles.some(r => m.allowedRoles.includes(r));
-
-                return hasAccess;
-            });
-
-            // Sort modules: Ensure Admin is last
-            const sortedModules = [
-                ...visibleModules.filter(m => m.id !== 'admin').sort((a, b) => a.title.localeCompare(b.title, 'es')),
-                ...visibleModules.filter(m => m.id === 'admin')
-            ];
-
-            setSystems(sortedModules);
-
             setConfig(activeConfig);
             setFooterLinks(activeConfig.footerLinks || { instagram: '', facebook: '', youtube: '', spotify: '' });
         };
 
         init();
-        // Only set loaded on first mount/init
         if (!isLoaded) {
             setTimeout(() => setIsLoaded(true), 100);
         }
-    }, [currentUser]); // FIX: Re-run when user changes (e.g. upgrades to Admin)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // LAZY INITIALIZATION: Only enable physics AFTER user is confirmed + 3s idle
-    // ═══════════════════════════════════════════════════════════════════════════
-    // EMERGENCY FIX: Physics disabled to prevent dashboard crashes and timeouts
-    useEffect(() => {
-        // PHYSICS DISABLED - Early return to prevent any initialization
-        return;
+    // --- Derivados de datos reales para las secciones nuevas ---
 
-        // CRITICAL: Do NOT initialize physics until authenticated
-        if (!currentUser) {
-            setIsPhysicsEnabled(false);
-            return;
-        }
+    const upcomingEventos = eventos
+        .filter(e => new Date(`${e.startDate}T${e.startTime || '00:00'}`).getTime() > now)
+        .slice(0, 3);
 
-        // "Safe Start" Pattern: Wait 3 seconds after auth to ensure the app is idle
-        physicsInitTimeoutRef.current = setTimeout(() => {
-            console.log('[Physics] User authenticated and idle. Enabling physics...');
-            setIsPhysicsEnabled(true);
-        }, 3000);
+    // --- Algoritmo de recomendación de "Grupos para vos" ---
+    // Señal: a qué categorías pertenecen los grupos donde el usuario tiene
+    // una inscripción APPROVED (participante real, no solicitud pendiente
+    // ni rechazada). Cuantos más grupos aprobados tenga en una categoría
+    // (ej. "La FEMME", "Currícula", "Finanzas"), más peso tiene esa
+    // categoría a la hora de ordenar las recomendaciones.
+    const isUserRegistration = (r: { userId?: string; email: string }) =>
+        !!currentUser && (r.userId === currentUser.id || r.email === currentUser.email);
 
-        return () => {
-            if (physicsInitTimeoutRef.current) {
-                clearTimeout(physicsInitTimeoutRef.current);
+    // Mismo criterio de "Activo" que usa el resto de la app (ver
+    // supabaseService.getGroupRegistrationAnalytics): aprobado y sin
+    // haber pasado su fecha de fin — un grupo puede seguir con
+    // status 'approved' en la base aunque su temporada ya terminó.
+    const isGroupActive = (g: Group) =>
+        g.status === 'approved' && (!g.endDate || new Date(g.endDate) >= new Date());
+
+    const userCategoryWeights = (() => {
+        const weights = new Map<string, number>();
+        if (!currentUser) return weights;
+        groups.forEach(g => {
+            if (!g.categoryId) return;
+            const isApprovedMember = g.registrations?.some(r => r.status === 'APPROVED' && isUserRegistration(r));
+            if (isApprovedMember) {
+                weights.set(g.categoryId, (weights.get(g.categoryId) || 0) + 1);
             }
-        };
-    }, [currentUser]);
+        });
+        return weights;
+    })();
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // PHYSICS ENGINE INITIALIZATION (Only when isPhysicsEnabled is true)
-    // ═══════════════════════════════════════════════════════════════════════════
-    // EMERGENCY FIX: Physics engine completely disabled
-    useEffect(() => {
-        // PHYSICS DISABLED - Early return to prevent any Matter.js loading
-        return;
+    const topCategoryName = (() => {
+        const top = [...userCategoryWeights.entries()].sort((a, b) => b[1] - a[1])[0];
+        return top ? categories.find(c => c.id === top[0])?.name : undefined;
+    })();
 
-        if (!isPhysicsEnabled || physicsError) return;
+    const recommendedGroups = (() => {
+        // Solo grupos Activos; y no recomendar a los que ya pertenece o ya aplicó.
+        const notJoined = groups.filter(g => !g.isHidden && isGroupActive(g) && !g.registrations?.some(isUserRegistration));
+        const withOpenSpots = notJoined.filter(g => !g.capacityLocked && (g.maxCapacity - g.membersCount) > 0);
+        const pool = withOpenSpots.length > 0 ? withOpenSpots : notJoined;
 
-        let isMounted = true;
+        if (userCategoryWeights.size === 0) return pool.slice(0, 8);
 
-        const initPhysics = async () => {
-            try {
-                // Dynamic import of Matter.js (lazy load)
-                const Matter = await import('matter-js');
+        // Orden estable: primero las categorías donde el usuario más
+        // participa; dentro de un mismo peso, se preserva el orden original.
+        const ranked = [...pool].sort((a, b) => {
+            const weightA = (a.categoryId && userCategoryWeights.get(a.categoryId)) || 0;
+            const weightB = (b.categoryId && userCategoryWeights.get(b.categoryId)) || 0;
+            return weightB - weightA;
+        });
+        return ranked.slice(0, 8);
+    })();
 
-                if (!isMounted) return;
-
-                const { Engine, Render, World, Bodies, Body, Events, Runner } = Matter;
-
-                // Create engine (off-screen, no visual rendering needed)
-                const engine = Engine.create({
-                    gravity: { x: 0, y: 0.5, scale: 0.001 }
-                });
-
-                engineRef.current = engine;
-                worldRef.current = engine.world;
-
-                // Create invisible render (we won't actually use the canvas for display)
-                const render = Render.create({
-                    element: document.body,
-                    engine: engine,
-                    options: {
-                        width: 1,
-                        height: 1,
-                        wireframes: false,
-                        background: 'transparent',
-                    }
-                });
-
-                // Hide the Matter.js canvas (we use DOM transforms instead)
-                if (render.canvas) {
-                    render.canvas.style.display = 'none';
-                }
-
-                renderRef.current = render;
-
-                // Create physics bodies for each card
-                const containerBounds = containerRef.current?.getBoundingClientRect();
-                if (!containerBounds) return;
-
-                // Create ground and walls
-                const ground = Bodies.rectangle(
-                    containerBounds.width / 2,
-                    containerBounds.height + 50,
-                    containerBounds.width * 2,
-                    100,
-                    { isStatic: true }
-                );
-
-                const leftWall = Bodies.rectangle(
-                    -50,
-                    containerBounds.height / 2,
-                    100,
-                    containerBounds.height * 2,
-                    { isStatic: true }
-                );
-
-                const rightWall = Bodies.rectangle(
-                    containerBounds.width + 50,
-                    containerBounds.height / 2,
-                    100,
-                    containerBounds.height * 2,
-                    { isStatic: true }
-                );
-
-                World.add(engine.world, [ground, leftWall, rightWall]);
-
-                // Create bodies for each card
-                cardRefs.current.forEach((cardEl, systemId) => {
-                    const rect = cardEl.getBoundingClientRect();
-                    const containerRect = containerRef.current?.getBoundingClientRect();
-                    if (!containerRect) return;
-
-                    const x = rect.left - containerRect.left + rect.width / 2;
-                    const y = rect.top - containerRect.top + rect.height / 2;
-
-                    const body = Bodies.rectangle(x, y, rect.width, rect.height, {
-                        restitution: 0.3,
-                        friction: 0.1,
-                        frictionAir: 0.02,
-                        density: 0.001,
-                        label: systemId
-                    });
-
-                    bodiesRef.current.set(systemId, body);
-                    World.add(engine.world, body);
-                });
-
-                // Create runner
-                const runner = Runner.create();
-                runnerRef.current = runner;
-                Runner.run(runner, engine);
-
-                // FPS monitoring for fallback
-                fpsMonitorRef.current = [];
-                lastFrameTimeRef.current = Date.now();
-
-                // OPTIMIZED LOOP: Use refs to sync DOM directly (NO useState)
-                Events.on(engine, 'afterUpdate', () => {
-                    if (!isMounted) return;
-
-                    // FPS monitoring
-                    const now = Date.now();
-                    const delta = now - lastFrameTimeRef.current;
-                    lastFrameTimeRef.current = now;
-
-                    const fps = delta > 0 ? 1000 / delta : 60;
-                    fpsMonitorRef.current.push(fps);
-
-                    // Keep only last 30 frames
-                    if (fpsMonitorRef.current.length > 30) {
-                        fpsMonitorRef.current.shift();
-                    }
-
-                    // Calculate average FPS
-                    const avgFps = fpsMonitorRef.current.reduce((a, b) => a + b, 0) / fpsMonitorRef.current.length;
-
-                    // If FPS drops below 30, fail silently and revert to static
-                    if (fpsMonitorRef.current.length >= 30 && avgFps < 30) {
-                        console.warn('[Physics] FPS too low, reverting to static layout');
-                        cleanupPhysics();
-                        setPhysicsError(true);
-                        return;
-                    }
-
-                    // Apply transforms directly via refs (bypasses React render cycle)
-                    bodiesRef.current.forEach((body, systemId) => {
-                        const cardEl = cardRefs.current.get(systemId);
-                        if (cardEl) {
-                            const rect = cardEl.getBoundingClientRect();
-                            const containerRect = containerRef.current?.getBoundingClientRect();
-                            if (!containerRect) return;
-
-                            const initialX = rect.left - containerRect.left + rect.width / 2;
-                            const initialY = rect.top - containerRect.top + rect.height / 2;
-
-                            const dx = body.position.x - initialX;
-                            const dy = body.position.y - initialY;
-                            const angle = body.angle;
-
-                            // Direct DOM manipulation (no React re-render)
-                            cardEl.style.transform = `translate(${dx}px, ${dy}px) rotate(${angle}rad)`;
-                        }
-                    });
-                });
-
-                console.log('[Physics] Engine initialized successfully');
-
-            } catch (error) {
-                console.error('[Physics] Failed to initialize:', error);
-                setPhysicsError(true);
-            }
-        };
-
-        // Cleanup function
-        const cleanupPhysics = () => {
-            try {
-                if (runnerRef.current) {
-                    const Matter = (window as any).Matter;
-                    if (Matter?.Runner?.stop) {
-                        Matter.Runner.stop(runnerRef.current);
-                    }
-                    runnerRef.current = null;
-                }
-
-                if (renderRef.current) {
-                    const Matter = (window as any).Matter;
-                    if (Matter?.Render?.stop) {
-                        Matter.Render.stop(renderRef.current);
-                    }
-                    if (renderRef.current.canvas) {
-                        renderRef.current.canvas.remove();
-                    }
-                    renderRef.current = null;
-                }
-
-                if (worldRef.current && engineRef.current) {
-                    const Matter = (window as any).Matter;
-                    if (Matter?.World?.clear) {
-                        Matter.World.clear(worldRef.current, false);
-                    }
-                    if (Matter?.Engine?.clear) {
-                        Matter.Engine.clear(engineRef.current);
-                    }
-                }
-
-                engineRef.current = null;
-                worldRef.current = null;
-                bodiesRef.current.clear();
-
-                // Reset transforms on all cards
-                cardRefs.current.forEach((cardEl) => {
-                    cardEl.style.transform = '';
-                });
-
-                console.log('[Physics] Cleanup complete');
-            } catch (error) {
-                console.error('[Physics] Cleanup error:', error);
-            }
-        };
-
-        initPhysics();
-
-        return () => {
-            isMounted = false;
-            cleanupPhysics();
-        };
-    }, [isPhysicsEnabled, physicsError, systems]);
-
-    const handleSystemClick = (system: SystemModule) => {
-        if (system.status === 'construction' && system.id !== 'alabanza') {
-            return;
-        }
-
-        // Check for restrictions
-        // 1. PUBLIC ACCESS - Always Allow
-        if (system.publicAccess) {
-            navigate(system.route);
-            return;
-        }
-
-        // 2. RESTRICTED ACCESS - Check Roles
-        const isAdmin = currentUser && hasRole(currentUser, [UserRole.SUPER_ADMIN]);
-        const hasAccess = isAdmin || (currentUser && hasRole(currentUser, system.allowedRoles));
-
-        if (!hasAccess && currentUser) {
-            // Remove strict return to allow modal to open
-            // return; 
-        }
-
-        if (system.publicAccess) {
-            navigate(system.route);
-            return;
-        }
-
-        const isSuperAdmin = currentUser ? hasRole(currentUser, UserRole.SUPER_ADMIN) : false;
-        const hasRoleAccess = currentUser && (isSuperAdmin || hasRole(currentUser, system.allowedRoles));
-
-        if (hasRoleAccess) {
-            db.addLog({
-                id: generateUUID(),
-                userId: currentUser!.id,
-                action: `Acceso a Módulo`,
-                timestamp: new Date().toISOString(),
-                details: `El usuario ${currentUser!.name} ingresó al sistema: ${system.title}.`
-            });
-            navigate(system.route);
-        } else {
-            setSelectedSystem({
-                name: system.title,
-                id: system.id,
-                route: system.route
-            });
-            setModalOpen(true);
-        }
-    };
-
-    const handleModalLogin = async (email: string, pass: string) => {
-        const success = await onLoginRequest(email, pass);
-        if (success && selectedSystem) {
-            setModalOpen(false);
-            navigate(selectedSystem.route);
-            return true;
-        }
-        return false;
-    };
+    const todaysVerse = (() => {
+        if (!config.verses || config.verses.length === 0) return null;
+        const startOfYear = new Date(new Date().getFullYear(), 0, 0).getTime();
+        const dayOfYear = Math.floor((Date.now() - startOfYear) / 86400000);
+        return config.verses[dayOfYear % config.verses.length];
+    })();
 
     return (
         <>
             <style>{animationStyles}</style>
 
-            <div className="w-full min-h-screen bg-white dark:bg-black text-black dark:text-white font-sans flex flex-col relative selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
-
-                {/* Modal for System Login */}
-                <SystemLoginModal
-                    isOpen={modalOpen}
-                    onClose={() => setModalOpen(false)}
-                    systemName={selectedSystem?.name || 'Sistema'}
-                    onLogin={handleModalLogin}
-                />
+            <div className="w-full min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white font-sans flex flex-col relative">
 
                 {/* Tutorial Components */}
                 <TutorialInvitation
@@ -548,18 +664,42 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                     onSkip={dismissTutorial}
                 />
 
-                {/* === HERO SECTION - DYNAMIC CAROUSEL === */}
-                <div id="dashboard-hero" className={`${isLoaded ? 'animate-fadeIn' : 'opacity-0'} relative border-y-4 border-black mb-12 md:mb-16`}>
+                {/* === HERO — a sangre y al ras del tope de la página ===
+                    Vive fuera del contenedor con padding: la navbar es
+                    transparente y se monta encima (Estructura.tsx sube el
+                    contenido 64px en el dashboard), así que el hero llega
+                    hasta el borde superior. Sólo se redondea abajo — arriba
+                    va al ras, y a los costados también, porque un borde
+                    superior recto contra un margen lateral se vería roto.
+                    El alto compensa los 64px que tapa la navbar. */}
+                <div
+                    id="dashboard-hero"
+                    className={`rounded-b-3xl overflow-hidden ${isLoaded ? 'animate-fadeIn' : 'opacity-0'}`}
+                >
                     <HeroCarousel
                         slides={(config.banner?.slides && config.banner.slides.length > 0)
                             ? config.banner.slides.map(s => ({
                                 id: s.id,
                                 imageUrl: s.imageUrl,
-                                titlePrefix: 'Origen', // TODO: restore to s.title || s.titlePrefix
-                                titleHighlight: 'App',  // TODO: restore to s.titleHighlight
-                                description: s.subtitle || s.description
+                                mediaType: s.mediaType,
+                                videoUrl: s.videoUrl,
+                                focalX: s.focalX,
+                                focalY: s.focalY,
+                                zoom: s.zoom,
+                                eyebrow: s.eyebrow,
+                                title: s.title,
+                                titlePrefix: s.titlePrefix,
+                                titleHighlight: s.titleHighlight,
+                                subtitle: s.subtitle,
+                                description: s.description,
+                                // El CTA sólo se dibuja si tiene a dónde ir: un
+                                // botón sin destino se ve igual que uno roto.
+                                buttonText: s.buttonLink ? s.buttonText : undefined,
+                                onButtonClick: s.buttonLink ? () => openBannerLink(s.buttonLink as string) : undefined
                             }))
                             : [
+                                // Slide de respaldo: sólo se usa cuando el admin
+                                // todavía no cargó ninguno.
                                 {
                                     id: 'default-hero',
                                     imageUrl: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=2073&auto=format&fit=crop',
@@ -569,256 +709,158 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                 }
                             ]
                         }
-                        theme="default"
-                        heightClass="h-[42vh] md:h-[53vh]"
+                        theme="soft"
+                        // Con medidas cargadas desde el admin manda esa proporción;
+                        // sin ellas se conserva el alto por viewport de siempre.
+                        aspectRatio={
+                            config.banner?.frameWidth && config.banner?.frameHeight
+                                ? `${config.banner.frameWidth} / ${config.banner.frameHeight}`
+                                : undefined
+                        }
+                        heightClass="h-[46vh] sm:h-[50vh] md:h-[54vh] lg:h-[480px]"
                         autoPlayInterval={5000}
                     />
                 </div>
 
+                <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-16 flex-1">
 
+                    {/* === GRID PRINCIPAL: eventos + versículo, grupos ===
+                        Un solo árbol responsive, sin detección de dispositivo por JS.
+                        Fila 1: eventos (2/3) + versículo (1/3) — la card de eventos
+                        es lateral (portada + panel), y a 2/3 el contador y el CTA a
+                        ancho completo quedan proporcionados; a 1400px se verían
+                        estirados. Fila 2: grupos. Mobile apila en el orden del DOM. */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
 
-                {/* === SYSTEMS GRID - NEO-BRUTALIST CARDS === */}
-                <section id="systems-grid" className="relative z-10 pb-16 px-4 sm:px-6 lg:px-8 max-w-[95%] mx-auto w-full flex-1">
-
-
-
-                    {/* Grid Cards - Neo-Brutalist Layout */}
-                    <div
-                        ref={containerRef}
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative"
-                    >
-                        {systems.map((system, idx) => {
-                            const isRestricted = !system.publicAccess &&
-                                currentUser &&
-                                !hasRole(currentUser, UserRole.SUPER_ADMIN) &&
-                                !hasRole(currentUser, system.allowedRoles);
-
-                            const isConstruction = system.status === 'construction';
-                            const isFeatured = false;
-                            const isAdmin = system.id === 'admin';
-
-                            return (
-                                <div
-                                    key={system.id}
-                                    ref={(el) => setCardRef(system.id, el)}
-                                    onClick={() => handleSystemClick(system)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSystemClick(system); } }}
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label={`Acceder a ${system.title}: ${system.description}`}
-                                    className={`
-                                        group relative cursor-pointer overflow-hidden
-                                        border-[3px] p-6 sm:p-8
-                                        transition-all duration-200
-                                        hover:-translate-y-[2px] hover:-translate-x-[2px]
-                                        active:translate-y-0 active:translate-x-0
-                                        focus:ring-2 focus:ring-offset-2 focus:outline-none
-                                        min-h-[300px] flex flex-col justify-between
-                                        ${isConstruction ? 'opacity-60' : ''}
-                                        ${isLoaded ? 'animate-scaleIn' : 'opacity-0'}
-                                        ${isFeatured
-                                            ? 'md:col-span-2 bg-[#FFF9E5] dark:bg-yellow-900/30 border-black dark:border-yellow-300/50 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] dark:hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.2)] focus:ring-black dark:focus:ring-yellow-300'
-                                            : isAdmin
-                                                ? 'bg-white dark:bg-black border-blue-900 dark:border-blue-400 shadow-[8px_8px_0px_0px_rgba(30,58,138,1)] hover:shadow-[10px_10px_0px_0px_rgba(30,58,138,1)] dark:shadow-[8px_8px_0px_0px_rgba(96,165,250,0.3)] dark:hover:shadow-[10px_10px_0px_0px_rgba(96,165,250,0.4)] focus:ring-blue-900 dark:focus:ring-blue-400'
-                                                : 'bg-white dark:bg-black border-black dark:border-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.2)] dark:hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,0.3)] focus:ring-black dark:focus:ring-white'
-                                        }
-                                    `}
-                                    style={{ animationDelay: `${0.05 + idx * 0.05}s`, opacity: isLoaded ? undefined : 0 }}
-                                >
-                                    {/* Admin diagonal stripe pattern */}
-                                    {isAdmin && (
-                                        <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #1e3a8a 0, #1e3a8a 1px, transparent 0, transparent 10px)' }} />
-                                    )}
-
-                                    {/* Featured card decorative circle */}
-                                    {isFeatured && (
-                                        <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-[#ffeebb] dark:bg-yellow-700/20 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500 pointer-events-none" />
-                                    )}
-
-                                    {/* Content */}
-                                    <div className="relative z-10 h-full flex flex-col">
-
-                                        {/* Top Row */}
-                                        <div className="flex items-start justify-between mb-6">
-                                            {/* Icon Box */}
-                                            <div className={`
-                                                flex items-center justify-center border-[3px] bg-white
-                                                ${isFeatured
-                                                    ? 'w-14 h-14 sm:w-16 sm:h-16 border-black dark:border-yellow-300 text-black dark:text-yellow-300'
-                                                    : isAdmin
-                                                        ? 'w-12 h-12 sm:w-14 sm:h-14 border-blue-900 dark:border-blue-400 text-blue-900 dark:text-blue-400 dark:bg-black'
-                                                        : 'w-12 h-12 sm:w-14 sm:h-14 border-black dark:border-white text-black dark:text-white dark:bg-black'
-                                                }
-                                            `}>
-                                                {getModuleIcon(
-                                                    system.id,
-                                                    system.icon,
-                                                    isConstruction,
-                                                    isRestricted || false
-                                                )}
-                                            </div>
-
-                                            {/* Status Badge / Lock / Admin Badge */}
-                                            {isConstruction && (
-                                                <span className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border-2 border-amber-400 dark:border-amber-600">
-                                                    Próximamente
-                                                </span>
-                                            )}
-
-                                            {isAdmin && !isConstruction && (
-                                                <div className="bg-blue-900 dark:bg-blue-500 text-white text-[10px] font-bold px-2 py-1 uppercase">
-                                                    Admin
-                                                </div>
-                                            )}
-
-                                            {!system.publicAccess && !isConstruction && !isAdmin && (
-                                                <Lock className="w-5 h-5 text-gray-300 dark:text-neutral-600" />
-                                            )}
-                                        </div>
-
-                                        {/* Subtitle */}
-                                        <p className={`text-xs font-mono font-bold tracking-widest mb-2
-                                            ${isFeatured
-                                                ? 'text-gray-600 dark:text-yellow-200/80'
-                                                : isAdmin
-                                                    ? 'text-blue-800 dark:text-blue-300'
-                                                    : 'text-gray-500 dark:text-neutral-500'
-                                            }
-                                        `}>
-                                            {system.subtitle}
-                                        </p>
-
-                                        {/* Title */}
-                                        <h3 className={`font-black leading-none mb-3
-                                            ${isFeatured
-                                                ? 'text-3xl sm:text-4xl tracking-tighter text-black dark:text-white'
-                                                : isAdmin
-                                                    ? 'text-2xl sm:text-3xl tracking-tight text-blue-900 dark:text-blue-300'
-                                                    : 'text-2xl sm:text-3xl tracking-tight text-black dark:text-white'
-                                            }
-                                        `}>
-                                            {system.title}
-                                        </h3>
-
-                                        {/* Description */}
-                                        <p className={`font-medium leading-relaxed flex-1
-                                            ${isFeatured
-                                                ? 'text-black dark:text-neutral-200 text-sm sm:text-base max-w-lg mb-8'
-                                                : 'text-gray-600 dark:text-neutral-400 text-sm mb-8'
-                                            }
-                                        `}>
-                                            {system.description}
-                                        </p>
-
-                                        {/* Action Footer */}
-                                        <div className={`pt-6 border-t-[3px]
-                                            ${isFeatured
-                                                ? 'border-black dark:border-yellow-300/50'
-                                                : isAdmin
-                                                    ? 'border-blue-900 dark:border-blue-400'
-                                                    : 'border-black dark:border-white'
-                                            }
-                                        `}>
-                                            {isConstruction ? (
-                                                <span className="flex items-center gap-2 text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">
-                                                    <Construction className="w-4 h-4" />
-                                                    En Desarrollo
-                                                </span>
-                                            ) : (
-                                                <button
-                                                    className={`inline-flex items-center gap-2 font-bold text-xs uppercase
-                                                        ${isFeatured
-                                                            ? 'px-8 py-3 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-colors'
-                                                            : isAdmin
-                                                                ? 'px-6 py-2.5 bg-blue-900 text-white hover:bg-blue-800 dark:bg-blue-500 dark:hover:bg-blue-400 transition-colors w-max'
-                                                                : 'px-6 py-2.5 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-colors w-max'
-                                                        }
-                                                    `}
-                                                >
-                                                    ACCEDER
-                                                    <ArrowRight className={`${isFeatured ? 'w-4 h-4' : 'w-3 h-3'} group-hover:translate-x-1 transition-transform`} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
+                        {/* === PRÓXIMOS EVENTOS — portada + contador + CTA, en carrusel === */}
+                        {upcomingEventos.length > 0 && (
+                            <div className={todaysVerse ? 'lg:col-span-2' : 'lg:col-span-3'}>
+                                <div className="flex items-baseline justify-between gap-3 mb-4">
+                                    <h2 className="text-lg sm:text-xl font-black uppercase tracking-[-0.02em] text-slate-900 dark:text-white">Próximos eventos</h2>
+                                    <button
+                                        onClick={() => navigate('/eventos')}
+                                        className="shrink-0 inline-flex items-center gap-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                    >
+                                        Ver todos <ChevronRight className="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
-                            );
-                        })}
+                                <EventosCarousel eventos={upcomingEventos} now={now} />
+                            </div>
+                        )}
+
+                        {/* === VERSÍCULO DEL DÍA — config.verses real, rotación por día ===
+                            Va al lado de eventos y estira a su altura: un versículo con
+                            aire alrededor se lee mejor que uno apretado, así que el
+                            texto se centra vertical en vez de quedar arriba. */}
+                        {todaysVerse && (
+                            <div className="lg:col-span-1 flex flex-col">
+                                {/* Espaciador invisible que iguala la altura del header
+                                    de "Próximos eventos", para que las dos cards de la
+                                    fila arranquen a la misma altura. */}
+                                <div className="hidden lg:block h-7 mb-4" aria-hidden="true" />
+                                <div className="relative flex-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm p-5 sm:p-6 overflow-hidden flex flex-col justify-center">
+                                    <Quote className="absolute top-3 right-3 w-10 h-10 text-emerald-50 dark:text-emerald-950" />
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-600">Versículo del día</div>
+                                    {/* Un versículo es una cita, no un titular: LightItalic (300) a
+                                        tamaño generoso y leading suelto le da el registro correcto.
+                                        Es el único italic de la página, por eso se nota. */}
+                                    <p className="mt-2.5 text-lg sm:text-xl font-light italic text-slate-900 dark:text-white leading-relaxed max-w-[90%]">«{todaysVerse.text}»</p>
+                                    <div className="mt-3 text-xs font-semibold uppercase tracking-[0.1em] text-emerald-600">{todaysVerse.ref}</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* === GRUPOS PARA VOS — carrusel de grupos reales con lugar disponible === */}
+                        {recommendedGroups.length > 0 && (
+                            <div className="lg:col-span-3">
+                                <div className="flex items-baseline justify-between gap-3 mb-1">
+                                    <h2 className="text-lg sm:text-xl font-black uppercase tracking-[-0.02em] text-slate-900 dark:text-white">Grupos para vos</h2>
+                                    <button
+                                        onClick={() => navigate('/gcx')}
+                                        className="shrink-0 inline-flex items-center gap-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                    >
+                                        Ver todos <ChevronRight className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                                <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 mb-4">
+                                    {topCategoryName
+                                        ? <>Como participás de grupos de <span className="font-semibold text-slate-700 dark:text-zinc-200">{topCategoryName}</span>, esto te puede interesar.</>
+                                        : 'Grupos con lugar disponible esta semana.'}
+                                </p>
+                                <GruposCarousel groups={recommendedGroups} categories={categories} categoryWeights={userCategoryWeights} />
+                            </div>
+                        )}
                     </div>
-                </section>
+                </div>
 
-
-
-                {/* === FOOTER - NEO-BRUTALIST === */}
-                <footer className={`relative z-10 bg-neutral-50 dark:bg-neutral-950 border-t-2 sm:border-t-4 border-black dark:border-white py-8 sm:py-12 md:py-16 px-4 md:px-6 mt-auto ${isLoaded ? 'animate-slideUp stagger-4' : 'opacity-0'}`}>
+                {/* === FOOTER === */}
+                <footer className={`relative z-10 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 py-8 sm:py-12 md:py-16 px-4 md:px-6 mt-auto ${isLoaded ? 'animate-slideUp stagger-4' : 'opacity-0'}`}>
                     <div className="max-w-7xl mx-auto flex flex-col items-center text-center md:text-left md:flex-row md:items-center md:justify-between gap-8 md:gap-12">
 
                         {/* Left - Text */}
                         <div>
-                            <h2 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-tighter mb-2 md:mb-4">
+                            {/* Cierra en el mismo registro con el que abre el saludo
+                                (Light 300): la página empieza y termina hablando. */}
+                            <h2 className="text-2xl sm:text-3xl md:text-4xl font-light tracking-[-0.02em] mb-2 md:mb-3 text-slate-900 dark:text-white">
                                 ¿Querés conocernos?
                             </h2>
-                            <p className="text-neutral-500 dark:text-neutral-400 text-sm md:text-base font-bold uppercase tracking-wider">
+                            <p className="text-slate-500 dark:text-zinc-400 text-sm md:text-base font-normal">
                                 Seguinos en nuestras redes y sé parte de la comunidad.
                             </p>
                         </div>
 
-                        {/* Right - Social Icons - NEO-BRUTALIST BUTTONS */}
+                        {/* Right - Social Icons */}
                         <div className="flex flex-wrap justify-center gap-3 md:gap-4">
                             {footerLinks.instagram && (
                                 <button
                                     onClick={() => window.open(footerLinks.instagram, '_blank')}
-                                    className="w-14 h-14 bg-white dark:bg-black border-3 border-black dark:border-white flex items-center justify-center hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-all duration-200 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.4)] hover:-translate-y-1 hover:-rotate-3 active:translate-y-0 active:shadow-none"
-                                    style={{ borderWidth: '3px' }}
+                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200"
                                     title="Instagram"
                                 >
-                                    <Instagram className="w-6 h-6" />
+                                    <Instagram className="w-5 h-5" />
                                 </button>
                             )}
                             {footerLinks.facebook && (
                                 <button
                                     onClick={() => window.open(footerLinks.facebook, '_blank')}
-                                    className="w-14 h-14 bg-white dark:bg-black border-3 border-black dark:border-white flex items-center justify-center hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-all duration-200 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.4)] hover:-translate-y-1 hover:rotate-3 active:translate-y-0 active:shadow-none"
-                                    style={{ borderWidth: '3px' }}
+                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200"
                                     title="Facebook"
                                 >
-                                    <Facebook className="w-6 h-6" />
+                                    <Facebook className="w-5 h-5" />
                                 </button>
                             )}
                             {footerLinks.youtube && (
                                 <button
                                     onClick={() => window.open(footerLinks.youtube, '_blank')}
-                                    className="w-14 h-14 bg-white dark:bg-black border-3 border-black dark:border-white flex items-center justify-center hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-all duration-200 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.4)] hover:-translate-y-1 hover:-rotate-3 active:translate-y-0 active:shadow-none"
-                                    style={{ borderWidth: '3px' }}
+                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200"
                                     title="YouTube"
                                 >
-                                    <Youtube className="w-6 h-6" />
+                                    <Youtube className="w-5 h-5" />
                                 </button>
                             )}
                             {footerLinks.spotify && (
                                 <button
                                     onClick={() => window.open(footerLinks.spotify, '_blank')}
-                                    className="w-14 h-14 bg-white dark:bg-black border-3 border-black dark:border-white flex items-center justify-center hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-all duration-200 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.4)] hover:-translate-y-1 hover:rotate-3 active:translate-y-0 active:shadow-none"
-                                    style={{ borderWidth: '3px' }}
+                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200"
                                     title="Spotify"
                                 >
-                                    <MusicIcon className="w-6 h-6" />
+                                    <MusicIcon className="w-5 h-5" />
                                 </button>
                             )}
                         </div>
                     </div>
 
                     {/* Copyright */}
-                    <div className="max-w-7xl mx-auto mt-8 sm:mt-12 pt-6 sm:pt-8 border-t-2 border-black dark:border-white text-center">
-                        <p className="text-sm font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                    <div className="max-w-7xl mx-auto mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-200 dark:border-zinc-800 text-center">
+                        <p className="text-sm font-semibold text-slate-400 dark:text-zinc-500">
                             © {new Date().getFullYear()} Sistema Origen — Todos los derechos reservados
                         </p>
-                        <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500 mt-2 uppercase tracking-widest">
+                        <p className="text-xs font-normal tracking-[0.06em] text-slate-300 dark:text-zinc-600 mt-2">
                             Powered by IQstudios
                         </p>
                     </div>
                 </footer>
-            </div >
+            </div>
         </>
     );
 };

@@ -41,11 +41,24 @@ interface DrawerMenuProps {
 export const HamburgerButton: React.FC<{
     onClick: () => void;
     className?: string;
-}> = ({ onClick, className = "" }) => (
+    /**
+     * El ícono va montado sobre una foto o video, sin fondo de navbar
+     * detrás: pasa a blanco con un halo que lo sostiene también sobre
+     * imágenes claras. El color es una decisión del componente y no un
+     * className de afuera porque `text-white` y `text-slate-700` tienen la
+     * misma especificidad — cuál gana lo decidiría el orden de la hoja de
+     * estilos, no el orden del atributo class.
+     */
+    onMedia?: boolean;
+}> = ({ onClick, className = "", onMedia = false }) => (
     <button
         id="hamburger-menu-btn"
         onClick={onClick}
-        className={`flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-800 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all group ${className}`}
+        style={{ transition: 'color 600ms ease-out, filter 600ms ease-out' }}
+        className={`flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full focus-visible:outline-none focus-visible:ring-2 group ${onMedia
+            ? 'text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.5)] focus-visible:ring-white/60'
+            : 'text-slate-700 dark:text-zinc-200 drop-shadow-none hover:text-black dark:hover:text-white focus-visible:ring-slate-900/30 dark:focus-visible:ring-white/30'
+            } ${className}`}
         aria-label="Menú"
     >
         <Menu className="w-5 h-5 transition-transform group-hover:scale-110" />
@@ -353,15 +366,31 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             ]
         },
         {
+            // Módulo interno: fuera del radar público. Con `roles: []` el ítem
+            // se mostraba a cualquiera, incluso sin sesión. Los roles son los
+            // mismos que ya declara Ninez.tsx para su botonera y App.tsx para
+            // el guard de la ruta — los tres lugares tienen que coincidir.
             label: 'Niñez',
             icon: Baby,
             path: '/ninez',
-            roles: [],
+            roles: [
+                UserRole.SUPER_ADMIN,
+                UserRole.PASTOR,
+                UserRole.ENCARGADO_NINEZ,
+            ],
             subItems: [
                 {
+                    // Se repiten los roles en vez de heredarlos del padre: los
+                    // subItems se filtran por su cuenta, así que si mañana
+                    // alguien vuelve a abrir el ítem padre, este no queda
+                    // público por descuido.
                     label: 'Panel Niñez',
                     path: '/ninez',
-                    roles: []
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_NINEZ,
+                    ]
                 },
                 // ── ADMINISTRACIÓN ────────────────
                 {
