@@ -1494,11 +1494,27 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     </button>
 
                     {/* HERO CAROUSEL - Grupos de Conexión */}
-                    <section className="relative border-b-4 border-black">
+                    {/* Sólo se redondea abajo: arriba el hero va al ras del tope
+                        de la página, montado bajo la navbar transparente. Mismo
+                        criterio que el hero del Dashboard. El overflow-hidden es
+                        necesario — sin él las esquinas cuadradas del carrusel se
+                        pintan por encima del radio del contenedor. */}
+                    <section className="relative rounded-b-3xl overflow-hidden">
+                        {/* El tema queda en `groups`, no en `soft` como el
+                            Dashboard: la tipografía de los títulos de esta
+                            página es propia del módulo y se conserva. Lo que sí
+                            se comparte con el Dashboard es el encuadre — alto,
+                            redondeo inferior y navbar montada encima.
+
+                            Van juntos: los títulos de `groups` son blancos con
+                            drop-shadow y sin contorno, así que dependen del velo
+                            degradado que ese mismo tema pinta sobre la foto.
+                            Sobre el `soft` —que va sin velo— se perderían en
+                            cualquier imagen clara. */}
                         <HeroCarousel
                             slides={heroSlides}
                             theme="groups"
-                            heightClass="h-[42vh] md:h-[53vh]"
+                            heightClass="h-[46vh] sm:h-[50vh] md:h-[54vh] lg:h-[480px]"
                             autoPlayInterval={6000}
                         />
                     </section>

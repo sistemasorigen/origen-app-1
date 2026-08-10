@@ -411,6 +411,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         UserRole.ENCARGADO_NINEZ,
                     ]
                 },
+                {
+                    label: 'Día del Niño',
+                    path: '/eventos/admin/diadelnino',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_EVENTOS,
+                        UserRole.ENCARGADO_NINEZ,
+                    ]
+                },
             ]
         },
         {

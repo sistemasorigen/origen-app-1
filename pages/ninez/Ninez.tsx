@@ -66,7 +66,9 @@ const Ninez: React.FC<NinezProps> = ({ currentUser }) => {
 
             {/* Hero */}
             {slides.length > 0 ? (
-                <HeroCarousel slides={slides} heightClass="h-[50vh] md:h-[60vh]" theme="groups" />
+                <div className="rounded-b-3xl overflow-hidden">
+                    <HeroCarousel slides={slides} heightClass="h-[46vh] sm:h-[50vh] md:h-[54vh] lg:h-[480px]" theme="soft" />
+                </div>
             ) : (
                 !loading && (
                     <div className="h-[30vh] flex items-center justify-center bg-slate-50 border-b border-slate-100">

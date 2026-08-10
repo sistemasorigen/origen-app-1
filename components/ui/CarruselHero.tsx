@@ -31,25 +31,6 @@ interface HeroCarouselProps {
 }
 
 /**
- * Texto blanco con contorno negro, para leerse sobre cualquier foto.
- *
- * La clave es `paint-order: stroke fill`: el trazo se pinta POR DETRÁS del
- * relleno. Sin eso el navegador lo dibuja encima y se come el interior de
- * las letras — a estos tamaños las deja sucias y más finas.
- *
- * Es lo que reemplaza al velo oscuro sobre la imagen: el banner se ve limpio
- * de punta a punta y el texto igual se lee, venga la foto clara u oscura.
- * El grosor va por parámetro porque un trazo fijo que funciona en un titular
- * de 60px ahoga a un subtítulo de 16px.
- */
-const outlinedText = (strokeWidth: number): React.CSSProperties => ({
-    color: '#ffffff',
-    WebkitTextStroke: `${strokeWidth}px rgba(0,0,0,0.55)`,
-    paintOrder: 'stroke fill',
-    textShadow: '0 2px 10px rgba(0,0,0,0.3)'
-} as React.CSSProperties);
-
-/**
  * Traduce el encuadre de un slide a CSS.
  *
  * El medio siempre llena el marco (object-cover) y sobra por algún lado; el
@@ -216,8 +197,13 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
         if (theme === 'infopoint') return 'bg-gradient-to-t from-black/60 via-black/20 to-transparent';
         if (theme === 'groups') return 'bg-gradient-to-t from-black/70 via-black/30 to-transparent';
         if (theme === 'prode') return 'bg-transparent';
-        // Sin velo: la foto se ve limpia de punta a punta.
-        if (theme === 'soft') return 'bg-transparent';
+        // Antes iba sin velo porque el texto traía su propio contorno negro.
+        // Con la tipografía de Grupos —blanca lisa, sólo drop-shadow— el velo
+        // es lo único que la sostiene sobre una foto clara. Va parejo arriba y
+        // abajo, no cargado al pie como en `groups`, porque acá el bloque de
+        // texto está centrado; de paso el tramo superior le da contraste al
+        // logo blanco de la navbar montada encima.
+        if (theme === 'soft') return 'bg-gradient-to-b from-black/55 via-black/45 to-black/55';
         return 'bg-gradient-to-b from-black/70 via-black/40 to-slate-900';
     };
 
@@ -305,13 +291,11 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                             <div className={`absolute inset-0 ${slide.overlayColor || getOverlayClass()}`}></div>
 
                             {/* Content */}
-                            {/* El tema soft ancla su contenido abajo a la izquierda y
-                                resuelve su propio layout a pantalla completa. Envuelto
-                                en el centrador de los demás temas (items-center +
-                                justify-center + max-w-5xl) su `items-end` no tenía
-                                ninguna altura contra la cual medir —el contenedor era
-                                tan alto como el texto— y el bloque terminaba flotando
-                                en el medio del banner. */}
+                            {/* El tema soft queda fuera del centrador compartido de
+                                los demás temas porque resuelve su propio layout a
+                                pantalla completa: centra el bloque contra la altura
+                                real del banner y fija su propio max-width y padding
+                                lateral, alineados con el resto de la página. */}
                             <div className={`absolute inset-0 ${theme === 'soft' ? '' : 'flex items-center justify-center p-6 text-center'}`}>
                                 <div className={`relative z-10 ${theme === 'soft' ? 'w-full h-full' : 'max-w-5xl'}`}>
                                     {theme === 'store' ? (
@@ -446,79 +430,46 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                                             </div>
                                         </div>
                                     ) : theme === 'soft' ? (
-                                        // Soft Layout — contenido anclado abajo a la izquierda
-                                        // sobre el velo de pie: eyebrow en píldora, titular en
-                                        // Black 900, bajada y CTA. La foto respira arriba.
-                                        <div className="w-full h-full flex items-end">
-                                            {/* El hero va a sangre, pero su texto se alinea con
-                                                el contenedor del resto de la página (mismo
-                                                max-w y mismo padding lateral que las tarjetas
-                                                de abajo), así el margen izquierdo es uno solo
-                                                de punta a punta. */}
-                                            <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 md:pb-10">
-                                                {/* Cuatro escalones de tamaño, de mayor a menor:
-                                                    principal → destacado → descripción → etiqueta.
-                                                    Antes principal y destacado compartían el mismo
-                                                    tamaño dentro de un solo h1 partido por un <br>,
-                                                    así que no había jerarquía: eran dos renglones
-                                                    del mismo peso. */}
-                                                <div className="max-w-2xl text-left">
+                                        // Soft Layout — mismo tratamiento tipográfico que el
+                                        // tema `groups` (blanco liso, Bold, uppercase, tracking
+                                        // ajustado y drop-shadow), pero con el bloque centrado
+                                        // en el banner en vez de anclado abajo a la izquierda.
+                                        // La legibilidad ya no la da el contorno del texto sino
+                                        // el velo degradado — ver getOverlayClass().
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+                                                {/* Dos escalones de tamaño, de mayor a menor:
+                                                    principal → destacado. Van en un solo h1 para
+                                                    que el titular sea un encabezado y no dos. */}
+                                                <div className="max-w-3xl mx-auto text-center">
 
-                                                    {/* 4 · ETIQUETA SUPERIOR — la más chica. Mantiene
-                                                        su píldora clara: al tener fondo propio se
-                                                        lee sobre cualquier foto sin depender del
-                                                        contorno. */}
-                                                    <span className={`inline-block py-1 px-3 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-[11px] font-semibold tracking-[0.08em] uppercase mb-3 ${animBase} ${isActive ? animActive : ''}`}>
-                                                        {slide.eyebrow || '¡Qué bueno que estés en casa!'}
-                                                    </span>
-
-                                                    <h1 className={`uppercase tracking-[-0.03em] ${animBase} ${isActive ? `${animActive} animation-delay-200` : ''}`}>
-                                                        {/* 1 · TEXTO PRINCIPAL — el más grande, Black 900 */}
-                                                        <span
-                                                            className="block text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-[0.95]"
-                                                            style={outlinedText(2.5)}
-                                                        >
+                                                    <h1 className={`uppercase tracking-tight text-white drop-shadow-lg ${animBase} ${isActive ? animActive : ''}`}>
+                                                        {/* 1 · TEXTO PRINCIPAL */}
+                                                        <span className="block text-3xl md:text-5xl lg:text-6xl font-bold leading-[1.05]">
                                                             {slide.title || slide.titlePrefix}
                                                         </span>
                                                         {/* 2 · TEXTO DESTACADO — un escalón abajo en
-                                                            tamaño y en peso (Bold 700) */}
+                                                            tamaño y apenas más apagado en color, así
+                                                            se lee como bajada del principal y no
+                                                            como un segundo titular del mismo rango. */}
                                                         {slide.titleHighlight && (
-                                                            <span
-                                                                className="block mt-1 text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-[1.05]"
-                                                                style={outlinedText(2)}
-                                                            >
+                                                            <span className="block mt-1 text-xl md:text-3xl lg:text-4xl font-bold leading-[1.05] text-white/90">
                                                                 {slide.titleHighlight}
                                                             </span>
                                                         )}
                                                     </h1>
 
-                                                    {/* 3 · DESCRIPCIÓN — Semibold, no Regular: sobre
-                                                        una foto un trazo fino con contorno se
-                                                        empasta y deja de leerse. */}
                                                     {(slide.subtitle || slide.description) && (
-                                                        <p
-                                                            className={`mt-3 text-sm sm:text-base md:text-lg font-semibold max-w-xl ${animBase} ${isActive ? `${animActive} animation-delay-400` : ''}`}
-                                                            style={outlinedText(1)}
-                                                        >
+                                                        <p className={`mt-3 md:mt-4 text-base md:text-lg font-medium text-white/90 max-w-lg mx-auto ${animBase} ${isActive ? `${animActive} animation-delay-200` : ''}`}>
                                                             {slide.subtitle || slide.description}
                                                         </p>
                                                     )}
 
                                                     {slide.buttonText && (
-                                                        <div className={`mt-4 sm:mt-5 ${animBase} ${isActive ? `${animActive} animation-delay-600` : ''}`}>
-                                                            {/* CTA — bloque blanco con borde y letra
-                                                                negra. Es lo único de la composición
-                                                                que no depende del contorno para
-                                                                leerse: trae su propio fondo, así que
-                                                                se sostiene sobre cualquier foto.
-
-                                                                Al hover se invierte a negro en vez de
-                                                                aclararse. El borde queda siempre, así
-                                                                que la caja no cambia de tamaño y nada
-                                                                se corre. */}
+                                                        <div className={`mt-6 flex justify-center ${animBase} ${isActive ? `${animActive} animation-delay-400` : ''}`}>
                                                             <button
                                                                 onClick={slide.onButtonClick}
-                                                                className="px-5 py-2.5 bg-white text-slate-900 border-2 border-slate-900 font-bold text-sm uppercase tracking-[0.08em] rounded-[10px] shadow-[0_2px_12px_rgba(0,0,0,0.28)] hover:bg-slate-900 hover:text-white active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                                                                className="px-8 py-3 rounded-xl bg-white text-black font-bold uppercase tracking-widest text-xs hover:bg-neutral-200 transition-all hover:scale-105 border-2 border-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/50"
                                                             >
                                                                 {slide.buttonText}
                                                             </button>
@@ -587,9 +538,8 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                         <ChevronRight className="w-6 h-6" />
                     </button>
 
-                    {/* Pagination Dots — en el tema soft van abajo a la derecha,
-                        para no chocar con el contenido anclado abajo a la izquierda. */}
-                    <div className={`absolute z-20 flex ${theme === 'soft' ? 'bottom-4 right-4 gap-1.5' : 'bottom-8 left-1/2 -translate-x-1/2 gap-3'}`}>
+                    {/* Pagination Dots */}
+                    <div className="absolute z-20 flex bottom-8 left-1/2 -translate-x-1/2 gap-3">
                         {slides.map((_, idx) => (
                             <button
                                 key={idx}

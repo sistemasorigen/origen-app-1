@@ -35,8 +35,18 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
     const [isNotifDrawerOpen, setIsNotifDrawerOpen] = useState(false);
 
-    const isDashboard = location.pathname === '/';
-    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/gcx' || location.pathname === '/punto-de-informacion' || location.pathname === '/alabanza' || location.pathname === '/prode' || location.pathname.startsWith('/coordinators');
+    // Páginas con hero "soft" a pantalla completa —
+    // la navbar arranca transparente sobre la imagen
+    // y recupera su fondo blanco recién al hacer
+    // scroll, igual que en el Dashboard.
+    const isDashboard = location.pathname === '/' || location.pathname === '/gcx' || location.pathname === '/ninez';
+    // `/ninez` entra acá junto con isDashboard, no por separado: el -mt-16 que
+    // monta el hero bajo la navbar sólo tiene sentido si el contenido va a
+    // sangre. Con el padding del contenedor angosto el hero quedaría con
+    // márgenes laterales y 32px de blanco arriba, y el logo invertido a blanco
+    // caería sobre ese blanco. Ninez.tsx ya limita su propio contenido con un
+    // max-w-4xl interno, así que no necesita el de acá.
+    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/gcx' || location.pathname === '/ninez' || location.pathname === '/punto-de-informacion' || location.pathname === '/alabanza' || location.pathname === '/prode' || location.pathname.startsWith('/coordinators');
 
     // En el dashboard la navbar arranca sin fondo, montada sobre el hero.
     // Al scrollear recupera el fondo: si no, quedaría flotando transparente

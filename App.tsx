@@ -182,19 +182,26 @@ const AppContent: React.FC = () => {
         window.scrollTo(0, 0);
     }, [location.pathname]); // location is derived from useLocation hook logic from react-router
 
-    // Redirigir post-login con Google usando el destino guardado en sessionStorage
+    // Redirigir post-login con Google usando el destino guardado en sessionStorage.
+    // IMPORTANTE: no consumir el destino guardado mientras needsProfileCompletion
+    // sea true — si lo hiciéramos apenas `user` está listo, el modal de completar
+    // perfil (que reemplaza TODO el árbol de rutas, ver más abajo en este archivo)
+    // taparía la navegación real y el destino se perdería sin una segunda
+    // oportunidad. Se espera a que el perfil esté 100% completo antes de leer y
+    // borrar sessionStorage.
     useEffect(() => {
-        if (!user) return;
+        if (!user || needsProfileCompletion) return;
         const destino = sessionStorage.getItem('post_login_redirect');
-        if (destino) {
+        if (!destino) return;
+
+        // Solo se borra/consume el destino guardado si realmente vamos a
+        // navegar — si no estamos en una ruta "neutra", se deja intacto en
+        // sessionStorage para la próxima vez que este efecto corra.
+        if (location.pathname === '/auth' || location.pathname === '/') {
             sessionStorage.removeItem('post_login_redirect');
-            // Solo redirigir si estamos en una ruta "neutra"
-            // (auth, raíz) para no interrumpir navegación normal
-            if (location.pathname === '/auth' || location.pathname === '/') {
-                navigate(destino);
-            }
+            navigate(destino);
         }
-    }, [user]);
+    }, [user, needsProfileCompletion, location.pathname]);
 
     // Effects
     useEffect(() => {
@@ -751,6 +758,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN,
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.ENCARGADO_NINEZ,
                                     ]))
                                         ? <AdminDiaNino currentUser={user} />
                                         : <Navigate to="/" />
@@ -795,6 +803,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN,
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.ENCARGADO_NINEZ,
                                     ]))
                                         ? <NuevaDiaNino />
                                         : <Navigate to="/" />
@@ -804,6 +813,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN,
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.ENCARGADO_NINEZ,
                                     ]))
                                         ? <EscanerDiaNino />
                                         : <Navigate to="/" />
@@ -813,6 +823,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN,
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.ENCARGADO_NINEZ,
                                     ]))
                                         ? <DetalleDiaNino />
                                         : <Navigate to="/" />

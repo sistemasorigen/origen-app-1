@@ -736,7 +736,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                         {upcomingEventos.length > 0 && (
                             <div className={todaysVerse ? 'lg:col-span-2' : 'lg:col-span-3'}>
                                 <div className="flex items-baseline justify-between gap-3 mb-4">
-                                    <h2 className="text-lg sm:text-xl font-black uppercase tracking-[-0.02em] text-slate-900 dark:text-white">Próximos eventos</h2>
+                                    <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white">Próximos eventos</h2>
                                     <button
                                         onClick={() => navigate('/eventos')}
                                         className="shrink-0 inline-flex items-center gap-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
@@ -774,7 +774,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                         {recommendedGroups.length > 0 && (
                             <div className="lg:col-span-3">
                                 <div className="flex items-baseline justify-between gap-3 mb-1">
-                                    <h2 className="text-lg sm:text-xl font-black uppercase tracking-[-0.02em] text-slate-900 dark:text-white">Grupos para vos</h2>
+                                    <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white">Grupos para vos</h2>
                                     <button
                                         onClick={() => navigate('/gcx')}
                                         className="shrink-0 inline-flex items-center gap-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
