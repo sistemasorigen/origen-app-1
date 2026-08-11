@@ -259,7 +259,24 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Influos',
             icon: Star,
             path: '/influos',
-            roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR]
+            roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR],
+            subItems: [
+                {
+                    label: 'Panel Influos',
+                    path: '/influos',
+                    roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR]
+                },
+                {
+                    label: 'Administración',
+                    separator: true,
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS, UserRole.INFLUOS]
+                },
+                {
+                    label: 'Tribal Wars',
+                    path: '/eventos/admin/tribal-wars',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS, UserRole.INFLUOS]
+                },
+            ]
         },
         {
             label: 'Prode Mundial',

@@ -402,6 +402,11 @@ export interface EventoGeneral {
 export interface NinezBannerSlide {
     id: string;
     imageUrl: string;
+    mediaType?: 'image' | 'video';
+    videoUrl?: string;
+    focalX?: number;
+    focalY?: number;
+    zoom?: number;
     title?: string;
     subtitle?: string;
     displayOrder: number;

@@ -4,18 +4,46 @@ import {
     getNinezBannerSlides,
     createNinezBannerSlide,
     updateNinezBannerSlide,
-    deleteNinezBannerSlide
+    deleteNinezBannerSlide,
+    NinezBannerSlideInput
 } from '../../../services/supabaseService';
 import { ChevronLeft, Save, Loader2, Plus, Trash2 } from 'lucide-react';
 import ImageUpload from '../../../components/media/SubidaImagen';
+import VideoUpload from '../../../components/media/SubidaVideo';
+import EncuadreMedia from '../../../components/media/EncuadreMedia';
+
+// Mismo encuadre de referencia que usa el banner del Dashboard por default
+// (config.banner.frameWidth/frameHeight). Acá no hay un tamaño configurable
+// por evento — el hero de /ninez siempre usa el mismo heightClass — así que
+// el marco del editor de encuadre queda fijo a esta proporción.
+const NINEZ_BANNER_FRAME_WIDTH = 1920;
+const NINEZ_BANNER_FRAME_HEIGHT = 720;
 
 interface SlideForm {
     id: string | null; // null = todavía no existe en la base
     localId: string;
     imageUrl: string;
+    mediaType: 'image' | 'video';
+    videoUrl: string;
+    focalX: number;
+    focalY: number;
+    zoom: number;
     title: string;
     subtitle: string;
 }
+
+const emptySlide = (localId: string): SlideForm => ({
+    id: null,
+    localId,
+    imageUrl: '',
+    mediaType: 'image',
+    videoUrl: '',
+    focalX: 50,
+    focalY: 50,
+    zoom: 1,
+    title: '',
+    subtitle: ''
+});
 
 const ConfiguracionNinez: React.FC = () => {
     const navigate = useNavigate();
@@ -32,6 +60,11 @@ const ConfiguracionNinez: React.FC = () => {
                 id: s.id,
                 localId: s.id,
                 imageUrl: s.imageUrl,
+                mediaType: s.mediaType || 'image',
+                videoUrl: s.videoUrl || '',
+                focalX: s.focalX ?? 50,
+                focalY: s.focalY ?? 50,
+                zoom: s.zoom ?? 1,
                 title: s.title || '',
                 subtitle: s.subtitle || ''
             })));
@@ -40,13 +73,7 @@ const ConfiguracionNinez: React.FC = () => {
     }, []);
 
     const addSlide = () => {
-        setSlides(prev => [...prev, {
-            id: null,
-            localId: `new-${Date.now()}`,
-            imageUrl: '',
-            title: '',
-            subtitle: ''
-        }]);
+        setSlides(prev => [...prev, emptySlide(`new-${Date.now()}`)]);
     };
 
     const removeSlide = (localId: string) => {
@@ -57,8 +84,8 @@ const ConfiguracionNinez: React.FC = () => {
         setSlides(prev => prev.filter(s => s.localId !== localId));
     };
 
-    const updateSlide = (localId: string, field: 'imageUrl' | 'title' | 'subtitle', value: string) => {
-        setSlides(prev => prev.map(s => s.localId === localId ? { ...s, [field]: value } : s));
+    const updateSlide = (localId: string, patch: Partial<SlideForm>) => {
+        setSlides(prev => prev.map(s => s.localId === localId ? { ...s, ...patch } : s));
     };
 
     const handleSave = async () => {
@@ -70,6 +97,11 @@ const ConfiguracionNinez: React.FC = () => {
             setSaveError('Todos los slides necesitan una imagen antes de guardar.');
             return;
         }
+        const missingVideo = slides.some(s => s.mediaType === 'video' && !s.videoUrl.trim());
+        if (missingVideo) {
+            setSaveError('Los slides de video necesitan un video antes de guardar.');
+            return;
+        }
 
         setSaving(true);
         try {
@@ -78,8 +110,13 @@ const ConfiguracionNinez: React.FC = () => {
 
             // Crear/actualizar el resto, respetando el orden visual
             await Promise.all(slides.map((s, index) => {
-                const input = {
+                const input: NinezBannerSlideInput = {
                     imageUrl: s.imageUrl,
+                    mediaType: s.mediaType,
+                    videoUrl: s.mediaType === 'video' ? s.videoUrl : undefined,
+                    focalX: s.focalX,
+                    focalY: s.focalY,
+                    zoom: s.zoom,
                     title: s.title.trim() || undefined,
                     subtitle: s.subtitle.trim() || undefined,
                     displayOrder: index
@@ -99,6 +136,11 @@ const ConfiguracionNinez: React.FC = () => {
                 id: s.id,
                 localId: s.id,
                 imageUrl: s.imageUrl,
+                mediaType: s.mediaType || 'image',
+                videoUrl: s.videoUrl || '',
+                focalX: s.focalX ?? 50,
+                focalY: s.focalY ?? 50,
+                zoom: s.zoom ?? 1,
                 title: s.title || '',
                 subtitle: s.subtitle || ''
             })));
@@ -133,7 +175,7 @@ const ConfiguracionNinez: React.FC = () => {
                     Configuración
                 </h1>
                 <p className="text-sm text-slate-500 mb-6">
-                    Editar Banner — las imágenes que rotan en el inicio de /ninez.
+                    Editar Banner — las imágenes o videos que rotan en el inicio de /ninez.
                 </p>
 
                 <div className="space-y-4">
@@ -151,21 +193,90 @@ const ConfiguracionNinez: React.FC = () => {
                                 </button>
                             </div>
 
-                            <ImageUpload
-                                currentImage={slide.imageUrl}
-                                onImageUpload={(url) => updateSlide(slide.localId, 'imageUrl', url)}
-                                folder="ninez-banner"
-                                aspectRatio="wide"
-                                placeholder="Subir imagen del slide"
-                                variant="minimal"
-                            />
+                            {/* Selector de medio. El video no reemplaza a la imagen: la
+                                imagen sigue haciendo de poster mientras el video carga, si
+                                el navegador bloquea el autoplay o si el usuario tiene
+                                activado "reducir movimiento" — mismo criterio que el
+                                banner del Dashboard en Administrador.tsx. */}
+                            <div>
+                                <label className="text-xs font-bold uppercase text-slate-400 mb-1.5 block">Tipo de medio</label>
+                                <div className="flex gap-2">
+                                    {([['image', 'Imagen'], ['video', 'Video']] as const).map(([value, label]) => {
+                                        const isSelected = slide.mediaType === value;
+                                        return (
+                                            <button
+                                                key={value}
+                                                type="button"
+                                                onClick={() => updateSlide(slide.localId, { mediaType: value })}
+                                                className={`flex-1 py-2 text-xs font-bold uppercase rounded-lg border transition-colors ${isSelected
+                                                    ? 'bg-black text-white border-black'
+                                                    : 'bg-white text-slate-500 border-slate-300 hover:border-black hover:text-black'
+                                                    }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold uppercase text-slate-400 mb-1.5 block">
+                                    {slide.mediaType === 'video' ? 'Imagen de respaldo (poster)' : 'Imagen del slide'}
+                                </label>
+                                {slide.mediaType === 'video' && (
+                                    <p className="text-[11px] text-slate-500 mb-2">
+                                        Se ve mientras carga el video y en dispositivos que no lo reproducen. Cargala siempre.
+                                    </p>
+                                )}
+                                <ImageUpload
+                                    currentImage={slide.imageUrl}
+                                    onImageUpload={(url) => updateSlide(slide.localId, { imageUrl: url })}
+                                    folder="ninez-banner"
+                                    aspectRatio="wide"
+                                    placeholder="Subir imagen del slide"
+                                    variant="minimal"
+                                />
+                            </div>
+
+                            {slide.mediaType === 'video' && (
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-slate-400 mb-1.5 block">Video del slide</label>
+                                    <VideoUpload
+                                        currentVideo={slide.videoUrl}
+                                        folder="ninez-banner"
+                                        onVideoUpload={(url) => updateSlide(slide.localId, { videoUrl: url })}
+                                    />
+                                    <p className="text-[11px] text-slate-500 mt-2">
+                                        Se reproduce solo, sin sonido y en bucle. El visitante no puede pausarlo ni controlarlo.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* ENCUADRE — el archivo casi nunca tiene la proporción del
+                                banner, así que sobra imagen y el navegador recortaría por
+                                el centro. Acá se elige qué parte sobrevive. Mismo
+                                componente y misma fórmula (getMediaFrameStyle) que usa el
+                                banner real, así que lo que se ve acá es lo que se publica. */}
+                            <div>
+                                <label className="text-xs font-bold uppercase text-slate-400 mb-1.5 block">Encuadre</label>
+                                <EncuadreMedia
+                                    mediaType={slide.mediaType}
+                                    imageUrl={slide.imageUrl}
+                                    videoUrl={slide.videoUrl}
+                                    frameWidth={NINEZ_BANNER_FRAME_WIDTH}
+                                    frameHeight={NINEZ_BANNER_FRAME_HEIGHT}
+                                    value={{ focalX: slide.focalX, focalY: slide.focalY, zoom: slide.zoom }}
+                                    onChange={(frame) => updateSlide(slide.localId, frame)}
+                                />
+                            </div>
 
                             <div>
                                 <label className="text-xs font-bold uppercase text-slate-400 mb-1.5 block">Título</label>
                                 <input
                                     type="text"
                                     value={slide.title}
-                                    onChange={e => updateSlide(slide.localId, 'title', e.target.value)}
+                                    onChange={e => updateSlide(slide.localId, { title: e.target.value })}
                                     className="w-full px-3 py-2.5 border border-slate-300 rounded-lg outline-none focus:border-black text-sm"
                                 />
                             </div>
@@ -174,7 +285,7 @@ const ConfiguracionNinez: React.FC = () => {
                                 <input
                                     type="text"
                                     value={slide.subtitle}
-                                    onChange={e => updateSlide(slide.localId, 'subtitle', e.target.value)}
+                                    onChange={e => updateSlide(slide.localId, { subtitle: e.target.value })}
                                     className="w-full px-3 py-2.5 border border-slate-300 rounded-lg outline-none focus:border-black text-sm"
                                 />
                             </div>
@@ -186,7 +297,7 @@ const ConfiguracionNinez: React.FC = () => {
                         onClick={addSlide}
                         className="w-full py-3 flex items-center justify-center gap-2 text-sm font-semibold text-slate-600 border-2 border-dashed border-slate-300 rounded-lg hover:bg-white transition-colors"
                     >
-                        <Plus className="w-4 h-4" /> Agregar otra imagen
+                        <Plus className="w-4 h-4" /> Agregar otro slide
                     </button>
                 </div>
 

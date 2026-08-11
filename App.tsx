@@ -768,6 +768,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN,
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.INFLUOS,
                                     ]))
                                         ? <AdminInfluosDia currentUser={user} />
                                         : <Navigate to="/" />
@@ -794,6 +795,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN,
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.INFLUOS,
                                     ]))
                                         ? <NuevaInfluosDia />
                                         : <Navigate to="/" />

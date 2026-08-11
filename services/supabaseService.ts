@@ -606,6 +606,18 @@ export async function deleteInfluosDiaRegistration(id: string): Promise<boolean>
   return true;
 }
 
+export async function updateInfluosDiaTribu(id: string, tribu: 'Garra' | 'Trueno' | 'No tengo'): Promise<boolean> {
+  const { error } = await supabase
+    .from('influos_dia_registrations')
+    .update({ tribu })
+    .eq('id', id);
+  if (error) {
+    console.error('[updateInfluosDiaTribu] Error:', error);
+    return false;
+  }
+  return true;
+}
+
 // ── Gestión de Eventos (Panel "General") ────────
 
 function mapEventoGeneralRow(row: any): import('../types').EventoGeneral {
@@ -755,6 +767,11 @@ function mapNinezSlideRow(row: any): import('../types').NinezBannerSlide {
   return {
     id: row.id,
     imageUrl: row.image_url,
+    mediaType: row.media_type === 'video' ? 'video' : 'image',
+    videoUrl: row.video_url || undefined,
+    focalX: row.focal_x ?? 50,
+    focalY: row.focal_y ?? 50,
+    zoom: row.zoom ?? 1,
     title: row.title || undefined,
     subtitle: row.subtitle || undefined,
     displayOrder: row.display_order,
@@ -777,6 +794,11 @@ export async function getNinezBannerSlides(): Promise<import('../types').NinezBa
 
 export interface NinezBannerSlideInput {
   imageUrl: string;
+  mediaType?: 'image' | 'video';
+  videoUrl?: string;
+  focalX?: number;
+  focalY?: number;
+  zoom?: number;
   title?: string;
   subtitle?: string;
   displayOrder: number;
@@ -787,6 +809,11 @@ export async function createNinezBannerSlide(input: NinezBannerSlideInput): Prom
     .from('ninez_banner_slides')
     .insert({
       image_url: input.imageUrl,
+      media_type: input.mediaType || 'image',
+      video_url: input.mediaType === 'video' ? (input.videoUrl || null) : null,
+      focal_x: input.focalX ?? 50,
+      focal_y: input.focalY ?? 50,
+      zoom: input.zoom ?? 1,
       title: input.title || null,
       subtitle: input.subtitle || null,
       display_order: input.displayOrder
@@ -806,6 +833,11 @@ export async function updateNinezBannerSlide(id: string, input: NinezBannerSlide
     .from('ninez_banner_slides')
     .update({
       image_url: input.imageUrl,
+      media_type: input.mediaType || 'image',
+      video_url: input.mediaType === 'video' ? (input.videoUrl || null) : null,
+      focal_x: input.focalX ?? 50,
+      focal_y: input.focalY ?? 50,
+      zoom: input.zoom ?? 1,
       title: input.title || null,
       subtitle: input.subtitle || null,
       display_order: input.displayOrder

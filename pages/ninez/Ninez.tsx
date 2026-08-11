@@ -47,6 +47,11 @@ const Ninez: React.FC<NinezProps> = ({ currentUser }) => {
                 setSlides(bannerData.map(s => ({
                     id: s.id,
                     imageUrl: s.imageUrl,
+                    mediaType: s.mediaType,
+                    videoUrl: s.videoUrl,
+                    focalX: s.focalX,
+                    focalY: s.focalY,
+                    zoom: s.zoom,
                     title: s.title,
                     subtitle: s.subtitle
                 })));
