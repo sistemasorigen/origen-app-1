@@ -3,7 +3,16 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" 
+  <!-- Defensa adicional contra un index.html cacheado sirviendo hashes de
+       JS/CSS que ya no existen: la mayoría de los navegadores ignora estos
+       meta http-equiv para el cacheo real de la página (a diferencia de un
+       header HTTP), así que esto no reemplaza el Cache-Control real que
+       manda el hosting (ver public/.htaccess) — es sólo la capa extra que
+       no cuesta nada agregar por si algún cliente sí la respeta. -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta http-equiv="Content-Security-Policy"
     content="default-src 'self'; 
              script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://aistudiocdn.com https://esm.sh 'unsafe-eval'; 
              connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com;

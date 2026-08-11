@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Archivo de trabajo intermedio de scripts/generate-build-version.js —
+# se regenera en cada build, no debe versionarse.
+.build-version
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
