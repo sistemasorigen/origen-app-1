@@ -12,6 +12,46 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
+
+  <!-- Red de seguridad para "Failed to load module script (...) MIME type
+       of text/html": pasa cuando ESTA página quedó cacheada apuntando al
+       bundle de un deploy anterior, y ese archivo ya no existe (cada
+       deploy vacía dist/ y genera hashes nuevos) — el fallback de SPA
+       (mod_rewrite en .htaccess / el equivalente del hosting) responde
+       con index.html en vez de un 404, y el navegador lo rechaza por
+       MIME type.
+       Cuando esto pasa, el <script type="module"> de abajo directamente
+       nunca llega a ejecutarse — React nunca monta — así que nada de lo
+       que vive dentro de la app (useVersionCheck, el ErrorBoundary) tiene
+       chance de reaccionar. Por eso este listener vive acá, en un script
+       NO module que corre siempre, ANTES de que el módulo principal
+       intente cargar. Los errores de recursos (<script>, <img>, etc.) no
+       burbujean, así que hace falta capture:true en window para poder
+       escucharlos. Un solo reintento —marcado en sessionStorage— con
+       cache-busting real en la URL. Si el reintento también falla, no
+       hay loop: mejor mostrar el error una vez que quedarse recargando
+       solo para siempre. -->
+  <script>
+    (function () {
+      var RETRY_KEY = 'origen_module_load_retry';
+      window.addEventListener('error', function (event) {
+        var target = event.target;
+        if (!target || target.tagName !== 'SCRIPT' || target.type !== 'module') return;
+        if (sessionStorage.getItem(RETRY_KEY)) return;
+        try {
+          sessionStorage.setItem(RETRY_KEY, '1');
+        } catch (e) {
+          // sessionStorage no disponible (modo privado estricto, etc.) —
+          // sin poder marcar el intento, mejor no reintentar que arriesgar
+          // un loop.
+          return;
+        }
+        var url = new URL(window.location.href);
+        url.searchParams.set('_cb', Date.now().toString());
+        window.location.href = url.toString();
+      }, true);
+    })();
+  </script>
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'self'; 
              script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://aistudiocdn.com https://esm.sh 'unsafe-eval'; 

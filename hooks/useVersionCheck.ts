@@ -12,6 +12,13 @@ declare const __BUILD_VERSION__: string;
 const RESET_STORAGE_KEY = 'origen_version_reset';
 const MAX_RESET_ATTEMPTS = 3;
 
+// Mismo flag que setea el script inline de index.html cuando el
+// <script type="module"> principal falla al cargar (MIME type de un
+// index.html apuntando a un bundle que un deploy posterior ya borró). Si
+// React llegó a montar es porque esta carga sí trajo un bundle que
+// funciona — no queda nada pendiente de reintentar.
+const MODULE_LOAD_RETRY_KEY = 'origen_module_load_retry';
+
 interface PendingReset {
     expectedVersion: string;
     attempts: number;
@@ -90,6 +97,12 @@ export function useVersionCheck() {
     // para no mezclar la suscripción de Realtime con esta verificación
     // puntual de una sola vez.
     useEffect(() => {
+        // Si este efecto corrió es porque React montó, y si React montó es
+        // porque el módulo principal cargó bien esta vez — lo que haya
+        // quedado marcado por el listener de index.html ya cumplió su
+        // función.
+        sessionStorage.removeItem(MODULE_LOAD_RETRY_KEY);
+
         const raw = sessionStorage.getItem(RESET_STORAGE_KEY);
         if (!raw) return;
 
