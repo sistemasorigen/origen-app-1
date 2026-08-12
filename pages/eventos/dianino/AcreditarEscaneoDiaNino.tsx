@@ -100,41 +100,51 @@ const AcreditarEscaneoDiaNino: React.FC = () => {
 
             <div className="flex-1 px-4 pb-6 max-w-md w-full mx-auto space-y-5">
 
-                {/* Estado de la Declaración — bien visible */}
+                {/* Estado de la Declaración — bien visible. Bloque sólido y
+                    saturado, no un tinte translúcido: sobre un fondo casi
+                    negro un color al 15% de opacidad pierde saturación y
+                    el texto en el mismo tono de color queda apagado — acá
+                    el color tiene que gritar, no insinuarse. Texto negro
+                    porque es el que de verdad contrasta contra amarillo/
+                    verde brillante (blanco sobre esos tonos no pasa
+                    contraste — se ve pastel y se lee mal). */}
                 {declaracionAceptada ? (
-                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30">
-                        <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
-                        <p className="text-emerald-300 font-bold text-sm">Aceptó la Declaración de Conformidad</p>
+                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-500">
+                        <CheckCircle2 className="w-6 h-6 text-black shrink-0" />
+                        <p className="text-black font-bold text-sm">Aceptó la Declaración de Conformidad</p>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40">
-                        <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
-                        <div>
-                            <p className="text-amber-300 font-bold text-sm">NO aceptó la Declaración de Conformidad</p>
-                            <p className="text-amber-300/70 text-xs mt-0.5">Decidí si esta familia puede ingresar.</p>
-                        </div>
+                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-500">
+                        <AlertTriangle className="w-6 h-6 text-black shrink-0" />
+                        <p className="text-black font-bold text-sm">NO aceptó la Declaración de Conformidad</p>
                     </div>
                 )}
 
-                {/* Adulto responsable — informativo, sin nada para tildar */}
+                {/* Adulto responsable — informativo, sin nada para tildar.
+                    Tarjeta blanca tipo talón de entrada: contra el fondo
+                    oscuro es lo más legible posible, y separa con claridad
+                    "esto ya está resuelto" de los niños, que sí requieren
+                    una decisión. */}
                 <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">Adulto responsable</p>
-                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/10">
-                        <div className="w-11 h-11 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-white/50 mb-2">Adulto responsable</p>
+                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-white">
+                        <div className="w-11 h-11 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
                             <User className="w-5 h-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="text-white font-semibold text-sm truncate">{adultTicket.firstName} {adultTicket.lastName}</p>
-                            <p className="text-white/40 text-xs">Ya acreditado</p>
+                            <p className="text-slate-900 font-semibold text-sm truncate">{adultTicket.firstName} {adultTicket.lastName}</p>
+                            <p className="text-slate-400 text-xs">Ya acreditado</p>
                         </div>
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                     </div>
                 </div>
 
-                {/* Niños — tildar quiénes vinieron */}
+                {/* Niños — tildar quiénes vinieron. Mismo sistema de dos
+                    estados que el resto de la página: blanco = todavía no,
+                    verde sólido = confirmado — nada de medios tonos. */}
                 {childTickets.length > 0 && (
                     <div>
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-white/50 mb-2">
                             Niños — tocá para marcar quién vino
                         </p>
                         <div className="space-y-2.5">
@@ -144,14 +154,14 @@ const AcreditarEscaneoDiaNino: React.FC = () => {
                                     <button
                                         key={child.id}
                                         onClick={() => toggleChild(child.id)}
-                                        className={`w-full flex items-center gap-3 p-4 rounded-2xl border text-left transition-all active:scale-[0.98] ${isSelected ? 'bg-emerald-500/15 border-emerald-500/40' : 'bg-white/5 border-white/10'}`}
+                                        className={`w-full flex items-center gap-3 p-4 rounded-2xl text-left transition-all active:scale-[0.98] ${isSelected ? 'bg-emerald-500' : 'bg-white'}`}
                                     >
-                                        <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white/40'}`}>
+                                        <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-white text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
                                             {isSelected ? <Check className="w-5 h-5" strokeWidth={3} /> : <Baby className="w-5 h-5" />}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <p className={`font-semibold text-sm truncate ${isSelected ? 'text-white' : 'text-white/70'}`}>{child.firstName} {child.lastName}</p>
-                                            <p className="text-white/30 text-xs">{isSelected ? 'Vino' : 'Tocá si vino'}</p>
+                                            <p className={`font-semibold text-sm truncate ${isSelected ? 'text-black' : 'text-slate-700'}`}>{child.firstName} {child.lastName}</p>
+                                            <p className={`text-xs ${isSelected ? 'text-black/60' : 'text-slate-400'}`}>{isSelected ? 'Vino' : 'Tocá si vino'}</p>
                                         </div>
                                     </button>
                                 );
@@ -166,7 +176,7 @@ const AcreditarEscaneoDiaNino: React.FC = () => {
                 <button
                     onClick={handleAcreditar}
                     disabled={saving}
-                    className="w-full max-w-md mx-auto flex items-center justify-center gap-2 py-4 bg-emerald-500 text-white font-black uppercase tracking-wide rounded-2xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all"
+                    className="w-full max-w-md mx-auto flex items-center justify-center gap-2 py-4 bg-emerald-500 text-black font-black uppercase tracking-wide rounded-2xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all"
                 >
                     {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                     Acreditar
