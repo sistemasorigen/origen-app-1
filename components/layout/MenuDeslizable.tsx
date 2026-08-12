@@ -351,6 +351,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         UserRole.SUPER_ADMIN,
                         UserRole.PASTOR,
                         UserRole.ENCARGADO_EVENTOS,
+                        UserRole.ENCARGADO_NINEZ,
+                        UserRole.ACREDITACION,
                     ]
                 },
                 {
@@ -360,6 +362,20 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         UserRole.SUPER_ADMIN,
                         UserRole.PASTOR,
                         UserRole.ENCARGADO_EVENTOS,
+                    ]
+                },
+                {
+                    // Mismos roles que el guard real de la ruta en
+                    // App.tsx — Encargado Niñez también administra este
+                    // módulo, aunque viva bajo Eventos en el menú.
+                    label: 'Día del Niño',
+                    path: '/eventos/admin/diadelnino',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.PASTOR,
+                        UserRole.ENCARGADO_EVENTOS,
+                        UserRole.ENCARGADO_NINEZ,
+                        UserRole.ACREDITACION,
                     ]
                 },
                 // ── DÍA DEL PADRE (solo si el evento está activo) ──
@@ -425,16 +441,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     roles: [
                         UserRole.SUPER_ADMIN,
                         UserRole.PASTOR,
-                        UserRole.ENCARGADO_NINEZ,
-                    ]
-                },
-                {
-                    label: 'Día del Niño',
-                    path: '/eventos/admin/diadelnino',
-                    roles: [
-                        UserRole.SUPER_ADMIN,
-                        UserRole.PASTOR,
-                        UserRole.ENCARGADO_EVENTOS,
                         UserRole.ENCARGADO_NINEZ,
                     ]
                 },

@@ -760,6 +760,7 @@ const AppContent: React.FC = () => {
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
                                         UserRole.ENCARGADO_NINEZ,
+                                        UserRole.ACREDITACION,
                                     ]))
                                         ? <AdminDiaNino currentUser={user} />
                                         : <Navigate to="/" />
@@ -807,6 +808,7 @@ const AppContent: React.FC = () => {
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
                                         UserRole.ENCARGADO_NINEZ,
+                                        UserRole.ACREDITACION,
                                     ]))
                                         ? <NuevaDiaNino />
                                         : <Navigate to="/" />
@@ -817,6 +819,7 @@ const AppContent: React.FC = () => {
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
                                         UserRole.ENCARGADO_NINEZ,
+                                        UserRole.ACREDITACION,
                                     ]))
                                         ? <EscanerDiaNino />
                                         : <Navigate to="/" />
@@ -827,6 +830,7 @@ const AppContent: React.FC = () => {
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
                                         UserRole.ENCARGADO_NINEZ,
+                                        UserRole.ACREDITACION,
                                     ]))
                                         ? <AcreditarEscaneoDiaNino />
                                         : <Navigate to="/" />
@@ -837,6 +841,7 @@ const AppContent: React.FC = () => {
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
                                         UserRole.ENCARGADO_NINEZ,
+                                        UserRole.ACREDITACION,
                                     ]))
                                         ? <DetalleDiaNino />
                                         : <Navigate to="/" />

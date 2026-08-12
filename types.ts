@@ -31,6 +31,7 @@ export enum UserRole {
     EVENTOS = 'EVENTOS',   // Gestión / acceso a Eventos
     ENCARGADO_EVENTOS = 'ENCARGADO_EVENTOS', // Gestión de eventos
     ENCARGADO_NINEZ = 'ENCARGADO_NINEZ', // Gestión del módulo Niñez
+    ACREDITACION = 'ACREDITACION', // Exclusivo del evento Día del Niño — sin acceso a ningún otro módulo
 }
 
 export enum CoordinatorVariant {
