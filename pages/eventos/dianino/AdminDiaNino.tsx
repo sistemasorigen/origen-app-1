@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDianinoSessions, deleteDianinoSession } from '../../../services/supabaseService';
 import { DiaNinoSessionRow, User } from '../../../types';
-import { ChevronLeft, Search, Plus, Eye, Trash2, Loader2, PartyPopper, CheckCircle2, Circle, QrCode } from 'lucide-react';
+import { ChevronLeft, Search, Plus, Eye, Trash2, Loader2, PartyPopper, CheckCircle2, Circle, QrCode, ShieldCheck, UserPlus } from 'lucide-react';
+import NeoModal from '../../../components/ui/NeoModal';
+import WizardAgregarPersona from './WizardAgregarPersona';
 
 interface AdminDiaNinoProps {
     currentUser: User;
@@ -16,6 +18,8 @@ const AdminDiaNino: React.FC<AdminDiaNinoProps> = () => {
     const [declaracionFilter, setDeclaracionFilter] = useState<'all' | 'accepted' | 'rejected'>('all');
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+    const [showDeclaracionModal, setShowDeclaracionModal] = useState(false);
+    const [showWizard, setShowWizard] = useState(false);
 
     const fetchSessions = async () => {
         setLoading(true);
@@ -72,12 +76,24 @@ const AdminDiaNino: React.FC<AdminDiaNinoProps> = () => {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            onClick={() => setShowDeclaracionModal(true)}
+                            className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 bg-white text-slate-700 font-semibold text-sm rounded-lg hover:bg-slate-50 transition-colors"
+                        >
+                            <ShieldCheck className="w-4 h-4" /> Declaración
+                        </button>
                         <button
                             onClick={() => navigate('/eventos/admin/diadelnino/escaner')}
                             className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 bg-white text-slate-700 font-semibold text-sm rounded-lg hover:bg-slate-50 transition-colors"
                         >
                             <QrCode className="w-4 h-4" /> Escanear
+                        </button>
+                        <button
+                            onClick={() => setShowWizard(true)}
+                            className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 bg-white text-slate-700 font-semibold text-sm rounded-lg hover:bg-slate-50 transition-colors"
+                        >
+                            <UserPlus className="w-4 h-4" /> Agregar adulto/niño
                         </button>
                         <button
                             onClick={() => navigate('/eventos/admin/diadelnino/nueva')}
@@ -307,6 +323,47 @@ const AdminDiaNino: React.FC<AdminDiaNinoProps> = () => {
                     )}
                 </div>
             </div>
+
+            {/* Texto estático — es el mismo aviso que se le muestra a
+                cada familia en el paso 3 del formulario público
+                (InscripcionDiaNino.tsx), no algo que varíe por sesión.
+                El botón es sólo de referencia rápida para el staff: la
+                planilla ya muestra por fila si cada familia aceptó o no. */}
+            <NeoModal
+                isOpen={showDeclaracionModal}
+                onClose={() => setShowDeclaracionModal(false)}
+                title="Declaración de Conformidad"
+                maxWidth="max-w-lg"
+            >
+                <div className="p-5 rounded-2xl space-y-3 bg-amber-50 border-2 border-amber-300/60">
+                    <div className="flex items-center gap-2 mb-1">
+                        <ShieldCheck className="w-5 h-5 shrink-0 text-amber-900" aria-hidden="true" />
+                        <span className="text-[11px] font-black uppercase tracking-widest text-amber-900">
+                            Aviso sobre registro fotográfico y audiovisual
+                        </span>
+                    </div>
+                    <p className="text-sm font-medium leading-relaxed text-amber-950">
+                        Te informamos que durante el evento se tomarán fotografías y grabaciones de video de las
+                        distintas actividades. Este material será utilizado exclusivamente por{' '}
+                        <span className="font-black">Origen Iglesia</span> con fines de difusión, comunicación y
+                        registro informativo en nuestros canales oficiales (redes sociales, sitio web y material
+                        impreso de la iglesia).
+                    </p>
+                </div>
+                <p className="text-xs text-slate-400 mt-4">
+                    Este es el mismo texto que cada familia ve y acepta o rechaza al inscribirse. Cada fila de la
+                    planilla muestra si esa familia en particular lo aceptó.
+                </p>
+            </NeoModal>
+
+            <WizardAgregarPersona
+                isOpen={showWizard}
+                sessions={sessions}
+                onClose={(didChange) => {
+                    setShowWizard(false);
+                    if (didChange) fetchSessions();
+                }}
+            />
         </div>
     );
 };

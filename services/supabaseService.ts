@@ -509,6 +509,83 @@ export async function deleteDianinoSession(sessionId: string): Promise<boolean> 
   return true; // dianino_tickets se borra solo por el ON DELETE CASCADE de la FK
 }
 
+// ── Wizard "Agregar adulto/niño" (planilla admin) ──
+// Acceso directo, sin RPC: el staff autenticado ya
+// tiene INSERT/UPDATE en ambas tablas vía las
+// policies dianino_staff_all_sessions/tickets
+// (FOR ALL). La disponibilidad de DNI se valida
+// antes con checkDianinoDniAvailable — el UNIQUE de
+// la tabla es la red de seguridad real contra
+// carreras, no la primera línea de defensa.
+
+export async function addDianinoChild(
+  sessionId: string,
+  firstName: string,
+  lastName: string,
+  dni: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('dianino_tickets')
+    .insert({
+      session_id: sessionId,
+      first_name: firstName,
+      last_name: lastName,
+      dni,
+      is_adult: false
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    console.error('[addDianinoChild] Error:', error);
+    return null;
+  }
+  return data.id;
+}
+
+export interface UpdateDianinoAdultInput {
+  firstName: string;
+  lastName: string;
+  dni: string;
+  email: string;
+}
+
+// Actualiza el ticket del adulto Y el email de la sesión (el email
+// vive en dianino_sessions, no en el ticket) en la misma operación
+// lógica — desde el punto de vista de quien usa el wizard es "un
+// solo dato: el adulto responsable".
+export async function updateDianinoAdult(
+  sessionId: string,
+  adultTicketId: string,
+  input: UpdateDianinoAdultInput
+): Promise<boolean> {
+  const { error: ticketError } = await supabase
+    .from('dianino_tickets')
+    .update({
+      first_name: input.firstName,
+      last_name: input.lastName,
+      dni: input.dni
+    })
+    .eq('id', adultTicketId);
+
+  if (ticketError) {
+    console.error('[updateDianinoAdult] Error (ticket):', ticketError);
+    return false;
+  }
+
+  const { error: sessionError } = await supabase
+    .from('dianino_sessions')
+    .update({ email: input.email })
+    .eq('id', sessionId);
+
+  if (sessionError) {
+    console.error('[updateDianinoAdult] Error (session):', sessionError);
+    return false;
+  }
+
+  return true;
+}
+
 // ── Evento "Día de Influos" ─────────────────────
 
 export async function checkInfluosNameExists(firstName: string, lastName: string): Promise<boolean> {

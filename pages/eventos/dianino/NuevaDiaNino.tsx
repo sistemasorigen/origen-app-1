@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { checkDianinoDniAvailable, registerDianinoSession } from '../../../services/supabaseService';
+import { checkDianinoDniAvailable, registerDianinoSession, getDianinoSessionDetail, checkinDianinoTicket } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
 import { DiaNinoChildInput } from '../../../types';
-import { ChevronLeft, Plus, Trash2, Save, Loader2 } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Save, Loader2, UserCheck } from 'lucide-react';
 
 interface ChildForm extends DiaNinoChildInput {
     localId: string;
@@ -23,6 +23,12 @@ const NuevaDiaNino: React.FC = () => {
 
     const [children, setChildren] = useState<ChildForm[]>([]);
     const [declaracionAceptada, setDeclaracionAceptada] = useState(true);
+
+    // Prende por default: la inscripción manual la carga el staff con la
+    // familia ahí mismo delante — el caso común es que ya llegaron. Se
+    // puede apagar para el caso menos común de cargar a alguien que
+    // todavía no está en el predio.
+    const [autoAcreditar, setAutoAcreditar] = useState(true);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -72,12 +78,26 @@ const NuevaDiaNino: React.FC = () => {
             children.map(c => ({ firstName: c.firstName.trim(), lastName: c.lastName.trim(), dni: c.dni.trim() }))
         );
 
-        setSaving(false);
-
         if (result.sessionId) {
+            // Acredita a todos (adulto + niños) antes de navegar — no en
+            // paralelo con la navegación — para que la página de detalle,
+            // que trae sus propios datos al montar, ya los encuentre
+            // CHECKED_IN en vez de mostrar PENDING un instante y corregirse
+            // sola. Mismo criterio que ya usa el escaneo del QR maestro:
+            // el adulto se acredita junto con los niños, no queda aparte.
+            if (autoAcreditar) {
+                const detail = await getDianinoSessionDetail(result.sessionId);
+                if (detail) {
+                    await Promise.all(detail.tickets.map(t => checkinDianinoTicket(t.id)));
+                }
+            }
+
+            setSaving(false);
             navigate(`/eventos/admin/diadelnino/${result.sessionId}`);
             return;
         }
+
+        setSaving(false);
 
         if (result.errorDni) {
             setError(`El DNI ${result.errorDni} ya está inscripto. Revisá los datos.`);
@@ -165,6 +185,37 @@ const NuevaDiaNino: React.FC = () => {
                         </label>
                     </div>
 
+                    <div className="border-t border-slate-100 pt-6">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${autoAcreditar ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                    <UserCheck className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-slate-900">Acreditar automáticamente</p>
+                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                        {autoAcreditar
+                                            ? 'Al guardar, el adulto y los niños quedan marcados como ingresados.'
+                                            : 'Van a quedar pendientes hasta escanearlos o acreditarlos a mano.'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={autoAcreditar}
+                                aria-label="Acreditar automáticamente al guardar"
+                                onClick={() => setAutoAcreditar(v => !v)}
+                                className={`relative w-12 h-7 rounded-full transition-colors shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 ${autoAcreditar ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                            >
+                                <span
+                                    className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${autoAcreditar ? 'translate-x-5' : 'translate-x-0'}`}
+                                />
+                            </button>
+                        </div>
+                    </div>
+
                     {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
 
                     <button
@@ -173,7 +224,7 @@ const NuevaDiaNino: React.FC = () => {
                         className="w-full flex items-center justify-center gap-2 py-3 bg-black text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        Guardar inscripción
+                        {autoAcreditar ? 'Guardar y acreditar' : 'Guardar inscripción'}
                     </button>
                 </div>
             </div>

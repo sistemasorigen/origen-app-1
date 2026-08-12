@@ -463,6 +463,9 @@ const InscripcionDiaNino: React.FC = () => {
                         {step === 1 && (
                             <motion.div key="step1" {...stepTransition} className="space-y-4">
                                 <h2 className="font-black uppercase border-b-2 pb-3" style={{ color: INK, borderColor: '#EAD9BE' }}>Tus datos (adulto responsable)</h2>
+                                <p className="text-xs font-bold -mt-1" style={{ color: '#8A7857' }}>
+                                    Se inscribe un solo adulto responsable por grupo. Si vienen más adultos con vos, no necesitan anotarse.
+                                </p>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label htmlFor="dn-adult-firstName" className={labelClass}>Nombre</label>
