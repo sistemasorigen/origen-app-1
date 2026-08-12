@@ -61,6 +61,7 @@ import AdminDiaNino from './pages/eventos/dianino/AdminDiaNino';
 import DetalleDiaNino from './pages/eventos/dianino/DetalleDiaNino';
 import NuevaDiaNino from './pages/eventos/dianino/NuevaDiaNino';
 import EscanerDiaNino from './pages/eventos/dianino/EscanerDiaNino';
+import AcreditarEscaneoDiaNino from './pages/eventos/dianino/AcreditarEscaneoDiaNino';
 import Puntuacion from './pages/eventos/dpadre/Puntuacion';
 import AdminDPadre from './pages/eventos/dpadre/AdminDPadre';
 import DetalleFamilia from './pages/eventos/dpadre/DetalleFamilia';
@@ -818,6 +819,16 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_NINEZ,
                                     ]))
                                         ? <EscanerDiaNino />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/eventos/admin/diadelnino/escaner/:ticketId" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.ENCARGADO_NINEZ,
+                                    ]))
+                                        ? <AcreditarEscaneoDiaNino />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/eventos/admin/diadelnino/:sessionId" element={
