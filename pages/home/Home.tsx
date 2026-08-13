@@ -980,7 +980,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                             <div className="lg:col-span-3">
                                 <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white">Origen Música</h2>
                                 <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 mb-4">
-                                    ¡Acá encontrarás nuestras canciones más recientes de Origen! Clickeá la canción para conocer más.
+                                    ¡Acá encontrarás nuestras canciones más recientes de Origen Música! Clickeá la canción para conocer más.
                                 </p>
                                 <MusicaCarousel slides={musicaSlides} />
                             </div>

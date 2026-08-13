@@ -102,6 +102,7 @@ const calcStats = (r: any) => {
 
     const totalVol = volFields.reduce((a, b) => a + b, 0);
     const auditorio = Number(r.auditorio) || 0;
+    const online = Number(r.online) || 0;
     const ninezSinProfes = [r.ninos_3_6, r.ninos_7_10, r.ninos_hd, r.borders]
         .map(v => Number(v) || 0).reduce((a, b) => a + b, 0);
 
@@ -109,9 +110,10 @@ const calcStats = (r: any) => {
     const auditorioConVol = totalVol + auditorio;
     const audNinezSinProfes = auditorioSinVol + ninezSinProfes;
     const totalFinal = audNinezSinProfes + totalVol;
+    const totalFinalConOnline = totalFinal + online;
     const pctVol = audNinezSinProfes > 0 ? (totalVol / audNinezSinProfes) * 100 : 0;
 
-    return { totalVol, auditorioSinVol, auditorioConVol, ninezSinProfes, audNinezSinProfes, totalFinal, pctVol };
+    return { totalVol, auditorioSinVol, auditorioConVol, ninezSinProfes, audNinezSinProfes, totalFinal, totalFinalConOnline, online, pctVol };
 };
 
 
@@ -217,6 +219,20 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
                 <StatRow label="% Voluntarios" value={`${s.pctVol.toFixed(1)}%`} highlight />
             </div>
 
+            {/* ── Total Asistencia + Online ── */}
+            <div className="mt-5 rounded-xl border-2 border-black bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/30 dark:to-indigo-950/30 p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                <p className="text-[10px] font-black uppercase tracking-widest text-sky-600 dark:text-sky-400 mb-2">📡 Total c/ Online</p>
+                <div className="flex items-end justify-between">
+                    <div>
+                        <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">{fmt(s.totalFinalConOnline)}</p>
+                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium mt-1">Total Asistencia + {fmt(s.online)} online</p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 text-xs font-black">
+                        +{fmt(s.online)} online
+                    </span>
+                </div>
+            </div>
+
             <div className="mt-6">
                 <p className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Desglose Voluntarios</p>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
@@ -278,6 +294,15 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {record.observations && (
+                <div className="mt-6">
+                    <p className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Observaciones</p>
+                    <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-3">
+                        {record.observations}
+                    </p>
                 </div>
             )}
 
@@ -701,7 +726,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
 
             {/* Header */}
             <div className="bg-white dark:bg-black border-b-4 border-black dark:border-white">
-                <div className="w-full px-4 sm:px-8 lg:px-12 py-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="w-full px-4 sm:px-6 lg:px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
                         <button onClick={() => navigate('/')} className="w-10 h-10 flex items-center justify-center border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
                             <ArrowLeft className="w-4 h-4" />
@@ -724,7 +749,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
             </div>
 
             {/* Content */}
-            <div className="w-full px-4 sm:px-8 lg:px-12 pt-8">
+            <div className="w-full px-4 sm:px-6 lg:px-4 pt-8">
                 {loading && (
                     <>
                         {/* Skeleton filters */}
@@ -938,6 +963,14 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                             <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-0.5">Total Voluntarios</p>
                                             <p className="text-sm font-black text-violet-600 tabular-nums">{s.totalVol.toLocaleString()}</p>
                                         </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-0.5">📡 Online</p>
+                                            <p className="text-sm font-black text-sky-600 tabular-nums">{s.online.toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-0.5">Total c/ Online</p>
+                                            <p className="text-sm font-black text-indigo-600 tabular-nums">{s.totalFinalConOnline.toLocaleString()}</p>
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -950,24 +983,34 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
 
                 {/* ── Desktop: Table ── */}
                 {!loading && records.length > 0 && (
-                    <div className="hidden md:block bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)] overflow-x-auto">
-                        <table className="w-full text-sm">
+                    <div className="hidden md:block bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)]">
+                        <table className="table-fixed w-full text-sm">
+                            <colgroup>
+                                <col style={{width:'10%'}} />
+                                <col style={{width:'15%'}} />
+                                <col style={{width:'8%'}} />
+                                <col style={{width:'10%'}} />
+                                <col style={{width:'8%'}} />
+                                <col style={{width:'11%'}} />
+                                <col style={{width:'11%'}} />
+                                <col style={{width:'6%'}} />
+                                <col style={{width:'21%'}} />
+                            </colgroup>
                             <thead>
                                 <tr className="border-b-2 border-black dark:border-white bg-neutral-50 dark:bg-neutral-900">
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none min-w-[120px]" onClick={() => handleSort('service_date')}>
-                                        <span className="flex items-center gap-1.5">Fecha <SortIcon col="service_date" /></span>
+                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-wider cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none whitespace-nowrap" onClick={() => handleSort('service_date')}>
+                                        <span className="flex items-center gap-1">Fecha <SortIcon col="service_date" /></span>
                                     </th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none min-w-[160px]" onClick={() => handleSort('name')}>
-                                        <span className="flex items-center gap-1.5">Nombre de servicio <SortIcon col="name" /></span>
+                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-wider cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none whitespace-nowrap" onClick={() => handleSort('name')}>
+                                        <span className="flex items-center gap-1">Nombre <SortIcon col="name" /></span>
                                     </th>
-                                    <th className="text-center px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[100px]">Horario</th>
-                                    <th className="text-center px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[130px]">Total Asistencia</th>
-                                    <th className="text-center px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[120px]">Total Voluntarios</th>
-                                    <th className="text-center px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[90px]">% Vol</th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[110px]">Observaciones</th>
-                                    <th className="px-4 py-3 font-black uppercase text-xs tracking-widest min-w-[220px]">
-                                        <div className="flex justify-center">Acciones</div>
-                                    </th>
+                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap">Horario</th>
+                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap">Total Asist.</th>
+                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap bg-sky-50 dark:bg-sky-950/30">📡 Online</th>
+                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/30">Total c/ Online</th>
+                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap">Total Vols.</th>
+                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap">% Vol</th>
+                                    <th className="text-center px-4 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -975,34 +1018,45 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                     const s = calcStats(rec);
                                     return (
                                         <tr key={rec.id} className={`border-b border-neutral-100 dark:border-neutral-900 hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors ${idx % 2 === 0 ? '' : 'bg-neutral-50/50 dark:bg-neutral-900/30'}`}>
-                                            <td className="px-4 py-3 font-mono text-sm font-bold tabular-nums whitespace-nowrap min-w-[120px]">{fmtDate(rec.service_date)}</td>
-                                            <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300 font-bold uppercase tracking-tight min-w-[160px]">{rec.name || <span className="text-neutral-300 dark:text-neutral-600">—</span>}</td>
-                                            <td className="px-4 py-3 font-mono text-[11px] font-bold text-neutral-500 text-center min-w-[100px]">
+                                            <td className="px-4 py-3 font-mono text-sm font-bold tabular-nums whitespace-nowrap">{fmtDate(rec.service_date)}</td>
+                                            <td className="px-4 py-3 font-bold uppercase tracking-tight text-neutral-700 dark:text-neutral-300 truncate">
+                                                <span className="block truncate" title={rec.name || '—'}>{rec.name || <span className="text-neutral-300 dark:text-neutral-600">—</span>}</span>
+                                            </td>
+                                            <td className="px-3 py-3 font-mono text-xs font-bold text-neutral-500 text-center">
                                                 {rec.service_hour ? (
-                                                    <span className="flex flex-col items-center">
-                                                        <span className="text-black dark:text-white leading-none mb-0.5">{rec.service_hour}</span>
-                                                        <span className="text-[9px] uppercase opacity-60 tracking-tighter">{rec.service_time}</span>
+                                                    <span className="flex flex-col items-center leading-tight">
+                                                        <span className="text-black dark:text-white text-sm">{rec.service_hour}</span>
+                                                        <span className="text-[10px] uppercase opacity-60">{rec.service_time}</span>
                                                     </span>
                                                 ) : rec.service_time || "—"}
                                             </td>
-                                            <td className="px-4 py-3 font-black tabular-nums text-black dark:text-white text-center min-w-[130px]">{s.totalFinal.toLocaleString('es-AR')}</td>
-                                            <td className="px-4 py-3 font-black tabular-nums text-violet-600 dark:text-violet-400 text-center min-w-[120px]">{s.totalVol.toLocaleString('es-AR')}</td>
-                                            <td className="px-4 py-3 font-bold tabular-nums text-neutral-500 text-center min-w-[90px]">{s.pctVol.toFixed(1)}%</td>
-                                            <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400 text-xs italic min-w-[110px] max-w-[150px]">
-                                                <span className="line-clamp-1 block">{rec.observations || <span className="text-neutral-300 dark:text-neutral-600 not-italic">—</span>}</span>
+                                            <td className="px-3 py-3 font-black tabular-nums text-black dark:text-white text-center text-sm">{s.totalFinal.toLocaleString('es-AR')}</td>
+                                            <td className="px-3 py-3 text-center bg-sky-50/60 dark:bg-sky-950/20">
+                                                {s.online > 0 ? (
+                                                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/50 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 text-xs font-black tabular-nums">
+                                                        {s.online.toLocaleString('es-AR')}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-neutral-300 dark:text-neutral-700 text-xs">—</span>
+                                                )}
                                             </td>
-                                            <td className="px-4 py-3 text-center min-w-[220px]">
+                                            <td className="px-3 py-3 text-center bg-indigo-50/60 dark:bg-indigo-950/20">
+                                                <span className="font-black tabular-nums text-indigo-700 dark:text-indigo-300 text-sm">{s.totalFinalConOnline.toLocaleString('es-AR')}</span>
+                                            </td>
+                                            <td className="px-3 py-3 font-black tabular-nums text-violet-600 dark:text-violet-400 text-center text-sm">{s.totalVol.toLocaleString('es-AR')}</td>
+                                            <td className="px-3 py-3 font-bold tabular-nums text-neutral-500 text-center text-sm">{s.pctVol.toFixed(1)}%</td>
+                                            <td className="px-3 py-3 text-center">
                                                 <div className="flex items-center justify-center gap-1.5">
-                                                    <button onClick={() => setDetailRecord(rec)} title="Ver detalles" aria-label="Ver detalles" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-black dark:hover:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
+                                                    <button onClick={() => setDetailRecord(rec)} title="Ver detalles" aria-label="Ver detalles" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-black dark:hover:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1">
                                                         <Eye className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => setYoyRecord(rec)} title="Comparativa YoY" aria-label="Comparativa año a año" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-violet-600 hover:bg-violet-600 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2">
+                                                    <button onClick={() => setYoyRecord(rec)} title="Comparativa YoY" aria-label="Comparativa año a año" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-violet-600 hover:bg-violet-600 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-1">
                                                         <GitCompareArrows className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => navigate('/audiencia-servicios/new', { state: { record: rec } })} title="Editar" aria-label="Editar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
+                                                    <button onClick={() => navigate('/audiencia-servicios/new', { state: { record: rec } })} title="Editar" aria-label="Editar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1">
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => setDeleteTarget(rec)} title="Eliminar" aria-label="Eliminar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-red-500 hover:bg-red-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2">
+                                                    <button onClick={() => setDeleteTarget(rec)} title="Eliminar" aria-label="Eliminar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-red-500 hover:bg-red-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1">
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
