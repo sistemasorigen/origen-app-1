@@ -843,7 +843,7 @@ export async function deleteEventoGeneral(id: string): Promise<boolean> {
 function mapNinezSlideRow(row: any): import('../types').NinezBannerSlide {
   return {
     id: row.id,
-    imageUrl: row.image_url,
+    imageUrl: row.image_url || undefined,
     mediaType: row.media_type === 'video' ? 'video' : 'image',
     videoUrl: row.video_url || undefined,
     focalX: row.focal_x ?? 50,
@@ -870,7 +870,7 @@ export async function getNinezBannerSlides(): Promise<import('../types').NinezBa
 }
 
 export interface NinezBannerSlideInput {
-  imageUrl: string;
+  imageUrl?: string;
   mediaType?: 'image' | 'video';
   videoUrl?: string;
   focalX?: number;
@@ -885,7 +885,7 @@ export async function createNinezBannerSlide(input: NinezBannerSlideInput): Prom
   const { data, error } = await supabase
     .from('ninez_banner_slides')
     .insert({
-      image_url: input.imageUrl,
+      image_url: input.imageUrl || null,
       media_type: input.mediaType || 'image',
       video_url: input.mediaType === 'video' ? (input.videoUrl || null) : null,
       focal_x: input.focalX ?? 50,
@@ -909,7 +909,7 @@ export async function updateNinezBannerSlide(id: string, input: NinezBannerSlide
   const { error } = await supabase
     .from('ninez_banner_slides')
     .update({
-      image_url: input.imageUrl,
+      image_url: input.imageUrl || null,
       media_type: input.mediaType || 'image',
       video_url: input.mediaType === 'video' ? (input.videoUrl || null) : null,
       focal_x: input.focalX ?? 50,
@@ -936,6 +936,109 @@ export async function deleteNinezBannerSlide(id: string): Promise<boolean> {
 
   if (error) {
     console.error('[deleteNinezBannerSlide] Error:', error);
+    return false;
+  }
+  return true;
+}
+
+// ── Home: mini-banner "Origen Música" ───────────
+
+function mapMusicaBannerSlideRow(row: any): import('../types').MusicaBannerSlide {
+  return {
+    id: row.id,
+    mediaUrl: row.media_url || undefined,
+    mediaType: row.media_type,
+    videoUrl: row.video_url || undefined,
+    focalX: row.focal_x ?? undefined,
+    focalY: row.focal_y ?? undefined,
+    zoom: row.zoom ?? undefined,
+    title: row.title || undefined,
+    targetUrl: row.target_url,
+    displayOrder: row.display_order,
+    createdAt: row.created_at
+  };
+}
+
+export async function getMusicaBannerSlides(): Promise<import('../types').MusicaBannerSlide[]> {
+  const { data, error } = await supabase
+    .from('home_musica_banner_slides')
+    .select('*')
+    .order('display_order', { ascending: true });
+
+  if (error) {
+    console.error('[getMusicaBannerSlides] Error:', error);
+    return [];
+  }
+  return (data || []).map(mapMusicaBannerSlideRow);
+}
+
+export interface MusicaBannerSlideInput {
+  mediaUrl?: string;
+  mediaType: 'image' | 'video';
+  videoUrl?: string;
+  focalX?: number;
+  focalY?: number;
+  zoom?: number;
+  title?: string;
+  targetUrl: string;
+  displayOrder: number;
+}
+
+export async function createMusicaBannerSlide(input: MusicaBannerSlideInput): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('home_musica_banner_slides')
+    .insert({
+      media_url: input.mediaUrl || null,
+      media_type: input.mediaType,
+      video_url: input.videoUrl || null,
+      focal_x: input.focalX ?? null,
+      focal_y: input.focalY ?? null,
+      zoom: input.zoom ?? null,
+      title: input.title || null,
+      target_url: input.targetUrl,
+      display_order: input.displayOrder
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    console.error('[createMusicaBannerSlide] Error:', error);
+    return null;
+  }
+  return data.id;
+}
+
+export async function updateMusicaBannerSlide(id: string, input: MusicaBannerSlideInput): Promise<boolean> {
+  const { error } = await supabase
+    .from('home_musica_banner_slides')
+    .update({
+      media_url: input.mediaUrl || null,
+      media_type: input.mediaType,
+      video_url: input.videoUrl || null,
+      focal_x: input.focalX ?? null,
+      focal_y: input.focalY ?? null,
+      zoom: input.zoom ?? null,
+      title: input.title || null,
+      target_url: input.targetUrl,
+      display_order: input.displayOrder
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('[updateMusicaBannerSlide] Error:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function deleteMusicaBannerSlide(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('home_musica_banner_slides')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('[deleteMusicaBannerSlide] Error:', error);
     return false;
   }
   return true;
@@ -3774,11 +3877,15 @@ export const supabaseService = {
    * Sube un video al bucket 'images' (el bucket no restringe MIME ni tamaño,
    * así que sirve para cualquier media; el nombre es histórico).
    *
-   * El límite de 25MB es propio, no del bucket: un video de fondo del hero se
-   * descarga entero antes de reproducirse, y arriba de eso el banner tarda
-   * más que la página. Para piezas más largas conviene un embed externo.
+   * El tope de 500MB es propio, no del bucket, y aplica al archivo que
+   * llega acá — no al archivo fuente que el usuario eligió en su disco.
+   * SubidaVideo.tsx recorta ese archivo fuente a un clip de 5s *antes* de
+   * llamar a esta función (ver EncuadreVideo/extractClip ahí), así que en
+   * la práctica lo que sube esta función pesa unos pocos MB. El tope real
+   * de "video de fondo que se descarga entero antes de reproducirse" ya no
+   * aplica: 5 segundos a resolución acotada nunca se acerca a 500MB.
    *
-   * @param file - Archivo de video
+   * @param file - Archivo de video (normalmente ya recortado por el caller)
    * @param folder - Carpeta dentro del bucket (ej: 'banners')
    * @returns URL pública del video
    * @throws Error si el archivo no es válido o la subida falla
@@ -3788,9 +3895,9 @@ export const supabaseService = {
       throw new Error('El archivo debe ser un video');
     }
 
-    const maxSize = 25 * 1024 * 1024;
+    const maxSize = 500 * 1024 * 1024;
     if (file.size > maxSize) {
-      throw new Error(`El video no puede superar los 25MB (este pesa ${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+      throw new Error(`El video no puede superar los 500MB (este pesa ${(file.size / 1024 / 1024).toFixed(1)}MB)`);
     }
 
     const timestamp = Date.now();

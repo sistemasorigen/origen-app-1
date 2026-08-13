@@ -402,7 +402,9 @@ export interface EventoGeneral {
 
 export interface NinezBannerSlide {
     id: string;
-    imageUrl: string;
+    // Opcional: solo hace falta si mediaType es 'image' (ahí es el contenido
+    // en sí). Para 'video' es la portada, y sin ella el fallback es negro.
+    imageUrl?: string;
     mediaType?: 'image' | 'video';
     videoUrl?: string;
     focalX?: number;
@@ -810,9 +812,10 @@ export interface BannerSlide {
      * Imagen del slide. Cuando mediaType es 'video' sigue usándose como
      * poster: es lo que se ve mientras el video carga, si el navegador
      * bloquea la reproducción automática, o si el usuario pidió
-     * `prefers-reduced-motion`. Por eso conviene cargarla siempre.
+     * `prefers-reduced-motion`. Opcional a propósito: no subirla no es un
+     * error, el fallback es directamente pantalla negra (ver CarruselHero).
      */
-    imageUrl: string;
+    imageUrl?: string;
     mediaType?: 'image' | 'video';  // Ausente = 'image' (slides ya existentes)
     videoUrl?: string;              // Sólo se usa si mediaType === 'video'
     /**
@@ -839,6 +842,24 @@ export interface BannerSlide {
      */
     buttonLink?: string;
     overlayColor?: string;
+}
+
+// ── Home: mini-banner "Origen Música" ───────────
+
+export interface MusicaBannerSlide {
+    id: string;
+    // Opcional: solo hace falta si mediaType es 'image' (ahí es el contenido
+    // en sí). Para 'video' es la portada, y sin ella el fallback es negro.
+    mediaUrl?: string;
+    mediaType: 'image' | 'video';
+    videoUrl?: string;
+    focalX?: number;
+    focalY?: number;
+    zoom?: number;
+    title?: string;
+    targetUrl: string; // Nunca se muestra en la UI pública — solo destino del click
+    displayOrder: number;
+    createdAt: string;
 }
 
 export interface BannerConfig {

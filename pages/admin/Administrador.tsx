@@ -5,7 +5,14 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { db } from '../../services/dbService';
 import { supabaseService } from '../../services/supabaseService';
-import { User, UserRole, Log, SystemModule, AppConfig, BannerSlide, ValuesSectionConfig, Group, FooterLinks, CoordinatorVariant } from '../../types';
+import {
+    getMusicaBannerSlides,
+    createMusicaBannerSlide,
+    updateMusicaBannerSlide,
+    deleteMusicaBannerSlide,
+    MusicaBannerSlideInput
+} from '../../services/supabaseService';
+import { User, UserRole, Log, SystemModule, AppConfig, BannerSlide, MusicaBannerSlide, ValuesSectionConfig, Group, FooterLinks, CoordinatorVariant } from '../../types';
 import { Users, Shield, Home, Database, CloudUpload, Save, Search, X, Check, Book, Palette, Globe, Plus, Edit2, Trash2, Info, UserCheck, ClipboardList, CheckCircle, XCircle, Share2, Instagram, Facebook, Youtube, Music, Eye, Loader2, Medal, Film } from 'lucide-react';
 import ImageUpload from '../../components/media/SubidaImagen';
 import VideoUpload from '../../components/media/SubidaVideo';
@@ -71,6 +78,14 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     const [editingSlide, setEditingSlide] = useState<Partial<BannerSlide> | null>(null);
     const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
 
+    // "Origen Música" Mini-Banner State — tabla dedicada, NO usa
+    // editingSlide/isSlideModalOpen (esos gobiernan config.banner, un
+    // sistema de persistencia distinto — JSON en AppConfig).
+    const [musicaSlides, setMusicaSlides] = useState<MusicaBannerSlide[]>([]);
+    const [editingMusicaSlide, setEditingMusicaSlide] = useState<Partial<MusicaBannerSlideInput> & { id?: string } | null>(null);
+    const [isMusicaModalOpen, setIsMusicaModalOpen] = useState(false);
+    const [savingMusica, setSavingMusica] = useState(false);
+
     // Verse Management State
     const [newVerse, setNewVerse] = useState({ text: '', ref: '' });
 
@@ -96,7 +111,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             setActiveTab(tab as any);
         }
     }, [searchParams]);
-    const [configSubTab, setConfigSubTab] = useState<'IDENTITY' | 'BANNERS' | 'VALUES' | 'VERSES' | 'INFO_POINT' | 'FOOTER'>('IDENTITY');
+    const [configSubTab, setConfigSubTab] = useState<'IDENTITY' | 'BANNERS' | 'MUSICA' | 'VALUES' | 'VERSES' | 'INFO_POINT' | 'FOOTER'>('IDENTITY');
 
     // User Sub-Tabs State - Updated to include 'all' tab
     const [userSubTab, setUserSubTab] = useState<'all' | 'admins' | 'area_admins' | 'volunteers' | 'all_volunteers' | 'viewers'>('all');
@@ -127,6 +142,9 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             // Fetch Groups for assignment dropdown
             const dbGroups = await supabaseService.getGroups();
             setGroups(dbGroups);
+
+            // Fetch "Origen Música" mini-banner slides
+            setMusicaSlides(await getMusicaBannerSlides());
 
             setModules(db.getModules());
 
@@ -423,6 +441,45 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                 banner: { ...config.banner, slides: updatedSlides }
             });
         }
+    };
+
+    // "Origen Música" Mini-Banner — tabla dedicada home_musica_banner_slides.
+    // La imagen solo es obligatoria en modo 'image' (ahí ES el contenido).
+    // En modo 'video' es apenas una portada opcional: sin ella, el fallback
+    // público es directamente pantalla negra (MusicaCarousel en Home.tsx).
+    const handleSaveMusicaSlide = async () => {
+        if (!editingMusicaSlide?.targetUrl) return;
+        const mediaType = editingMusicaSlide.mediaType || 'image';
+        if (mediaType !== 'video' && !editingMusicaSlide.mediaUrl) return;
+        setSavingMusica(true);
+
+        const input: MusicaBannerSlideInput = {
+            mediaUrl: editingMusicaSlide.mediaUrl,
+            mediaType: editingMusicaSlide.mediaType || 'image',
+            videoUrl: editingMusicaSlide.videoUrl,
+            focalX: editingMusicaSlide.focalX,
+            focalY: editingMusicaSlide.focalY,
+            zoom: editingMusicaSlide.zoom,
+            title: editingMusicaSlide.title,
+            targetUrl: editingMusicaSlide.targetUrl,
+            displayOrder: editingMusicaSlide.displayOrder ?? musicaSlides.length
+        };
+
+        if (editingMusicaSlide.id) {
+            await updateMusicaBannerSlide(editingMusicaSlide.id, input);
+        } else {
+            await createMusicaBannerSlide(input);
+        }
+
+        setMusicaSlides(await getMusicaBannerSlides());
+        setSavingMusica(false);
+        setIsMusicaModalOpen(false);
+        setEditingMusicaSlide(null);
+    };
+
+    const handleDeleteMusicaSlide = async (id: string) => {
+        await deleteMusicaBannerSlide(id);
+        setMusicaSlides(prev => prev.filter(s => s.id !== id));
     };
 
     // Values Section
@@ -1157,6 +1214,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             {[
                                 { id: 'IDENTITY', icon: Palette, label: 'ID' },
                                 { id: 'BANNERS', icon: Home, label: 'Banners' },
+                                { id: 'MUSICA', icon: Music, label: 'Música' },
                                 { id: 'FOOTER', icon: Share2, label: 'Pies' },
                             ].map(tab => (
                                 <button
@@ -1310,6 +1368,52 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             </div>
                         )}
 
+                        {configSubTab === 'MUSICA' && (
+                            <div className="space-y-4 md:space-y-6">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                    <div>
+                                        <h3 className="text-base md:text-xl font-bold uppercase">Origen Música</h3>
+                                        <p className="text-[11px] text-neutral-500 mt-1">
+                                            Mini-banner debajo de "Próximos eventos" en el Home. 1920×600. El link de cada slide nunca se muestra — solo se usa al clickear.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => { setEditingMusicaSlide({ mediaType: 'image', mediaUrl: '', targetUrl: '' }); setIsMusicaModalOpen(true); }}
+                                        className="px-4 md:px-6 py-2 bg-black text-white text-[10px] md:text-xs font-bold uppercase rounded-lg hover:bg-slate-800 flex items-center gap-2 whitespace-nowrap"
+                                    >
+                                        <Plus className="w-3 md:w-4 h-3 md:h-4" /> Agregar
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                                    {musicaSlides.map(slide => (
+                                        <div key={slide.id} className="bg-off-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group">
+                                            <div className="aspect-[1920/600] bg-slate-100 relative">
+                                                {slide.mediaType === 'video' && slide.videoUrl ? (
+                                                    <video src={slide.videoUrl} poster={slide.mediaUrl || undefined} className="w-full h-full object-cover" muted loop playsInline />
+                                                ) : (
+                                                    <img src={slide.mediaUrl} className="w-full h-full object-cover" />
+                                                )}
+                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                    <button onClick={() => { setEditingMusicaSlide(slide); setIsMusicaModalOpen(true); }} className="p-2 bg-white text-black rounded hover:bg-slate-200"><Edit2 className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDeleteMusicaSlide(slide.id)} className="p-2 bg-red-600 text-white rounded hover:bg-red-700"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                            </div>
+                                            <div className="p-4">
+                                                <h4 className="font-bold text-sm uppercase truncate">{slide.title || '(Sin título)'}</h4>
+                                                <p className="text-[11px] text-slate-400 mt-1 truncate">{slide.targetUrl}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {musicaSlides.length === 0 && (
+                                        <div className="col-span-full py-12 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
+                                            No hay slides configurados.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {configSubTab === 'FOOTER' && (
                             <div className="max-w-4xl space-y-8 animate-fadeIn">
                                 <div className="bg-off-white p-8 rounded-2xl shadow-lg border border-slate-200">
@@ -1436,11 +1540,11 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
 
                             <div>
                                 <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">
-                                    {editingSlide.mediaType === 'video' ? 'Imagen de Respaldo (Poster)' : 'Imagen del Slide'}
+                                    {editingSlide.mediaType === 'video' ? 'Imagen de Respaldo (Poster) — opcional' : 'Imagen del Slide'}
                                 </label>
                                 {editingSlide.mediaType === 'video' && (
                                     <p className="text-[11px] text-neutral-500 mb-2">
-                                        Se ve mientras carga el video y en dispositivos que no lo reproducen. Cargala siempre.
+                                        Se ve mientras carga el video y en dispositivos que no lo reproducen. Si no subís nada, el fallback es pantalla negra.
                                     </p>
                                 )}
                                 <ImageUpload
@@ -1512,7 +1616,124 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                     </NeoModal>
                 )}
 
+                {/* Edit "Origen Música" Slide Modal — tabla dedicada,
+                    independiente del modal de BANNERS de arriba */}
+                {isMusicaModalOpen && editingMusicaSlide && (
+                    <NeoModal
+                        isOpen={isMusicaModalOpen}
+                        onClose={() => { setIsMusicaModalOpen(false); setEditingMusicaSlide(null); }}
+                        title={editingMusicaSlide.id ? 'Editar Slide Música' : 'Nuevo Slide Música'}
+                    >
+                        <div className="flex flex-col gap-6">
+                            <div>
+                                <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">Tipo de Medio</label>
+                                <div className="flex gap-2">
+                                    {([['image', 'Imagen'], ['video', 'Video']] as const).map(([value, label]) => {
+                                        const isSelected = (editingMusicaSlide.mediaType || 'image') === value;
+                                        return (
+                                            <button
+                                                key={value}
+                                                type="button"
+                                                onClick={() => setEditingMusicaSlide({ ...editingMusicaSlide, mediaType: value })}
+                                                className={`px-5 py-2.5 text-xs font-bold uppercase border-2 transition-all ${isSelected
+                                                    ? 'bg-black text-white border-black'
+                                                    : 'bg-white text-neutral-500 border-slate-200 hover:border-black hover:text-black'
+                                                    }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
 
+                            <div>
+                                <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">
+                                    {editingMusicaSlide.mediaType === 'video' ? 'Portada (opcional)' : 'Imagen'}
+                                </label>
+                                {editingMusicaSlide.mediaType === 'video' && (
+                                    <p className="text-[11px] text-neutral-500 mb-2">
+                                        Se ve mientras carga el video. Si no subís nada, el fallback es pantalla negra.
+                                    </p>
+                                )}
+                                <ImageUpload
+                                    currentImage={editingMusicaSlide.mediaUrl || ''}
+                                    folder="musica-banner"
+                                    onImageUpload={(url) => setEditingMusicaSlide({ ...editingMusicaSlide, mediaUrl: url })}
+                                    aspectRatio="wide"
+                                />
+                            </div>
+
+                            {editingMusicaSlide.mediaType === 'video' && (
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">Video</label>
+                                    <VideoUpload
+                                        currentVideo={editingMusicaSlide.videoUrl || ''}
+                                        folder="musica-banner"
+                                        onVideoUpload={(url) => setEditingMusicaSlide({ ...editingMusicaSlide, videoUrl: url })}
+                                    />
+                                </div>
+                            )}
+
+                            {/* 1920×600 fijo — medida pedida por Ignacio para este
+                                banner puntual, a diferencia del banner principal
+                                (config.banner.frameWidth/frameHeight, configurable). */}
+                            <div>
+                                <label className="text-xs font-bold uppercase text-neutral-500 mb-2 block">Encuadre</label>
+                                <EncuadreMedia
+                                    mediaType={editingMusicaSlide.mediaType || 'image'}
+                                    imageUrl={editingMusicaSlide.mediaUrl}
+                                    videoUrl={editingMusicaSlide.videoUrl}
+                                    frameWidth={1920}
+                                    frameHeight={600}
+                                    value={{
+                                        focalX: editingMusicaSlide.focalX ?? 50,
+                                        focalY: editingMusicaSlide.focalY ?? 50,
+                                        zoom: editingMusicaSlide.zoom ?? 1
+                                    }}
+                                    onChange={(frame) => setEditingMusicaSlide({ ...editingMusicaSlide, ...frame })}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Título</label>
+                                <input
+                                    type="text"
+                                    value={editingMusicaSlide.title || ''}
+                                    onChange={e => setEditingMusicaSlide({ ...editingMusicaSlide, title: e.target.value })}
+                                    className="w-full p-3 border border-slate-200 text-sm font-bold focus:shadow-md outline-none"
+                                    placeholder="Ej: Nueva canción — Título"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold uppercase text-neutral-500 mb-1 block">Link de destino</label>
+                                <input
+                                    type="text"
+                                    value={editingMusicaSlide.targetUrl || ''}
+                                    onChange={e => setEditingMusicaSlide({ ...editingMusicaSlide, targetUrl: e.target.value })}
+                                    className="w-full p-3 border border-slate-200 text-sm font-medium focus:shadow-md outline-none"
+                                    placeholder="https://youtube.com/... o https://open.spotify.com/..."
+                                />
+                                <p className="text-[11px] text-neutral-500 mt-1.5">
+                                    Nunca se muestra públicamente — se abre en una pestaña nueva al clickear el slide.
+                                </p>
+                            </div>
+
+                            <div className="pt-4 border-t-2 border-black flex justify-end gap-3 bg-white">
+                                <button onClick={() => { setIsMusicaModalOpen(false); setEditingMusicaSlide(null); }} className="px-6 py-3 text-xs font-bold uppercase border border-slate-200 hover:bg-neutral-100">Cancelar</button>
+                                <button
+                                    onClick={handleSaveMusicaSlide}
+                                    disabled={savingMusica || !editingMusicaSlide.targetUrl || ((editingMusicaSlide.mediaType || 'image') !== 'video' && !editingMusicaSlide.mediaUrl)}
+                                    className="px-6 py-3 bg-black text-white text-xs font-bold uppercase border border-slate-200 shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] hover:shadow-[5px_5px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-[3px_3px_0px_0px_rgba(100,100,100,1)] flex items-center gap-2"
+                                >
+                                    {savingMusica ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    Guardar Slide
+                                </button>
+                            </div>
+                        </div>
+                    </NeoModal>
+                )}
 
             </div>
         </div>

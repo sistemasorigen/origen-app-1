@@ -59,7 +59,7 @@ const ConfiguracionNinez: React.FC = () => {
             setSlides(data.map(s => ({
                 id: s.id,
                 localId: s.id,
-                imageUrl: s.imageUrl,
+                imageUrl: s.imageUrl || '',
                 mediaType: s.mediaType || 'image',
                 videoUrl: s.videoUrl || '',
                 focalX: s.focalX ?? 50,
@@ -92,9 +92,12 @@ const ConfiguracionNinez: React.FC = () => {
         setSaveError(null);
         setSaveSuccess(false);
 
-        const missingImage = slides.some(s => !s.imageUrl.trim());
+        // La imagen solo es obligatoria en modo 'image' (ahí ES el
+        // contenido). En modo 'video' es apenas una portada opcional: sin
+        // ella, el fallback público es directamente pantalla negra.
+        const missingImage = slides.some(s => s.mediaType !== 'video' && !s.imageUrl.trim());
         if (missingImage) {
-            setSaveError('Todos los slides necesitan una imagen antes de guardar.');
+            setSaveError('Los slides de imagen necesitan una imagen antes de guardar.');
             return;
         }
         const missingVideo = slides.some(s => s.mediaType === 'video' && !s.videoUrl.trim());
@@ -111,7 +114,7 @@ const ConfiguracionNinez: React.FC = () => {
             // Crear/actualizar el resto, respetando el orden visual
             await Promise.all(slides.map((s, index) => {
                 const input: NinezBannerSlideInput = {
-                    imageUrl: s.imageUrl,
+                    imageUrl: s.imageUrl || '',
                     mediaType: s.mediaType,
                     videoUrl: s.mediaType === 'video' ? s.videoUrl : undefined,
                     focalX: s.focalX,
@@ -135,7 +138,7 @@ const ConfiguracionNinez: React.FC = () => {
             setSlides(fresh.map(s => ({
                 id: s.id,
                 localId: s.id,
-                imageUrl: s.imageUrl,
+                imageUrl: s.imageUrl || '',
                 mediaType: s.mediaType || 'image',
                 videoUrl: s.videoUrl || '',
                 focalX: s.focalX ?? 50,
@@ -222,11 +225,11 @@ const ConfiguracionNinez: React.FC = () => {
 
                             <div>
                                 <label className="text-xs font-bold uppercase text-slate-400 mb-1.5 block">
-                                    {slide.mediaType === 'video' ? 'Imagen de respaldo (poster)' : 'Imagen del slide'}
+                                    {slide.mediaType === 'video' ? 'Imagen de respaldo (poster) — opcional' : 'Imagen del slide'}
                                 </label>
                                 {slide.mediaType === 'video' && (
                                     <p className="text-[11px] text-slate-500 mb-2">
-                                        Se ve mientras carga el video y en dispositivos que no lo reproducen. Cargala siempre.
+                                        Se ve mientras carga el video y en dispositivos que no lo reproducen. Si no subís nada, el fallback es pantalla negra.
                                     </p>
                                 )}
                                 <ImageUpload

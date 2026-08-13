@@ -4,7 +4,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface HeroSlideData {
     id: string;
-    imageUrl: string;
+    // Opcional: sin ella, el fallback es directamente pantalla negra (ver
+    // el fondo bg-black del contenedor y el branding condicional del <img> abajo).
+    imageUrl?: string;
     mediaType?: 'image' | 'video';  // Ausente = 'image'
     videoUrl?: string;
     focalX?: number;
@@ -64,6 +66,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
     const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
     const touchStartXRef = useRef<number | null>(null);
+    const rootRef = useRef<HTMLDivElement>(null);
     // Posición dentro de la pista (puede caer en el clon del final, ver abajo).
     const [index, setIndex] = useState(0);
     const [animate, setAnimate] = useState(true);
@@ -110,6 +113,48 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                 video.pause();
             }
         });
+    }, [index]);
+
+    // Red de seguridad para cuando el video activo queda pausado por el
+    // navegador sin que React se entere — el effect de arriba sólo llama a
+    // play() cuando CAMBIA el índice, y hay dos formas de volver sin que
+    // eso pase:
+    //
+    // 1. El hero sale del viewport y vuelve (scrollear hacia abajo por el
+    //    resto del Home y volver arriba) — en mobile los navegadores suelen
+    //    pausar/soltar el buffer de un <video> lejos de pantalla por
+    //    memoria. Lo cubre el IntersectionObserver.
+    // 2. Se cambia de pestaña (o se bloquea el celular) unos minutos y se
+    //    vuelve — la posición de scroll no cambió, así que el hero ya
+    //    estaba "intersectando" antes de irse y el observer de arriba NO
+    //    dispara de nuevo al volver. Acá el navegador puede pausar/soltar
+    //    el video igual, sólo que por estar la pestaña oculta en vez de
+    //    estar fuera del viewport. Lo cubre visibilitychange.
+    useEffect(() => {
+        const resumeActiveVideo = () => {
+            const video = videoRefs.current.get(index);
+            if (video && video.paused) {
+                video.play().catch(() => { /* el navegador decidió no reproducir */ });
+            }
+        };
+
+        const root = rootRef.current;
+        const observer = root
+            ? new IntersectionObserver(([entry]) => {
+                if (entry.isIntersecting) resumeActiveVideo();
+            }, { threshold: 0 })
+            : null;
+        if (root && observer) observer.observe(root);
+
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') resumeActiveVideo();
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            observer?.disconnect();
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
     }, [index]);
 
     useEffect(() => () => {
@@ -214,6 +259,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
 
     return (
         <div
+            ref={rootRef}
             // Con encuadre configurado manda la proporción; el min-height evita
             // que un marco panorámico (ej 1920×480) colapse a una franja de
             // 90px en un teléfono. Ahí el recorte lo resuelve el punto focal.
@@ -278,14 +324,14 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                                     style={getMediaFrameStyle(slide)}
                                     className={`w-full h-full pointer-events-none select-none ${theme === 'prode' ? 'object-contain bg-white' : 'object-cover'} ${getImageClass()}`}
                                 />
-                            ) : (
+                            ) : slide.imageUrl ? (
                                 <img
                                     src={slide.imageUrl}
                                     alt={slide.title || slide.titlePrefix || ''}
                                     style={getMediaFrameStyle(slide)}
                                     className={`w-full h-full ${theme === 'prode' ? 'object-contain bg-white' : 'object-cover'} ${getImageClass()}`}
                                 />
-                            )}
+                            ) : null /* sin imagen ni video: queda el fondo negro del contenedor, nunca un ícono de imagen rota */}
 
                             {/* Overlay */}
                             <div className={`absolute inset-0 ${slide.overlayColor || getOverlayClass()}`}></div>
