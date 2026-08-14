@@ -73,9 +73,9 @@ const SUNDAY_SERVICE_TYPES = [
     'Acción de Gracias',
 ];
 
-const inputCls = 'w-full p-3 bg-white border-2 border-black rounded-lg outline-none font-bold placeholder-neutral-400 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all text-black text-base appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
+const inputCls = 'w-full p-3 bg-white border border-slate-300 rounded-lg outline-none font-bold placeholder-slate-400 focus:border-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all text-black text-base appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
 
-const selectCls = 'w-full p-3 bg-white border-2 border-black rounded-lg outline-none font-bold text-black text-base focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all cursor-pointer';
+const selectCls = 'w-full p-3 bg-white border border-slate-300 rounded-lg outline-none font-bold text-black text-base focus:border-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all cursor-pointer';
 
 const NumericInput: React.FC<{
     label: string;
@@ -85,7 +85,7 @@ const NumericInput: React.FC<{
     error?: string;
 }> = ({ label, value, onChange, max, error }) => (
     <div>
-        <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
             {label}
         </label>
         <input
@@ -99,7 +99,7 @@ const NumericInput: React.FC<{
                 const clamped = max ? Math.min(max, Math.max(0, isNaN(n) ? 0 : n)) : Math.max(0, isNaN(n) ? 0 : n);
                 onChange(clamped);
             }}
-            className={`${inputCls} ${error ? 'border-red-500 shadow-[4px_4px_0px_0px_rgba(239,68,68,1)]' : ''}`}
+            className={`${inputCls} ${error ? 'border-red-500' : ''}`}
         />
         {error && <p className="text-red-600 text-xs font-bold mt-1">{error}</p>}
     </div>
@@ -217,29 +217,29 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
 
     if (submitted) {
         return (
-            <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
                 <div className="text-center max-w-sm w-full">
-                    <div className="w-20 h-20 bg-black flex items-center justify-center mx-auto mb-6 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                    <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
                         <Check className="w-10 h-10 text-white" />
                     </div>
                     <h2 className="text-3xl font-black uppercase tracking-tight mb-3">
                         {isEdit ? '¡Registro actualizado!' : '¡Registro guardado!'}
                     </h2>
-                    <p className="text-neutral-600 text-sm font-bold mb-8">
+                    <p className="text-slate-500 text-sm font-bold mb-8">
                         Las estadísticas del servicio fueron {isEdit ? 'actualizadas' : 'registradas'} correctamente.
                     </p>
                     <div className="flex flex-col gap-3 w-full">
                         {!isEdit && (
                             <button
                                 onClick={() => { setForm({ ...EMPTY_FORM }); setTotalAuditorioInput(0); setStep(0); setSubmitted(false); }}
-                                className="w-full py-4 bg-white text-black font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                className="w-full py-4 bg-white text-slate-700 font-bold uppercase tracking-widest border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                             >
                                 Nuevo Registro
                             </button>
                         )}
                         <button
                             onClick={() => navigate('/audiencia-servicios')}
-                            className="w-full py-4 bg-black text-white font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="w-full py-4 bg-black text-white font-bold uppercase tracking-widest rounded-lg hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             Ver Panel
                         </button>
@@ -252,23 +252,23 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
     const StepIcon = STEPS[step].icon;
 
     return (
-        <div className="min-h-screen bg-neutral-50 pb-28 animate-fadeIn">
+        <div className="min-h-screen bg-slate-50 pb-28 animate-fadeIn">
 
             {/* Header */}
-            <div className="bg-white border-b-4 border-black sticky top-0 z-10">
+            <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
                     <button
                         onClick={() => navigate('/audiencia-servicios')}
-                        className="w-10 h-10 flex items-center justify-center border-2 border-black bg-white hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                        className="w-10 h-10 flex items-center justify-center border border-slate-300 bg-white hover:bg-slate-50 rounded-lg transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         aria-label="Volver"
                     >
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4 text-slate-700" />
                     </button>
                     <div>
                         <h1 className="text-xl font-black uppercase tracking-tight leading-none text-black">
                             {isEdit ? 'Editar Registro' : 'Nuevo Registro'}
                         </h1>
-                        <p className="text-xs text-neutral-500 font-black uppercase tracking-widest">Cuidado Pastoral</p>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Cuidado Pastoral</p>
                     </div>
                 </div>
 
@@ -278,8 +278,8 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         {STEPS.map((s, idx) => (
                             <React.Fragment key={s.title}>
                                 <div className={`flex items-center gap-2 transition-all ${idx === step ? 'opacity-100' : 'opacity-50'}`}>
-                                    <div className={`w-8 h-8 flex items-center justify-center border-2 border-black text-xs font-bold transition-colors
-                                        ${idx <= step ? 'bg-black text-white' : 'bg-white text-neutral-400'}`}>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors
+                                        ${idx <= step ? 'bg-black text-white' : 'bg-slate-100 text-slate-400'}`}>
                                         {idx < step ? <Check className="w-4 h-4" /> : idx + 1}
                                     </div>
                                     <span className="hidden sm:block text-[11px] font-bold uppercase tracking-wider text-black whitespace-nowrap">
@@ -287,7 +287,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                     </span>
                                 </div>
                                 {idx < STEPS.length - 1 && (
-                                    <div className={`flex-1 h-0.5 transition-colors ${idx < step ? 'bg-black' : 'bg-neutral-300'}`} />
+                                    <div className={`flex-1 h-0.5 rounded-full transition-colors ${idx < step ? 'bg-black' : 'bg-slate-200'}`} />
                                 )}
                             </React.Fragment>
                         ))}
@@ -299,15 +299,15 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
             <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 space-y-4">
 
                 {/* Step header card */}
-                <div className="bg-white p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3">
-                    <div className="w-10 h-10 bg-black flex items-center justify-center flex-shrink-0">
+                <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center flex-shrink-0">
                         <StepIcon className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                             Paso {step + 1} de {STEPS.length}
                         </p>
-                        <h2 className="text-lg font-black uppercase tracking-tight text-black">{STEPS[step].title}</h2>
+                        <h2 className="text-lg font-bold uppercase tracking-tight text-black">{STEPS[step].title}</h2>
                     </div>
                 </div>
 
@@ -315,15 +315,15 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                 {step === 0 && (
                     <>
                         {/* Info del servicio */}
-                        <div className="bg-white p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                            <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
+                        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-sm uppercase tracking-tight border-b border-slate-200 pb-2 mb-4 text-black">
                                 Información del Servicio
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                                 {/* Nombre */}
                                 <div>
-                                    <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
-                                        Nombre <span className="text-neutral-500 normal-case font-medium">(Opcional)</span>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                        Nombre <span className="text-slate-400 normal-case font-medium">(Opcional)</span>
                                     </label>
                                     <input
                                         type="text"
@@ -335,14 +335,14 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                 </div>
                                 {/* Fecha */}
                                 <div>
-                                    <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                                         Fecha <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="date"
                                         value={form.service_date}
                                         onChange={(e) => setField('service_date', e.target.value)}
-                                        className={`${inputCls} ${dateError ? 'border-red-500 shadow-[4px_4px_0px_0px_rgba(239,68,68,1)]' : ''}`}
+                                        className={`${inputCls} ${dateError ? 'border-red-500' : ''}`}
                                     />
                                     {dateError && <p className="text-red-600 text-xs font-bold mt-1">{dateError}</p>}
                                 </div>
@@ -350,7 +350,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
 
                             {/* Horario: time picker + AM/PM */}
                             <div className="mb-4">
-                                <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                                     Horario <span className="text-red-500">*</span>
                                 </label>
                                 <div className="flex gap-3 items-center">
@@ -366,20 +366,20 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                         <button
                                             type="button"
                                             onClick={() => setField('service_time', 'AM')}
-                                            className={`flex-1 py-3 font-bold text-sm uppercase tracking-wider border-2 border-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
+                                            className={`flex-1 py-3 font-bold text-sm uppercase tracking-wider rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
                                                 ${form.service_time === 'AM'
-                                                    ? 'bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                                                    : 'bg-white text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'}`}
+                                                    ? 'bg-black text-white'
+                                                    : 'border border-slate-300 text-slate-700 hover:bg-slate-50'}`}
                                         >
                                             AM
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setField('service_time', 'PM')}
-                                            className={`flex-1 py-3 font-bold text-sm uppercase tracking-wider border-2 border-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
+                                            className={`flex-1 py-3 font-bold text-sm uppercase tracking-wider rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
                                                 ${form.service_time === 'PM'
-                                                    ? 'bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                                                    : 'bg-white text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'}`}
+                                                    ? 'bg-black text-white'
+                                                    : 'border border-slate-300 text-slate-700 hover:bg-slate-50'}`}
                                         >
                                             PM
                                         </button>
@@ -389,7 +389,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
 
                             {/* Categoría */}
                             <div className="mb-4">
-                                <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                                     Categoría <span className="text-red-500">*</span>
                                 </label>
                                 <select
@@ -407,7 +407,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                             {/* Tipo de Servicio — solo visible si categoría = "Servicio de Domingo" */}
                             {form.category === 'Servicio de Domingo' && (
                                 <div className="mb-4">
-                                    <label className="block text-[11px] font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                                         Tipo de Servicio
                                     </label>
                                     <select
@@ -425,8 +425,8 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         </div>
 
                         {/* Voluntarios */}
-                        <div className="bg-white p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                            <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
+                        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-sm uppercase tracking-tight border-b border-slate-200 pb-2 mb-4 text-black">
                                 Áreas de Voluntarios
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -450,8 +450,8 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
 
                 {/* Step 2 */}
                 {step === 1 && (
-                    <div className="bg-white p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                        <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
+                    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-sm uppercase tracking-tight border-b border-slate-200 pb-2 mb-4 text-black">
                             Asistencia por grupo de edad
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -464,8 +464,8 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
 
                 {/* Step 3 */}
                 {step === 2 && (
-                    <div className="bg-white p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                        <h3 className="font-black text-sm uppercase tracking-widest border-b-2 border-black pb-2 mb-4 text-black">
+                    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-sm uppercase tracking-tight border-b border-slate-200 pb-2 mb-4 text-black">
                             Métricas generales del servicio
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -477,7 +477,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
 
                         {/* Observaciones */}
                         <div className="mt-8">
-                            <label className="block text-xs font-black text-neutral-600 uppercase tracking-widest mb-1.5">
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                                 Observaciones
                             </label>
                             <textarea
@@ -485,12 +485,12 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                 onChange={(e) => setField('observations', e.target.value)}
                                 placeholder="Anotá cualquier detalle relevante del servicio..."
                                 rows={4}
-                                className="w-full p-3 bg-white border-2 border-black rounded-lg outline-none font-bold placeholder-neutral-400 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all text-black text-base resize-none"
+                                className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none font-bold placeholder-slate-400 focus:border-black transition-all text-black text-base resize-none"
                             />
                         </div>
 
                         {saveError && (
-                            <div className="mt-4 p-3 border-2 border-red-500 bg-red-50 text-red-700 text-xs font-bold shadow-[2px_2px_0px_0px_rgba(239,68,68,1)]">
+                            <div className="mt-4 p-3 border border-red-300 bg-red-50 text-red-700 text-xs font-bold rounded-lg">
                                 {saveError}
                             </div>
                         )}
@@ -501,7 +501,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
             {/* Loading overlay */}
             {saving && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
+                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-lg text-center">
                         <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-black" />
                         <p className="font-bold text-sm uppercase tracking-widest">Guardando...</p>
                     </div>
@@ -509,12 +509,12 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
             )}
 
             {/* Navigation — Fixed bottom bar */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black z-20 px-3 py-2 sm:px-4 sm:py-3">
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-20 px-3 py-2 sm:px-4 sm:py-3">
                 <div className="max-w-3xl mx-auto flex items-center gap-2 sm:gap-3">
                     <button
                         onClick={prevStep}
                         disabled={step === 0}
-                        className="flex items-center justify-center gap-1 px-3 sm:px-5 py-2.5 sm:py-3.5 bg-white text-black font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 disabled:opacity-30 disabled:pointer-events-none transition-all flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                        className="flex items-center justify-center gap-1 px-3 sm:px-5 py-2.5 sm:py-3.5 border border-slate-300 text-slate-700 font-bold text-xs sm:text-sm uppercase tracking-wider rounded-lg hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                     >
                         <ChevronLeft className="w-4 h-4" />
                         <span className="hidden sm:inline">Atrás</span>
@@ -522,14 +522,14 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
 
                     <div className="flex gap-1.5 flex-1 justify-center">
                         {STEPS.map((_, idx) => (
-                            <div key={idx} className={`h-1.5 sm:h-2 transition-all rounded-full ${idx === step ? 'bg-black w-5 sm:w-6' : 'bg-neutral-300 w-1.5 sm:w-2'}`} />
+                            <div key={idx} className={`h-1.5 sm:h-2 transition-all rounded-full ${idx === step ? 'bg-black w-5 sm:w-6' : 'bg-slate-200 w-1.5 sm:w-2'}`} />
                         ))}
                     </div>
 
                     {step < 2 ? (
                         <button
                             onClick={nextStep}
-                            className="flex items-center justify-center gap-1.5 flex-1 py-2.5 sm:py-3.5 bg-black text-white font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="flex items-center justify-center gap-1.5 flex-1 py-2.5 sm:py-3.5 bg-black text-white font-bold text-xs sm:text-sm uppercase tracking-wider rounded-lg hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             Siguiente <ChevronRight className="w-4 h-4" />
                         </button>
@@ -537,7 +537,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         <button
                             onClick={handleSubmit}
                             disabled={saving}
-                            className="flex items-center justify-center gap-1.5 flex-1 py-2.5 sm:py-3.5 bg-black text-white font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="flex items-center justify-center gap-1.5 flex-1 py-2.5 sm:py-3.5 bg-black text-white font-bold text-xs sm:text-sm uppercase tracking-wider rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                             {saving ? 'Guardando...' : 'Guardar'}

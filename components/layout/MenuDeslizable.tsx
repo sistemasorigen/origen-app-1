@@ -195,10 +195,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             icon: HeartHandshake,
             path: '/audiencia-servicios',
             roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL],
-            subItems: [
-                { label: 'Inicio', path: '/audiencia-servicios' },
-                { label: 'Crear nuevo servicio', path: '/audiencia-servicios/new' },
-            ]
         },
         {
             label: 'Bienvenida',

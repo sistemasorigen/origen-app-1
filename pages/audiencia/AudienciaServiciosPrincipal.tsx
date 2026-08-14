@@ -42,11 +42,11 @@ const FilterChip: React.FC<{
             <button
                 type="button"
                 onClick={() => setOpen(o => !o)}
-                className={`w-full flex items-center justify-between gap-1.5 px-3 py-2.5 rounded-lg border-2 border-black text-xs font-bold transition-all
+                className={`w-full flex items-center justify-between gap-1.5 px-3 py-2.5 rounded-lg border text-xs font-bold transition-colors
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
                     ${active
-                        ? `${activeColor} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`
-                        : 'border-black bg-white text-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5'
+                        ? `${activeColor} border-transparent`
+                        : 'border-slate-300 bg-white text-black hover:bg-slate-50'
                     }`}
             >
                 <span className="truncate">{selectedLabel}</span>
@@ -57,7 +57,7 @@ const FilterChip: React.FC<{
             </button>
 
             {open && (
-                <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
                     {options.map(opt => (
                         <button
                             key={opt.value}
@@ -66,7 +66,7 @@ const FilterChip: React.FC<{
                             className={`w-full text-left px-3 py-2.5 text-xs font-bold transition-colors
                                 ${value === opt.value
                                     ? 'bg-black text-white'
-                                    : 'text-black hover:bg-neutral-100'
+                                    : 'text-black hover:bg-slate-100'
                                 }`}
                         >
                             {opt.label}
@@ -121,7 +121,7 @@ const calcStats = (r: any) => {
 // ─── Shared UI atoms ──────────────────────────────────────────────────────
 
 const StatRow: React.FC<{ label: string; value: string | number; highlight?: boolean }> = ({ label, value, highlight }) => (
-    <div className={`flex items-center justify-between py-2.5 border-b border-neutral-100 dark:border-neutral-800 ${highlight ? 'bg-violet-50 dark:bg-violet-950/30 -mx-3 px-3 rounded' : ''}`}>
+    <div className={`flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-neutral-800 ${highlight ? 'bg-violet-50 dark:bg-violet-950/30 -mx-3 px-3 rounded' : ''}`}>
         <span className={`text-sm ${highlight ? 'font-bold text-black dark:text-white' : 'text-black dark:text-white font-medium'}`}>{label}</span>
         <span className={`font-black tabular-nums ${highlight ? 'text-violet-700 dark:text-violet-300 text-lg' : 'text-black dark:text-white'}`}>{value}</span>
     </div>
@@ -205,7 +205,7 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
     return (
         <NeoModal isOpen={true} onClose={onClose} title="Detalle del Servicio" maxWidth="max-w-lg">
             <div className="mb-4">
-                <p className="text-xs font-mono text-neutral-400 uppercase tracking-widest">
+                <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">
                     {record.name || '—'} · {new Date(record.service_date + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}{record.service_time ? ` (${record.service_time})` : ''}
                 </p>
             </div>
@@ -220,12 +220,12 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
             </div>
 
             {/* ── Total Asistencia + Online ── */}
-            <div className="mt-5 rounded-xl border-2 border-black bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/30 dark:to-indigo-950/30 p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+            <div className="mt-5 rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/30 dark:to-indigo-950/30 p-4 shadow-sm">
                 <p className="text-[10px] font-black uppercase tracking-widest text-sky-600 dark:text-sky-400 mb-2">📡 Total c/ Online</p>
                 <div className="flex items-end justify-between">
                     <div>
                         <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">{fmt(s.totalFinalConOnline)}</p>
-                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium mt-1">Total Asistencia + {fmt(s.online)} online</p>
+                        <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-medium mt-1">Total Asistencia + {fmt(s.online)} online</p>
                     </div>
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 text-xs font-black">
                         +{fmt(s.online)} online
@@ -234,7 +234,7 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
             </div>
 
             <div className="mt-6">
-                <p className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Desglose Voluntarios</p>
+                <p className="text-xs font-bold uppercase tracking-tight text-slate-400 mb-3">Desglose Voluntarios</p>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
                     {[
                         ['Conecta', record.conecta], ['Store', record.store],
@@ -247,27 +247,27 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
                         ['Fotos', record.fotos], ['Profes Niñez', record.profes_ninez],
                         ['Auditorio', record.auditorio],
                     ].map(([lbl, val]) => (
-                        <div key={lbl as string} className="flex justify-between border-b border-neutral-100 dark:border-neutral-800 py-1.5">
-                            <span className="text-neutral-500 text-xs">{lbl}</span>
+                        <div key={lbl as string} className="flex justify-between border-b border-slate-100 dark:border-neutral-800 py-1.5">
+                            <span className="text-slate-500 text-xs">{lbl}</span>
                             <span className="font-bold text-xs tabular-nums">{Number(val) || 0}</span>
                         </div>
                     ))}
                 </div>
             </div>
             <div className="mt-6">
-                <p className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Niñez</p>
+                <p className="text-xs font-bold uppercase tracking-tight text-slate-400 mb-3">Niñez</p>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
                     {[['Niños 3–6', record.ninos_3_6], ['Niños 7–10', record.ninos_7_10], ['Niños HD', record.ninos_hd], ['Borders', record.borders]]
                         .map(([lbl, val]) => (
-                            <div key={lbl as string} className="flex justify-between border-b border-neutral-100 dark:border-neutral-800 py-1.5">
-                                <span className="text-neutral-500 text-xs">{lbl}</span>
+                            <div key={lbl as string} className="flex justify-between border-b border-slate-100 dark:border-neutral-800 py-1.5">
+                                <span className="text-slate-500 text-xs">{lbl}</span>
                                 <span className="font-bold text-xs tabular-nums">{Number(val) || 0}</span>
                             </div>
                         ))}
                 </div>
             </div>
             <div className="mt-6">
-                <p className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Seguimiento</p>
+                <p className="text-xs font-bold uppercase tracking-tight text-slate-400 mb-3">Seguimiento</p>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
                     {[
                         ['Online', record.online], ['Vol. Repetidos', record.voluntarios_repetidos],
@@ -275,8 +275,8 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
                         ['Reconciliaron', record.reconciliaron], ['Podcast', record.podcast],
                         ['Oración', record.oracion],
                     ].map(([lbl, val]) => (
-                        <div key={lbl as string} className="flex justify-between border-b border-neutral-100 dark:border-neutral-800 py-1.5">
-                            <span className="text-neutral-500 text-xs">{lbl}</span>
+                        <div key={lbl as string} className="flex justify-between border-b border-slate-100 dark:border-neutral-800 py-1.5">
+                            <span className="text-slate-500 text-xs">{lbl}</span>
                             <span className="font-bold text-xs tabular-nums">{Number(val) || 0}</span>
                         </div>
                     ))}
@@ -285,11 +285,11 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
 
             {record.conference_sessions && record.conference_sessions.length > 0 && (
                 <div className="mt-6">
-                    <p className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Sesiones Especiales</p>
+                    <p className="text-xs font-bold uppercase tracking-tight text-slate-400 mb-3">Sesiones Especiales</p>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
                         {record.conference_sessions.map((session: { name: string, attendees: number }, idx: number) => (
-                            <div key={idx} className="flex justify-between border-b border-neutral-100 dark:border-neutral-800 py-1.5">
-                                <span className="text-neutral-500 text-xs">{session.name}</span>
+                            <div key={idx} className="flex justify-between border-b border-slate-100 dark:border-neutral-800 py-1.5">
+                                <span className="text-slate-500 text-xs">{session.name}</span>
                                 <span className="font-bold text-xs tabular-nums">{session.attendees}</span>
                             </div>
                         ))}
@@ -299,8 +299,8 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
 
             {record.observations && (
                 <div className="mt-6">
-                    <p className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Observaciones</p>
-                    <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-3">
+                    <p className="text-xs font-bold uppercase tracking-tight text-slate-400 mb-3">Observaciones</p>
+                    <p className="text-sm text-slate-600 dark:text-neutral-300 leading-relaxed bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-lg px-4 py-3">
                         {record.observations}
                     </p>
                 </div>
@@ -353,8 +353,8 @@ const YoYModal: React.FC<{ record: any; allRecords: any[]; onClose: () => void }
                     <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center mx-auto mb-4">
                         <AlertTriangle className="w-8 h-8 text-amber-500" />
                     </div>
-                    <p className="font-bold text-neutral-700 dark:text-neutral-200 text-base mb-1">Sin datos para comparar</p>
-                    <p className="text-sm text-neutral-400">No encontramos un registro del mismo mes en el año anterior.</p>
+                    <p className="font-bold text-slate-700 dark:text-neutral-200 text-base mb-1">Sin datos para comparar</p>
+                    <p className="text-sm text-slate-400">No encontramos un registro del mismo mes en el año anterior.</p>
                 </div>
             )}
 
@@ -406,10 +406,10 @@ const YoYModal: React.FC<{ record: any; allRecords: any[]; onClose: () => void }
 
 const ConfirmModal: React.FC<{ onConfirm: () => void; onClose: () => void; loading: boolean }> = ({ onConfirm, onClose, loading }) => (
     <NeoModal isOpen={true} onClose={onClose} title="Eliminar Registro" maxWidth="max-w-md">
-        <p className="text-neutral-600 dark:text-neutral-300 mb-6">¿Estás seguro que querés eliminar este registro? Esta acción no se puede deshacer.</p>
+        <p className="text-slate-600 dark:text-neutral-300 mb-6">¿Estás seguro que querés eliminar este registro? Esta acción no se puede deshacer.</p>
         <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 py-3 border-2 border-black dark:border-white font-bold text-sm uppercase hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">Cancelar</button>
-            <button onClick={onConfirm} disabled={loading} className="flex-1 py-3 bg-red-600 text-white font-bold text-sm uppercase hover:bg-red-700 transition-colors disabled:opacity-50">{loading ? 'Eliminando...' : 'Eliminar'}</button>
+            <button onClick={onClose} className="flex-1 py-3 border border-slate-300 rounded-lg text-slate-700 font-bold text-sm uppercase hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors">Cancelar</button>
+            <button onClick={onConfirm} disabled={loading} className="flex-1 py-3 bg-red-600 text-white rounded-lg font-bold text-sm uppercase hover:bg-red-700 transition-colors disabled:opacity-50">{loading ? 'Eliminando...' : 'Eliminar'}</button>
         </div>
     </NeoModal>
 );
@@ -481,29 +481,29 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
     const sparkColor = stats.sparkTrend > 0 ? '#10b981' : stats.sparkTrend < 0 ? '#ef4444' : '#8b5cf6';
 
     return (
-        <div className="mb-6 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-700 rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)]">
+        <div className="mb-6 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-2xl overflow-hidden shadow-sm">
             <button
                 type="button"
                 onClick={() => setIsCollapsed(c => !c)}
-                className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-inset"
+                className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-inset"
             >
                 <div className="flex items-center gap-2.5">
                     <BarChart3 className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
-                    <span className="text-sm font-black uppercase tracking-wider text-black dark:text-white">
+                    <span className="text-sm font-bold uppercase tracking-tight text-black dark:text-white">
                         Resumen del período
                     </span>
-                    <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 font-mono normal-case">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-neutral-500 font-mono normal-case">
                         {sorted.length} servicio{sorted.length !== 1 ? 's' : ''}
                     </span>
                 </div>
                 {isCollapsed
-                    ? <ChevronDown className="w-4 h-4 text-neutral-400" />
-                    : <ChevronUp className="w-4 h-4 text-neutral-400" />
+                    ? <ChevronDown className="w-4 h-4 text-slate-400" />
+                    : <ChevronUp className="w-4 h-4 text-slate-400" />
                 }
             </button>
 
             {!isCollapsed && (
-                <div className="border-t-2 border-black dark:border-neutral-700 px-5 py-5">
+                <div className="border-t border-slate-200 dark:border-neutral-700 px-5 py-5">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
                         {/* Promedio últimas 4 */}
                         <div className="bg-violet-50 dark:bg-violet-950/30 rounded-xl p-4 border border-violet-100 dark:border-violet-900/50">
@@ -513,7 +513,7 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
                             <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">
                                 {stats.avgLast4.toLocaleString('es-AR')}
                             </p>
-                            <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium mt-1">
+                            <p className="text-[10px] text-slate-400 dark:text-neutral-500 font-medium mt-1">
                                 personas por servicio
                             </p>
                         </div>
@@ -521,12 +521,12 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
                         {/* YoY */}
                         <div className={`rounded-xl p-4 border ${
                             !stats.hasYoY
-                                ? 'bg-neutral-50 dark:bg-neutral-800/50 border-neutral-100 dark:border-neutral-700/50'
+                                ? 'bg-slate-50 dark:bg-neutral-800/50 border-slate-100 dark:border-neutral-700/50'
                                 : stats.yoyDiff >= 0
                                     ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-100 dark:border-emerald-900/50'
                                     : 'bg-red-50 dark:bg-red-950/30 border-red-100 dark:border-red-900/50'
                         }`}>
-                            <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-neutral-500 dark:text-neutral-400">
+                            <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-slate-500 dark:text-neutral-400">
                                 vs año anterior
                             </p>
                             {stats.hasYoY ? (
@@ -538,7 +538,7 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
                                     }`}>
                                         {stats.yoyDiff >= 0 ? '+' : ''}{stats.yoyDiff.toLocaleString('es-AR')}
                                     </p>
-                                    <p className="text-[10px] font-bold mt-1 text-neutral-400 dark:text-neutral-500 flex items-center gap-0.5">
+                                    <p className="text-[10px] font-bold mt-1 text-slate-400 dark:text-neutral-500 flex items-center gap-0.5">
                                         {stats.yoyDiff >= 0
                                             ? <TrendingUp className="inline w-3 h-3" />
                                             : <TrendingDown className="inline w-3 h-3" />
@@ -548,8 +548,8 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
                                 </>
                             ) : (
                                 <>
-                                    <p className="text-xl font-black text-neutral-300 dark:text-neutral-600 leading-none">—</p>
-                                    <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium mt-1">
+                                    <p className="text-xl font-black text-slate-300 dark:text-neutral-600 leading-none">—</p>
+                                    <p className="text-[10px] text-slate-400 dark:text-neutral-500 font-medium mt-1">
                                         sin datos comparables
                                     </p>
                                 </>
@@ -564,20 +564,20 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
                             <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">
                                 {calcStats(stats.best).totalFinal.toLocaleString('es-AR')}
                             </p>
-                            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium mt-1 truncate">
+                            <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-medium mt-1 truncate">
                                 {stats.best.name || fmtDate(stats.best.service_date)}
                             </p>
                         </div>
 
                         {/* Menor servicio */}
-                        <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700/50">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1">
+                        <div className="bg-slate-50 dark:bg-neutral-800/50 rounded-xl p-4 border border-slate-100 dark:border-neutral-700/50">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-neutral-500 mb-1">
                                 Menor servicio
                             </p>
                             <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">
                                 {calcStats(stats.worst).totalFinal.toLocaleString('es-AR')}
                             </p>
-                            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium mt-1 truncate">
+                            <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-medium mt-1 truncate">
                                 {stats.worst.name || fmtDate(stats.worst.service_date)}
                             </p>
                         </div>
@@ -586,7 +586,7 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
                     {/* Sparkline */}
                     {stats.last8.length >= 2 && (
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-neutral-500 mb-3">
                                 Últimos {stats.last8.length} servicios — Total final
                             </p>
                             <div className="h-28">
@@ -612,10 +612,10 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
                                 </ResponsiveContainer>
                             </div>
                             <div className="flex justify-between mt-1 px-2">
-                                <span className="text-[9px] font-bold text-neutral-400 dark:text-neutral-600 font-mono">
+                                <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-600 font-mono">
                                     {stats.last8[0]?.label}
                                 </span>
-                                <span className="text-[9px] font-bold text-neutral-400 dark:text-neutral-600 font-mono">
+                                <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-600 font-mono">
                                     {stats.last8[stats.last8.length - 1]?.label}
                                 </span>
                             </div>
@@ -623,7 +623,7 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
                     )}
 
                     {stats.last8.length < 2 && (
-                        <p className="text-xs text-neutral-400 dark:text-neutral-500 font-medium text-center py-4 border border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl">
+                        <p className="text-xs text-slate-400 dark:text-neutral-500 font-medium text-center py-4 border border-dashed border-slate-200 dark:border-neutral-700 rounded-xl">
                             Se necesitan al menos 2 servicios para mostrar la tendencia gráfica.
                         </p>
                     )}
@@ -714,7 +714,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
     };
 
     const SortIcon = ({ col }: { col: SortKey }) => {
-        if (sortKey !== col) return <Minus className="w-3 h-3 text-neutral-300" />;
+        if (sortKey !== col) return <Minus className="w-3 h-3 text-slate-300" />;
         return sortAsc ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
     };
 
@@ -722,24 +722,24 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
         new Date(d + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
     return (
-        <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 pb-16">
+        <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 pb-16">
 
             {/* Header */}
-            <div className="bg-white dark:bg-black border-b-4 border-black dark:border-white">
+            <div className="bg-white dark:bg-black border-b border-slate-200 dark:border-white">
                 <div className="w-full px-4 sm:px-6 lg:px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => navigate('/')} className="w-10 h-10 flex items-center justify-center border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
-                            <ArrowLeft className="w-4 h-4" />
+                        <button onClick={() => navigate('/')} className="w-10 h-10 flex items-center justify-center border border-slate-300 bg-white hover:bg-slate-50 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
+                            <ArrowLeft className="w-4 h-4 text-slate-700" />
                         </button>
                         <div>
                             <h1 className="text-xl font-black uppercase tracking-tighter leading-none">Audiencia Servicios</h1>
-                            <p className="text-[10px] text-neutral-600 dark:text-neutral-400 font-mono uppercase tracking-wider">Estadísticas de Servicios</p>
+                            <p className="text-[10px] text-slate-600 dark:text-neutral-400 font-mono uppercase tracking-wider">Estadísticas de Servicios</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         <button
                             onClick={() => navigate('/audiencia-servicios/new')}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-black dark:bg-white text-white dark:text-black font-bold text-xs uppercase border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.3)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-black dark:bg-white text-white dark:text-black font-bold text-xs uppercase rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                         >
                             <Plus className="w-4 h-4" />
                             Nuevo Registro
@@ -754,42 +754,42 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                     <>
                         {/* Skeleton filters */}
                         <div className="mb-5 space-y-3">
-                            <div className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
+                            <div className="h-10 bg-slate-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
                             <div className="grid grid-cols-3 gap-2">
-                                <div className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
-                                <div className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
-                                <div className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
+                                <div className="h-10 bg-slate-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
+                                <div className="h-10 bg-slate-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
+                                <div className="h-10 bg-slate-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
                             </div>
                         </div>
                         {/* Skeleton cards for mobile */}
                         <div className="md:hidden space-y-3">
                             {[1, 2, 3].map((i) => (
-                                <div key={i} className="bg-white border-2 border-black rounded-xl p-4 animate-pulse">
+                                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 animate-pulse">
                                     <div className="flex justify-between mb-3">
-                                        <div className="h-6 w-16 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
+                                        <div className="h-6 w-16 bg-slate-200 dark:bg-neutral-800 rounded-lg" />
                                         <div className="flex gap-1.5">
                                             {[1, 2, 3, 4].map((j) => (
-                                                <div key={j} className="w-11 h-11 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
+                                                <div key={j} className="w-11 h-11 bg-slate-200 dark:bg-neutral-800 rounded-lg" />
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="h-6 w-3/4 bg-neutral-200 dark:bg-neutral-800 rounded mb-3" />
+                                    <div className="h-6 w-3/4 bg-slate-200 dark:bg-neutral-800 rounded mb-3" />
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded" />
-                                        <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded" />
+                                        <div className="h-4 bg-slate-200 dark:bg-neutral-800 rounded" />
+                                        <div className="h-4 bg-slate-200 dark:bg-neutral-800 rounded" />
                                     </div>
                                 </div>
                             ))}
                         </div>
                         {/* Skeleton table for desktop */}
-                        <div className="hidden md:block bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-x-auto">
+                        <div className="hidden md:block bg-white dark:bg-black border border-slate-200 dark:border-white rounded-lg shadow-sm overflow-x-auto">
                             <div className="p-4 space-y-3">
                                 {[1, 2, 3, 4, 5].map((i) => (
                                     <div key={i} className="flex gap-4">
-                                        <div className="h-4 w-24 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
-                                        <div className="h-4 w-48 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
-                                        <div className="h-4 w-16 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
-                                        <div className="h-4 w-20 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+                                        <div className="h-4 w-24 bg-slate-200 dark:bg-neutral-800 rounded animate-pulse" />
+                                        <div className="h-4 w-48 bg-slate-200 dark:bg-neutral-800 rounded animate-pulse" />
+                                        <div className="h-4 w-16 bg-slate-200 dark:bg-neutral-800 rounded animate-pulse" />
+                                        <div className="h-4 w-20 bg-slate-200 dark:bg-neutral-800 rounded animate-pulse" />
                                     </div>
                                 ))}
                             </div>
@@ -799,16 +799,16 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
 
                 {!loading && records.length === 0 && (
                     <div className="text-center py-16 px-4">
-                        <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-900 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-black dark:border-white">
-                            <Calendar className="w-10 h-10 text-neutral-400 dark:text-neutral-500" />
+                        <div className="w-20 h-20 bg-slate-100 dark:bg-neutral-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Calendar className="w-10 h-10 text-slate-400 dark:text-neutral-500" />
                         </div>
                         <h3 className="text-lg font-black uppercase tracking-tight mb-2">Sin registros aún</h3>
-                        <p className="text-neutral-600 dark:text-neutral-400 text-sm mb-6 max-w-sm mx-auto">
+                        <p className="text-slate-600 dark:text-neutral-400 text-sm mb-6 max-w-sm mx-auto">
                             Comenzá a registrar las estadísticas de los servicios para visualizar métricas y comparativas.
                         </p>
                         <button onClick={() => navigate('/audiencia-servicios/new')}
                             className="inline-flex items-center gap-2 px-5 py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-sm uppercase
-                            border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
+                            rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
                             <Plus className="w-4 h-4" />
                             Crear primer registro
                         </button>
@@ -924,58 +924,58 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                         {sorted.map((rec) => {
                             const s = calcStats(rec);
                             return (
-                                <div key={rec.id} className="bg-white border-2 border-black rounded-xl p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                                <div key={rec.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                                     {/* Top row: badge + actions */}
                                     <div className="flex items-start justify-between mb-3">
-                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border-2 border-black text-[11px] font-bold uppercase tracking-wide
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide
                                             ${rec.service_time === 'PM' ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'}`}>
                                             {rec.service_hour ? `${rec.service_hour} ${rec.service_time || ''}` : rec.service_time || '—'}
                                         </span>
                                         {/* Kebab-style inline action buttons - 44px minimum touch target */}
                                         <div className="flex items-center gap-1.5">
-                                            <button onClick={() => setDetailRecord(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-black hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2" title="Ver detalles" aria-label="Ver detalles">
+                                            <button onClick={() => setDetailRecord(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-black hover:text-white hover:border-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2" title="Ver detalles" aria-label="Ver detalles">
                                                 <Eye className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => setYoyRecord(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-violet-600 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2" title="Comparativa YoY" aria-label="Comparativa año a año">
+                                            <button onClick={() => setYoyRecord(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2" title="Comparativa YoY" aria-label="Comparativa año a año">
                                                 <GitCompareArrows className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => navigate('/audiencia-servicios/new', { state: { record: rec } })} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-amber-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2" title="Editar" aria-label="Editar registro">
+                                            <button onClick={() => navigate('/audiencia-servicios/new', { state: { record: rec } })} className="w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2" title="Editar" aria-label="Editar registro">
                                                 <Pencil className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => setDeleteTarget(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border-2 border-black text-neutral-600 hover:bg-red-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2" title="Eliminar" aria-label="Eliminar registro">
+                                            <button onClick={() => setDeleteTarget(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2" title="Eliminar" aria-label="Eliminar registro">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
 
                                     {/* Name */}
-                                    <h3 className="text-base font-black uppercase tracking-tight text-black leading-tight mb-3">
-                                        {rec.name || <span className="text-neutral-400 normal-case font-medium">Sin nombre</span>}
+                                    <h3 className="text-base font-bold uppercase tracking-tight text-black leading-tight mb-3">
+                                        {rec.name || <span className="text-slate-400 normal-case font-medium">Sin nombre</span>}
                                     </h3>
 
                                     {/* Meta grid */}
-                                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 border-t-2 border-black pt-3">
+                                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 border-t border-slate-200 pt-3">
                                         <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-0.5">Fecha</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Fecha</p>
                                             <p className="text-sm font-bold text-black tabular-nums">{fmtDate(rec.service_date)}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-0.5">Total Voluntarios</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Total Voluntarios</p>
                                             <p className="text-sm font-black text-violet-600 tabular-nums">{s.totalVol.toLocaleString()}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-0.5">📡 Online</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">📡 Online</p>
                                             <p className="text-sm font-black text-sky-600 tabular-nums">{s.online.toLocaleString()}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-0.5">Total c/ Online</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Total c/ Online</p>
                                             <p className="text-sm font-black text-indigo-600 tabular-nums">{s.totalFinalConOnline.toLocaleString()}</p>
                                         </div>
                                     </div>
                                 </div>
                             );
                         })}
-                        <p className="text-xs text-neutral-500 font-mono px-1 pt-1">
+                        <p className="text-xs text-slate-500 font-mono px-1 pt-1">
                             {sorted.length} registro{sorted.length !== 1 ? 's' : ''}
                         </p>
                     </div>
@@ -983,7 +983,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
 
                 {/* ── Desktop: Table ── */}
                 {!loading && records.length > 0 && (
-                    <div className="hidden md:block bg-white dark:bg-black border-2 border-black dark:border-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)]">
+                    <div className="hidden md:block bg-white dark:bg-black border border-slate-200 dark:border-white rounded-lg shadow-sm overflow-hidden">
                         <table className="table-fixed w-full text-sm">
                             <colgroup>
                                 <col style={{width:'10%'}} />
@@ -997,32 +997,32 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                 <col style={{width:'21%'}} />
                             </colgroup>
                             <thead>
-                                <tr className="border-b-2 border-black dark:border-white bg-neutral-50 dark:bg-neutral-900">
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-wider cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none whitespace-nowrap" onClick={() => handleSort('service_date')}>
+                                <tr className="border-b border-slate-200 dark:border-white bg-slate-50 dark:bg-neutral-900">
+                                    <th className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors select-none whitespace-nowrap" onClick={() => handleSort('service_date')}>
                                         <span className="flex items-center gap-1">Fecha <SortIcon col="service_date" /></span>
                                     </th>
-                                    <th className="text-left px-4 py-3 font-black uppercase text-xs tracking-wider cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors select-none whitespace-nowrap" onClick={() => handleSort('name')}>
+                                    <th className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors select-none whitespace-nowrap" onClick={() => handleSort('name')}>
                                         <span className="flex items-center gap-1">Nombre <SortIcon col="name" /></span>
                                     </th>
-                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap">Horario</th>
-                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap">Total Asist.</th>
-                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap bg-sky-50 dark:bg-sky-950/30">📡 Online</th>
-                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/30">Total c/ Online</th>
-                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap">Total Vols.</th>
-                                    <th className="text-center px-3 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap">% Vol</th>
-                                    <th className="text-center px-4 py-3 font-black uppercase text-xs tracking-wider whitespace-nowrap">Acciones</th>
+                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Horario</th>
+                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Total Asist.</th>
+                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap bg-sky-50 dark:bg-sky-950/30">📡 Online</th>
+                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/30">Total c/ Online</th>
+                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Total Vols.</th>
+                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">% Vol</th>
+                                    <th className="text-center px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {sorted.map((rec, idx) => {
                                     const s = calcStats(rec);
                                     return (
-                                        <tr key={rec.id} className={`border-b border-neutral-100 dark:border-neutral-900 hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors ${idx % 2 === 0 ? '' : 'bg-neutral-50/50 dark:bg-neutral-900/30'}`}>
+                                        <tr key={rec.id} className={`border-b border-slate-100 dark:border-neutral-900 hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors ${idx % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-neutral-900/30'}`}>
                                             <td className="px-4 py-3 font-mono text-sm font-bold tabular-nums whitespace-nowrap">{fmtDate(rec.service_date)}</td>
-                                            <td className="px-4 py-3 font-bold uppercase tracking-tight text-neutral-700 dark:text-neutral-300 truncate">
-                                                <span className="block truncate" title={rec.name || '—'}>{rec.name || <span className="text-neutral-300 dark:text-neutral-600">—</span>}</span>
+                                            <td className="px-4 py-3 font-bold uppercase tracking-tight text-slate-700 dark:text-neutral-300 truncate">
+                                                <span className="block truncate" title={rec.name || '—'}>{rec.name || <span className="text-slate-300 dark:text-neutral-600">—</span>}</span>
                                             </td>
-                                            <td className="px-3 py-3 font-mono text-xs font-bold text-neutral-500 text-center">
+                                            <td className="px-3 py-3 font-mono text-xs font-bold text-slate-500 text-center">
                                                 {rec.service_hour ? (
                                                     <span className="flex flex-col items-center leading-tight">
                                                         <span className="text-black dark:text-white text-sm">{rec.service_hour}</span>
@@ -1037,26 +1037,26 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                                         {s.online.toLocaleString('es-AR')}
                                                     </span>
                                                 ) : (
-                                                    <span className="text-neutral-300 dark:text-neutral-700 text-xs">—</span>
+                                                    <span className="text-slate-300 dark:text-neutral-700 text-xs">—</span>
                                                 )}
                                             </td>
                                             <td className="px-3 py-3 text-center bg-indigo-50/60 dark:bg-indigo-950/20">
                                                 <span className="font-black tabular-nums text-indigo-700 dark:text-indigo-300 text-sm">{s.totalFinalConOnline.toLocaleString('es-AR')}</span>
                                             </td>
                                             <td className="px-3 py-3 font-black tabular-nums text-violet-600 dark:text-violet-400 text-center text-sm">{s.totalVol.toLocaleString('es-AR')}</td>
-                                            <td className="px-3 py-3 font-bold tabular-nums text-neutral-500 text-center text-sm">{s.pctVol.toFixed(1)}%</td>
+                                            <td className="px-3 py-3 font-bold tabular-nums text-slate-500 text-center text-sm">{s.pctVol.toFixed(1)}%</td>
                                             <td className="px-3 py-3 text-center">
                                                 <div className="flex items-center justify-center gap-1.5">
-                                                    <button onClick={() => setDetailRecord(rec)} title="Ver detalles" aria-label="Ver detalles" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-black dark:hover:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1">
+                                                    <button onClick={() => setDetailRecord(rec)} title="Ver detalles" aria-label="Ver detalles" className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-neutral-700 hover:border-black dark:hover:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1">
                                                         <Eye className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => setYoyRecord(rec)} title="Comparativa YoY" aria-label="Comparativa año a año" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-violet-600 hover:bg-violet-600 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-1">
+                                                    <button onClick={() => setYoyRecord(rec)} title="Comparativa YoY" aria-label="Comparativa año a año" className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-neutral-700 hover:border-violet-600 hover:bg-violet-600 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-1">
                                                         <GitCompareArrows className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => navigate('/audiencia-servicios/new', { state: { record: rec } })} title="Editar" aria-label="Editar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1">
+                                                    <button onClick={() => navigate('/audiencia-servicios/new', { state: { record: rec } })} title="Editar" aria-label="Editar registro" className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1">
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => setDeleteTarget(rec)} title="Eliminar" aria-label="Eliminar registro" className="w-9 h-9 flex items-center justify-center border-2 border-neutral-200 dark:border-neutral-700 hover:border-red-500 hover:bg-red-500 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1">
+                                                    <button onClick={() => setDeleteTarget(rec)} title="Eliminar" aria-label="Eliminar registro" className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-neutral-700 hover:border-red-500 hover:bg-red-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1">
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
@@ -1066,7 +1066,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                 })}
                             </tbody>
                         </table>
-                        <div className="px-4 py-3 border-t border-neutral-100 dark:border-neutral-900 text-xs text-neutral-400 font-mono">
+                        <div className="px-4 py-3 border-t border-slate-100 dark:border-neutral-900 text-xs text-slate-400 font-mono">
                             {records.length} registro{records.length !== 1 ? 's' : ''}
                         </div>
                     </div>
@@ -1080,7 +1080,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
 
             {/* Toast notification */}
             {deleteSuccess && (
-                <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 bg-black text-white px-4 py-3 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-50 flex items-center gap-2 animate-fadeIn">
+                <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 bg-black text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-fadeIn">
                     <Check className="w-4 h-4" />
                     <span className="font-bold text-sm uppercase">Registro eliminado</span>
                 </div>
