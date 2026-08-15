@@ -36,6 +36,8 @@ const EscanerDiaNino: React.FC = () => {
     const scannerRef = useRef<Html5Qrcode | null>(null);
 
     const [cameraError, setCameraError] = useState<string | null>(null);
+    const [inAppBrowserWarning, setInAppBrowserWarning] = useState(false);
+    const [permissionPreviouslyDenied, setPermissionPreviouslyDenied] = useState(false);
     const [showManualInput, setShowManualInput] = useState(false);
     const [manualValue, setManualValue] = useState('');
 
@@ -123,9 +125,40 @@ const EscanerDiaNino: React.FC = () => {
 
     // ── Inicializar escáner de cámara ──
     useEffect(() => {
+        // Detectar navegadores embebidos conocidos por bloquear la
+        // cámara sin avisar en Android (WhatsApp, Instagram, Facebook,
+        // Messenger). En iOS estas mismas apps casi siempre fuerzan la
+        // apertura en Safari real, por eso el problema se ve
+        // específicamente en dispositivos no-iPhone.
+        const ua = navigator.userAgent || '';
+        const isKnownInAppBrowser = /Instagram|FBAN|FBAV|FB_IAB|WhatsApp|Line\//i.test(ua);
+        if (isKnownInAppBrowser) {
+            setInAppBrowserWarning(true);
+        }
+
         const containerId = 'dianino-qr-reader';
         const scanner = new Html5Qrcode(containerId, { verbose: false });
         scannerRef.current = scanner;
+
+        // Si el navegador soporta la Permissions API, chequear el
+        // estado ANTES de intentar — si ya está denegado, la mayoría
+        // de los navegadores no vuelven a mostrar el popup nunca más,
+        // así que mostramos un mensaje distinto y accionable en vez
+        // del genérico.
+        if (navigator.permissions?.query) {
+            navigator.permissions
+                .query({ name: 'camera' as PermissionName })
+                .then((status) => {
+                    if (status.state === 'denied') {
+                        setPermissionPreviouslyDenied(true);
+                    }
+                })
+                .catch(() => {
+                    // Si la API no soporta consultar 'camera' en este
+                    // navegador (pasa en algunos), seguimos igual sin
+                    // este chequeo extra — no es crítico.
+                });
+        }
 
         scanner.start(
             { facingMode: 'environment' },
@@ -142,7 +175,11 @@ const EscanerDiaNino: React.FC = () => {
         )
             .catch((err) => {
                 setCameraError('No pudimos acceder a la cámara. Revisá los permisos del navegador e intentá de nuevo.');
-                console.error('[EscanerDiaNino] Camera error:', err);
+                // Loguear el nombre real del error (NotAllowedError,
+                // NotFoundError, NotReadableError, etc.) — ayuda a
+                // diagnosticar si esto sigue pasando después de este
+                // cambio, sin tener el dispositivo real a mano.
+                console.error('[EscanerDiaNino] Camera error:', err?.name || 'unknown', err);
             });
 
         return () => {
@@ -226,6 +263,20 @@ const EscanerDiaNino: React.FC = () => {
                     <ChevronLeft className="w-4 h-4" /> Día del Niño
                 </button>
             </div>
+
+            {inAppBrowserWarning && (
+                <div className="bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs p-3 mx-4 mt-4 rounded-xl">
+                    Parece que abriste este link desde WhatsApp/Instagram/Facebook. La cámara puede no funcionar acá —
+                    tocá los 3 puntos (⋮) arriba y elegí <strong>"Abrir en Chrome"</strong> o similar.
+                </div>
+            )}
+            {permissionPreviouslyDenied && (
+                <div className="bg-red-500/15 border border-red-500/40 text-red-200 text-xs p-3 mx-4 mt-4 rounded-xl">
+                    Ya le negaste el permiso de cámara a este sitio antes — tu navegador no va a volver a preguntar solo.
+                    Andá a la configuración del sitio (ícono de candado en la barra de direcciones) y habilitá la cámara
+                    manualmente.
+                </div>
+            )}
 
             <div className="flex-1 relative flex items-center justify-center px-4">
                 {cameraError ? (

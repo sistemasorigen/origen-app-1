@@ -49,6 +49,13 @@ const COUNTRIES: Country[] = [
     { name: 'Suiza',                flag: '🇨🇭', iso: 'CH', dialCode: '+41'  },
 ];
 
+// Mismos tokens que pages/bienvenida/Formulario.tsx — el selector de país y
+// los campos de este modal comparten casi textual el patrón visual con ese
+// formulario, así que se replican literalmente para que no se note ninguna
+// diferencia de tratamiento entre los dos.
+const labelCls = 'block text-xs font-bold uppercase tracking-wide text-slate-900 dark:text-white mb-1';
+const inputCls = 'w-full h-12 px-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-semibold text-sm placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:border-slate-400 dark:focus:border-zinc-600 focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-all';
+
 interface NewVisitorModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -193,14 +200,14 @@ Gracias por tomarte unos minutos.
 
                 {/* ── Datos personales ──────────────────────────── */}
                 <fieldset>
-                    <legend className="w-full text-[10px] font-black uppercase tracking-[0.18em] text-neutral-400 mb-3 flex items-center gap-2">
-                        <span className="flex-1 h-px bg-neutral-200" />
+                    <legend className="w-full text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-zinc-500 mb-3 flex items-center gap-2">
+                        <span className="flex-1 h-px bg-slate-200 dark:bg-zinc-700" />
                         Datos personales
-                        <span className="flex-1 h-px bg-neutral-200" />
+                        <span className="flex-1 h-px bg-slate-200 dark:bg-zinc-700" />
                     </legend>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="block text-[11px] font-black uppercase tracking-widest mb-1.5 text-black">
+                            <label className={labelCls}>
                                 Nombre <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -209,12 +216,11 @@ Gracias por tomarte unos minutos.
                                 placeholder="Ej: Valentina"
                                 value={formData.firstName}
                                 onChange={e => setFormData({ ...formData, firstName: e.target.value })}
-                                className="w-full h-12 px-3 font-bold text-black bg-white outline-none transition-shadow"
-                                style={{ borderRadius: 0, border: '2px solid black' }}
+                                className={inputCls}
                             />
                         </div>
                         <div>
-                            <label className="block text-[11px] font-black uppercase tracking-widest mb-1.5 text-black">
+                            <label className={labelCls}>
                                 Apellido <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -223,8 +229,7 @@ Gracias por tomarte unos minutos.
                                 placeholder="Ej: González"
                                 value={formData.lastName}
                                 onChange={e => setFormData({ ...formData, lastName: e.target.value })}
-                                className="w-full h-12 px-3 font-bold text-black bg-white outline-none transition-shadow"
-                                style={{ borderRadius: 0, border: '2px solid black' }}
+                                className={inputCls}
                             />
                         </div>
                     </div>
@@ -233,7 +238,7 @@ Gracias por tomarte unos minutos.
                 {/* ── Edad + Localidad ──────────────────────── */}
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-[11px] font-black uppercase tracking-widest mb-1.5 text-black">
+                        <label className={labelCls}>
                             Edad
                         </label>
                         <input
@@ -243,12 +248,11 @@ Gracias por tomarte unos minutos.
                             placeholder="Ej: 28"
                             value={formData.age}
                             onChange={e => setFormData({ ...formData, age: e.target.value })}
-                            className="w-full h-12 px-3 font-bold text-black bg-white outline-none transition-shadow"
-                            style={{ borderRadius: 0, border: '2px solid black' }}
+                            className={inputCls}
                         />
                     </div>
                     <div>
-                        <label className="block text-[11px] font-black uppercase tracking-widest mb-1.5 text-black">
+                        <label className={labelCls}>
                             Localidad o barrio
                         </label>
                         <input
@@ -256,8 +260,7 @@ Gracias por tomarte unos minutos.
                             placeholder="Ej: Palermo, Lomas..."
                             value={formData.localidad}
                             onChange={e => setFormData({ ...formData, localidad: e.target.value })}
-                            className="w-full h-12 px-3 font-bold text-black bg-white outline-none transition-shadow"
-                            style={{ borderRadius: 0, border: '2px solid black' }}
+                            className={inputCls}
                         />
                     </div>
                 </div>
@@ -266,10 +269,10 @@ Gracias por tomarte unos minutos.
                 {/* Llenado por el equipo de bienvenida,
                     NO aparece en el /form público */}
                 <div>
-                    <label className="block text-[11px] font-black uppercase tracking-widest mb-1.5 text-black">
+                    <label className={labelCls}>
                         Decisión de Fe
                     </label>
-                    <p className="text-[10px] font-bold text-neutral-400 mb-2 leading-snug tracking-wide">
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 mb-2 leading-snug tracking-wide">
                         ¿Tomó una decisión en la reunión de hoy?
                     </p>
                     <div className="grid grid-cols-3 gap-2">
@@ -292,18 +295,11 @@ Gracias por tomarte unos minutos.
                                                 : opt.value
                                     })
                                 }
-                                className={`h-10 text-[10px] font-black uppercase tracking-wide transition-all ${
+                                className={`h-10 rounded-xl border text-[10px] font-bold uppercase tracking-wide transition-colors ${
                                     formData.accepted_jesus === opt.value
-                                        ? 'bg-black text-white'
-                                        : 'bg-white text-black hover:bg-neutral-100'
+                                        ? 'border-slate-900 dark:border-white bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                                        : 'border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 hover:border-slate-400 dark:hover:border-zinc-500'
                                 }`}
-                                style={{
-                                    borderRadius: 0,
-                                    border: '2px solid black',
-                                    boxShadow: formData.accepted_jesus === opt.value
-                                        ? '3px 3px 0px 0px rgba(0,0,0,0.3)'
-                                        : 'none'
-                                }}
                             >
                                 {opt.label}
                             </button>
@@ -313,17 +309,17 @@ Gracias por tomarte unos minutos.
 
                 {/* ── Contacto ─────────────────────────────────── */}
                 <fieldset>
-                    <legend className="w-full text-[10px] font-black uppercase tracking-[0.18em] text-neutral-400 mb-3 flex items-center gap-2">
-                        <span className="flex-1 h-px bg-neutral-200" />
+                    <legend className="w-full text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-zinc-500 mb-3 flex items-center gap-2">
+                        <span className="flex-1 h-px bg-slate-200 dark:bg-zinc-700" />
                         Contacto
-                        <span className="flex-1 h-px bg-neutral-200" />
+                        <span className="flex-1 h-px bg-slate-200 dark:bg-zinc-700" />
                     </legend>
 
-                    <label className="block text-[11px] font-black uppercase tracking-widest mb-1.5 text-black">
+                    <label className={labelCls}>
                         WhatsApp <span className="text-red-500">*</span>
                     </label>
 
-                    <div className="flex" style={{ border: '2px solid black' }}>
+                    <div className="flex rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-within:ring-4 focus-within:ring-slate-900/10 dark:focus-within:ring-white/10 focus-within:border-slate-400 dark:focus-within:border-zinc-600 overflow-hidden transition-all">
 
                         {/* Selector de país */}
                         <div ref={countryRef} className="relative shrink-0">
@@ -331,61 +327,50 @@ Gracias por tomarte unos minutos.
                                 ref={btnRef}
                                 type="button"
                                 onClick={openDropdown}
-                                className="h-12 px-3 bg-neutral-50 hover:bg-neutral-100 transition-colors flex items-center gap-2 text-black focus:outline-none cursor-pointer"
-                                style={{ borderRadius: 0, borderRight: '2px solid black' }}
+                                className="h-12 px-3 bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 border-r border-slate-200 dark:border-zinc-700 transition-colors flex items-center gap-2 text-slate-900 dark:text-white focus:outline-none cursor-pointer"
                             >
                                 <span
-                                    className="text-[10px] font-black text-white bg-black px-1.5 py-0.5 leading-none"
-                                    style={{ minWidth: 26, textAlign: 'center' }}
+                                    className="min-w-[26px] text-center text-[10px] font-black text-slate-600 dark:text-zinc-300 bg-slate-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded leading-none tabular-nums"
                                 >
                                     {selectedCountry.iso}
                                 </span>
-                                <span className="text-xs font-black tabular-nums text-black">
+                                <span className="text-xs font-black tabular-nums text-slate-900 dark:text-white">
                                     {selectedCountry.dialCode}
                                 </span>
                                 <ChevronDown
                                     size={12}
-                                    className={`text-neutral-400 transition-transform duration-150 ${isCountryOpen ? 'rotate-180' : ''}`}
+                                    className={`text-slate-400 dark:text-zinc-500 transition-transform duration-150 ${isCountryOpen ? 'rotate-180' : ''}`}
                                 />
                             </button>
 
                             {/* Dropdown renderizado en body para superponer el modal */}
                             {isCountryOpen && createPortal(
                                 <div
-                                    className="bg-white flex flex-col overflow-hidden"
+                                    className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-lg flex flex-col overflow-hidden"
                                     style={{
                                         position: 'fixed',
                                         top: dropdownPos.top,
                                         left: dropdownPos.left,
                                         width: dropdownPos.width,
                                         zIndex: 9999,
-                                        borderRadius: 0,
-                                        border: '2px solid black',
-                                        boxShadow: '6px 6px 0px 0px rgba(0,0,0,1)',
                                     }}
                                 >
                                     {/* Search */}
-                                    <div className="p-2 bg-neutral-50" style={{ borderBottom: '2px solid black' }}>
+                                    <div className="p-2 bg-slate-50 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">
                                         <input
                                             type="text"
                                             autoFocus
                                             placeholder="Buscar país o prefijo..."
                                             value={countrySearch}
                                             onChange={e => setCountrySearch(e.target.value)}
-                                            className="w-full h-9 px-3 text-xs font-bold text-black bg-white"
-                                            style={{
-                                                borderRadius: 0,
-                                                border: '2px solid black',
-                                                outline: 'none',
-                                                boxShadow: 'none',
-                                            }}
+                                            className="w-full h-9 px-3 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-700 outline-none focus:border-slate-400 dark:focus:border-zinc-600"
                                         />
                                     </div>
 
                                     {/* Country list */}
                                     <div className="overflow-y-auto max-h-52">
                                         {filteredCountries.length === 0 ? (
-                                            <p className="px-4 py-5 text-xs font-bold text-neutral-400 text-center uppercase tracking-widest">
+                                            <p className="px-4 py-5 text-xs font-bold text-slate-400 dark:text-zinc-500 text-center uppercase tracking-widest">
                                                 Sin resultados
                                             </p>
                                         ) : (
@@ -401,19 +386,18 @@ Gracias por tomarte unos minutos.
                                                             setCountrySearch('');
                                                         }}
                                                         className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-left transition-colors cursor-pointer ${
-                                                            isSelected ? 'bg-black text-white' : 'text-black hover:bg-neutral-100'
+                                                            isSelected ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-zinc-800'
                                                         }`}
                                                     >
                                                         <span
-                                                            className={`text-[9px] font-black px-1 py-0.5 leading-none shrink-0 ${
-                                                                isSelected ? 'bg-white text-black' : 'bg-black text-white'
+                                                            className={`min-w-[22px] text-center text-[9px] font-black px-1 py-0.5 rounded leading-none shrink-0 ${
+                                                                isSelected ? 'bg-white text-slate-900' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
                                                             }`}
-                                                            style={{ minWidth: 22, textAlign: 'center' }}
                                                         >
                                                             {country.iso}
                                                         </span>
                                                         <span className="flex-1 truncate">{country.name}</span>
-                                                        <span className={`tabular-nums shrink-0 text-[11px] ${isSelected ? 'text-white/60' : 'text-neutral-400'}`}>
+                                                        <span className={`tabular-nums shrink-0 text-[11px] ${isSelected ? 'text-white/60 dark:text-slate-900/60' : 'text-slate-400 dark:text-zinc-500'}`}>
                                                             {country.dialCode}
                                                         </span>
                                                     </button>
@@ -433,29 +417,21 @@ Gracias por tomarte unos minutos.
                             placeholder="Número sin 0 ni 15"
                             value={formData.phone}
                             onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                            className="flex-1 h-12 px-3 font-bold text-black bg-white outline-none min-w-0"
-                            style={{ borderRadius: 0, border: 'none' }}
+                            className="flex-1 h-12 px-3 text-sm font-bold text-slate-900 dark:text-white bg-white dark:bg-zinc-900 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none min-w-0"
                         />
                     </div>
 
-                    <p className="text-[10px] font-bold text-neutral-400 mt-1.5 tracking-wide">
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 mt-1.5 tracking-wide">
                         Se abrirá WhatsApp al guardar para enviar el formulario
                     </p>
                 </fieldset>
 
                 {/* ── Submit ────────────────────────────────────── */}
-                <div className="pt-2" style={{ borderTop: '2px solid black' }}>
+                <div className="pt-2 border-t border-slate-200 dark:border-zinc-800">
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full h-12 bg-black text-white text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
-                        style={{
-                            borderRadius: 0,
-                            border: '2px solid black',
-                            boxShadow: isLoading ? 'none' : undefined,
-                        }}
-                        onMouseEnter={e => { if (!isLoading) (e.currentTarget as HTMLButtonElement).style.boxShadow = '6px 6px 0px 0px rgba(0,0,0,1)'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
+                        className="w-full h-12 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                     >
                         {isLoading
                             ? <Loader2 size={16} className="animate-spin" />

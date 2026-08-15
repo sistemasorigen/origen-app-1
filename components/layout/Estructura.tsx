@@ -9,7 +9,6 @@ import DrawerMenu, { HamburgerButton } from './MenuDeslizable';
 import { useAudio } from '../../contexts/AudioContext';
 import { Sun, Moon } from 'lucide-react';
 import { NotificationBell, NotificationDrawer } from '../notifications/InterfazNotificaciones';
-import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { useAttendanceReminder } from '../../hooks/useAttendanceReminder';
 import PushPermissionBanner from '../notifications/BannerPermisoNotificaciones';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
@@ -25,7 +24,6 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogout, onToggleTheme }) => {
-    useAutoRefresh();
     useAttendanceReminder();
     const location = useLocation();
     const navigate = useNavigate();

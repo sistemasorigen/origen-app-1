@@ -203,17 +203,18 @@ const Bienvenida: React.FC = () => {
                 onComplete={completeTutorial}
                 onSkip={dismissTutorial}
             />
-            <div className="h-full flex flex-col animate-fadeIn">
+            <div className="h-full flex flex-col bg-slate-50 dark:bg-zinc-950 animate-fadeIn">
 
                 {/* ── HEADER ─────────────────────────────────────────── */}
-                <div className="bg-white border-b-4 border-black px-4 sm:px-6 pt-4 pb-3">
+                <div className="p-4 sm:p-6 pb-0">
+                    <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm px-4 sm:px-6 pt-4 pb-4">
                     <div className="flex items-start justify-between gap-3">
                         {/* Title block */}
                         <div>
-                            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-black leading-none">
+                            <h2 className="text-2xl sm:text-3xl font-bold uppercase tracking-tight text-slate-900 dark:text-white leading-none">
                                 Tablero Bienvenida
                             </h2>
-                            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mt-1">
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-400 mt-1">
                                 Pipeline de seguimiento · {totalCount} personas
                             </p>
                         </div>
@@ -223,14 +224,14 @@ const Bienvenida: React.FC = () => {
                             <button
                                 onClick={fetchVisitors}
                                 aria-label="Actualizar datos"
-                                className="h-10 w-10 flex items-center justify-center border-2 border-black bg-white hover:bg-neutral-100 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none cursor-pointer"
+                                className="h-10 w-10 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors"
                             >
                                 <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
                             </button>
                             <button
                                 id="btn-new-visitor"
                                 onClick={() => setIsNewModalOpen(true)}
-                                className="flex items-center gap-2 h-10 px-4 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all cursor-pointer"
+                                className="flex items-center gap-2 h-10 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20"
                             >
                                 <Plus size={16} />
                                 <span className="hidden sm:inline">Nuevo Ingresante</span>
@@ -241,11 +242,8 @@ const Bienvenida: React.FC = () => {
 
                     {/* Buscador global */}
                     <div ref={searchRef} className="relative mt-3">
-                        <div
-                            className="flex items-center"
-                            style={{ border: '2px solid black' }}
-                        >
-                            <Search size={14} className="ml-3 shrink-0 text-neutral-400" />
+                        <div className="flex items-center rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-within:ring-4 focus-within:ring-slate-900/10 dark:focus-within:ring-white/10 focus-within:border-slate-400 dark:focus-within:border-zinc-600 transition-all">
+                            <Search size={14} className="ml-3 shrink-0 text-slate-400 dark:text-zinc-500" />
                             <input
                                 ref={searchInputRef}
                                 type="text"
@@ -256,14 +254,13 @@ const Bienvenida: React.FC = () => {
                                     setSearchQuery(e.target.value);
                                     setIsSearchOpen(true);
                                 }}
-                                className="flex-1 h-9 px-3 text-xs font-bold text-black bg-white"
-                                style={{ border: 'none', outline: 'none', boxShadow: 'none', borderRadius: 0 }}
+                                className="flex-1 h-9 px-3 text-sm font-medium text-slate-900 dark:text-white bg-transparent outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-500"
                             />
                             {searchQuery && (
                                 <button
                                     type="button"
                                     onClick={() => { setSearchQuery(''); setIsSearchOpen(false); searchInputRef.current?.focus(); }}
-                                    className="mr-2 p-0.5 text-neutral-400 hover:text-black transition-colors cursor-pointer"
+                                    className="mr-2 p-0.5 text-slate-400 dark:text-zinc-500 hover:text-black dark:hover:text-white transition-colors cursor-pointer"
                                 >
                                     <X size={14} />
                                 </button>
@@ -272,18 +269,15 @@ const Bienvenida: React.FC = () => {
 
                         {/* Resultados */}
                         {isSearchOpen && searchQuery.trim().length >= 2 && (
-                            <div
-                                className="absolute top-full left-0 right-0 bg-white z-50 flex flex-col overflow-hidden"
-                                style={{ border: '2px solid black', borderTop: 'none', boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)' }}
-                            >
+                            <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg z-50 flex flex-col overflow-hidden">
                                 {searchResults.length === 0 ? (
-                                    <p className="px-4 py-4 text-xs font-bold text-neutral-400 uppercase tracking-widest text-center">
+                                    <p className="px-4 py-4 text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest text-center">
                                         Sin resultados para "{searchQuery}"
                                     </p>
                                 ) : (
                                     <>
-                                        <div className="px-3 py-1.5 bg-neutral-50" style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                                        <div className="px-3 py-1.5 bg-slate-50 dark:bg-zinc-800 border-b border-slate-100 dark:border-zinc-800">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
                                                 {searchResults.length} resultado{searchResults.length !== 1 ? 's' : ''}
                                             </p>
                                         </div>
@@ -294,25 +288,24 @@ const Bienvenida: React.FC = () => {
                                                     key={visitor.id}
                                                     type="button"
                                                     onClick={() => handleSelectResult(visitor)}
-                                                    className="flex items-center gap-3 px-4 py-3 text-left hover:bg-neutral-50 transition-colors cursor-pointer"
-                                                    style={{ borderBottom: '1px solid #f3f4f6' }}
+                                                    className="flex items-center gap-3 px-4 py-3 text-left border-b border-slate-100 dark:border-zinc-800 last:border-b-0 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                                 >
                                                     {/* Avatar con iniciales */}
-                                                    <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center text-[10px] font-black shrink-0">
                                                         {visitor.first_name[0]}{visitor.last_name?.[0] ?? ''}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-xs font-black text-black uppercase leading-none truncate">
+                                                        <p className="text-xs font-bold text-slate-900 dark:text-white uppercase leading-none truncate">
                                                             {visitor.first_name} {visitor.last_name}
                                                         </p>
                                                         {visitor.phone && (
-                                                            <p className="text-[10px] font-bold text-neutral-400 mt-0.5 truncate">
+                                                            <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 mt-0.5 truncate">
                                                                 {visitor.phone}
                                                             </p>
                                                         )}
                                                     </div>
                                                     {/* Stage badge */}
-                                                    <span className={`shrink-0 text-[9px] font-black uppercase tracking-widest px-2 py-1 border border-black ${cfg.accent}`}>
+                                                    <span className={`shrink-0 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${cfg.accent}`}>
                                                         {STAGE_LABELS[visitor.stage]}
                                                     </span>
                                                 </button>
@@ -331,8 +324,7 @@ const Bienvenida: React.FC = () => {
                                 key={k.label}
                                 type="button"
                                 onClick={() => k.stage && setActiveStage(k.stage)}
-                                className={`flex flex-col justify-between p-3 min-h-[72px] text-left transition-all cursor-pointer ${k.bg} ${k.text} ${k.stage ? 'hover:brightness-95 active:scale-95' : 'cursor-default'}`}
-                                style={{ border: '2px solid black' }}
+                                className={`flex flex-col justify-between p-3 min-h-[72px] rounded-xl text-left transition-all cursor-pointer ${k.bg} ${k.text} ${k.stage ? 'hover:brightness-95 active:scale-95' : 'cursor-default'}`}
                             >
                                 <span className={`text-[10px] font-black uppercase tracking-widest leading-tight ${k.subText}`}>
                                     {k.sub}
@@ -343,6 +335,7 @@ const Bienvenida: React.FC = () => {
                                 </div>
                             </button>
                         ))}
+                    </div>
                     </div>
                 </div>
 
@@ -357,15 +350,15 @@ const Bienvenida: React.FC = () => {
                 </div>
 
                 {/* ── CONTENT ────────────────────────────────────────── */}
-                <div className="flex-1 overflow-y-auto bg-slate-50 pb-48">
+                <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-zinc-950 pb-48">
 
                     {/* Stage title banner */}
-                    <div className={`${activeConfig.accent} border-b-4 border-black px-4 sm:px-6 py-3 flex items-center justify-between`}>
+                    <div className={`${activeConfig.accent} border-b border-black/10 px-4 sm:px-6 py-3 flex items-center justify-between`}>
                         <div className="flex items-center gap-3">
-                            <h3 className="text-sm sm:text-base font-black uppercase tracking-widest text-black leading-none">
+                            <h3 className="text-sm sm:text-base font-bold uppercase tracking-tight text-black leading-none">
                                 {STAGE_LABELS[activeStage]}
                             </h3>
-                            <span className="bg-black text-white text-xs font-black px-2 py-0.5 tabular-nums">
+                            <span className="bg-black text-white text-xs font-black px-2 py-0.5 rounded-full tabular-nums">
                                 {activeCount}
                             </span>
                         </div>
@@ -375,7 +368,7 @@ const Bienvenida: React.FC = () => {
                     </div>
 
                     {/* Pipeline progress bar */}
-                    <div className="flex h-1.5 border-b border-black">
+                    <div className="flex h-1.5 border-b border-black/10">
                         {STAGES.map((s, i) => (
                             <div
                                 key={s}
@@ -394,11 +387,11 @@ const Bienvenida: React.FC = () => {
                                 {[1, 2, 3, 4].map(i => (
                                     <div
                                         key={i}
-                                        className="bg-white border-2 border-black p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-pulse"
+                                        className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm p-4 animate-pulse"
                                     >
-                                        <div className="h-4 bg-gray-200 mb-3 w-3/4" />
-                                        <div className="h-3 bg-gray-100 mb-2 w-1/2" />
-                                        <div className="h-3 bg-gray-100 w-2/3" />
+                                        <div className="h-4 rounded bg-slate-200 dark:bg-zinc-800 mb-3 w-3/4" />
+                                        <div className="h-3 rounded bg-slate-100 dark:bg-zinc-800 mb-2 w-1/2" />
+                                        <div className="h-3 rounded bg-slate-100 dark:bg-zinc-800 w-2/3" />
                                     </div>
                                 ))}
                             </div>
@@ -406,19 +399,19 @@ const Bienvenida: React.FC = () => {
 
                         {/* Empty state */}
                         {!isLoading && activeCount === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 border-4 border-dashed border-black bg-white">
-                                <div className={`w-16 h-16 ${activeConfig.accent} border-2 border-black flex items-center justify-center mb-4`}>
+                            <div className="flex flex-col items-center justify-center py-20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                                <div className={`w-16 h-16 ${activeConfig.accent} rounded-2xl flex items-center justify-center mb-4`}>
                                     <Users size={26} className="text-black" />
                                 </div>
-                                <p className="font-black uppercase text-lg text-black text-center leading-none">
+                                <p className="font-bold uppercase text-lg text-slate-900 dark:text-white text-center leading-none">
                                     Sin ingresantes
                                 </p>
-                                <p className="text-xs font-bold uppercase text-gray-400 mt-1 text-center tracking-widest">
+                                <p className="text-xs font-bold uppercase text-slate-400 dark:text-zinc-400 mt-1 text-center tracking-widest">
                                     en {STAGE_LABELS[activeStage]}
                                 </p>
                                 <button
                                     onClick={() => setIsNewModalOpen(true)}
-                                    className="mt-6 flex items-center gap-2 h-10 px-5 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
+                                    className="mt-6 flex items-center gap-2 h-10 px-5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20"
                                 >
                                     <Plus size={14} />
                                     Registrar ingresante

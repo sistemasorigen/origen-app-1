@@ -53,6 +53,13 @@ const INTEREST_OPTIONS = ['Domingos', 'Grupos GCX', 'Voluntarios', 'Oración', '
 const FORM_RATE_KEY = 'form_last_submit';
 const FORM_RATE_MS = 60_000;
 
+// Prioridad de legibilidad: esto lo completa gente que recién llega a la
+// iglesia, a veces desde el celular con poca luz — por eso el label queda
+// alto contraste (texto sólido, no atenuado) aunque el resto del chrome sea
+// "soft". Mismo criterio de campo que Bienvenida.tsx ya restyleado.
+const labelCls = 'block text-xs font-bold uppercase tracking-wide text-slate-900 dark:text-white mb-1';
+const inputCls = 'w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-semibold text-sm placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:border-slate-400 dark:focus:border-zinc-600 focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-all';
+
 const Formulario: React.FC = () => {
     const navigate = useNavigate();
     const toast = useToast();
@@ -218,72 +225,74 @@ const Formulario: React.FC = () => {
 
     if (step === 2) {
         return (
-            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 text-center animate-fadeIn">
-                <h1 className="text-4xl font-black text-white uppercase tracking-tighter mb-4">
-                    ¡Gracias!
-                </h1>
-                <p className="text-gray-400 max-w-md mb-8">
-                    Tus respuestas nos ayudan a conocerte mejor.
-                    <br />
-                    Te estamos redirigiendo...
-                </p>
-                <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+            <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4 text-center animate-fadeIn">
+                <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-8">
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-3">
+                        ¡Gracias!
+                    </h1>
+                    <p className="text-slate-500 dark:text-zinc-400 max-w-md mb-8">
+                        Tus respuestas nos ayudan a conocerte mejor.
+                        <br />
+                        Te estamos redirigiendo...
+                    </p>
+                    <Loader2 className="w-8 h-8 mx-auto animate-spin text-slate-400 dark:text-zinc-500" />
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-neutral-100 flex flex-col items-center justify-center p-4 py-12">
-            <div className="w-full max-w-2xl bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 md:p-8">
+        <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4 py-12">
+            <div className="w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-6 md:p-8">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-black text-black uppercase tracking-tighter mb-2">
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-2">
                         Bienvenido
                     </h1>
-                    <div className="h-1 w-20 bg-black mx-auto mb-4" />
-                    <p className="text-sm font-bold text-gray-600 uppercase tracking-widest">
+                    <div className="h-1 w-20 bg-slate-900 dark:bg-white mx-auto mb-4 rounded-full" />
+                    <p className="text-sm font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest">
                         Queremos conocerte
                     </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* 1. DATOS BÁSICOS */}
-                    <div className="bg-slate-50 p-4 border-2 border-black">
-                        <h3 className="font-black uppercase mb-3 text-sm">Tus Datos</h3>
+                    <div className="bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-200 dark:border-zinc-700 p-4">
+                        <h3 className="font-bold uppercase tracking-tight mb-3 text-sm text-slate-900 dark:text-white">Tus Datos</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="label">Nombre</label>
-                                <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">El mismo nombre con el que te anotaste en recepción.</p>
+                                <label className={labelCls}>Nombre</label>
+                                <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium mb-1.5 leading-snug">El mismo nombre con el que te anotaste en recepción.</p>
                                 <input
                                     type="text"
                                     required
                                     value={formData.firstName}
                                     onChange={e => setFormData({ ...formData, firstName: e.target.value })}
-                                    className="input-field"
+                                    className={inputCls}
                                     placeholder="Tu nombre"
                                 />
                             </div>
                             <div>
-                                <label className="label">Apellido</label>
-                                <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">El mismo apellido con el que te anotaste en recepción.</p>
+                                <label className={labelCls}>Apellido</label>
+                                <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium mb-1.5 leading-snug">El mismo apellido con el que te anotaste en recepción.</p>
                                 <input
                                     type="text"
                                     required
                                     value={formData.lastName}
                                     onChange={e => setFormData({ ...formData, lastName: e.target.value })}
-                                    className="input-field"
+                                    className={inputCls}
                                     placeholder="Tu apellido"
                                 />
                             </div>
                             <div>
-                                <label className="label">Teléfono</label>
-                                <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">
+                                <label className={labelCls}>Teléfono</label>
+                                <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium mb-1.5 leading-snug">
                                     El mismo número que le diste al equipo de bienvenida.
                                     Seleccioná tu país y escribí el número sin el 0 inicial.
                                 </p>
 
                                 {/* Selector de país + input — wrapper con borde único */}
-                                <div className="flex" style={{ border: '2px solid #d1d5db' }}>
+                                <div className="flex rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus-within:ring-4 focus-within:ring-slate-900/10 dark:focus-within:ring-white/10 focus-within:border-slate-400 dark:focus-within:border-zinc-600 overflow-hidden transition-all">
 
                                     {/* Selector de país */}
                                     <div ref={countryRef} className="relative shrink-0">
@@ -291,52 +300,47 @@ const Formulario: React.FC = () => {
                                             ref={btnRef}
                                             type="button"
                                             onClick={openDropdown}
-                                            className="h-11 px-3 bg-neutral-50 hover:bg-neutral-100 transition-colors flex items-center gap-2 text-black focus:outline-none cursor-pointer"
-                                            style={{ borderRight: '2px solid #d1d5db' }}
+                                            className="h-11 px-3 bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 border-r border-slate-200 dark:border-zinc-700 transition-colors flex items-center gap-2 text-slate-900 dark:text-white focus:outline-none cursor-pointer"
                                         >
                                             <span
-                                                className="text-[10px] font-black text-neutral-500 bg-neutral-200 px-1.5 py-0.5 leading-none tabular-nums"
-                                                style={{ minWidth: 26, textAlign: 'center' }}
+                                                className="min-w-[26px] text-center text-[10px] font-black text-slate-600 dark:text-zinc-300 bg-slate-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded leading-none tabular-nums"
                                             >
                                                 {selectedCountry.iso}
                                             </span>
-                                            <span className="text-xs font-black tabular-nums text-black">
+                                            <span className="text-xs font-black tabular-nums text-slate-900 dark:text-white">
                                                 {selectedCountry.dialCode}
                                             </span>
                                             <ChevronDown
                                                 size={12}
-                                                className={`text-neutral-400 transition-transform duration-150 ${isCountryOpen ? 'rotate-180' : ''}`}
+                                                className={`text-slate-400 dark:text-zinc-500 transition-transform duration-150 ${isCountryOpen ? 'rotate-180' : ''}`}
                                             />
                                         </button>
 
                                         {/* Dropdown de países */}
                                         {isCountryOpen && (
                                             <div
-                                                className="bg-white flex flex-col overflow-hidden"
+                                                className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-lg flex flex-col overflow-hidden"
                                                 style={{
                                                     position: 'fixed',
                                                     top: dropdownPos.top,
                                                     left: dropdownPos.left,
                                                     width: dropdownPos.width,
                                                     zIndex: 9999,
-                                                    border: '2px solid black',
-                                                    boxShadow: '6px 6px 0px 0px rgba(0,0,0,1)',
                                                 }}
                                             >
-                                                <div className="p-2 bg-neutral-50" style={{ borderBottom: '2px solid black' }}>
+                                                <div className="p-2 bg-slate-50 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">
                                                     <input
                                                         type="text"
                                                         autoFocus
                                                         placeholder="Buscar país o prefijo..."
                                                         value={countrySearch}
                                                         onChange={e => setCountrySearch(e.target.value)}
-                                                        className="w-full h-9 px-3 text-xs font-bold text-black bg-white"
-                                                        style={{ border: '2px solid black', outline: 'none' }}
+                                                        className="w-full h-9 px-3 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-700 outline-none focus:border-slate-400 dark:focus:border-zinc-600"
                                                     />
                                                 </div>
                                                 <div className="overflow-y-auto max-h-52">
                                                     {filteredCountries.length === 0 ? (
-                                                        <p className="px-4 py-5 text-xs font-bold text-neutral-400 text-center uppercase tracking-widest">
+                                                        <p className="px-4 py-5 text-xs font-bold text-slate-400 dark:text-zinc-500 text-center uppercase tracking-widest">
                                                             Sin resultados
                                                         </p>
                                                     ) : (
@@ -352,19 +356,18 @@ const Formulario: React.FC = () => {
                                                                         setCountrySearch('');
                                                                     }}
                                                                     className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-left transition-colors cursor-pointer ${
-                                                                        isSelected ? 'bg-black text-white' : 'text-black hover:bg-neutral-100'
+                                                                        isSelected ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-zinc-800'
                                                                     }`}
                                                                 >
                                                                     <span
-                                                                        className={`text-[9px] font-black px-1 py-0.5 leading-none shrink-0 ${
-                                                                            isSelected ? 'bg-white text-black' : 'bg-black text-white'
+                                                                        className={`min-w-[22px] text-center text-[9px] font-black px-1 py-0.5 rounded leading-none shrink-0 ${
+                                                                            isSelected ? 'bg-white text-slate-900' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
                                                                         }`}
-                                                                        style={{ minWidth: 22, textAlign: 'center' }}
                                                                     >
                                                                         {c.iso}
                                                                     </span>
                                                                     <span className="flex-1 truncate">{c.name}</span>
-                                                                    <span className={`tabular-nums shrink-0 text-[11px] ${isSelected ? 'text-white/60' : 'text-neutral-400'}`}>
+                                                                    <span className={`tabular-nums shrink-0 text-[11px] ${isSelected ? 'text-white/60 dark:text-slate-900/60' : 'text-slate-400 dark:text-zinc-500'}`}>
                                                                         {c.dialCode}
                                                                     </span>
                                                                 </button>
@@ -382,20 +385,19 @@ const Formulario: React.FC = () => {
                                         required
                                         value={formData.phone}
                                         onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                        className="flex-1 h-11 px-3 font-bold text-black bg-white outline-none min-w-0"
-                                        style={{ border: 'none', fontSize: '0.9rem' }}
+                                        className="flex-1 h-11 px-3 text-sm font-bold text-slate-900 dark:text-white bg-white dark:bg-zinc-900 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none min-w-0"
                                         placeholder="9 11 1234-5678"
                                     />
                                 </div>
                             </div>
                             <div>
-                                <label className="label">Email <span className="text-gray-400 font-normal">(Opcional)</span></label>
-                                <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">Solo para enviarte info de la iglesia cuando la tengas. No es obligatorio.</p>
+                                <label className={labelCls}>Email <span className="text-slate-400 dark:text-zinc-500 font-normal">(Opcional)</span></label>
+                                <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium mb-1.5 leading-snug">Solo para enviarte info de la iglesia cuando la tengas. No es obligatorio.</p>
                                 <input
                                     type="email"
                                     value={formData.email}
                                     onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    className="input-field"
+                                    className={inputCls}
                                     placeholder="tu@email.com"
                                 />
                             </div>
@@ -405,10 +407,10 @@ const Formulario: React.FC = () => {
                     {/* 2. SOBRE TU VISITA */}
                     <div className="grid grid-cols-1 gap-4">
                         <div>
-                            <label className="label">¿Es primera vez?</label>
-                            <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">¿Es la primera vez que venís a una reunión de Origen?</p>
+                            <label className={labelCls}>¿Es primera vez?</label>
+                            <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium mb-1.5 leading-snug">¿Es la primera vez que venís a una reunión de Origen?</p>
                             <select
-                                className="input-field"
+                                className={inputCls}
                                 required
                                 value={formData.is_first_time === null ? '' : (formData.is_first_time ? 'yes' : 'no')}
                                 onChange={e => {
@@ -426,21 +428,21 @@ const Formulario: React.FC = () => {
                     {/* 3. EXPERIENCIA & ORACION */}
                     <div className="space-y-4">
                         <div>
-                            <label className="label">Experiencia / Comentarios</label>
-                            <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">Contanos cómo te sentiste hoy, qué fue lo que más te gustó o cualquier cosa que quieras compartir con nosotros.</p>
+                            <label className={labelCls}>Experiencia / Comentarios</label>
+                            <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium mb-1.5 leading-snug">Contanos cómo te sentiste hoy, qué fue lo que más te gustó o cualquier cosa que quieras compartir con nosotros.</p>
                             <textarea
                                 required
-                                className="input-field h-24 py-2 resize-none"
+                                className={`${inputCls} h-24 py-2 resize-none`}
                                 value={formData.experience}
                                 onChange={e => setFormData({ ...formData, experience: e.target.value })}
                                 placeholder="¿Cómo te sentiste? ¿Qué te pareció la reunión?"
                             />
                         </div>
                         <div>
-                            <label className="label">Petición de Oración</label>
-                            <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">Si hay algo por lo que querés que oremos por vos, escribilo acá. Es confidencial.</p>
+                            <label className={labelCls}>Petición de Oración</label>
+                            <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium mb-1.5 leading-snug">Si hay algo por lo que querés que oremos por vos, escribilo acá. Es confidencial.</p>
                             <textarea
-                                className="input-field h-24 py-2 resize-none"
+                                className={`${inputCls} h-24 py-2 resize-none`}
                                 value={formData.prayer_request}
                                 onChange={e => setFormData({ ...formData, prayer_request: e.target.value })}
                                 placeholder="(Opcional)"
@@ -450,11 +452,11 @@ const Formulario: React.FC = () => {
 
                     {/* 5. INTERESES */}
                     <div>
-                        <label className="label mb-2 block">Áreas de Interés</label>
-                        <p className="text-[11px] text-neutral-400 font-medium mb-1.5 leading-snug">Seleccioná todo lo que te llame la atención. Podés elegir más de uno, o ninguno si preferís.</p>
+                        <label className="block text-xs font-bold uppercase tracking-wide text-slate-900 dark:text-white mb-2">Áreas de Interés</label>
+                        <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium mb-1.5 leading-snug">Seleccioná todo lo que te llame la atención. Podés elegir más de uno, o ninguno si preferís.</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                             {INTEREST_OPTIONS.map(opt => (
-                                <label key={opt} className={`flex items-center gap-2 p-2 border-2 cursor-pointer transition-all ${formData.interest_areas.includes(opt) ? 'border-black bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'border-neutral-200 text-neutral-500 hover:border-black'}`}>
+                                <label key={opt} className={`flex items-center gap-2 p-2 rounded-xl border cursor-pointer transition-colors ${formData.interest_areas.includes(opt) ? 'border-slate-900 dark:border-white bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:border-slate-400 dark:hover:border-zinc-500'}`}>
                                     <input
                                         type="checkbox"
                                         className="hidden"
@@ -470,43 +472,16 @@ const Formulario: React.FC = () => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full h-14 bg-black text-white text-sm font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-8"
+                        className="w-full h-14 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-base font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20 disabled:opacity-50 flex items-center justify-center gap-2 mt-8"
                     >
-                        {isLoading ? <Loader2 className="animate-spin" /> : <><Send size={18} /> ENVIAR</>}
+                        {isLoading ? <Loader2 className="animate-spin" /> : <><Send size={18} /> Enviar</>}
                     </button>
 
-                    <p className="text-xs text-center text-gray-400 mt-4">
+                    <p className="text-xs text-center text-slate-400 dark:text-zinc-500 mt-4">
                         Al enviar este formulario aceptas ser contactado por el equipo de Origen.
                     </p>
                 </form>
             </div>
-
-            <style>{`
-                .label {
-                    display: block;
-                    font-size: 0.75rem;
-                    font-weight: 900;
-                    text-transform: uppercase;
-                    margin-bottom: 0.25rem;
-                    color: #000;
-                }
-                .input-field {
-                    width: 100%;
-                    height: 2.75rem;
-                    padding: 0 0.75rem;
-                    border: 2px solid #000;
-                    font-weight: 700;
-                    outline: none;
-                    transition: all;
-                    color: #000;
-                    background: #fff;
-                    font-size: 0.9rem;
-                }
-                .input-field:focus {
-                    box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
-                    background-color: #fffbeb;
-                }
-            `}</style>
         </div>
     );
 };

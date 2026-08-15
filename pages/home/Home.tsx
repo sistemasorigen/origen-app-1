@@ -765,14 +765,13 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
             const activeConfig = remoteConfig || db.getAppConfig();
             setConfig(activeConfig);
             setFooterLinks(activeConfig.footerLinks || { instagram: '', facebook: '', youtube: '', spotify: '' });
-            // Cachea la config real en localStorage. useAutoRefresh recarga la
-            // página entera tras 5min de inactividad (hooks/useAutoRefresh.ts):
-            // sin este cache, el primer render post-reload arranca de
-            // DEFAULT_CONFIG (banner.slides: [] a propósito) mientras esta
-            // misma consulta vuelve a resolver, y ahí es donde aparece el
-            // slide de respaldo sin video. Sólo se cachea si la consulta a
-            // Supabase realmente respondió — no queremos pisar un cache bueno
-            // con el fallback local ante una falla de red transitoria.
+            // Cachea la config real en localStorage — protege contra fallas
+            // de red transitorias: si una consulta futura a Supabase falla,
+            // se usa la última config buena guardada acá en vez de caer al
+            // DEFAULT_CONFIG (banner.slides: [] a propósito), que mostraría
+            // el slide de respaldo sin video. Sólo se cachea si la consulta
+            // realmente respondió — no queremos pisar un cache bueno con el
+            // fallback local ante una falla puntual.
             if (remoteConfig) db.saveAppConfig(remoteConfig);
         };
 
