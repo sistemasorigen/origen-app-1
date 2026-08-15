@@ -38,6 +38,8 @@ const EscanerDiaNino: React.FC = () => {
     const [cameraError, setCameraError] = useState<string | null>(null);
     const [inAppBrowserWarning, setInAppBrowserWarning] = useState(false);
     const [permissionPreviouslyDenied, setPermissionPreviouslyDenied] = useState(false);
+    const [retryKey, setRetryKey] = useState(0);
+    const [retrying, setRetrying] = useState(false);
     const [showManualInput, setShowManualInput] = useState(false);
     const [manualValue, setManualValue] = useState('');
 
@@ -125,6 +127,13 @@ const EscanerDiaNino: React.FC = () => {
 
     // ── Inicializar escáner de cámara ──
     useEffect(() => {
+        // Reset de avisos previos al arrancar cada intento (incluye reintentos
+        // manuales vía retryKey) — si no, un aviso de un intento anterior
+        // podría quedar pegado en pantalla aunque este intento sea distinto.
+        setPermissionPreviouslyDenied(false);
+        setInAppBrowserWarning(false);
+        setCameraError(null);
+
         // Detectar navegadores embebidos conocidos por bloquear la
         // cámara sin avisar en Android (WhatsApp, Instagram, Facebook,
         // Messenger). En iOS estas mismas apps casi siempre fuerzan la
@@ -193,7 +202,7 @@ const EscanerDiaNino: React.FC = () => {
             }
             scannerRef.current = null;
         };
-    }, [handleTicketCode]);
+    }, [handleTicketCode, retryKey]);
 
     const handleContinue = () => {
         if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
@@ -284,6 +293,17 @@ const EscanerDiaNino: React.FC = () => {
                         Si no lo encontrás ahí: menú (⋮) → Configuración → Configuración de sitios → Cámara →
                         buscá este sitio en la lista y cambialo a "Permitir".
                     </p>
+                    <button
+                        onClick={() => {
+                            setRetrying(true);
+                            setRetryKey(k => k + 1);
+                            setTimeout(() => setRetrying(false), 1500);
+                        }}
+                        disabled={retrying}
+                        className="mt-3 w-full py-3 bg-white text-black font-bold rounded-xl text-sm disabled:opacity-50"
+                    >
+                        {retrying ? 'Reintentando...' : 'Reintentar acceso a la cámara'}
+                    </button>
                 </div>
             )}
 
@@ -292,6 +312,17 @@ const EscanerDiaNino: React.FC = () => {
                     <div className="text-center text-white/80 max-w-sm">
                         <CameraOff className="w-12 h-12 mx-auto mb-4 text-white/40" />
                         <p className="text-sm">{cameraError}</p>
+                        <button
+                            onClick={() => {
+                                setRetrying(true);
+                                setRetryKey(k => k + 1);
+                                setTimeout(() => setRetrying(false), 1500);
+                            }}
+                            disabled={retrying}
+                            className="mt-3 w-full py-3 bg-white text-black font-bold rounded-xl text-sm disabled:opacity-50"
+                        >
+                            {retrying ? 'Reintentando...' : 'Reintentar acceso a la cámara'}
+                        </button>
                     </div>
                 ) : (
                     <div id="dianino-qr-reader" className="w-full max-w-md rounded-2xl overflow-hidden" />

@@ -56,6 +56,21 @@ export const getMediaFrameStyle = (
     };
 };
 
+// Intenta reproducir un video — si el navegador lo
+// rechaza (comúnmente porque todavía no bufereó lo
+// suficiente en el primer intento), escucha 'canplay'
+// y reintenta apenas el navegador confirma que ya
+// puede arrancar. Sin esto, un rechazo temprano deja
+// el video pausado para siempre sin ningún aviso.
+const playWithRetry = (video: HTMLVideoElement) => {
+    video.play().catch(() => {
+        const retryOnReady = () => {
+            video.play().catch(() => { /* el navegador decidió no reproducir, ahora sí definitivo */ });
+        };
+        video.addEventListener('canplay', retryOnReady, { once: true });
+    });
+};
+
 const HeroCarousel: React.FC<HeroCarouselProps> = ({
     slides,
     autoPlayInterval = 6000,
@@ -108,7 +123,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
     useEffect(() => {
         videoRefs.current.forEach((video, position) => {
             if (position === index) {
-                video.play().catch(() => { /* el navegador decidió no reproducir */ });
+                playWithRetry(video);
             } else {
                 video.pause();
             }
@@ -134,7 +149,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
         const resumeActiveVideo = () => {
             const video = videoRefs.current.get(index);
             if (video && video.paused) {
-                video.play().catch(() => { /* el navegador decidió no reproducir */ });
+                playWithRetry(video);
             }
         };
 
