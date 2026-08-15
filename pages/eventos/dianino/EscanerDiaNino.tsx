@@ -271,10 +271,19 @@ const EscanerDiaNino: React.FC = () => {
                 </div>
             )}
             {permissionPreviouslyDenied && (
-                <div className="bg-red-500/15 border border-red-500/40 text-red-200 text-xs p-3 mx-4 mt-4 rounded-xl">
-                    Ya le negaste el permiso de cámara a este sitio antes — tu navegador no va a volver a preguntar solo.
-                    Andá a la configuración del sitio (ícono de candado en la barra de direcciones) y habilitá la cámara
-                    manualmente.
+                <div className="bg-red-500/15 border border-red-500/40 text-red-200 text-xs p-3 mx-4 mt-4 rounded-xl space-y-2">
+                    <p>
+                        Ya le negaste el permiso de cámara a este sitio antes — tu navegador no va a volver a
+                        preguntar solo, ni "limpiar caché" lo arregla (los permisos de cámara son otra cosa).
+                    </p>
+                    <p>
+                        Tocá el ícono que está justo antes de la URL, arriba (candado o controles deslizantes,
+                        según tu navegador) → buscá "Cámara" → cambiala a "Permitir".
+                    </p>
+                    <p className="text-red-200/70">
+                        Si no lo encontrás ahí: menú (⋮) → Configuración → Configuración de sitios → Cámara →
+                        buscá este sitio en la lista y cambialo a "Permitir".
+                    </p>
                 </div>
             )}
 
