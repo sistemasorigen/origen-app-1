@@ -441,6 +441,8 @@ export async function getDianinoSessions(): Promise<import('../types').DiaNinoSe
       childrenCount,
       declaracionJuradaAceptada: s.declaracion_jurada_aceptada,
       allCheckedIn,
+      adultCheckedIn: adultTicket?.status === 'CHECKED_IN',
+      childrenCheckedInCount: childTickets.filter(t => t.status === 'CHECKED_IN').length,
       createdAt: s.created_at
     };
   });

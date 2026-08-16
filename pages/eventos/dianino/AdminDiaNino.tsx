@@ -2,13 +2,64 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDianinoSessions, deleteDianinoSession } from '../../../services/supabaseService';
 import { DiaNinoSessionRow, User } from '../../../types';
-import { ChevronLeft, Search, Plus, Eye, Trash2, Loader2, PartyPopper, CheckCircle2, Circle, QrCode, ShieldCheck, UserPlus } from 'lucide-react';
+import { ChevronLeft, Search, Plus, Eye, Trash2, Loader2, PartyPopper, CheckCircle2, Circle, QrCode, ShieldCheck, UserPlus, User as UserIcon, Baby } from 'lucide-react';
 import NeoModal from '../../../components/ui/NeoModal';
 import WizardAgregarPersona from './WizardAgregarPersona';
 
 interface AdminDiaNinoProps {
     currentUser: User;
 }
+
+// Tarjeta de progreso de acreditación — un mismo layout para
+// "Adultos" y "Niños", cada uno con su propio total y color de
+// ícono, así el staff ve de un vistazo cuánta gente falta
+// escanear sin tener que sumarlo a mano fila por fila.
+const AccreditationCard: React.FC<{
+    icon: React.ElementType;
+    iconColorClass: string;
+    label: string;
+    checkedIn: number;
+    total: number;
+}> = ({ icon: Icon, iconColorClass, label, checkedIn, total }) => {
+    const pending = total - checkedIn;
+    const pct = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
+
+    return (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${iconColorClass}`}>
+                        <Icon className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-400">{label}</span>
+                </div>
+                {total > 0 && (
+                    pending === 0 ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
+                            <CheckCircle2 className="w-3 h-3" /> Completo
+                        </span>
+                    ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                            <Circle className="w-3 h-3" /> {pending} pendiente{pending !== 1 ? 's' : ''}
+                        </span>
+                    )
+                )}
+            </div>
+
+            <div className="flex items-baseline gap-1.5 mb-2">
+                <span className="text-3xl font-black text-slate-900">{checkedIn}</span>
+                <span className="text-sm font-semibold text-slate-400">/ {total} acreditados</span>
+            </div>
+
+            <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${pct}%` }}
+                />
+            </div>
+        </div>
+    );
+};
 
 const AdminDiaNino: React.FC<AdminDiaNinoProps> = () => {
     const navigate = useNavigate();
@@ -54,6 +105,11 @@ const AdminDiaNino: React.FC<AdminDiaNinoProps> = () => {
     });
 
     const totalChildren = sessions.reduce((sum, s) => sum + s.childrenCount, 0);
+    // Contadores globales de acreditación — siempre sobre `sessions`
+    // (no `filtered`), para que reflejen el evento completo aunque
+    // el staff esté buscando o filtrando la planilla en ese momento.
+    const adultsCheckedIn = sessions.filter(s => s.adultCheckedIn).length;
+    const childrenCheckedIn = sessions.reduce((sum, s) => sum + s.childrenCheckedInCount, 0);
 
     return (
         <div className="min-h-screen bg-slate-50 p-4 md:p-8">
@@ -102,6 +158,23 @@ const AdminDiaNino: React.FC<AdminDiaNinoProps> = () => {
                             <Plus className="w-4 h-4" /> Inscripción manual
                         </button>
                     </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                    <AccreditationCard
+                        icon={UserIcon}
+                        iconColorClass="bg-blue-50 text-blue-600"
+                        label="Adultos"
+                        checkedIn={adultsCheckedIn}
+                        total={sessions.length}
+                    />
+                    <AccreditationCard
+                        icon={Baby}
+                        iconColorClass="bg-orange-50 text-orange-600"
+                        label="Niños"
+                        checkedIn={childrenCheckedIn}
+                        total={totalChildren}
+                    />
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">

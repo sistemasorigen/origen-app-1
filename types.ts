@@ -366,6 +366,11 @@ export interface DiaNinoSessionRow {
     childrenCount: number;
     declaracionJuradaAceptada: boolean;
     allCheckedIn: boolean;
+    // Estado de acreditación real (a diferencia de allCheckedIn,
+    // que sólo mide contra los niños) — usados para los contadores
+    // globales de acreditados/pendientes de la planilla admin.
+    adultCheckedIn: boolean;
+    childrenCheckedInCount: number;
     createdAt: string;
 }
 
