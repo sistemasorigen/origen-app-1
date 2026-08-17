@@ -13,6 +13,12 @@ import { ArrowLeft, ChevronLeft, Plus, Trash2, Check, Loader2, User, Baby, Shiel
 
 const LOGO_URL = '/origen-logo-full.png';
 
+// Evento finalizado (sábado 15/08) — cambiar a
+// `false` para reactivar la inscripción el año que
+// viene, sin tener que reconstruir nada de esta
+// página.
+const EVENT_ENDED = true;
+
 // ── Sistema de color "Día del Niño" ───────────────────────────────
 // Paleta tomada del flyer real del evento. El naranja es EXCLUSIVO
 // de acciones/CTA (nunca aparece en la tipografía crayón ni en la
@@ -174,6 +180,29 @@ const labelClass = 'block text-[11px] font-black uppercase tracking-widest text-
 
 const InscripcionDiaNino: React.FC = () => {
     const navigate = useNavigate();
+
+    if (EVENT_ENDED) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#FDF6E9' }}>
+                <div className="max-w-md w-full bg-white rounded-3xl shadow-lg p-8 text-center space-y-4">
+                    <img src={LOGO_URL} alt="Origen" className="h-8 mx-auto object-contain" />
+                    <p className="text-2xl">🎉</p>
+                    <h1 className="text-xl font-bold text-neutral-800">
+                        ¡El Día del Niño ya pasó!
+                    </h1>
+                    <p className="text-sm text-neutral-500">
+                        Este link de inscripción ya no está activo. ¡Gracias a todos los que vinieron!
+                    </p>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="w-full py-3 bg-black text-white font-bold rounded-full text-sm mt-2"
+                    >
+                        Volver al Inicio
+                    </button>
+                </div>
+            </div>
+        );
+    }
     const shouldReduceMotion = useReducedMotion();
     const [step, setStep] = useState(1);
 

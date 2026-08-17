@@ -7,6 +7,12 @@ import { ArrowLeft, Search, User, Baby, Loader2, Check, Calendar, Clock, Ticket 
 
 const LOGO_URL = '/origen-logo-full.png';
 
+// Evento finalizado (sábado 15/08) — cambiar a
+// `false` para reactivar el buscador el año que
+// viene, sin tener que reconstruir nada de esta
+// página.
+const EVENT_ENDED = true;
+
 // ── Mismo sistema de color "Día del Niño" que InscripcionDiaNino.tsx ──
 const INK = '#2A211B';
 const CRAYON_RED = '#E63B2E';
@@ -84,6 +90,29 @@ const TicketResult: React.FC<{ row: DianinoSearchResultRow; index: number }> = (
 
 const BuscarDiaNino: React.FC = () => {
     const navigate = useNavigate();
+
+    if (EVENT_ENDED) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#FDF6E9' }}>
+                <div className="max-w-md w-full bg-white rounded-3xl shadow-lg p-8 text-center space-y-4">
+                    <img src={LOGO_URL} alt="Origen" className="h-8 mx-auto object-contain" />
+                    <p className="text-2xl">🎉</p>
+                    <h1 className="text-xl font-bold text-neutral-800">
+                        ¡El Día del Niño ya pasó!
+                    </h1>
+                    <p className="text-sm text-neutral-500">
+                        Este buscador de entradas ya no está activo — el evento ya pasó.
+                    </p>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="w-full py-3 bg-black text-white font-bold rounded-full text-sm mt-2"
+                    >
+                        Volver al Inicio
+                    </button>
+                </div>
+            </div>
+        );
+    }
     const shouldReduceMotion = useReducedMotion();
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');

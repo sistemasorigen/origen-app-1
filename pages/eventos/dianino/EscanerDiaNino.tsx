@@ -38,7 +38,6 @@ const EscanerDiaNino: React.FC = () => {
     const [cameraError, setCameraError] = useState<string | null>(null);
     const [inAppBrowserWarning, setInAppBrowserWarning] = useState(false);
     const [permissionPreviouslyDenied, setPermissionPreviouslyDenied] = useState(false);
-    const [retryKey, setRetryKey] = useState(0);
     const [retrying, setRetrying] = useState(false);
     const [showManualInput, setShowManualInput] = useState(false);
     const [manualValue, setManualValue] = useState('');
@@ -125,14 +124,29 @@ const EscanerDiaNino: React.FC = () => {
         setResult({ type: 'SUCCESS', name: fullName });
     }, []);
 
-    // ── Inicializar escáner de cámara ──
-    useEffect(() => {
-        // Reset de avisos previos al arrancar cada intento (incluye reintentos
-        // manuales vía retryKey) — si no, un aviso de un intento anterior
-        // podría quedar pegado en pantalla aunque este intento sea distinto.
+    // Inicializa (o REINICIALIZA) el escáner. Se usa tanto al montar el
+    // componente como cuando el usuario toca "Reintentar" — en ambos casos
+    // pasa por acá, así que la secuencia es siempre la misma: si había una
+    // instancia anterior, se espera de verdad (await) a que termine de
+    // liberar el contenedor del DOM ANTES de crear la nueva. Sin este
+    // await, dos instancias de Html5Qrcode pueden terminar peleando por el
+    // mismo elemento del DOM (dianino-qr-reader) y tirar una excepción no
+    // controlada — root cause confirmado de un crash real reportado por un
+    // usuario Android al usar el botón de reintentar.
+    const initScanner = useCallback(async () => {
         setPermissionPreviouslyDenied(false);
         setInAppBrowserWarning(false);
         setCameraError(null);
+
+        if (scannerRef.current) {
+            try {
+                await scannerRef.current.stop();
+                await scannerRef.current.clear();
+            } catch {
+                // no-op: no había nada corriendo que detener
+            }
+            scannerRef.current = null;
+        }
 
         // Detectar navegadores embebidos conocidos por bloquear la
         // cámara sin avisar en Android (WhatsApp, Instagram, Facebook,
@@ -169,40 +183,50 @@ const EscanerDiaNino: React.FC = () => {
                 });
         }
 
-        scanner.start(
-            { facingMode: 'environment' },
-            {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-            },
-            (decodedText) => {
-                handleTicketCode(decodedText);
-            },
-            () => {
-                // No-QR-in-frame — no es un error real
-            }
-        )
-            .catch((err) => {
-                setCameraError('No pudimos acceder a la cámara. Revisá los permisos del navegador e intentá de nuevo.');
-                // Loguear el nombre real del error (NotAllowedError,
-                // NotFoundError, NotReadableError, etc.) — ayuda a
-                // diagnosticar si esto sigue pasando después de este
-                // cambio, sin tener el dispositivo real a mano.
-                console.error('[EscanerDiaNino] Camera error:', err?.name || 'unknown', err);
-            });
+        try {
+            await scanner.start(
+                { facingMode: 'environment' },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                },
+                (decodedText) => {
+                    handleTicketCode(decodedText);
+                },
+                () => {
+                    // No-QR-in-frame — no es un error real
+                }
+            );
+        } catch (err: any) {
+            setCameraError('No pudimos acceder a la cámara. Revisá los permisos del navegador e intentá de nuevo.');
+            // Loguear el nombre real del error (NotAllowedError,
+            // NotFoundError, NotReadableError, etc.) — ayuda a
+            // diagnosticar si esto sigue pasando después de este
+            // cambio, sin tener el dispositivo real a mano.
+            console.error('[EscanerDiaNino] Camera error:', err?.name || 'unknown', err);
+        }
+    }, [handleTicketCode]);
+
+    // ── Inicializar escáner de cámara — SOLO al montar. El reintento
+    // manual llama initScanner() directo (ver el botón más abajo), no
+    // pasa por acá — así evitamos que React dispare este efecto y el
+    // cleanup asíncrono de la instancia anterior al mismo tiempo. ──
+    useEffect(() => {
+        initScanner();
 
         return () => {
-            try {
-                // html5-qrcode lanza un throw sincrónico (no una promesa rechazada)
-                // si el scanner nunca llegó a arrancar (p.ej. falló el acceso a cámara) —
-                // el .catch() no lo atrapa, por eso el try/catch alrededor.
-                scanner.stop().then(() => scanner.clear()).catch(() => {});
-            } catch {
-                // no-op: no había nada corriendo que detener
+            const scanner = scannerRef.current;
+            if (scanner) {
+                try {
+                    scanner.stop().then(() => scanner.clear()).catch(() => {});
+                } catch {
+                    // no-op: no había nada corriendo que detener
+                }
             }
             scannerRef.current = null;
         };
-    }, [handleTicketCode, retryKey]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleContinue = () => {
         if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
@@ -294,10 +318,10 @@ const EscanerDiaNino: React.FC = () => {
                         buscá este sitio en la lista y cambialo a "Permitir".
                     </p>
                     <button
-                        onClick={() => {
+                        onClick={async () => {
                             setRetrying(true);
-                            setRetryKey(k => k + 1);
-                            setTimeout(() => setRetrying(false), 1500);
+                            await initScanner();
+                            setRetrying(false);
                         }}
                         disabled={retrying}
                         className="mt-3 w-full py-3 bg-white text-black font-bold rounded-xl text-sm disabled:opacity-50"
@@ -313,10 +337,10 @@ const EscanerDiaNino: React.FC = () => {
                         <CameraOff className="w-12 h-12 mx-auto mb-4 text-white/40" />
                         <p className="text-sm">{cameraError}</p>
                         <button
-                            onClick={() => {
+                            onClick={async () => {
                                 setRetrying(true);
-                                setRetryKey(k => k + 1);
-                                setTimeout(() => setRetrying(false), 1500);
+                                await initScanner();
+                                setRetrying(false);
                             }}
                             disabled={retrying}
                             className="mt-3 w-full py-3 bg-white text-black font-bold rounded-xl text-sm disabled:opacity-50"
