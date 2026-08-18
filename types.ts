@@ -365,10 +365,10 @@ export interface DiaNinoSessionRow {
     email: string;
     childrenCount: number;
     declaracionJuradaAceptada: boolean;
+    // "Completo": el adulto responsable acreditado Y todos sus niños.
     allCheckedIn: boolean;
-    // Estado de acreditación real (a diferencia de allCheckedIn,
-    // que sólo mide contra los niños) — usados para los contadores
-    // globales de acreditados/pendientes de la planilla admin.
+    // Desglose por persona: alimenta los contadores globales de la
+    // planilla admin y el detalle de qué falta escanear en cada fila.
     adultCheckedIn: boolean;
     childrenCheckedInCount: number;
     createdAt: string;

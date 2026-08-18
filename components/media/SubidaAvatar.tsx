@@ -115,7 +115,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
                     title="Cambiar foto de perfil"
                 >
                     <div
-                        className="w-full h-full rounded-full overflow-hidden border-4 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] transition-shadow"
+                        className="w-full h-full rounded-full overflow-hidden ring-1 ring-slate-200 dark:ring-zinc-700 shadow-sm group-hover:ring-slate-300 dark:group-hover:ring-zinc-600 transition-all"
                         style={{ width: px, height: px }}
                     >
                         {currentAvatarUrl ? (
@@ -125,9 +125,9 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
                                 className="w-full h-full object-cover"
                             />
                         ) : (
-                            <div className="w-full h-full bg-black dark:bg-white flex items-center justify-center">
+                            <div className="w-full h-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
                                 <span
-                                    className="text-white dark:text-black font-black"
+                                    className="text-slate-400 dark:text-zinc-500 font-light tracking-[-0.02em]"
                                     style={{ fontSize: px * 0.28 }}
                                 >
                                     {initials}
@@ -147,18 +147,24 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
                 <button
                     type="button"
                     onClick={() => inputRef.current?.click()}
-                    className="text-xs font-bold text-black dark:text-white underline underline-offset-2 hover:opacity-60 transition-opacity uppercase tracking-wide"
+                    className="px-3.5 py-2 rounded-full border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10 dark:focus-visible:ring-white/10"
                 >
                     {currentAvatarUrl ? 'Cambiar foto' : 'Subir foto'}
                 </button>
 
-                <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium text-center leading-relaxed">
-                    JPG, PNG o WEBP · Máx 5MB<br />
-                    Se recortará en formato circular
-                </p>
+                {/* Los requisitos del archivo sólo hacen falta antes de la
+                    primera foto: ahí explican qué se puede subir. Con una foto
+                    ya puesta pasan a ser letra chica permanente en el panel de
+                    identidad, y los casos borde ya los cubren los mensajes de
+                    error de handleFileChange. */}
+                {!currentAvatarUrl && (
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-normal text-center leading-relaxed">
+                        JPG, PNG o WEBP · Máx 5MB
+                    </p>
+                )}
 
                 {uploadError && (
-                    <p className="text-xs font-bold text-red-600 dark:text-red-400 text-center max-w-[200px]">
+                    <p className="text-xs font-semibold text-red-600 dark:text-red-400 text-center max-w-[200px]">
                         {uploadError}
                     </p>
                 )}
@@ -167,25 +173,26 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
             {isModalOpen && imageToCrop && createPortal(
                 <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
                     <div
-                        className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl flex flex-col border-2 border-black dark:border-zinc-700"
+                        className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl flex flex-col border border-slate-200 dark:border-zinc-800"
                         style={{ maxHeight: '90vh' }}
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between px-5 py-4 border-b-2 border-black dark:border-zinc-700 shrink-0">
+                        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-200 dark:border-zinc-800 shrink-0">
                             <div>
-                                <h2 className="text-sm font-black uppercase tracking-widest text-black dark:text-white">
-                                    Ajustar Foto
+                                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-zinc-400">
+                                    Ajustar foto
                                 </h2>
-                                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-                                    Mové y hacé zoom para centrar tu cara
+                                <p className="text-sm font-normal text-slate-600 dark:text-zinc-300 mt-1">
+                                    Mové y hacé zoom para centrar tu cara.
                                 </p>
                             </div>
                             <button
                                 type="button"
                                 onClick={handleCancelCrop}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-zinc-800 hover:bg-neutral-200 dark:hover:bg-zinc-700 transition-colors"
+                                aria-label="Cerrar"
+                                className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10"
                             >
-                                <X className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
+                                <X className="w-4 h-4" />
                             </button>
                         </div>
 
@@ -209,7 +216,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
                                     },
                                 }}
                             />
-                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full pointer-events-none">
+                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-[10px] font-semibold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full pointer-events-none">
                                 Circular · 1:1
                             </div>
                         </div>
@@ -218,10 +225,10 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
                         <div className="px-5 py-4 shrink-0 space-y-4 bg-white dark:bg-zinc-900">
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                                    <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-zinc-400">
                                         Zoom
                                     </span>
-                                    <span className="text-[10px] font-bold text-neutral-400 tabular-nums">
+                                    <span className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500 tabular-nums">
                                         {zoom.toFixed(1)}×
                                     </span>
                                 </div>
@@ -231,8 +238,9 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
                                     max={3}
                                     step={0.05}
                                     value={zoom}
+                                    aria-label="Zoom de la foto"
                                     onChange={e => setZoom(Number(e.target.value))}
-                                    className="w-full h-1.5 cursor-pointer accent-black dark:accent-white"
+                                    className="w-full h-1.5 cursor-pointer accent-emerald-600"
                                 />
                             </div>
 
@@ -241,7 +249,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
                                     type="button"
                                     onClick={handleCancelCrop}
                                     disabled={isUploading}
-                                    className="flex-1 py-3 text-sm font-black uppercase tracking-wide text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-zinc-800 hover:bg-neutral-200 dark:hover:bg-zinc-700 rounded-xl transition-colors disabled:opacity-50"
+                                    className="flex-1 py-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10"
                                 >
                                     Cancelar
                                 </button>
@@ -249,7 +257,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
                                     type="button"
                                     onClick={handleConfirmCrop}
                                     disabled={isUploading}
-                                    className="flex-[2] py-3 text-sm font-black uppercase tracking-wide text-white bg-black dark:bg-white dark:text-black rounded-xl hover:opacity-80 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    className="flex-[2] py-3 rounded-xl text-sm font-semibold text-white bg-slate-900 dark:bg-white dark:text-slate-900 hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20"
                                 >
                                     {isUploading ? (
                                         <>

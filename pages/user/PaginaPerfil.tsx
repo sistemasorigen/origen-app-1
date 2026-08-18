@@ -1,17 +1,125 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, Save, Lock, Loader2,
-    CheckCircle, AlertCircle, CalendarDays
+    ArrowLeft, Check, Loader2, AlertCircle, ChevronRight, Lock
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabaseService } from '../../services/supabaseService';
 import { getRoleDisplayNames } from '../../services/authUtils';
 import AvatarUpload from '../../components/media/SubidaAvatar';
 
-const inputClass = "w-full p-4 bg-white border border-slate-300 rounded-lg outline-none text-black font-medium focus:border-black focus:ring-1 focus:ring-black transition-all placeholder-slate-400";
-const labelClass = "block text-xs font-bold text-slate-500 uppercase mb-1 ml-1";
-const buttonClass = "w-full py-3 bg-black text-white font-bold uppercase tracking-widest rounded-lg hover:bg-neutral-800 transition-all shadow-lg disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 transform active:scale-[0.98]";
+// ── Estilos de página ───────────────────────────────────────────────────
+//
+// index.html define overrides globales de formulario ("GLOBAL INPUT
+// OVERRIDES — HIGH READABILITY") con !important: fondo blanco forzado
+// —también en dark—, borde slate-300, radio 0.5rem y outline azul en
+// foco. Ese selector encadena nueve :not([type=...]) y pesa (0,9,1), así
+// que ninguna clase de Tailwind lo toca: `focus:border-emerald-500` y
+// `rounded-xl` se escriben en el HTML pero no llegan a pintar nada.
+//
+// Scopear por id da (1,x,x) y gana por la columna de ids sin importar el
+// resto. Es la única forma de que esta página tenga su propio tratamiento
+// de formulario sin editar el override global, que lo usa toda la app.
+//
+// De paso corrige el modo oscuro: el override global deja los inputs
+// blancos sobre fondo negro, que es lo que hoy se ve en dark.
+const estilos = `
+    #perfil-page .campo {
+        width: 100%;
+        padding: 0.8125rem 1rem;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        line-height: 1.4;
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 0.75rem !important;
+        outline: none !important;
+        box-shadow: none;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    #perfil-page .campo:hover:not(:focus) {
+        border-color: #cbd5e1 !important;
+    }
+    /* El foco pinta borde + halo en el verde de la casa. El outline
+       transparente no se ve en pantalla pero sobrevive a forced-colors
+       (alto contraste de Windows), donde box-shadow se descarta y el
+       campo quedaría sin ninguna marca de foco. */
+    #perfil-page .campo:focus,
+    #perfil-page .campo:focus-visible {
+        border-color: #059669 !important;
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, .15) !important;
+        outline: 2px solid transparent !important;
+        outline-offset: 2px;
+    }
+    #perfil-page .campo::placeholder { color: #94a3b8 !important; opacity: 1; }
+
+    .dark #perfil-page .campo {
+        background-color: #18181b !important;
+        color: #ffffff !important;
+        border-color: #3f3f46 !important;
+    }
+    .dark #perfil-page .campo:hover:not(:focus) { border-color: #52525b !important; }
+    .dark #perfil-page .campo::placeholder { color: #71717a !important; }
+
+    /* El select nativo trae su propia flecha, distinta en cada sistema.
+       Se reemplaza por una que coincide con los chevrons de lucide que
+       usa el resto de la página. */
+    #perfil-page select.campo {
+        appearance: none;
+        -webkit-appearance: none;
+        padding-right: 2.75rem;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 1rem;
+    }
+    .dark #perfil-page select.campo {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    }
+
+    /* El ícono de calendario nativo viene gris fijo y desaparece sobre
+       fondo oscuro. */
+    #perfil-page input[type="date"]::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        opacity: .5;
+        transition: opacity .15s ease;
+    }
+    #perfil-page input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+    .dark #perfil-page input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        opacity: .6;
+    }
+
+    /* Entrada escalonada: el encabezado primero, después la identidad y
+       las dos secciones del formulario. Misma curva que el fadeInUp
+       global (index.html) — arranca rápido y frena suave. */
+    #perfil-page .aparece {
+        opacity: 0;
+        animation: perfilAparece .5s cubic-bezier(.16, 1, .3, 1) forwards;
+    }
+    #perfil-page .retraso-1 { animation-delay: .06s; }
+    #perfil-page .retraso-2 { animation-delay: .12s; }
+    #perfil-page .retraso-3 { animation-delay: .18s; }
+    @keyframes perfilAparece {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        #perfil-page .aparece {
+            animation: none;
+            opacity: 1;
+        }
+    }
+`;
+
+// Etiqueta de sección: el registro de "rótulo estructural" que usa Home
+// para "Empieza en" y "Versículo del día".
+const rotuloClass = 'text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-zinc-400';
+// Etiqueta de campo: caja baja y semibold. Se diferencia a propósito del
+// rótulo — mayúsculas espaciadas marcan estructura, caja baja marca dato.
+const etiquetaClass = 'text-sm font-semibold text-slate-700 dark:text-zinc-200';
+const tarjetaClass = 'bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm';
 
 const calculateAge = (birthDate: string): number => {
     if (!birthDate) return 0;
@@ -23,13 +131,50 @@ const calculateAge = (birthDate: string): number => {
     return age;
 };
 
-const formatDateForDisplay = (dateStr: string): string => {
-    if (!dateStr) return 'DD/MM/AAAA';
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('es-AR', {
-        day: '2-digit', month: '2-digit', year: 'numeric'
-    });
-};
+type CampoNombre = 'name' | 'phone' | 'birthDate' | 'gender';
+
+// Los cuatro campos que ModalCompletarPerfil exige antes de dejar entrar a
+// la app. Acá se marcan igual: si le faltan a alguien que llegó por otro
+// camino, la página dice cuáles y dónde, en vez de dejarlo adivinar.
+const CAMPOS_REQUERIDOS: { key: CampoNombre; label: string }[] = [
+    { key: 'name', label: 'Nombre y apellido' },
+    { key: 'phone', label: 'Teléfono' },
+    { key: 'birthDate', label: 'Fecha de nacimiento' },
+    { key: 'gender', label: 'Sexo' },
+];
+
+// Encabezado de un campo: nombre, aviso de dato faltante y punto de
+// "editado sin guardar". El punto es lo que hace que el formulario sea
+// legible de un vistazo cuando se tocaron dos cosas y no se sabe cuáles.
+const Campo: React.FC<{
+    id: string;
+    label: string;
+    falta?: boolean;
+    editado?: boolean;
+    ayuda?: string;
+    children: React.ReactNode;
+}> = ({ id, label, falta, editado, ayuda, children }) => (
+    <div>
+        <div className="flex items-center gap-2 mb-1.5">
+            <label htmlFor={id} className={etiquetaClass}>{label}</label>
+            {falta && (
+                <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-amber-700 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded">
+                    Falta
+                </span>
+            )}
+            {editado && (
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                    Editado
+                </span>
+            )}
+        </div>
+        {children}
+        {ayuda && (
+            <p className="mt-1.5 text-xs font-normal text-slate-500 dark:text-zinc-400">{ayuda}</p>
+        )}
+    </div>
+);
 
 const ProfilePage: React.FC = () => {
     const navigate = useNavigate();
@@ -43,8 +188,9 @@ const ProfilePage: React.FC = () => {
     });
 
     const [isSaving, setIsSaving] = useState(false);
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const [errorMessage, setErrorMessage] = useState('');
+    // Un solo aviso, con su texto: guardar el perfil y cambiar la foto son
+    // dos acciones distintas y cada una tiene que decir lo suyo.
+    const [aviso, setAviso] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
 
     useEffect(() => {
         if (user) {
@@ -57,11 +203,42 @@ const ProfilePage: React.FC = () => {
         }
     }, [user]);
 
+    const setCampo = (key: CampoNombre, value: string) =>
+        setFormData(prev => ({ ...prev, [key]: value }));
+
+    // La referencia de "sin cambios" sale de `user`, no de un estado
+    // aparte: al guardar, refreshSession() actualiza `user`, el efecto de
+    // arriba recarga el formulario y el diff vuelve a cero solo.
+    const guardado = {
+        name: user?.name || '',
+        phone: user?.phone || '',
+        birthDate: user?.birthDate || '',
+        gender: user?.gender || '',
+    };
+    const editados = (Object.keys(guardado) as CampoNombre[]).filter(k => formData[k] !== guardado[k]);
+    const hayCambios = editados.length > 0;
+
+    const faltantes = CAMPOS_REQUERIDOS.filter(c => !formData[c.key].trim());
+
+    const hoyISO = new Date().toISOString().split('T')[0];
+
+    // Mismo rango que valida ModalCompletarPerfil antes de dejar entrar:
+    // acá se avisa en el campo en vez de rechazar el envío sin explicar.
+    const errorFecha = (() => {
+        if (!formData.birthDate) return null;
+        const fecha = new Date(formData.birthDate + 'T00:00:00');
+        if (Number.isNaN(fecha.getTime())) return 'Revisá la fecha.';
+        if (formData.birthDate > hoyISO) return 'La fecha no puede ser futura.';
+        if (calculateAge(formData.birthDate) > 120) return 'Revisá el año de nacimiento.';
+        return null;
+    })();
+
+    const edad = formData.birthDate && !errorFecha ? calculateAge(formData.birthDate) : null;
+
     const handleSave = async () => {
-        if (!user) return;
+        if (!user || !hayCambios || errorFecha) return;
         setIsSaving(true);
-        setSaveStatus('idle');
-        setErrorMessage('');
+        setAviso(null);
 
         try {
             const age = formData.birthDate
@@ -82,221 +259,309 @@ const ProfilePage: React.FC = () => {
 
             if (profileOk && nameOk) {
                 await refreshSession();
-                setSaveStatus('success');
-                setTimeout(() => setSaveStatus('idle'), 3000);
+                setAviso({ tipo: 'ok', texto: 'Cambios guardados.' });
+                setTimeout(() => setAviso(null), 3000);
             } else {
-                throw new Error('No se pudo guardar el perfil.');
+                throw new Error('No se pudieron guardar los cambios. Revisá tu conexión e intentá de nuevo.');
             }
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Error al guardar.';
-            setErrorMessage(message);
-            setSaveStatus('error');
+            const texto = err instanceof Error
+                ? err.message
+                : 'No se pudieron guardar los cambios. Revisá tu conexión e intentá de nuevo.';
+            setAviso({ tipo: 'error', texto });
         } finally {
             setIsSaving(false);
         }
     };
 
-    const initials = user?.name
-        ? user.name.substring(0, 2).toUpperCase()
-        : 'US';
-
-    const roleLabel = user
-        ? getRoleDisplayNames([user.role])[0] ?? user.role
-        : '';
+    // `roles` es el array real; `role` quedó como campo heredado. La página
+    // mostraba sólo el heredado, así que a quien tiene dos roles le faltaba
+    // uno.
+    const rolesUsuario = user
+        ? (user.roles?.length ? user.roles : [user.role])
+        : [];
+    const etiquetasRol = getRoleDisplayNames(rolesUsuario);
 
     return (
-        <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 pb-16">
-            {/* Header */}
-            <div className="bg-white dark:bg-black border-b-2 border-black dark:border-white">
-                <div className="max-w-2xl mx-auto px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="w-10 h-10 border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black flex items-center justify-center transition-all"
-                        >
-                            <ArrowLeft className="w-5 h-5" />
-                        </button>
-                        <div>
-                            <h1 className="text-xl font-black uppercase tracking-tighter text-black dark:text-white">
-                                Mi Perfil
-                            </h1>
-                            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-mono uppercase tracking-wider">
-                                Datos personales
-                            </p>
-                        </div>
+        <div id="perfil-page" className="w-full">
+            <style>{estilos}</style>
+
+            {/* === ENCABEZADO ===
+                Sin barra a sangre: Estructura.tsx ya encierra esta ruta en
+                un max-w-7xl con padding, así que una franja de ancho
+                completo no llega a ningún borde — queda flotando con doble
+                margen. El título vive dentro de la misma columna que el
+                contenido. */}
+            <div className="max-w-5xl mx-auto">
+                <header className="aparece flex items-start gap-3 sm:gap-4 mb-6 sm:mb-8">
+                    <button
+                        onClick={() => navigate(-1)}
+                        aria-label="Volver"
+                        className="w-10 h-10 mt-0.5 shrink-0 rounded-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-300 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/10 dark:focus-visible:ring-white/10"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="min-w-0">
+                        <h1 className="text-xl sm:text-2xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white">
+                            Mi perfil
+                        </h1>
+                        <p className="mt-1 text-sm font-normal text-slate-500 dark:text-zinc-400">
+                            Revisá tus datos y actualizá lo que haga falta.
+                        </p>
                     </div>
-                </div>
-            </div>
+                </header>
 
-            {/* Content */}
-            <div className="max-w-2xl mx-auto px-4 sm:px-8 pt-8 space-y-6">
-                {/* Avatar + Display Name */}
-                <div className="flex items-center gap-6 p-6 bg-white dark:bg-zinc-900 border-2 border-black dark:border-zinc-700 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-                    <AvatarUpload
-                        currentAvatarUrl={user?.avatarUrl}
-                        userName={user?.name || 'Usuario'}
-                        userId={user?.id || ''}
-                        size="lg"
-                        onUploadComplete={async (url) => {
-                            await supabaseService.updateUserProfile(user!.id, { avatarUrl: url });
-                            updateAvatar(url);
-                            setSaveStatus('success');
-                            setTimeout(() => setSaveStatus('idle'), 3000);
-                        }}
-                    />
-                    <div className="flex-1">
-                        <p className="text-xl font-black text-black dark:text-white">{user?.name}</p>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">{user?.email}</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-black uppercase rounded-full bg-black text-white dark:bg-white dark:text-black">
-                                {roleLabel}
-                            </span>
-                        </div>
-                    </div>
-                </div>
+                {/* === GRILLA ===
+                    Izquierda, quién sos; derecha, lo que podés cambiar. Es
+                    la división real del contenido: el nombre y el teléfono
+                    son tuyos, el email y el rol te los asigna la comunidad.
+                    En mobile se apila en ese mismo orden. */}
+                <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-5 lg:gap-6 items-start">
 
-                {/* Form */}
-                <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-zinc-700 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] p-6 space-y-5">
-                    <h2 className="text-sm font-black uppercase tracking-wider text-black dark:text-white mb-4">
-                        Información Personal
-                    </h2>
-
-                    {/* Name */}
-                    <div>
-                        <label className={labelClass}>Nombre completo</label>
-                        <input
-                            type="text"
-                            className={inputClass}
-                            value={formData.name}
-                            placeholder="Tu nombre completo"
-                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        />
-                    </div>
-
-                    {/* Phone */}
-                    <div>
-                        <label className={labelClass}>Teléfono</label>
-                        <input
-                            type="tel"
-                            className={inputClass}
-                            value={formData.phone}
-                            placeholder="+54 9 11..."
-                            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                        />
-                    </div>
-
-                    {/* BirthDate + Gender */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* BirthDate */}
-                        <div>
-                            <label className={labelClass}>Fecha de Nacimiento</label>
-                            <div className="relative">
-                                <div className={`${inputClass} flex items-center justify-between pointer-events-none bg-white dark:bg-zinc-800`}>
-                                    <span className={!formData.birthDate ? 'text-neutral-400' : 'text-black dark:text-white'}>
-                                        {formatDateForDisplay(formData.birthDate)}
-                                    </span>
-                                    <CalendarDays className="w-5 h-5 text-neutral-400" />
-                                </div>
-                                <input
-                                    type="date"
-                                    value={formData.birthDate}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
-                                    onClick={(e) => {
-                                        try {
-                                            if ('showPicker' in e.currentTarget) {
-                                                (e.currentTarget as HTMLInputElement & { showPicker: () => void }).showPicker();
-                                            }
-                                        } catch (error) {
-                                            console.log('Error opening picker:', error);
-                                        }
+                    {/* === IDENTIDAD ===
+                        Espejo en vivo del formulario: el nombre y la edad
+                        salen de lo que hay escrito a la derecha, no de lo
+                        último guardado. Editar la fecha de nacimiento y ver
+                        cambiar la edad es lo que vuelve literal el "estos
+                        son tus datos". */}
+                    {/* Se reacomoda dos veces: apilada y centrada en mobile;
+                        horizontal entre sm y lg, donde la tarjeta ocupa todo
+                        el ancho y una foto centrada dejaría medio metro de
+                        aire al costado; y de vuelta en vertical dentro del
+                        rail angosto de desktop. */}
+                    <aside className={`aparece retraso-1 ${tarjetaClass} p-6 lg:sticky lg:top-20`}>
+                        <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-6 lg:flex-col lg:items-center lg:gap-5">
+                            <div className="shrink-0">
+                                <AvatarUpload
+                                    currentAvatarUrl={user?.avatarUrl}
+                                    userName={user?.name || 'Usuario'}
+                                    userId={user?.id || ''}
+                                    size="lg"
+                                    onUploadComplete={async (url) => {
+                                        await supabaseService.updateUserProfile(user!.id, { avatarUrl: url });
+                                        updateAvatar(url);
+                                        setAviso({ tipo: 'ok', texto: 'Foto actualizada.' });
+                                        setTimeout(() => setAviso(null), 3000);
                                     }}
-                                    className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                                 />
                             </div>
-                        </div>
 
-                        {/* Gender */}
-                        <div>
-                            <label className={labelClass}>Sexo</label>
-                            <select
-                                className={inputClass}
-                                value={formData.gender}
-                                onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-                            >
-                                <option value="">Seleccionar...</option>
-                                <option value="Masculino">Masculino</option>
-                                <option value="Femenino">Femenino</option>
-                                <option value="No especificar">No especificar</option>
-                            </select>
-                        </div>
-                    </div>
+                            <div className="min-w-0 w-full sm:flex-1 lg:w-full text-center sm:text-left lg:text-center">
+                                {/* El nombre en Light 300 a tamaño grande — el
+                                    mismo registro con el que Home abre su cierre
+                                    ("¿Querés conocernos?"). Un nombre propio no
+                                    es un titular que grita. */}
+                                <p className="text-2xl font-light tracking-[-0.02em] leading-tight text-slate-900 dark:text-white break-words">
+                                    {formData.name.trim() || 'Sin nombre'}
+                                </p>
+                                <p className="mt-1 text-sm font-normal text-slate-500 dark:text-zinc-400 break-all">
+                                    {user?.email}
+                                </p>
 
-                    {/* Calculated age */}
-                    {formData.birthDate && (
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium -mt-2">
-                            Edad calculada: {calculateAge(formData.birthDate)} años
-                        </p>
-                    )}
-                </div>
+                                {etiquetasRol.length > 0 && (
+                                    <div className="mt-5 pt-5 border-t border-slate-100 dark:border-zinc-800 text-left">
+                                        <div className={rotuloClass}>Rol en Origen</div>
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                            {etiquetasRol.map(nombre => (
+                                                <span
+                                                    key={nombre}
+                                                    className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                                                >
+                                                    {nombre}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
-                {/* Account (read-only) */}
-                <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-zinc-700 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] p-6">
-                    <h2 className="text-sm font-black uppercase tracking-wider text-black dark:text-white mb-4">
-                        Cuenta
-                    </h2>
-                    <div className="space-y-3">
-                        <div>
-                            <label className={labelClass}>Email</label>
-                            <div className={`${inputClass} bg-neutral-50 dark:bg-zinc-800 cursor-not-allowed opacity-75 flex items-center gap-2`}>
-                                <Lock className="w-4 h-4 text-neutral-400 shrink-0" />
-                                <span className="text-neutral-500 dark:text-neutral-400">{user?.email}</span>
+                                {/* La edad es el único número derivado de la
+                                    página: no se escribe, sale de la fecha.
+                                    Black (900) con tabular-nums, el tratamiento
+                                    que Home reserva para el contador — y acá
+                                    también se usa una sola vez. */}
+                                {edad !== null && (
+                                    <div className="mt-5 pt-5 border-t border-slate-100 dark:border-zinc-800 text-left">
+                                        <div className={rotuloClass}>Edad</div>
+                                        <div className="mt-1.5 flex items-baseline gap-1.5">
+                                            <span className="text-3xl font-black tabular-nums tracking-[-0.03em] leading-none text-slate-900 dark:text-white">
+                                                {edad}
+                                            </span>
+                                            <span className="text-sm font-normal text-slate-500 dark:text-zinc-400">
+                                                {edad === 1 ? 'año' : 'años'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <button
-                            onClick={() => navigate('/update-password')}
-                            className="text-sm font-bold text-black dark:text-white underline underline-offset-2 hover:opacity-70 transition-opacity text-left mt-2"
-                        >
-                            Cambiar contraseña →
-                        </button>
+                    </aside>
+
+                    <div className="space-y-5 lg:space-y-6">
+
+                        {/* === TUS DATOS === */}
+                        <section className={`aparece retraso-2 ${tarjetaClass} p-5 sm:p-6`}>
+                            <h2 className={rotuloClass}>Tus datos</h2>
+
+                            {faltantes.length > 0 && (
+                                <p className="mt-2 text-sm font-normal text-amber-700 dark:text-amber-500">
+                                    {faltantes.length === 1
+                                        ? `Falta un dato para completar tu perfil: ${faltantes[0].label.toLowerCase()}.`
+                                        : `Faltan ${faltantes.length} datos para completar tu perfil.`}
+                                </p>
+                            )}
+
+                            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                                <div className="sm:col-span-2">
+                                    <Campo
+                                        id="perfil-nombre"
+                                        label="Nombre y apellido"
+                                        falta={!formData.name.trim()}
+                                        editado={editados.includes('name')}
+                                    >
+                                        <input
+                                            id="perfil-nombre"
+                                            type="text"
+                                            className="campo"
+                                            value={formData.name}
+                                            placeholder="Tu nombre y apellido"
+                                            autoComplete="name"
+                                            onChange={(e) => setCampo('name', e.target.value)}
+                                        />
+                                    </Campo>
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <Campo
+                                        id="perfil-telefono"
+                                        label="Teléfono"
+                                        falta={!formData.phone.trim()}
+                                        editado={editados.includes('phone')}
+                                    >
+                                        <input
+                                            id="perfil-telefono"
+                                            type="tel"
+                                            className="campo"
+                                            value={formData.phone}
+                                            placeholder="+54 9 11 1234 5678"
+                                            autoComplete="tel"
+                                            inputMode="tel"
+                                            onChange={(e) => setCampo('phone', e.target.value)}
+                                        />
+                                    </Campo>
+                                </div>
+
+                                <Campo
+                                    id="perfil-nacimiento"
+                                    label="Fecha de nacimiento"
+                                    falta={!formData.birthDate}
+                                    editado={editados.includes('birthDate')}
+                                    ayuda={errorFecha ?? undefined}
+                                >
+                                    <input
+                                        id="perfil-nacimiento"
+                                        type="date"
+                                        className="campo"
+                                        value={formData.birthDate}
+                                        max={hoyISO}
+                                        autoComplete="bday"
+                                        aria-invalid={!!errorFecha}
+                                        onChange={(e) => setCampo('birthDate', e.target.value)}
+                                    />
+                                </Campo>
+
+                                <Campo
+                                    id="perfil-sexo"
+                                    label="Sexo"
+                                    falta={!formData.gender}
+                                    editado={editados.includes('gender')}
+                                >
+                                    <select
+                                        id="perfil-sexo"
+                                        className="campo"
+                                        value={formData.gender}
+                                        onChange={(e) => setCampo('gender', e.target.value)}
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Masculino">Masculino</option>
+                                        <option value="Femenino">Femenino</option>
+                                        <option value="No especificar">No especificar</option>
+                                    </select>
+                                </Campo>
+                            </div>
+
+                            {/* === GUARDAR ===
+                                El botón queda apagado mientras no haya nada
+                                que guardar: antes se podía apretar con el
+                                formulario intacto y escribía igual. El conteo
+                                al lado dice qué se está por mandar. */}
+                            <div className="mt-6 pt-5 border-t border-slate-100 dark:border-zinc-800">
+                                {aviso && (
+                                    <div
+                                        role="status"
+                                        className={`mb-4 p-3.5 rounded-xl flex items-center gap-2.5 text-sm font-semibold ${aviso.tipo === 'ok'
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
+                                            : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400'
+                                            }`}
+                                    >
+                                        {aviso.tipo === 'ok'
+                                            ? <Check className="w-4 h-4 shrink-0" />
+                                            : <AlertCircle className="w-4 h-4 shrink-0" />}
+                                        {aviso.texto}
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col sm:flex-row-reverse sm:items-center sm:justify-between gap-3">
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={isSaving || !hayCambios || !!errorFecha}
+                                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-base font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20"
+                                    >
+                                        {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
+                                        {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                                    </button>
+
+                                    <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 text-center sm:text-left">
+                                        {hayCambios
+                                            ? `${editados.length} ${editados.length === 1 ? 'cambio' : 'cambios'} sin guardar`
+                                            : 'Todo guardado'}
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* === TU CUENTA ===
+                            Lo que no se edita acá. Va en su propia tarjeta
+                            en vez de mezclado entre los campos: un campo
+                            deshabilitado dentro del formulario se lee como
+                            algo que falla, no como algo que es así. */}
+                        <section className={`aparece retraso-3 ${tarjetaClass} p-5 sm:p-6`}>
+                            <h2 className={rotuloClass}>Tu cuenta</h2>
+
+                            <div className="mt-5">
+                                <div className={etiquetaClass}>Email</div>
+                                <div className="mt-1.5 flex items-center gap-2.5 p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-800">
+                                    <Lock className="w-4 h-4 shrink-0 text-slate-400 dark:text-zinc-500" />
+                                    <span className="text-[15px] font-medium text-slate-600 dark:text-zinc-300 break-all">
+                                        {user?.email}
+                                    </span>
+                                </div>
+                                <p className="mt-1.5 text-xs font-normal text-slate-500 dark:text-zinc-400">
+                                    Tu email identifica tu cuenta y no se puede cambiar.
+                                </p>
+                            </div>
+
+                            <div className="mt-5 pt-5 border-t border-slate-100 dark:border-zinc-800">
+                                <button
+                                    onClick={() => navigate('/update-password')}
+                                    className="group w-full flex items-center justify-between gap-3 text-left rounded-xl -m-1 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+                                >
+                                    <span className={etiquetaClass}>Cambiar contraseña</span>
+                                    <ChevronRight className="w-5 h-5 shrink-0 text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" />
+                                </button>
+                            </div>
+                        </section>
                     </div>
                 </div>
-
-                {/* Feedback */}
-                {saveStatus === 'success' && (
-                    <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-emerald-500 rounded-r-lg flex items-center gap-3 animate-fadeIn">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                        <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                            Perfil actualizado correctamente.
-                        </span>
-                    </div>
-                )}
-                {saveStatus === 'error' && (
-                    <div className="p-4 bg-red-50 dark:bg-red-950/30 border-l-4 border-red-500 rounded-r-lg flex items-center gap-3 animate-fadeIn">
-                        <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-                        <span className="text-sm font-bold text-red-700 dark:text-red-400">
-                            {errorMessage}
-                        </span>
-                    </div>
-                )}
-
-                {/* Save button */}
-                <button
-                    className={buttonClass}
-                    disabled={isSaving}
-                    onClick={handleSave}
-                >
-                    {isSaving ? (
-                        <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Guardando...
-                        </>
-                    ) : (
-                        <>
-                            <Save className="w-5 h-5" />
-                            Guardar Cambios
-                        </>
-                    )}
-                </button>
             </div>
         </div>
     );

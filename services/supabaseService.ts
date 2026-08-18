@@ -399,38 +399,111 @@ export async function getDianinoSessionForCheckin(ticketId: string): Promise<Dia
   };
 }
 
+// PostgREST corta las respuestas en 1000 filas. Está verificado en este
+// proyecto: pedir una tabla de 2502 filas devuelve exactamente 1000 con
+// HTTP 206 y `content-range: 0-999/2502`. supabase-js NO reporta eso como
+// error — devuelve las 1000 filas y sigue de largo, así que el truncado es
+// invisible desde el código.
+//
+// Los tickets del Día del Niño ya van por 625 (219 adultos + 406 niños).
+// Al pasar las 1000 filas, sin paginar, todos los contadores de la planilla
+// empezarían a quedar cortos en silencio: sin error, sin excepción, sólo
+// números más bajos que la realidad.
+//
+// El orden explícito no es cosmético: sin un ORDER BY determinístico, dos
+// páginas consecutivas pueden repetir o saltear filas.
+const DIANINO_PAGE_SIZE = 1000;
+
+async function fetchAllDianinoTickets() {
+  const todos: {
+    session_id: string;
+    first_name: string;
+    last_name: string;
+    dni: string;
+    is_adult: boolean;
+    status: string;
+  }[] = [];
+
+  for (let desde = 0; ; desde += DIANINO_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('dianino_tickets')
+      .select('session_id, first_name, last_name, dni, is_adult, status')
+      .order('id', { ascending: true })
+      .range(desde, desde + DIANINO_PAGE_SIZE - 1);
+
+    if (error) {
+      console.error('[getDianinoSessions] Error (tickets):', error);
+      return null;
+    }
+
+    todos.push(...(data || []));
+    if (!data || data.length < DIANINO_PAGE_SIZE) return todos;
+  }
+}
+
+async function fetchAllDianinoSessions() {
+  const todas: {
+    id: string;
+    email: string;
+    declaracion_jurada_aceptada: boolean;
+    created_at: string;
+  }[] = [];
+
+  for (let desde = 0; ; desde += DIANINO_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('dianino_sessions')
+      .select('id, email, declaracion_jurada_aceptada, created_at')
+      // `id` desempata: dos inscripciones pueden compartir created_at.
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: true })
+      .range(desde, desde + DIANINO_PAGE_SIZE - 1);
+
+    if (error) {
+      console.error('[getDianinoSessions] Error (sessions):', error);
+      return null;
+    }
+
+    todas.push(...(data || []));
+    if (!data || data.length < DIANINO_PAGE_SIZE) return todas;
+  }
+}
+
 // ── Planilla admin: trae todas las sesiones con
 // el adulto ya resuelto y el conteo de niños.
 // NO pasa por RPC — el staff autenticado ya tiene
 // acceso directo vía la policy dianino_staff_all_*.
 export async function getDianinoSessions(): Promise<import('../types').DiaNinoSessionRow[]> {
-  const { data: sessions, error: sessionsError } = await supabase
-    .from('dianino_sessions')
-    .select('id, email, declaracion_jurada_aceptada, created_at')
-    .order('created_at', { ascending: false });
+  const [sessions, tickets] = await Promise.all([
+    fetchAllDianinoSessions(),
+    fetchAllDianinoTickets()
+  ]);
 
-  if (sessionsError) {
-    console.error('[getDianinoSessions] Error (sessions):', sessionsError);
-    return [];
+  if (sessions === null || tickets === null) return [];
+
+  // Agrupar los tickets por sesión de una sola pasada. El .filter() por
+  // sesión que había antes recorría los 625 tickets una vez por cada una
+  // de las 219 sesiones.
+  const porSesion = new Map<string, typeof tickets>();
+  for (const t of tickets) {
+    const lista = porSesion.get(t.session_id);
+    if (lista) lista.push(t);
+    else porSesion.set(t.session_id, [t]);
   }
 
-  const { data: tickets, error: ticketsError } = await supabase
-    .from('dianino_tickets')
-    .select('session_id, first_name, last_name, dni, is_adult, status');
-
-  if (ticketsError) {
-    console.error('[getDianinoSessions] Error (tickets):', ticketsError);
-    return [];
-  }
-
-  return (sessions || []).map(s => {
-    const sessionTickets = (tickets || []).filter(t => t.session_id === s.id);
+  return sessions.map(s => {
+    const sessionTickets = porSesion.get(s.id) || [];
     const adultTicket = sessionTickets.find(t => t.is_adult);
     const childTickets = sessionTickets.filter(t => !t.is_adult);
-    const childrenCount = childTickets.length;
-    // El adulto no necesita acreditarse — "todos
-    // escaneados" se mide solo contra los niños.
-    const allCheckedIn = childTickets.length > 0 && childTickets.every(t => t.status === 'CHECKED_IN');
+    const adultCheckedIn = adultTicket?.status === 'CHECKED_IN';
+
+    // "Completo" exige al adulto responsable además de todos los niños.
+    // Antes se medía sólo contra los niños, así que una familia podía
+    // figurar como completa con el adulto sin escanear — el escaneo que
+    // justamente importa para el retiro. Eso dejaba la fila contradiciendo
+    // a la tarjeta de "Adultos", que sí lo contaba.
+    // .every() sobre un array vacío da true: una sesión sin niños queda
+    // completa cuando se acredita su adulto.
+    const allCheckedIn = adultCheckedIn && childTickets.every(t => t.status === 'CHECKED_IN');
 
     return {
       sessionId: s.id,
@@ -438,10 +511,10 @@ export async function getDianinoSessions(): Promise<import('../types').DiaNinoSe
       adultLastName: adultTicket?.last_name || '',
       adultDni: adultTicket?.dni || '',
       email: s.email,
-      childrenCount,
+      childrenCount: childTickets.length,
       declaracionJuradaAceptada: s.declaracion_jurada_aceptada,
       allCheckedIn,
-      adultCheckedIn: adultTicket?.status === 'CHECKED_IN',
+      adultCheckedIn,
       childrenCheckedInCount: childTickets.filter(t => t.status === 'CHECKED_IN').length,
       createdAt: s.created_at
     };
