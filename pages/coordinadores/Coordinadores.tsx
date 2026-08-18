@@ -8,7 +8,8 @@ import {
     LogOut,
     AlertTriangle,
     ChevronRight,
-    ArrowRight
+    ArrowRight,
+    Menu
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, UserRole, Group, GroupCategory, GroupTag, GroupRegistration, DropoutRequest, coordinatorVariantToCategory } from '../../types';
@@ -136,13 +137,13 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     // No variant assigned alert
     if (categoryFilters.length === 0 && !hasRole(currentUser, [UserRole.SUPER_ADMIN])) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#fdfdfd] p-4">
-                <div className="bg-white border-2 border-black p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] max-w-md text-center">
-                    <div className="w-16 h-16 bg-amber-100 border-2 border-black rounded-full flex items-center justify-center mx-auto mb-4">
-                        <AlertTriangle className="w-8 h-8 text-amber-600" />
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950 p-4">
+                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-8 shadow-sm max-w-md text-center">
+                    <div className="w-16 h-16 bg-amber-50 dark:bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
                     </div>
-                    <h2 className="text-xl font-black uppercase mb-2">Sin Categoría Asignada</h2>
-                    <p className="text-gray-600 font-medium">
+                    <h2 className="text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white mb-2">Sin Categoría Asignada</h2>
+                    <p className="text-sm text-slate-500 dark:text-zinc-400">
                         No tienes una categoría de coordinación asignada. Contacta al Administrador.
                     </p>
                 </div>
@@ -169,7 +170,7 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
         if (loading) {
             return (
                 <div className="flex items-center justify-center h-64">
-                    <div className="w-12 h-12 border-4 border-black border-t-emerald-500 rounded-full animate-spin" />
+                    <div className="w-12 h-12 border-4 border-slate-200 dark:border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
                 </div>
             );
         }
@@ -222,44 +223,44 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     };
 
     return (
-        <div className="flex h-[calc(100vh-64px)] bg-[#fdfdfd] overflow-hidden font-sans">
+        <div className="flex h-[calc(100vh-64px)] bg-slate-50 dark:bg-zinc-950 overflow-hidden font-sans">
             {/* Mobile Backdrop */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm md:hidden"
+                    className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
             <aside className={`
-                fixed inset-y-0 left-0 z-50 w-72 bg-white border-r-2 border-black
+                fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800
                 transform transition-transform duration-300 ease-in-out
                 md:relative md:translate-x-0
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-                flex flex-col shadow-[4px_0px_0px_0px_rgba(0,0,0,0.1)] md:shadow-none
+                flex flex-col shadow-xl md:shadow-none
             `}>
                 {/* Logo Area */}
-                <div className="p-6 border-b-2 border-black bg-white">
+                <div className="p-6 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-emerald-500 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
-                                <Users className="w-6 h-6 text-white text-stroke-black" strokeWidth={2.5} />
+                            <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center">
+                                <Users className="w-5 h-5 text-white" strokeWidth={2.5} />
                             </div>
                             <div>
-                                <span className="block font-black text-black text-xl uppercase tracking-tighter leading-none">Coordinadores</span>
-                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Panel de Control</span>
+                                <span className="block font-bold text-slate-900 dark:text-white text-xl uppercase tracking-tight leading-none">Coordinadores</span>
+                                <span className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">Panel de Control</span>
                             </div>
                         </div>
                         <button
                             onClick={() => setSidebarOpen(false)}
-                            className="md:hidden p-1 hover:bg-red-100 rounded border-2 border-transparent hover:border-black transition-all"
+                            className="md:hidden p-2 rounded-xl text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
                         >
-                            <X className="w-6 h-6" />
+                            <X className="w-5 h-5" />
                         </button>
                     </div>
                     {categoryName && (
-                        <div className="mt-4 px-3 py-1.5 bg-black text-white text-xs font-black uppercase tracking-wider text-center border-2 border-black shadow-[3px_3px_0px_0px_#10b981]">
+                        <div className="mt-4 px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold uppercase tracking-wider text-center rounded-lg shadow-sm">
                             {categoryName}
                         </div>
                     )}
@@ -271,32 +272,32 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                         <button
                             key={item.id}
                             onClick={() => handleTabChange(item.id)}
-                            className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all ${activeTab === item.id
-                                ? 'bg-emerald-500 text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                                : 'text-gray-500 hover:text-black hover:bg-gray-50 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0px_0px_#e5e7eb]'
+                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wide transition-all ${activeTab === item.id
+                                ? 'bg-emerald-500 text-white shadow-sm'
+                                : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-800'
                                 }`}
                         >
-                            <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white' : 'text-gray-400 group-hover:text-black'}`} strokeWidth={2.5} />
+                            <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white' : 'text-slate-400 dark:text-zinc-500'}`} strokeWidth={2.5} />
                             {item.label}
                             {activeTab === item.id && <ChevronRight className="w-5 h-5 ml-auto" strokeWidth={3} />}
                         </button>
                     ))}
 
                     {/* Section divider */}
-                    <div className="my-6 border-t-2 border-black relative">
-                        <span className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black text-black uppercase tracking-widest border-2 border-black">Gestión</span>
+                    <div className="my-6 border-t border-slate-200 dark:border-zinc-800 relative">
+                        <span className="absolute -top-2.5 left-4 bg-white dark:bg-zinc-900 px-2 text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">Gestión</span>
                     </div>
 
                     {gestionItems.map(item => (
                         <button
                             key={item.id}
                             onClick={() => handleTabChange(item.id)}
-                            className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all ${activeTab === item.id
-                                ? 'bg-emerald-500 text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                                : 'text-gray-500 hover:text-black hover:bg-gray-50 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0px_0px_#e5e7eb]'
+                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wide transition-all ${activeTab === item.id
+                                ? 'bg-emerald-500 text-white shadow-sm'
+                                : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-800'
                                 }`}
                         >
-                            <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white' : 'text-gray-400 group-hover:text-black'}`} strokeWidth={2.5} />
+                            <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white' : 'text-slate-400 dark:text-zinc-500'}`} strokeWidth={2.5} />
                             {item.label}
                             {activeTab === item.id && <ChevronRight className="w-5 h-5 ml-auto" strokeWidth={3} />}
                         </button>
@@ -306,44 +307,32 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-[#fdfdfd]">
+            <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50 dark:bg-zinc-950">
                 {/* Top bar (mobile) */}
-                <div className="md:hidden flex items-center justify-between p-4 bg-white border-b-2 border-black sticky top-0 z-30 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-emerald-500 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
-                            <Users className="w-6 h-6 text-white text-stroke-black" strokeWidth={2.5} />
+                <div className="md:hidden flex items-center justify-between gap-3 p-4 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-30 shrink-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center shrink-0">
+                            <Users className="w-5 h-5 text-white" strokeWidth={2.5} />
                         </div>
-                        <div className="flex flex-col">
-                            <span className="block font-black text-black text-xl uppercase tracking-tighter leading-none">Coordinadores</span>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Panel de Control</span>
+                        <div className="flex flex-col min-w-0">
+                            <span className="block font-bold text-slate-900 dark:text-white text-lg uppercase tracking-tight leading-none truncate">Coordinadores</span>
+                            <span className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">Panel de Control</span>
                         </div>
                     </div>
+                    <button
+                        onClick={() => setSidebarOpen(true)}
+                        className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center shrink-0"
+                        aria-label="Abrir menú"
+                    >
+                        <Menu className="w-5 h-5 text-slate-700 dark:text-zinc-300" />
+                    </button>
                 </div>
 
                 {/* Content - Full width/height, let children handle scrolling */}
-                <div className="flex-1 overflow-hidden relative pb-20 md:pb-0">
+                <div className="flex-1 overflow-hidden relative">
                     {renderContent()}
                 </div>
             </main>
-
-            {/* Mobile Bottom Navigation Bar - Premium App Feel */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-2 pb-safe flex justify-around items-center z-50 shadow-[0px_-4px_10px_rgba(0,0,0,0.05)]">
-                {menuItems.concat(gestionItems).map(item => (
-                    <button
-                        key={item.id}
-                        onClick={() => handleTabChange(item.id)}
-                        className={`flex flex-col items-center justify-center py-2 px-1 min-h-[56px] rounded-xl transition-all flex-1 ${activeTab === item.id
-                            ? 'text-emerald-700 bg-emerald-50 shadow-sm'
-                            : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'
-                            }`}
-                    >
-                        <item.icon className={`w-5 h-5 mb-1 ${activeTab === item.id ? 'text-emerald-600' : 'text-gray-400'}`} strokeWidth={activeTab === item.id ? 2.5 : 2} />
-                        <span className={`text-[9px] font-bold uppercase tracking-wide ${activeTab === item.id ? 'text-emerald-700' : 'text-gray-400'}`}>
-                            {item.label === 'Dashboard' ? 'Inicio' : item.label}
-                        </span>
-                    </button>
-                ))}
-            </div>
         </div>
     );
 };

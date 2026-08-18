@@ -168,15 +168,15 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
         );
 
         return (
-            <div className="flex flex-col h-full bg-[#fdfdfd] overflow-y-auto font-sans">
+            <div className="flex flex-col h-full bg-slate-50 dark:bg-zinc-950 overflow-y-auto font-sans">
                 {/* Header & Breadcrumbs */}
-                <header className="px-6 py-6 md:px-10 border-b-2 border-black bg-white">
+                <header className="px-6 py-6 md:px-10 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
                     <button
                         onClick={() => setSelectedGroup(null)}
-                        className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-black transition-colors group"
+                        className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-white transition-colors group"
                     >
-                        <span className="w-8 h-8 rounded-full border-2 border-gray-200 group-hover:border-black flex items-center justify-center transition-colors">
-                            <ArrowRight className="w-4 h-4 rotate-180" strokeWidth={3} />
+                        <span className="w-8 h-8 rounded-full border border-slate-200 dark:border-zinc-700 group-hover:border-slate-900 dark:group-hover:border-white flex items-center justify-center transition-colors">
+                            <ArrowRight className="w-4 h-4 rotate-180" strokeWidth={2.5} />
                         </span>
                         Volver a Mis Grupos
                     </button>
@@ -184,22 +184,22 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div>
                             <div className="flex items-center gap-2 mb-2">
-                                <span className="bg-black text-white text-[10px] font-black px-2 py-0.5 uppercase tracking-widest">
+                                <span className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest">
                                     {getCategoryName(selectedGroup)}
                                 </span>
-                                <span className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-widest border-2 border-black ${isGroupFinished(selectedGroup) ? 'bg-gray-200 text-gray-600' : 'bg-emerald-400 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest ${isGroupFinished(selectedGroup) ? 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400' : 'bg-emerald-400 text-black'
                                     }`}>
                                     {isGroupFinished(selectedGroup) ? 'Finalizado' : 'Activo'}
                                 </span>
                             </div>
-                            <h1 className="text-3xl md:text-5xl font-black text-black uppercase tracking-tighter leading-none">{selectedGroup.name}</h1>
-                            <div className="flex items-center gap-4 mt-3 text-sm font-bold text-gray-500">
-                                <span className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 border-2 border-transparent">
-                                    <Clock className="w-4 h-4 text-black" strokeWidth={2.5} />
+                            <h1 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{selectedGroup.name}</h1>
+                            <div className="flex items-center gap-4 mt-3 text-sm font-semibold text-slate-500 dark:text-zinc-400">
+                                <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800 px-2.5 py-1 rounded-lg">
+                                    <Clock className="w-4 h-4 text-slate-700 dark:text-zinc-300" strokeWidth={2.5} />
                                     {selectedGroup.meetingDay} {selectedGroup.meetingTime}
                                 </span>
-                                <span className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 border-2 border-transparent">
-                                    <MapPin className="w-4 h-4 text-black" strokeWidth={2.5} />
+                                <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800 px-2.5 py-1 rounded-lg">
+                                    <MapPin className="w-4 h-4 text-slate-700 dark:text-zinc-300" strokeWidth={2.5} />
                                     {selectedGroup.location || 'Sin ubicación'}
                                 </span>
                             </div>
@@ -212,72 +212,72 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                     {/* KPI Cards */}
                     <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
                         {/* Card 1: Total Inscritos */}
-                        <div className="bg-white p-6 border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden group hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all">
+                        <div className="bg-white dark:bg-zinc-900 p-6 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 bg-emerald-400 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                                <div className="p-3 bg-emerald-400 rounded-2xl">
                                     <Users className="w-6 h-6 text-black" strokeWidth={2.5} />
                                 </div>
                                 <div className="text-right">
-                                    <h3 className="text-4xl font-black text-black">{approvedMembers.length}</h3>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Inscriptos</p>
+                                    <h3 className="text-4xl font-black text-slate-900 dark:text-white">{approvedMembers.length}</h3>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">Inscriptos</p>
                                 </div>
                             </div>
-                            <div className="w-full bg-gray-100 h-2 border border-black mt-2">
+                            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-2">
                                 <div
-                                    className="bg-emerald-400 h-full border-r border-black"
+                                    className="bg-emerald-400 h-full rounded-full"
                                     style={{ width: `${Math.min(((approvedMembers.length) / (selectedGroup.maxCapacity || selectedGroup.maxMembers || 20)) * 100, 100)}%` }}
                                 ></div>
                             </div>
                         </div>
 
                         {/* Card 2: Capacidad */}
-                        <div className="bg-white p-6 border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden group hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all">
+                        <div className="bg-white dark:bg-zinc-900 p-6 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 bg-lime-300 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                                <div className="p-3 bg-lime-300 rounded-2xl">
                                     <CheckCircle className="w-6 h-6 text-black" strokeWidth={2.5} />
                                 </div>
                                 <div className="text-right">
-                                    <h3 className="text-4xl font-black text-black">{selectedGroup.maxCapacity || selectedGroup.maxMembers || '∞'}</h3>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Capacidad Máx</p>
+                                    <h3 className="text-4xl font-black text-slate-900 dark:text-white">{selectedGroup.maxCapacity || selectedGroup.maxMembers || '∞'}</h3>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">Capacidad Máx</p>
                                 </div>
                             </div>
                             <div className="flex justify-end gap-1 mt-2">
                                 {[...Array(5)].map((_, i) => (
-                                    <div key={i} className={`w-2 h-2 border border-black ${i < 3 ? 'bg-lime-300' : 'bg-white'}`}></div>
+                                    <div key={i} className={`w-2 h-2 rounded-full ${i < 3 ? 'bg-lime-300' : 'bg-slate-100 dark:bg-zinc-800'}`}></div>
                                 ))}
                             </div>
                         </div>
 
                         {/* Card 3: Bajas */}
-                        <div className="bg-white p-6 border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden group hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all">
+                        <div className="bg-white dark:bg-zinc-900 p-6 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 bg-rose-400 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                                <div className="p-3 bg-rose-400 rounded-2xl">
                                     <UserMinus className="w-6 h-6 text-black" strokeWidth={2.5} />
                                 </div>
                                 <div className="text-right">
-                                    <h3 className="text-4xl font-black text-black">
+                                    <h3 className="text-4xl font-black text-slate-900 dark:text-white">
                                         {(selectedGroup.registrations || []).filter(r => r.status === 'REJECTED').length}
                                     </h3>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Bajas Totales</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">Bajas Totales</p>
                                 </div>
                             </div>
                         </div>
                     </section>
 
                     {/* Members Section */}
-                    <div className="border-2 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                    <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm overflow-hidden">
                         {/* Toolbar */}
-                        <div className="p-5 border-b-2 border-black flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white">
-                            <h2 className="text-xl font-black text-black uppercase tracking-tighter flex items-center gap-3">
+                        <div className="p-5 border-b border-slate-200 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900">
+                            <h2 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
                                 <Users className="w-6 h-6" strokeWidth={2.5} />
                                 Miembros del Grupo
                             </h2>
                             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                                 <div className="relative w-full sm:w-64">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-black w-4 h-4" strokeWidth={2.5} />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 w-4 h-4" strokeWidth={2.5} />
                                     <input
-                                        className="w-full pl-10 pr-4 py-2 bg-white border-2 border-black text-sm font-bold text-black placeholder-gray-400 focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
-                                        placeholder="BUSCAR MIEMBRO..."
+                                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-all"
+                                        placeholder="Buscar miembro..."
                                         type="text"
                                         value={memberSearch}
                                         onChange={e => setMemberSearch(e.target.value)}
@@ -290,47 +290,47 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                         <div className="w-full">
                             <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left">
-                                    <thead className="bg-black text-white">
+                                    <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-400 dark:text-zinc-500">
                                         <tr>
-                                            <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Miembro</th>
-                                            <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Contacto</th>
-                                            <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Rol</th>
-                                            <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Estado</th>
-                                            <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-right">Acciones</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Miembro</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Contacto</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Rol</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Estado</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-right">Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y-2 divide-gray-100">
+                                    <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
                                         {filteredMembers.map(m => (
-                                            <tr key={m.id} className="hover:bg-emerald-50 transition-colors group">
+                                            <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors group">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 border-2 border-black flex items-center justify-center font-black text-sm bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
                                                             {(m.firstName || '?').substring(0, 1)}{(m.lastName || '?').substring(0, 1)}
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold text-black uppercase">{m.firstName} {m.lastName}</div>
-                                                            <div className="text-xs text-gray-500 font-bold">Unido: {new Date(m.timestamp).toLocaleDateString()}</div>
+                                                            <div className="font-bold text-slate-900 dark:text-white">{m.firstName} {m.lastName}</div>
+                                                            <div className="text-xs text-slate-400 dark:text-zinc-500 font-medium">Unido: {new Date(m.timestamp).toLocaleDateString()}</div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm font-medium text-gray-600">
+                                                <td className="px-6 py-4 text-sm font-medium text-slate-500 dark:text-zinc-400">
                                                     <div className="flex flex-col gap-1">
                                                         {m.email && <span className="flex items-center gap-2"><Mail className="w-3 h-3" /> {m.email}</span>}
                                                         {m.phone && <span className="flex items-center gap-2"><Phone className="w-3 h-3" /> {m.phone}</span>}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="text-xs font-bold uppercase tracking-wider bg-gray-100 px-2 py-1 border border-gray-200 text-gray-600">
+                                                    <span className="text-xs font-semibold uppercase tracking-wide bg-slate-100 dark:bg-zinc-800 px-2.5 py-1 rounded-full text-slate-500 dark:text-zinc-400">
                                                         Participante
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {m.status === 'APPROVED' ? (
-                                                        <span className="inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-emerald-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
+                                                        <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full">
                                                             Activo
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-300 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
+                                                        <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-full">
                                                             Pendiente
                                                         </span>
                                                     )}
@@ -339,7 +339,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                                     <button
                                                         onClick={() => handleDeleteMember(m)}
                                                         disabled={deletingMember === m.id}
-                                                        className="p-2 min-h-[44px] border-2 border-transparent hover:border-black hover:bg-red-50 hover:shadow-[2px_2px_0px_0px_#ef4444] transition-all text-gray-400 hover:text-red-500"
+                                                        className="p-2 min-h-[44px] rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-slate-400 dark:text-zinc-500 hover:text-red-500"
                                                     >
                                                         <Trash2 className="w-5 h-5" strokeWidth={2.5} />
                                                     </button>
@@ -348,7 +348,7 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                         ))}
                                         {filteredMembers.length === 0 && (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold uppercase">
+                                                <td colSpan={5} className="px-6 py-12 text-center text-slate-400 dark:text-zinc-600 font-semibold">
                                                     No se encontraron resultados
                                                 </td>
                                             </tr>
@@ -358,36 +358,36 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                             </div>
 
                             {/* Mobile Cards Alternative */}
-                            <div className="md:hidden flex flex-col gap-4 p-4 bg-[#fdfdfd]">
+                            <div className="md:hidden flex flex-col gap-4 p-4 bg-slate-50 dark:bg-zinc-950">
                                 {filteredMembers.map(m => (
-                                    <div key={m.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col relative w-full">
+                                    <div key={m.id} className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-100 dark:border-zinc-800 p-4 flex flex-col relative w-full">
                                         <div className="flex items-start justify-between mb-3 w-full">
                                             <div className="flex items-center gap-3 w-full">
-                                                <div className="w-12 h-12 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-bold text-gray-700 text-lg shadow-sm">
+                                                <div className="w-12 h-12 bg-slate-100 dark:bg-zinc-800 rounded-full flex items-center justify-center font-bold text-slate-700 dark:text-zinc-300 text-lg">
                                                     {(m.firstName || '?').substring(0, 1)}{(m.lastName || '?').substring(0, 1)}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="text-lg font-bold text-gray-900 uppercase truncate">{m.firstName} {m.lastName}</div>
-                                                    <div className="text-xs text-gray-400">Unido: {new Date(m.timestamp).toLocaleDateString()}</div>
+                                                    <div className="text-lg font-bold text-slate-900 dark:text-white truncate">{m.firstName} {m.lastName}</div>
+                                                    <div className="text-xs text-slate-400 dark:text-zinc-500">Unido: {new Date(m.timestamp).toLocaleDateString()}</div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col gap-2 text-sm text-gray-500 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                            {m.email && <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-gray-400" /> <span className="truncate">{m.email}</span></span>}
-                                            {m.phone && <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400" /> <span className="truncate">{m.phone}</span></span>}
+                                        <div className="flex flex-col gap-2 text-sm text-slate-500 dark:text-zinc-400 mb-4 bg-slate-50 dark:bg-zinc-800 p-3 rounded-lg border border-slate-100 dark:border-zinc-700">
+                                            {m.email && <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-slate-400 dark:text-zinc-500" /> <span className="truncate">{m.email}</span></span>}
+                                            {m.phone && <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-slate-400 dark:text-zinc-500" /> <span className="truncate">{m.phone}</span></span>}
                                         </div>
 
                                         <div className="flex items-center justify-between mb-4 mt-auto w-full">
-                                            <span className="text-xs font-bold uppercase tracking-wider bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                            <span className="text-xs font-semibold uppercase tracking-wide bg-slate-100 dark:bg-zinc-800 px-2.5 py-1 rounded-full text-slate-500 dark:text-zinc-400">
                                                 Participante
                                             </span>
                                             {m.status === 'APPROVED' ? (
-                                                <span className="inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded-full">
+                                                <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full">
                                                     Activo
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 rounded-full">
+                                                <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-full">
                                                     Pendiente
                                                 </span>
                                             )}
@@ -396,14 +396,14 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                         <button
                                             onClick={() => handleDeleteMember(m)}
                                             disabled={deletingMember === m.id}
-                                            className="w-full py-2 px-4 min-h-[44px] bg-white text-red-600 font-bold rounded-lg border border-red-200 hover:bg-red-50 flex items-center justify-center gap-2 transition-colors mt-2"
+                                            className="w-full py-2 px-4 min-h-[44px] bg-white dark:bg-zinc-900 text-red-600 dark:text-red-400 font-semibold rounded-lg border border-red-200 dark:border-red-500/20 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center justify-center gap-2 transition-colors mt-2"
                                         >
                                             <Trash2 className="w-4 h-4" /> Eliminar
                                         </button>
                                     </div>
                                 ))}
                                 {filteredMembers.length === 0 && (
-                                    <div className="py-12 text-center text-gray-400 font-bold uppercase">
+                                    <div className="py-12 text-center text-slate-400 dark:text-zinc-600 font-semibold">
                                         No se encontraron resultados
                                     </div>
                                 )}
@@ -417,40 +417,40 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
 
     // --- Main Grid View ---
     return (
-        <div className="flex flex-col h-full bg-[#fdfdfd] relative overflow-y-auto font-sans">
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-zinc-950 relative overflow-y-auto font-sans">
             {/* Header Section */}
-            <div className="p-4 md:px-10 md:py-8 border-b-2 border-black bg-white">
+            <div className="p-4 md:px-10 md:py-8 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-black text-white text-[10px] font-black px-2 py-0.5 uppercase tracking-widest">
+                            <span className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest">
                                 {categoryName || 'General'}
                             </span>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l-2 border-gray-300 pl-2">Temporada 2026</span>
+                            <span className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-widest border-l border-slate-200 dark:border-zinc-700 pl-2">Temporada 2026</span>
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-black text-black uppercase tracking-tighter leading-none">Mis Grupos</h1>
-                        <p className="text-gray-500 mt-2 font-bold text-sm max-w-lg">Gestiona tus células, revisa métricas y organiza tu comunidad con eficiencia total.</p>
+                        <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">Mis Grupos</h1>
+                        <p className="text-slate-500 dark:text-zinc-400 mt-2 font-medium text-sm max-w-lg">Gestiona tus células, revisa métricas y organiza tu comunidad con eficiencia total.</p>
                     </div>
 
                 </div>
 
                 {/* Filters Row */}
                 <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                    <div className="flex p-1 bg-gray-100 rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <div className="flex p-1 bg-slate-100 dark:bg-zinc-800 rounded-xl">
                         <button
                             onClick={() => setActiveFilter('active')}
-                            className={`px-6 py-2 text-sm font-black uppercase tracking-wider transition-all rounded-md ${activeFilter === 'active'
-                                ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]'
-                                : 'text-gray-500 hover:text-black'
+                            className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${activeFilter === 'active'
+                                ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-white shadow-sm'
+                                : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
                                 }`}
                         >
                             Activos
                         </button>
                         <button
                             onClick={() => setActiveFilter('finished')}
-                            className={`px-6 py-2 text-sm font-black uppercase tracking-wider transition-all rounded-md ${activeFilter === 'finished'
-                                ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]'
-                                : 'text-gray-500 hover:text-black'
+                            className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${activeFilter === 'finished'
+                                ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-white shadow-sm'
+                                : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
                                 }`}
                         >
                             Finalizados
@@ -458,27 +458,27 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                     </div>
 
                     <div className="relative w-full md:w-72">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black" strokeWidth={2.5} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" strokeWidth={2.5} />
                         <input
                             type="text"
-                            placeholder="BUSCAR GRUPO..."
+                            placeholder="Buscar grupo..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-black text-sm font-bold placeholder-gray-400 focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-all"
                         />
                     </div>
                 </div>
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 p-4 md:px-10 md:py-10 bg-[#fdfdfd]">
+            <div className="flex-1 p-4 md:px-10 md:py-10 bg-slate-50 dark:bg-zinc-950">
                 {filteredGroups.length === 0 ? (
-                    <div className="text-center py-20 border-2 border-dashed border-gray-300 rounded-xl">
-                        <div className="w-20 h-20 bg-gray-100 border-2 border-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                            <Search className="w-8 h-8 text-gray-400" />
+                    <div className="text-center py-20 border border-dashed border-slate-300 dark:border-zinc-700 rounded-2xl">
+                        <div className="w-20 h-20 bg-slate-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Search className="w-8 h-8 text-slate-400 dark:text-zinc-600" />
                         </div>
-                        <h3 className="text-2xl font-black text-black uppercase tracking-tight mb-2">No se encontraron grupos</h3>
-                        <p className="text-gray-500 font-bold">Ajusta tus filtros o búsqueda para encontrar resultados.</p>
+                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-2">No se encontraron grupos</h3>
+                        <p className="text-slate-500 dark:text-zinc-400 font-medium">Ajusta tus filtros o búsqueda para encontrar resultados.</p>
                     </div>
                 ) : (
                     <div className={`grid gap-8 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
@@ -491,22 +491,22 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                             if (viewMode === 'table') {
                                 // Simple Table Row Card
                                 return (
-                                    <div key={group.id} onClick={() => setSelectedGroup(group)} className="bg-white p-4 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col md:flex-row items-start md:items-center justify-between cursor-pointer hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all group gap-4 md:gap-0">
+                                    <div key={group.id} onClick={() => setSelectedGroup(group)} className="bg-white dark:bg-zinc-900 p-4 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between cursor-pointer hover:shadow-lg transition-all group gap-4 md:gap-0">
                                         <div className="flex items-center gap-4 w-full md:w-auto">
-                                            <div className="w-16 h-16 bg-gray-100 border-2 border-black flex-shrink-0 flex items-center justify-center overflow-hidden">
-                                                {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" /> : <Users className="w-8 h-8 text-black" />}
+                                            <div className="w-16 h-16 bg-slate-100 dark:bg-zinc-800 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                                {group.imageUrl ? <img src={group.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" /> : <Users className="w-8 h-8 text-slate-400 dark:text-zinc-500" />}
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <h3 className="text-xl font-black text-black uppercase tracking-tight truncate">{group.name}</h3>
-                                                <p className="text-sm font-bold text-gray-500 truncate">{group.leaderName}</p>
+                                                <h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight truncate">{group.name}</h3>
+                                                <p className="text-sm font-medium text-slate-500 dark:text-zinc-400 truncate">{group.leaderName}</p>
                                             </div>
                                         </div>
-                                        <div className="flex flex-row md:gap-8 gap-4 text-sm font-bold text-black uppercase tracking-wide w-full md:w-auto justify-between md:justify-start">
+                                        <div className="flex flex-row md:gap-8 gap-4 text-sm font-semibold text-slate-600 dark:text-zinc-300 uppercase tracking-wide w-full md:w-auto justify-between md:justify-start">
                                             <span className="flex items-center gap-2"><CalendarIcon className="w-4 h-4" /> {group.meetingDay}</span>
                                             <span className="flex items-center gap-2"><Users className="w-4 h-4" /> {approvedCount}/{group.maxCapacity || group.maxMembers || '∞'}</span>
                                         </div>
-                                        <div className="hidden md:block p-2 border-2 border-black bg-black text-white group-hover:bg-emerald-500 group-hover:text-black transition-colors">
-                                            <ArrowRight className="w-5 h-5" strokeWidth={3} />
+                                        <div className="hidden md:block p-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 group-hover:bg-emerald-500 group-hover:text-black transition-colors">
+                                            <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
                                         </div>
                                     </div>
                                 );
@@ -514,9 +514,9 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
 
                             // Card View
                             return (
-                                <article key={group.id} className="bg-white border-2 border-black flex flex-col shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-2 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 group">
+                                <article key={group.id} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl flex flex-col shadow-sm hover:shadow-lg transition-all duration-300 group overflow-hidden">
                                     {/* Image Area */}
-                                    <div className="relative h-56 border-b-2 border-black overflow-hidden bg-gray-200">
+                                    <div className="relative h-56 border-b border-slate-200 dark:border-zinc-800 overflow-hidden bg-slate-100 dark:bg-zinc-800">
                                         {group.imageUrl ? (
                                             <img
                                                 src={group.imageUrl}
@@ -524,23 +524,23 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                                 className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                                             />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-gray-100 pattern-grid-lg">
-                                                <Users className="w-16 h-16 text-gray-300" />
+                                            <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-zinc-800">
+                                                <Users className="w-16 h-16 text-slate-300 dark:text-zinc-700" />
                                             </div>
                                         )}
 
                                         <div className="absolute top-4 left-4">
                                             {isGroupFinished(group) ? (
-                                                <span className="bg-gray-900 text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest border-2 border-white shadow-sm">
-                                                    FINALIZADO
+                                                <span className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
+                                                    Finalizado
                                                 </span>
                                             ) : isFull ? (
-                                                <span className="bg-red-500 text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                                                    LLENO
+                                                <span className="bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
+                                                    Lleno
                                                 </span>
                                             ) : (
-                                                <span className="bg-emerald-400 text-black text-[10px] font-black px-3 py-1 uppercase tracking-widest border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                                                    ABIERTO
+                                                <span className="bg-emerald-400 text-black text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
+                                                    Abierto
                                                 </span>
                                             )}
                                         </div>
@@ -549,46 +549,46 @@ const CoordinatorGroups: React.FC<CoordinatorGroupsProps> = ({
                                     {/* Content Area */}
                                     <div className="p-6 flex-1 flex flex-col">
                                         <div className="flex flex-wrap gap-2 mb-4">
-                                            <span className="px-2 py-0.5 bg-black text-white text-[10px] font-black uppercase tracking-widest">
+                                            <span className="px-2.5 py-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-bold rounded-full uppercase tracking-widest">
                                                 {category}
                                             </span>
                                             {tagsList.slice(0, 2).map((tag, i) => (
-                                                <span key={i} className="px-2 py-0.5 border-2 border-black bg-white text-black text-[10px] font-black uppercase tracking-widest">
+                                                <span key={i} className="px-2.5 py-1 border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-[10px] font-bold rounded-full uppercase tracking-widest">
                                                     {tag}
                                                 </span>
                                             ))}
                                         </div>
 
-                                        <h2 className="text-2xl font-black text-black mb-4 leading-none uppercase tracking-tighter">{group.name}</h2>
+                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4 leading-none uppercase tracking-tight">{group.name}</h2>
 
                                         <div className="space-y-2 mb-6">
-                                            <div className="flex items-center gap-3 text-xs font-bold text-gray-600">
-                                                <Clock className="w-4 h-4 text-black" strokeWidth={2.5} />
+                                            <div className="flex items-center gap-3 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+                                                <Clock className="w-4 h-4 text-slate-400 dark:text-zinc-500" strokeWidth={2.5} />
                                                 <span className="uppercase tracking-wide">{group.meetingDay} {group.meetingTime}</span>
                                             </div>
-                                            <div className="flex items-center gap-3 text-xs font-bold text-gray-600">
-                                                <MapPin className="w-4 h-4 text-black" strokeWidth={2.5} />
+                                            <div className="flex items-center gap-3 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+                                                <MapPin className="w-4 h-4 text-slate-400 dark:text-zinc-500" strokeWidth={2.5} />
                                                 <span className="uppercase tracking-wide truncate max-w-[200px]">{group.location || 'Sin ubicación'}</span>
                                             </div>
                                         </div>
 
                                         {/* Footer */}
-                                        <div className="mt-auto pt-6 border-t-2 border-black flex items-center justify-between gap-4">
+                                        <div className="mt-auto pt-6 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-white border-2 border-black flex items-center justify-center font-black text-sm text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center font-bold text-sm text-slate-700 dark:text-zinc-300">
                                                     {(group.hostName || group.leaderName || '?').substring(0, 2).toUpperCase()}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-[9px] uppercase text-gray-500 font-black tracking-widest">Anfitrión</span>
-                                                    <span className="text-xs font-bold text-black uppercase truncate max-w-[100px]">{group.leaderName}</span>
+                                                    <span className="text-[9px] uppercase text-slate-400 dark:text-zinc-500 font-bold tracking-widest">Anfitrión</span>
+                                                    <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300 truncate max-w-[100px]">{group.leaderName}</span>
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={() => setSelectedGroup(group)}
-                                                className="bg-emerald-400 text-black border-2 border-black px-5 py-2.5 text-xs font-black uppercase tracking-wider shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-1px] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] active:shadow-none transition-all flex items-center gap-2 group-hover:bg-emerald-300"
+                                                className="bg-emerald-400 text-black rounded-xl px-5 py-2.5 text-xs font-bold uppercase tracking-wide active:scale-[0.98] transition-all flex items-center gap-2 shadow-sm group-hover:bg-emerald-300"
                                             >
                                                 Gestionar
-                                                <ArrowRight className="w-3.5 h-3.5" strokeWidth={3} />
+                                                <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} />
                                             </button>
                                         </div>
                                     </div>

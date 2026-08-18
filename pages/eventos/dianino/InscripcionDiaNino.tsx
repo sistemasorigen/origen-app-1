@@ -193,6 +193,9 @@ const InscripcionDiaNino: React.FC = () => {
                     <p className="text-sm text-neutral-500">
                         Este link de inscripción ya no está activo. ¡Gracias a todos los que vinieron!
                     </p>
+                    <p className="text-sm font-bold text-neutral-800">
+                        Nos vemos el próximo año 👋
+                    </p>
                     <button
                         onClick={() => navigate('/')}
                         className="w-full py-3 bg-black text-white font-bold rounded-full text-sm mt-2"
