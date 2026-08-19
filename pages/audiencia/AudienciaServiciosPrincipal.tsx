@@ -710,11 +710,6 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
         }
     };
 
-    const SortIcon = ({ col }: { col: SortKey }) => {
-        if (sortKey !== col) return <Minus className="w-3 h-3 text-slate-300" />;
-        return sortAsc ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
-    };
-
     const fmtDate = (d: string) =>
         new Date(d + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -926,7 +921,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                     <div className="flex items-start justify-between mb-3">
                                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide
                                             ${rec.service_time === 'PM' ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'}`}>
-                                            {rec.service_hour ? `${rec.service_hour} ${rec.service_time || ''}` : rec.service_time || '—'}
+                                            {rec.service_hour || rec.service_time || '—'}
                                         </span>
                                         {/* Kebab-style inline action buttons - 44px minimum touch target */}
                                         <div className="flex items-center gap-1.5">
@@ -982,34 +977,65 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                 {!loading && records.length > 0 && (
                     <div className="hidden md:block bg-white dark:bg-black border border-slate-200 dark:border-white rounded-lg shadow-sm overflow-hidden">
                         <table className="table-fixed w-full text-sm">
+                            {/* Nombre y Observaciones ceden ancho (11%→10%, 20%→17%)
+                                para Horario/Online/Voluntarios/%Vol (6/6/8/5%→8/7/9/6%):
+                                son palabras cortas o medias sin espacio donde partir
+                                ("HORARIO", "ONLINE", "VOLUNTARIOS"), así que con muy
+                                poco margen quedaban partidas letra por letra en vez de
+                                en un punto prolijo — "VOLUNTARIOS" con 8% dejaba una
+                                "S" sola huérfana en la segunda línea incluso en
+                                pantallas grandes (1440px). Nombre y Observaciones
+                                truncan con "…" y conservan el texto completo en el
+                                title al pasar el mouse, así que ceder ese margen no
+                                pierde información. */}
                             <colgroup>
                                 <col style={{width:'8%'}} />
-                                <col style={{width:'11%'}} />
-                                <col style={{width:'6%'}} />
+                                <col style={{width:'10%'}} />
                                 <col style={{width:'8%'}} />
+                                <col style={{width:'8%'}} />
+                                <col style={{width:'7%'}} />
+                                <col style={{width:'9%'}} />
+                                <col style={{width:'9%'}} />
                                 <col style={{width:'6%'}} />
-                                <col style={{width:'9%'}} />
-                                <col style={{width:'9%'}} />
-                                <col style={{width:'5%'}} />
-                                <col style={{width:'20%'}} />
+                                <col style={{width:'17%'}} />
                                 <col style={{width:'18%'}} />
                             </colgroup>
+                            {/* Cabecera responsiva: 9px hasta xl (tablet y notebooks
+                                chicos, donde el ancho real por columna sigue siendo
+                                escaso pese al breakpoint), subiendo recién en xl
+                                (≥1280px) al 10px estándar del resto de la app, que es
+                                donde el contenedor ya tiene aire de sobra. Subir la
+                                fuente en lg (1024px) resultó contraproducente: en ese
+                                punto la tabla apenas creció en píxeles reales (el
+                                sidebar fijo se come una porción similar del viewport),
+                                así que texto más grande + más padding a la vez achicó
+                                el espacio disponible en vez de darle más aire.
+                                Sin whitespace-nowrap + break-words: los títulos largos
+                                parten a una segunda línea o, en el peor caso, dentro de
+                                la palabra, en vez de desbordar sobre la columna vecina
+                                — que es lo que pasaba antes en pantallas angostas. */}
                             <thead>
                                 <tr className="border-b border-slate-200 dark:border-white bg-slate-50 dark:bg-neutral-900">
-                                    <th className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors select-none whitespace-nowrap" onClick={() => handleSort('service_date')}>
-                                        <span className="flex items-center gap-1">Fecha <SortIcon col="service_date" /></span>
+                                    <th
+                                        className={`text-left px-1.5 py-2.5 xl:px-4 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words cursor-pointer hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors select-none ${sortKey === 'service_date' ? 'text-black dark:text-white' : 'text-slate-400'}`}
+                                        onClick={() => handleSort('service_date')}
+                                    >
+                                        Fecha
                                     </th>
-                                    <th className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors select-none whitespace-nowrap" onClick={() => handleSort('name')}>
-                                        <span className="flex items-center gap-1">Nombre <SortIcon col="name" /></span>
+                                    <th
+                                        className={`text-left px-1.5 py-2.5 xl:px-4 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words cursor-pointer hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors select-none ${sortKey === 'name' ? 'text-black dark:text-white' : 'text-slate-400'}`}
+                                        onClick={() => handleSort('name')}
+                                    >
+                                        Nombre
                                     </th>
-                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Horario</th>
-                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Total Asist.</th>
-                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap bg-sky-50 dark:bg-sky-950/30">📡 Online</th>
-                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/30">Total c/ Online</th>
-                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Total Vols.</th>
-                                    <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">% Vol</th>
-                                    <th className="text-left px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Observaciones</th>
-                                    <th className="text-center px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Acciones</th>
+                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">Horario</th>
+                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">Total Asist.</th>
+                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400 bg-sky-50 dark:bg-sky-950/30">Online</th>
+                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400 bg-indigo-50 dark:bg-indigo-950/30">Total c/ Online</th>
+                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">Voluntarios</th>
+                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">% Vol</th>
+                                    <th className="text-left px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">Observaciones</th>
+                                    <th className="text-center px-1.5 py-2.5 xl:px-4 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1021,13 +1047,8 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                             <td className="px-4 py-3 font-bold uppercase tracking-tight text-slate-700 dark:text-neutral-300 truncate">
                                                 <span className="block truncate" title={rec.name || '—'}>{rec.name || <span className="text-slate-300 dark:text-neutral-600">—</span>}</span>
                                             </td>
-                                            <td className="px-3 py-3 font-mono text-xs font-bold text-slate-500 text-center">
-                                                {rec.service_hour ? (
-                                                    <span className="flex flex-col items-center leading-tight">
-                                                        <span className="text-black dark:text-white text-sm">{rec.service_hour}</span>
-                                                        <span className="text-[10px] uppercase opacity-60">{rec.service_time}</span>
-                                                    </span>
-                                                ) : rec.service_time || "—"}
+                                            <td className="px-3 py-3 font-mono text-sm font-bold text-black dark:text-white text-center">
+                                                {rec.service_hour || rec.service_time || "—"}
                                             </td>
                                             <td className="px-3 py-3 font-black tabular-nums text-black dark:text-white text-center text-sm">{s.totalFinal.toLocaleString('es-AR')}</td>
                                             <td className="px-3 py-3 text-center bg-sky-50/60 dark:bg-sky-950/20">

@@ -44,11 +44,16 @@ const STEP2_FIELDS: FieldDef[] = [
     { key: 'ninos_hd', label: 'Niños HD' }, { key: 'borders', label: 'Borders' },
 ];
 
+// "podcast" y "oracion" ya no se cargan desde el formulario (dejaron de
+// medirse), pero siguen siendo columnas reales con datos históricos —
+// 49 y 52 registros respectivamente al momento de este cambio. Por eso
+// EMPTY_FORM y la carga de editRecord más abajo los siguen incluyendo:
+// un registro nuevo los manda en 0, y uno existente conserva su valor
+// real sin que haya UI para tocarlo, en vez de resetearlo al editar.
 const STEP3_FIELDS: FieldDef[] = [
     { key: 'online', label: 'Online' }, { key: 'voluntarios_repetidos', label: 'Voluntarios Repetidos' },
     { key: 'aceptaron', label: 'Aceptaron' }, { key: 'asistieron_primera_vez', label: 'Asistieron por Primera Vez' },
-    { key: 'reconciliaron', label: 'Reconciliaron' }, { key: 'podcast', label: 'Podcast' },
-    { key: 'oracion', label: 'Oración' },
+    { key: 'reconciliaron', label: 'Reconciliaron' },
 ];
 
 const STEPS = [
@@ -57,7 +62,7 @@ const STEPS = [
     { title: 'Seguimiento', subtitle: 'Métricas generales', icon: Calendar },
 ];
 
-const CATEGORIES = ['Servicio de Domingo', 'CXV', 'Evento', 'Conferencia', 'Oración Martes'];
+const CATEGORIES = ['Servicio de Domingo', 'CXV', 'Evento', 'Conferencia', 'Martes'];
 
 const SUNDAY_SERVICE_TYPES = [
     'Tradicional',
