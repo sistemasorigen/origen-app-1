@@ -44,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     // márgenes laterales y 32px de blanco arriba, y el logo invertido a blanco
     // caería sobre ese blanco. Ninez.tsx ya limita su propio contenido con un
     // max-w-4xl interno, así que no necesita el de acá.
-    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/gcx' || location.pathname === '/ninez' || location.pathname === '/punto-de-informacion' || location.pathname === '/alabanza' || location.pathname === '/prode' || location.pathname.startsWith('/coordinators');
+    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/gcx' || location.pathname === '/ninez' || location.pathname === '/punto-de-informacion' || location.pathname === '/alabanza' || location.pathname === '/prode' || location.pathname.startsWith('/coordinators') || location.pathname === '/audiencia-servicios';
 
     // En el dashboard la navbar arranca sin fondo, montada sobre el hero.
     // Al scrollear recupera el fondo: si no, quedaría flotando transparente

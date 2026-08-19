@@ -213,8 +213,6 @@ const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
                 <StatRow label="Total Voluntarios" value={fmt(s.totalVol)} />
                 <StatRow label="Total Auditorio (sin voluntarios)" value={fmt(s.auditorioSinVol)} />
                 <StatRow label="Total Auditorio (con voluntarios)" value={fmt(s.auditorioConVol)} />
-                <StatRow label="Niños (sin profes)" value={fmt(s.ninezSinProfes)} />
-                <StatRow label="Auditorio (sin vol) + Niños (sin profes)" value={fmt(s.audNinezSinProfes)} />
                 <StatRow label="Total Final" value={fmt(s.totalFinal)} highlight />
                 <StatRow label="% Voluntarios" value={`${s.pctVol.toFixed(1)}%`} highlight />
             </div>
@@ -390,7 +388,6 @@ const YoYModal: React.FC<{ record: any; allRecords: any[]; onClose: () => void }
                         <Delta label="Auditorio (con voluntarios)" curr={curr.auditorioConVol} prev={prev.auditorioConVol} />
                         <Delta label="Total Voluntarios" curr={curr.totalVol} prev={prev.totalVol} />
                         <Delta label="Auditorio (sin voluntarios)" curr={curr.auditorioSinVol} prev={prev.auditorioSinVol} />
-                        <Delta label="Auditorio + Niños (sin profes)" curr={curr.audNinezSinProfes} prev={prev.audNinezSinProfes} />
                     </div>
 
                     <p className="text-[10px] text-slate-400 mt-5 text-center font-mono">
@@ -986,15 +983,16 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                     <div className="hidden md:block bg-white dark:bg-black border border-slate-200 dark:border-white rounded-lg shadow-sm overflow-hidden">
                         <table className="table-fixed w-full text-sm">
                             <colgroup>
-                                <col style={{width:'10%'}} />
-                                <col style={{width:'15%'}} />
                                 <col style={{width:'8%'}} />
-                                <col style={{width:'10%'}} />
-                                <col style={{width:'8%'}} />
-                                <col style={{width:'11%'}} />
                                 <col style={{width:'11%'}} />
                                 <col style={{width:'6%'}} />
-                                <col style={{width:'21%'}} />
+                                <col style={{width:'8%'}} />
+                                <col style={{width:'6%'}} />
+                                <col style={{width:'9%'}} />
+                                <col style={{width:'9%'}} />
+                                <col style={{width:'5%'}} />
+                                <col style={{width:'20%'}} />
+                                <col style={{width:'18%'}} />
                             </colgroup>
                             <thead>
                                 <tr className="border-b border-slate-200 dark:border-white bg-slate-50 dark:bg-neutral-900">
@@ -1010,6 +1008,7 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                     <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/30">Total c/ Online</th>
                                     <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Total Vols.</th>
                                     <th className="text-center px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">% Vol</th>
+                                    <th className="text-left px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Observaciones</th>
                                     <th className="text-center px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Acciones</th>
                                 </tr>
                             </thead>
@@ -1045,6 +1044,9 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
                                             </td>
                                             <td className="px-3 py-3 font-black tabular-nums text-violet-600 dark:text-violet-400 text-center text-sm">{s.totalVol.toLocaleString('es-AR')}</td>
                                             <td className="px-3 py-3 font-bold tabular-nums text-slate-500 text-center text-sm">{s.pctVol.toFixed(1)}%</td>
+                                            <td className="px-3 py-3 text-xs text-slate-500 dark:text-neutral-400 truncate" title={rec.observations || ''}>
+                                                {rec.observations || '—'}
+                                            </td>
                                             <td className="px-3 py-3 text-center">
                                                 <div className="flex items-center justify-center gap-1.5">
                                                     <button onClick={() => setDetailRecord(rec)} title="Ver detalles" aria-label="Ver detalles" className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-neutral-700 hover:border-black dark:hover:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1">

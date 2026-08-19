@@ -57,7 +57,7 @@ const STEPS = [
     { title: 'Seguimiento', subtitle: 'Métricas generales', icon: Calendar },
 ];
 
-const CATEGORIES = ['Servicio de Domingo', 'CXV', 'Evento', 'Conferencia'];
+const CATEGORIES = ['Servicio de Domingo', 'CXV', 'Evento', 'Conferencia', 'Oración Martes'];
 
 const SUNDAY_SERVICE_TYPES = [
     'Tradicional',
