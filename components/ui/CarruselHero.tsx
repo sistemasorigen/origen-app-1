@@ -71,6 +71,11 @@ const playWithRetry = (video: HTMLVideoElement) => {
     });
 };
 
+// Duración del desplazamiento de la pista. Vive acá arriba y no suelta en el
+// style porque el respaldo del salto al original (más abajo) necesita esperar
+// exactamente lo mismo que tarda la transición.
+const TRANSITION_MS = 600;
+
 const HeroCarousel: React.FC<HeroCarouselProps> = ({
     slides,
     autoPlayInterval = 6000,
@@ -178,9 +183,40 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
 
     useEffect(() => {
         if (!autoPlayInterval || isPaused || total <= 1) return;
-        const interval = setInterval(() => setIndex(i => i + 1), autoPlayInterval);
+        // El tope no es defensivo por las dudas: sin él, el índice se iba de
+        // la pista y el hero quedaba en negro para siempre.
+        //
+        // El único camino de vuelta a 0 es `handleTransitionEnd`, y ese evento
+        // no está garantizado: si la página deja de componer (pestaña en
+        // segundo plano, celular bloqueado) el rAF de `jumpTo` no corre,
+        // `animate` queda en false, y un cambio de transform con
+        // `transition: none` no dispara ningún `transitionend`. Mientras
+        // tanto los timers sí siguen corriendo, así que cada tick empujaba el
+        // índice un slide más lejos, sin nada que lo trajera de vuelta.
+        //
+        // Medido en vivo: índice 116 con sólo 3 posiciones en la pista, cero
+        // slides dentro del marco y los dos videos en pause.
+        //
+        // Clavarlo en `total` (el clon) en vez de dejarlo pasar también repara
+        // un índice ya desbordado: vuelve al clon, y de ahí el salto al
+        // original lo devuelve a 0.
+        const interval = setInterval(
+            () => setIndex(i => (i >= total ? total : i + 1)),
+            autoPlayInterval
+        );
         return () => clearInterval(interval);
     }, [isPaused, total, autoPlayInterval]);
+
+    // Respaldo del salto al original. El camino normal es
+    // `handleTransitionEnd`; esto cubre el caso en que `transitionend` no
+    // llega —transición inexistente por `animate: false`, transición
+    // interrumpida, o pestaña que no compone—. Sin este respaldo el carrusel
+    // se quedaba varado en el clon esperando un evento que ya no iba a venir.
+    useEffect(() => {
+        if (!hasLoop || index !== total) return;
+        const id = setTimeout(() => jumpTo(0), TRANSITION_MS + 150);
+        return () => clearTimeout(id);
+    }, [index, hasLoop, total]);
 
     // Pausa mientras el usuario interactúa, y se reanuda sola. Antes
     // `isPaused` se activaba con el primer hover o toque y nada lo volvía
@@ -200,7 +236,12 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
     // clon es idéntico al primer slide, así que el cambio es invisible.
     const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
         if (e.propertyName !== 'transform' || e.target !== e.currentTarget) return;
-        if (hasLoop && index === total) jumpTo(0);
+        // `>=` y no `===`: con igualdad estricta, un índice que se pasó del
+        // clon una sola vez no se recuperaba nunca. Está medido — el
+        // `transitionend` seguía disparando con el índice en 3, 5, 6 y 7
+        // sobre un total de 2, y ninguno cumplía la igualdad, así que el
+        // carrusel nunca volvía del negro por su cuenta.
+        if (hasLoop && index >= total) jumpTo(0);
     };
 
     const handleNext = () => {
@@ -297,7 +338,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                     className="flex w-full h-full"
                     style={{
                         transform: `translateX(-${index * 100}%)`,
-                        transition: animate ? 'transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none',
+                        transition: animate ? `transform ${TRANSITION_MS}ms cubic-bezier(0.25, 0.1, 0.25, 1)` : 'none',
                         willChange: 'transform'
                     }}
                     onTransitionEnd={handleTransitionEnd}
