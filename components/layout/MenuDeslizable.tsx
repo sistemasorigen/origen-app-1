@@ -201,18 +201,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             icon: Heart,
             path: '/bienvenida',
             roles: [UserRole.SUPER_ADMIN, UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA],
-            subItems: [
-                { label: 'Inicio', path: '/bienvenida' },
-                { label: 'Incompletos', path: '/bienvenida?stage=NEW' },
-                { label: 'Form Lleno', path: '/bienvenida?stage=FILLED_FORM' },
-                { label: '2° Contacto', path: '/bienvenida?stage=SECOND_CONTACT' },
-                { label: '3° Contacto', path: '/bienvenida?stage=THIRD_CONTACT' },
-                { label: 'Int. Crecer', path: '/bienvenida?stage=INTERESTED_GROWTH' },
-                { label: 'Creciendo', path: '/bienvenida?stage=DOING_GROWTH' },
-                { label: 'Entrenamiento', path: '/bienvenida?stage=DOING_TRAINING' },
-                { label: 'Voluntarios', path: '/bienvenida?stage=VOLUNTEERS' },
-                { label: 'No Respondió', path: '/bienvenida?stage=NO_RESPONSE' }
-            ]
         },
         {
             label: 'GCX',
