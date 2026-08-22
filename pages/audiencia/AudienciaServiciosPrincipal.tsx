@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
@@ -10,73 +10,9 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import NeoModal from '../../components/ui/NeoModal';
+import FilterChip from '../../components/ui/FilterChip';
 
 interface PastoralCareDashboardProps { currentUser: User | null; }
-
-// ─── FilterChip ────────────────────────────────────────────────────────────
-
-interface FilterChipOption { label: string; value: string; }
-
-const FilterChip: React.FC<{
-    label: string;
-    value: string;
-    options: FilterChipOption[];
-    onChange: (v: string) => void;
-    activeColor?: string; // tailwind bg+border classes when active
-}> = ({ label, value, options, onChange, activeColor = 'bg-black border-black text-white' }) => {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-    const active = value !== '';
-    const selectedLabel = active ? options.find(o => o.value === value)?.label ?? label : label;
-
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-        };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, []);
-
-    return (
-        <div ref={ref} className="relative">
-            <button
-                type="button"
-                onClick={() => setOpen(o => !o)}
-                className={`w-full flex items-center justify-between gap-1.5 px-3 py-2.5 rounded-lg border text-xs font-bold transition-colors
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2
-                    ${active
-                        ? `${activeColor} border-transparent`
-                        : 'border-slate-300 bg-white text-black hover:bg-slate-50'
-                    }`}
-            >
-                <span className="truncate">{selectedLabel}</span>
-                {active
-                    ? <X className="w-3.5 h-3.5 shrink-0 opacity-70" onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(false); }} />
-                    : <ChevronDown className={`w-3.5 h-3.5 shrink-0 opacity-50 transition-transform ${open ? 'rotate-180' : ''}`} />
-                }
-            </button>
-
-            {open && (
-                <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
-                    {options.map(opt => (
-                        <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => { onChange(opt.value); setOpen(false); }}
-                            className={`w-full text-left px-3 py-2.5 text-xs font-bold transition-colors
-                                ${value === opt.value
-                                    ? 'bg-black text-white'
-                                    : 'text-black hover:bg-slate-100'
-                                }`}
-                        >
-                            {opt.label}
-                        </button>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-};
 
 // ─── Calculation helpers ───────────────────────────────────────────────────
 
@@ -419,7 +355,9 @@ interface SummaryPanelProps {
 }
 
 const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    // Arranca cerrado siempre: el resumen es contexto, no la tarea. Lo primero
+    // que tiene que verse al entrar es la lista de registros.
+    const [isCollapsed, setIsCollapsed] = useState(true);
 
     const stats = useMemo(() => {
         if (sorted.length === 0) return null;

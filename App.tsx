@@ -30,6 +30,8 @@ import PaginaInscribirParticipante from './pages/groups/PaginaInscribirParticipa
 import UpdatePassword from './pages/auth/ActualizarContrasena';
 import VerifyEmail from './pages/auth/VerificarEmail';
 import Bienvenida from './pages/bienvenida/Bienvenida';
+import DetalleIngresante from './pages/bienvenida/DetalleIngresante';
+import NuevoIngresante from './pages/bienvenida/NuevoIngresante';
 import InfluosPage from './pages/influos/InfluosPagina';
 import InfluosAcceso from './pages/influos/InfluosAcceso';
 import Formulario from './pages/bienvenida/Formulario';
@@ -472,6 +474,24 @@ const AppContent: React.FC = () => {
                                         UserRole.VOLUNTARIO_BIENVENIDA
                                     ]))
                                         ? <Bienvenida />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/bienvenida/v/:id" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ENCARGADO_BIENVENIDA,
+                                        UserRole.VOLUNTARIO_BIENVENIDA
+                                    ]))
+                                        ? <DetalleIngresante />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/bienvenida/nuevo" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ENCARGADO_BIENVENIDA,
+                                        UserRole.VOLUNTARIO_BIENVENIDA
+                                    ]))
+                                        ? <NuevoIngresante />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/influos" element={
