@@ -57,7 +57,7 @@ export const HamburgerButton: React.FC<{
         style={{ transition: 'color 600ms ease-out, filter 600ms ease-out' }}
         className={`flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full focus-visible:outline-none focus-visible:ring-2 group ${onMedia
             ? 'text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.5)] focus-visible:ring-white/60'
-            : 'text-slate-700 dark:text-zinc-200 drop-shadow-none hover:text-black dark:hover:text-white focus-visible:ring-slate-900/30 dark:focus-visible:ring-white/30'
+            : 'text-slate-700 dark:text-zinc-200 drop-shadow-none hover:text-slate-900 dark:hover:text-white focus-visible:ring-slate-900/30 dark:focus-visible:ring-white/30'
             } ${className}`}
         aria-label="Menú"
     >
@@ -497,7 +497,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         onClick={onClose}
                         className="p-2 rounded-full hover:bg-black/5 transition-colors group"
                     >
-                        <X className="w-6 h-6 text-black dark:text-white group-hover:rotate-90 transition-transform duration-300" />
+                        <X className="w-6 h-6 text-slate-900 dark:text-white group-hover:rotate-90 transition-transform duration-300" />
                     </button>
                 )}
             </div>
@@ -539,8 +539,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     return (
                         <div key={index} title={isCollapsed ? item.label : undefined}>
                             <div className={`flex items-center rounded-xl transition-all duration-200 group ${isActive
-                                ? 'bg-black text-white dark:bg-white dark:text-black shadow-lg shadow-black/10'
-                                : isExpanded && !isCollapsed ? 'bg-black text-white' : 'text-gray-700 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                                : isExpanded && !isCollapsed ? 'bg-slate-900 text-white' : 'text-gray-700 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
                                 } ${isCollapsed ? 'justify-center mx-1' : ''}`}>
                                 <button
                                     onClick={() => {
@@ -562,7 +562,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                     }}
                                     className={`flex-1 flex items-center gap-3 py-2.5 text-left ${isCollapsed ? 'justify-center px-0' : 'px-3'}`}
                                 >
-                                    <item.icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? (isDarkMode ? 'text-black' : 'text-white dark:text-black') : 'text-gray-500 dark:text-zinc-500 group-hover:text-black dark:group-hover:text-white'}`} />
+                                    <item.icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? (isDarkMode ? 'text-slate-900' : 'text-white dark:text-slate-900') : 'text-gray-500 dark:text-zinc-500 group-hover:text-slate-900 dark:group-hover:text-white'}`} />
                                     {!isCollapsed && <span className="text-sm font-bold truncate">{item.label}</span>}
                                 </button>
                                 {!isCollapsed && hasChildren && (
@@ -570,7 +570,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                         onClick={(e) => { e.stopPropagation(); toggleExpand(item.label); }}
                                         className="pr-3 py-2.5 shrink-0"
                                     >
-                                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} ${isActive ? 'text-white dark:text-black' : 'text-gray-400'}`} />
+                                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} ${isActive ? 'text-white dark:text-slate-900' : 'text-gray-400'}`} />
                                     </button>
                                 )}
                             </div>
@@ -583,7 +583,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                         if (group.separator) {
                                             return (
                                                 <div key={gi} className="px-3 pt-3 pb-1">
-                                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 dark:text-zinc-600 select-none">
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 dark:text-zinc-600 select-none">
                                                         {group.label}
                                                     </span>
                                                 </div>
@@ -606,8 +606,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                                             if (hasGroupItems) toggleExpand(groupKey);
                                                         }}
                                                         className={`flex-1 text-left px-3 py-1.5 text-xs font-bold transition-colors rounded-lg ${!hasGroupItems && isGroupActive
-                                                            ? 'bg-black text-white dark:bg-white dark:text-black'
-                                                            : 'text-gray-500 dark:text-zinc-500 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                                                            : 'text-gray-500 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800'
                                                             }`}
                                                     >
                                                         {group.label}
@@ -631,8 +631,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                                                     key={si}
                                                                     onClick={() => handleNavigation(sub.path)}
                                                                     className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${isSubActive
-                                                                        ? 'bg-black text-white dark:bg-white dark:text-black'
-                                                                        : 'text-gray-500 dark:text-zinc-500 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white'
+                                                                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                                                                        : 'text-gray-500 dark:text-zinc-500 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
                                                                         }`}
                                                                 >
                                                                     {sub.label}
@@ -650,7 +650,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                         if (sub.separator) {
                                             return (
                                                 <div key={si} className="px-3 pt-3 pb-1">
-                                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 dark:text-zinc-600 select-none">
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 dark:text-zinc-600 select-none">
                                                         {sub.label}
                                                     </span>
                                                 </div>
@@ -665,8 +665,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                                 key={si}
                                                 onClick={() => sub.path && handleNavigation(sub.path)}
                                                 className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${isSubActive
-                                                    ? 'bg-black text-white dark:bg-white dark:text-black'
-                                                    : 'text-gray-500 dark:text-zinc-500 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white'
+                                                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                                                    : 'text-gray-500 dark:text-zinc-500 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
                                                     }`}
                                             >
                                                 {sub.label}
@@ -684,7 +684,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             <div className={`p-4 border-t border-gray-100 dark:border-zinc-800 space-y-3 ${isCollapsed ? 'flex flex-col items-center px-2' : ''}`}>
                 {currentUser && (
                     <div className={`flex items-center gap-3 px-1 ${isCollapsed ? 'justify-center cursor-pointer' : ''}`} title={isCollapsed ? currentUser.name : undefined}>
-                        <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-black dark:border-white shrink-0">
+                        <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-zinc-700 shrink-0">
                             {currentUser.avatarUrl ? (
                                 <img
                                     src={currentUser.avatarUrl}
@@ -692,7 +692,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <div className="w-full h-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-xs">
+                                <div className="w-full h-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-bold text-xs">
                                     {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
                                 </div>
                             )}
@@ -741,7 +741,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     ) : (
                         <button
                             onClick={() => { handleNavigation('/auth'); onClose(); }}
-                            className={`w-full flex items-center gap-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-black text-xs uppercase tracking-wider transition-all border-2 border-black hover:opacity-80 ${isCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+                            className={`w-full flex items-center gap-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs uppercase tracking-wider transition-all hover:bg-black dark:hover:bg-slate-200 ${isCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
                             title={isCollapsed ? "Iniciar Sesión" : undefined}
                         >
                             <LogIn className="w-4 h-4 shrink-0" />
