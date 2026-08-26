@@ -4711,9 +4711,15 @@ export const supabaseService = {
   // --- ATTENDANCE SYSTEM ---
 
   /**
-   * Save or update attendance for a group on a specific date
+   * Save or update attendance for a group on a specific date.
+   *
+   * `originalDate` se pasa cuando se entró por "Editar" desde el historial.
+   * Si al guardar la fecha cambió, el registro se MUEVE a la fecha nueva en
+   * vez de dejar dos filas: el upsert resuelve por (group_id, date), así que
+   * sin esto una edición que corrige la fecha creaba un registro nuevo y
+   * dejaba huérfano al viejo — que es como se reportó el bug del "duplicado".
    */
-  async saveAttendance(groupId: string, date: string, presentIds: string[]): Promise<boolean> {
+  async saveAttendance(groupId: string, date: string, presentIds: string[], originalDate?: string): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('group_attendance')
@@ -4729,6 +4735,22 @@ export const supabaseService = {
         console.error('[Attendance] Error saving attendance:', error);
         return false;
       }
+
+      // El registro nuevo ya quedó guardado; recién ahí se borra el viejo.
+      // Si este delete fallara, el peor caso es el comportamiento anterior
+      // (dos filas), nunca perder la asistencia recién guardada.
+      if (originalDate && originalDate !== date) {
+        const { error: deleteError } = await supabase
+          .from('group_attendance')
+          .delete()
+          .eq('group_id', groupId)
+          .eq('date', originalDate);
+
+        if (deleteError) {
+          console.error('[Attendance] Error removing previous date:', deleteError);
+        }
+      }
+
       return true;
     } catch (error) {
       console.error('[Attendance] Exception saving attendance:', error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
@@ -18,6 +18,16 @@ interface AttendanceRecord {
     presentMembers: string[];
 }
 
+// Fecha de HOY en hora local, no en UTC.
+//
+// Antes esto era `new Date().toISOString().split('T')[0]`. toISOString()
+// convierte a UTC, así que en Argentina (UTC-3) a partir de las 21:00 devolvía
+// el día siguiente y la asistencia se guardaba con fecha de mañana. Se
+// encontraron 27 registros en producción con ese corrimiento, todos creados
+// entre las 21:00 y las 23:59. 'en-CA' da YYYY-MM-DD, que es el formato que
+// espera <input type="date">.
+const hoyLocal = (): string => new Date().toLocaleDateString('en-CA');
+
 const getInitials = (name: string): string => {
     const parts = name.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return '?';
@@ -33,10 +43,11 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     const [loadingGroup, setLoadingGroup] = useState(true);
 
     const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
-    const [selectedDate, setSelectedDate] = useState(() => {
-        const today = new Date();
-        return today.toISOString().split('T')[0];
-    });
+    const [selectedDate, setSelectedDate] = useState(hoyLocal);
+
+    // Fecha del registro que se abrió con "Editar". Si al guardar la fecha
+    // cambió, el registro se mueve en vez de duplicarse. null = alta nueva.
+    const [editingDate, setEditingDate] = useState<string | null>(null);
 
     const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
     const [history, setHistory] = useState<AttendanceRecord[]>([]);
@@ -102,6 +113,15 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
         }
     }, [activeTab, loadHistory]);
 
+    // Qué (grupo + fecha) ya se cargó en la lista de tildes.
+    //
+    // Sin esto la asistencia se perdía mientras se tomaba: `group` cambia de
+    // identidad cada vez que se re-consulta al grupo, el efecto de abajo
+    // volvía a correr y pisaba lo que el anfitrión venía tildando con lo que
+    // hay guardado (normalmente vacío). Medido: al tildar a alguien, la
+    // selección se borraba sola ~1,5s después y el guardado escribía [].
+    const hydratedKeyRef = useRef<string | null>(null);
+
     useEffect(() => {
         const fetchDateAttendance = async () => {
             let record = history.find(r => r.date === selectedDate);
@@ -113,14 +133,23 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
             }
             if (record) {
                 setSelectedMembers(new Set(record.presentMembers));
-            } else {
+            } else if (!editingDate) {
+                // En modo edición la lista viaja con el registro que se está
+                // moviendo: limpiarla acá haría que mover la asistencia del 19
+                // al 18 guarde 0 presentes y borre los que tenía el 19.
                 setSelectedMembers(new Set());
             }
         };
         if (group && activeTab === 'new') {
+            // Se hidrata una sola vez por (grupo, fecha). Si ya se cargó, lo
+            // que hay en pantalla es la edición en curso del anfitrión y no se
+            // toca.
+            const key = `${group.id}|${selectedDate}`;
+            if (hydratedKeyRef.current === key) return;
+            hydratedKeyRef.current = key;
             fetchDateAttendance();
         }
-    }, [selectedDate, group, activeTab, loadHistory]);
+    }, [selectedDate, group, activeTab, loadHistory, editingDate]);
 
     const toggleMember = (memberId: string) => {
         const newSet = new Set(selectedMembers);
@@ -139,12 +168,16 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
         const success = await supabaseService.saveAttendance(
             group.id,
             selectedDate,
-            Array.from(selectedMembers)
+            Array.from(selectedMembers),
+            editingDate ?? undefined
         );
         setSaving(false);
         if (success) {
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
+            // El registro ya vive en selectedDate: si se vuelve a guardar sin
+            // salir de la pantalla, no hay nada más que mover.
+            setEditingDate(null);
             loadHistory();
             if (user?.id) {
                 const formattedDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long' });
@@ -192,7 +225,7 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                 {/* TABS */}
                 <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl mb-6">
                     <button
-                        onClick={() => setActiveTab('new')}
+                        onClick={() => { setEditingDate(null); setActiveTab('new'); }}
                         className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${activeTab === 'new' ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm' : 'text-slate-500 hover:text-black dark:hover:text-white'}`}
                     >
                         <Calendar className="w-3 h-3" /> Nueva
@@ -229,14 +262,26 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                         <span className="text-sm text-black dark:text-white">{formatDate(selectedDate)}</span>
                                         <Calendar className="w-4 h-4 text-slate-400" />
                                     </div>
+                                    {/* max = hoy: se puede registrar una reunión
+                                        que ya pasó, nunca una que todavía no
+                                        ocurrió. */}
                                     <input
                                         id={`attendance-date-${group.id}`}
                                         type="date"
                                         value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        max={hoyLocal()}
+                                        onChange={(e) => {
+                                            if (e.target.value && e.target.value > hoyLocal()) return;
+                                            setSelectedDate(e.target.value);
+                                        }}
                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                     />
                                 </div>
+                                {editingDate && editingDate !== selectedDate && (
+                                    <p className="mt-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                        Al guardar, la asistencia del {formatDate(editingDate)} se mueve al {formatDate(selectedDate)}.
+                                    </p>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -315,7 +360,14 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                             </p>
                                         </div>
                                         <button
-                                            onClick={() => { setSelectedDate(record.date); setActiveTab('new'); }}
+                                            onClick={() => {
+                                                // Fuerza recargar los tildes de ese día aunque
+                                                // ya se estuviera parado en esa misma fecha.
+                                                hydratedKeyRef.current = null;
+                                                setEditingDate(record.date);
+                                                setSelectedDate(record.date);
+                                                setActiveTab('new');
+                                            }}
                                             className="px-3 py-1.5 bg-black dark:bg-white text-white dark:text-black rounded-lg text-[10px] font-black uppercase tracking-wide hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                                         >
                                             Editar

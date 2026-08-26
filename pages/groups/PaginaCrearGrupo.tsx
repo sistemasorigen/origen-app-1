@@ -35,7 +35,7 @@ const NativeTooltip: React.FC<NativeTooltipProps> = ({ title, description, step,
     else if (align === 'center') alignClass = 'left-1/2 -translate-x-1/2';
 
     return (
-        <div className={`absolute w-72 z-[9999] bg-white border-[3px] border-black rounded-xl p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] animate-fadeIn text-left ${isTop ? 'bottom-full mb-3' : 'top-full mt-3'} ${alignClass}`}>
+        <div className={`absolute w-72 z-[9999] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-lg animate-fadeIn text-left ${isTop ? 'bottom-full mb-3' : 'top-full mt-3'} ${alignClass}`}>
             <div className="flex justify-between items-start mb-3">
                 <h3 className="text-lg font-black uppercase leading-tight">{title}</h3>
                 <span className="text-xs font-bold bg-neutral-100 px-2 py-1 rounded border border-neutral-200">{step} / {totalSteps}</span>
@@ -43,7 +43,7 @@ const NativeTooltip: React.FC<NativeTooltipProps> = ({ title, description, step,
             <p className="text-sm font-medium text-neutral-600 mb-6 leading-relaxed">{description}</p>
             <div className="flex items-center justify-between">
                 <button onClick={onSkip} type="button" className="text-xs font-bold uppercase text-neutral-400 hover:text-black transition-colors">Saltar</button>
-                <button onClick={onNext} type="button" className="bg-black text-white text-xs font-black uppercase px-6 py-2 rounded-lg hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] transition-all">
+                <button onClick={onNext} type="button" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold uppercase px-6 py-2 rounded-lg hover:opacity-90 transition-all">
                     {isLast ? 'Finalizar' : 'Siguiente'}
                 </button>
             </div>
@@ -377,7 +377,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                             <NativeTooltip title="Nombra tu Grupo" description="Elige un nombre claro y llamativo. Ej: 'Jóvenes Emprendedores' o 'Estudio de Juan'." step={2} totalSteps={9} onNext={() => handleTourNext(3)} onSkip={handleTourSkip} />
                         )}
                         <label className="text-xs font-black uppercase tracking-widest block">Nombre del Grupo</label>
-                        <input type="text" name="name" value={form.name} onChange={handleChange} className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold text-lg focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all" required placeholder="Ej: Jóvenes Profesionales" />
+                        <input type="text" name="name" value={form.name} onChange={handleChange} className="w-full h-12 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg outline-none font-medium text-lg bg-white dark:bg-zinc-900 text-black dark:text-white focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-all" required placeholder="Ej: Jóvenes Profesionales" />
                     </div>
 
                     {/* DESCRIPCIÓN — TOUR 3 */}
@@ -388,7 +388,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         <div className="flex justify-between items-center">
                             <label className="text-xs font-black uppercase tracking-widest block">Descripción</label>
                             {(spellingErrors || correctionStatus === 'correcting' || correctionStatus === 'success') && (
-                                <button type="button" onClick={handleFixSpelling} disabled={isCorrecting} className={`border-2 border-black font-black uppercase text-xs px-3 py-1 flex items-center gap-1 transition-all ${correctionStatus === 'correcting' ? 'bg-black text-white animate-pulse cursor-wait' : correctionStatus === 'success' ? 'bg-[#118f46] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-yellow-400 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none animate-scaleIn'}`}>
+                                <button type="button" onClick={handleFixSpelling} disabled={isCorrecting} className={`rounded-lg font-semibold uppercase text-xs px-3 py-1.5 flex items-center gap-1 transition-all ${correctionStatus === 'correcting' ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 animate-pulse cursor-wait' : correctionStatus === 'success' ? 'bg-[#118f46] text-white shadow-sm' : 'bg-yellow-400 text-black shadow-sm hover:opacity-90 animate-scaleIn'}`}>
                                     <Wand2 className="w-3 h-3" />
                                     {correctionStatus === 'correcting' ? 'Corrigiendo...' : correctionStatus === 'success' ? 'Corregido ✓' : 'Corregir'}
                                 </button>
@@ -407,7 +407,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     <NativeTooltip title="Categoría Principal" description="Clasifica tu grupo para que las personas puedan encontrarlo fácilmente en el buscador." step={4} totalSteps={9} onNext={() => handleTourNext(5)} onSkip={handleTourSkip} />
                                 )}
                                 <div className="relative">
-                                    <select name="categoryId" value={form.categoryId} onChange={handleChange} className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold bg-white appearance-none relative z-10">
+                                    <select name="categoryId" value={form.categoryId} onChange={handleChange} className="w-full h-12 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg outline-none font-medium bg-white dark:bg-zinc-900 text-black dark:text-white appearance-none relative z-10">
                                         <option value="">-- Seleccionar --</option>
                                         {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                                     </select>
@@ -418,7 +418,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                 {localTourStep === 5 && (
                                     <NativeTooltip title="Punto de Encuentro" description="Escribe la dirección exacta, el barrio o el nombre del local donde se reunirán." step={5} totalSteps={9} onNext={() => handleTourNext(6)} onSkip={handleTourSkip} />
                                 )}
-                                <input type="text" name="location" value={form.location} onChange={handleChange} className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold" placeholder="Dirección o punto de encuentro" />
+                                <input type="text" name="location" value={form.location} onChange={handleChange} className="w-full h-12 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg outline-none font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="Dirección o punto de encuentro" />
                             </div>
                         </div>
                     </div>
@@ -431,12 +431,12 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         <label className="text-xs font-black uppercase tracking-widest block">Horario de Reunión</label>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="relative">
-                                <select name="meetingDay" value={form.meetingDay} onChange={handleChange} className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold bg-white appearance-none">
+                                <select name="meetingDay" value={form.meetingDay} onChange={handleChange} className="w-full h-12 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg outline-none font-medium bg-white dark:bg-zinc-900 text-black dark:text-white appearance-none">
                                     {MEETING_DAYS.map(day => <option key={day} value={day}>{day}</option>)}
                                 </select>
                                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
                             </div>
-                            <input type="time" name="meetingTime" value={form.meetingTime} onChange={handleChange} className="w-full h-12 px-3 border-2 border-black rounded-none outline-none font-bold" />
+                            <input type="time" name="meetingTime" value={form.meetingTime} onChange={handleChange} className="w-full h-12 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg outline-none font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" />
                         </div>
                     </div>
 
@@ -481,7 +481,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         <label className="text-xs font-black uppercase tracking-widest block">Etiquetas del Grupo</label>
                         <div className="flex flex-wrap gap-2">
                             {availableTags.map(tag => (
-                                <button type="button" key={tag.id} onClick={() => toggleTag(tag.id)} className={`px-3 py-1 text-[10px] font-black uppercase border-2 border-black transition-all ${form.tags.includes(tag.id) ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]' : 'bg-white text-neutral-500 hover:bg-neutral-100'}`}>
+                                <button type="button" key={tag.id} onClick={() => toggleTag(tag.id)} className={`px-3 py-1 text-[10px] font-semibold uppercase rounded-full border transition-all ${form.tags.includes(tag.id) ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white' : 'bg-white dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}>
                                     {tag.name}
                                 </button>
                             ))}
@@ -489,7 +489,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                     </div>
 
                     {/* CO-ANFITRIÓN */}
-                    <div className="space-y-3 border-t-2 border-black pt-4">
+                    <div className="space-y-3 border-t border-slate-200 dark:border-zinc-800 pt-4">
                         <div className="flex items-center justify-between">
                             <p className="text-xs font-black uppercase tracking-widest text-neutral-400">Co-Anfitrión <span className="font-medium normal-case text-neutral-300">(Opcional)</span></p>
                             <div className="flex bg-neutral-100 p-1 rounded-full border border-neutral-200">
@@ -502,11 +502,11 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase block">Nombre</label>
-                                    <input type="text" name="coHostFirstName" value={form.coHostFirstName} onChange={handleChange} className="w-full h-10 px-3 border-2 border-black rounded-none outline-none font-bold" placeholder="Nombre" />
+                                    <input type="text" name="coHostFirstName" value={form.coHostFirstName} onChange={handleChange} className="w-full h-10 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg outline-none font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="Nombre" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase block">Apellido</label>
-                                    <input type="text" name="coHostLastName" value={form.coHostLastName} onChange={handleChange} className="w-full h-10 px-3 border-2 border-black rounded-none outline-none font-bold" placeholder="Apellido" />
+                                    <input type="text" name="coHostLastName" value={form.coHostLastName} onChange={handleChange} className="w-full h-10 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg outline-none font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="Apellido" />
                                 </div>
                             </div>
                         ) : (
@@ -519,12 +519,12 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                 ) : (
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                                        <input type="text" value={coHostSearchTerm} onChange={e => { setCoHostSearchTerm(e.target.value); setCoHostId(null); }} onFocus={() => coHostResults.length > 0 && setIsCoHostDropdownOpen(true)} placeholder="Buscar por nombre o email..." className="w-full h-10 pl-10 pr-3 border-2 border-black outline-none font-bold placeholder:font-normal" />
+                                        <input type="text" value={coHostSearchTerm} onChange={e => { setCoHostSearchTerm(e.target.value); setCoHostId(null); }} onFocus={() => coHostResults.length > 0 && setIsCoHostDropdownOpen(true)} placeholder="Buscar por nombre o email..." className="w-full h-10 pl-10 pr-3 border border-slate-300 dark:border-zinc-700 rounded-lg outline-none font-medium bg-white dark:bg-zinc-900 text-black dark:text-white placeholder:font-normal" />
                                         {isSearchingCoHost && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-neutral-400 animate-pulse">Buscando...</span>}
                                     </div>
                                 )}
                                 {isCoHostDropdownOpen && !coHostId && coHostResults.length > 0 && (
-                                    <div className="absolute top-full left-0 right-0 bg-white border-2 border-black mt-1 max-h-48 overflow-y-auto z-[99999] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                    <div className="absolute top-full left-0 right-0 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg mt-1 max-h-48 overflow-y-auto z-[99999] shadow-lg">
                                         {coHostResults.map(u => (
                                             <button key={u.id} type="button" onMouseDown={(e) => { e.preventDefault(); setCoHostId(u.id); setCoHostSearchTerm(u.name); setIsCoHostDropdownOpen(false); }} className="w-full flex items-center gap-3 p-3 text-left border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
                                                 <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-black text-xs shrink-0">{u.name.substring(0, 2).toUpperCase()}</div>
@@ -534,7 +534,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     </div>
                                 )}
                                 {isCoHostDropdownOpen && !coHostId && coHostResults.length === 0 && !isSearchingCoHost && coHostSearchTerm.trim() && (
-                                    <div className="absolute top-full left-0 right-0 bg-white border-2 border-black mt-1 p-4 text-center z-[99999] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                    <div className="absolute top-full left-0 right-0 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg mt-1 p-4 text-center z-[99999] shadow-lg">
                                         <p className="text-sm font-bold text-neutral-400">Sin resultados para "{coHostSearchTerm}"</p>
                                     </div>
                                 )}
@@ -543,19 +543,19 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                     </div>
 
                     {/* AVANZADO — género es TOUR 8 */}
-                    <div className="border-t-2 border-black pt-4 space-y-4">
+                    <div className="border-t border-slate-200 dark:border-zinc-800 pt-4 space-y-4">
                         <p className="text-xs font-black uppercase tracking-widest text-neutral-400">Detalles Avanzados</p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div><label className="text-[10px] font-bold uppercase block">Capacidad</label><input type="number" name="maxCapacity" value={form.maxCapacity} onChange={handleChange} className="w-full p-2 border-2 border-black font-bold" /></div>
-                            <div><label className="text-[10px] font-bold uppercase block">Edad Mín</label><input type="number" name="minAge" value={form.minAge} onChange={handleChange} className="w-full p-2 border-2 border-black font-bold" /></div>
-                            <div><label className="text-[10px] font-bold uppercase block">Edad Máx</label><input type="number" name="maxAge" value={form.maxAge} onChange={handleChange} className="w-full p-2 border-2 border-black font-bold" /></div>
+                            <div><label className="text-[10px] font-bold uppercase block">Capacidad</label><input type="number" name="maxCapacity" value={form.maxCapacity} onChange={handleChange} className="w-full p-2 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" /></div>
+                            <div><label className="text-[10px] font-bold uppercase block">Edad Mín</label><input type="number" name="minAge" value={form.minAge} onChange={handleChange} className="w-full p-2 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" /></div>
+                            <div><label className="text-[10px] font-bold uppercase block">Edad Máx</label><input type="number" name="maxAge" value={form.maxAge} onChange={handleChange} className="w-full p-2 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" /></div>
                             <div>
                                 <label className="text-[10px] font-bold uppercase block">Género</label>
                                 <div id="tour-wrap-8" className={`relative transition-all duration-300 rounded-xl ${localTourStep === 8 ? 'ring-4 ring-yellow-400 bg-yellow-400/10 p-1 -m-1 z-[50]' : ''}`}>
                                     {localTourStep === 8 && (
                                         <NativeTooltip title="Filtros de Exclusividad" description="Define si es para hombres, mujeres o mixto. Si activas 'Exclusivo para Parejas' y género Mixto, el sistema pedirá automáticamente los datos del cónyuge al inscribirse." step={8} totalSteps={9} onNext={() => handleTourNext(9)} onSkip={handleTourSkip} placement="top" align="right" />
                                     )}
-                                    <select name="targetGender" value={form.targetGender} onChange={handleChange} className="w-full p-2 border-2 border-black font-bold bg-white appearance-none relative z-10">
+                                    <select name="targetGender" value={form.targetGender} onChange={handleChange} className="w-full p-2 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white appearance-none relative z-10">
                                         {TARGET_GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
                                     </select>
                                     <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none z-10" />
@@ -569,7 +569,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         {localTourStep === 9 && (
                             <NativeTooltip title="¡Todo Listo!" description="Revisa que todo esté correcto y presiona crear. Tu grupo pasará a revisión." step={9} totalSteps={9} onNext={handleTourFinish} onSkip={handleTourSkip} isLast={true} placement="top" align="center" />
                         )}
-                        <button type="submit" disabled={loading || isCheckingSpelling} className={`w-full py-4 text-white font-black uppercase tracking-widest border-2 border-black transition-all flex items-center justify-center gap-2 ${isCheckingSpelling ? 'bg-neutral-300 text-neutral-500 border-neutral-400 cursor-not-allowed' : 'bg-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'}`}>
+                        <button type="submit" disabled={loading || isCheckingSpelling} className={`w-full py-4 text-white font-semibold uppercase tracking-wide rounded-lg transition-all flex items-center justify-center gap-2 ${isCheckingSpelling ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 cursor-not-allowed' : 'bg-slate-900 dark:bg-white dark:text-slate-900 hover:opacity-90'}`}>
                             {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> Guardando...</> : isCheckingSpelling ? 'Analizando texto...' : <><Save className="w-5 h-5" /> Crear Grupo</>}
                         </button>
                     </div>
@@ -577,16 +577,16 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
 
                 {showSpellingWarning && typeof document !== 'undefined' && createPortal(
                     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-                        <div className="bg-white border-2 border-black p-6 w-full max-w-sm shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-scaleIn">
+                        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-xl animate-scaleIn">
                             <div className="flex flex-col items-center text-center space-y-4">
-                                <div className="w-12 h-12 bg-yellow-400 border-2 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"><span className="text-2xl">⚠️</span></div>
+                                <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center shadow-sm"><span className="text-2xl">⚠️</span></div>
                                 <div>
                                     <h3 className="text-lg font-black uppercase">¡Atención!</h3>
                                     <p className="text-sm font-medium text-neutral-600 mt-2">La descripción de tu grupo contiene posibles errores de ortografía.</p>
                                     <p className="text-sm font-medium text-neutral-600">¿Deseas corregirlos antes de continuar?</p>
                                 </div>
                                 <div className="flex flex-col gap-2 w-full pt-2">
-                                    <button onClick={() => { setShowSpellingWarning(false); handleFixSpelling(); }} className="w-full py-3 bg-yellow-400 text-black font-black uppercase border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all flex items-center justify-center gap-2">
+                                    <button onClick={() => { setShowSpellingWarning(false); handleFixSpelling(); }} className="w-full py-3 bg-yellow-400 text-black font-semibold uppercase rounded-lg shadow-sm hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
                                         <Wand2 className="w-4 h-4" /> Corregir Errores
                                     </button>
                                     <button onClick={() => confirmSubmit()} className="w-full py-3 bg-white text-neutral-500 font-bold uppercase border-2 border-transparent hover:text-black hover:underline transition-all">

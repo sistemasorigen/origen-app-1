@@ -400,7 +400,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                             </div>
 
                             {/* Mismo contenedor que la lista de grupos */}
-                            <div className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-lg">
+                            <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
 
                                 {/* MOBILE */}
                                 <div className="md:hidden divide-y-2 divide-black/10 dark:divide-white/10">
@@ -619,7 +619,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                         if (loading) {
                             return (
                                 <div className="flex justify-center py-20">
-                                    <div className="w-8 h-8 border-4 border-black dark:border-white border-t-transparent rounded-full animate-spin" />
+                                    <div className="w-8 h-8 border-4 border-slate-200 dark:border-zinc-700 border-t-slate-900 dark:border-t-white rounded-full animate-spin" />
                                 </div>
                             );
                         }
@@ -641,7 +641,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
 
                         return (
                             /* Groups - Mobile Cards + Desktop Table */
-                            <div id="host-groups-list" className={`bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl overflow-hidden shadow-lg ${isDemoMode ? 'ring-4 ring-indigo-500 ring-offset-4 ring-offset-white dark:ring-offset-black' : ''}`}>
+                            <div id="host-groups-list" className={`bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm ${isDemoMode ? 'ring-4 ring-indigo-500 ring-offset-4 ring-offset-white dark:ring-offset-black' : ''}`}>
                                 {isDemoMode && (
                                     <div className="bg-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-widest p-2 text-center border-b border-indigo-200">
                                         Modo Demostración (Tutorial)
@@ -734,7 +734,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                 <button
                                                     id={isMobile ? `btn-host-actions-${index}` : undefined}
                                                     onClick={() => navigate(`/mis-grupos/${group.id}`)}
-                                                    className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-all rounded-lg text-xs font-bold uppercase w-full"
+                                                    className="flex items-center justify-center gap-2 p-3 min-h-[44px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition-all rounded-lg text-xs font-semibold uppercase w-full"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                     Ver Grupo
@@ -837,7 +837,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                                         <div className="flex justify-end">
                                                             <button
                                                                 onClick={() => navigate(`/mis-grupos/${group.id}`)}
-                                                                className="flex items-center gap-2 px-4 py-2 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-all rounded-lg text-xs font-bold uppercase"
+                                                                className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition-all rounded-lg text-xs font-semibold uppercase"
                                                             >
                                                                 <Eye className="w-4 h-4" />
                                                                 Ver Grupo
@@ -931,7 +931,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                             <img
                                 src={selectedIncomingTransfer.groupImageUrl}
                                 alt={selectedIncomingTransfer.groupName}
-                                className="w-full h-44 object-cover border-2 border-black dark:border-neutral-600"
+                                className="w-full h-44 object-cover border border-slate-200 dark:border-zinc-700 rounded-lg"
                                 loading="lazy"
                                 width={600}
                                 height={176}
@@ -1004,7 +1004,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                                 type="button"
                                 onClick={() => handleAcceptTransfer(selectedIncomingTransfer)}
                                 disabled={isProcessingTransfer}
-                                className="flex-[2] min-h-[44px] bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
+                                className="flex-[2] min-h-[44px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold uppercase tracking-wide hover:opacity-90 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 rounded-lg focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20"
                                 aria-label="Aceptar la titularidad de este grupo"
                             >
                                 {isProcessingTransfer ? (
@@ -1054,7 +1054,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                     </p>
                     <button
                         onClick={() => setIsSuccessModalOpen(false)}
-                        className="mt-4 w-full py-4 bg-[#118f46] text-white font-black uppercase tracking-widest rounded-xl hover:bg-[#0d7036] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1"
+                        className="mt-4 w-full py-4 bg-[#118f46] text-white font-semibold uppercase tracking-wide rounded-xl hover:bg-[#0d7036] transition-all shadow-sm active:scale-[0.98]"
                     >
                         Entendido
                     </button>

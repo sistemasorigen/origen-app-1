@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import NeoModal from '../ui/NeoModal';
 import { User, Calendar, History, Save, Check, Loader2, Users } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
@@ -27,13 +27,32 @@ interface AttendanceModalProps {
     };
 }
 
+// Fecha de HOY en hora local, no en UTC.
+//
+// Antes esto era `new Date().toISOString().split('T')[0]`. toISOString()
+// convierte a UTC, así que en Argentina (UTC-3) a partir de las 21:00 devolvía
+// el día siguiente y la asistencia se guardaba con fecha de mañana. Se
+// encontraron 27 registros en producción con ese corrimiento, todos creados
+// entre las 21:00 y las 23:59. 'en-CA' da YYYY-MM-DD, que es el formato que
+// espera <input type="date">.
+const hoyLocal = (): string => new Date().toLocaleDateString('en-CA');
+
 const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, group }) => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
-    const [selectedDate, setSelectedDate] = useState(() => {
-        const today = new Date();
-        return today.toISOString().split('T')[0];
-    });
+    const [selectedDate, setSelectedDate] = useState(hoyLocal);
+
+    // Qué (grupo + fecha) ya se cargó en la lista de tildes.
+    //
+    // Sin esto la asistencia se perdía mientras se tomaba: el efecto de abajo
+    // volvía a correr y pisaba lo que el anfitrión venía tildando con lo que
+    // hay guardado (normalmente vacío). Medido: al tildar a alguien, la
+    // selección se borraba sola ~1,5s después y el guardado escribía [].
+    const hydratedKeyRef = useRef<string | null>(null);
+
+    // Fecha del registro que se abrió con "Editar". Si al guardar la fecha
+    // cambió, el registro se mueve en vez de duplicarse. null = alta nueva.
+    const [editingDate, setEditingDate] = useState<string | null>(null);
 
     // Derived state from props
     const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
@@ -104,15 +123,23 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
 
             if (record) {
                 setSelectedMembers(new Set(record.presentMembers));
-            } else {
+            } else if (!editingDate) {
+                // En modo edición la lista viaja con el registro que se está
+                // moviendo: limpiarla acá haría que mover la asistencia del 19
+                // al 18 guarde 0 presentes y borre los que tenía el 19.
                 setSelectedMembers(new Set());
             }
         };
 
         if (isOpen && activeTab === 'new') {
+            // Se hidrata una sola vez por (grupo, fecha). Si ya se cargó, lo
+            // que hay en pantalla es la edición en curso y no se toca.
+            const key = `${group.id}|${selectedDate}`;
+            if (hydratedKeyRef.current === key) return;
+            hydratedKeyRef.current = key;
             fetchDateAttendance();
         }
-    }, [selectedDate, isOpen, activeTab]);
+    }, [selectedDate, isOpen, activeTab, editingDate]);
 
     const toggleMember = (memberId: string) => {
         const newSet = new Set(selectedMembers);
@@ -133,13 +160,17 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
         const success = await supabaseService.saveAttendance(
             group.id,
             selectedDate,
-            Array.from(selectedMembers)
+            Array.from(selectedMembers),
+            editingDate ?? undefined
         );
         setSaving(false);
         if (success) {
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
-            
+            // El registro ya vive en selectedDate: si se vuelve a guardar sin
+            // salir de la pantalla, no hay nada más que mover.
+            setEditingDate(null);
+
             // Refresh history after save
             loadHistory();
 
@@ -173,7 +204,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
                 {/* TABS */}
                 <div className="flex bg-neutral-100 p-1 rounded-lg mb-4 shrink-0">
                     <button
-                        onClick={() => setActiveTab('new')}
+                        onClick={() => { setEditingDate(null); setActiveTab('new'); }}
                         className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all flex items-center justify-center gap-2 ${activeTab === 'new' ? 'bg-black text-white shadow-sm' : 'text-neutral-500 hover:text-black'
                             }`}
                     >
@@ -217,14 +248,26 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
                                         <span className="text-sm">{formatDate(selectedDate)}</span>
                                         <Calendar className="w-4 h-4 text-neutral-400" />
                                     </div>
+                                    {/* max = hoy: se puede registrar una reunión
+                                        que ya pasó, nunca una que todavía no
+                                        ocurrió. */}
                                     <input
                                         id={`attendance-date-${group.id}`}
                                         type="date"
                                         value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        max={hoyLocal()}
+                                        onChange={(e) => {
+                                            if (e.target.value && e.target.value > hoyLocal()) return;
+                                            setSelectedDate(e.target.value);
+                                        }}
                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                     />
                                 </div>
+                                {editingDate && editingDate !== selectedDate && (
+                                    <p className="mt-1.5 text-[11px] font-medium text-amber-600">
+                                        Al guardar, la asistencia del {formatDate(editingDate)} se mueve al {formatDate(selectedDate)}.
+                                    </p>
+                                )}
                             </div>
 
                             {/* MEMBERS HEADER */}
@@ -291,6 +334,8 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
                                         </div>
                                         <button
                                             onClick={() => {
+                                                hydratedKeyRef.current = null;
+                                                setEditingDate(record.date);
                                                 setSelectedDate(record.date);
                                                 setActiveTab('new');
                                             }}

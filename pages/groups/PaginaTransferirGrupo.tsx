@@ -209,7 +209,7 @@ const PaginaTransferirGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                     onChange={e => setSearchTerm(e.target.value)}
                                     placeholder="Nombre o email..."
                                     autoComplete="off"
-                                    className="w-full h-11 pl-9 pr-10 border-2 border-black font-bold text-sm text-black dark:text-white dark:bg-black bg-white focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow duration-150"
+                                    className="w-full h-11 pl-9 pr-10 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium text-sm text-black dark:text-white dark:bg-zinc-900 bg-white focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-shadow duration-150"
                                     aria-describedby="search-hint"
                                 />
                                 {searching ? (
@@ -233,7 +233,7 @@ const PaginaTransferirGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
 
                         <div role="listbox" aria-label="Resultados de búsqueda" aria-live="polite">
                             {searchResults.length > 0 && (
-                                <div className="border-2 border-black overflow-hidden max-h-60 overflow-y-auto">
+                                <div className="border border-slate-200 dark:border-zinc-800 rounded-lg overflow-hidden max-h-60 overflow-y-auto">
                                     {searchResults.map((user, i) => (
                                         <div
                                             key={user.id}
@@ -284,7 +284,7 @@ const PaginaTransferirGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                             Confirmá el destinatario
                         </p>
 
-                        <div className="border-2 border-black dark:border-white p-4 mb-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
+                        <div className="border border-slate-200 dark:border-zinc-800 rounded-xl p-4 mb-2 shadow-sm">
                             <div className="flex items-start justify-between gap-2 mb-3">
                                 <p className="font-black text-base uppercase tracking-tight text-black dark:text-white">{selectedUser.name}</p>
                                 <span className="text-[9px] font-black uppercase px-2 py-1 bg-purple-600 text-white shrink-0">{getRoleLabel(selectedUser.role)}</span>
@@ -311,7 +311,7 @@ const PaginaTransferirGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                             <button
                                 type="button"
                                 onClick={() => { setSelectedUser(null); setStep(1); }}
-                                className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border-2 border-black dark:border-white text-black dark:text-white font-black uppercase tracking-widest text-xs hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-150 cursor-pointer"
+                                className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border border-slate-300 dark:border-zinc-700 rounded-lg text-slate-700 dark:text-zinc-300 font-semibold uppercase tracking-wide text-xs hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all duration-150 cursor-pointer"
                                 aria-label="Volver al paso anterior"
                             >
                                 <ChevronLeft className="w-4 h-4" aria-hidden="true" />
@@ -320,7 +320,7 @@ const PaginaTransferirGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                             <button
                                 type="button"
                                 onClick={() => setStep(3)}
-                                className="flex-[2] min-h-[44px] bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white border-2 border-black dark:border-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-150 cursor-pointer"
+                                className="flex-[2] min-h-[44px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold uppercase tracking-wide text-xs hover:opacity-90 rounded-lg transition-all duration-150 cursor-pointer"
                             >
                                 Continuar →
                             </button>
@@ -331,7 +331,7 @@ const PaginaTransferirGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                 {/* ─── PASO 3: Confirmación final ───────────────── */}
                 {step === 3 && selectedUser && (
                     <div>
-                        <div className="flex items-center gap-3 p-3 bg-neutral-100 dark:bg-neutral-900 border-2 border-black dark:border-white mb-4">
+                        <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg mb-4">
                             <ArrowLeftRight className="w-5 h-5 shrink-0 text-purple-500" aria-hidden="true" />
                             <div className="min-w-0">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Transferís</p>
@@ -367,7 +367,7 @@ const PaginaTransferirGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                 onChange={e => setConfirmText(e.target.value)}
                                 placeholder='Transferir'
                                 autoComplete="off"
-                                className="w-full h-11 px-3 border-2 border-black font-bold text-black dark:text-white dark:bg-black bg-white focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-150"
+                                className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium text-black dark:text-white dark:bg-zinc-900 bg-white focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-all duration-150"
                                 aria-describedby={error ? 'confirm-error' : undefined}
                             />
                         </div>
@@ -383,7 +383,7 @@ const PaginaTransferirGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                             <button
                                 type="button"
                                 onClick={() => { setConfirmText(''); setError(null); setStep(2); }}
-                                className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border-2 border-black dark:border-white text-black dark:text-white font-black uppercase tracking-widest text-xs hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-150 cursor-pointer"
+                                className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border border-slate-300 dark:border-zinc-700 rounded-lg text-slate-700 dark:text-zinc-300 font-semibold uppercase tracking-wide text-xs hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all duration-150 cursor-pointer"
                                 aria-label="Volver al paso anterior"
                             >
                                 <ChevronLeft className="w-4 h-4" aria-hidden="true" />
@@ -393,7 +393,7 @@ const PaginaTransferirGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                 type="button"
                                 disabled={!canConfirm}
                                 onClick={handleConfirm}
-                                className={`flex-[2] min-h-[44px] font-black uppercase tracking-widest text-xs border-2 transition-all duration-150 flex items-center justify-center gap-2 ${canConfirm ? 'bg-black dark:bg-white border-black dark:border-white text-white dark:text-black hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] cursor-pointer' : 'bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-400 cursor-not-allowed'}`}
+                                className={`flex-[2] min-h-[44px] font-semibold uppercase tracking-wide text-xs rounded-lg transition-all duration-150 flex items-center justify-center gap-2 ${canConfirm ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 cursor-pointer' : 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 cursor-not-allowed'}`}
                                 aria-disabled={!canConfirm}
                             >
                                 {loading

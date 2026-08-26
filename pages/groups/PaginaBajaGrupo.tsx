@@ -148,7 +148,7 @@ const PaginaBajaGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     <button
                                         type="button"
                                         onClick={() => setIsSelectOpen(!isSelectOpen)}
-                                        className="w-full flex items-center justify-between p-3 bg-white dark:bg-black border-2 border-black dark:border-white rounded-lg text-left hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
+                                        className="w-full flex items-center justify-between p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
                                     >
                                         <span className={`font-bold uppercase ${selectedMember ? 'text-black dark:text-white' : 'text-slate-400'}`}>
                                             {selectedMember ? `${selectedMember.firstName} ${selectedMember.lastName}` : 'Seleccionar miembro...'}
@@ -159,7 +159,7 @@ const PaginaBajaGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     {isSelectOpen && (
                                         <>
                                             <div className="fixed inset-0 z-10" onClick={() => setIsSelectOpen(false)} />
-                                            <div className="absolute z-20 w-full mt-1 bg-white dark:bg-black border-2 border-black dark:border-white rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                            <div className="absolute z-20 w-full mt-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                                 {approvedMembers.map((member) => (
                                                     <button
                                                         key={member.id}
@@ -199,7 +199,7 @@ const PaginaBajaGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
                             placeholder="Ej. Inasistencia reiterada"
-                            className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-lg text-sm font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                            className="w-full p-3 bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 rounded-lg text-sm font-medium placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10"
                             maxLength={100}
                             required
                         />
@@ -214,7 +214,7 @@ const PaginaBajaGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                             onChange={(e) => setDetails(e.target.value)}
                             placeholder="Detallá la situación con más contexto..."
                             rows={4}
-                            className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-lg text-sm font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black resize-none"
+                            className="w-full p-3 bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 rounded-lg text-sm font-medium placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 resize-none"
                             maxLength={500}
                         />
                     </div>

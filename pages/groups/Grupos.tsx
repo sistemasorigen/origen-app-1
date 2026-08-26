@@ -160,7 +160,7 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
                                         onClick={() => setIsMenuOpen(false)}
                                     />
                                     {/* Menu Panel */}
-                                    <div className="absolute top-full left-0 mt-2 z-50 w-64 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-2 flex flex-col gap-1">
+                                    <div className="absolute top-full left-0 mt-2 z-50 w-64 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg p-2 flex flex-col gap-1">
                                         {/* GRUPOS - Always visible */}
                                         <button
                                             onClick={() => handleTabClick('GROUPS')}
@@ -259,7 +259,7 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
                     {view === 'admin' && canAccessAdmin && (
                         <button
                             onClick={() => setView('public')}
-                            className="flex items-center gap-2 px-4 md:px-5 py-2 text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap border-2 border-black rounded-lg bg-black text-white hover:bg-white hover:text-black"
+                            className="flex items-center gap-2 px-4 md:px-5 py-2 text-xs font-semibold uppercase tracking-wide transition-all whitespace-nowrap rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-black dark:hover:bg-slate-200"
                         >
                             SALIR
                         </button>
@@ -1487,7 +1487,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             }
                             setIsHostCtaAtBottom(prev => !prev);
                         }}
-                        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-[#28a946] text-white border-2 border-black rounded-full font-black text-xs uppercase tracking-wide shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-[#1f8a39] hover:-translate-y-0.5 active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
+                        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-[#28a946] text-white rounded-full font-semibold text-xs uppercase tracking-wide shadow-lg hover:bg-[#1f8a39] hover:shadow-xl active:scale-[0.98] transition-all"
                     >
                         {isHostCtaAtBottom ? <ArrowUp className="w-4 h-4 shrink-0" /> : <UserPlus className="w-4 h-4 shrink-0" />}
                         {isHostCtaAtBottom ? 'Volver arriba del todo' : '¿Querés ser anfitrión?'}
@@ -1539,20 +1539,34 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                 own overflow-hidden (used to clip the rounded corners around
                                 the active black segment) would otherwise clip the dropdown too. */}
                             <div className="relative w-full md:max-w-xl">
-                                <div className="flex items-stretch border-2 border-black rounded-lg overflow-hidden bg-white">
+                                {/* index.html fuerza border/background/border-radius en TODO
+                                    <input> con !important (ver memoria "overrides-globales-inputs").
+                                    El buscador vive DENTRO de la cÃ¡psula, que ya aporta su borde y
+                                    su radio; sin este scope el input traÃ­a ademÃ¡s su propia caja
+                                    (borde 1px slate-300 + radio 8px + fondo blanco), o sea una caja
+                                    dentro de otra. Un id le gana en especificidad al override. */}
+                                <style>{`
+                                    #groups-search-input {
+                                        border: none !important;
+                                        border-radius: 0 !important;
+                                        background-color: transparent !important;
+                                        outline: none !important;
+                                    }
+                                `}</style>
+                                <div className="flex items-stretch border border-slate-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-900">
                                     {/* Search */}
                                     <div id="groups-search-bar" className="relative flex-1 min-w-0">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black pointer-events-none" />
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-zinc-500 pointer-events-none" />
                                         <input
                                             type="text"
-                                            placeholder="BUSCAR GRUPO..."
+                                            placeholder="Buscar grupo..."
                                             value={searchTerm}
                                             onChange={e => setSearchTerm(e.target.value)}
-                                            className="w-full h-full pl-12 pr-3 py-2.5 bg-transparent text-sm font-bold uppercase tracking-wide text-black placeholder:text-black/40 focus:outline-none"
+                                            id="groups-search-input" className="w-full h-full pl-12 pr-3 py-2.5 bg-transparent text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none"
                                         />
                                     </div>
 
-                                    <div className="w-[2px] bg-black shrink-0" aria-hidden="true" />
+                                    <div className="w-px bg-slate-200 dark:bg-zinc-800 shrink-0" aria-hidden="true" />
 
                                     {/* Tag Filter Trigger */}
                                     <div id="groups-filter-bar" className="shrink-0">
@@ -1571,8 +1585,8 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                             }
                                             aria-expanded={isTagFilterOpen}
                                             className={`h-full px-3.5 md:px-5 flex items-center justify-center transition-colors ${selectedTag !== 'ALL'
-                                                ? 'bg-black text-white'
-                                                : 'bg-white text-black hover:bg-black hover:text-white'
+                                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                                                : 'bg-white dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
                                                 }`}
                                         >
                                             <Filter className="w-4 h-4 shrink-0" />
@@ -1582,7 +1596,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                     {/* Clear Filters — only when active, same capsule */}
                                     {(selectedCategory !== 'ALL' || selectedTag !== 'ALL' || searchTerm) && (
                                         <>
-                                            <div className="w-[2px] bg-black shrink-0" aria-hidden="true" />
+                                            <div className="w-px bg-slate-200 dark:bg-zinc-800 shrink-0" aria-hidden="true" />
                                             <button
                                                 onClick={() => {
                                                     setSelectedCategory('ALL');
@@ -1591,7 +1605,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                 }}
                                                 aria-label="Limpiar filtros"
                                                 title="Limpiar filtros"
-                                                className="shrink-0 px-3.5 md:px-4 flex items-center justify-center bg-white text-black hover:bg-black hover:text-white transition-colors"
+                                                className="shrink-0 px-3.5 md:px-4 flex items-center justify-center bg-white dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white transition-colors"
                                             >
                                                 <X className="w-4 h-4" />
                                             </button>
@@ -1614,10 +1628,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: -8 }}
                                                 transition={{ duration: 0.2, ease: 'easeOut' }}
-                                                className="absolute top-full right-0 mt-2 z-50 min-w-[220px] bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] origin-top"
+                                                className="absolute top-full right-0 mt-2 z-50 min-w-[220px] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg origin-top"
                                             >
-                                                <div className="p-3 border-b-2 border-black bg-black">
-                                                    <span className="text-xs font-bold uppercase tracking-wide text-white">
+                                                <div className="px-3 py-2.5 border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800">
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
                                                         FILTRAR POR ETIQUETA
                                                     </span>
                                                 </div>
@@ -1628,9 +1642,9 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                             setSelectedTag('ALL');
                                                             setIsTagFilterOpen(false);
                                                         }}
-                                                        className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border-2 ${selectedTag === 'ALL'
-                                                            ? 'bg-black text-white border-black'
-                                                            : 'bg-white text-black border-black hover:bg-black hover:text-white'
+                                                        className={`px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide transition-colors border ${selectedTag === 'ALL'
+                                                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white'
+                                                            : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:border-slate-300 dark:hover:border-zinc-600'
                                                             }`}
                                                     >
                                                         TODAS
@@ -1644,9 +1658,9 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                                 setSelectedTag(selectedTag === tag.id ? 'ALL' : tag.id);
                                                                 setIsTagFilterOpen(false);
                                                             }}
-                                                            className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border-2 ${selectedTag === tag.id
-                                                                ? 'bg-black text-white border-black'
-                                                                : 'bg-white text-black border-black hover:bg-black hover:text-white'
+                                                            className={`px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide transition-colors border ${selectedTag === tag.id
+                                                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white'
+                                                                : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:border-slate-300 dark:hover:border-zinc-600'
                                                                 }`}
                                                         >
                                                             #{tag.name}
@@ -1704,7 +1718,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                             setSelectedTag('ALL');
                                             setSearchTerm('');
                                         }}
-                                        className="px-6 py-3 text-xs font-black uppercase tracking-widest transition-all border-2 border-black hover:bg-black hover:text-white"
+                                        className="px-6 py-3 text-xs font-bold uppercase tracking-wide transition-all border-b-2 border-transparent hover:border-slate-900 dark:hover:border-white"
                                         style={{ backgroundColor: '#ffffff', color: '#000000' }}
                                     >
                                         LIMPIAR FILTROS
@@ -1714,7 +1728,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                         )}
 
                         {/* CTA: Leader Postulation */}
-                        <div id="leader-postulation-card" className="mt-16 md:mt-24 border-4 border-black rounded-xl p-8 md:p-12 lg:p-16 xl:p-20 bg-black text-white">
+                        <div id="leader-postulation-card" className="mt-16 md:mt-24 rounded-2xl p-8 md:p-12 lg:p-16 xl:p-20 bg-slate-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white">
                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
                                 <div className="flex-1">
                                     <p className="text-xs font-bold italic text-[#118f46] mb-3">// postulaciones abiertas //</p>
@@ -1763,7 +1777,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                     {config.footerLinks?.instagram && (
                                         <button
                                             onClick={() => window.open(config.footerLinks!.instagram, '_blank')}
-                                            className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                            className="w-14 h-14 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2"
                                             title="Instagram"
                                         >
                                             <Instagram className="w-6 h-6" />
@@ -1772,7 +1786,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                     {config.footerLinks?.facebook && (
                                         <button
                                             onClick={() => window.open(config.footerLinks!.facebook, '_blank')}
-                                            className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                            className="w-14 h-14 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2"
                                             title="Facebook"
                                         >
                                             <Facebook className="w-6 h-6" />
@@ -1781,7 +1795,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                     {config.footerLinks?.youtube && (
                                         <button
                                             onClick={() => window.open(config.footerLinks!.youtube, '_blank')}
-                                            className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                            className="w-14 h-14 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2"
                                             title="YouTube"
                                         >
                                             <Youtube className="w-6 h-6" />
@@ -1790,7 +1804,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                     {config.footerLinks?.spotify && (
                                         <button
                                             onClick={() => window.open(config.footerLinks!.spotify, '_blank')}
-                                            className="w-14 h-14 border-4 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                                            className="w-14 h-14 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2"
                                             title="Spotify"
                                         >
                                             <Music className="w-6 h-6" />
@@ -2078,8 +2092,8 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                     <div className="max-w-4xl">
                                         <h3 className="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tighter mb-6">Temporadas</h3>
 
-                                        <div className="bg-white p-8 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                            <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-black">
+                                        <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+                                            <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-zinc-800">
                                                 <div>
                                                     <h4 className="font-black text-base uppercase tracking-tight">Configuración de Temporadas</h4>
                                                     <p className="text-xs font-medium text-neutral-500 mt-1">
@@ -2089,7 +2103,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                 {!editingSeasons ? (
                                                     <button
                                                         onClick={() => setEditingSeasons(JSON.parse(JSON.stringify(seasonSettings)))}
-                                                        className="px-4 py-2 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all shrink-0"
+                                                        className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold uppercase tracking-wide rounded-lg hover:bg-black dark:hover:bg-slate-200 transition-all shrink-0"
                                                     >
                                                         Editar
                                                     </button>
@@ -2097,14 +2111,14 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                     <div className="flex gap-2">
                                                         <button
                                                             onClick={() => setEditingSeasons(null)}
-                                                            className="px-4 py-2 text-xs font-black uppercase tracking-widest border-2 border-black hover:bg-neutral-100 transition-all"
+                                                            className="px-4 py-2 text-xs font-semibold uppercase tracking-wide rounded-lg border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all"
                                                         >
                                                             Cancelar
                                                         </button>
                                                         <button
                                                             onClick={handleSaveSeasonSettings}
                                                             disabled={isSavingSeasons}
-                                                            className="px-4 py-2 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black hover:opacity-80 transition-all disabled:opacity-50 shrink-0"
+                                                            className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold uppercase tracking-wide rounded-lg hover:opacity-90 transition-all disabled:opacity-50 shrink-0"
                                                         >
                                                             {isSavingSeasons ? 'Guardando...' : 'Guardar'}
                                                         </button>
@@ -2125,7 +2139,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                         max={2030}
                                                         value={editingSeasons.activeYear}
                                                         onChange={e => setEditingSeasons({ ...editingSeasons, activeYear: parseInt(e.target.value) || new Date().getFullYear() })}
-                                                        className="w-24 h-10 px-3 border-2 border-black font-black text-center text-base focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                                        className="w-24 h-10 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-bold text-center text-base bg-white dark:bg-zinc-900 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10"
                                                     />
                                                 ) : (
                                                     <span className="text-3xl font-black tabular-nums">{seasonSettings.activeYear}</span>
@@ -2140,7 +2154,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                     return (
                                                         <div
                                                             key={key}
-                                                            className={`border-2 p-5 transition-all ${s.isOpen ? 'border-black bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]' : 'border-neutral-200 bg-neutral-50'}`}
+                                                            className={`border rounded-xl p-5 transition-all ${s.isOpen ? 'border-slate-900 dark:border-white bg-white dark:bg-zinc-900 shadow-sm' : 'border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950'}`}
                                                         >
                                                             <div className="flex items-center justify-between mb-4">
                                                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{key}</p>
@@ -2172,7 +2186,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                                         updated.seasons[key].label = e.target.value;
                                                                         setEditingSeasons(updated);
                                                                     }}
-                                                                    className="w-full h-8 px-2 border-2 border-black font-black text-sm uppercase tracking-tight mb-3 focus:outline-none"
+                                                                    className="w-full h-8 px-2 border border-slate-300 dark:border-zinc-700 rounded-lg font-bold text-sm uppercase tracking-tight mb-3 bg-white dark:bg-zinc-900 focus:outline-none focus:border-slate-900 dark:focus:border-white"
                                                                 />
                                                             ) : (
                                                                 <p className="font-black text-base uppercase tracking-tight mb-3">{s.label}</p>
@@ -2192,7 +2206,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                                                 updated.seasons[key].startDate = e.target.value.split('-').reverse().join('-');
                                                                                 setEditingSeasons(updated);
                                                                             }}
-                                                                            className="w-full h-8 px-2 border-2 border-black font-bold text-sm text-center tabular-nums focus:outline-none"
+                                                                            className="w-full h-8 px-2 border border-slate-300 dark:border-zinc-700 rounded-lg font-bold text-sm text-center tabular-nums bg-white dark:bg-zinc-900 focus:outline-none focus:border-slate-900 dark:focus:border-white"
                                                                         />
                                                                     ) : (
                                                                         <p className="text-sm font-bold tabular-nums text-neutral-600">{(s.startDate || '').split('-').reverse().join('-')} · {year}</p>
@@ -2211,7 +2225,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                                                 updated.seasons[key].endDate = e.target.value.split('-').reverse().join('-');
                                                                                 setEditingSeasons(updated);
                                                                             }}
-                                                                            className="w-full h-8 px-2 border-2 border-black font-bold text-sm text-center tabular-nums focus:outline-none"
+                                                                            className="w-full h-8 px-2 border border-slate-300 dark:border-zinc-700 rounded-lg font-bold text-sm text-center tabular-nums bg-white dark:bg-zinc-900 focus:outline-none focus:border-slate-900 dark:focus:border-white"
                                                                         />
                                                                     ) : (
                                                                         <p className="text-sm font-bold tabular-nums text-neutral-600">{(s.endDate || '').split('-').reverse().join('-')} · {year}</p>

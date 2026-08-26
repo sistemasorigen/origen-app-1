@@ -278,7 +278,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                         <button
                             type="button"
                             onClick={() => handleSelectTipo('USUARIO')}
-                            className="w-full flex items-center gap-4 p-5 border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all text-left"
+                            className="w-full flex items-center gap-4 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all text-left"
                         >
                             <UserCheck className="w-8 h-8 shrink-0" />
                             <div>
@@ -289,7 +289,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                         <button
                             type="button"
                             onClick={() => handleSelectTipo('INVITADO')}
-                            className="w-full flex items-center gap-4 p-5 border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all text-left"
+                            className="w-full flex items-center gap-4 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all text-left"
                         >
                             <UserPlus className="w-8 h-8 shrink-0" />
                             <div>
@@ -316,7 +316,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
                                     placeholder="Nombre del participante..."
-                                    className="w-full h-11 pl-9 pr-3 border-2 border-black font-bold text-sm text-black dark:text-white dark:bg-black bg-white focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow duration-150"
+                                    className="w-full h-11 pl-9 pr-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium text-sm text-black dark:text-white dark:bg-zinc-900 bg-white focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-shadow duration-150"
                                 />
                                 {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 animate-spin" />}
                             </div>
@@ -324,7 +324,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                         </div>
 
                         {searchResults.length > 0 && (
-                            <div className="border-2 border-black overflow-hidden max-h-72 overflow-y-auto">
+                            <div className="border border-slate-200 dark:border-zinc-800 rounded-lg overflow-hidden max-h-72 overflow-y-auto">
                                 {searchResults.map((user, i) => (
                                     <button
                                         key={user.id}
@@ -363,29 +363,29 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="text-[10px] font-bold uppercase block mb-1">Nombre</label>
-                                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 px-3 border-2 border-black font-bold" placeholder="Ej. Juan" />
+                                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="Ej. Juan" />
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold uppercase block mb-1">Apellido</label>
-                                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 px-3 border-2 border-black font-bold" placeholder="Ej. Pérez" />
+                                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="Ej. Pérez" />
                             </div>
                         </div>
                         <div>
                             <label className="text-[10px] font-bold uppercase block mb-1">Teléfono</label>
-                            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-11 px-3 border-2 border-black font-bold" placeholder="+54 9 11 ..." />
+                            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="+54 9 11 ..." />
                         </div>
                         <div>
                             <label className="text-[10px] font-bold uppercase block mb-1">Email</label>
-                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full h-11 px-3 border-2 border-black font-bold" placeholder="ejemplo@email.com" />
+                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="ejemplo@email.com" />
                         </div>
 
                         {error && <p className="text-sm text-red-600 font-semibold">{error}</p>}
 
                         <div className="flex gap-3 pt-2">
-                            <button type="button" onClick={() => setStep(1)} className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border-2 border-black dark:border-white text-black dark:text-white font-black uppercase tracking-widest text-xs hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-150">
+                            <button type="button" onClick={() => setStep(1)} className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border border-slate-300 dark:border-zinc-700 rounded-lg text-slate-700 dark:text-zinc-300 font-semibold uppercase tracking-wide text-xs hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all duration-150">
                                 <ChevronLeft className="w-4 h-4" /> Volver
                             </button>
-                            <button type="button" onClick={handleGuestContinue} className="flex-[2] min-h-[44px] bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white border-2 border-black dark:border-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-150">
+                            <button type="button" onClick={handleGuestContinue} className="flex-[2] min-h-[44px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold uppercase tracking-wide text-xs hover:opacity-90 rounded-lg transition-all duration-150">
                                 Continuar →
                             </button>
                         </div>
@@ -395,7 +395,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                 {/* ─── PASO 3 (solo si isCouplesGroup): Pareja ─── */}
                 {step === 3 && isCouplesGroup && (
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 border-b-2 border-black pb-2">
+                        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-zinc-800 pb-2">
                             <Heart className="w-4 h-4 text-pink-600" />
                             <span className="text-xs font-black uppercase tracking-widest">¿Querés inscribir a la pareja?</span>
                         </div>
@@ -404,14 +404,14 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                             <button
                                 type="button"
                                 onClick={() => setWantsPartner(true)}
-                                className={`py-3 border-2 border-black font-black uppercase text-sm tracking-wide transition-all ${wantsPartner ? 'bg-pink-600 text-white' : 'bg-white text-black hover:bg-neutral-100'}`}
+                                className={`py-3 rounded-lg font-semibold uppercase text-sm tracking-wide transition-all ${wantsPartner ? 'bg-pink-600 text-white' : 'bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
                             >
                                 Sí
                             </button>
                             <button
                                 type="button"
                                 onClick={() => { setWantsPartner(false); resetPartnerData(); setPartnerHasEmail(null); }}
-                                className={`py-3 border-2 border-black font-black uppercase text-sm tracking-wide transition-all ${!wantsPartner ? 'bg-black text-white' : 'bg-white text-black hover:bg-neutral-100'}`}
+                                className={`py-3 rounded-lg font-semibold uppercase text-sm tracking-wide transition-all ${!wantsPartner ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
                             >
                                 No
                             </button>
@@ -425,14 +425,14 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                                         <button
                                             type="button"
                                             onClick={() => { setPartnerHasEmail(true); resetPartnerData(); }}
-                                            className={`py-2.5 border-2 border-black font-black uppercase text-sm tracking-wide transition-all ${partnerHasEmail === true ? 'bg-pink-600 text-white' : 'bg-white text-black hover:bg-neutral-100'}`}
+                                            className={`py-2.5 rounded-lg font-semibold uppercase text-sm tracking-wide transition-all ${partnerHasEmail === true ? 'bg-pink-600 text-white' : 'bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
                                         >
                                             Sí
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => { setPartnerHasEmail(false); resetPartnerData(); }}
-                                            className={`py-2.5 border-2 border-black font-black uppercase text-sm tracking-wide transition-all ${partnerHasEmail === false ? 'bg-black text-white' : 'bg-white text-black hover:bg-neutral-100'}`}
+                                            className={`py-2.5 rounded-lg font-semibold uppercase text-sm tracking-wide transition-all ${partnerHasEmail === false ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
                                         >
                                             No
                                         </button>
@@ -441,7 +441,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
 
                                 {partnerHasEmail !== null && (
                                     <div className="space-y-4 pt-1">
-                                        <div className="flex items-center justify-between border-b-2 border-black pb-2">
+                                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-2">
                                             <span className="text-xs font-black uppercase tracking-widest">Datos de la pareja</span>
                                             {partnerAccount && (
                                                 <span className="text-[10px] font-bold bg-green-200 px-2 py-0.5 border border-black">Cuenta encontrada</span>
@@ -482,7 +482,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                                                     type="text" value={partnerFirstName}
                                                     onChange={e => setPartnerFirstName(e.target.value)}
                                                     disabled={partnerHasEmail === true && (!hasCheckedPartnerEmail || checkingPartner)}
-                                                    className="w-full h-11 px-3 border-2 border-black font-bold disabled:bg-neutral-100 disabled:text-neutral-400"
+                                                    className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white disabled:bg-slate-100 dark:disabled:bg-zinc-800 disabled:text-slate-400"
                                                     placeholder="Nombre"
                                                 />
                                             </div>
@@ -492,7 +492,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                                                     type="text" value={partnerLastName}
                                                     onChange={e => setPartnerLastName(e.target.value)}
                                                     disabled={partnerHasEmail === true && (!hasCheckedPartnerEmail || checkingPartner)}
-                                                    className="w-full h-11 px-3 border-2 border-black font-bold disabled:bg-neutral-100 disabled:text-neutral-400"
+                                                    className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white disabled:bg-slate-100 dark:disabled:bg-zinc-800 disabled:text-slate-400"
                                                     placeholder="Apellido"
                                                 />
                                             </div>
@@ -503,7 +503,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                                                 type="tel" value={partnerPhone}
                                                 onChange={e => setPartnerPhone(e.target.value)}
                                                 disabled={partnerHasEmail === true && (!hasCheckedPartnerEmail || checkingPartner)}
-                                                className="w-full h-11 px-3 border-2 border-black font-bold disabled:bg-neutral-100 disabled:text-neutral-400"
+                                                className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white disabled:bg-slate-100 dark:disabled:bg-zinc-800 disabled:text-slate-400"
                                                 placeholder="+54 9 11 ..."
                                             />
                                         </div>
@@ -515,10 +515,10 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                         {error && <p className="text-sm text-red-600 font-semibold">{error}</p>}
 
                         <div className="flex gap-3 pt-2">
-                            <button type="button" onClick={() => setStep(2)} className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border-2 border-black dark:border-white text-black dark:text-white font-black uppercase tracking-widest text-xs hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-150">
+                            <button type="button" onClick={() => setStep(2)} className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border border-slate-300 dark:border-zinc-700 rounded-lg text-slate-700 dark:text-zinc-300 font-semibold uppercase tracking-wide text-xs hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all duration-150">
                                 <ChevronLeft className="w-4 h-4" /> Volver
                             </button>
-                            <button type="button" onClick={handlePartnerContinue} className="flex-[2] min-h-[44px] bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white border-2 border-black dark:border-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-150">
+                            <button type="button" onClick={handlePartnerContinue} className="flex-[2] min-h-[44px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold uppercase tracking-wide text-xs hover:opacity-90 rounded-lg transition-all duration-150">
                                 Continuar →
                             </button>
                         </div>
@@ -532,7 +532,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                             Confirmá los datos del participante
                         </p>
 
-                        <div className="border-2 border-black dark:border-white p-4 mb-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] space-y-3">
+                        <div className="border border-slate-200 dark:border-zinc-800 rounded-xl p-4 mb-5 shadow-sm space-y-3">
                             <div className="flex items-start justify-between gap-2">
                                 <p className="font-black text-base uppercase tracking-tight text-black dark:text-white">
                                     {firstName} {lastName}
@@ -580,7 +580,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                                 type="button"
                                 onClick={() => setStep(isCouplesGroup ? 3 : 2)}
                                 disabled={isSubmitting}
-                                className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border-2 border-black dark:border-white text-black dark:text-white font-black uppercase tracking-widest text-xs hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-150"
+                                className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border border-slate-300 dark:border-zinc-700 rounded-lg text-slate-700 dark:text-zinc-300 font-semibold uppercase tracking-wide text-xs hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all duration-150"
                             >
                                 <ChevronLeft className="w-4 h-4" /> Volver
                             </button>
@@ -588,7 +588,7 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
                                 type="button"
                                 onClick={handleConfirm}
                                 disabled={isSubmitting}
-                                className="flex-[2] min-h-[44px] bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white border-2 border-black dark:border-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-150 flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="flex-[2] min-h-[44px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold uppercase tracking-wide text-xs hover:opacity-90 rounded-lg transition-all duration-150 flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                                 {isSubmitting ? 'Agregando...' : 'Agregar al Grupo'}
