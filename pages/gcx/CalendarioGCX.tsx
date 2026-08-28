@@ -16,6 +16,15 @@ const DAY_MAP: Record<string, number> = {
 
 const DAY_LABELS_SHORT = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 
+// ── Tokens de Home.tsx ─────────────────────────────────
+// Se declaran acá arriba porque se repiten en varios lugares y porque la
+// intención es explícita: esta pantalla no tiene paleta propia, usa la del
+// Home. Cualquier cambio de estilo global se hace en un solo lugar.
+const CARD = 'bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm';
+const EYEBROW = 'text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-zinc-400';
+const BTN_PRIMARY = 'inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
+const BTN_SOFT = 'inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 font-semibold hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
+
 const getActiveSeasonRange = (
     settings: SeasonSettings
 ): { start: string; end: string; label: string } | null => {
@@ -127,34 +136,39 @@ interface WeekCalendarProps {
     accentColor: string;
 }
 
+// La tira de la semana es el objeto que da identidad a la pantalla, así que
+// es el único lugar donde se gasta tinta: HOY va en relleno sólido
+// slate-900/white — el mismo tratamiento que Home reserva para su botón
+// primario y el punto activo del carrusel. El resto de las celdas quedan
+// calladas y la lectura salta directo al día de hoy.
 const WeekCalendar: React.FC<WeekCalendarProps> = ({
     weekDays, mesLabel, groups, today,
     onPrev, onNext, onDayClick, getGroupsForDay, accentColor,
 }) => (
-    <div className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+    <div className={`${CARD} overflow-hidden`}>
         {/* Cabecera con navegación */}
-        <div className="flex items-center justify-between border-b-2 border-black bg-black text-white">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800">
             <button
                 type="button"
                 onClick={onPrev}
                 aria-label="Semana anterior"
-                className="flex items-center justify-center w-11 h-11 hover:bg-white/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white shrink-0"
+                className="flex items-center justify-center w-11 h-11 shrink-0 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-900 dark:focus-visible:ring-white"
             >
                 <ChevronLeft className="w-5 h-5" />
             </button>
-            <p className="text-xs font-black uppercase tracking-[0.2em] capitalize select-none">{mesLabel}</p>
+            <p className={`${EYEBROW} first-letter:uppercase select-none`}>{mesLabel}</p>
             <button
                 type="button"
                 onClick={onNext}
                 aria-label="Semana siguiente"
-                className="flex items-center justify-center w-11 h-11 hover:bg-white/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white shrink-0"
+                className="flex items-center justify-center w-11 h-11 shrink-0 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-900 dark:focus-visible:ring-white"
             >
                 <ChevronRight className="w-5 h-5" />
             </button>
         </div>
 
         {/* Grilla de 7 días */}
-        <div className="grid grid-cols-7 divide-x-2 divide-black">
+        <div className="grid grid-cols-7 divide-x divide-slate-100 dark:divide-zinc-800">
             {weekDays.map((day, idx) => {
                 const dayGroups = getGroupsForDay(day, groups);
                 const isToday   = day.toDateString() === today.toDateString();
@@ -168,38 +182,39 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({
                         onClick={() => onDayClick(day, dayGroups)}
                         aria-label={`${day.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}${hasGroups ? `, ${dayGroups.length} grupo${dayGroups.length > 1 ? 's' : ''}` : ''}`}
                         className={[
-                            'relative flex flex-col items-center justify-start pt-2 pb-3 gap-1 min-h-[64px]',
+                            'relative flex flex-col items-center justify-start pt-2.5 pb-3 gap-1 min-h-[68px]',
                             'cursor-pointer transition-colors duration-150',
-                            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-900 dark:focus-visible:ring-white',
                             isToday
-                                ? 'bg-black text-white'
+                                ? 'bg-slate-900 dark:bg-white'
                                 : hasGroups
-                                    ? 'bg-neutral-50 hover:bg-neutral-100 active:bg-neutral-200'
-                                    : 'bg-white hover:bg-neutral-50 active:bg-neutral-100',
+                                    ? 'bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                                    : 'hover:bg-slate-50 dark:hover:bg-zinc-800/60',
                         ].join(' ')}
                     >
                         {/* Etiqueta del día */}
-                        <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${isToday ? 'text-white/60' : 'text-neutral-400'}`}>
+                        <span className={`text-[10px] font-semibold uppercase tracking-[0.12em] leading-none ${isToday ? 'text-white/60 dark:text-slate-900/60' : 'text-slate-400 dark:text-zinc-500'}`}>
                             {DAY_LABELS_SHORT[idx]}
                         </span>
 
                         {/* Número del día */}
-                        <span className={`text-sm font-black tabular-nums leading-none ${isToday ? 'text-white' : 'text-black'}`}>
+                        <span className={`text-sm font-bold tabular-nums leading-none ${isToday ? 'text-white dark:text-slate-900' : 'text-slate-900 dark:text-white'}`}>
                             {day.getDate()}
                         </span>
 
-                        {/* Indicador de grupos */}
+                        {/* Indicador de grupos — el color distingue anfitrión de
+                            participante, así que dice algo verdadero y se queda. */}
                         {hasGroups ? (
                             <div className="flex flex-col items-center gap-0.5 w-full px-1">
                                 {dayGroups.slice(0, 2).map((_, gi) => (
                                     <div
                                         key={gi}
                                         className="w-1.5 h-1.5 rounded-full"
-                                        style={{ backgroundColor: isToday ? 'rgba(255,255,255,0.8)' : accentColor }}
+                                        style={{ backgroundColor: isToday ? 'currentColor' : accentColor }}
                                     />
                                 ))}
                                 {dayGroups.length > 2 && (
-                                    <span className={`text-[8px] font-black leading-none ${isToday ? 'text-white/60' : 'text-neutral-400'}`}>
+                                    <span className={`text-[9px] font-semibold leading-none ${isToday ? 'text-white/60 dark:text-slate-900/60' : 'text-slate-400 dark:text-zinc-500'}`}>
                                         +{dayGroups.length - 2}
                                     </span>
                                 )}
@@ -208,10 +223,9 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({
                             <div className="h-4" />
                         )}
 
-                        {/* Tooltip nombre (solo desktop) */}
+                        {/* Nombre del primer grupo (solo desktop) */}
                         {hasGroups && firstName && (
-                            <span className="hidden md:block absolute bottom-0 left-0 right-0 text-center text-[8px] font-bold truncate px-0.5 pb-0.5 leading-none"
-                                style={{ color: isToday ? 'rgba(255,255,255,0.5)' : '#9ca3af' }}>
+                            <span className={`hidden md:block absolute bottom-0 left-0 right-0 text-center text-[9px] font-normal truncate px-0.5 pb-1 leading-none ${isToday ? 'text-white/50 dark:text-slate-900/50' : 'text-slate-400 dark:text-zinc-500'}`}>
                                 {firstName.length > 8 ? firstName.slice(0, 7) + '…' : firstName}
                             </span>
                         )}
@@ -224,38 +238,41 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({
 
 // ── Tarjeta de grupo en modal ──────────────────────────
 const GroupCard: React.FC<{ group: Group; asHost: boolean }> = ({ group, asHost }) => (
-    <div className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-        {/* Badge de rol */}
-        <div className={`px-3 py-1.5 flex items-center gap-2 border-b-2 border-black ${asHost ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-700'}`}>
-            <Users className="w-3 h-3 shrink-0" aria-hidden="true" />
-            <span className="text-[10px] font-black uppercase tracking-widest">
+    <div className={`${CARD} overflow-hidden`}>
+        {/* Badge de rol — píldora al tono de Home, no una barra sólida */}
+        <div className="px-4 pt-4">
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full ${asHost
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
+                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400'
+                }`}>
+                <Users className="w-3 h-3 shrink-0" aria-hidden="true" />
                 {asHost ? 'Anfitrión' : 'Participante'}
             </span>
         </div>
 
         {/* Contenido */}
-        <div className="p-4 space-y-2">
-            <p className="font-black text-sm uppercase tracking-tight leading-snug">{group.name}</p>
+        <div className="p-4 space-y-2.5">
+            <p className="font-bold tracking-[-0.01em] text-slate-900 dark:text-white text-base leading-tight">{group.name}</p>
 
             <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs text-neutral-600">
-                    <Users className="w-3 h-3 shrink-0 text-neutral-400" aria-hidden="true" />
-                    <span><strong className="font-bold text-black">{group.leaderName} {group.leaderSurname}</strong></span>
+                <div className="flex items-center gap-2 text-sm font-normal text-slate-500 dark:text-zinc-400">
+                    <Users className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                    <span className="font-semibold text-slate-700 dark:text-zinc-200">{group.leaderName} {group.leaderSurname}</span>
                 </div>
                 {group.meetingTime && (
-                    <div className="flex items-center gap-2 text-xs text-neutral-600">
-                        <Clock className="w-3 h-3 shrink-0 text-neutral-400" aria-hidden="true" />
+                    <div className="flex items-center gap-2 text-sm font-normal text-slate-500 dark:text-zinc-400">
+                        <Clock className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
                         <span>{group.meetingDay} · {group.meetingTime}</span>
                     </div>
                 )}
                 {group.location && (
-                    <div className="flex items-center gap-2 text-xs text-neutral-600">
-                        <MapPin className="w-3 h-3 shrink-0 text-neutral-400" aria-hidden="true" />
+                    <div className="flex items-center gap-2 text-sm font-normal text-slate-500 dark:text-zinc-400">
+                        <MapPin className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
                         <span className="line-clamp-1">{group.location}</span>
                     </div>
                 )}
                 {group.description && (
-                    <p className="text-xs text-neutral-400 leading-relaxed pt-1 border-t border-neutral-100">
+                    <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 leading-relaxed pt-2 border-t border-slate-100 dark:border-zinc-800">
                         {group.description}
                     </p>
                 )}
@@ -376,293 +393,292 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
     const todayStr = today.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
 
     return (
-        <div className="max-w-3xl mx-auto px-4 md:px-8 py-6 md:py-10 space-y-8">
+        <div className="min-h-screen bg-slate-50 dark:bg-zinc-950">
+            <div className="max-w-3xl mx-auto px-4 md:px-8 py-6 md:py-10 space-y-8">
 
-            {/* ── HEADER ──────────────────────────────── */}
-            <div className="space-y-4">
-                {/* Título + fecha */}
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-black leading-none">
-                            Mi Calendario
-                        </h1>
-                        <p className="text-xs font-bold text-neutral-400 mt-1 capitalize">{todayStr}</p>
-                    </div>
-
-                    {/* Badge de temporada */}
-                    {seasonLabel && (
-                        <span className="shrink-0 inline-flex items-center px-3 py-1.5 border-2 border-[#28a946] text-[#28a946] text-[10px] font-black uppercase tracking-widest">
-                            {seasonLabel}
-                        </span>
-                    )}
-                </div>
-
-                {/* Stat bar: grupos hoy + botones de exportar */}
-                <div className="flex items-center justify-between gap-3 p-3 border-2 border-black bg-neutral-50">
-                    <div className="flex items-center gap-4">
-                        <div className="text-center">
-                            <p className="text-lg font-black tabular-nums leading-none">{todayCount}</p>
-                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none mt-0.5">
-                                hoy
-                            </p>
+                {/* ── HEADER ──────────────────────────────── */}
+                <div className="space-y-4">
+                    {/* Título + fecha */}
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white">
+                                Mi calendario
+                            </h1>
+                            <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 mt-1 first-letter:uppercase">{todayStr}</p>
                         </div>
-                        {todayCount > 0 && (
-                            <div className="text-xs font-medium text-neutral-500 leading-snug">
-                                {todayHostCount > 0 && (
-                                    <p>{todayHostCount} como anfitrión</p>
-                                )}
-                                {todayParticipantCount > 0 && (
-                                    <p>{todayParticipantCount} como participante</p>
-                                )}
-                            </div>
-                        )}
-                        {todayCount === 0 && (
-                            <p className="text-xs font-medium text-neutral-400">Sin reuniones hoy</p>
+
+                        {/* Badge de temporada */}
+                        {seasonLabel && (
+                            <span className="shrink-0 inline-flex items-center text-[11px] font-semibold px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400">
+                                {seasonLabel}
+                            </span>
                         )}
                     </div>
 
-                    {/* Botones exportar */}
-                    {!noGroups && (
-                        <div className="flex items-center gap-2 shrink-0">
-                            {hostGroups.length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() => openCalModal('host')}
-                                    aria-label="Agregar grupos de anfitrión al calendario"
-                                    className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] border-2 border-black bg-white text-black hover:bg-black hover:text-white transition-colors duration-150 text-[10px] font-black uppercase tracking-wide cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
-                                >
-                                    <GoogleGSvg />
-                                    <span className="hidden sm:inline">Anfitrión</span>
-                                </button>
+                    {/* Cuántas reuniones hay hoy + exportar.
+                        El número va en Black tabular — es el único 900 de la
+                        pantalla, igual que el contador del Home. */}
+                    <div className={`${CARD} flex items-center justify-between gap-3 p-4`}>
+                        <div className="flex items-center gap-4">
+                            <div className="text-center">
+                                <p className="text-2xl font-black tabular-nums tracking-[-0.03em] leading-none text-slate-900 dark:text-white">{todayCount}</p>
+                                <p className={`${EYEBROW} leading-none mt-1.5`}>hoy</p>
+                            </div>
+                            {todayCount > 0 && (
+                                <div className="text-sm font-normal text-slate-500 dark:text-zinc-400 leading-snug">
+                                    {todayHostCount > 0 && (
+                                        <p>{todayHostCount} como anfitrión</p>
+                                    )}
+                                    {todayParticipantCount > 0 && (
+                                        <p>{todayParticipantCount} como participante</p>
+                                    )}
+                                </div>
                             )}
-                            {participantGroups.length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() => openCalModal('participant')}
-                                    aria-label="Agregar grupos de participante al calendario"
-                                    className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] border-2 border-black bg-white text-black hover:bg-black hover:text-white transition-colors duration-150 text-[10px] font-black uppercase tracking-wide cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
-                                >
-                                    <GoogleGSvg />
-                                    <span className="hidden sm:inline">Participante</span>
-                                </button>
+                            {todayCount === 0 && (
+                                <p className="text-sm font-normal text-slate-500 dark:text-zinc-400">Sin reuniones hoy</p>
                             )}
                         </div>
-                    )}
-                </div>
-            </div>
 
-            {/* ── CALENDARIOS ─────────────────────────── */}
-            {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-3">
-                    <Loader2 className="w-7 h-7 animate-spin text-neutral-300" aria-hidden="true" />
-                    <p className="text-xs font-bold text-neutral-300 uppercase tracking-widest">Cargando grupos…</p>
-                </div>
-            ) : noGroups ? (
-                /* ── ESTADO VACÍO ── */
-                <div className="border-2 border-dashed border-neutral-200 py-16 text-center space-y-3">
-                    <CalendarDays className="w-10 h-10 text-neutral-200 mx-auto" aria-hidden="true" />
-                    <div>
-                        <p className="text-sm font-black text-neutral-400 uppercase tracking-widest">
-                            Sin grupos esta temporada
-                        </p>
-                        <p className="text-xs text-neutral-300 mt-1">
-                            Inscribite a un grupo de conexión para verlo acá
-                        </p>
+                        {/* Botones exportar */}
+                        {!noGroups && (
+                            <div className="flex items-center gap-2 shrink-0">
+                                {hostGroups.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => openCalModal('host')}
+                                        aria-label="Agregar grupos de anfitrión al calendario"
+                                        className={`${BTN_SOFT} px-3 min-h-[44px] text-xs cursor-pointer`}
+                                    >
+                                        <GoogleGSvg />
+                                        <span className="hidden sm:inline">Anfitrión</span>
+                                    </button>
+                                )}
+                                {participantGroups.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => openCalModal('participant')}
+                                        aria-label="Agregar grupos de participante al calendario"
+                                        className={`${BTN_SOFT} px-3 min-h-[44px] text-xs cursor-pointer`}
+                                    >
+                                        <GoogleGSvg />
+                                        <span className="hidden sm:inline">Participante</span>
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
-                    <a
-                        href="#/gcx"
-                        className="inline-flex items-center gap-2 px-4 py-2.5 border-2 border-black bg-black text-white text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black transition-colors duration-150 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
-                    >
-                        Ver grupos disponibles
-                    </a>
                 </div>
-            ) : (
-                <div className="space-y-10">
-                    {/* Anfitrión */}
-                    {hostGroups.length > 0 && (
-                        <section aria-label="Calendario de anfitrión">
-                            <div className="flex items-center gap-3 mb-3">
-                                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-400">
-                                    Mis grupos — Anfitrión
-                                </p>
-                                <span className="flex-1 border-t border-neutral-200" />
-                                <span className="text-[10px] font-bold text-neutral-300">{hostGroups.length}</span>
-                            </div>
-                            <WeekCalendar
-                                weekDays={weekDays}
-                                mesLabel={mesLabel}
-                                groups={hostGroups}
-                                today={today}
-                                onPrev={prevWeek}
-                                onNext={nextWeek}
-                                onDayClick={(date, groups) => {
-                                    setSelectedDay(date);
-                                    setSelectedDayGroups(groups.map(g => ({ group: g, asHost: true })));
-                                }}
-                                getGroupsForDay={getGroupsForDay}
-                                accentColor="#28a946"
-                            />
-                        </section>
-                    )}
 
-                    {/* Participante */}
-                    {participantGroups.length > 0 && (
-                        <section aria-label="Calendario de participante">
-                            <div className="flex items-center gap-3 mb-3">
-                                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-400">
-                                    Mis grupos — Participante
-                                </p>
-                                <span className="flex-1 border-t border-neutral-200" />
-                                <span className="text-[10px] font-bold text-neutral-300">{participantGroups.length}</span>
-                            </div>
-                            <WeekCalendar
-                                weekDays={weekDays}
-                                mesLabel={mesLabel}
-                                groups={participantGroups}
-                                today={today}
-                                onPrev={prevWeek}
-                                onNext={nextWeek}
-                                onDayClick={(date, groups) => {
-                                    setSelectedDay(date);
-                                    setSelectedDayGroups(groups.map(g => ({ group: g, asHost: false })));
-                                }}
-                                getGroupsForDay={getGroupsForDay}
-                                accentColor="#6366f1"
-                            />
-                        </section>
-                    )}
-                </div>
-            )}
-
-            {/* ── MODAL: DETALLE DEL DÍA ──────────────── */}
-            <NeoModal
-                isOpen={!!selectedDay}
-                onClose={() => { setSelectedDay(null); setSelectedDayGroups([]); }}
-                title={selectedDay
-                    ? selectedDay.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
-                    : ''
-                }
-                maxWidth="max-w-lg"
-            >
-                {selectedDayGroups.length === 0 ? (
-                    <div className="py-10 text-center">
-                        <CalendarDays className="w-8 h-8 text-neutral-200 mx-auto mb-2" aria-hidden="true" />
-                        <p className="text-sm font-medium text-neutral-400">Sin grupos este día.</p>
+                {/* ── CALENDARIOS ─────────────────────────── */}
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-3">
+                        <Loader2 className="w-7 h-7 animate-spin text-slate-300 dark:text-zinc-600" aria-hidden="true" />
+                        <p className={EYEBROW}>Cargando grupos…</p>
+                    </div>
+                ) : noGroups ? (
+                    /* ── ESTADO VACÍO ── */
+                    <div className="text-center py-16 px-4">
+                        <div className="w-20 h-20 bg-slate-100 dark:bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CalendarDays className="w-10 h-10 text-slate-400 dark:text-zinc-500" aria-hidden="true" />
+                        </div>
+                        <h2 className="text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white mb-2">
+                            Todavía no hay nada acá
+                        </h2>
+                        <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 mb-6 max-w-sm mx-auto">
+                            Cuando te sumes a un grupo de conexión, sus reuniones aparecen en esta semana.
+                        </p>
+                        <a href="#/gcx" className={`${BTN_PRIMARY} px-5 py-3 text-sm cursor-pointer`}>
+                            Buscar un grupo
+                            <ChevronRight className="w-4 h-4" />
+                        </a>
                     </div>
                 ) : (
-                    <div className="space-y-3">
-                        {selectedDayGroups.map(({ group, asHost }) => (
-                            <GroupCard key={group.id} group={group} asHost={asHost} />
-                        ))}
+                    <div className="space-y-10">
+                        {/* Anfitrión */}
+                        {hostGroups.length > 0 && (
+                            <section aria-label="Calendario de anfitrión">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white">
+                                        Como anfitrión
+                                    </h2>
+                                    <span className="flex-1 border-t border-slate-200 dark:border-zinc-800" />
+                                    <span className={EYEBROW}>{hostGroups.length} grupo{hostGroups.length !== 1 ? 's' : ''}</span>
+                                </div>
+                                <WeekCalendar
+                                    weekDays={weekDays}
+                                    mesLabel={mesLabel}
+                                    groups={hostGroups}
+                                    today={today}
+                                    onPrev={prevWeek}
+                                    onNext={nextWeek}
+                                    onDayClick={(date, groups) => {
+                                        setSelectedDay(date);
+                                        setSelectedDayGroups(groups.map(g => ({ group: g, asHost: true })));
+                                    }}
+                                    getGroupsForDay={getGroupsForDay}
+                                    accentColor="#059669"
+                                />
+                            </section>
+                        )}
+
+                        {/* Participante */}
+                        {participantGroups.length > 0 && (
+                            <section aria-label="Calendario de participante">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white">
+                                        Como participante
+                                    </h2>
+                                    <span className="flex-1 border-t border-slate-200 dark:border-zinc-800" />
+                                    <span className={EYEBROW}>{participantGroups.length} grupo{participantGroups.length !== 1 ? 's' : ''}</span>
+                                </div>
+                                <WeekCalendar
+                                    weekDays={weekDays}
+                                    mesLabel={mesLabel}
+                                    groups={participantGroups}
+                                    today={today}
+                                    onPrev={prevWeek}
+                                    onNext={nextWeek}
+                                    onDayClick={(date, groups) => {
+                                        setSelectedDay(date);
+                                        setSelectedDayGroups(groups.map(g => ({ group: g, asHost: false })));
+                                    }}
+                                    getGroupsForDay={getGroupsForDay}
+                                    accentColor="#6366f1"
+                                />
+                            </section>
+                        )}
                     </div>
                 )}
-            </NeoModal>
 
-            {/* ── MODAL: AGENDAR AL CALENDARIO ────────── */}
-            <NeoModal
-                isOpen={showCalendarModal}
-                onClose={() => setShowCalendarModal(false)}
-                title={`Agendar al Calendario`}
-                maxWidth="max-w-lg"
-            >
-                <div className="space-y-5">
-                    {/* Subtítulo de tipo */}
-                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
-                        {calendarModalType === 'host' ? 'Grupos como Anfitrión' : 'Grupos como Participante'}
-                    </p>
-
-                    <p className="text-xs font-medium text-neutral-500 leading-relaxed">
-                        Seleccioná los grupos que querés agregar como eventos semanales recurrentes.
-                    </p>
-
-                    {/* Lista de grupos */}
-                    <div className="space-y-2 max-h-56 overflow-y-auto -mx-1 px-1">
-                        {activeGroups.map(group => {
-                            const selected = selectedGroupIds.has(group.id);
-                            return (
-                                <button
-                                    key={group.id}
-                                    type="button"
-                                    onClick={() => toggleGroup(group.id)}
-                                    aria-pressed={selected}
-                                    className={[
-                                        'w-full flex items-center gap-3 px-4 py-3 min-h-[52px] border-2 text-left transition-all duration-150 cursor-pointer',
-                                        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black',
-                                        selected
-                                            ? 'border-black bg-black text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
-                                            : 'border-neutral-200 hover:border-neutral-400 bg-white',
-                                    ].join(' ')}
-                                >
-                                    {/* Checkbox visual */}
-                                    <div className={`w-4 h-4 border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? 'border-white bg-white' : 'border-neutral-300 bg-white'}`}>
-                                        {selected && <Check className="w-3 h-3 text-black" aria-hidden="true" />}
-                                    </div>
-
-                                    <div className="min-w-0 flex-1">
-                                        <p className="font-black text-sm truncate leading-snug">{group.name}</p>
-                                        <p className={`text-[10px] font-medium truncate leading-snug ${selected ? 'text-neutral-300' : 'text-neutral-400'}`}>
-                                            {group.meetingDay}{group.meetingTime ? ` · ${group.meetingTime}` : ''}
-                                        </p>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Contador de seleccionados */}
-                    {selectedGroupIds.size > 0 && (
-                        <p className="text-[10px] font-bold text-neutral-400 text-center">
-                            {selectedGroupIds.size} grupo{selectedGroupIds.size > 1 ? 's' : ''} seleccionado{selectedGroupIds.size > 1 ? 's' : ''}
-                        </p>
+                {/* ── MODAL: DETALLE DEL DÍA ──────────────── */}
+                <NeoModal
+                    isOpen={!!selectedDay}
+                    onClose={() => { setSelectedDay(null); setSelectedDayGroups([]); }}
+                    title={selectedDay
+                        ? selectedDay.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+                        : ''
+                    }
+                    maxWidth="max-w-lg"
+                >
+                    {selectedDayGroups.length === 0 ? (
+                        <div className="py-10 text-center">
+                            <CalendarDays className="w-8 h-8 text-slate-300 dark:text-zinc-600 mx-auto mb-2" aria-hidden="true" />
+                            <p className="text-sm font-normal text-slate-500 dark:text-zinc-400">No hay reuniones este día.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {selectedDayGroups.map(({ group, asHost }) => (
+                                <GroupCard key={group.id} group={group} asHost={asHost} />
+                            ))}
+                        </div>
                     )}
+                </NeoModal>
 
-                    {/* Acciones */}
-                    <div className="space-y-3 pt-1 border-t-2 border-black">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 pt-3">
-                            Agregar con:
+                {/* ── MODAL: AGENDAR AL CALENDARIO ────────── */}
+                <NeoModal
+                    isOpen={showCalendarModal}
+                    onClose={() => setShowCalendarModal(false)}
+                    title={`Agendar al Calendario`}
+                    maxWidth="max-w-lg"
+                >
+                    <div className="space-y-5">
+                        {/* Subtítulo de tipo */}
+                        <p className={EYEBROW}>
+                            {calendarModalType === 'host' ? 'Grupos como anfitrión' : 'Grupos como participante'}
                         </p>
 
-                        {/* Google Calendar */}
-                        <div className="space-y-1">
+                        <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 leading-relaxed">
+                            Elegí los grupos que querés agregar como eventos semanales recurrentes.
+                        </p>
+
+                        {/* Lista de grupos */}
+                        <div className="space-y-2 max-h-56 overflow-y-auto -mx-1 px-1">
+                            {activeGroups.map(group => {
+                                const selected = selectedGroupIds.has(group.id);
+                                return (
+                                    <button
+                                        key={group.id}
+                                        type="button"
+                                        onClick={() => toggleGroup(group.id)}
+                                        aria-pressed={selected}
+                                        className={[
+                                            'w-full flex items-center gap-3 px-4 py-3 min-h-[52px] rounded-xl border text-left transition-all duration-150 cursor-pointer',
+                                            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20',
+                                            selected
+                                                ? 'bg-slate-900 dark:bg-white border-slate-900 dark:border-white'
+                                                : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700',
+                                        ].join(' ')}
+                                    >
+                                        {/* Checkbox visual */}
+                                        <div className={`w-4 h-4 rounded shrink-0 flex items-center justify-center transition-colors ${selected ? 'bg-white dark:bg-slate-900' : 'border border-slate-300 dark:border-zinc-600'}`}>
+                                            {selected && <Check className="w-3 h-3 text-slate-900 dark:text-white" aria-hidden="true" />}
+                                        </div>
+
+                                        <div className="min-w-0 flex-1">
+                                            <p className={`font-semibold text-sm truncate leading-snug ${selected ? 'text-white dark:text-slate-900' : 'text-slate-900 dark:text-white'}`}>{group.name}</p>
+                                            <p className={`text-xs font-normal truncate leading-snug ${selected ? 'text-white/60 dark:text-slate-900/60' : 'text-slate-500 dark:text-zinc-400'}`}>
+                                                {group.meetingDay}{group.meetingTime ? ` · ${group.meetingTime}` : ''}
+                                            </p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Contador de seleccionados */}
+                        {selectedGroupIds.size > 0 && (
+                            <p className="text-xs font-normal text-slate-500 dark:text-zinc-400 text-center">
+                                {selectedGroupIds.size} grupo{selectedGroupIds.size > 1 ? 's' : ''} seleccionado{selectedGroupIds.size > 1 ? 's' : ''}
+                            </p>
+                        )}
+
+                        {/* Acciones */}
+                        <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-zinc-800">
+                            <p className={EYEBROW}>Agregar con</p>
+
+                            {/* Google Calendar — conserva el azul de marca, que es
+                                identidad del servicio, no decoración. */}
+                            <div className="space-y-1.5">
+                                <button
+                                    type="button"
+                                    disabled={selectedGroupIds.size === 0}
+                                    onClick={() => {
+                                        activeGroups
+                                            .filter(g => selectedGroupIds.has(g.id))
+                                            .forEach(g => window.open(buildGoogleCalUrl(g), '_blank'));
+                                    }}
+                                    className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 min-h-[52px] rounded-xl bg-[#4285F4] text-white text-sm font-semibold hover:bg-[#3367d6] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#4285F4]/30"
+                                >
+                                    <GoogleGSvg />
+                                    Google Calendar
+                                    {selectedGroupIds.size > 0 && <span className="opacity-70">({selectedGroupIds.size})</span>}
+                                </button>
+                                {isMobile && (
+                                    <p className="text-xs font-normal text-slate-500 dark:text-zinc-400 text-center leading-snug px-2">
+                                        En el teléfono activá <span className="font-semibold text-slate-700 dark:text-zinc-200">“Repetir → Semanal”</span> dentro del evento
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Apple Calendar / Outlook */}
                             <button
                                 type="button"
                                 disabled={selectedGroupIds.size === 0}
                                 onClick={() => {
                                     activeGroups
                                         .filter(g => selectedGroupIds.has(g.id))
-                                        .forEach(g => window.open(buildGoogleCalUrl(g), '_blank'));
+                                        .forEach(g => downloadIcs(g));
                                 }}
-                                className="w-full flex items-center justify-center gap-3 px-4 py-3 min-h-[52px] border-2 border-[#4285F4] text-[#4285F4] font-black text-xs uppercase tracking-widest hover:bg-[#4285F4] hover:text-white transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4285F4]"
+                                className={`${BTN_SOFT} w-full px-4 py-3 min-h-[52px] text-sm cursor-pointer disabled:opacity-40 disabled:pointer-events-none`}
                             >
-                                <GoogleGSvg />
-                                Google Calendar
-                                {selectedGroupIds.size > 0 && <span className="ml-1 opacity-70">({selectedGroupIds.size})</span>}
+                                <CalendarDays className="w-4 h-4 shrink-0" aria-hidden="true" />
+                                Apple Calendar / Outlook (.ics)
+                                {selectedGroupIds.size > 0 && <span className="opacity-60">({selectedGroupIds.size})</span>}
                             </button>
-                            {isMobile && (
-                                <p className="text-[10px] text-neutral-400 text-center leading-snug px-2">
-                                    En el teléfono activá <span className="font-bold text-neutral-500">“Repetir → Semanal”</span> dentro del evento
-                                </p>
-                            )}
                         </div>
-
-                        {/* Apple Calendar / Outlook */}
-                        <button
-                            type="button"
-                            disabled={selectedGroupIds.size === 0}
-                            onClick={() => {
-                                activeGroups
-                                    .filter(g => selectedGroupIds.has(g.id))
-                                    .forEach(g => downloadIcs(g));
-                            }}
-                            className="w-full flex items-center justify-center gap-3 px-4 py-3 min-h-[52px] border-2 border-neutral-300 text-neutral-600 font-black text-xs uppercase tracking-widest hover:border-black hover:text-black transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
-                        >
-                            <CalendarDays className="w-4 h-4 shrink-0" aria-hidden="true" />
-                            Apple Calendar / Outlook (.ics)
-                            {selectedGroupIds.size > 0 && <span className="ml-1 opacity-60">({selectedGroupIds.size})</span>}
-                        </button>
                     </div>
-                </div>
-            </NeoModal>
+                </NeoModal>
+            </div>
         </div>
     );
 };
