@@ -8,7 +8,8 @@
     "build": "node scripts/generate-build-version.js && vite build",
     "preview": "vite preview",
     "start": "vite preview --host --port ${PORT:-8080}",
-    "deploy": "git pull upstream main && npm run build && git add -f dist && git add -A && git commit -m \"chore: deploy\" --allow-empty && git push upstream main && node scripts/notify-deploy.js"
+    "deploy": "git pull upstream main && npm run build && git add -f dist && git add -A && git commit -m \"chore: deploy\" --allow-empty && git push upstream main && node scripts/publish-dist.js && node scripts/notify-deploy.js",
+    "publish-dist": "node scripts/publish-dist.js"
   },
   "dependencies": {
     "@google/genai": "^1.31.0",
