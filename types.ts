@@ -867,6 +867,22 @@ export interface MusicaBannerSlide {
     createdAt: string;
 }
 
+// ── Banner de Punto de Información ──────────────
+
+export interface PuntoInfoBannerSlide {
+    id: string;
+    mediaUrl: string;
+    mediaType: 'image' | 'video';
+    videoUrl?: string;
+    focalX?: number;
+    focalY?: number;
+    zoom?: number;
+    title?: string;
+    subtitle?: string;
+    displayOrder: number;
+    createdAt: string;
+}
+
 export interface BannerConfig {
     titlePrefix: string;
     titleHighlight: string;

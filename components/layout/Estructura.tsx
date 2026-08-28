@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { UserRole, AppConfig, User } from '../../types';
 import { db } from '../../services/dbService';
+import { HeroLayoutContext } from '../../contexts/HeroContext';
 
 import GlobalPlayer from './ReproductorGlobal';
 import DrawerMenu, { HamburgerButton } from './MenuDeslizable';
@@ -37,7 +38,18 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     // la navbar arranca transparente sobre la imagen
     // y recupera su fondo blanco recién al hacer
     // scroll, igual que en el Dashboard.
-    const isDashboard = location.pathname === '/' || location.pathname === '/gcx' || location.pathname === '/ninez';
+    //
+    // La lista de rutas cubre las pantallas que SIEMPRE abren con hero.
+    // `hasFullBleedHero` cubre a las que dependen de qué están mostrando:
+    // `/punto-de-informacion` renderiza el home público (con hero) o los
+    // paneles internos (fondo claro, sin hero) bajo el mismo pathname, y
+    // cambia de uno a otro sin tocar la URL — ver contexts/HeroContext.tsx.
+    const [hasFullBleedHero, setHasFullBleedHero] = useState(false);
+    const heroLayout = useMemo(
+        () => ({ hasFullBleedHero, setHasFullBleedHero }),
+        [hasFullBleedHero]
+    );
+    const isDashboard = location.pathname === '/' || location.pathname === '/gcx' || location.pathname === '/ninez' || hasFullBleedHero;
     // `/ninez` entra acá junto con isDashboard, no por separado: el -mt-16 que
     // monta el hero bajo la navbar sólo tiene sentido si el contenido va a
     // sangre. Con el padding del contenedor angosto el hero quedaría con
@@ -101,6 +113,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     };
 
     return (
+        <HeroLayoutContext.Provider value={heroLayout}>
         <div className="min-h-screen flex font-sans text-slate-900 dark:text-white bg-slate-50 dark:bg-black transition-colors duration-300 relative">
 
             {/* Desktop Sidebar */}
@@ -255,6 +268,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                 onClose={() => setIsNotifDrawerOpen(false)}
             />
         </div>
+        </HeroLayoutContext.Provider>
     );
 };
 

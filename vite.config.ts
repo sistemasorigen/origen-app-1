@@ -37,7 +37,9 @@ export default defineConfig(({ mode }) => {
       __BUILD_VERSION__: JSON.stringify(readBuildVersion()),
     },
     server: {
-      port: 5173,
+      // El harness asigna el puerto por PORT cuando 5173 ya está tomado por
+      // otro dev server; sin esa variable se mantiene el 5173 de siempre.
+      port: process.env.PORT ? Number(process.env.PORT) : 5173,
       host: 'localhost',
     },
     plugins: [react()],

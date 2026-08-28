@@ -1,14 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store';
-import { ProductType } from '../../types';
+import { ProductType, PuntoInfoBannerSlide } from '../../types';
 import { useToast } from './context/ContextoToast';
-import { RefreshCw, Download, AlertTriangle } from 'lucide-react';
+import {
+    RefreshCw, Download, AlertTriangle,
+    Image as ImageIcon, Plus, Edit2, Trash2, X, Save, Loader2
+} from 'lucide-react';
+import ImageUpload from '../../components/media/SubidaImagen';
+import VideoUpload from '../../components/media/SubidaVideo';
+import EncuadreMedia from '../../components/media/EncuadreMedia';
+import {
+    getPuntoInfoBannerSlides,
+    createPuntoInfoBannerSlide,
+    updatePuntoInfoBannerSlide,
+    deletePuntoInfoBannerSlide,
+    type PuntoInfoBannerSlideInput
+} from '../../services/supabaseService';
 
 const AdminPanel: React.FC = () => {
     const { products, refreshData } = useStore();
     const toast = useToast();
     const [priceUpdate, setPriceUpdate] = useState({ type: ProductType.REMERA, price: 0 });
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [bannerSlides, setBannerSlides] = useState<PuntoInfoBannerSlide[]>([]);
+    const [editingBannerSlide, setEditingBannerSlide] = useState<Partial<PuntoInfoBannerSlideInput> & { id?: string } | null>(null);
+    const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
+    const [savingBanner, setSavingBanner] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        getPuntoInfoBannerSlides().then(slides => {
+            if (!cancelled) setBannerSlides(slides);
+        });
+        return () => { cancelled = true; };
+    }, []);
 
     const executeUpdate = async () => {
         setConfirmOpen(false);
@@ -19,6 +44,44 @@ const AdminPanel: React.FC = () => {
             toast.success('Precios actualizados masivamente.');
         } catch {
             toast.error('Error al actualizar precios.');
+        }
+    };
+
+    const handleSaveBannerSlide = async () => {
+        if (!editingBannerSlide?.mediaUrl) return;
+        setSavingBanner(true);
+
+        const input: PuntoInfoBannerSlideInput = {
+            mediaUrl: editingBannerSlide.mediaUrl,
+            mediaType: editingBannerSlide.mediaType || 'image',
+            videoUrl: editingBannerSlide.videoUrl,
+            focalX: editingBannerSlide.focalX,
+            focalY: editingBannerSlide.focalY,
+            zoom: editingBannerSlide.zoom,
+            title: editingBannerSlide.title,
+            subtitle: editingBannerSlide.subtitle,
+            displayOrder: editingBannerSlide.displayOrder ?? bannerSlides.length
+        };
+
+        if (editingBannerSlide.id) {
+            await updatePuntoInfoBannerSlide(editingBannerSlide.id, input);
+        } else {
+            await createPuntoInfoBannerSlide(input);
+        }
+
+        const fresh = await getPuntoInfoBannerSlides();
+        setBannerSlides(fresh);
+        setSavingBanner(false);
+        setIsBannerModalOpen(false);
+        setEditingBannerSlide(null);
+    };
+
+    const handleDeleteBannerSlide = async (id: string) => {
+        const success = await deletePuntoInfoBannerSlide(id);
+        if (success) {
+            setBannerSlides(prev => prev.filter(s => s.id !== id));
+        } else {
+            toast.error('No se pudo eliminar el slide.');
         }
     };
 
@@ -69,6 +132,82 @@ const AdminPanel: React.FC = () => {
                                 Confirmar
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* BANNER SLIDE MODAL */}
+            {isBannerModalOpen && editingBannerSlide && (
+                <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-5">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">{editingBannerSlide.id ? 'Editar Slide' : 'Nuevo Slide'}</h3>
+                            <button onClick={() => { setIsBannerModalOpen(false); setEditingBannerSlide(null); }} className="text-slate-400 hover:text-black">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+                            <button type="button" onClick={() => setEditingBannerSlide({ ...editingBannerSlide, mediaType: 'image' })} className={`flex-1 py-2 rounded-md text-xs font-bold uppercase ${editingBannerSlide.mediaType === 'image' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Imagen</button>
+                            <button type="button" onClick={() => setEditingBannerSlide({ ...editingBannerSlide, mediaType: 'video' })} className={`flex-1 py-2 rounded-md text-xs font-bold uppercase ${editingBannerSlide.mediaType === 'video' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Video</button>
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">
+                                {editingBannerSlide.mediaType === 'video' ? 'Portada (mientras carga el video)' : 'Imagen'}
+                            </label>
+                            <ImageUpload
+                                currentImage={editingBannerSlide.mediaUrl || ''}
+                                folder="punto-info-banner"
+                                onImageUpload={(url) => setEditingBannerSlide({ ...editingBannerSlide, mediaUrl: url })}
+                                aspectRatio="wide"
+                            />
+                        </div>
+
+                        {editingBannerSlide.mediaType === 'video' && (
+                            <div>
+                                <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Video</label>
+                                <VideoUpload
+                                    currentVideo={editingBannerSlide.videoUrl || ''}
+                                    folder="punto-info-banner"
+                                    onVideoUpload={(url) => setEditingBannerSlide({ ...editingBannerSlide, videoUrl: url })}
+                                />
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Encuadre</label>
+                            <EncuadreMedia
+                                mediaType={editingBannerSlide.mediaType || 'image'}
+                                imageUrl={editingBannerSlide.mediaUrl}
+                                videoUrl={editingBannerSlide.videoUrl}
+                                frameWidth={1920}
+                                frameHeight={720}
+                                value={{
+                                    focalX: editingBannerSlide.focalX ?? 50,
+                                    focalY: editingBannerSlide.focalY ?? 50,
+                                    zoom: editingBannerSlide.zoom ?? 1
+                                }}
+                                onChange={(frame) => setEditingBannerSlide({ ...editingBannerSlide, ...frame })}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Título</label>
+                            <input type="text" value={editingBannerSlide.title || ''} onChange={e => setEditingBannerSlide({ ...editingBannerSlide, title: e.target.value })} className="w-full h-11 px-3 border border-slate-300 rounded-lg text-sm font-bold outline-none focus:border-black" />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Subtítulo</label>
+                            <input type="text" value={editingBannerSlide.subtitle || ''} onChange={e => setEditingBannerSlide({ ...editingBannerSlide, subtitle: e.target.value })} className="w-full h-11 px-3 border border-slate-300 rounded-lg text-sm font-medium outline-none focus:border-black" />
+                        </div>
+
+                        <button
+                            onClick={handleSaveBannerSlide}
+                            disabled={savingBanner || !editingBannerSlide.mediaUrl}
+                            className="w-full h-11 bg-black text-white rounded-lg font-bold uppercase text-xs tracking-widest hover:bg-slate-800 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                        >
+                            {savingBanner ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Guardar</>}
+                        </button>
                     </div>
                 </div>
             )}
@@ -125,6 +264,48 @@ const AdminPanel: React.FC = () => {
                     <Download className="w-4 h-4" />
                     Descargar inventario CSV
                 </button>
+            </div>
+
+            {/* BANNER PRINCIPAL */}
+            <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
+                    <h3 className="text-base font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                        <ImageIcon className="w-5 h-5 text-slate-400" />
+                        Banner Principal
+                    </h3>
+                    <button
+                        onClick={() => { setEditingBannerSlide({ mediaType: 'image', mediaUrl: '' }); setIsBannerModalOpen(true); }}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-black text-white text-xs font-bold uppercase rounded-lg hover:bg-slate-800 transition-colors"
+                    >
+                        <Plus className="w-4 h-4" /> Agregar
+                    </button>
+                </div>
+
+                <div className="space-y-3">
+                    {bannerSlides.map(slide => (
+                        <div key={slide.id} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg">
+                            <div className="w-16 h-10 rounded bg-slate-100 overflow-hidden shrink-0">
+                                {slide.mediaType === 'video' && slide.videoUrl ? (
+                                    <video src={slide.videoUrl} poster={slide.mediaUrl} className="w-full h-full object-cover" muted />
+                                ) : (
+                                    <img src={slide.mediaUrl} className="w-full h-full object-cover" />
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-slate-900 truncate">{slide.title || '(Sin título)'}</p>
+                            </div>
+                            <button onClick={() => { setEditingBannerSlide(slide); setIsBannerModalOpen(true); }} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+                                <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDeleteBannerSlide(slide.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ))}
+                    {bannerSlides.length === 0 && (
+                        <p className="text-xs font-medium uppercase text-slate-400 text-center py-6">Sin slides configurados.</p>
+                    )}
+                </div>
             </div>
         </div>
     );

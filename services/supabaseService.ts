@@ -1119,6 +1119,109 @@ export async function deleteMusicaBannerSlide(id: string): Promise<boolean> {
   return true;
 }
 
+// ── Banner de Punto de Información ──────────────
+
+function mapPuntoInfoBannerSlideRow(row: any): import('../types').PuntoInfoBannerSlide {
+  return {
+    id: row.id,
+    mediaUrl: row.media_url,
+    mediaType: row.media_type,
+    videoUrl: row.video_url || undefined,
+    focalX: row.focal_x ?? undefined,
+    focalY: row.focal_y ?? undefined,
+    zoom: row.zoom ?? undefined,
+    title: row.title || undefined,
+    subtitle: row.subtitle || undefined,
+    displayOrder: row.display_order,
+    createdAt: row.created_at
+  };
+}
+
+export async function getPuntoInfoBannerSlides(): Promise<import('../types').PuntoInfoBannerSlide[]> {
+  const { data, error } = await supabase
+    .from('punto_info_banner_slides')
+    .select('*')
+    .order('display_order', { ascending: true });
+
+  if (error) {
+    console.error('[getPuntoInfoBannerSlides] Error:', error);
+    return [];
+  }
+  return (data || []).map(mapPuntoInfoBannerSlideRow);
+}
+
+export interface PuntoInfoBannerSlideInput {
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  videoUrl?: string;
+  focalX?: number;
+  focalY?: number;
+  zoom?: number;
+  title?: string;
+  subtitle?: string;
+  displayOrder: number;
+}
+
+export async function createPuntoInfoBannerSlide(input: PuntoInfoBannerSlideInput): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('punto_info_banner_slides')
+    .insert({
+      media_url: input.mediaUrl,
+      media_type: input.mediaType,
+      video_url: input.videoUrl || null,
+      focal_x: input.focalX ?? null,
+      focal_y: input.focalY ?? null,
+      zoom: input.zoom ?? null,
+      title: input.title || null,
+      subtitle: input.subtitle || null,
+      display_order: input.displayOrder
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    console.error('[createPuntoInfoBannerSlide] Error:', error);
+    return null;
+  }
+  return data.id;
+}
+
+export async function updatePuntoInfoBannerSlide(id: string, input: PuntoInfoBannerSlideInput): Promise<boolean> {
+  const { error } = await supabase
+    .from('punto_info_banner_slides')
+    .update({
+      media_url: input.mediaUrl,
+      media_type: input.mediaType,
+      video_url: input.videoUrl || null,
+      focal_x: input.focalX ?? null,
+      focal_y: input.focalY ?? null,
+      zoom: input.zoom ?? null,
+      title: input.title || null,
+      subtitle: input.subtitle || null,
+      display_order: input.displayOrder
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('[updatePuntoInfoBannerSlide] Error:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function deletePuntoInfoBannerSlide(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('punto_info_banner_slides')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('[deletePuntoInfoBannerSlide] Error:', error);
+    return false;
+  }
+  return true;
+}
+
 // Delete group - Uses RPC to bypass RLS and cascade delete
 export async function deleteGroupDirect(id: string): Promise<boolean> {
 
