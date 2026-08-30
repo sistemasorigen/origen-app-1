@@ -5,7 +5,7 @@ import { supabase } from '../../services/supabaseClient';
 import { WelcomeVisitor, VisitorStage } from '../../types';
 import { ToastProvider } from '../punto-informacion/context/ContextoToast';
 import {
-    Plus, Users, Search, X, Eye, Trash2, ArrowLeft,
+    Plus, Users, Search, X, Eye, Trash2,
     ChevronUp, ChevronDown, BarChart3
 } from 'lucide-react';
 import FilterChip from '../../components/ui/FilterChip';
@@ -332,18 +332,9 @@ const Bienvenida: React.FC = () => {
                 {/* ── HEADER ─────────────────────────────────────────── */}
                 <div className="bg-white dark:bg-black border-b border-slate-200 dark:border-white">
                     <div className="w-full px-4 sm:px-6 lg:px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => navigate('/')}
-                                aria-label="Volver al inicio"
-                                className="w-10 h-10 flex items-center justify-center border border-slate-300 bg-white hover:bg-slate-50 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
-                            >
-                                <ArrowLeft className="w-4 h-4 text-slate-700" />
-                            </button>
-                            <div>
-                                <h1 className="text-xl font-black uppercase tracking-tighter leading-none">Tablero Bienvenida</h1>
-                                <p className="text-[10px] text-slate-600 dark:text-neutral-400 font-mono uppercase tracking-wider">Pipeline de seguimiento</p>
-                            </div>
+                        <div>
+                            <h1 className="text-xl font-black uppercase tracking-tighter leading-none">Tablero Bienvenida</h1>
+                            <p className="text-[10px] text-slate-600 dark:text-neutral-400 font-mono uppercase tracking-wider">Pipeline de seguimiento</p>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                             <button

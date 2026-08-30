@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import {
-    Plus, Eye, GitCompareArrows, Pencil, Trash2, ArrowLeft,
+    Plus, Eye, GitCompareArrows, Pencil, Trash2,
     TrendingUp, TrendingDown, Minus, ChevronUp, ChevronDown, Check,
     X, AlertTriangle, ChevronRight, Calendar, Search, SlidersHorizontal, Clock, CalendarDays,
     BarChart3
@@ -657,14 +657,9 @@ const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUs
             {/* Header */}
             <div className="bg-white dark:bg-black border-b border-slate-200 dark:border-white">
                 <div className="w-full px-4 sm:px-6 lg:px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => navigate('/')} className="w-10 h-10 flex items-center justify-center border border-slate-300 bg-white hover:bg-slate-50 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
-                            <ArrowLeft className="w-4 h-4 text-slate-700" />
-                        </button>
-                        <div>
-                            <h1 className="text-xl font-black uppercase tracking-tighter leading-none">Audiencia Servicios</h1>
-                            <p className="text-[10px] text-slate-600 dark:text-neutral-400 font-mono uppercase tracking-wider">Estadísticas de Servicios</p>
-                        </div>
+                    <div>
+                        <h1 className="text-xl font-black uppercase tracking-tighter leading-none">Audiencia Servicios</h1>
+                        <p className="text-[10px] text-slate-600 dark:text-neutral-400 font-mono uppercase tracking-wider">Estadísticas de Servicios</p>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         <button
