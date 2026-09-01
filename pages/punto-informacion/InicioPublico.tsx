@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import {
     QrCode,
     Instagram, Facebook, Youtube, Music,
-    ArrowRight, Calendar, Clock, Megaphone
+    ArrowRight, Calendar, Clock, Megaphone, LayoutDashboard
 } from 'lucide-react';
 import { AppEvent, AppConfig, Announcement, PuntoInfoBannerSlide } from '../../types';
 import { db } from '../../services/dbService';
@@ -171,6 +171,7 @@ interface PublicHomeProps {
 }
 
 const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPublic, canAccessPanel }) => {
+    const navigate = useNavigate();
     const { events, announcements } = useStore();
     const [appConfig, setAppConfig] = useState<AppConfig>(db.getAppConfig());
     const [sharingEvent, setSharingEvent] = useState<AppEvent | null>(null);
@@ -227,6 +228,37 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
         }
 
         return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(textOrUrl)}`;
+    };
+
+    /**
+     * Entrada al panel de administración.
+     *
+     * El destino cambia según el ancho porque el panel tiene DOS layouts, no
+     * uno responsive: PuntoInformacion.tsx monta `md:hidden` con el menú de
+     * tarjetas ("Menú Principal") y `hidden md:flex` con el tablero y las
+     * flechas de navegación. Mandar a todos a la misma vista deja a la mitad
+     * en la pantalla equivocada: en el teléfono, ?view=SUMMARY salta directo
+     * al Dashboard salteándose el menú desde donde se elige qué gestionar; en
+     * la compu, ?view=PANEL cae en el mismo Dashboard pero por el `default`
+     * del switch, sin el ítem del menú marcado.
+     *
+     * Por eso se consulta 768px, que es exactamente el breakpoint `md` de
+     * Tailwind con el que ese archivo decide qué layout monta: cualquier otro
+     * umbral haría que el destino y el layout se desincronicen en la franja
+     * intermedia. Se lee en el click y no en el render para que valga el
+     * tamaño real en el momento de la acción (rotar el teléfono, redimensionar
+     * la ventana).
+     */
+    const irAlPanel = () => {
+        // Sin permiso no hay a dónde ir todavía: onGoInternal abre el modal de
+        // login del panel, que el contenedor ya tiene montado en esta vista.
+        if (!canAccessPanel) {
+            onGoInternal();
+            return;
+        }
+        onGoInternal();
+        const esDesktop = window.matchMedia('(min-width: 768px)').matches;
+        navigate(`/punto-de-informacion?view=${esDesktop ? 'SUMMARY' : 'PANEL'}`);
     };
 
     const footerLinks = appConfig.footerLinks;
@@ -410,6 +442,24 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                     </div>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Acceso al panel — acción de servicio, no del público:
+                            va en `BTN_SOFT` para no competir con los "Ver QR",
+                            que son la acción real de esta pantalla. En el
+                            teléfono ocupa el ancho y sube a 48px de alto (el
+                            `py-2.5` del token queda en 42px, corto para el
+                            pulgar); en desktop vuelve a su tamaño y se alinea a
+                            la derecha, debajo de la tarjeta de redes. */}
+                        <div className="mt-4 sm:mt-5 flex sm:justify-end">
+                            <button
+                                onClick={irAlPanel}
+                                className={`pi-reveal w-full sm:w-auto min-h-[48px] sm:min-h-0 ${BTN_SOFT}`}
+                                style={{ animationDelay: '.15s' }}
+                            >
+                                <LayoutDashboard className="w-4 h-4" />
+                                Panel de administración
+                            </button>
                         </div>
                     </section>
 
