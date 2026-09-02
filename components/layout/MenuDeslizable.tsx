@@ -784,13 +784,18 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     {(() => {
                         const marca = (
                             <>
-                                <span className="w-9 h-9 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center shrink-0">
-                                    {/* favicon.png es el isotipo solo (negro sobre
-                                        transparente). Se invierte a blanco sobre la
-                                        pastilla oscura, y en modo oscuro la pastilla
-                                        pasa a blanca y el isotipo vuelve a negro. */}
-                                    <img src="/favicon.png" alt="" aria-hidden="true" className="w-5 h-5 object-contain invert dark:invert-0" />
-                                </span>
+                                {/* El isotipo solo, sin pastilla detrás.
+                                    favicon.png ya viene negro sobre transparente, así
+                                    que en claro va tal cual: negro sobre el blanco del
+                                    menú. En oscuro el fondo es zinc-950 y un logo negro
+                                    ahí no se vería, por eso `dark:invert` lo pasa a
+                                    blanco — es el único caso donde se toca el color. */}
+                                <img
+                                    src="/favicon.png"
+                                    alt=""
+                                    aria-hidden="true"
+                                    className="w-8 h-8 object-contain shrink-0 dark:invert"
+                                />
                                 {!isCollapsed && (
                                     <>
                                         <span className="flex-1 min-w-0 text-left">
