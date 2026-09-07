@@ -11,9 +11,23 @@ interface NeoModalProps {
     persistent?: boolean; // If true, modal cannot be closed by user
     maxWidth?: string; // e.g. 'max-w-2xl', 'max-w-4xl'
     disableScrollLock?: boolean;
+    /**
+     * 'brutal' (default) es el marco neo-brutalist de toda la app: borde negro
+     * de 4px y sombra dura. 'soft' lo reemplaza por esquinas grandes y sombra
+     * difusa, para pantallas que no usan esa estética — hoy solo /auth.
+     * El default se mantiene para no tocar los 40+ usos existentes.
+     */
+    variant?: 'brutal' | 'soft';
+    /**
+     * Oculta la X sin volver el modal `persistent`: se sigue pudiendo cerrar
+     * por el backdrop y por el gesto de arrastre en mobile. Para diálogos de
+     * una sola acción, donde el botón del cuerpo ya es la salida.
+     */
+    hideCloseButton?: boolean;
 }
 
-const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, persistent = false, maxWidth = 'max-w-2xl', disableScrollLock = false }) => {
+const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, persistent = false, maxWidth = 'max-w-2xl', disableScrollLock = false, variant = 'brutal', hideCloseButton = false }) => {
+    const isSoft = variant === 'soft';
     // Media Query for Responsive Animations
     const [isMobile, setIsMobile] = useState(false);
 
@@ -95,9 +109,11 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                             className={`
                                 relative w-full md:w-auto md:min-w-[500px] ${maxWidth}
                                 bg-white !bg-white flex flex-col my-auto
-                                ${isMobile
+                                ${isSoft
                                     ? 'rounded-3xl max-h-[90vh] shadow-2xl'
-                                    : 'rounded-2xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[90vh]'
+                                    : isMobile
+                                        ? 'rounded-3xl max-h-[90vh] shadow-2xl'
+                                        : 'rounded-2xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[90vh]'
                                 }
                             `}
                             style={{ backgroundColor: 'white', opacity: 1 }} // Removed isolation: isolate
@@ -118,16 +134,21 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
                             {/* HEADER */}
                             <div className={`flex items-start justify-between shrink-0 ${isMobile ? 'px-6 pt-5 pb-2' : 'px-6 md:px-8 lg:px-10 pt-6 pb-2'}`}>
                                 {title && (
-                                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-black pr-4">
+                                    <h2 className={`text-black pr-4 ${isSoft
+                                        ? 'text-xl font-bold tracking-tight'
+                                        : 'text-xl md:text-2xl font-black uppercase tracking-tight'}`}>
                                         {title}
                                     </h2>
                                 )}
-                                {!persistent && (
+                                {!persistent && !hideCloseButton && (
                                     <button
                                         onClick={onClose}
-                                        className="p-1 hover:bg-slate-100 rounded-md transition-colors shrink-0 ml-auto"
+                                        aria-label="Cerrar"
+                                        className={`hover:bg-slate-100 transition-colors shrink-0 ml-auto ${isSoft
+                                            ? 'p-2 rounded-full text-slate-500 hover:text-black'
+                                            : 'p-1 rounded-md'}`}
                                     >
-                                        <X className="w-6 h-6" />
+                                        <X className={isSoft ? 'w-5 h-5' : 'w-6 h-6'} />
                                     </button>
                                 )}
                             </div>

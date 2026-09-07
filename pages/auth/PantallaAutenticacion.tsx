@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabaseClient';
 import { User } from '../../types';
-import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowRight, UserPlus, LogIn, Lock, ArrowLeft, Mail, AlertTriangle, Calendar, MailCheck, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, LogIn, Lock, ArrowLeft, Mail, AlertTriangle, Calendar, MailCheck, RefreshCw } from 'lucide-react';
 // --- TUTORIAL INTEGRATION ---
 import { useTutorial } from '../../src/hooks/useTutorial';
 import TutorialController from '../../components/onboarding/ControladorTutorial';
@@ -23,6 +23,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
 
     const [mode, setMode] = useState<AuthMode>('LOGIN');
+    // Splash de bienvenida — SOLO mobile (lg:hidden).
+    // Arranca en true: en mobile, lo primero que se ve
+    // es la imagen con los 2 botones. Al elegir "email"
+    // pasa a false y aparece el formulario de siempre.
+    // En desktop este estado existe pero es irrelevante:
+    // el splash nunca se renderiza y el formulario
+    // siempre se muestra.
+    const [showMobileSplash, setShowMobileSplash] = useState(true);
     const [loading, setLoading] = useState(false);
     const [registrationComplete, setRegistrationComplete] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
@@ -143,8 +151,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
             if (isInvalidCredentials) {
                 console.log("Attempting to show error modal...");
-                setModalErrorTitle("Datos Incorrectos");
-                setModalErrorMessage("El correo electrónico o la contraseña ingresados son incorrectos. Por favor, verifica tus datos e inténtalo de nuevo.");
+                setModalErrorTitle("Datos incorrectos");
+                setModalErrorMessage("El email o la contraseña no coinciden. Revisá los datos e intentá de nuevo.");
                 setShowErrorModal(true);
             } else {
                 console.log("Setting inline error instead");
@@ -279,10 +287,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     );
 
     // --- STYLES ---
-    const inputClass = "w-full p-4 bg-white border border-slate-300 rounded-lg outline-none text-black font-medium focus:border-black focus:ring-1 focus:ring-black transition-all placeholder-slate-400";
-    const labelClass = "block text-xs font-bold text-slate-500 uppercase mb-1 ml-1";
-    const buttonClass = "w-full py-3 bg-black text-white font-bold uppercase tracking-widest rounded-lg hover:bg-neutral-800 transition-all shadow-lg disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 transform active:scale-[0.98]";
-    const googleButtonClass = "w-full py-4 bg-white text-black font-bold uppercase tracking-widest rounded-lg border border-gray-300 hover:bg-gray-50 transition-all shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-3 transform active:scale-[0.98]";
+    // El relleno y el radio reales de los inputs viven en index.html (#auth-form):
+    // el override global con !important gana por especificidad sobre estas clases.
+    // Acá quedan solo tipografía y espaciado, que ese override no toca.
+    const inputClass = "w-full px-4 py-3.5 rounded-xl outline-none text-black font-medium placeholder-slate-400";
+    const labelClass = "block text-[13px] font-semibold text-slate-700 mb-1.5";
+    const buttonClass = "w-full py-4 bg-black text-white font-semibold rounded-full hover:bg-neutral-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex justify-center items-center gap-2 active:scale-[0.99]";
+    const googleButtonClass = "w-full py-4 bg-slate-100 text-black font-semibold rounded-full hover:bg-slate-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex justify-center items-center gap-3 active:scale-[0.99]";
 
     const {
         isActive,
@@ -293,17 +304,108 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         dismissTutorial
     } = useTutorial('auth');
 
+    // El splash solo aplica al modo LOGIN inicial. Si
+    // el usuario fue a registrarse, a recuperar
+    // contraseña, o ya completó el registro, el
+    // formulario manda y el splash no vuelve a
+    // aparecer — si no, quedaría atrapado.
+    const splashVisible = showMobileSplash && mode === 'LOGIN' && !registrationComplete;
+
+    // Una sola flecha para toda la pantalla mobile, con un paso atrás por vez:
+    // confirmación → login → splash. Antes hacían falta dos botones apilados
+    // en la misma esquina para cubrir lo mismo.
+    const volverAtras = () => {
+        setError(null);
+        setSuccess(null);
+        if (registrationComplete) {
+            setRegistrationComplete(false);
+            setMode('LOGIN');
+            return;
+        }
+        if (mode !== 'LOGIN') {
+            setMode('LOGIN');
+            return;
+        }
+        setShowMobileSplash(true);
+    };
+
     return (
         <>
         <div className="min-h-screen flex flex-col lg:flex-row bg-white font-sans text-black overflow-hidden">
 
-            {/* Back to Home button */}
+            {/* ══ SPLASH MOBILE — lg:hidden, el desktop nunca lo renderiza ══ */}
+            {splashVisible && (
+                <div className="lg:hidden fixed inset-0 z-40 flex flex-col">
+                    {/* Imagen de fondo (la misma que usa el panel de desktop) */}
+                    <img
+                        src="/auth-bg.jpg"
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    {/* Degradado inferior: sostiene el nombre, la bajada y los botones */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
+                    {/* Velo superior: el logo y la flecha son blancos y el cielo de la
+                        foto es claro — sin esto ninguno de los dos se lee */}
+                    <div className="absolute inset-x-0 top-0 h-2/5 bg-gradient-to-b from-black/50 to-transparent" />
+
+                    <div className="relative z-10 flex-1 flex flex-col justify-end px-6 pb-10">
+                        {/* mb-auto contra el justify-end del contenedor: empuja el logo
+                            arriba y deja todo lo demás anclado abajo */}
+                        <img
+                            src="/origen-logo-full.png"
+                            alt="Origen"
+                            className="h-20 w-auto object-contain invert self-center mt-20 mb-auto"
+                        />
+
+                        <h1 className="text-white text-[30px] leading-none font-semibold tracking-tight text-center">
+                            Origen App
+                        </h1>
+                        <p className="text-white/75 text-[15px] font-light text-center mt-2.5 mb-8">
+                            Conectando a la comunidad.
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowMobileSplash(false)}
+                            className="w-full h-14 rounded-full bg-white text-slate-900 font-semibold text-sm flex items-center justify-center gap-2.5 active:scale-[0.98] transition-transform mb-3"
+                        >
+                            <Mail className="w-5 h-5" />
+                            Continuar con email
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={handleGoogleLogin}
+                            disabled={loading}
+                            className="w-full h-14 rounded-full bg-white/10 border border-white/25 backdrop-blur-sm text-white font-semibold text-sm flex items-center justify-center gap-2.5 active:scale-[0.98] transition-transform disabled:opacity-50"
+                        >
+                            <GoogleIcon />
+                            Continuar con Google
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Back to Home button.
+                Sobre el splash queda solo la flecha en blanco: el texto oscuro no se
+                leía sobre la foto y competía con el logo.
+
+                OJO con las variantes lg: no se pueden sacar. `splashVisible` es un
+                booleano de JS y vale true en desktop también — el splash se oculta
+                por CSS (lg:hidden), no por estado. Sin el `lg:` de cada clase, el
+                botón de desktop perdería la etiqueta y se volvería blanco. */}
             <button
                 onClick={() => navigate('/')}
-                className="absolute top-4 left-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold text-slate-600 hover:text-black hover:bg-slate-100 transition-all"
+                aria-label="Volver al home"
+                className={`absolute top-4 left-4 z-50 items-center gap-2 rounded-lg text-sm font-bold transition-all ${
+                    splashVisible
+                        ? 'flex p-3 text-white hover:bg-white/10 lg:px-3 lg:py-2 lg:text-slate-600 lg:hover:text-black lg:hover:bg-slate-100'
+                        : 'hidden lg:flex px-3 py-2 text-slate-600 hover:text-black hover:bg-slate-100'
+                }`}
             >
-                <ArrowLeft className="w-4 h-4" />
-                Volver al home
+                <ArrowLeft className={splashVisible ? 'w-5 h-5 lg:w-4 lg:h-4' : 'w-4 h-4'} />
+                <span className={splashVisible ? 'hidden lg:inline' : ''}>Volver al home</span>
             </button>
 
             {/* Tutorial Components */}
@@ -316,7 +418,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             />
             <TutorialController
                 steps={tours.auth}
-                run={isActive}
+                run={isActive && !splashVisible}
                 onComplete={completeTutorial}
                 onSkip={dismissTutorial}
             />
@@ -346,50 +448,75 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             </div>
 
             {/* RIGHT SIDE: FORM */}
-            <div className="w-full lg:w-1/2 flex flex-col justify-center p-6 lg:p-20 relative bg-white">
+            <div className={`w-full flex-1 lg:flex-none lg:w-1/2 flex-col justify-center lg:p-20 relative bg-white ${splashVisible ? 'hidden lg:flex' : 'flex'}`}>
 
-                {/* Mobile Header */}
-                <div className="lg:hidden flex items-center justify-center gap-3 mb-8 pt-8">
-                    <img src="/origen-logo.png" alt="Logo" className="h-24 w-auto object-contain" />
+                {/* Banda fotográfica — solo mobile. En desktop la foto ya ocupa
+                    el panel izquierdo y una segunda banda sería redundante. */}
+                <div className="lg:hidden relative h-40 shrink-0">
+                    <img
+                        src="/auth-bg.jpg"
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/30" />
+                    <button
+                        type="button"
+                        onClick={volverAtras}
+                        aria-label="Volver"
+                        className="absolute top-4 left-4 z-10 p-3 rounded-lg text-white hover:bg-white/10 transition-colors"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
                 </div>
+
+                {/* La hoja blanca monta sobre la foto y el logo se apoya en la costura */}
+                <div className="relative -mt-7 lg:mt-0 flex-1 rounded-t-[28px] lg:rounded-none bg-white px-6 pb-10 lg:p-0 lg:flex lg:flex-col lg:justify-center">
+
+                    {/* El logo apoya sobre el blanco, no sobre la costura: es oscuro
+                        y sobre la foto la mitad superior se perdía. */}
+                    <img
+                        src="/origen-logo.png"
+                        alt="Origen"
+                        className="lg:hidden h-11 w-auto object-contain mx-auto mt-5 mb-6"
+                    />
 
                 <div className="max-w-md mx-auto w-full">
                     {/* Registration Complete - Email Confirmation Card */}
                     {registrationComplete ? (
                         <div className="animate-fadeIn">
-                            {/* Neo-Brutalist Confirmation Card */}
-                            <div className="border-4 border-black bg-white p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                            <div className="text-center">
                                 <div className="flex justify-center mb-6">
-                                    <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center">
-                                        <MailCheck className="w-10 h-10 text-white" />
+                                    <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center">
+                                        <MailCheck className="w-8 h-8 text-white" />
                                     </div>
                                 </div>
 
-                                <h2 className="text-2xl font-black uppercase tracking-tight text-black text-center mb-4">
-                                    ¡REVISA TU EMAIL!
+                                <h2 className="text-[26px] lg:text-3xl font-bold tracking-tight text-black mb-2">
+                                    Revisá tu email
                                 </h2>
 
-                                <p className="text-slate-600 text-center mb-2 font-medium">
-                                    Hemos enviado un enlace de confirmación a:
+                                <p className="text-slate-500 text-sm leading-relaxed mb-4">
+                                    Te mandamos un enlace de confirmación a:
                                 </p>
 
-                                <p className="text-black font-bold text-center text-lg mb-6 bg-slate-100 py-2 px-4 rounded-lg border-2 border-black">
+                                <p className="text-black font-semibold text-center mb-5 bg-slate-100 py-3 px-4 rounded-xl break-all">
                                     {registeredEmail}
                                 </p>
 
-                                <p className="text-slate-500 text-sm text-center mb-8">
-                                    Haz clic en el enlace del email para activar tu cuenta. Una vez confirmado, podrás iniciar sesión.
+                                <p className="text-slate-500 text-sm leading-relaxed mb-7">
+                                    Abrí el enlace para activar tu cuenta. Una vez confirmada, ya podés iniciar sesión.
                                 </p>
 
                                 {/* Messages */}
                                 {error && (
-                                    <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 flex items-start gap-2 rounded-r-lg">
+                                    <div className="mb-4 p-3 bg-red-50 text-red-700 flex items-start gap-2 rounded-xl text-left">
                                         <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                                         <span className="text-sm font-bold">{error}</span>
                                     </div>
                                 )}
                                 {success && (
-                                    <div className="mb-4 p-3 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 flex items-start gap-2 rounded-r-lg">
+                                    <div className="mb-4 p-3 bg-emerald-50 text-emerald-700 flex items-start gap-2 rounded-xl text-left">
                                         <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                                         <span className="text-sm font-bold">{success}</span>
                                     </div>
@@ -398,92 +525,75 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                                 {/* Action Buttons */}
                                 <div className="space-y-3">
                                     <button
-                                        onClick={handleResendConfirmation}
-                                        disabled={resendLoading}
-                                        className="w-full py-3 bg-slate-100 text-black font-bold uppercase tracking-wider rounded-lg border-2 border-black hover:bg-slate-200 transition-all flex justify-center items-center gap-2 disabled:opacity-50"
-                                    >
-                                        {resendLoading ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                            <>
-                                                <RefreshCw className="w-4 h-4" />
-                                                Reenviar Email
-                                            </>
-                                        )}
-                                    </button>
-
-                                    <button
                                         onClick={() => {
                                             setRegistrationComplete(false);
                                             setMode('LOGIN');
                                             setError(null);
                                             setSuccess(null);
                                         }}
-                                        className="w-full py-3 bg-black text-white font-bold uppercase tracking-wider rounded-lg hover:bg-neutral-800 transition-all flex justify-center items-center gap-2"
+                                        className={buttonClass}
                                     >
                                         <LogIn className="w-4 h-4" />
-                                        Ir a Iniciar Sesión
+                                        Iniciar sesión
+                                    </button>
+
+                                    <button
+                                        onClick={handleResendConfirmation}
+                                        disabled={resendLoading}
+                                        className={googleButtonClass}
+                                    >
+                                        {resendLoading ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <RefreshCw className="w-4 h-4" />
+                                                Reenviar email
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </div>
 
                             {/* Helper text */}
-                            <p className="text-xs text-slate-400 text-center mt-6 uppercase tracking-wider font-bold">
-                                ¿No recibiste el email? Revisa tu carpeta de spam
+                            <p className="text-[13px] text-slate-400 text-center mt-7">
+                                ¿No te llegó? Revisá la carpeta de spam.
                             </p>
                         </div>
                     ) : (
                         <>
-                            {/* Toggle Tabs */}
-                            {mode !== 'FORGOT_PASSWORD' && (
-                                <div className="auth-toggle flex bg-slate-100 p-1 rounded-xl mb-8 relative">
-                                    <div
-                                        className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-sm transition-all duration-300 ease-in-out ${mode === 'LOGIN' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
-                                    ></div>
+                            <div className="mb-7 text-center">
+                                {mode === 'FORGOT_PASSWORD' && (
+                                    // Solo desktop: en mobile este paso atrás ya lo da la
+                                    // flecha sobre la foto, y tenerlo dos veces sobra.
                                     <button
                                         onClick={() => { setMode('LOGIN'); setError(null); setSuccess(null); }}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold uppercase tracking-wider relative z-10 transition-colors ${mode === 'LOGIN' ? 'text-black' : 'text-slate-400 hover:text-slate-600'}`}
-                                    >
-                                        <LogIn className="w-4 h-4" /> Iniciar Sesión
-                                    </button>
-                                    <button
-                                        onClick={() => { setMode('REGISTER'); setError(null); setSuccess(null); }}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold uppercase tracking-wider relative z-10 transition-colors ${mode === 'REGISTER' ? 'text-black' : 'text-slate-400 hover:text-slate-600'}`}
-                                    >
-                                        <UserPlus className="w-4 h-4" /> Registrarse
-                                    </button>
-                                </div>
-                            )}
-
-                            <div className="mb-8">
-                                {mode === 'FORGOT_PASSWORD' ? (
-                                    <button
-                                        onClick={() => { setMode('LOGIN'); setError(null); setSuccess(null); }}
-                                        className="flex items-center gap-2 text-slate-500 hover:text-black transition-colors mb-4 text-sm font-bold uppercase tracking-wide"
+                                        className="hidden lg:flex items-center gap-2 text-slate-500 hover:text-black transition-colors mb-4 text-sm font-semibold"
                                     >
                                         <ArrowLeft className="w-4 h-4" /> Volver
                                     </button>
-                                ) : null}
+                                )}
 
-                                <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-black mb-2">
-                                    {mode === 'LOGIN' ? 'BIENVENIDO A ORIGEN' : mode === 'REGISTER' ? 'Crear Cuenta' : 'Recuperar Clave'}
+                                <h2 className="text-[26px] lg:text-3xl font-bold tracking-tight text-black mb-2">
+                                    {mode === 'LOGIN' ? 'Bienvenido de nuevo'
+                                        : mode === 'REGISTER' ? 'Creá tu cuenta'
+                                            : 'Recuperar contraseña'}
                                 </h2>
-                                <p className="text-slate-500 text-sm md:text-base font-medium">
-                                    {mode === 'LOGIN' ? 'Inicia sesión para conectar.'
-                                        : mode === 'REGISTER' ? 'Completa el formulario para unirte.'
-                                            : 'Ingresa tu email para recibir instrucciones.'}
+                                <p className="text-slate-500 text-sm leading-relaxed max-w-[46ch] mx-auto">
+                                    {mode === 'LOGIN' ? 'Iniciá sesión para ver los grupos, anotarte en las actividades y conectar con la comunidad.'
+                                        : mode === 'REGISTER' ? 'Completá tus datos para unirte a Origen y empezar a participar.'
+                                            : 'Escribí tu email y te mandamos un enlace para crear una contraseña nueva.'}
                                 </p>
                             </div>
 
                             {/* Messages */}
                             {error && (
-                                <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 flex items-start gap-3 rounded-r-lg animate-fadeIn">
+                                <div className="mb-6 p-4 bg-red-50 text-red-700 flex items-start gap-3 rounded-xl text-left animate-fadeIn">
                                     <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                                     <span className="text-sm font-bold">{error}</span>
                                 </div>
                             )}
                             {success && (
-                                <div className="mb-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 flex items-start gap-3 rounded-r-lg animate-fadeIn">
+                                <div className="mb-6 p-4 bg-emerald-50 text-emerald-700 flex items-start gap-3 rounded-xl text-left animate-fadeIn">
                                     <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                                     <span className="text-sm font-bold">{success}</span>
                                 </div>
@@ -529,10 +639,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                                 {mode === 'REGISTER' && (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
                                         <div>
-                                            <label className={labelClass}>Fecha de Nacimiento</label>
+                                            <label className={labelClass}>Fecha de nacimiento</label>
                                             <div className="relative">
                                                 <div
-                                                    className={`${inputClass} flex items-center justify-between pointer-events-none bg-white`}
+                                                    className={`${inputClass} flex items-center justify-between pointer-events-none bg-slate-100 border border-transparent`}
                                                 >
                                                     <span className={!formData.birthDate ? 'text-gray-400' : 'text-gray-900'}>
                                                         {formatDateForDisplay(formData.birthDate)}
@@ -607,7 +717,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
                                 {mode === 'REGISTER' && (
                                     <div className="animate-fadeIn">
-                                        <label className={labelClass}>Confirmar Contraseña</label>
+                                        <label className={labelClass}>Confirmar contraseña</label>
                                         <div className="relative">
                                             <input
                                                 name="confirmPassword"
@@ -637,52 +747,62 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                                 )}
 
                                 {mode === 'LOGIN' && (
-                                    <div className="flex justify-end pt-1">
+                                    <div className="flex justify-end -mt-1">
                                         <button
                                             type="button"
                                             onClick={() => { setMode('FORGOT_PASSWORD'); setError(null); setSuccess(null); }}
-                                            className="text-xs font-bold uppercase tracking-wide text-slate-400 hover:text-black transition-colors"
+                                            className="text-[13px] font-semibold text-slate-500 hover:text-black transition-colors"
                                         >
                                             ¿Olvidaste tu contraseña?
                                         </button>
                                     </div>
                                 )}
 
-                                <div className="flex gap-3">
-                                    {/* Google Button - Icon Only, Next to Login */}
+                                <div className="space-y-3 pt-1">
+                                    <button type="submit" disabled={loading} className={buttonClass}>
+                                        {loading ? (
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                        ) : (
+                                            mode === 'LOGIN' ? 'Ingresar'
+                                                : mode === 'REGISTER' ? 'Crear cuenta'
+                                                    : 'Enviar enlace'
+                                        )}
+                                    </button>
+
                                     {mode === 'LOGIN' && (
                                         <button
                                             id="google-login-btn"
                                             type="button"
                                             onClick={handleGoogleLogin}
                                             disabled={loading}
-                                            className="px-5 border-2 border-slate-200 hover:border-black rounded-xl flex items-center justify-center transition-colors hover:bg-slate-50"
-                                            title="Continuar con Google"
+                                            className={googleButtonClass}
                                         >
                                             <GoogleIcon />
+                                            Continuar con Google
                                         </button>
                                     )}
-
-                                    <button type="submit" disabled={loading} className={`${buttonClass} flex-1`}>
-                                        {loading ? (
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                        ) : (
-                                            <>
-                                                {mode === 'LOGIN' ? 'Ingresar'
-                                                    : mode === 'REGISTER' ? 'Crear Cuenta'
-                                                        : 'Enviar Enlace'}
-                                                <ArrowRight className="w-5 h-5" />
-                                            </>
-                                        )}
-                                    </button>
                                 </div>
                             </form>
+
+                            {mode !== 'FORGOT_PASSWORD' && (
+                                <p className="mt-7 text-center text-sm text-slate-500">
+                                    {mode === 'LOGIN' ? '¿No tenés cuenta? ' : '¿Ya tenés cuenta? '}
+                                    <button
+                                        type="button"
+                                        onClick={() => { setMode(mode === 'LOGIN' ? 'REGISTER' : 'LOGIN'); setError(null); setSuccess(null); }}
+                                        className="font-semibold text-black underline underline-offset-4 decoration-2 hover:opacity-60 transition-opacity"
+                                    >
+                                        {mode === 'LOGIN' ? 'Registrate' : 'Iniciá sesión'}
+                                    </button>
+                                </p>
+                            )}
                         </>
                     )}
 
-                    <div className="mt-12 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                        Sistema de Gestion Integral {new Date().getFullYear()}
+                    <div className="mt-10 text-center text-[10px] text-slate-300 font-semibold tracking-wide">
+                        Sistema de Gestión Integral {new Date().getFullYear()}
                     </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -693,17 +813,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             onClose={() => setShowErrorModal(false)}
             title={modalErrorTitle}
             maxWidth="max-w-sm"
+            variant="soft"
+            hideCloseButton
         >
-            <div className="flex flex-col items-center justify-center text-center p-4">
-                <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6 border-4 border-red-200">
-                    <AlertTriangle className="w-8 h-8" />
+            <div className="flex flex-col items-center justify-center text-center pt-2 pb-2">
+                <div className="w-14 h-14 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-5">
+                    <AlertTriangle className="w-7 h-7" />
                 </div>
-                <p className="text-slate-600 font-medium mb-8">
+                <p className="text-slate-500 text-sm leading-relaxed mb-7">
                     {modalErrorMessage}
                 </p>
                 <button
                     onClick={() => setShowErrorModal(false)}
-                    className="w-full py-3 bg-black text-white font-bold uppercase tracking-widest rounded-lg hover:bg-neutral-800 transition-all border-2 border-black flex justify-center items-center"
+                    className={buttonClass}
                 >
                     Entendido
                 </button>

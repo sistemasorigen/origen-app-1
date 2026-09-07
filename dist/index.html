@@ -335,6 +335,34 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
     }
 
+    /* Pantallas de autenticación (/auth y /update-password): campos rellenos
+       sin borde. Scopeado por id a propósito, NO por clase: el override global
+       de arriba usa !important y llega a (0,8,1); una clase se quedaría en
+       (0,4,1) y perdería. Un id levanta el selector a (1,3,1) y gana.
+       Para sumar otra pantalla, agregar su id acá — no alcanza con una clase. */
+    #auth-form input:not([type="submit"]):not([type="button"]):not([type="reset"]),
+    #auth-form select,
+    #reset-form input:not([type="submit"]):not([type="button"]):not([type="reset"]) {
+      background-color: #f1f5f9 !important;
+      /* Slate-100 */
+      border: 1px solid transparent !important;
+      border-radius: 0.75rem !important;
+    }
+
+    /* La cadena de :not() se repite acá a propósito. Sin ella esta regla queda
+       en (1,1,1) y pierde contra la de arriba, que con los tres :not() llega a
+       (1,3,1) — el foco se quedaba sin fondo blanco ni borde negro. */
+    #auth-form input:not([type="submit"]):not([type="button"]):not([type="reset"]):focus,
+    #auth-form select:focus,
+    #reset-form input:not([type="submit"]):not([type="button"]):not([type="reset"]):focus {
+      /* Se reemplaza el outline azul por borde negro + halo: el foco sigue
+         siendo visible con teclado, pero deja de contradecir la paleta. */
+      outline: none !important;
+      background-color: #ffffff !important;
+      border-color: #000000 !important;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.07);
+    }
+
     /* New Style: Hazard Tape for Restricted Modules */
     .hazard-tape-bg {
       background-image: repeating-linear-gradient(45deg,
@@ -434,7 +462,7 @@
         }
       })();
   </script>
-  <script type="module" crossorigin src="/assets/index-CoD2vJfp.js"></script>
+  <script type="module" crossorigin src="/assets/index-Ct5SoIk4.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-Cb6HN1W0.css">
 </head>
 
