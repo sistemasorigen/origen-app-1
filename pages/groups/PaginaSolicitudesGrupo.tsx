@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, GroupRegistration } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import { ArrowLeft, Check, Search, Clock, Mail, Phone, Loader2, Heart, X, UserPlus, Edit2 } from 'lucide-react';
+import { ArrowLeft, Check, Search, Clock, Mail, Phone, Loader2, Heart, X, UserPlus, Edit2, Shuffle } from 'lucide-react';
 
 const getInitials = (firstName?: string, lastName?: string): string => {
     const a = (firstName || '').trim()[0] || '';
@@ -18,6 +18,9 @@ const PaginaSolicitudesGrupo: React.FC<{ currentUser: User }> = ({ currentUser }
     const [loadingGroup, setLoadingGroup] = useState(true);
 
     const [applicants, setApplicants] = useState<GroupRegistration[]>([]);
+    // id de grupo → nombre, para el cartel de derivación. Puede faltar alguno
+    // si el RLS lo oculta; en ese caso el cartel usa el texto genérico.
+    const [nombresOrigen, setNombresOrigen] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('PENDING');
     const [searchTerm, setSearchTerm] = useState('');
@@ -126,6 +129,13 @@ const PaginaSolicitudesGrupo: React.FC<{ currentUser: User }> = ({ currentUser }
         const data = await supabaseService.getGroupRegistrations(groupId);
         setApplicants(data);
         setLoading(false);
+
+        // Nombres de los grupos de origen de las derivaciones, en UNA consulta
+        // para toda la lista. No están en memoria: son de otros anfitriones.
+        const origenes = data.map(a => a.transferFromGroupId).filter(Boolean) as string[];
+        if (origenes.length > 0) {
+            setNombresOrigen(await supabaseService.getGroupNamesByIds(origenes));
+        }
     }, [groupId]);
 
     useEffect(() => { fetchApplicants(); }, [fetchApplicants]);
@@ -269,6 +279,17 @@ const PaginaSolicitudesGrupo: React.FC<{ currentUser: User }> = ({ currentUser }
                                         )}
                                     </div>
                                 </div>
+
+                                {app.transferFromGroupId && (
+                                    <div className="flex items-center gap-2 px-3 py-2 mt-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                                        <Shuffle className="w-4 h-4 text-amber-600 shrink-0" />
+                                        <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                                            {nombresOrigen[app.transferFromGroupId]
+                                                ? `Derivado desde ${nombresOrigen[app.transferFromGroupId]} — si aceptás, sale de ese grupo automáticamente.`
+                                                : 'Derivado desde otro grupo — si aceptás, sale de ese grupo automáticamente.'}
+                                        </p>
+                                    </div>
+                                )}
 
                                 {app.status === 'PENDING' && (
                                     <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">

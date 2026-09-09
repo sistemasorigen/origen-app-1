@@ -614,6 +614,9 @@ export interface GroupRegistration {
     };
     // Partner's user ID if they have an account in the system
     partnerUserId?: string;
+    // Si tiene valor, esta inscripción es una derivación desde ese grupo.
+    // Al aprobarse, la base da de baja la de origen (atómico).
+    transferFromGroupId?: string;
 }
 
 export interface DropoutRequest {
@@ -658,6 +661,7 @@ export interface Group {
     startDate: string; // ISO Date string
     endDate?: string; // ISO Date string (optional)
     location: string;
+    isOnline?: boolean; // true = grupo online (location vacío). false/undefined = presencial.
     membersCount: number;
     maxCapacity: number;
     capacityLocked?: boolean; // Bloqueo manual: fuerza estado "LLENO" sin importar el cupo numérico

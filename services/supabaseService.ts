@@ -36,6 +36,7 @@ export async function insertGroupDirect(group: Group): Promise<Group | null> {
     start_date: group.startDate || null,
     end_date: group.endDate || null,
     location: group.location || '',
+    is_online: group.isOnline || false,
     members_count: group.membersCount || 0,
     max_capacity: group.maxCapacity || 12,
     description: group.description || '',
@@ -113,6 +114,7 @@ export async function updateGroupDirect(group: Group): Promise<Group | null> {
     start_date: group.startDate || null,
     end_date: group.endDate || null,
     location: group.location || '',
+    is_online: group.isOnline || false,
     members_count: group.membersCount || 0,
     max_capacity: group.maxCapacity || 12,
     description: group.description || '',
@@ -1254,6 +1256,7 @@ function transformDbRowToGroup(data: any): Group {
     startDate: data.start_date || '',
     endDate: data.end_date || '',
     location: data.location || '',
+    isOnline: data.is_online || false,
     membersCount: data.members_count || 0,
     maxCapacity: data.max_capacity || 12,
     capacityLocked: data.capacity_locked || false,
@@ -2528,6 +2531,7 @@ export const supabaseService = {
       startDate: row.start_date || '',
       endDate: row.end_date || '',
       location: row.location || '',
+      isOnline: row.is_online || false,
       membersCount: row.members_count || 0,
       maxCapacity: row.max_capacity || 12,
       capacityLocked: row.capacity_locked || false,
@@ -2559,7 +2563,8 @@ export const supabaseService = {
         status: (r.status || 'PENDING').toUpperCase() as 'PENDING' | 'APPROVED' | 'REJECTED',
         // Couples registration fields
         partnerData: r.partner_data || null,
-        partnerUserId: r.partner_user_id || null
+        partnerUserId: r.partner_user_id || null,
+        transferFromGroupId: r.transfer_from_group_id || undefined
       }))
     };
   },
@@ -2578,6 +2583,7 @@ export const supabaseService = {
       start_date: group.startDate || null,
       end_date: group.endDate || null,
       location: group.location || '',
+      is_online: group.isOnline || false,
       members_count: group.membersCount || 0,
       max_capacity: group.maxCapacity || 12,
       description: group.description || '',
@@ -2832,6 +2838,7 @@ export const supabaseService = {
         meeting_day:        originalData.meeting_day,
         meeting_time:       originalData.meeting_time,
         location:           originalData.location,
+        is_online:          originalData.is_online,
         max_capacity:       originalData.max_capacity,
         description:        originalData.description,
         image_url:          originalData.image_url,
@@ -2899,6 +2906,7 @@ export const supabaseService = {
         meeting_time: groupWithoutRegs.meetingTime || '20:00',
         start_date: groupWithoutRegs.startDate || null,
         location: groupWithoutRegs.location || '',
+        is_online: groupWithoutRegs.isOnline || false,
         members_count: groupWithoutRegs.membersCount || 0,
         max_capacity: groupWithoutRegs.maxCapacity || 12,
         description: groupWithoutRegs.description || '',
@@ -2981,6 +2989,7 @@ export const supabaseService = {
       meetingTime: data.meeting_time || '20:00',
       startDate: data.start_date || '',
       location: data.location || '',
+      isOnline: data.is_online || false,
       membersCount: data.members_count || 0,
       maxCapacity: data.max_capacity || 12,
       description: data.description || '',
@@ -3332,6 +3341,7 @@ export const supabaseService = {
         status: row.status || 'PENDING',
         userId: row.user_id,
         partnerUserId: row.partner_user_id,
+        transferFromGroupId: row.transfer_from_group_id || undefined,
         partnerData: row.partner_data
       }));
     } catch (error) {
@@ -3364,6 +3374,7 @@ export const supabaseService = {
             status: row.status,
             userId: row.user_id,
             partnerUserId: row.partner_user_id,
+            transferFromGroupId: row.transfer_from_group_id || undefined,
             partnerData: row.partner_data
           }));
         }
@@ -3412,6 +3423,7 @@ export const supabaseService = {
         status: row.status,
         userId: row.user_id,
         partnerUserId: row.partner_user_id,
+        transferFromGroupId: row.transfer_from_group_id || undefined,
         partnerData: row.partner_data
       }));
     } catch (err) {
@@ -3450,6 +3462,7 @@ export const supabaseService = {
         status: row.status,
         userId: row.user_id,
         partnerUserId: row.partner_user_id,
+        transferFromGroupId: row.transfer_from_group_id || undefined,
         partnerData: row.partner_data
       }));
     } catch (err) {
@@ -3548,6 +3561,106 @@ export const supabaseService = {
       console.error('[Groups] Exception in bulk delete:', err);
       return { success: false, message: 'Error inesperado al eliminar' };
     }
+  },
+
+  /**
+   * Historial de grupos del usuario logueado. No hace falta
+   * una RPC: el RLS de group_registrations ya limita lo que se ve
+   * a las inscripciones propias y a aquellas donde figura como
+   * pareja. Se piden igual por user_id/partner_user_id para no
+   * depender solo de la policy.
+   * El embed groups(...) funciona por la FK group_registrations_group_id_fkey
+   * (verificada en pg_constraint). Si el grupo estuviera oculto por RLS, el
+   * embed vuelve null y se degrada al nombre genérico.
+   */
+  async getMiHistorialDeGrupos(userId: string): Promise<Array<{
+    registrationId: string;
+    groupId: string;
+    groupName: string;
+    startDate?: string;
+    endDate?: string;
+    meetingDay?: string;
+    isOnline?: boolean;
+    location?: string;
+    esPareja: boolean;
+  }>> {
+    const { data, error } = await supabase
+      .from('group_registrations')
+      .select('id, group_id, user_id, partner_user_id, timestamp, groups(name, start_date, end_date, meeting_day, is_online, location)')
+      .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`)
+      .eq('status', 'APPROVED');
+
+    if (error) {
+      console.error('[getMiHistorialDeGrupos] Error:', error);
+      return [];
+    }
+
+    return (data || [])
+      .map((row: any) => ({
+        registrationId: row.id,
+        groupId: row.group_id,
+        groupName: row.groups?.name || 'Grupo',
+        startDate: row.groups?.start_date || undefined,
+        endDate: row.groups?.end_date || undefined,
+        meetingDay: row.groups?.meeting_day || undefined,
+        isOnline: row.groups?.is_online || false,
+        location: row.groups?.location || undefined,
+        // Distingue "me anoté yo" de "me anotó mi pareja".
+        esPareja: row.user_id !== userId && row.partner_user_id === userId,
+      }))
+      // Más reciente primero. Si falta startDate, al final.
+      .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
+  },
+
+  /**
+   * Nombres de varios grupos en UNA sola consulta. Para el cartel de
+   * derivación: el grupo de origen es de otro anfitrión, así que nunca está
+   * en memoria, y una consulta por solicitud sería un N+1.
+   * El RLS puede ocultar alguno (por ejemplo un grupo oculto): los que
+   * falten no vienen en el objeto y el cartel cae al texto genérico.
+   */
+  async getGroupNamesByIds(ids: string[]): Promise<Record<string, string>> {
+    const unicos = Array.from(new Set(ids.filter(Boolean)));
+    if (unicos.length === 0) return {};
+
+    const { data, error } = await supabase
+      .from('groups')
+      .select('id, name')
+      .in('id', unicos);
+
+    if (error) {
+      console.error('[getGroupNamesByIds] Error:', error);
+      return {};
+    }
+    return Object.fromEntries((data || []).map((g: any) => [g.id as string, g.name as string]));
+  },
+
+  /**
+   * Deriva un miembro a otro grupo. Toda la validación
+   * (permisos, duplicados, copia de datos y de la pareja)
+   * vive en la RPC: con el RLS actual el anfitrión de
+   * origen no ve las inscripciones del destino, así que
+   * un chequeo desde acá daría un falso negativo.
+   * NO da de baja la inscripción original — eso lo hace
+   * manage_group_registration_v3 al aprobarse.
+   */
+  async derivarMiembro(
+    registrationId: string,
+    toGroupId: string
+  ): Promise<{ ok: boolean; error?: string }> {
+    const { data, error } = await supabase.rpc('derivar_miembro', {
+      p_registration_id: registrationId,
+      p_to_group_id: toGroupId
+    });
+
+    if (error) {
+      console.error('[derivarMiembro] Error:', error);
+      return { ok: false, error: 'No pudimos completar la derivación.' };
+    }
+    return {
+      ok: data?.ok === true,
+      error: data?.error
+    };
   },
 
   async deleteGroupRegistration(registrationId: string, groupId: string): Promise<boolean> {

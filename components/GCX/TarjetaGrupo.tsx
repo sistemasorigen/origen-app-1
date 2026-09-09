@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Clock, MapPin, Users, ArrowRight, CheckCircle2, Lock, ChevronDown, ChevronUp, Link, Check, EyeOff } from 'lucide-react';
+import { Clock, MapPin, Video, Users, ArrowRight, CheckCircle2, Lock, ChevronDown, ChevronUp, Link, Check, EyeOff, CalendarPlus } from 'lucide-react';
 import { Group, GroupTag, GroupCategory, User as AppUser, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
+import { descargarICS } from '../../src/utils/calendario';
 
 
 interface GroupCardProps {
@@ -261,8 +262,8 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                             <span className="text-sm font-medium">{group.meetingDay} {group.meetingTime} HS</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
-                            <MapPin className="w-4 h-4 text-[#28a946]" />
-                            <span className="text-sm font-medium truncate max-w-[160px]">{group.location}</span>
+                            {group.isOnline ? <Video className="w-4 h-4 text-[#28a946]" /> : <MapPin className="w-4 h-4 text-[#28a946]" />}
+                            <span className="text-sm font-medium truncate max-w-[160px]">{group.isOnline ? 'Online' : group.location}</span>
                         </div>
                     </div>
 
@@ -404,6 +405,34 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                     </button>
                 </div>
             </div>
+
+            {/* Fila propia y no dentro del footer: ese es un flex horizontal
+                shrink-0 junto al anfitrión, donde un w-full no tendría sentido. */}
+            {userStatus === 'APPROVED' && (
+                <div className="px-5 pb-4 bg-neutral-50/80 dark:bg-neutral-800/50">
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            const ok = descargarICS({
+                                nombre: group.name,
+                                meetingDay: group.meetingDay,
+                                meetingTime: group.meetingTime,
+                                startDate: group.startDate,
+                                endDate: group.endDate,
+                                location: group.location,
+                                isOnline: group.isOnline,
+                                descripcion: group.description,
+                            });
+                            if (!ok) alert('No pudimos generar el archivo — falta el día o el horario del grupo.');
+                        }}
+                        className="w-full py-2.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors"
+                    >
+                        <CalendarPlus className="w-3.5 h-3.5" />
+                        Agregar al calendario
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

@@ -85,7 +85,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
 
     const [form, setForm] = useState({
         name: '', categoryId: '', meetingDay: 'Lunes', meetingTime: '20:00',
-        location: '', description: '', maxCapacity: 12 as number | string,
+        location: '', isOnline: false, description: '', maxCapacity: 12 as number | string,
         imageUrl: '', coHostFirstName: '', coHostLastName: '',
         minAge: 0 as number | string, maxAge: 100 as number | string,
         targetGender: 'Mixto', tags: [] as string[], startDate: '', endDate: ''
@@ -214,7 +214,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         e.preventDefault();
         if (!form.name.trim()) return alert('El nombre del grupo es obligatorio');
         if (!form.categoryId) return alert('Debes seleccionar una categoría.');
-        if (!form.location.trim()) return alert('El barrio/ubicación es obligatorio.');
+        if (!form.isOnline && !form.location.trim()) return alert('El barrio/ubicación es obligatorio.');
         if (!form.description.trim()) return alert('La descripción es obligatoria.');
         if (!form.startDate) return alert('La fecha de arranque es obligatoria.');
         if (!form.endDate) return alert('La fecha de fin es obligatoria.');
@@ -295,7 +295,8 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                 leaderPhone: '',
                 meetingDay: form.meetingDay,
                 meetingTime: form.meetingTime,
-                location: form.location,
+                location: form.isOnline ? '' : form.location,
+                isOnline: form.isOnline,
                 description: form.description,
                 maxCapacity: Number(form.maxCapacity),
                 imageUrl: finalImageUrl,
@@ -418,7 +419,29 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                 {localTourStep === 5 && (
                                     <NativeTooltip title="Punto de Encuentro" description="Escribe la dirección exacta, el barrio o el nombre del local donde se reunirán." step={5} totalSteps={9} onNext={() => handleTourNext(6)} onSkip={handleTourSkip} />
                                 )}
-                                <input type="text" name="location" value={form.location} onChange={handleChange} className="w-full h-12 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg outline-none font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="Dirección o punto de encuentro" />
+                                <div className="flex gap-2 p-1 bg-slate-100 dark:bg-zinc-800 rounded-full mb-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm(prev => ({ ...prev, isOnline: false }))}
+                                        className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-colors ${!form.isOnline ? 'bg-black text-white' : 'text-slate-500 dark:text-zinc-400'}`}
+                                    >
+                                        Presencial
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm(prev => ({ ...prev, isOnline: true }))}
+                                        className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-colors ${form.isOnline ? 'bg-black text-white' : 'text-slate-500 dark:text-zinc-400'}`}
+                                    >
+                                        Online
+                                    </button>
+                                </div>
+                                {form.isOnline ? (
+                                    <p className="text-[13px] text-slate-500 dark:text-zinc-400 py-2">
+                                        Este grupo se reúne de forma virtual — no hace falta cargar una dirección.
+                                    </p>
+                                ) : (
+                                    <input type="text" name="location" value={form.location} onChange={handleChange} className="w-full px-4 py-3.5 rounded-xl border border-slate-300 dark:border-zinc-700 outline-none font-medium bg-white dark:bg-zinc-900 text-black dark:text-white placeholder-slate-400" placeholder="Dirección o punto de encuentro" />
+                                )}
                             </div>
                         </div>
                     </div>

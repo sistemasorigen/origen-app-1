@@ -5,7 +5,7 @@ import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
-import { Search, Calendar, MapPin, Users, X, ArrowRight, ArrowUp, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock, Instagram, Facebook, Youtube, Music } from 'lucide-react';
+import { Search, Calendar, CalendarClock, MapPin, Users, X, ArrowRight, ArrowUp, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock, Instagram, Facebook, Youtube, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
@@ -85,6 +85,26 @@ const getSeasonFromDate = (dateStr?: string): 'S1' | 'S2' | 'S3' | null => {
     if (md >= 1005 && md <= 1129) return 'S3';
 
     return null;
+};
+
+const WEEK_DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+const TIME_SLOTS = [
+    { id: 'MORNING', label: 'Mañana', hint: 'Antes de las 12' },
+    { id: 'AFTERNOON', label: 'Tarde', hint: '12 a 18' },
+    { id: 'EVENING', label: 'Noche', hint: 'Desde las 18' },
+];
+
+// meetingTime viene como 'HH:MM'. Si estuviera vacío o
+// mal formado, devolvemos null y el grupo no matchea
+// ninguna franja (queda fuera solo si hay filtro activo).
+const getTimeSlot = (meetingTime?: string): string | null => {
+    if (!meetingTime) return null;
+    const hour = parseInt(meetingTime.split(':')[0], 10);
+    if (Number.isNaN(hour)) return null;
+    if (hour < 12) return 'MORNING';
+    if (hour < 18) return 'AFTERNOON';
+    return 'EVENING';
 };
 
 // --- COMPONENTS ---
@@ -332,6 +352,11 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
     const [selectedTag, setSelectedTag] = useState<string>('ALL');
+    // Filtro de disponibilidad: varios días a la vez + franja horaria.
+    // Vacío = sin filtrar (no "ninguno").
+    const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
+    const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
     const [isTagFilterOpen, setIsTagFilterOpen] = useState(false); // Tag filter dropdown
     const [isCategoryFilterOpen, setIsCategoryFilterOpen] = useState(false); // Category filter dropdown
 
@@ -935,7 +960,9 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         const matchesSearch = g.name.toLowerCase().includes(searchTerm.toLowerCase()) || g.location.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'ALL' || g.categoryId === selectedCategory;
         const matchesTag = selectedTag === 'ALL' || (g.tags && g.tags.includes(selectedTag));
-        return matchesSearch && matchesCategory && matchesTag;
+        const matchesDay = selectedDays.length === 0 || selectedDays.includes(g.meetingDay);
+        const matchesSlot = selectedSlots.length === 0 || selectedSlots.includes(getTimeSlot(g.meetingTime) || '');
+        return matchesSearch && matchesCategory && matchesTag && matchesDay && matchesSlot;
     });
 
     // handleInquirySubmit removed - logic moved to JoinGroupModal
@@ -1574,6 +1601,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                             onClick={() => {
                                                 setIsTagFilterOpen(!isTagFilterOpen);
                                                 setIsCategoryFilterOpen(false);
+                                                setIsAvailabilityOpen(false);
                                             }}
                                             aria-label={selectedTag !== 'ALL'
                                                 ? `Filtro activo: ${tags.find(t => t.id === selectedTag)?.name || 'etiqueta'}`
@@ -1593,8 +1621,37 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         </button>
                                     </div>
 
+                                    <div className="w-px bg-slate-200 dark:bg-zinc-800 shrink-0" aria-hidden="true" />
+
+                                    {/* Availability Filter Trigger — mismo formato de ícono
+                                        que el de etiquetas para no romper la cápsula */}
+                                    <div className="shrink-0">
+                                        <button
+                                            onClick={() => {
+                                                setIsAvailabilityOpen(!isAvailabilityOpen);
+                                                setIsTagFilterOpen(false);
+                                                setIsCategoryFilterOpen(false);
+                                            }}
+                                            aria-label={(selectedDays.length + selectedSlots.length) > 0
+                                                ? `Disponibilidad: ${selectedDays.length + selectedSlots.length} filtros activos`
+                                                : 'Filtrar por disponibilidad'
+                                            }
+                                            title="Filtrar por día y horario"
+                                            aria-expanded={isAvailabilityOpen}
+                                            className={`h-full px-3.5 md:px-5 flex items-center justify-center gap-1.5 transition-colors ${(selectedDays.length + selectedSlots.length) > 0
+                                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                                                : 'bg-white dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
+                                                }`}
+                                        >
+                                            <CalendarClock className="w-4 h-4 shrink-0" />
+                                            {(selectedDays.length + selectedSlots.length) > 0 && (
+                                                <span className="text-xs font-bold tabular-nums">{selectedDays.length + selectedSlots.length}</span>
+                                            )}
+                                        </button>
+                                    </div>
+
                                     {/* Clear Filters — only when active, same capsule */}
-                                    {(selectedCategory !== 'ALL' || selectedTag !== 'ALL' || searchTerm) && (
+                                    {(selectedCategory !== 'ALL' || selectedTag !== 'ALL' || searchTerm || selectedDays.length > 0 || selectedSlots.length > 0) && (
                                         <>
                                             <div className="w-px bg-slate-200 dark:bg-zinc-800 shrink-0" aria-hidden="true" />
                                             <button
@@ -1602,6 +1659,8 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                     setSelectedCategory('ALL');
                                                     setSelectedTag('ALL');
                                                     setSearchTerm('');
+                                                    setSelectedDays([]);
+                                                    setSelectedSlots([]);
                                                 }}
                                                 aria-label="Limpiar filtros"
                                                 title="Limpiar filtros"
@@ -1666,6 +1725,81 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                             #{tag.name}
                                                         </button>
                                                     ))}
+                                                </div>
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Availability Dropdown Panel — mismo patrón que el de
+                                    etiquetas: backdrop fixed para cerrar al click afuera.
+                                    Ancla a la izquierda para no encimarse con aquel, que va a la derecha. */}
+                                <AnimatePresence>
+                                    {isAvailabilityOpen && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-40"
+                                                onClick={() => setIsAvailabilityOpen(false)}
+                                            />
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -8 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -8 }}
+                                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                className="absolute top-full left-0 mt-2 z-50 w-72 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg origin-top"
+                                            >
+                                                <div className="px-3 py-2.5 border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800">
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+                                                        FILTRAR POR DISPONIBILIDAD
+                                                    </span>
+                                                </div>
+                                                <div className="p-3">
+                                                    <p className="text-[13px] font-semibold text-slate-700 dark:text-zinc-300 mb-2">¿Qué días podés?</p>
+                                                    <div className="flex flex-wrap gap-1.5 mb-4">
+                                                        {WEEK_DAYS.map(day => (
+                                                            <button
+                                                                key={day}
+                                                                type="button"
+                                                                onClick={() => setSelectedDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])}
+                                                                aria-pressed={selectedDays.includes(day)}
+                                                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${selectedDays.includes(day)
+                                                                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white'
+                                                                    : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                                                                    }`}
+                                                            >
+                                                                {day.slice(0, 3)}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    <p className="text-[13px] font-semibold text-slate-700 dark:text-zinc-300 mb-2">¿En qué momento?</p>
+                                                    <div className="flex gap-1.5">
+                                                        {TIME_SLOTS.map(slot => (
+                                                            <button
+                                                                key={slot.id}
+                                                                type="button"
+                                                                onClick={() => setSelectedSlots(prev => prev.includes(slot.id) ? prev.filter(s => s !== slot.id) : [...prev, slot.id])}
+                                                                aria-pressed={selectedSlots.includes(slot.id)}
+                                                                title={slot.hint}
+                                                                className={`flex-1 px-2 py-2 rounded-xl text-xs font-semibold transition-colors border ${selectedSlots.includes(slot.id)
+                                                                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white'
+                                                                    : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                                                                    }`}
+                                                            >
+                                                                {slot.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    {(selectedDays.length > 0 || selectedSlots.length > 0) && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setSelectedDays([]); setSelectedSlots([]); }}
+                                                            className="w-full mt-4 py-2.5 rounded-full text-xs font-semibold text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+                                                        >
+                                                            Limpiar
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </motion.div>
                                         </>

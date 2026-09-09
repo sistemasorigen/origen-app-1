@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, Check, Loader2, AlertCircle, ChevronRight, Lock
+    ArrowLeft, Check, Loader2, AlertCircle, ChevronRight, Lock, Users, Video
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabaseService } from '../../services/supabaseService';
@@ -101,6 +101,7 @@ const estilos = `
     #perfil-page .retraso-1 { animation-delay: .06s; }
     #perfil-page .retraso-2 { animation-delay: .12s; }
     #perfil-page .retraso-3 { animation-delay: .18s; }
+    #perfil-page .retraso-4 { animation-delay: .24s; }
     @keyframes perfilAparece {
         from { opacity: 0; transform: translateY(12px); }
         to   { opacity: 1; transform: none; }
@@ -130,6 +131,48 @@ const calculateAge = (birthDate: string): number => {
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
     return age;
 };
+
+// 'YYYY-MM-DD' → Date local. new Date('YYYY-MM-DD') parsea en UTC y en
+// Argentina (UTC-3) retrocede al día anterior, mostrando el mes de menos
+// cuando la fecha cae el día 1. Mismo criterio que src/utils/calendario.ts.
+const fechaLocal = (iso?: string): Date | null => {
+    if (!iso) return null;
+    const [y, m, d] = iso.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+};
+
+const MES_CORTO = (f: Date) =>
+    f.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '').slice(0, 3);
+
+// "Mar — Ago 2026". Si falta una punta, muestra la que hay; si no hay
+// ninguna, devuelve '' y el renglón queda solo con el día de reunión.
+const periodoLegible = (startDate?: string, endDate?: string): string => {
+    const ini = fechaLocal(startDate);
+    const fin = fechaLocal(endDate);
+    if (!ini && !fin) return '';
+
+    const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+    if (ini && fin) {
+        const mismoAnio = ini.getFullYear() === fin.getFullYear();
+        return mismoAnio
+            ? `${capital(MES_CORTO(ini))} — ${capital(MES_CORTO(fin))} ${fin.getFullYear()}`
+            : `${capital(MES_CORTO(ini))} ${ini.getFullYear()} — ${capital(MES_CORTO(fin))} ${fin.getFullYear()}`;
+    }
+    const unica = (ini || fin)!;
+    return `${capital(MES_CORTO(unica))} ${unica.getFullYear()}`;
+};
+
+// Vigente = todavía no venció. Sin fecha de fin se asume vigente.
+const esActual = (endDate?: string): boolean => {
+    const fin = fechaLocal(endDate);
+    if (!fin) return true;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return fin >= hoy;
+};
+
+type ItemHistorial = Awaited<ReturnType<typeof supabaseService.getMiHistorialDeGrupos>>[number];
 
 type CampoNombre = 'name' | 'phone' | 'birthDate' | 'gender';
 
@@ -191,6 +234,21 @@ const ProfilePage: React.FC = () => {
     // Un solo aviso, con su texto: guardar el perfil y cambiar la foto son
     // dos acciones distintas y cada una tiene que decir lo suyo.
     const [aviso, setAviso] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
+
+    const [historial, setHistorial] = useState<ItemHistorial[]>([]);
+    const [cargandoHistorial, setCargandoHistorial] = useState(true);
+
+    useEffect(() => {
+        if (!user?.id) return;
+        let vigente = true;
+        setCargandoHistorial(true);
+        supabaseService.getMiHistorialDeGrupos(user.id)
+            .then(datos => { if (vigente) setHistorial(datos); })
+            .finally(() => { if (vigente) setCargandoHistorial(false); });
+        // El flag evita escribir estado si el usuario cambia o se desmonta
+        // la página mientras la consulta está en vuelo.
+        return () => { vigente = false; };
+    }, [user?.id]);
 
     useEffect(() => {
         if (user) {
@@ -559,6 +617,62 @@ const ProfilePage: React.FC = () => {
                                     <ChevronRight className="w-5 h-5 shrink-0 text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" />
                                 </button>
                             </div>
+                        </section>
+
+                        <section className={`aparece retraso-4 ${tarjetaClass} p-5 sm:p-6`}>
+                            <h2 className={rotuloClass}>Tus grupos</h2>
+
+                            {cargandoHistorial ? (
+                                <div className="mt-4 flex justify-center py-6">
+                                    <Loader2 className="w-5 h-5 animate-spin text-slate-300" />
+                                </div>
+                            ) : historial.length === 0 ? (
+                                <div className="mt-4">
+                                    <p className="text-sm text-slate-500 dark:text-zinc-400">
+                                        Todavía no estuviste en ningún grupo.
+                                    </p>
+                                    <button
+                                        onClick={() => navigate('/gcx')}
+                                        className="mt-3 px-5 py-2.5 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:opacity-90 transition-opacity"
+                                    >
+                                        Ver grupos disponibles
+                                    </button>
+                                </div>
+                            ) : (
+                                <ul className="mt-4 space-y-3">
+                                    {historial.map(item => (
+                                        <li
+                                            key={item.registrationId}
+                                            className="flex items-start gap-3 pb-3 border-b border-slate-100 dark:border-zinc-800 last:border-0 last:pb-0"
+                                        >
+                                            <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center shrink-0">
+                                                {item.isOnline
+                                                    ? <Video className="w-4 h-4 text-slate-400" />
+                                                    : <Users className="w-4 h-4 text-slate-400" />}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                                    {item.groupName}
+                                                </p>
+                                                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                                                    {periodoLegible(item.startDate, item.endDate)}
+                                                    {item.meetingDay ? ` · ${item.meetingDay}` : ''}
+                                                </p>
+                                                {item.esPareja && (
+                                                    <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                                                        Inscripción compartida
+                                                    </p>
+                                                )}
+                                            </div>
+                                            {esActual(item.endDate) && (
+                                                <span className="shrink-0 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold">
+                                                    Actual
+                                                </span>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </section>
                     </div>
                 </div>

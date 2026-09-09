@@ -5,7 +5,7 @@ import { supabaseService, toggleGroupCapacityLock } from '../../services/supabas
 import {
     ArrowLeft, ArrowRight, Calendar, MapPin, Edit2, Inbox, ClipboardList,
     RotateCcw, UserMinus, UserPlus, Check, Link, ArrowLeftRight, Lock, Unlock,
-    Loader2, ImageIcon, QrCode
+    Loader2, ImageIcon, QrCode, Shuffle
 } from 'lucide-react';
 import NeoModal from '../../components/ui/NeoModal';
 import { QRCodeSVG } from 'qrcode.react';
@@ -407,6 +407,11 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                                 <button onClick={() => navigate(`/mis-grupos/${group.id}/bajas`)} className={utilBtn}>
                                     <UserMinus className="w-3.5 h-3.5" /> Bajas
                                 </button>
+                                {!isFinished && (
+                                    <button onClick={() => navigate(`/mis-grupos/${group.id}/derivar`)} className={utilBtn}>
+                                        <Shuffle className="w-3.5 h-3.5" /> Derivar
+                                    </button>
+                                )}
                                 {isMainHost && (
                                     <button onClick={() => navigate(`/mis-grupos/${group.id}/transferir`)} className={utilBtn}>
                                         <ArrowLeftRight className="w-3.5 h-3.5" /> Transferir
