@@ -2,43 +2,22 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Group, GroupCategory, GroupTag } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import { ArrowLeft, Search, UserCheck, UserPlus, ChevronLeft, Loader2, Check, Mail, Phone, Heart } from 'lucide-react';
+import { Search, Loader2, Check } from 'lucide-react';
+import { T, btnSecundario, rotulo, Encabezado, Pasos, PasosBotones, Campo } from '../../components/GCX/patron';
 
-type TipoParticipante = 'USUARIO' | 'INVITADO';
-
-// Muestra solo los últimos 3 dígitos, el resto censurado
+// Muestra solo los últimos 3 dígitos, el resto censurado. Se mantiene en el
+// listado de búsqueda: para elegir a alguien no hace falta ver su teléfono
+// entero, y ese listado recorre usuarios de toda la app.
 const maskPhone = (phone?: string): string => {
     if (!phone) return '—';
     const clean = phone.trim();
     if (clean.length <= 3) return clean;
-    const visible = clean.slice(-3);
-    const masked = '•'.repeat(clean.length - 3);
-    return masked + visible;
+    return '•'.repeat(clean.length - 3) + clean.slice(-3);
 };
 
-const StepIndicator: React.FC<{ current: number; steps: string[] }> = ({ current, steps }) => {
-    return (
-        <div className="flex items-center gap-0 mb-6" role="list" aria-label="Progreso del formulario">
-            {steps.map((label, i) => {
-                const n = i + 1;
-                const done = n < current;
-                const active = n === current;
-                return (
-                    <React.Fragment key={n}>
-                        <div role="listitem" aria-current={active ? 'step' : undefined} className="flex flex-col items-center gap-1 min-w-0">
-                            <div className={`w-7 h-7 flex items-center justify-center border-2 font-black text-xs transition-all duration-200 ${done || active ? 'bg-black border-black text-white' : 'bg-white border-neutral-300 text-neutral-400'}`}>
-                                {done ? '✓' : n}
-                            </div>
-                            <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-200 ${active ? 'text-black dark:text-white' : 'text-neutral-400'}`}>
-                                {label}
-                            </span>
-                        </div>
-                        {i < steps.length - 1 && <div className={`flex-1 h-0.5 mb-4 transition-colors duration-300 ${done ? 'bg-black' : 'bg-neutral-200'}`} />}
-                    </React.Fragment>
-                );
-            })}
-        </div>
-    );
+const iniciales = (nombre: string) => {
+    const p = (nombre || '').split(' ').filter(Boolean);
+    return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || '?';
 };
 
 const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentUser }) => {
@@ -50,16 +29,16 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
     const [tags, setTags] = useState<GroupTag[]>([]);
     const [loadingGroup, setLoadingGroup] = useState(true);
 
-    const [step, setStep] = useState<number>(1);
-    const [tipo, setTipo] = useState<TipoParticipante | null>(null);
+    // El diseño baja el flujo a 3 pasos: la elección entre "ya tiene cuenta" y
+    // "invitado nuevo" deja de ser un paso propio y vive dentro del buscador,
+    // con la carga manual como salida al pie.
+    const [step, setStep] = useState<1 | 2 | 3>(1);
 
-    // Búsqueda de usuario del sistema
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<User[]>([]);
     const [searching, setSearching] = useState(false);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Datos finales del participante (usuario o invitado)
     const [foundUserId, setFoundUserId] = useState<string | null>(null);
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -70,35 +49,30 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
     const [error, setError] = useState<string | null>(null);
 
     // ── Estado de pareja — mismo patrón que ModalUnirseGrupo.tsx ──
-    const [wantsPartner, setWantsPartner] = useState(false);
-    const [partnerHasEmail, setPartnerHasEmail] = useState<boolean | null>(null);
+    const [wantsPartner, setWantsPartner] = useState<boolean | null>(null);
     const [partnerFirstName, setPartnerFirstName] = useState('');
     const [partnerLastName, setPartnerLastName] = useState('');
     const [partnerEmail, setPartnerEmail] = useState('');
     const [partnerPhone, setPartnerPhone] = useState('');
     const [partnerAccount, setPartnerAccount] = useState<{ id: string; name: string; phone?: string } | null>(null);
-    const [hasCheckedPartnerEmail, setHasCheckedPartnerEmail] = useState(false);
     const [partnerEmailError, setPartnerEmailError] = useState<string | null>(null);
     const [checkingPartner, setCheckingPartner] = useState(false);
 
     const resetPartnerData = () => {
         setPartnerFirstName(''); setPartnerLastName(''); setPartnerEmail(''); setPartnerPhone('');
         setPartnerAccount(null);
-        setHasCheckedPartnerEmail(false);
         setPartnerEmailError(null);
     };
 
-    const partnerFieldsFilled = !!(
-        partnerFirstName.trim() &&
-        partnerLastName.trim() &&
-        partnerPhone.trim() &&
-        (partnerHasEmail === false || partnerEmail.trim())
-    );
-    const hasPartnerData = wantsPartner && partnerHasEmail !== null && partnerFieldsFilled;
-    const partnerDataPending = wantsPartner && (partnerHasEmail === null || !partnerFieldsFilled);
+    // El email del acompañante pasó a ser OPCIONAL (así lo marca el artboard
+    // 3b), así que la validez ya no depende de él: nombre, apellido y teléfono.
+    const partnerFieldsFilled = !!(partnerFirstName.trim() && partnerLastName.trim() && partnerPhone.trim());
+    const hasPartnerData = wantsPartner === true && partnerFieldsFilled;
 
+    // Se conserva la búsqueda por email para VINCULAR la cuenta del
+    // acompañante cuando existe — es lo que llena partner_user_id.
     const handlePartnerEmailBlur = async () => {
-        if (!partnerEmail) return;
+        if (!partnerEmail) { setPartnerEmailError(null); setPartnerAccount(null); return; }
         if (partnerEmail.toLowerCase().trim() === email.toLowerCase().trim()) {
             setPartnerEmailError('No podés poner el mismo email dos veces. Corregilo para continuar.');
             setPartnerAccount(null);
@@ -119,7 +93,6 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
             console.error('Error checking partner email:', err);
         } finally {
             setCheckingPartner(false);
-            setHasCheckedPartnerEmail(true);
         }
     };
 
@@ -160,6 +133,8 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
         return (categoryName === 'parejas' || hasParejasTag) && group.targetGender === 'Mixto';
     })();
 
+    const totalPasos = isCouplesGroup ? 3 : 2;
+
     // Búsqueda de usuarios del sistema (debounce 350ms)
     useEffect(() => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -176,14 +151,6 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
         return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
     }, [searchTerm]);
 
-    const handleSelectTipo = (t: TipoParticipante) => {
-        setTipo(t);
-        setFoundUserId(null);
-        setFirstName(''); setLastName(''); setEmail(''); setPhone('');
-        setSearchTerm(''); setSearchResults([]);
-        setStep(2);
-    };
-
     const handleSelectUser = (user: User) => {
         const nameParts = (user.name || '').trim().split(/\s+/);
         setFoundUserId(user.id);
@@ -191,35 +158,29 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
         setLastName(nameParts.slice(1).join(' ') || '');
         setEmail(user.email || '');
         setPhone((user as any).phone || '');
-        setStep(3); // Paso 3 = Pareja (si aplica) o Confirmar
+        setError(null);
+        setStep(2);
     };
 
-    const handleGuestContinue = () => {
-        setError(null);
-        if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
-            setError('Completá todos los campos para continuar.');
-            return;
-        }
+    const handleInvitadoNuevo = () => {
         setFoundUserId(null);
-        setStep(3); // Paso 3 = Pareja (si aplica) o Confirmar
+        setFirstName(''); setLastName(''); setEmail(''); setPhone('');
+        setError(null);
+        setStep(2);
     };
 
-    const handlePartnerContinue = () => {
-        setError(null);
-        if (partnerDataPending) {
-            setError("Completá todos los datos de tu pareja, o elegí 'No' si inscribís solo a esta persona.");
-            return;
-        }
-        setStep(4);
-    };
+    const datosCompletos = !!(firstName.trim() && lastName.trim() && phone.trim());
 
     const handleConfirm = async () => {
         if (!groupId) return;
         setIsSubmitting(true);
         setError(null);
 
+        // Si el acompañante no dejó email, la clave se OMITE en vez de mandar
+        // string vacío: dos inscripciones sin email harían falso match entre sí
+        // (sección 23 de instrucciones_ia.md).
         const partnerDataToSend = hasPartnerData
-            ? (partnerHasEmail
+            ? (partnerEmail.trim()
                 ? { firstName: partnerFirstName, lastName: partnerLastName, email: partnerEmail, phone: partnerPhone }
                 : { firstName: partnerFirstName, lastName: partnerLastName, phone: partnerPhone })
             : undefined;
@@ -242,359 +203,223 @@ const PaginaInscribirParticipante: React.FC<{ currentUser: User }> = ({ currentU
         }
     };
 
+    const volver = () => {
+        if (step === 3) { setStep(2); setError(null); return; }
+        if (step === 2) { setStep(1); setError(null); return; }
+        navigate(`/mis-grupos/${groupId}`);
+    };
+
     if (loadingGroup) return (
-        <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-            <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+        <div className={`min-h-screen flex items-center justify-center ${T.fondo}`}>
+            <Loader2 className="w-8 h-8 animate-spin text-black/20 dark:text-white/20" />
         </div>
     );
+    if (!group) return null;
+
+    const libres = Math.max(0, (group.maxCapacity || 0) - (group.membersCount || 0));
+    const ocupa = wantsPartner === true ? 2 : 1;
+
+    const nombrePaso = step === 1 ? '¿Quién es?' : step === 2 ? 'Datos de la persona' : '¿Viene con pareja?';
+    const subtitulo = step === 1
+        ? group.name
+        : foundUserId
+            ? `${firstName} ${lastName}`.trim() || group.name
+            : 'Invitado nuevo';
 
     return (
-        <div className="min-h-screen bg-white dark:bg-black">
-            <div className="max-w-lg mx-auto px-4 md:px-8 py-8">
+        <div id="gcx-accion" className={`min-h-screen ${T.fondo} ${T.fuente} ${T.tinta}`}>
 
-                <button
-                    onClick={() => navigate(`/mis-grupos/${groupId}`)}
-                    className="flex items-center gap-2 text-sm text-slate-400 hover:text-black dark:hover:text-white transition-colors mb-6 font-bold uppercase tracking-wide"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    {group?.name}
-                </button>
-
-                <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-black dark:text-white mb-6">
-                    Inscribir Participante
-                </h1>
-
-                <StepIndicator
-                    current={step}
-                    steps={isCouplesGroup ? ['Tipo', 'Datos', 'Pareja', 'Confirmar'] : ['Tipo', 'Datos', 'Confirmar']}
-                />
-
-                {/* ─── PASO 1: Tipo ─────────────────────────── */}
-                {step === 1 && (
-                    <div className="space-y-3">
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 border-l-2 border-purple-400 pl-3">
-                            ¿La persona que querés inscribir ya tiene cuenta en la app, o es alguien sin cuenta?
-                        </p>
-                        <button
-                            type="button"
-                            onClick={() => handleSelectTipo('USUARIO')}
-                            className="w-full flex items-center gap-4 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all text-left"
-                        >
-                            <UserCheck className="w-8 h-8 shrink-0" />
-                            <div>
-                                <p className="font-black uppercase text-sm">Usuario del Sistema</p>
-                                <p className="text-xs opacity-70">Ya tiene cuenta en la app</p>
-                            </div>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleSelectTipo('INVITADO')}
-                            className="w-full flex items-center gap-4 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all text-left"
-                        >
-                            <UserPlus className="w-8 h-8 shrink-0" />
-                            <div>
-                                <p className="font-black uppercase text-sm">Invitado</p>
-                                <p className="text-xs opacity-70">No tiene cuenta en la app</p>
-                            </div>
-                        </button>
+            <div className="bg-white dark:bg-[#1b1b1a] rounded-b-[28px] px-5 pt-4 pb-5 lg:px-8">
+                <div className="max-w-[430px] mx-auto">
+                    <Encabezado accion="Inscribir a alguien" grupo={subtitulo} onVolver={volver} />
+                    <div className="mt-5">
+                        <Pasos actual={step} total={totalPasos} nombre={nombrePaso} />
                     </div>
-                )}
+                </div>
+            </div>
 
-                {/* ─── PASO 2A: Buscador de usuario ─────────── */}
-                {step === 2 && tipo === 'USUARIO' && (
-                    <div>
-                        <div className="mb-3">
-                            <label htmlFor="user-search" className="block text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1.5">
-                                Buscar usuario por nombre
-                            </label>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-                                <input
-                                    id="user-search"
-                                    type="text"
-                                    autoFocus
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                    placeholder="Nombre del participante..."
-                                    className="w-full h-11 pl-9 pr-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium text-sm text-black dark:text-white dark:bg-zinc-900 bg-white focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-shadow duration-150"
-                                />
-                                {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 animate-spin" />}
-                            </div>
-                            <p className="text-[10px] text-neutral-400 mt-1">Mínimo 2 caracteres</p>
+            <div className="max-w-[430px] mx-auto px-4 pt-5 pb-8">
+
+                {/* ── PASO 1: primero el buscador. El caso frecuente es alguien
+                     que ya tiene cuenta; la carga manual es la salida al pie. ── */}
+                {step === 1 && (
+                    <>
+                        <div className="h-[56px] rounded-full bg-white dark:bg-[#1b1b1a] flex items-center gap-3 px-5">
+                            <Search className="w-[18px] h-[18px] shrink-0 text-black/40 dark:text-white/40" strokeWidth={2.2} />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                placeholder="Buscar por nombre o email"
+                                className="flex-1 min-w-0 outline-none text-[15.5px] font-medium placeholder:text-black/35 dark:placeholder:text-white/35"
+                                style={{ background: 'transparent', border: 0, borderRadius: 0 }}
+                            />
+                            {searching && <Loader2 className="w-4 h-4 animate-spin text-black/30 dark:text-white/30" />}
                         </div>
 
                         {searchResults.length > 0 && (
-                            <div className="border border-slate-200 dark:border-zinc-800 rounded-lg overflow-hidden max-h-72 overflow-y-auto">
-                                {searchResults.map((user, i) => (
-                                    <button
-                                        key={user.id}
-                                        type="button"
-                                        onClick={() => handleSelectUser(user)}
-                                        className={`w-full flex items-center justify-between p-3 text-left hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors ${i < searchResults.length - 1 ? 'border-b border-neutral-100 dark:border-neutral-800' : ''}`}
-                                    >
-                                        <div className="min-w-0">
-                                            <p className="font-bold text-sm text-black dark:text-white truncate">{user.name}</p>
-                                            <p className="text-xs text-neutral-500 truncate">{user.email}</p>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
+                            <>
+                                <p className={`${rotulo} px-1.5 mt-[22px] mb-2.5`}>Personas con cuenta</p>
+                                <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] overflow-hidden">
+                                    {searchResults.map((u, i) => (
+                                        <React.Fragment key={u.id}>
+                                            {i > 0 && <div className="h-px bg-black/[.06] dark:bg-white/[.08] mx-4" />}
+                                            <button
+                                                type="button"
+                                                onClick={() => handleSelectUser(u)}
+                                                className="w-full flex items-center gap-3.5 h-[70px] px-4 text-left transition-colors hover:bg-black/[.02] dark:hover:bg-white/[.03]"
+                                            >
+                                                <div className={`w-11 h-11 shrink-0 rounded-full ${T.chip} flex items-center justify-center text-[14px] font-semibold text-black/60 dark:text-white/60`}>
+                                                    {iniciales(u.name || '')}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[15.5px] font-semibold truncate">{u.name}</p>
+                                                    <p className="mt-0.5 text-[12.5px] font-medium text-black/45 dark:text-white/45 truncate">
+                                                        {maskPhone((u as any).phone)}
+                                                    </p>
+                                                </div>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+                                                    strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-black/30 dark:text-white/30" aria-hidden="true">
+                                                    <path d="M9 6l6 6-6 6" />
+                                                </svg>
+                                            </button>
+                                        </React.Fragment>
+                                    ))}
+                                </div>
+                            </>
                         )}
 
                         {searchTerm.trim().length >= 2 && !searching && searchResults.length === 0 && (
-                            <div className="border-2 border-dashed border-neutral-200 dark:border-neutral-700 p-6 text-center">
-                                <p className="text-sm font-bold text-neutral-400">Sin resultados para "{searchTerm}"</p>
-                            </div>
+                            <p className="mt-7 text-[14.5px] font-medium text-black/50 dark:text-white/50 text-center">
+                                No encontramos a nadie con ese nombre o email.
+                            </p>
                         )}
 
-                        <button
-                            type="button"
-                            onClick={() => setStep(1)}
-                            className="mt-4 flex items-center gap-2 text-xs font-bold uppercase text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
-                        >
-                            <ChevronLeft className="w-4 h-4" /> Volver
-                        </button>
-                    </div>
-                )}
-
-                {/* ─── PASO 2B: Formulario de invitado ──────── */}
-                {step === 2 && tipo === 'INVITADO' && (
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-[10px] font-bold uppercase block mb-1">Nombre</label>
-                                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="Ej. Juan" />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-bold uppercase block mb-1">Apellido</label>
-                                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="Ej. Pérez" />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold uppercase block mb-1">Teléfono</label>
-                            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="+54 9 11 ..." />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold uppercase block mb-1">Email</label>
-                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white" placeholder="ejemplo@email.com" />
-                        </div>
-
-                        {error && <p className="text-sm text-red-600 font-semibold">{error}</p>}
-
-                        <div className="flex gap-3 pt-2">
-                            <button type="button" onClick={() => setStep(1)} className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border border-slate-300 dark:border-zinc-700 rounded-lg text-slate-700 dark:text-zinc-300 font-semibold uppercase tracking-wide text-xs hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all duration-150">
-                                <ChevronLeft className="w-4 h-4" /> Volver
-                            </button>
-                            <button type="button" onClick={handleGuestContinue} className="flex-[2] min-h-[44px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold uppercase tracking-wide text-xs hover:opacity-90 rounded-lg transition-all duration-150">
-                                Continuar →
+                        <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] p-5 mt-3.5">
+                            <p className="text-[15.5px] font-semibold">No tiene cuenta en la app</p>
+                            <p className="mt-2 mb-4 text-[13.5px] leading-[1.55] font-medium text-black/50 dark:text-white/50">
+                                Cargá los datos a mano y queda inscripto como invitado.
+                            </p>
+                            <button type="button" onClick={handleInvitadoNuevo} className={`${btnSecundario} w-full`}>
+                                Cargar un invitado nuevo
                             </button>
                         </div>
-                    </div>
+                    </>
                 )}
 
-                {/* ─── PASO 3 (solo si isCouplesGroup): Pareja ─── */}
-                {step === 3 && isCouplesGroup && (
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-zinc-800 pb-2">
-                            <Heart className="w-4 h-4 text-pink-600" />
-                            <span className="text-xs font-black uppercase tracking-widest">¿Querés inscribir a la pareja?</span>
+                {/* ── PASO 2: los datos ── */}
+                {step === 2 && (
+                    <>
+                        <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] p-[18px] flex flex-col gap-2.5">
+                            <Campo id="ins-nombre" etiqueta="Nombre" valor={firstName} onChange={setFirstName} />
+                            <Campo id="ins-apellido" etiqueta="Apellido" valor={lastName} onChange={setLastName} />
+                            <Campo id="ins-tel" etiqueta="Teléfono" valor={phone} onChange={setPhone} tipo="tel" />
+                            <Campo id="ins-email" etiqueta="Email" valor={email} onChange={setEmail} tipo="email" opcional />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        {error && (
+                            <p className="mt-3.5 text-[14px] font-semibold text-center text-[oklch(0.52_0.19_25)]">{error}</p>
+                        )}
+
+                        <div className="mt-[18px]">
+                            <PasosBotones
+                                onVolver={volver}
+                                onSiguiente={() => {
+                                    if (!datosCompletos) { setError('Completá nombre, apellido y teléfono.'); return; }
+                                    setError(null);
+                                    if (isCouplesGroup) setStep(3); else handleConfirm();
+                                }}
+                                textoSiguiente={isCouplesGroup ? 'Continuar' : 'Inscribir'}
+                                puedeSeguir={datosCompletos}
+                                cargando={isSubmitting}
+                            />
+                        </div>
+                    </>
+                )}
+
+                {/* ── PASO 3: pareja. Par de píldoras, no un toggle chico. ── */}
+                {step === 3 && (
+                    <>
+                        <div className="flex gap-2.5">
                             <button
                                 type="button"
-                                onClick={() => setWantsPartner(true)}
-                                className={`py-3 rounded-lg font-semibold uppercase text-sm tracking-wide transition-all ${wantsPartner ? 'bg-pink-600 text-white' : 'bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
+                                onClick={() => { setWantsPartner(true); setError(null); }}
+                                aria-pressed={wantsPartner === true}
+                                className={`flex-1 h-[58px] rounded-full flex items-center justify-center gap-2.5 text-[16px] font-semibold transition-colors ${wantsPartner === true
+                                    ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
+                                    : 'bg-white dark:bg-[#1b1b1a] text-black/55 dark:text-white/55'}`}
                             >
-                                Sí
+                                {wantsPartner === true && <Check className="w-[17px] h-[17px]" strokeWidth={2.6} />}
+                                Sí, con pareja
                             </button>
                             <button
                                 type="button"
-                                onClick={() => { setWantsPartner(false); resetPartnerData(); setPartnerHasEmail(null); }}
-                                className={`py-3 rounded-lg font-semibold uppercase text-sm tracking-wide transition-all ${!wantsPartner ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
+                                onClick={() => { setWantsPartner(false); resetPartnerData(); setError(null); }}
+                                aria-pressed={wantsPartner === false}
+                                className={`flex-1 h-[58px] rounded-full flex items-center justify-center text-[16px] font-semibold transition-colors ${wantsPartner === false
+                                    ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
+                                    : 'bg-white dark:bg-[#1b1b1a] text-black/55 dark:text-white/55'}`}
                             >
-                                No
+                                Viene sola
                             </button>
                         </div>
 
-                        {wantsPartner && (
-                            <div className="space-y-4 pt-1">
-                                <div className="space-y-2">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-black">¿La pareja tiene email?</span>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button
-                                            type="button"
-                                            onClick={() => { setPartnerHasEmail(true); resetPartnerData(); }}
-                                            className={`py-2.5 rounded-lg font-semibold uppercase text-sm tracking-wide transition-all ${partnerHasEmail === true ? 'bg-pink-600 text-white' : 'bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
-                                        >
-                                            Sí
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => { setPartnerHasEmail(false); resetPartnerData(); }}
-                                            className={`py-2.5 rounded-lg font-semibold uppercase text-sm tracking-wide transition-all ${partnerHasEmail === false ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
-                                        >
-                                            No
-                                        </button>
-                                    </div>
+                        {/* Los datos del acompañante aparecen recién al elegir "Sí". */}
+                        {wantsPartner === true && (
+                            <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] p-[18px] mt-3.5 flex flex-col gap-2.5">
+                                <p className={`${rotulo} px-1 mb-1`}>Datos del acompañante</p>
+                                <Campo id="par-nombre" etiqueta="Nombre" valor={partnerFirstName} onChange={setPartnerFirstName} />
+                                <Campo id="par-apellido" etiqueta="Apellido" valor={partnerLastName} onChange={setPartnerLastName} />
+                                <Campo id="par-tel" etiqueta="Teléfono" valor={partnerPhone} onChange={setPartnerPhone} tipo="tel" />
+                                <div onBlur={handlePartnerEmailBlur}>
+                                    <Campo id="par-email" etiqueta="Email" valor={partnerEmail} onChange={setPartnerEmail} tipo="email" opcional />
                                 </div>
-
-                                {partnerHasEmail !== null && (
-                                    <div className="space-y-4 pt-1">
-                                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-2">
-                                            <span className="text-xs font-black uppercase tracking-widest">Datos de la pareja</span>
-                                            {partnerAccount && (
-                                                <span className="text-[10px] font-bold bg-green-200 px-2 py-0.5 border border-black">Cuenta encontrada</span>
-                                            )}
-                                        </div>
-
-                                        {partnerHasEmail && (
-                                            <div>
-                                                <label className="text-[10px] font-bold uppercase block mb-1">Email de la pareja</label>
-                                                <input
-                                                    type="email"
-                                                    value={partnerEmail}
-                                                    onChange={e => {
-                                                        if (e.target.value.trim() === '') resetPartnerData();
-                                                        else setPartnerEmail(e.target.value);
-                                                        setPartnerAccount(null);
-                                                        setHasCheckedPartnerEmail(false);
-                                                        setPartnerEmailError(null);
-                                                    }}
-                                                    onBlur={handlePartnerEmailBlur}
-                                                    className={`w-full h-11 px-3 border-2 font-bold ${partnerEmailError ? 'border-red-600 bg-red-50' : partnerAccount ? 'border-green-600 bg-green-50' : 'border-black'}`}
-                                                    placeholder="Email para vincular"
-                                                />
-                                                {partnerEmailError ? (
-                                                    <p className="text-[10px] font-bold text-red-600 uppercase mt-1">{partnerEmailError}</p>
-                                                ) : !hasCheckedPartnerEmail && (
-                                                    <p className="text-[10px] font-bold text-neutral-400 uppercase mt-1">
-                                                        {checkingPartner ? 'Buscando...' : 'Ingresá y confirmá el email para continuar'}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-[10px] font-bold uppercase block mb-1">Nombre</label>
-                                                <input
-                                                    type="text" value={partnerFirstName}
-                                                    onChange={e => setPartnerFirstName(e.target.value)}
-                                                    disabled={partnerHasEmail === true && (!hasCheckedPartnerEmail || checkingPartner)}
-                                                    className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white disabled:bg-slate-100 dark:disabled:bg-zinc-800 disabled:text-slate-400"
-                                                    placeholder="Nombre"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] font-bold uppercase block mb-1">Apellido</label>
-                                                <input
-                                                    type="text" value={partnerLastName}
-                                                    onChange={e => setPartnerLastName(e.target.value)}
-                                                    disabled={partnerHasEmail === true && (!hasCheckedPartnerEmail || checkingPartner)}
-                                                    className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white disabled:bg-slate-100 dark:disabled:bg-zinc-800 disabled:text-slate-400"
-                                                    placeholder="Apellido"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold uppercase block mb-1">Teléfono</label>
-                                            <input
-                                                type="tel" value={partnerPhone}
-                                                onChange={e => setPartnerPhone(e.target.value)}
-                                                disabled={partnerHasEmail === true && (!hasCheckedPartnerEmail || checkingPartner)}
-                                                className="w-full h-11 px-3 border border-slate-300 dark:border-zinc-700 rounded-lg font-medium bg-white dark:bg-zinc-900 text-black dark:text-white disabled:bg-slate-100 dark:disabled:bg-zinc-800 disabled:text-slate-400"
-                                                placeholder="+54 9 11 ..."
-                                            />
-                                        </div>
-                                    </div>
+                                {checkingPartner && (
+                                    <p className="px-1 text-[12.5px] font-medium text-black/45 dark:text-white/45">Buscando la cuenta…</p>
                                 )}
-                            </div>
-                        )}
-
-                        {error && <p className="text-sm text-red-600 font-semibold">{error}</p>}
-
-                        <div className="flex gap-3 pt-2">
-                            <button type="button" onClick={() => setStep(2)} className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border border-slate-300 dark:border-zinc-700 rounded-lg text-slate-700 dark:text-zinc-300 font-semibold uppercase tracking-wide text-xs hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all duration-150">
-                                <ChevronLeft className="w-4 h-4" /> Volver
-                            </button>
-                            <button type="button" onClick={handlePartnerContinue} className="flex-[2] min-h-[44px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold uppercase tracking-wide text-xs hover:opacity-90 rounded-lg transition-all duration-150">
-                                Continuar →
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* ─── PASO 3: Confirmar (o 4 si hay pareja) ─── */}
-                {step === (isCouplesGroup ? 4 : 3) && (
-                    <div>
-                        <p className="text-[11px] font-black uppercase tracking-widest text-neutral-400 mb-4">
-                            Confirmá los datos del participante
-                        </p>
-
-                        <div className="border border-slate-200 dark:border-zinc-800 rounded-xl p-4 mb-5 shadow-sm space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                                <p className="font-black text-base uppercase tracking-tight text-black dark:text-white">
-                                    {firstName} {lastName}
-                                </p>
-                                <span className={`text-[9px] font-black uppercase px-2 py-1 shrink-0 ${foundUserId ? 'bg-purple-600 text-white' : 'bg-neutral-200 text-neutral-600'}`}>
-                                    {foundUserId ? 'Usuario del sistema' : 'Invitado'}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-black dark:text-white">
-                                <Mail className="w-4 h-4 text-neutral-400 shrink-0" />
-                                <span className="break-all">{email}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-black dark:text-white">
-                                <Phone className="w-4 h-4 text-neutral-400 shrink-0" />
-                                <span className="font-mono">{maskPhone(phone)}</span>
-                            </div>
-                        </div>
-
-                        {hasPartnerData && (
-                            <div className="border-2 border-pink-300 bg-pink-50 dark:bg-pink-950/20 p-4 mb-5 space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <Heart className="w-4 h-4 text-pink-600" />
-                                    <p className="font-black text-sm uppercase text-black dark:text-white">
-                                        {partnerFirstName} {partnerLastName}
+                                {partnerAccount && (
+                                    <p className="px-1 text-[12.5px] font-semibold text-emerald-700 dark:text-emerald-400">
+                                        Cuenta encontrada: queda vinculada a {partnerAccount.name}.
                                     </p>
-                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-pink-600 text-white shrink-0">Pareja</span>
-                                </div>
-                                {partnerHasEmail && (
-                                    <div className="flex items-center gap-2 text-sm text-black dark:text-white">
-                                        <Mail className="w-4 h-4 text-neutral-400 shrink-0" />
-                                        <span className="break-all">{partnerEmail}</span>
-                                    </div>
                                 )}
-                                <div className="flex items-center gap-2 text-sm text-black dark:text-white">
-                                    <Phone className="w-4 h-4 text-neutral-400 shrink-0" />
-                                    <span className="font-mono">{maskPhone(partnerPhone)}</span>
-                                </div>
+                                {partnerEmailError && (
+                                    <p className="px-1 text-[12.5px] font-semibold text-[oklch(0.52_0.19_25)]">{partnerEmailError}</p>
+                                )}
                             </div>
                         )}
 
-                        {error && <p className="text-sm text-red-600 font-semibold mb-4">{error}</p>}
+                        {wantsPartner !== null && (
+                            <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] px-[18px] py-4 mt-3.5">
+                                <p className="text-[13.5px] leading-[1.5] font-medium text-black/55 dark:text-white/55">
+                                    {libres === 0
+                                        ? <>El grupo <span className="font-semibold text-[#0a0a0a] dark:text-white">ya no tiene lugares libres</span>. Podés inscribir igual: el cupo queda excedido.</>
+                                        : <>Se {ocupa === 1 ? 'va a ocupar' : 'van a ocupar'} <span className="font-semibold text-[#0a0a0a] dark:text-white">{ocupa} de los {libres} lugares</span> que quedan en el grupo.</>}
+                                </p>
+                            </div>
+                        )}
 
-                        <div className="flex gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setStep(isCouplesGroup ? 3 : 2)}
-                                disabled={isSubmitting}
-                                className="flex-1 flex items-center justify-center gap-2 min-h-[44px] border border-slate-300 dark:border-zinc-700 rounded-lg text-slate-700 dark:text-zinc-300 font-semibold uppercase tracking-wide text-xs hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all duration-150"
-                            >
-                                <ChevronLeft className="w-4 h-4" /> Volver
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleConfirm}
-                                disabled={isSubmitting}
-                                className="flex-[2] min-h-[44px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold uppercase tracking-wide text-xs hover:opacity-90 rounded-lg transition-all duration-150 flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                {isSubmitting ? 'Agregando...' : 'Agregar al Grupo'}
-                            </button>
+                        {error && (
+                            <p className="mt-3.5 text-[14px] font-semibold text-center text-[oklch(0.52_0.19_25)]">{error}</p>
+                        )}
+
+                        <div className="mt-[18px]">
+                            <PasosBotones
+                                onVolver={volver}
+                                onSiguiente={() => {
+                                    if (wantsPartner === null) { setError('Elegí si viene con pareja o sola.'); return; }
+                                    if (wantsPartner && !partnerFieldsFilled) {
+                                        setError('Completá nombre, apellido y teléfono del acompañante.');
+                                        return;
+                                    }
+                                    if (partnerEmailError) { setError(partnerEmailError); return; }
+                                    handleConfirm();
+                                }}
+                                textoSiguiente="Inscribir"
+                                puedeSeguir={wantsPartner !== null && (wantsPartner === false || partnerFieldsFilled) && !partnerEmailError}
+                                cargando={isSubmitting}
+                            />
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
         </div>

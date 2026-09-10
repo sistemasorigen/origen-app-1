@@ -17,6 +17,9 @@ import AuthScreen from './pages/auth/PantallaAutenticacion';
 import Store from './pages/primarias/Tienda';
 import Alabanza from './pages/primarias/Alabanza';
 import Pastores from './pages/audiencia/Pastores';
+import ReportesGCX from './pages/reportes/ReportesGCX';
+import DetalleGrupoReporte from './pages/reportes/DetalleGrupoReporte';
+import CompararTemporadas from './pages/reportes/CompararTemporadas';
 import HostDashboard from './pages/groups/PanelAnfitrion';
 import DetalleGrupoAnfitrion from './pages/groups/DetalleGrupoAnfitrion';
 import PaginaAsistenciaGrupo from './pages/groups/PaginaAsistenciaGrupo';
@@ -36,7 +39,9 @@ import NuevoIngresante from './pages/bienvenida/NuevoIngresante';
 import InfluosPage from './pages/influos/InfluosPagina';
 import InfluosAcceso from './pages/influos/InfluosAcceso';
 import Formulario from './pages/bienvenida/Formulario';
-import TutorialsPage from './pages/user/PaginaTutoriales';
+// Tutoriales desactivado — ver la ruta /tutoriales más abajo. El archivo
+// pages/user/PaginaTutoriales.tsx sigue en el repo, sin importar.
+// import TutorialsPage from './pages/user/PaginaTutoriales';
 import Coordinators from './pages/coordinadores/Coordinadores';
 import PastoralCareForm from './pages/audiencia/AudienciaServiciosFormulario';
 import Notifications from './pages/user/Notificaciones';
@@ -468,6 +473,53 @@ const AppContent: React.FC = () => {
                                         ? <Pastores currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
+                                {/* Tablero nuevo de GCX. Convive con /reportes, que sigue
+                                    siendo Pastores.tsx: mismo guard de 7 roles, copiado tal cual. */}
+                                <Route path="/reportes/gcx" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_PUNTO,
+                                        UserRole.ADMIN_PUNTO,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                        UserRole.REPORTES,
+                                        UserRole.ADMIN_GROUPS
+                                    ]))
+                                        ? <ReportesGCX currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                {/* ⚠️ ANTES de :groupId a propósito — si no, "comp-temp" se
+                                    interpreta como un id de grupo. React Router 7 rankea los
+                                    segmentos estáticos por encima de los dinámicos incluso si el
+                                    dinámico está declarado primero, pero no vale la pena depender
+                                    de ese detalle de implementación cuando dejarlo en el orden
+                                    correcto sale gratis. */}
+                                <Route path="/reportes/gcx/comp-temp" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_PUNTO,
+                                        UserRole.ADMIN_PUNTO,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                        UserRole.REPORTES,
+                                        UserRole.ADMIN_GROUPS
+                                    ]))
+                                        ? <CompararTemporadas currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/reportes/gcx/:groupId" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_PUNTO,
+                                        UserRole.ADMIN_PUNTO,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                        UserRole.REPORTES,
+                                        UserRole.ADMIN_GROUPS
+                                    ]))
+                                        ? <DetalleGrupoReporte />
+                                        : <Navigate to="/" />
+                                } />
                                 <Route path="/bienvenida" element={
                                     (user && hasRole(user, [
                                         UserRole.SUPER_ADMIN,
@@ -734,7 +786,12 @@ const AppContent: React.FC = () => {
                                         ? <Coordinators currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
-                                <Route path="/tutoriales" element={<TutorialsPage />} />
+                                {/* Tutoriales desactivado. La ruta se mantiene y redirige a
+                                    inicio en vez de borrarse, para que un link viejo o un
+                                    favorito no caiga en la nada. Para reponerlo: volver a
+                                    <TutorialsPage /> acá y descomentar la entrada del menú
+                                    en components/layout/MenuDeslizable.tsx. */}
+                                <Route path="/tutoriales" element={<Navigate to="/" replace />} />
                                 <Route path="/audiencia-servicios" element={
                                     (user && hasRole(user, [
                                         UserRole.SUPER_ADMIN,

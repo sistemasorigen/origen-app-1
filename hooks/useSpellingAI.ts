@@ -5,6 +5,9 @@ interface UseSpellingAIReturn {
     isChecking: boolean;
     isCorrecting: boolean;
     hasErrors: boolean;
+    // Texto ya corregido que devolvio checkSpelling. Se expone para poder
+    // mostrar QUE cambia antes de aplicarlo, no solo que hay algo mal.
+    suggestedCorrection: string | null;
     correctionStatus: 'idle' | 'correcting' | 'success' | 'error';
     checkSpelling: (text: string) => Promise<boolean>;
     fixText: (text: string) => Promise<string>;
@@ -175,6 +178,7 @@ export const useSpellingAI = (): UseSpellingAIReturn => {
         isChecking,
         isCorrecting,
         hasErrors,
+        suggestedCorrection,
         correctionStatus,
         checkSpelling,
         fixText,

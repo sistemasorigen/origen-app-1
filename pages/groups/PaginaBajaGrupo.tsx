@@ -2,7 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Group, GroupRegistration } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import { ArrowLeft, UserMinus, Users, Send, ChevronDown, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { T, btnPrimario, rotulo, Encabezado, HojaConfirmacion, Vacio } from '../../components/GCX/patron';
+
+// Motivos frecuentes como píldoras. "Otro" abre el campo libre — el resto
+// también lo permite, pero sin obligar a escribir lo que ya está dicho.
+const MOTIVOS = ['Se mudó', 'Dejó de asistir', 'Pasó a otro grupo', 'Otro'];
+
+const iniciales = (n: string, a: string) =>
+    ((n || '').trim()[0] || '' + (a || '').trim()[0] || '').toUpperCase() || '?';
 
 const PaginaBajaGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const { groupId } = useParams<{ groupId: string }>();
@@ -11,15 +19,15 @@ const PaginaBajaGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const [group, setGroup] = useState<Group | null>(null);
     const [loadingGroup, setLoadingGroup] = useState(true);
 
-    const [requestType, setRequestType] = useState<'USER' | 'GROUP'>('USER');
+    // null = pantalla de bifurcación. El diseño la pone primero: la decisión
+    // de qué se está por hacer es lo primero que hay que tomar.
+    const [requestType, setRequestType] = useState<'USER' | 'GROUP' | null>(null);
     const [selectedUserId, setSelectedUserId] = useState<string>('');
-    const [reason, setReason] = useState('');
+    const [motivo, setMotivo] = useState<string>('');
     const [details, setDetails] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSelectOpen, setIsSelectOpen] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
-    // Confirmación en 2 pasos, solo para la baja de un miembro.
-    const [confirmandoBaja, setConfirmandoBaja] = useState(false);
+    const [confirmando, setConfirmando] = useState(false);
 
     const fetchGroup = useCallback(async () => {
         if (!currentUser || !groupId) return;
@@ -42,63 +50,57 @@ const PaginaBajaGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const approvedMembers = (group?.registrations || []).filter(
         (r: GroupRegistration) => r.status === 'APPROVED'
     );
-
     const selectedMember = approvedMembers.find(m => m.id === selectedUserId);
+    const reason = motivo === 'Otro' ? details.trim() : motivo;
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const volver = () => {
+        if (requestType) { setRequestType(null); setSubmitError(null); setConfirmando(false); return; }
+        navigate(`/mis-grupos/${groupId}`);
+    };
+
+    const validar = (): string | null => {
+        if (requestType === 'USER' && !selectedUserId) return 'Elegí a la persona que sale del grupo.';
+        if (!motivo) return 'Elegí un motivo.';
+        if (motivo === 'Otro' && !details.trim()) return 'Contanos el motivo.';
+        return null;
+    };
+
+    const continuar = () => {
+        const error = validar();
+        if (error) { setSubmitError(error); return; }
         setSubmitError(null);
+        setConfirmando(true);
+    };
 
+    const ejecutar = async () => {
         if (!group) return;
-
-        if (!reason.trim()) {
-            setSubmitError(requestType === 'USER'
-                ? 'Escribí el motivo de la baja.'
-                : 'Escribí el motivo de la solicitud.');
-            return;
-        }
-        if (requestType === 'USER' && !selectedUserId) {
-            setSubmitError('Elegí un miembro del grupo.');
-            return;
-        }
-
-        // La baja de un miembro es inmediata y no se puede deshacer, así que
-        // se pide confirmación antes de ejecutarla. El cierre del grupo no la
-        // necesita: todavía pasa por la aprobación de un administrador.
-        if (requestType === 'USER' && !confirmandoBaja) {
-            setConfirmandoBaja(true);
-            return;
-        }
-
         setIsSubmitting(true);
 
         // ── Baja de UN MIEMBRO: directa, sin aprobación ──
-        // Misma secuencia que usa BandejaBajasAdmin al aprobar:
-        // primero se borra la inscripción, y solo si eso salió
-        // bien se deja el registro histórico. Al revés quedaría
-        // un historial de una baja que nunca ocurrió.
+        // Misma secuencia que usa BandejaBajasAdmin al aprobar: primero se
+        // borra la inscripción, y solo si eso salió bien se deja el registro
+        // histórico. Al revés quedaría un historial de una baja que nunca ocurrió.
         if (requestType === 'USER') {
             const deleted = await supabaseService.deleteGroupRegistration(selectedUserId, group.id);
-
             if (!deleted) {
                 setIsSubmitting(false);
-                setConfirmandoBaja(false);
+                setConfirmando(false);
                 setSubmitError('No pudimos dar de baja al miembro. Intentá de nuevo.');
                 return;
             }
 
-            // Historial: queda el motivo y quién la hizo, ya resuelta.
-            // Si esto falla no se revierte nada ni se muestra error — la baja,
-            // que es lo que le importa al anfitrión, ya se ejecutó bien.
+            // Historial: queda el motivo y quién la hizo, ya resuelta. Si esto
+            // falla no se revierte nada ni se muestra error — la baja, que es
+            // lo que le importa al anfitrión, ya se ejecutó bien.
             await supabaseService.createDropoutRequest({
                 groupId: group.id,
                 hostId: currentUser.id,
-                requestType,
+                requestType: 'USER',
                 targetRegistrationId: selectedUserId,
                 targetUserName: selectedMember
                     ? `${selectedMember.firstName} ${selectedMember.lastName}`
                     : undefined,
-                reason: reason.trim(),
+                reason,
                 details: details.trim() || undefined,
                 status: 'APPROVED'
             });
@@ -112,228 +114,210 @@ const PaginaBajaGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         const success = await supabaseService.createDropoutRequest({
             groupId: group.id,
             hostId: currentUser.id,
-            requestType,
+            requestType: 'GROUP',
             targetRegistrationId: undefined,
             targetUserName: undefined,
-            reason: reason.trim(),
+            reason,
             details: details.trim() || undefined,
             status: 'PENDING'
         });
         setIsSubmitting(false);
+        setConfirmando(false);
 
-        if (success) {
-            navigate(`/mis-grupos/${groupId}`);
-        } else {
-            setSubmitError('Error al enviar la solicitud. Intentá de nuevo.');
-        }
+        if (success) navigate(`/mis-grupos/${groupId}`);
+        else setSubmitError('Error al enviar la solicitud. Intentá de nuevo.');
     };
 
     if (loadingGroup) return (
-        <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-            <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+        <div className={`min-h-screen flex items-center justify-center ${T.fondo}`}>
+            <Loader2 className="w-8 h-8 animate-spin text-black/20 dark:text-white/20" />
         </div>
     );
-
     if (!group) return null;
 
+    const tituloAccion = requestType === 'USER' ? 'Dar de baja a un miembro'
+        : requestType === 'GROUP' ? 'Cerrar el grupo'
+            : 'Dar de baja';
+
     return (
-        <div className="min-h-screen bg-white dark:bg-black">
-            <div className="max-w-2xl mx-auto px-4 md:px-8 py-8">
+        <div id="gcx-accion" className={`min-h-screen ${T.fondo} ${T.fuente} ${T.tinta}`}>
+            {/* El encabezado va sobre blanco y se curva abajo: separa la
+                identidad de la pantalla del contenido, que vive sobre el fondo. */}
+            <div className="bg-white dark:bg-[#1b1b1a] rounded-b-[28px] px-5 pt-4 pb-[18px] lg:px-8 lg:py-5">
+                <div className="max-w-[820px] mx-auto">
+                    <Encabezado accion={tituloAccion} grupo={group.name} onVolver={volver} />
+                </div>
+            </div>
 
-                <button
-                    onClick={() => navigate(`/mis-grupos/${groupId}`)}
-                    className="flex items-center gap-2 text-sm text-slate-400 hover:text-black dark:hover:text-white transition-colors mb-6 font-bold uppercase tracking-wide"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    {group.name}
-                </button>
+            <div className="max-w-[820px] mx-auto px-4 pt-[22px] pb-8">
 
-                <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-black dark:text-white mb-2">
-                    {requestType === 'USER' ? 'Dar de baja a un miembro' : 'Solicitud de cierre del grupo'}
-                </h1>
-                <p className="text-sm text-slate-500 dark:text-zinc-400 mb-6">
-                    {requestType === 'USER'
-                        ? 'La baja se aplica en el momento. No pasa por revisión y no se puede deshacer.'
-                        : 'La solicitud queda pendiente hasta que un administrador la revise.'}
-                </p>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="bg-slate-100 dark:bg-slate-900 rounded-lg p-4 border-2 border-slate-200 dark:border-slate-700">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Grupo</p>
-                        <p className="font-black text-black dark:text-white uppercase">{group.name}</p>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                            Qué querés hacer
-                        </label>
-                        <div className="flex gap-3">
-                            <button
-                                type="button"
-                                onClick={() => { setRequestType('USER'); setConfirmandoBaja(false); setSubmitError(null); }}
-                                className={`flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border-2 font-bold uppercase text-sm transition-all ${requestType === 'USER' ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white' : 'bg-white dark:bg-black text-black dark:text-white border-slate-300 dark:border-slate-600 hover:border-black dark:hover:border-white'}`}
-                            >
-                                <UserMinus className="w-5 h-5" />
-                                Usuario
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => { setRequestType('GROUP'); setConfirmandoBaja(false); setSubmitError(null); }}
-                                className={`flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border-2 font-bold uppercase text-sm transition-all ${requestType === 'GROUP' ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-black text-black dark:text-white border-slate-300 dark:border-slate-600 hover:border-red-600'}`}
-                            >
-                                <Users className="w-5 h-5" />
-                                Grupo
-                            </button>
-                        </div>
-                    </div>
-
-                    {requestType === 'USER' && (
+                {/* ── Bifurcación: dos tarjetas de peso distinto ── */}
+                {requestType === null && (
+                    <div className="lg:grid lg:grid-cols-2 lg:gap-5 lg:items-start">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                Seleccionar Miembro
-                            </label>
-                            {approvedMembers.length === 0 ? (
-                                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg text-center">
-                                    <p className="text-sm text-yellow-700 dark:text-yellow-400">Este grupo no tiene miembros aprobados.</p>
+                            <p className={`${rotulo} px-1.5 mb-2.5`}>Un miembro</p>
+                            <button
+                                type="button"
+                                onClick={() => setRequestType('USER')}
+                                className="w-full text-left bg-white dark:bg-[#1b1b1a] rounded-[26px] p-5 transition-transform hover:-translate-y-0.5"
+                            >
+                                <p className="text-[17px] font-semibold tracking-[-.01em]">Dar de baja a un miembro</p>
+                                <p className="mt-2.5 text-[13.5px] leading-[1.6] font-medium text-black/55 dark:text-white/55">
+                                    La persona sale del grupo <span className={`font-semibold ${T.riesgo}`}>en el momento</span>. No pasa por aprobación y no se puede deshacer.
+                                </p>
+                                <div className="flex items-center justify-between mt-[18px]">
+                                    <span className="text-[14.5px] font-semibold">Elegir a la persona</span>
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
                                 </div>
-                            ) : (
-                                <div className="relative">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsSelectOpen(!isSelectOpen)}
-                                        className="w-full flex items-center justify-between p-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-left hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
-                                    >
-                                        <span className={`font-bold uppercase ${selectedMember ? 'text-black dark:text-white' : 'text-slate-400'}`}>
-                                            {selectedMember ? `${selectedMember.firstName} ${selectedMember.lastName}` : 'Seleccionar miembro...'}
-                                        </span>
-                                        <ChevronDown className={`w-5 h-5 transition-transform text-black dark:text-white ${isSelectOpen ? 'rotate-180' : ''}`} />
-                                    </button>
+                            </button>
+                        </div>
 
-                                    {isSelectOpen && (
-                                        <>
-                                            <div className="fixed inset-0 z-10" onClick={() => setIsSelectOpen(false)} />
-                                            <div className="absolute z-20 w-full mt-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                                {approvedMembers.map((member) => (
+                        <div className="mt-[26px] lg:mt-0">
+                            <p className={`${rotulo} px-1.5 mb-2.5`}>Todo el grupo</p>
+                            <button
+                                type="button"
+                                onClick={() => setRequestType('GROUP')}
+                                className="w-full text-left bg-[#f0f0ed] dark:bg-[#232322] rounded-[26px] p-5 transition-transform hover:-translate-y-0.5"
+                            >
+                                <p className="text-[17px] font-semibold tracking-[-.01em]">Cerrar el grupo</p>
+                                <p className="mt-2.5 text-[13.5px] leading-[1.6] font-medium text-black/55 dark:text-white/55">
+                                    Se envía una <span className="font-semibold text-[#0a0a0a] dark:text-white">solicitud a un administrador</span>. El grupo sigue funcionando hasta que la aprueben.
+                                </p>
+                                <div className="flex items-center justify-between mt-[18px]">
+                                    <span className="text-[14.5px] font-semibold text-black/60 dark:text-white/60">Pedir el cierre</span>
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-black/40 dark:text-white/40" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Formulario ── */}
+                {requestType !== null && (
+                    <>
+                        {requestType === 'USER' && (
+                            <>
+                                <p className={`${rotulo} px-1.5 mb-2.5`}>¿A quién?</p>
+                                {approvedMembers.length === 0 ? (
+                                    <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px]">
+                                        <Vacio
+                                            titulo="No hay miembros aprobados"
+                                            detalle="Cuando alguien se sume al grupo vas a poder darlo de baja desde acá."
+                                            accion={{ texto: 'Volver al grupo', onClick: () => navigate(`/mis-grupos/${groupId}`) }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] overflow-hidden">
+                                        {approvedMembers.map((m, i) => {
+                                            const elegido = selectedUserId === m.id;
+                                            return (
+                                                <React.Fragment key={m.id}>
+                                                    {i > 0 && <div className="h-px bg-black/[.06] dark:bg-white/[.08] mx-4" />}
                                                     <button
-                                                        key={member.id}
                                                         type="button"
-                                                        onClick={() => { setSelectedUserId(member.id); setIsSelectOpen(false); setConfirmandoBaja(false); }}
-                                                        className={`w-full p-3 text-left hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-b-0 ${selectedUserId === member.id ? 'bg-slate-100 dark:bg-slate-900' : ''}`}
+                                                        onClick={() => { setSelectedUserId(m.id); setSubmitError(null); setConfirmando(false); }}
+                                                        aria-pressed={elegido}
+                                                        className="w-full flex items-center gap-3.5 h-[70px] px-4 transition-colors hover:bg-black/[.02] dark:hover:bg-white/[.03]"
                                                     >
-                                                        <p className="font-bold text-black dark:text-white uppercase text-sm">
-                                                            {member.firstName} {member.lastName}
-                                                        </p>
-                                                        <p className="text-xs text-slate-500">{member.email}</p>
+                                                        <div className={`w-11 h-11 shrink-0 rounded-full ${T.chip} flex items-center justify-center text-[14px] font-semibold text-black/60 dark:text-white/60`}>
+                                                            {iniciales(m.firstName, m.lastName)}
+                                                        </div>
+                                                        <span className="flex-1 text-left text-[15.5px] font-semibold truncate">
+                                                            {m.firstName} {m.lastName}
+                                                        </span>
+                                                        <span className={`w-[26px] h-[26px] shrink-0 rounded-full flex items-center justify-center transition-colors ${elegido ? 'bg-[#0a0a0a] dark:bg-white' : 'bg-[#eeeeeb] dark:bg-[#2a2a28]'}`}>
+                                                            {elegido && (
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white dark:text-black" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 6.5" /></svg>
+                                                            )}
+                                                        </span>
                                                     </button>
-                                                ))}
-                                            </div>
-                                        </>
-                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {(requestType === 'GROUP' || approvedMembers.length > 0) && (
+                            <>
+                                <p className={`${rotulo} px-1.5 mt-6 mb-2.5`}>Motivo</p>
+                                <div className="flex flex-wrap gap-2.5">
+                                    {MOTIVOS.map(m => (
+                                        <button
+                                            key={m}
+                                            type="button"
+                                            onClick={() => { setMotivo(m); setSubmitError(null); setConfirmando(false); }}
+                                            aria-pressed={motivo === m}
+                                            className={`h-[46px] px-[18px] rounded-full text-[14px] font-semibold transition-colors ${motivo === m
+                                                ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
+                                                : 'bg-white dark:bg-[#1b1b1a] text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white'}`}
+                                        >
+                                            {m}
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
+
+                                <textarea
+                                    id="baja-detalles"
+                                    value={details}
+                                    onChange={e => { setDetails(e.target.value); setSubmitError(null); }}
+                                    rows={3}
+                                    maxLength={500}
+                                    placeholder={motivo === 'Otro' ? 'Contanos el motivo' : 'Detalles (opcional)'}
+                                    className="w-full mt-3.5 px-[18px] py-4 rounded-[22px] resize-none text-[14.5px] font-medium outline-none min-h-[84px]"
+                                />
+
+                                {submitError && (
+                                    <p className="mt-3.5 text-[14px] font-semibold text-center text-[oklch(0.52_0.19_25)]">{submitError}</p>
+                                )}
+
+                                <button type="button" onClick={continuar} className={`${btnPrimario} h-[60px] mt-5`}>
+                                    Continuar
+                                </button>
+                                <p className="mt-3 mx-5 text-[12.5px] leading-[1.5] font-medium text-black/45 dark:text-white/45 text-center">
+                                    Vas a ver una confirmación antes de que se ejecute.
+                                </p>
+                            </>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {/* ── 1c · Confirmación. Dos temperaturas en la misma hoja ── */}
+            <HojaConfirmacion
+                abierta={confirmando}
+                titulo={requestType === 'USER'
+                    ? `¿Dar de baja a ${selectedMember ? `${selectedMember.firstName} ${selectedMember.lastName}` : 'este miembro'}?`
+                    : `¿Pedir el cierre de ${group.name}?`}
+                antes={requestType === 'USER' ? 'Sale del grupo ' : 'La solicitud '}
+                consecuencia={requestType === 'USER' ? 'de inmediato y no se puede deshacer' : 'queda pendiente de aprobación'}
+                despues={requestType === 'USER'
+                    ? '. Si vuelve, hay que inscribirlo otra vez.'
+                    : '. El grupo sigue funcionando hasta que un administrador la revise.'}
+                textoConfirmar={requestType === 'USER' ? 'Sí, dar de baja' : 'Enviar solicitud'}
+                onConfirmar={ejecutar}
+                onCancelar={() => setConfirmando(false)}
+                cargando={isSubmitting}
+            >
+                <div className={`${T.interna} rounded-[20px] px-4 py-3.5 flex items-center gap-3`}>
+                    {requestType === 'USER' && selectedMember && (
+                        <div className="w-10 h-10 shrink-0 rounded-full bg-[#e8e8e5] dark:bg-[#2a2a28] flex items-center justify-center text-[13.5px] font-semibold text-black/60 dark:text-white/60">
+                            {iniciales(selectedMember.firstName, selectedMember.lastName)}
                         </div>
                     )}
-
-                    {requestType === 'GROUP' && (
-                        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg">
-                            <p className="text-sm text-red-700 dark:text-red-400 font-medium">
-                                ⚠️ Esta solicitud pedirá la <strong>eliminación completa del grupo</strong>,
-                                incluyendo todos los miembros y registros de asistencia.
-                            </p>
-                        </div>
-                    )}
-
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                            Motivo
-                        </label>
-                        <input
-                            type="text"
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            placeholder="Ej. Inasistencia reiterada"
-                            className="w-full px-4 py-3.5 bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 rounded-xl text-sm font-medium placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10"
-                            maxLength={100}
-                            required
-                        />
-                        <p className="text-xs text-slate-400 mt-1.5">
-                            {requestType === 'USER'
-                                ? 'Queda guardado en el historial de bajas del grupo.'
-                                : 'Es lo que va a leer el administrador que revise la solicitud.'}
+                    <div className="min-w-0">
+                        <p className="text-[14.5px] font-semibold truncate">
+                            {requestType === 'USER' && selectedMember
+                                ? `${selectedMember.firstName} ${selectedMember.lastName}`
+                                : group.name}
+                        </p>
+                        <p className="mt-0.5 text-[12.5px] font-medium text-black/45 dark:text-white/45 truncate">
+                            Motivo: {reason}
                         </p>
                     </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                            Detalles (Opcional)
-                        </label>
-                        <textarea
-                            value={details}
-                            onChange={(e) => setDetails(e.target.value)}
-                            placeholder="Detallá la situación con más contexto..."
-                            rows={4}
-                            className="w-full px-4 py-3.5 bg-white dark:bg-zinc-900 text-black dark:text-white border border-slate-300 dark:border-zinc-700 rounded-xl text-sm font-medium placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-white/10 resize-none"
-                            maxLength={500}
-                        />
-                    </div>
-
-                    {submitError && (
-                        <p className="text-sm text-red-600 font-semibold text-center">{submitError}</p>
-                    )}
-
-                    {/* Confirmación en 2 pasos: el mismo patrón de BandejaBajasAdmin,
-                        no un confirm() nativo. Solo para la baja de un miembro, que
-                        es la que se ejecuta al instante. */}
-                    {confirmandoBaja && requestType === 'USER' && (
-                        <div className="p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl">
-                            <p className="text-sm text-red-700 dark:text-red-400 font-semibold">
-                                ¿Dar de baja a {selectedMember ? `${selectedMember.firstName} ${selectedMember.lastName}` : 'este miembro'}?
-                            </p>
-                            <p className="text-sm text-red-700/80 dark:text-red-400/80 mt-1">
-                                Sale del grupo ahora mismo. Para volver a entrar tiene que inscribirse de nuevo.
-                            </p>
-                        </div>
-                    )}
-
-                    <div className="flex gap-3">
-                        {confirmandoBaja && requestType === 'USER' && (
-                            <button
-                                type="button"
-                                onClick={() => setConfirmandoBaja(false)}
-                                disabled={isSubmitting}
-                                className="px-6 py-4 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-semibold transition-colors hover:bg-slate-200 dark:hover:bg-zinc-700 disabled:opacity-50"
-                            >
-                                Cancelar
-                            </button>
-                        )}
-                        <button
-                            type="submit"
-                            disabled={isSubmitting || (requestType === 'USER' && !selectedUserId)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-4 font-semibold rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${confirmandoBaja && requestType === 'USER'
-                                ? 'bg-red-600 text-white hover:bg-red-700'
-                                : 'bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-slate-200'
-                                }`}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    {requestType === 'USER' ? 'Dando de baja...' : 'Enviando...'}
-                                </>
-                            ) : requestType === 'USER' ? (
-                                <>
-                                    <UserMinus className="w-5 h-5" />
-                                    {confirmandoBaja ? 'Sí, dar de baja' : 'Dar de baja'}
-                                </>
-                            ) : (
-                                <>
-                                    <Send className="w-5 h-5" />
-                                    Enviar solicitud
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </form>
-            </div>
+                </div>
+            </HojaConfirmacion>
         </div>
     );
 };

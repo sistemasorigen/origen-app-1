@@ -142,7 +142,7 @@
   </script>
   <!-- Google Fonts for fallback fonts -->
   <link
-    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Caveat:wght@400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Caveat:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <style>
     /* Proxima Nova Font Face Declarations */
@@ -334,6 +334,124 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
     }
 
+    /* Tablero de /reportes/gcx — el override global de arriba le pone borde
+       slate y radio 0.5rem a todo campo, y en esta pantalla eso se ve como
+       un cuadro ajeno adentro de las tarjetas (el buscador de la tabla
+       quedaba con doble borde). Scopeado por id, que le gana al !important
+       global por especificidad. */
+    #gcx-reportes input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    #gcx-reportes select {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+      border: 1px solid #e8e9ec !important;
+      border-radius: 9px;
+    }
+
+    /* El buscador de la tabla va desnudo: el borde y el radio los dibuja su
+       contenedor, no el input. */
+    #gcx-reportes input.campo-desnudo {
+      border: 0 !important;
+      background-color: transparent !important;
+      border-radius: 0;
+    }
+
+    #gcx-reportes input:focus,
+    #gcx-reportes select:focus {
+      outline: none !important;
+      border-color: #2563eb !important;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    #gcx-reportes input.campo-desnudo:focus {
+      border: 0 !important;
+      box-shadow: none;
+    }
+
+    /* Pantallas de acción de /mis-grupos/:id — campos del diseño nuevo:
+       fondo blanco sobre el gris de página, radio 22px y SIN borde.
+       Scopeado por id igual que /auth: el override global de arriba usa
+       !important, y cualquier id le gana por especificidad. */
+    #gcx-accion input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    #gcx-accion textarea,
+    #gcx-accion select {
+      background-color: #ffffff !important;
+      border: 1px solid transparent !important;
+      border-radius: 22px !important;
+    }
+
+    #gcx-accion input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):focus,
+    #gcx-accion textarea:focus,
+    #gcx-accion select:focus {
+      outline: none !important;
+      border-color: #0a0a0a !important;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .dark #gcx-accion input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    .dark #gcx-accion textarea,
+    .dark #gcx-accion select {
+      background-color: #1b1b1a !important;
+      color: #ffffff !important;
+    }
+
+    /* Pantalla de crear / editar un grupo. Los campos van embutidos en
+       recuadros grises adentro de tarjetas blancas, así que acá el control
+       casi siempre es .campo-desnudo; esto es el piso para el resto. */
+    #gcx-formulario input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    #gcx-formulario textarea,
+    #gcx-formulario select {
+      background-color: #f7f7f5 !important;
+      border: 1px solid transparent !important;
+      border-radius: 20px !important;
+    }
+
+    .dark #gcx-formulario input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    .dark #gcx-formulario textarea,
+    .dark #gcx-formulario select {
+      background-color: #232322 !important;
+      color: #ffffff !important;
+    }
+
+    /* La caja de portada la dibuja SubidaImagen, que trae su propio borde
+       punteado y radio 12. Se reviste desde acá en vez de tocar ese
+       componente, que lo usan muchas pantallas con otro aspecto. */
+    #gcx-formulario .caja-portada>div {
+      border: 0 !important;
+      border-radius: 20px !important;
+      background-color: #f7f7f5 !important;
+    }
+
+    .dark #gcx-formulario .caja-portada>div {
+      background-color: #232322 !important;
+    }
+
+    /* Campos "desnudos": el recuadro lo dibuja el contenedor y el control
+       vive adentro sin fondo ni borde propios. Hace falta una regla porque
+       el estilo inline NO alcanza — una declaración inline normal pierde
+       contra un !important de hoja, así que style={{background:'transparent'}}
+       se lo comía el bloque de arriba y el input salía blanco adentro del
+       recuadro gris.
+
+       Va ÚLTIMO a propósito: repetir la cadena de :not() lo deja en (1,6,1),
+       que empata con los .dark de arriba, y en un empate gana el que está
+       después. Si se mueve, en oscuro los campos vuelven a pintarse. */
+    #gcx-accion input.campo-desnudo:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    #gcx-accion textarea.campo-desnudo,
+    #gcx-accion select.campo-desnudo,
+    #gcx-formulario input.campo-desnudo:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    #gcx-formulario textarea.campo-desnudo,
+    #gcx-formulario select.campo-desnudo,
+    #gcx-accion .campo-desnudo:focus,
+    #gcx-formulario .campo-desnudo:focus {
+      background-color: transparent !important;
+      color: inherit !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+
     /* Pantallas de autenticación (/auth y /update-password): campos rellenos
        sin borde. Scopeado por id a propósito, NO por clase: el override global
        de arriba usa !important y llega a (0,8,1); una clase se quedaría en
@@ -375,6 +493,82 @@
     }
 
     /* Print styles */
+    /* Impresión del tablero de /reportes/gcx — el "PDF" de cada gráfico.
+       No hay librería de PDF en el proyecto; se usa el mismo camino que
+       components/Reportes/PanelInteracciones: window.print() y que el
+       navegador guarde como PDF. Imprime los SVG de verdad, no una captura.
+
+       Con data-imprimir puesto en la raíz se imprime UN gráfico solo: se
+       ocultan todos los [data-grafico] y se repone el que la pantalla marcó
+       con .imprimir-este. Sin el atributo salen todos, que es el export
+       completo. Una sola regla para los once gráficos. */
+    /* Sólo se ve en papel. En pantalla estorbaría: repite lo que ya dicen
+       los selectores del encabezado. */
+    .solo-impresion {
+      display: none;
+    }
+
+    @media print {
+      #gcx-reportes[data-imprimir] [data-grafico] {
+        display: none !important;
+      }
+
+      #gcx-reportes[data-imprimir] [data-grafico].imprimir-este {
+        display: block !important;
+      }
+
+      #gcx-reportes .solo-impresion {
+        display: block !important;
+      }
+
+      /* Imprimiendo UN gráfico, el encabezado de la pantalla tampoco va: la
+         hoja tiene que arrancar con el gráfico que se pidió, no con el
+         título y los selectores ocupando la primera página entera. */
+      #gcx-reportes[data-imprimir] .encabezado-tablero {
+        display: none !important;
+      }
+
+      /* Sin esto la primera hoja sale casi vacía: el contenedor conserva el
+         min-h-screen y el padding de la pantalla. */
+      #gcx-reportes {
+        min-height: 0 !important;
+      }
+
+      #gcx-reportes[data-imprimir] > div:last-child {
+        padding-top: 0 !important;
+      }
+
+      /* Las filas de dos y tres tarjetas se apilan en papel.
+         Dos motivos distintos:
+         - Imprimiendo UNA sola, display:none en las hermanas NO colapsa las
+           pistas de la grilla (están declaradas en gridTemplateColumns), así
+           que la tarjeta visible quedaba encerrada en su 1/3 de ancho.
+         - Imprimiendo todo, tres columnas en una hoja vertical no se leen.
+         Se aplica sólo a las filas, marcadas a mano: un display:block sobre
+         cualquier .grid rompería las grillas de ADENTRO de las tarjetas (los
+         indicadores, las dos donas del detalle, las filas de la tabla). */
+      #gcx-reportes .fila-graficos {
+        display: block !important;
+      }
+
+      /* Apiladas necesitan aire entre sí; el gap de la grilla ya no aplica. */
+      #gcx-reportes .fila-graficos > * + * {
+        margin-top: 16px;
+      }
+
+      /* Que una tarjeta no se corte al medio entre dos hojas. */
+      #gcx-reportes [data-grafico] {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      /* El gris de fondo de las tarjetas gasta tinta y no aporta nada en
+         papel; el borde de un pixel sí, que es lo que las separa. */
+      #gcx-reportes {
+        background: #ffffff !important;
+      }
+    }
+
     @media print {
       .no-print {
         display: none !important;

@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { User } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import { useAuth } from '../../contexts/AuthContext';
-import { ArrowLeft, Calendar, History, Save, Check, Loader2, Users } from 'lucide-react';
+import { Calendar, History, Save, Check, Loader2 } from 'lucide-react';
+import { T, btnPrimario, btnSecundario, rotulo, Encabezado, Vacio } from '../../components/GCX/patron';
 
 interface Member {
     id: string;
@@ -34,6 +35,52 @@ const getInitials = (name: string): string => {
     return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
 };
 
+// Se parsea a mano en vez de new Date(dateStr): ese constructor interpreta
+// YYYY-MM-DD como UTC y en Argentina (UTC-3) muestra el día anterior. Mismo
+// problema que arregla hoyLocal().
+const aFechaLocal = (dateStr: string): Date | null => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+};
+
+// "miércoles, 9 de septiembre". Para el historial, que tiene ancho de sobra.
+const fechaLarga = (dateStr: string): string => {
+    const f = aFechaLocal(dateStr);
+    if (!f) return dateStr;
+    return f.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+};
+
+// Versión corta para la píldora, que en 375px comparte fila con el botón de
+// historial y sólo dispone de ~160px de texto: el día de la semana se abrevia
+// ("mié") y hoy se nombra por su nombre, que es el caso normal. Se agrega el
+// año sólo si no es el actual, para no confundir una reunión vieja con una
+// reciente al editarla.
+const fechaPildora = (dateStr: string): string => {
+    const f = aFechaLocal(dateStr);
+    if (!f) return dateStr;
+    const anioAparte = f.getFullYear() !== new Date().getFullYear();
+    const resto = f.toLocaleDateString('es-AR', {
+        day: 'numeric', month: anioAparte ? 'short' : 'long', ...(anioAparte ? { year: 'numeric' } : {}),
+    });
+    if (dateStr === hoyLocal()) return `Hoy, ${resto}`;
+    return `${f.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')}, ${resto}`;
+};
+
+// El toggle de presente/ausente. 44px de lado para que se pueda tildar
+// con el pulgar, de pie, sin apuntar.
+const Tilde: React.FC<{ presente: boolean; chico?: boolean }> = ({ presente, chico }) => (
+    <span
+        aria-hidden="true"
+        className={`shrink-0 rounded-full flex items-center justify-center transition-all duration-200 ${chico ? 'w-[34px] h-[34px]' : 'w-[44px] h-[44px]'
+            } ${presente
+                ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
+                : 'bg-transparent border-2 border-black/[.13] dark:border-white/[.18] text-transparent'}`}
+    >
+        <Check className={chico ? 'w-[15px] h-[15px]' : 'w-[19px] h-[19px]'} strokeWidth={3} />
+    </span>
+);
+
 const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const { groupId } = useParams<{ groupId: string }>();
     const navigate = useNavigate();
@@ -54,6 +101,9 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     const [saving, setSaving] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    // Inscripciones de pareja abiertas para tildar por separado. Cerradas,
+    // la fila se lee como una sola unidad con su contador "2 de 2".
+    const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
 
     const fetchGroup = useCallback(async () => {
         if (!currentUser || !groupId) return;
@@ -93,6 +143,17 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
             };
             return [titular, parejaMember];
         });
+
+    // Las mismas personas, pero agrupadas por inscripción: el diseño muestra
+    // la pareja como UNA fila. Los ids no cambian, así que selectedMembers y
+    // saveAttendance siguen viendo exactamente lo de antes.
+    const filas: { regId: string; personas: Member[] }[] = (group?.registrations || [])
+        .filter((r: any) => r.status === 'APPROVED')
+        .map((r: any) => {
+            const propias = members.filter(m => m.id === r.id || m.id === `${r.id}-partner`);
+            return { regId: r.id, personas: propias };
+        })
+        .filter(f => f.personas.length > 0);
 
     const presentCount = selectedMembers.size;
     const absentCount = members.length - presentCount;
@@ -198,168 +259,297 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     };
 
     if (loadingGroup) return (
-        <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-            <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+        <div className={`min-h-screen flex items-center justify-center ${T.fondo}`}>
+            <Loader2 className="w-8 h-8 animate-spin text-black/20 dark:text-white/20" />
         </div>
     );
 
     if (!group) return null;
 
     return (
-        <div className="min-h-screen bg-white dark:bg-black">
-            <div className="max-w-2xl mx-auto px-4 md:px-8 py-8">
+        <div id="gcx-accion" className={`min-h-screen ${T.fondo} ${T.fuente} ${T.tinta}`}>
 
-                {/* Volver */}
-                <button
-                    onClick={() => navigate(`/mis-grupos/${groupId}`)}
-                    className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-black dark:hover:text-white transition-colors mb-6 font-black uppercase tracking-widest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    {group.name}
-                </button>
+            <div className="bg-white dark:bg-[#1b1b1a] rounded-b-[28px] px-5 pt-4 pb-[18px] lg:px-8">
+                <div className="max-w-[430px] lg:max-w-[900px] mx-auto">
+                    <Encabezado
+                        accion="Tomar asistencia"
+                        grupo={group.name}
+                        onVolver={() => navigate(`/mis-grupos/${groupId}`)}
+                    />
 
-                <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-black dark:text-white mb-6">
-                    Control de Asistencia
-                </h1>
+                    <div className="flex items-center gap-2.5 mt-[18px]">
+                        {/* Selector de fecha: una píldora, no un campo de formulario.
+                            Editar una fecha anterior no es otra pantalla — cambia el
+                            rótulo y el botón pasa a "Guardar cambios". */}
+                        <div
+                            className={`relative flex-1 min-w-0 h-[52px] rounded-full ${T.interna} flex items-center gap-2 px-[15px] cursor-pointer`}
+                            onClick={() => {
+                                const input = document.getElementById(`attendance-date-${group.id}`) as HTMLInputElement;
+                                if (input) {
+                                    if ('showPicker' in HTMLInputElement.prototype) {
+                                        try { input.showPicker(); } catch (e) { input.click(); }
+                                    } else {
+                                        input.focus();
+                                        input.click();
+                                    }
+                                }
+                            }}
+                        >
+                            <Calendar className="w-[17px] h-[17px] shrink-0" strokeWidth={2} />
+                            <span className="flex-1 min-w-0 text-[14.5px] font-semibold truncate first-letter:uppercase">{fechaPildora(selectedDate)}</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+                                strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-black/40 dark:text-white/40" aria-hidden="true">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                            {/* max = hoy: se puede registrar una reunión que ya pasó,
+                                nunca una que todavía no ocurrió. */}
+                            <input
+                                id={`attendance-date-${group.id}`}
+                                type="date"
+                                value={selectedDate}
+                                max={hoyLocal()}
+                                onChange={(e) => {
+                                    if (e.target.value && e.target.value > hoyLocal()) return;
+                                    setSelectedDate(e.target.value);
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                style={{ background: 'transparent', border: 0 }}
+                            />
+                        </div>
 
-                {/* TABS */}
-                <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl mb-6">
-                    <button
-                        onClick={() => { setEditingDate(null); setActiveTab('new'); }}
-                        className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${activeTab === 'new' ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm' : 'text-slate-500 hover:text-black dark:hover:text-white'}`}
-                    >
-                        <Calendar className="w-3 h-3" /> Nueva
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${activeTab === 'history' ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm' : 'text-slate-500 hover:text-black dark:hover:text-white'}`}
-                    >
-                        <History className="w-3 h-3" /> Historial
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => { setEditingDate(null); setActiveTab(activeTab === 'new' ? 'history' : 'new'); }}
+                            aria-label={activeTab === 'new' ? 'Ver reuniones anteriores' : 'Volver a tomar asistencia'}
+                            className={`w-[52px] h-[52px] shrink-0 rounded-full flex items-center justify-center transition-colors ${activeTab === 'history'
+                                ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
+                                : `${T.interna} hover:opacity-80`}`}
+                        >
+                            <History className="w-[18px] h-[18px]" strokeWidth={2} />
+                        </button>
+                    </div>
+
+                    {editingDate && editingDate !== selectedDate && (
+                        <p className="mt-2.5 px-1 text-[12.5px] font-medium text-black/55 dark:text-white/55">
+                            Al guardar, la asistencia del {formatDate(editingDate)} se mueve al {formatDate(selectedDate)}.
+                        </p>
+                    )}
                 </div>
+            </div>
 
-                {/* CONTENT */}
-                <div>
-                    {activeTab === 'new' ? (
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Fecha de Reunión</label>
-                                <div
-                                    className="relative"
-                                    onClick={() => {
-                                        const input = document.getElementById(`attendance-date-${group.id}`) as HTMLInputElement;
-                                        if (input) {
-                                            if ('showPicker' in HTMLInputElement.prototype) {
-                                                try { input.showPicker(); } catch (e) { input.click(); }
-                                            } else {
-                                                input.focus();
-                                                input.click();
-                                            }
-                                        }
-                                    }}
-                                >
-                                    <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold flex items-center justify-between bg-slate-50 dark:bg-slate-900 hover:border-slate-900 dark:hover:border-white cursor-pointer transition-colors">
-                                        <span className="text-sm text-black dark:text-white">{formatDate(selectedDate)}</span>
-                                        <Calendar className="w-4 h-4 text-slate-400" />
+            {activeTab === 'new' ? (
+                <>
+                    {/* Resumen en vivo, pegado bajo el encabezado: se actualiza
+                        mientras se tilda, sin bajar a buscarlo. */}
+                    {members.length > 0 && (
+                        <div className="sticky top-0 z-20 px-4 pt-3 pb-1 bg-gradient-to-b from-[#f6f6f4] from-[78%] to-transparent dark:from-[#111110]">
+                            <div className="max-w-[430px] lg:max-w-[900px] mx-auto bg-[#0a0a0a] dark:bg-white rounded-[24px] px-[18px] py-4">
+                                <div className="flex items-end justify-between">
+                                    <div className="flex items-baseline gap-[18px]">
+                                        <div>
+                                            <p className="text-[26px] font-semibold tracking-[-.02em] text-white dark:text-black tabular-nums">{presentCount}</p>
+                                            <p className="mt-0.5 text-[11.5px] font-semibold uppercase tracking-[.06em] text-white/50 dark:text-black/50">Presentes</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[26px] font-semibold tracking-[-.02em] text-white/45 dark:text-black/45 tabular-nums">{absentCount}</p>
+                                            <p className="mt-0.5 text-[11.5px] font-semibold uppercase tracking-[.06em] text-white/35 dark:text-black/35">Ausentes</p>
+                                        </div>
                                     </div>
-                                    {/* max = hoy: se puede registrar una reunión
-                                        que ya pasó, nunca una que todavía no
-                                        ocurrió. */}
-                                    <input
-                                        id={`attendance-date-${group.id}`}
-                                        type="date"
-                                        value={selectedDate}
-                                        max={hoyLocal()}
-                                        onChange={(e) => {
-                                            if (e.target.value && e.target.value > hoyLocal()) return;
-                                            setSelectedDate(e.target.value);
-                                        }}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
+                                    <p className="text-[22px] font-semibold tracking-[-.02em] text-white dark:text-black tabular-nums">{presentPct}%</p>
                                 </div>
-                                {editingDate && editingDate !== selectedDate && (
-                                    <p className="mt-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                                        Al guardar, la asistencia del {formatDate(editingDate)} se mueve al {formatDate(selectedDate)}.
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                    Miembros ({members.length})
-                                </label>
-                                <div className="flex gap-1">
-                                    <button
-                                        onClick={selectAll}
-                                        className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                                    >
-                                        Todos
-                                    </button>
-                                    <button
-                                        onClick={deselectAll}
-                                        className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                                    >
-                                        Ninguno
-                                    </button>
+                                <div className="h-1.5 rounded-full bg-white/[.16] dark:bg-black/[.16] mt-3.5 overflow-hidden">
+                                    <div className="h-full rounded-full bg-white dark:bg-black transition-all duration-500" style={{ width: `${presentPct}%` }} />
                                 </div>
                             </div>
+                        </div>
+                    )}
 
-                            {members.length === 0 ? (
-                                <div className="text-center py-10 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                                    <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Todavía no hay miembros aprobados en este grupo.</p>
+                    <div className="max-w-[430px] lg:max-w-[900px] mx-auto px-4 pt-2 pb-[132px]">
+                        {members.length === 0 ? (
+                            <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px]">
+                                <Vacio
+                                    titulo="Todavía no hay miembros"
+                                    detalle="Cuando alguien se sume al grupo vas a poder tomarle asistencia."
+                                    accion={{ texto: 'Volver al grupo', onClick: () => navigate(`/mis-grupos/${groupId}`) }}
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="flex items-center justify-between px-1.5 pt-1.5 pb-2.5">
+                                    <p className={rotulo}>Miembros · {members.length}</p>
+                                    <button
+                                        type="button"
+                                        onClick={presentCount === members.length ? deselectAll : selectAll}
+                                        className="text-[13px] font-semibold hover:opacity-70 transition-opacity"
+                                    >
+                                        {presentCount === members.length ? 'Desmarcar todos' : 'Marcar todos presentes'}
+                                    </button>
                                 </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {members.map((member) => {
-                                        const isPresent = selectedMembers.has(member.id);
+
+                                <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] overflow-hidden">
+                                    {filas.map((fila, i) => {
+                                        const esPareja = fila.personas.length > 1;
+                                        const presentes = fila.personas.filter(p => selectedMembers.has(p.id)).length;
+                                        const abierta = expandidas.has(fila.regId);
+                                        const todosPresentes = presentes === fila.personas.length;
+
                                         return (
-                                            <div
-                                                key={member.id}
-                                                onClick={() => toggleMember(member.id)}
-                                                role="checkbox"
-                                                aria-checked={isPresent}
-                                                tabIndex={0}
-                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMember(member.id); } }}
-                                                className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${isPresent ? 'border-[#118f46] bg-[#118f46]/5' : 'border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-500 bg-white dark:bg-black'}`}
-                                            >
-                                                <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[11px] font-black flex items-center justify-center shrink-0">
-                                                    {getInitials(member.name)}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-sm truncate text-black dark:text-white">{member.name}</p>
-                                                </div>
-                                                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${isPresent ? 'bg-[#118f46] border-[#118f46] text-white' : 'border-slate-300 dark:border-slate-600'}`}>
-                                                    {isPresent && <Check className="w-3 h-3" />}
-                                                </div>
-                                            </div>
+                                            <React.Fragment key={fila.regId}>
+                                                {i > 0 && <div className="h-px bg-black/[.06] dark:bg-white/[.08] mx-4" />}
+
+                                                {esPareja ? (
+                                                    <>
+                                                        <div className="flex items-center h-[68px] pr-4 select-none transition-colors hover:bg-black/[.02] dark:hover:bg-white/[.03]">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setExpandidas(prev => {
+                                                                const s = new Set(prev);
+                                                                if (s.has(fila.regId)) s.delete(fila.regId); else s.add(fila.regId);
+                                                                return s;
+                                                            })}
+                                                            aria-expanded={abierta}
+                                                            aria-label={`${abierta ? 'Contraer' : 'Desplegar'} la inscripción de ${fila.personas.map(p => p.name).join(' y ')}`}
+                                                            className="flex-1 min-w-0 flex items-center gap-3 h-full pl-4 pr-0"
+                                                        >
+                                                            <div className="flex shrink-0 w-[58px]">
+                                                                {fila.personas.slice(0, 2).map((p, k) => (
+                                                                    <div
+                                                                        key={p.id}
+                                                                        className={`w-[36px] h-[36px] rounded-full flex items-center justify-center text-[12.5px] font-semibold text-black/60 dark:text-white/60 ${k === 0
+                                                                            ? T.chip
+                                                                            : 'bg-[#e8e8e5] dark:bg-[#333331] -ml-[13px] ring-[3px] ring-white dark:ring-[#1b1b1a]'}`}
+                                                                    >
+                                                                        {/* Una sola inicial: en pareja los avatares se
+                                                                            superponen y la segunda letra queda tapada. */}
+                                                                        {(p.name.trim()[0] || '?').toUpperCase()}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0 text-left">
+                                                                <p className="text-[15.5px] font-semibold truncate">
+                                                                    {fila.personas[0].name.split(' ')[0]} y {fila.personas[1].name.split(' ')[0]}
+                                                                </p>
+                                                                <p className="mt-0.5 text-[12.5px] font-medium text-black/45 dark:text-white/45 truncate">
+                                                                    Pareja · {presentes} de {fila.personas.length}
+                                                                </p>
+                                                            </div>
+                                                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+                                                                strokeLinecap="round" strokeLinejoin="round"
+                                                                className={`shrink-0 text-black/35 dark:text-white/35 transition-transform ${abierta ? 'rotate-180' : ''}`} aria-hidden="true">
+                                                                <path d="M6 9l6 6 6-6" />
+                                                            </svg>
+                                                        </button>
+
+                                                        {/* Marca o desmarca a los dos de una: si falta alguno,
+                                                            el toggle completa la pareja. */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedMembers(prev => {
+                                                                const s = new Set(prev);
+                                                                fila.personas.forEach(p => todosPresentes ? s.delete(p.id) : s.add(p.id));
+                                                                return s;
+                                                            })}
+                                                            role="checkbox"
+                                                            aria-checked={todosPresentes}
+                                                            aria-label={`Marcar presentes a ${fila.personas.map(p => p.name).join(' y ')}`}
+                                                            className="shrink-0 flex items-center"
+                                                        >
+                                                            <Tilde presente={todosPresentes} />
+                                                        </button>
+                                                        </div>
+
+                                                        {abierta && fila.personas.map(p => {
+                                                            const presente = selectedMembers.has(p.id);
+                                                            return (
+                                                                <button
+                                                                    key={p.id}
+                                                                    type="button"
+                                                                    onClick={() => toggleMember(p.id)}
+                                                                    role="checkbox"
+                                                                    aria-checked={presente}
+                                                                    className="w-full flex items-center gap-3.5 h-[60px] pl-[58px] pr-4 select-none transition-colors hover:bg-black/[.02] dark:hover:bg-white/[.03]"
+                                                                >
+                                                                    <span className="flex-1 text-left text-[14.5px] font-medium truncate">{p.name}</span>
+                                                                    <Tilde presente={presente} chico />
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleMember(fila.personas[0].id)}
+                                                        role="checkbox"
+                                                        aria-checked={todosPresentes}
+                                                        className="w-full flex items-center gap-3.5 h-[68px] px-4 select-none transition-colors hover:bg-black/[.02] dark:hover:bg-white/[.03]"
+                                                    >
+                                                        <div className={`w-[42px] h-[42px] shrink-0 rounded-full ${T.chip} flex items-center justify-center text-[14px] font-semibold text-black/60 dark:text-white/60`}>
+                                                            {getInitials(fila.personas[0].name)}
+                                                        </div>
+                                                        <span className="flex-1 text-left text-[15.5px] font-semibold truncate">{fila.personas[0].name}</span>
+                                                        <Tilde presente={todosPresentes} />
+                                                    </button>
+                                                )}
+                                            </React.Fragment>
                                         );
                                     })}
                                 </div>
-                            )}
+                            </>
+                        )}
+                    </div>
+
+                    {/* Guardar anclado abajo: se toma asistencia parado, con la
+                        lista scrolleada. */}
+                    {members.length > 0 && (
+                        <div className="fixed left-0 right-0 bottom-0 px-4 pt-3.5 pb-5 bg-gradient-to-t from-[#f6f6f4] from-[62%] to-transparent dark:from-[#111110]">
+                            <div className="max-w-[430px] lg:max-w-[900px] mx-auto">
+                                <button
+                                    type="button"
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className={`${btnPrimario} h-[60px] text-[17px] shadow-[0_6px_22px_rgba(0,0,0,.18)]`}
+                                >
+                                    {saving ? (
+                                        <><Loader2 className="w-5 h-5 animate-spin" /> Guardando…</>
+                                    ) : saveSuccess ? (
+                                        <><Check className="w-5 h-5" /> Guardado</>
+                                    ) : (
+                                        <><Save className="w-5 h-5" /> {editingDate ? 'Guardar cambios' : 'Guardar asistencia'}</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </>
+            ) : (
+                <div className="max-w-[430px] lg:max-w-[900px] mx-auto px-4 pt-4 pb-8">
+                    {loadingHistory ? (
+                        <div className="flex justify-center py-10"><Loader2 className="w-7 h-7 animate-spin text-black/20 dark:text-white/20" /></div>
+                    ) : history.length === 0 ? (
+                        <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px]">
+                            <Vacio
+                                titulo="Todavía no registraste ninguna reunión"
+                                detalle="Cuando guardes una asistencia va a quedar acá, para consultarla o corregirla."
+                                accion={{ texto: 'Tomar asistencia', onClick: () => setActiveTab('new') }}
+                            />
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            {loadingHistory ? (
-                                <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-slate-300" /></div>
-                            ) : history.length === 0 ? (
-                                <div className="text-center py-10 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                                    <History className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Todavía no registraste ninguna reunión.</p>
-                                </div>
-                            ) : (
-                                history.map((record) => (
-                                    <div key={record.id} className="flex justify-between items-center p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-black">
-                                        <div className="flex flex-col">
-                                            <div className="flex items-center gap-2">
-                                                <Calendar className="w-4 h-4 text-slate-400" />
-                                                <span className="font-bold text-black dark:text-white">{formatDate(record.date)}</span>
-                                            </div>
-                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wide mt-1">
-                                                {record.count} presentes
+                        <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] overflow-hidden">
+                            {history.map((record, i) => (
+                                <React.Fragment key={record.id}>
+                                    {i > 0 && <div className="h-px bg-black/[.06] dark:bg-white/[.08] mx-4" />}
+                                    <div className="flex items-center gap-3.5 h-[70px] px-4">
+                                        <div className={`w-[42px] h-[42px] shrink-0 rounded-full ${T.chip} flex items-center justify-center`}>
+                                            <Calendar className="w-[18px] h-[18px] text-black/50 dark:text-white/50" strokeWidth={2} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[15.5px] font-semibold truncate first-letter:uppercase">{fechaLarga(record.date)}</p>
+                                            <p className="mt-0.5 text-[12.5px] font-medium text-black/45 dark:text-white/45">
+                                                {record.count} {record.count === 1 ? 'presente' : 'presentes'}
                                             </p>
                                         </div>
                                         <button
+                                            type="button"
                                             onClick={() => {
                                                 // Fuerza recargar los tildes de ese día aunque
                                                 // ya se estuviera parado en esa misma fecha.
@@ -368,55 +558,17 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                                 setSelectedDate(record.date);
                                                 setActiveTab('new');
                                             }}
-                                            className="px-3 py-1.5 bg-black dark:bg-white text-white dark:text-black rounded-lg text-[10px] font-black uppercase tracking-wide hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                                            className={`${btnSecundario} h-[42px] px-[18px] text-[14px] shrink-0`}
                                         >
                                             Editar
                                         </button>
                                     </div>
-                                ))
-                            )}
+                                </React.Fragment>
+                            ))}
                         </div>
                     )}
                 </div>
-
-                {/* FOOTER — barra de asistencia + guardar */}
-                {activeTab === 'new' && members.length > 0 && (
-                    <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-4">
-                        <div>
-                            <div className="flex h-2 w-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-                                <div className="bg-[#118f46] transition-all duration-500" style={{ width: `${presentPct}%` }} />
-                                <div className="bg-red-400 dark:bg-red-500 transition-all duration-500" style={{ width: `${100 - presentPct}%` }} />
-                            </div>
-                            <div className="flex justify-between mt-3">
-                                <div className="flex items-center gap-1.5">
-                                    <span className="w-2 h-2 rounded-full bg-[#118f46]" />
-                                    <span className="text-lg font-black text-black dark:text-white tabular-nums">{presentCount}</span>
-                                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Presentes</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Ausentes</span>
-                                    <span className="text-lg font-black text-black dark:text-white tabular-nums">{absentCount}</span>
-                                    <span className="w-2 h-2 rounded-full bg-red-400 dark:bg-red-500" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className={`w-full py-4 text-sm font-black uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400 ${saveSuccess ? 'bg-[#118f46] text-white' : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'}`}
-                        >
-                            {saving ? (
-                                <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
-                            ) : saveSuccess ? (
-                                <><Check className="w-4 h-4" /> ¡Guardado!</>
-                            ) : (
-                                <><Save className="w-4 h-4" /> Guardar Asistencia</>
-                            )}
-                        </button>
-                    </div>
-                )}
-            </div>
+            )}
         </div>
     );
 };

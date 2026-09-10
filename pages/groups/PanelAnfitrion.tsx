@@ -2,14 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { User, UserRole, Group, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { hasRole } from '../../services/authUtils';
-import { supabaseService, toggleGroupCapacityLock } from '../../services/supabaseService';
-import { Plus, Users, Calendar, MapPin, Edit2, Eye, Inbox, AlertCircle, ClipboardList, RotateCcw, Settings, UserMinus, Check, Link, ArrowLeftRight, X, AlertTriangle, Loader2, Lock, Unlock } from 'lucide-react';
+import { supabaseService } from '../../services/supabaseService';
+import { Plus, Check, X, AlertTriangle, Loader2, ArrowLeftRight, Calendar, Eye } from 'lucide-react';
 import CreateGroupModal from '../../components/GCX/ModalCrearGrupo';
-import ApplicantsModal from '../../components/GCX/ModalSolicitantes';
-import AttendanceModal from '../../components/GCX/ModalAsistencia';
-import DropoutRequestModal from '../../components/GCX/ModalSolicitudBaja';
-import ModalTransferirGrupo from '../../components/GCX/ModalTransferirGrupo';
 import NeoModal from '../../components/ui/NeoModal';
+import { T, btnPrimarioBase, rotulo, Vacio } from '../../components/GCX/patron';
 import { useTutorial } from '../../src/hooks/useTutorial';
 import { useIsMobile } from '../../src/hooks/useIsMobile';
 import TutorialInvitation from '../../components/onboarding/InvitacionTutorial';
@@ -47,6 +44,55 @@ function countApprovedPeople(registrations?: any[]): number {
         }, 0);
 }
 
+const iniciales = (nombre?: string): string => {
+    const partes = (nombre || '').trim().split(/\s+/).filter(Boolean);
+    if (partes.length === 0) return '?';
+    return (partes[0][0] + (partes[1]?.[0] || '')).toUpperCase();
+};
+
+// ── Estado visible de una tarjeta ───────────────────────────────────────
+// El estado es lo único que cambia el peso de la tarjeta; la forma es
+// siempre la misma. "finalizado" no vive en la base: se deriva del endDate,
+// igual que en el detalle del grupo.
+type EstadoTarjeta = 'activo' | 'pendiente' | 'rechazado' | 'finalizado';
+
+const estadoDeGrupo = (group: Group): EstadoTarjeta => {
+    if (group.endDate && group.endDate < new Date().toISOString().split('T')[0]) return 'finalizado';
+    if (group.status === 'rejected') return 'rechazado';
+    if (group.status === 'approved') return 'activo';
+    return 'pendiente';
+};
+
+const ETIQUETA_ESTADO: Record<EstadoTarjeta, string> = {
+    activo: 'Activo',
+    pendiente: 'Pendiente',
+    rechazado: 'Rechazado',
+    finalizado: 'Finalizado',
+};
+
+// Badge sobre la foto, no al lado del nombre: es lo primero que se ve y
+// no compite con el título.
+const BadgeEstado: React.FC<{ estado: EstadoTarjeta }> = ({ estado }) => {
+    const punto = estado === 'activo'
+        ? 'oklch(0.62 0.15 150)'
+        : estado === 'pendiente'
+            ? 'rgba(0,0,0,.35)'
+            : null;
+
+    const fondo = estado === 'rechazado'
+        ? 'bg-[#0a0a0a] text-white'
+        : estado === 'finalizado'
+            ? 'bg-white/[.94] text-black/55'
+            : 'bg-white/[.94] text-[#0a0a0a]';
+
+    return (
+        <div className={`absolute top-3 left-3 lg:top-3.5 lg:left-3.5 h-[30px] lg:h-8 px-3 lg:px-[13px] rounded-full flex items-center gap-1.5 text-[12px] lg:text-[12.5px] font-semibold ${fondo}`}>
+            {punto && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: punto }} aria-hidden="true" />}
+            {ETIQUETA_ESTADO[estado]}
+        </div>
+    );
+};
+
 const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -54,20 +100,10 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
     const [loading, setLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingGroup, setEditingGroup] = useState<Group | null>(null);
-    const [isApplicantsModalOpen, setIsApplicantsModalOpen] = useState(false);
-    const [selectedGroupForApplicants, setSelectedGroupForApplicants] = useState<Group | null>(null);
-    const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
-    const [selectedGroupForAttendance, setSelectedGroupForAttendance] = useState<Group | null>(null);
     const [isReopenRequest, setIsReopenRequest] = useState(false);
     const [seasonSettings, setSeasonSettings] = useState<SeasonSettings>(DEFAULT_SEASON_SETTINGS);
-    const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
-    const [isDropoutModalOpen, setIsDropoutModalOpen] = useState(false);
-    const [selectedGroupForDropout, setSelectedGroupForDropout] = useState<Group | null>(null);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalMessage, setSuccessModalMessage] = useState('');
-    const [copiedGroupId, setCopiedGroupId] = useState<string | null>(null);
-    const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-    const [groupToTransfer, setGroupToTransfer] = useState<Group | null>(null);
     // Transferencias entrantes (soy el destinatario)
     const [incomingTransfers, setIncomingTransfers] = useState<IncomingTransfer[]>([]);
     // Grupos míos con transferencia saliente pendiente
@@ -86,82 +122,6 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
         dismissTutorial,
         declineTemporary
     } = useTutorial('host');
-
-    const handleCopyGroupLink = (e: React.MouseEvent, groupId: string) => {
-        e.stopPropagation();
-        e.preventDefault();
-
-        const origin = window.location.hostname.includes('localhost') || window.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/)
-            ? 'https://app.origeniglesia.org'
-            : window.location.origin;
-        const url = `${origin}/#/gcx?groupId=${groupId}`;
-
-        const fallbackCopy = () => {
-            const textArea = document.createElement("textarea");
-            textArea.value = url;
-            textArea.style.position = "fixed";
-            textArea.style.top = "0";
-            textArea.style.left = "0";
-            textArea.style.width = "2em";
-            textArea.style.height = "2em";
-            textArea.style.padding = "0";
-            textArea.style.border = "none";
-            textArea.style.outline = "none";
-            textArea.style.boxShadow = "none";
-            textArea.style.background = "transparent";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                if (document.execCommand('copy')) {
-                    setCopiedGroupId(groupId);
-                    setTimeout(() => setCopiedGroupId(null), 2000);
-                }
-            } catch (err) {
-                console.error('Fallback copy failed', err);
-            }
-            document.body.removeChild(textArea);
-        };
-
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(url).then(() => {
-                setCopiedGroupId(groupId);
-                setTimeout(() => setCopiedGroupId(null), 2000);
-            }).catch(() => fallbackCopy());
-        } else {
-            fallbackCopy();
-        }
-    };
-
-    const handleOpenApplicants = (group: Group) => {
-        setSelectedGroupForApplicants(group);
-        setIsApplicantsModalOpen(true);
-    };
-
-    const handleOpenAttendance = (group: Group) => {
-        setSelectedGroupForAttendance(group);
-        setIsAttendanceModalOpen(true);
-    };
-
-    const handleOpenDropout = (group: Group) => {
-        setSelectedGroupForDropout(group);
-        setIsDropoutModalOpen(true);
-    };
-
-    const handleToggleCapacityLock = async (group: Group) => {
-        const nuevoEstado = !group.capacityLocked;
-        const ok = await toggleGroupCapacityLock(group.id, nuevoEstado);
-        if (ok) {
-            await fetchMyGroups();
-        } else {
-            alert('Error al cambiar el bloqueo de cupos. Intentá de nuevo.');
-        }
-    };
-
-    const handleTransferGroup = (group: Group) => {
-        setGroupToTransfer(group);
-        setIsTransferModalOpen(true);
-    };
 
     const handleAcceptTransfer = async (transfer: IncomingTransfer) => {
         if (!currentUser) return;
@@ -258,27 +218,6 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
         navigate('/mis-grupos/crear-grupo');
     };
 
-    const handleEditGroup = (group: Group) => {
-        setEditingGroup(group);
-        setIsCreateModalOpen(true);
-    };
-
-    const handleDeleteGroup = async (groupId: string) => {
-        if (!window.confirm('¿Estás seguro que deseas eliminar este grupo?')) return;
-
-        const success = await supabaseService.deleteGroup(groupId);
-        if (success) {
-            fetchMyGroups();
-        }
-    };
-
-    // Handle Re-opening a finished or rejected group - Opens modal in reopen mode
-    const handleReopenGroup = (group: Group) => {
-        setEditingGroup(group);
-        setIsReopenRequest(true);
-        setIsCreateModalOpen(true);
-    };
-
     const handleModalClose = () => {
         setIsCreateModalOpen(false);
         setEditingGroup(null);
@@ -323,13 +262,11 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
 
     if (!isAnfitrion) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
+            <div className={`min-h-screen ${T.fondo} ${T.fuente} ${T.tinta} flex items-center justify-center px-6`}>
                 <div className="text-center">
-                    <p className="text-lg font-bold text-slate-400 uppercase tracking-wider">
-                        Acceso Denegado
-                    </p>
-                    <p className="text-sm text-slate-500 mt-2">
-                        Solo los Anfitriones pueden acceder a este panel.
+                    <p className="text-[19px] font-semibold tracking-[-.01em]">Acceso denegado</p>
+                    <p className="mt-2.5 text-[14.5px] font-medium text-black/50 dark:text-white/50">
+                        Solo los anfitriones pueden entrar a este panel.
                     </p>
                 </div>
             </div>
@@ -341,8 +278,160 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
         t => !myGroups.some(g => g.id === t.groupId)
     );
 
+    // Antes acá vivía un SAMPLE_GROUP: cuando el recorrido guiado estaba
+    // activo y el anfitrión no tenía grupos, se mostraba un "Grupo de
+    // ejemplo" de mentira para recorrer. Se fue con los tutoriales, que
+    // están apagados desde src/hooks/useTutorial.ts.
+    const displayGroups = myGroups;
+
+    // ── Una tarjeta ─────────────────────────────────────────────────────
+    // Es la portada del detalle, no un renglón de tabla: entrar al grupo se
+    // siente como agrandar la misma tarjeta.
+    const Tarjeta = (group: Group, index: number) => {
+        const estado = estadoDeGrupo(group);
+        const transferenciaSaliente = pendingOutgoingGroupIds.has(group.id);
+        const aprobados = countApprovedPeople(group.registrations);
+        const pendientes = (group.registrations || []).filter((r: any) => r.status === 'PENDING').length;
+        const apagado = estado === 'finalizado';
+
+        // Un grupo en revisión todavía no tiene detalle que mirar, y uno con
+        // transferencia saliente está en manos de otro: ninguno se abre.
+        const abrible = estado !== 'pendiente' && !transferenciaSaliente;
+
+        const cuando = [
+            `${group.meetingDay || ''} ${group.meetingTime || ''}`.trim(),
+            group.isOnline ? 'Online' : group.location,
+        ].filter(Boolean).join(' · ');
+
+        const cuerpo = (
+            <>
+                <div className={`relative rounded-[20px] lg:rounded-[22px] overflow-hidden ${group.imageUrl ? 'h-[168px] lg:h-[200px]' : 'h-[120px] lg:h-[150px]'} ${apagado ? 'grayscale' : ''}`}>
+                    {group.imageUrl ? (
+                        <img src={group.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${T.chip}`}>
+                            <span className="text-[10.5px] font-medium tracking-[.06em] text-black/35 dark:text-white/35 font-mono">
+                                sin foto cargada
+                            </span>
+                        </div>
+                    )}
+                    <BadgeEstado estado={estado} />
+                    {pendientes > 0 && estado === 'activo' && (
+                        <div
+                            className="absolute top-3 right-3 lg:top-3.5 lg:right-3.5 h-[30px] lg:h-8 px-[11px] lg:px-3 rounded-full flex items-center text-[13px] font-semibold text-white"
+                            style={{ background: 'oklch(0.58 0.2 25)' }}
+                        >
+                            {pendientes} {pendientes === 1 ? 'solicitud' : 'solicitudes'}
+                        </div>
+                    )}
+                </div>
+
+                <div className="px-2.5 lg:px-3 pt-4 lg:pt-[18px] pb-2 lg:pb-2.5 text-left">
+                    <div className="flex items-baseline justify-between gap-3">
+                        <p className={`text-[20px] lg:text-[22px] font-semibold tracking-[-.015em] truncate ${apagado ? 'text-black/60 dark:text-white/60' : ''}`}>
+                            {group.name}
+                        </p>
+                        <span className={`text-[13.5px] lg:text-[14px] font-semibold whitespace-nowrap ${apagado ? 'text-black/40 dark:text-white/40' : 'text-black/50 dark:text-white/50'}`}>
+                            {apagado
+                                ? `${aprobados} ${aprobados === 1 ? 'miembro' : 'miembros'}`
+                                : `${aprobados} de ${group.maxCapacity || 12}`}
+                        </span>
+                    </div>
+                    <p className={`mt-2 text-[14px] lg:text-[14.5px] leading-[1.6] font-medium ${apagado ? 'text-black/45 dark:text-white/45' : 'text-black/55 dark:text-white/55'}`}>
+                        {cuando || 'Sin horario cargado'}
+                    </p>
+                </div>
+            </>
+        );
+
+        return (
+            <div
+                key={group.id}
+                id={`host-group-card-${index}`}
+                className={`rounded-[28px] lg:rounded-[30px] p-3 lg:p-3.5 ${apagado
+                    ? 'bg-[#f0f0ed] dark:bg-[#1b1b1a]'
+                    : 'bg-white dark:bg-[#1b1b1a]'} ${transferenciaSaliente ? 'opacity-60' : ''}`}
+            >
+                {abrible ? (
+                    <button
+                        type="button"
+                        id={`btn-host-actions-${index}`}
+                        onClick={() => navigate(`/mis-grupos/${group.id}`)}
+                        className="block w-full text-left rounded-[20px] lg:rounded-[22px] transition-opacity hover:opacity-[.92] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/10"
+                    >
+                        {cuerpo}
+                    </button>
+                ) : (
+                    <div>{cuerpo}</div>
+                )}
+
+                <div className="px-2.5 lg:px-3 pb-1.5">
+                    {transferenciaSaliente && (
+                        <div className={`${T.interna} rounded-[18px] lg:rounded-[20px] px-4 py-3.5 flex items-center gap-2.5`}>
+                            <ArrowLeftRight className="w-4 h-4 shrink-0 text-black/45 dark:text-white/45" aria-hidden="true" />
+                            <p className="text-[13px] leading-[1.55] font-medium text-black/55 dark:text-white/55">
+                                Transferencia pendiente: alguien más tiene que aceptarla.
+                            </p>
+                        </div>
+                    )}
+
+                    {!transferenciaSaliente && estado === 'pendiente' && (
+                        <div className={`${T.interna} rounded-[18px] lg:rounded-[20px] px-4 py-3.5`}>
+                            <p className="text-[13px] leading-[1.55] font-medium text-black/55 dark:text-white/55">
+                                Esperando la revisión de un administrador. Te avisamos cuando lo aprueben.
+                            </p>
+                        </div>
+                    )}
+
+                    {!transferenciaSaliente && estado === 'rechazado' && (
+                        <>
+                            {group.adminNote && (
+                                <div className={`${T.interna} rounded-[18px] lg:rounded-[20px] px-4 py-3.5`}>
+                                    <p className={rotulo}>Motivo del rechazo</p>
+                                    <p className="mt-[7px] text-[13px] leading-[1.55] font-medium text-black/60 dark:text-white/60">
+                                        {group.adminNote}
+                                    </p>
+                                </div>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => navigate(`/mis-grupos/${group.id}/editar-grupo`)}
+                                className={`${btnPrimarioBase} w-full h-[52px] text-[15.5px] mt-3.5`}
+                            >
+                                Editar y reenviar
+                            </button>
+                        </>
+                    )}
+
+                    {!transferenciaSaliente && estado === 'finalizado' && (
+                        <button
+                            type="button"
+                            onClick={() => navigate(`/mis-grupos/${group.id}/reabrir-grupo`)}
+                            className={`${btnPrimarioBase} w-full h-[52px] text-[15.5px] mt-4`}
+                        >
+                            Reabrir para la próxima
+                        </button>
+                    )}
+
+                </div>
+            </div>
+        );
+    };
+
+    const botonCrear = (id?: string, extra = '') => (
+        <button
+            type="button"
+            id={id}
+            onClick={handleCreateGroup}
+            className={`${btnPrimarioBase} w-full h-[60px] text-[16.5px] ${extra}`}
+        >
+            <Plus className="w-[18px] h-[18px]" strokeWidth={2.4} />
+            Crear un grupo
+        </button>
+    );
+
     return (
-        <div className="min-h-screen bg-white dark:bg-black py-8 px-4 md:px-8">
+        <div className={`min-h-screen ${T.fondo} ${T.fuente} ${T.tinta}`}>
             <TutorialInvitation
                 isOpen={showInvitation}
                 onStart={startTutorial}
@@ -357,505 +446,149 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                 onSkip={dismissTutorial}
             />
 
-            {/* Header */}
-            <div id="host-dashboard-header" className="w-full px-4 md:px-8 lg:px-12">
-                <div className="text-center mb-12">
-                    <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-black dark:text-white">
-                        Mis Grupos de Conexión
-                    </h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-widest">
-                        Panel del Anfitrión
-                    </p>
-                </div>
-
-                {/* Create Button */}
-                {canCreateGroup && (
-                    <div className="flex justify-center mb-10">
-                        <button
-                            id="btn-create-group"
-                            onClick={handleCreateGroup}
-                            className="flex items-center gap-3 px-8 py-4 bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-wider text-sm rounded-full shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Crear Nuevo Grupo
-                        </button>
+            {/* Encabezado */}
+            <div className="bg-white dark:bg-[#1b1b1a] rounded-b-[28px] px-5 pt-4 pb-[22px] lg:px-8 lg:py-[22px]">
+                <div id="host-dashboard-header" className="max-w-[430px] lg:max-w-[1160px] mx-auto flex items-center gap-3.5 lg:gap-5">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[26px] lg:text-[28px] font-semibold tracking-[-.02em]">Mis grupos</p>
+                        <p className="mt-1 text-[13.5px] lg:text-[14px] font-medium text-black/45 dark:text-white/45 truncate">
+                            {currentUser?.name || 'Anfitrión'}
+                            <span className="hidden lg:inline">
+                                {` · ${displayGroups.length} ${displayGroups.length === 1 ? 'grupo' : 'grupos'}`}
+                            </span>
+                        </p>
                     </div>
-                )}
 
-                {/* Content */}
-                <div id="host-content-area">
-
-                    {/* ── TRANSFERENCIAS PENDIENTES ENTRANTES ── */}
-                    {displayIncomingTransfers.length > 0 && (
-                        <section aria-label="Grupos que te ofrecieron" className="mb-8">
-                            {/* Header */}
-                            <div className="flex items-center gap-2.5 mb-4">
-                                <ArrowLeftRight className="w-4 h-4 text-purple-500 shrink-0" aria-hidden="true" />
-                                <h2 className="text-sm font-black uppercase tracking-widest text-black dark:text-white">
-                                    Grupos que te ofrecieron
-                                </h2>
-                                <span className="text-[9px] font-black bg-purple-600 text-white px-2 py-0.5 shrink-0">
-                                    {displayIncomingTransfers.length}
-                                </span>
-                            </div>
-
-                            {/* Mismo contenedor que la lista de grupos */}
-                            <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
-
-                                {/* MOBILE */}
-                                <div className="md:hidden divide-y-2 divide-black/10 dark:divide-white/10">
-                                    {displayIncomingTransfers.map(transfer => (
-                                        <div key={transfer.transferId} className="p-4">
-                                            {/* Header row */}
-                                            <div className="flex items-start gap-3 mb-3">
-                                                {transfer.groupImageUrl ? (
-                                                    <img
-                                                        src={transfer.groupImageUrl}
-                                                        alt={transfer.groupName}
-                                                        className="w-14 h-14 rounded-lg object-cover grayscale border border-slate-200 dark:border-slate-700 shrink-0"
-                                                        loading="lazy"
-                                                        width={56}
-                                                        height={56}
-                                                    />
-                                                ) : (
-                                                    <div className="w-14 h-14 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shrink-0">
-                                                        <Users className="w-6 h-6 text-neutral-400" aria-hidden="true" />
-                                                    </div>
-                                                )}
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-black dark:text-white uppercase flex items-center gap-2 flex-wrap">
-                                                        <span className="truncate">{transfer.groupName}</span>
-                                                        <span className="px-2 py-0.5 text-[9px] font-black uppercase bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-full shrink-0">
-                                                            Pendiente
-                                                        </span>
-                                                    </p>
-                                                    <p className="text-xs text-purple-600 dark:text-purple-400 font-bold mt-0.5 truncate">
-                                                        De: {transfer.fromUserName}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Info row */}
-                                            {(transfer.groupMeetingDay || transfer.groupLocation) && (
-                                                <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400 mb-3">
-                                                    <div className="flex items-center gap-1">
-                                                        <Calendar className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                                                        <span>{transfer.groupMeetingDay}{transfer.groupMeetingTime ? ` ${transfer.groupMeetingTime}` : ''}</span>
-                                                    </div>
-                                                    {transfer.groupLocation && (
-                                                        <div className="flex items-center gap-1 min-w-0">
-                                                            <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                                                            <span className="truncate">{transfer.groupLocation}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Acciones */}
-                                            <div className="flex flex-col gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => { setSelectedIncomingTransfer(transfer); setIsTransferDetailOpen(true); }}
-                                                    className="flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all rounded-lg text-xs font-bold uppercase w-full"
-                                                    aria-label={`Ver detalle de la transferencia del grupo ${transfer.groupName}`}
-                                                >
-                                                    <Eye className="w-4 h-4" aria-hidden="true" />
-                                                    Ver detalle
-                                                </button>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRejectTransfer(transfer)}
-                                                        disabled={isProcessingTransfer}
-                                                        className="flex-1 flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase disabled:opacity-40 disabled:cursor-not-allowed"
-                                                        aria-label={`Rechazar transferencia del grupo ${transfer.groupName}`}
-                                                    >
-                                                        <X className="w-4 h-4" aria-hidden="true" />
-                                                        Rechazar
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleAcceptTransfer(transfer)}
-                                                        disabled={isProcessingTransfer}
-                                                        className="flex-1 flex items-center justify-center gap-2 p-3 min-h-[44px] border-2 border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase disabled:opacity-40 disabled:cursor-not-allowed"
-                                                        aria-label={`Aceptar transferencia del grupo ${transfer.groupName}`}
-                                                    >
-                                                        {isProcessingTransfer
-                                                            ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                                                            : <Check className="w-4 h-4" aria-hidden="true" />
-                                                        }
-                                                        Aceptar
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* DESKTOP TABLE */}
-                                <table className="w-full hidden md:table">
-                                    <thead className="bg-black dark:bg-white text-white dark:text-black">
-                                        <tr className="text-xs font-black uppercase tracking-widest">
-                                            <th className="p-4 text-left">Grupo</th>
-                                            <th className="p-4 text-center">Ofrecido por</th>
-                                            <th className="p-4 text-left">Horario</th>
-                                            <th className="p-4 text-right">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {displayIncomingTransfers.map(transfer => (
-                                            <tr key={transfer.transferId} className="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
-                                                <td className="p-4">
-                                                    <div className="flex items-center gap-3">
-                                                        {transfer.groupImageUrl ? (
-                                                            <img
-                                                                src={transfer.groupImageUrl}
-                                                                alt={transfer.groupName}
-                                                                className="w-12 h-12 rounded-lg object-cover grayscale border border-slate-200 dark:border-slate-700"
-                                                                loading="lazy"
-                                                                width={48}
-                                                                height={48}
-                                                            />
-                                                        ) : (
-                                                            <div className="w-12 h-12 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shrink-0">
-                                                                <Users className="w-5 h-5 text-neutral-400" aria-hidden="true" />
-                                                            </div>
-                                                        )}
-                                                        <div>
-                                                            <p className="font-bold text-black dark:text-white uppercase">{transfer.groupName}</p>
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black uppercase bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full mt-0.5">
-                                                                <ArrowLeftRight className="w-2.5 h-2.5" aria-hidden="true" />
-                                                                Transferencia pendiente
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 text-center">
-                                                    <p className="text-sm font-bold text-purple-600 dark:text-purple-400">{transfer.fromUserName}</p>
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                                        <Calendar className="w-4 h-4 shrink-0" aria-hidden="true" />
-                                                        <span>{transfer.groupMeetingDay}{transfer.groupMeetingTime ? ` - ${transfer.groupMeetingTime}` : ''}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="flex justify-end gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { setSelectedIncomingTransfer(transfer); setIsTransferDetailOpen(true); }}
-                                                            className="p-2 border-2 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all rounded-lg"
-                                                            title="Ver detalle"
-                                                            aria-label={`Ver detalle del grupo ${transfer.groupName}`}
-                                                        >
-                                                            <Eye className="w-4 h-4" aria-hidden="true" />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleRejectTransfer(transfer)}
-                                                            disabled={isProcessingTransfer}
-                                                            className="p-2 border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
-                                                            title="Rechazar"
-                                                            aria-label={`Rechazar transferencia del grupo ${transfer.groupName}`}
-                                                        >
-                                                            <X className="w-4 h-4" aria-hidden="true" />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleAcceptTransfer(transfer)}
-                                                            disabled={isProcessingTransfer}
-                                                            className="flex items-center gap-2 px-3 py-2 border-2 border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all rounded-lg text-xs font-bold uppercase disabled:opacity-40 disabled:cursor-not-allowed"
-                                                            aria-label={`Aceptar transferencia del grupo ${transfer.groupName}`}
-                                                        >
-                                                            {isProcessingTransfer
-                                                                ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                                                                : <Check className="w-4 h-4" aria-hidden="true" />
-                                                            }
-                                                            Aceptar
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </section>
+                    {/* En desktop el botón sube al encabezado: abajo de tres
+                        tarjetas no lo vería nadie. */}
+                    {canCreateGroup && (
+                        <button
+                            type="button"
+                            id={!isMobile ? 'btn-create-group' : undefined}
+                            onClick={handleCreateGroup}
+                            className={`${btnPrimarioBase} hidden lg:flex shrink-0 h-[52px] px-6 text-[15.5px]`}
+                        >
+                            <Plus className="w-[17px] h-[17px]" strokeWidth={2.4} />
+                            Crear un grupo
+                        </button>
                     )}
 
-                    {(() => {
-                        // SAMPLE DATA FOR TUTORIAL
-                        const SAMPLE_GROUP: Group = {
-                            id: 'demo-group',
-                            name: 'Grupo Demo (Tutorial)',
-                            leaderName: currentUser?.name || 'Usuario',
-                            leaderSurname: '',
-                            meetingDay: 'Martes',
-                            meetingTime: '20:00',
-                            location: 'Palermo, CABA',
-                            description: 'Este es un grupo de ejemplo para mostrarte cómo funciona el sistema.',
-                            maxCapacity: 12,
-                            membersCount: 5,
-                            status: 'approved',
-                            tags: ['Jóvenes', 'Mixto'],
-                            targetGender: 'Mixto',
-                            registrations: [
-                                { id: '1', status: 'APPROVED' }, { id: '2', status: 'APPROVED' },
-                                { id: '3', status: 'APPROVED' }, { id: '4', status: 'APPROVED' },
-                                { id: '5', status: 'APPROVED' }
-                            ] as any[],
-                            imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                            coHostFirstName: '',
-                            coHostLastName: '',
-                            minAge: 18,
-                            maxAge: 35,
-                            startDate: new Date().toISOString(),
-                            endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-                        };
-
-                        const displayGroups = (isActive && myGroups.length === 0) ? [SAMPLE_GROUP] : myGroups;
-                        const isDemoMode = (isActive && myGroups.length === 0);
-
-                        if (loading) {
-                            return (
-                                <div className="flex justify-center py-20">
-                                    <div className="w-8 h-8 border-4 border-slate-200 dark:border-zinc-700 border-t-slate-900 dark:border-t-white rounded-full animate-spin" />
-                                </div>
-                            );
-                        }
-
-                        if (displayGroups.length === 0) {
-                            return (
-                                /* Empty State */
-                                <div className="text-center py-20 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
-                                    <Users className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-                                    <h3 className="text-xl font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-                                        Aún no tienes grupos activos
-                                    </h3>
-                                    <p className="text-sm text-slate-400 dark:text-slate-600 mt-2 max-w-md mx-auto">
-                                        Crea tu primer grupo de conexión y comienza a impactar vidas.
-                                    </p>
-                                </div>
-                            );
-                        }
-
-                        return (
-                            /* Groups - Mobile Cards + Desktop Table */
-                            <div id="host-groups-list" className={`bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm ${isDemoMode ? 'ring-4 ring-indigo-500 ring-offset-4 ring-offset-white dark:ring-offset-black' : ''}`}>
-                                {isDemoMode && (
-                                    <div className="bg-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-widest p-2 text-center border-b border-indigo-200">
-                                        Modo Demostración (Tutorial)
-                                    </div>
-                                )}
-
-                                {/* MOBILE CARD VIEW */}
-                                <div className="md:hidden divide-y-2 divide-black/10 dark:divide-white/10">
-                                    {displayGroups.map((group, index) => (
-                                        <div key={group.id} id={isMobile ? `host-group-card-${index}` : undefined} className={`p-4 ${group.status === 'pending' || !group.status ? 'bg-yellow-50/30 dark:bg-yellow-900/10' : ''} ${pendingOutgoingGroupIds.has(group.id) ? 'grayscale opacity-60' : ''}`}>
-                                            {/* Header Row */}
-                                            <div className="flex items-start gap-3 mb-3">
-                                                {group.imageUrl && (
-                                                    <img
-                                                        src={group.imageUrl}
-                                                        alt={group.name}
-                                                        className="w-14 h-14 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0"
-                                                    />
-                                                )}
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-black dark:text-white uppercase flex items-center gap-2 flex-wrap">
-                                                        <span className="truncate">{group.name}</span>
-                                                        {(group as any).co_host_id === currentUser?.id && (
-                                                            <span className="px-2 py-0.5 text-[9px] font-black uppercase bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-full shrink-0">
-                                                                Co-Líder
-                                                            </span>
-                                                        )}
-                                                    </p>
-                                                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                                                        <MapPin className="w-3 h-3 shrink-0" />
-                                                        <span className="truncate">{group.location || 'Sin ubicación'}</span>
-                                                    </p>
-                                                </div>
-                                                {/* Status Badge */}
-                                                <div className="shrink-0">
-                                                    {/* Status Badge - Priority: Finished > Status */}
-                                                    {group.endDate && group.endDate < new Date().toISOString().split('T')[0] ? (
-                                                        <span className="inline-flex items-center px-2 py-1 text-[10px] font-bold uppercase bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 border border-neutral-400 rounded-full">
-                                                            FINALIZADO
-                                                        </span>
-                                                    ) : (
-                                                        <>
-                                                            {group.status === 'approved' ? (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
-                                                                    ✓ Aprobado
-                                                                </span>
-                                                            ) : group.status === 'rejected' ? (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">
-                                                                    ✗ Rechazado
-                                                                </span>
-                                                            ) : (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full animate-pulse">
-                                                                    ⏳ Pendiente
-                                                                </span>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Info Row */}
-                                            <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400 mb-3">
-                                                <div className="flex items-center gap-1">
-                                                    <Calendar className="w-3.5 h-3.5" />
-                                                    <span>{group.meetingDay} {group.meetingTime}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <Users className="w-3.5 h-3.5" />
-                                                    <span>{countApprovedPeople(group.registrations)}/{group.maxCapacity || 12}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Admin Note for Rejected */}
-                                            {group.adminNote && group.status === 'rejected' && (
-                                                <div className="mb-3 flex items-start gap-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                                                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                                                    <p className="text-xs text-red-700 dark:text-red-400">{group.adminNote}</p>
-                                                </div>
-                                            )}
-
-                                            {/* Ver Grupo */}
-                                            {pendingOutgoingGroupIds.has(group.id) ? (
-                                                <div className="flex items-center gap-2 mt-2 px-3 py-2.5 border-2 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950/30">
-                                                    <ArrowLeftRight className="w-3.5 h-3.5 text-purple-500 shrink-0" aria-hidden="true" />
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">
-                                                        Transferencia pendiente
-                                                    </p>
-                                                </div>
-                                            ) : !(group.status === 'pending' || !group.status) && (
-                                                <button
-                                                    id={isMobile ? `btn-host-actions-${index}` : undefined}
-                                                    onClick={() => navigate(`/mis-grupos/${group.id}`)}
-                                                    className="flex items-center justify-center gap-2 p-3 min-h-[44px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition-all rounded-lg text-xs font-semibold uppercase w-full"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                    Ver Grupo
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* DESKTOP TABLE VIEW */}
-                                <table className="w-full hidden md:table">
-                                    <thead className="bg-black dark:bg-white text-white dark:text-black">
-                                        <tr className="text-xs font-black uppercase tracking-widest">
-                                            <th className="p-4 text-left">Grupo</th>
-                                            <th className="p-4 text-center">Estado</th>
-                                            <th className="p-4 text-left">Horario</th>
-                                            <th className="p-4 text-center">Miembros</th>
-                                            <th className="p-4 text-right">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {displayGroups.map((group, index) => (
-                                            <tr key={group.id} id={!isMobile ? `host-group-row-${index}` : undefined} className={`transition-colors ${pendingOutgoingGroupIds.has(group.id) ? 'grayscale opacity-60' : 'hover:bg-slate-50 dark:hover:bg-zinc-800'} ${group.status === 'pending' || !group.status ? 'bg-yellow-50/30 dark:bg-yellow-900/10' : ''}`}>
-                                                <td className="p-4">
-                                                    <div className="flex items-center gap-3">
-                                                        {group.imageUrl && (
-                                                            <img
-                                                                src={group.imageUrl}
-                                                                alt={group.name}
-                                                                className="w-12 h-12 rounded-lg object-cover border border-slate-200 dark:border-slate-700"
-                                                            />
-                                                        )}
-                                                        <div>
-                                                            <p className="font-bold text-black dark:text-white uppercase flex items-center gap-2">
-                                                                {group.name}
-                                                                {(group as any).co_host_id === currentUser?.id && (
-                                                                    <span className="px-2 py-0.5 text-[9px] font-black uppercase bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
-                                                                        Co-Líder
-                                                                    </span>
-                                                                )}
-                                                            </p>
-                                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                                                                <MapPin className="w-3 h-3" />
-                                                                {group.location || 'Sin ubicación'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 text-center">
-                                                    {/* Status Badge - Priority: Finished > Status */}
-                                                    {group.endDate && group.endDate < new Date().toISOString().split('T')[0] ? (
-                                                        <span className="inline-flex items-center px-2 py-1 text-[10px] font-bold uppercase bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 border border-neutral-400 rounded-full">
-                                                            FINALIZADO
-                                                        </span>
-                                                    ) : (
-                                                        <>
-                                                            {group.status === 'approved' ? (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
-                                                                    ✓ Aprobado
-                                                                </span>
-                                                            ) : group.status === 'rejected' ? (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">
-                                                                    ✗ Rechazado
-                                                                </span>
-                                                            ) : (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full animate-pulse">
-                                                                    ⏳ Pendiente
-                                                                </span>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                    {group.adminNote && group.status === 'rejected' && (
-                                                        <div className="mt-2 flex items-start gap-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-left">
-                                                            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                                                            <p className="text-xs text-red-700 dark:text-red-400">{group.adminNote}</p>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                                        <Calendar className="w-4 h-4" />
-                                                        {group.meetingDay} - {group.meetingTime}
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 text-center">
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-sm font-bold">
-                                                        <Users className="w-4 h-4" />
-                                                        {countApprovedPeople(group.registrations)} / {group.maxCapacity || 12}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4">
-                                                    {pendingOutgoingGroupIds.has(group.id) ? (
-                                                        <div className="flex justify-end">
-                                                            <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400 px-2 py-1.5 bg-purple-50 dark:bg-purple-950/20 border border-purple-300 dark:border-purple-700">
-                                                                <ArrowLeftRight className="w-3 h-3" aria-hidden="true" />
-                                                                Transferencia pendiente
-                                                            </span>
-                                                        </div>
-                                                    ) : !(group.status === 'pending' || !group.status) && (
-                                                        <div className="flex justify-end">
-                                                            <button
-                                                                onClick={() => navigate(`/mis-grupos/${group.id}`)}
-                                                                className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition-all rounded-lg text-xs font-semibold uppercase"
-                                                            >
-                                                                <Eye className="w-4 h-4" />
-                                                                Ver Grupo
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        );
-                    })()}
+                    {currentUser?.avatarUrl ? (
+                        <img
+                            src={currentUser.avatarUrl}
+                            alt=""
+                            className="w-11 h-11 lg:w-12 lg:h-12 rounded-full object-cover shrink-0"
+                            loading="lazy"
+                        />
+                    ) : (
+                        <div className={`w-11 h-11 lg:w-12 lg:h-12 shrink-0 rounded-full ${T.chip} flex items-center justify-center text-[14px] lg:text-[15px] font-semibold text-black/60 dark:text-white/60`}>
+                            {iniciales(currentUser?.name)}
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Create/Edit Modal */}
+            <div className="max-w-[430px] lg:max-w-[1160px] mx-auto px-4 lg:px-8 pt-4 lg:pt-7 pb-8 lg:pb-10">
+
+                {/* ── SOLICITUDES DE TITULARIDAD ──
+                    Interrumpe por posición y por inversión de color, arriba de
+                    todo y antes del rótulo. Sin banda de alerta. */}
+                {displayIncomingTransfers.map(transfer => (
+                    <div
+                        key={transfer.transferId}
+                        className="bg-[#0a0a0a] dark:bg-white rounded-[26px] lg:rounded-[28px] p-5 lg:px-7 lg:py-6 mb-3.5 lg:flex lg:items-center lg:gap-7"
+                    >
+                        <button
+                            type="button"
+                            onClick={() => { setSelectedIncomingTransfer(transfer); setIsTransferDetailOpen(true); }}
+                            className="block w-full text-left lg:flex-1 min-w-0"
+                            aria-label={`Ver el detalle del grupo ${transfer.groupName}`}
+                        >
+                            <p className="text-[11.5px] font-semibold uppercase tracking-[.07em] text-white/50 dark:text-black/45">
+                                Te quieren transferir un grupo
+                            </p>
+                            <p className="mt-2.5 text-[19px] lg:text-[21px] leading-[1.35] font-semibold tracking-[-.01em] text-white dark:text-black">
+                                {transfer.fromUserName} te ofrece el grupo {transfer.groupName}
+                            </p>
+                            <p className="mt-2.5 text-[13.5px] lg:text-[14px] leading-[1.6] font-medium text-white/60 dark:text-black/55">
+                                {[
+                                    `${transfer.groupMeetingDay || ''} ${transfer.groupMeetingTime || ''}`.trim(),
+                                    transfer.groupLocation,
+                                ].filter(Boolean).join(' · ')}
+                                {'. Si aceptás, pasás a ser el anfitrión.'}
+                            </p>
+                        </button>
+
+                        <div className="flex gap-2.5 mt-[18px] lg:mt-0 lg:shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => handleRejectTransfer(transfer)}
+                                disabled={isProcessingTransfer}
+                                className="h-[54px] px-[22px] lg:px-6 rounded-full bg-white/[.12] dark:bg-black/[.08] text-white dark:text-black font-semibold text-[15.5px] transition-opacity hover:opacity-80 disabled:opacity-40"
+                            >
+                                Rechazar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleAcceptTransfer(transfer)}
+                                disabled={isProcessingTransfer}
+                                className="flex-1 lg:flex-none h-[54px] lg:px-8 rounded-full bg-white dark:bg-[#0a0a0a] text-[#0a0a0a] dark:text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-40"
+                            >
+                                {isProcessingTransfer
+                                    ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                                    : <Check className="w-[18px] h-[18px]" aria-hidden="true" />}
+                                Aceptar
+                            </button>
+                        </div>
+                    </div>
+                ))}
+
+                <div id="host-content-area">
+                    {loading ? (
+                        <div className="flex justify-center py-20">
+                            <Loader2 className="w-7 h-7 animate-spin text-black/20 dark:text-white/20" />
+                        </div>
+                    ) : displayGroups.length === 0 ? (
+                        // El diseño traía acá un "Recorrer un grupo de ejemplo".
+                        // Se sacó junto con los tutoriales: con el recorrido
+                        // apagado sería un botón que no hace nada.
+                        <div className="bg-white dark:bg-[#1b1b1a] rounded-[28px]">
+                            <Vacio
+                                titulo="Todavía no liderás ningún grupo"
+                                detalle="Creá el primero: cargás el día, el horario y el lugar, y un administrador lo aprueba."
+                                accion={canCreateGroup ? { texto: 'Crear mi primer grupo', onClick: handleCreateGroup } : undefined}
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <p className={`${rotulo} px-1.5 lg:px-1 mb-3 lg:mb-3.5`}>
+                                Mis grupos · {displayGroups.length}
+                            </p>
+                            {/* Con uno a tres grupos, dos columnas alcanzan y las
+                                tarjetas no se comprimen: son las mismas, más anchas. */}
+                            <div id="host-groups-list" className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 lg:gap-5">
+                                {/* La key va acá y no adentro de Tarjeta: React
+                                    valida las listas en el punto donde se arma
+                                    el array, y una key puesta dentro de una
+                                    función auxiliar no la ve. */}
+                                {displayGroups.map((group, index) => (
+                                    <React.Fragment key={group.id}>
+                                        {Tarjeta(group, index)}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                {canCreateGroup && !loading && displayGroups.length > 0 && (
+                    <div className="lg:hidden mt-5">
+                        {botonCrear(isMobile ? 'btn-create-group' : undefined)}
+                    </div>
+                )}
+            </div>
+
+            {/* Create/Edit Modal — alcanzable desde /mis-grupos?modal=createGroup */}
             {isCreateModalOpen && (
                 <CreateGroupModal
                     isOpen={isCreateModalOpen}
@@ -865,37 +598,6 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                     currentUser={currentUser}
                     isReopenRequest={isReopenRequest}
                     seasonSettings={seasonSettings}
-                />
-            )}
-
-            {/* Applicants Modal */}
-            {isApplicantsModalOpen && selectedGroupForApplicants && (
-                <ApplicantsModal
-                    isOpen={isApplicantsModalOpen}
-                    onClose={() => setIsApplicantsModalOpen(false)}
-                    groupId={selectedGroupForApplicants.id}
-                    groupName={selectedGroupForApplicants.name}
-                    hideEmailSelection={true}
-                />
-            )}
-
-            {/* Attendance Modal */}
-            {isAttendanceModalOpen && selectedGroupForAttendance && (
-                <AttendanceModal
-                    isOpen={isAttendanceModalOpen}
-                    onClose={() => setIsAttendanceModalOpen(false)}
-                    group={selectedGroupForAttendance}
-                />
-            )}
-
-            {/* Dropout Request Modal */}
-            {isDropoutModalOpen && selectedGroupForDropout && currentUser && (
-                <DropoutRequestModal
-                    isOpen={isDropoutModalOpen}
-                    onClose={() => setIsDropoutModalOpen(false)}
-                    group={selectedGroupForDropout}
-                    currentUserId={currentUser.id}
-                    onSuccess={() => fetchMyGroups()}
                 />
             )}
 
@@ -1017,24 +719,6 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
                     </div>
                 )}
             </NeoModal>
-
-            {/* Transfer Modal */}
-            {isTransferModalOpen && groupToTransfer && currentUser && (
-                <ModalTransferirGrupo
-                    isOpen={isTransferModalOpen}
-                    onClose={() => {
-                        setIsTransferModalOpen(false);
-                        setGroupToTransfer(null);
-                    }}
-                    group={groupToTransfer}
-                    currentUser={currentUser}
-                    onTransferInitiated={() => {
-                        setIsTransferModalOpen(false);
-                        setGroupToTransfer(null);
-                        fetchMyGroups();
-                    }}
-                />
-            )}
 
             {/* Success Modal */}
             <NeoModal

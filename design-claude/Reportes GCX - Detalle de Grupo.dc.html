@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics=""><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#eceae6;font-family:Manrope,system-ui,sans-serif}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 Manrope,system-ui,sans-serif;color:#1a1a1a}.dv-tsub{max-width:700px;margin:0 0 22px;font:400 12px/1.6 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.5)}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:600 11.5px/1.3 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.65)}.dv-note{max-width:430px;margin:2px 0 0;font:400 11.5px/1.55 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.5)}.dv-frame{max-width:100%;background:#f7f8fa;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.5)}a{color:#1a1a1a}a:hover{color:#2a78d6}</style></helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Pantalla 3 · Detalle de un grupo (desktop)</span></div>
+<p class="dv-tsub">La pantalla contesta la pregunta antes de mostrar los datos: arriba de todo hay una franja de diagnóstico con el veredicto en una frase y los tres o cuatro números que lo sostienen. Recién debajo viene la asistencia reunión a reunión, después los miembros, y al final la ficha administrativa y la genealogía. La identidad del grupo se comprime a una tira angosta: quien entra ya sabe a qué grupo entró, no necesita una portada gigante.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+  <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Grupo sano · con asistencia cargada</div>
+  <p class="dv-note">El veredicto es una oración, no un semáforo: “Grupo sano” + qué lo sostiene. Los cuatro indicadores comparan contra la referencia de la iglesia (5,2 por reunión), que es lo que le da sentido al número. La ausencia de co-anfitrión ocupa uno de esos cuatro lugares, tratada como riesgo y no como campo vacío.</p>
+  <div class="dv-frame" style="width:1440px">
+
+    <div style="background:#fff; border-bottom:1px solid #e8e9ec; padding:14px 28px">
+      <div style="display:flex; align-items:center; gap:16px">
+        <div style="height:36px; padding:0 14px; border:1px solid #e8e9ec; border-radius:9px; display:flex; align-items:center; gap:8px; font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; cursor:pointer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>Volver al dashboard
+        </div>
+        <span style="font:500 13px Manrope,system-ui,sans-serif; color:#9ca3af">Reportes GCX</span>
+        <span style="font:500 13px Manrope,system-ui,sans-serif; color:#c3c7ce">/</span>
+        <span style="font:500 13px Manrope,system-ui,sans-serif; color:#9ca3af">Temporada 1 · 2026</span>
+        <span style="font:500 13px Manrope,system-ui,sans-serif; color:#c3c7ce">/</span>
+        <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">Almagro Norte</span>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
+          <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Grupo 12 de 80</span>
+          <div style="display:flex; gap:4px">
+            <div style="width:36px; height:36px; border:1px solid #e8e9ec; border-radius:9px; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg></div>
+            <div style="width:36px; height:36px; border:1px solid #e8e9ec; border-radius:9px; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6l6 6-6 6"></path></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:22px 28px 32px">
+
+      <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 22px; display:flex; align-items:center; gap:22px">
+        <div style="width:104px; height:72px; border-radius:10px; background:repeating-linear-gradient(135deg,#e6e4e0 0 9px,#dedbd6 9px 18px); flex:none"></div>
+        <div style="min-width:0; flex:1">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+            <h1 style="margin:0; font:600 22px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.02em">Almagro Norte</h1>
+            <span style="height:24px; padding:0 10px; border-radius:6px; background:#eaf6ee; color:#12783f; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:6px"><span style="width:6px; height:6px; border-radius:999px; background:#12783f"></span>Activo</span>
+            <span style="height:24px; padding:0 10px; border-radius:6px; background:#f4f5f7; color:#4b5563; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center">Temporada 1 · 2026</span>
+          </div>
+          <p style="margin:8px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:#6b7280">Jóvenes adultos · Jueves 20:00 · Av. Rivadavia 4820, 3º B · 3 mar – 18 dic</p>
+        </div>
+        <div style="display:flex; gap:8px; flex:none">
+          <span style="height:28px; padding:0 12px; border:1px solid #e8e9ec; border-radius:7px; font:600 12px Manrope,system-ui,sans-serif; color:#4b5563; display:flex; align-items:center">Jóvenes</span>
+          <span style="height:28px; padding:0 12px; border:1px solid #e8e9ec; border-radius:7px; font:600 12px Manrope,system-ui,sans-serif; color:#4b5563; display:flex; align-items:center">Estudio bíblico</span>
+        </div>
+      </div>
+
+      <div style="border-radius: 14px; padding: 24px 26px; margin-top: 16px; display: grid; grid-template-columns: minmax(0,1.25fr) minmax(0,2fr); gap: 32px; align-items: center; background-color: #4371C5">
+        <div style="min-width:0">
+          <p style="margin:0; font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(255,255,255,.5)">DIAGNÓSTICO</p>
+          <p style="margin:12px 0 0; font:600 27px/1.25 Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.02em">Grupo sano</p>
+          <p style="margin:12px 0 0; font:500 14px/1.6 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.72)">Reporta todas las semanas, tiene el cupo completo y trae 6,8 personas por reunión contra un promedio de 5,2. El único punto flojo es que no tiene co-anfitrión cargado.</p>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px">
+          <div style="background:rgba(255,255,255,.07); border-radius:11px; padding:16px">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(255,255,255,.5)">PRESENTES POR REUNIÓN</p>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:10px"><span style="font:600 25px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.025em">6,8</span><span style="font:600 12px Manrope,system-ui,sans-serif; color:#7ee2a8">+1,6</span></div>
+            <p style="margin:8px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.55)">Promedio iglesia: 5,2</p>
+          </div>
+          <div style="background:rgba(255,255,255,.07); border-radius:11px; padding:16px">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(255,255,255,.5)">REUNIONES CARGADAS</p>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:10px"><span style="font:600 25px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.025em">14</span><span style="font:600 12px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5)">de 16</span></div>
+            <p style="margin:8px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.55)">Faltan 2 semanas de julio</p>
+          </div>
+          <div style="background:rgba(255,255,255,.07); border-radius:11px; padding:16px">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(255,255,255,.5)">OCUPACIÓN</p>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:10px"><span style="font:600 25px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.025em">12/12</span></div>
+            <p style="margin:8px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.55)">Cupo completo</p>
+          </div>
+          <div style="background:rgba(255,255,255,.07); border-radius:11px; padding:16px; box-shadow:0 0 0 1px rgba(255,190,120,.35) inset">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(255,255,255,.5)">CO-ANFITRIÓN</p>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:10px"><span style="font: 600 25px Manrope,system-ui,sans-serif; color: #FFFFFF; letter-spacing: -.025em">Sin cargar</span></div>
+            <p style="margin:8px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.55)">Si el anfitrión falta, no hay reemplazo</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:minmax(0,1.9fr) minmax(0,1fr); gap:16px; margin-top:16px">
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px">
+            <div style="min-width:0"><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Asistencia reunión a reunión</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">14 reuniones cargadas entre marzo y julio.</p></div>
+            <div style="display:flex; align-items:center; gap:16px; flex:none">
+              <div style="display:flex; align-items:center; gap:7px"><span style="width:9px; height:9px; border-radius:2px; background:#2563eb"></span><span style="font:600 12px Manrope,system-ui,sans-serif; color:#4b5563">Presentes</span></div>
+              <div style="display:flex; align-items:center; gap:7px"><span style="width:14px; height:2px; background:#9ca3af"></span><span style="font:600 12px Manrope,system-ui,sans-serif; color:#4b5563">Promedio iglesia 5,2</span></div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:14px; margin-top:24px">
+            <div style="width:26px; flex:none; height:212px; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-end">
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">12</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">9</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">6</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">3</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">0</span>
+            </div>
+            <div style="flex:1; min-width:0; position:relative; height:212px; border-bottom:1px solid #e8e9ec">
+              <div style="position:absolute; left:0; right:0; top:0; height:1px; background:#f2f3f5"></div>
+              <div style="position:absolute; left:0; right:0; top:53px; height:1px; background:#f2f3f5"></div>
+              <div style="position:absolute; left:0; right:0; top:106px; height:1px; background:#f2f3f5"></div>
+              <div style="position:absolute; left:0; right:0; top:159px; height:1px; background:#f2f3f5"></div>
+              <div style="position:absolute; left:0; right:0; bottom:91px; border-top:2px dashed #9ca3af"></div>
+              <div style="position:absolute; left:0; right:0; bottom:0; top:0; display:flex; align-items:flex-end; gap:9px; padding:0 2px">
+                <div style="flex:1; height:44%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex:1; height:58%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex:1; height:50%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex:1; height:67%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex: 1; height: 75%; border-radius: 4px 4px 0 0; background-color: #2563EB"></div>
+                <div style="flex:1; height:58%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex:1; height:67%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex:1; height:83%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex:1; height:75%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex: 1; height: 42%; border-radius: 4px 4px 0 0; background-color: #93B4F0"></div>
+                <div style="flex:1; height:58%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex:1; height:67%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex:1; height:92%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+                <div style="flex:1; height:83%; border-radius:4px 4px 0 0; background:#2563eb"></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; gap:14px; margin-top:9px">
+            <div style="width:26px; flex:none"></div>
+            <div style="flex:1; min-width:0; display:flex; justify-content:space-between">
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">6 mar</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">abr</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">may</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">jun</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">10 jul</span>
+            </div>
+          </div>
+          <p style="margin:20px 0 0; padding-top:16px; border-top:1px solid #eef0f3; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">La reunión del 15 de mayo tuvo 5 presentes por un feriado largo. La tendencia de los últimos dos meses es de subida sostenida.</p>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+          <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Constancia de los miembros</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Sobre las 14 reuniones cargadas.</p></div>
+
+          <p style="margin:22px 0 12px; font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.05em; color:#6b7280">VIENEN SIEMPRE · 5</p>
+          <div style="display:flex; flex-direction:column; gap:11px">
+            <div style="display:flex; align-items:center; gap:11px"><span style="flex:1; min-width:0; font:500 13px Manrope,system-ui,sans-serif; color:#374151">Julieta Ramos</span><div style="width:64px; height:6px; border-radius:999px; background:#eef0f3; overflow:hidden; flex:none"><div style="width:100%; height:100%; background:#12783f"></div></div><span style="width:34px; text-align:right; font:600 12px Manrope,system-ui,sans-serif; color:#374151">14/14</span></div>
+            <div style="display:flex; align-items:center; gap:11px"><span style="flex:1; min-width:0; font:500 13px Manrope,system-ui,sans-serif; color:#374151">Diego Cabrera</span><div style="width:64px; height:6px; border-radius:999px; background:#eef0f3; overflow:hidden; flex:none"><div style="width:93%; height:100%; background:#12783f"></div></div><span style="width:34px; text-align:right; font:600 12px Manrope,system-ui,sans-serif; color:#374151">13/14</span></div>
+            <div style="display:flex; align-items:center; gap:11px"><span style="flex:1; min-width:0; font:500 13px Manrope,system-ui,sans-serif; color:#374151">Valeria Aguirre</span><div style="width:64px; height:6px; border-radius:999px; background:#eef0f3; overflow:hidden; flex:none"><div style="width:93%; height:100%; background:#12783f"></div></div><span style="width:34px; text-align:right; font:600 12px Manrope,system-ui,sans-serif; color:#374151">13/14</span></div>
+            <div style="display:flex; align-items:center; gap:11px"><span style="flex:1; min-width:0; font:500 13px Manrope,system-ui,sans-serif; color:#374151">Carla Medina</span><div style="width:64px; height:6px; border-radius:999px; background:#eef0f3; overflow:hidden; flex:none"><div style="width:86%; height:100%; background:#12783f"></div></div><span style="width:34px; text-align:right; font:600 12px Manrope,system-ui,sans-serif; color:#374151">12/14</span></div>
+            <div style="display:flex; align-items:center; gap:11px"><span style="flex:1; min-width:0; font:500 13px Manrope,system-ui,sans-serif; color:#374151">Federico Navarro</span><div style="width:64px; height:6px; border-radius:999px; background:#eef0f3; overflow:hidden; flex:none"><div style="width:79%; height:100%; background:#12783f"></div></div><span style="width:34px; text-align:right; font:600 12px Manrope,system-ui,sans-serif; color:#374151">11/14</span></div>
+          </div>
+
+          <div style="height:1px; background:#eef0f3; margin:20px 0"></div>
+
+          <p style="margin:0 0 12px; font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.05em; color:#6b7280">SE ESTÁN DESENGANCHANDO · 3</p>
+          <div style="display:flex; flex-direction:column; gap:11px">
+            <div style="display:flex; align-items:center; gap:11px"><span style="flex:1; min-width:0; font:500 13px Manrope,system-ui,sans-serif; color:#374151">Tomás Leiva</span><div style="width:64px; height:6px; border-radius:999px; background:#eef0f3; overflow:hidden; flex:none"><div style="width:21%; height:100%; background:#b42318"></div></div><span style="width:34px; text-align:right; font:600 12px Manrope,system-ui,sans-serif; color:#374151">3/14</span></div>
+            <div style="display:flex; align-items:center; gap:11px"><span style="flex:1; min-width:0; font:500 13px Manrope,system-ui,sans-serif; color:#374151">Brenda Ojeda</span><div style="width:64px; height:6px; border-radius:999px; background:#eef0f3; overflow:hidden; flex:none"><div style="width:29%; height:100%; background:#b42318"></div></div><span style="width:34px; text-align:right; font:600 12px Manrope,system-ui,sans-serif; color:#374151">4/14</span></div>
+            <div style="display:flex; align-items:center; gap:11px"><span style="flex:1; min-width:0; font:500 13px Manrope,system-ui,sans-serif; color:#374151">Iván Sotelo</span><div style="width:64px; height:6px; border-radius:999px; background:#eef0f3; overflow:hidden; flex:none"><div style="width:36%; height:100%; background:#b42318"></div></div><span style="width:34px; text-align:right; font:600 12px Manrope,system-ui,sans-serif; color:#374151">5/14</span></div>
+          </div>
+          <p style="margin:18px 0 0; padding-top:16px; border-top:1px solid #eef0f3; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Los tres dejaron de venir después de mayo. Ninguno pidió la baja.</p>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:minmax(0,1.9fr) minmax(0,1fr); gap:16px; margin-top:16px">
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; overflow:hidden">
+          <div style="padding:20px 22px; display:flex; align-items:flex-start; justify-content:space-between; gap:16px">
+            <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Miembros</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">12 personas en 10 inscripciones: 2 son parejas.</p></div>
+            <div style="display:flex; gap:8px; flex:none">
+              <span style="height:26px; padding:0 10px; border-radius:6px; background:#f4f5f7; color:#4b5563; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center">2 parejas</span>
+              <span style="height:26px; padding:0 10px; border-radius:6px; background:#f4f5f7; color:#4b5563; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center">1 derivado</span>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1.2fr) minmax(0,1.1fr) 110px; gap:18px; padding:11px 22px; background:#f7f8fa; border-top:1px solid #eef0f3; border-bottom:1px solid #eef0f3">
+            <span style="font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.04em; color:#6b7280">MIEMBRO</span>
+            <span style="font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.04em; color:#6b7280">TELÉFONO</span>
+            <span style="font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.04em; color:#6b7280">ORIGEN</span>
+            <span style="font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.04em; color:#6b7280; text-align:right">ASISTENCIA</span>
+          </div>
+          <div style="display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1.2fr) minmax(0,1.1fr) 110px; gap:18px; padding:13px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+            <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">Julieta Ramos</span>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#374151">11 5544 2210</span>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Solicitud propia</span>
+            <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">14/14</span>
+          </div>
+          <div style="display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1.2fr) minmax(0,1.1fr) 110px; gap:18px; padding:13px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+            <div style="min-width:0"><p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">Diego Cabrera y Valeria Aguirre</p><p style="margin:3px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:#6b7280">Pareja · una inscripción, dos personas</p></div>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#374151">11 6033 1180</span>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Solicitud propia</span>
+            <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">13/14</span>
+          </div>
+          <div style="display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1.2fr) minmax(0,1.1fr) 110px; gap:18px; padding:13px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+            <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">Carla Medina</span>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#374151">11 4477 9032</span>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Solicitud propia</span>
+            <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">12/14</span>
+          </div>
+          <div style="display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1.2fr) minmax(0,1.1fr) 110px; gap:18px; padding:13px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+            <div style="min-width:0"><p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">Nicolás Guerra</p><p style="margin:3px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:#6b7280">Derivado desde Caballito Sur en abril</p></div>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#374151">11 6120 8834</span>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Derivación</span>
+            <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">9/11</span>
+          </div>
+          <div style="display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1.2fr) minmax(0,1.1fr) 110px; gap:18px; padding:13px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+            <div style="min-width:0"><p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">Rodrigo Benítez y Ana Bianchi</p><p style="margin:3px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:#6b7280">Pareja · una inscripción, dos personas</p></div>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#374151">11 4477 9033</span>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Carga manual</span>
+            <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">10/14</span>
+          </div>
+          <div style="display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1.2fr) minmax(0,1.1fr) 110px; gap:18px; padding:13px 22px; align-items:center">
+            <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">Tomás Leiva</span>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#374151">11 2299 4410</span>
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Solicitud propia</span>
+            <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#b42318; text-align:right">3/14</span>
+          </div>
+          <div style="padding:13px 22px; border-top:1px solid #eef0f3; background:#fcfcfd; display:flex; align-items:center; justify-content:space-between">
+            <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Mostrando 6 de 10 inscripciones.</span>
+            <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver todas</span>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:16px">
+          <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+            <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Liderazgo</p>
+            <div style="display:flex; align-items:center; gap:13px; margin-top:18px">
+              <div style="width:42px; height:42px; border-radius:999px; background:#eaf0fc; color:#2563eb; display:flex; align-items:center; justify-content:center; font:600 13.5px Manrope,system-ui,sans-serif; flex:none">MS</div>
+              <div style="min-width:0"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Martín Sosa</p><p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Anfitrión · 11 5533 7788</p></div>
+            </div>
+            <div style="background:#fff8f0; border:1px solid #f3ddc4; border-radius:11px; padding:14px 16px; margin-top:14px">
+              <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:#8a5a12">No tiene co-anfitrión</p>
+              <p style="margin:6px 0 0; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Si Martín falta, el grupo no tiene quien lo conduzca ni quien cargue la asistencia. Pasa en 70 de los 80 grupos.</p>
+            </div>
+          </div>
+
+          <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+            <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Ficha del grupo</p>
+            <div style="margin-top:16px">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid #f2f3f5"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Categoría</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">Jóvenes adultos</span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid #f2f3f5"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Modalidad</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">Presencial</span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid #f2f3f5"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Día y horario</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">Jueves 20:00</span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid #f2f3f5"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Apunta a</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">Mixto · 18 a 35 años</span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid #f2f3f5"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Temporada</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">3 mar – 18 dic 2026</span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 0"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Creado</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">18 feb 2026</span></div>
+            </div>
+            <div style="height:1px; background:#eef0f3; margin:16px 0"></div>
+            <p style="margin:0; font:500 12.5px/1.65 Manrope,system-ui,sans-serif; color:#6b7280">“Un grupo para jóvenes del barrio que se juntan los jueves a estudiar la biblia y compartir la cena. Todos son bienvenidos.”</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px; margin-top:16px">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px">
+          <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">De dónde viene y qué salió de acá</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Multiplicación del grupo a lo largo de las temporadas.</p></div>
+          <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer; flex:none">Ver el árbol completo</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:0; margin-top:22px">
+          <div style="width:230px; flex:none; border:1px solid #e8e9ec; border-radius:11px; padding:14px 16px; background:#fcfcfd; cursor:pointer">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:#9ca3af">TEMPORADA 3 · 2025</p>
+            <p style="margin:8px 0 0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Almagro Centro</p>
+            <p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Grupo madre · Ana Quiroga</p>
+          </div>
+          <div style="flex:1; min-width:24px; height:2px; background:#e3e6eb; position:relative"><div style="position:absolute; right:0; top:-4px; width:0; height:0; border-left:7px solid #e3e6eb; border-top:5px solid transparent; border-bottom:5px solid transparent"></div></div>
+          <div style="width:250px; flex:none; border:1px solid #2563eb; border-radius:11px; padding:14px 16px; background:#f5f8ff">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:#2563eb">TEMPORADA 1 · 2026 · ACÁ ESTÁS</p>
+            <p style="margin:8px 0 0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Almagro Norte</p>
+            <p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">12 miembros · Martín Sosa</p>
+          </div>
+          <div style="flex:1; min-width:24px; height:2px; background:#e3e6eb; position:relative"><div style="position:absolute; right:0; top:-4px; width:0; height:0; border-left:7px solid #e3e6eb; border-top:5px solid transparent; border-bottom:5px solid transparent"></div></div>
+          <div style="display:flex; flex-direction:column; gap:10px; flex:none; width:460px">
+            <div style="display:flex; gap:10px">
+              <div style="flex:1; border:1px solid #e8e9ec; border-radius:11px; padding:14px 16px; background:#fcfcfd; cursor:pointer">
+                <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:#9ca3af">TEMPORADA 2 · 2026</p>
+                <p style="margin:8px 0 0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Villa Crespo Norte</p>
+                <p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">8 miembros · Julieta Ramos</p>
+              </div>
+              <div style="flex:1; border:1px solid #e8e9ec; border-radius:11px; padding:14px 16px; background:#fcfcfd; cursor:pointer">
+                <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:#9ca3af">TEMPORADA 2 · 2026</p>
+                <p style="margin:8px 0 0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Almagro Matrimonios</p>
+                <p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">6 miembros · Diego Cabrera</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="margin:20px 0 0; padding-top:16px; border-top:1px solid #eef0f3; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Dos de sus miembros pasaron a liderar grupos propios en la temporada siguiente. Es el indicador de multiplicación más directo que tiene este grupo.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1b">
+  <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>El caso del 43% · un grupo que nunca reportó</div>
+  <p class="dv-note">El vacío no se disimula ni se disculpa: pasa al lugar del diagnóstico y se enuncia como hallazgo (“Sin datos para evaluar”), con los días desde la última reunión cargada como el número grande. Abajo, donde iría el gráfico, va lo poco que sí se sabe — que el grupo existe, tiene gente inscripta y nunca se cargó nada — más la acción que corresponde: hablar con el anfitrión.</p>
+  <div class="dv-frame" style="width:1440px">
+    <div style="background:#fff; border-bottom:1px solid #e8e9ec; padding:14px 28px">
+      <div style="display:flex; align-items:center; gap:16px">
+        <div style="height:36px; padding:0 14px; border:1px solid #e8e9ec; border-radius:9px; display:flex; align-items:center; gap:8px; font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; cursor:pointer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>Volver al dashboard
+        </div>
+        <span style="font:500 13px Manrope,system-ui,sans-serif; color:#9ca3af">Reportes GCX</span>
+        <span style="font:500 13px Manrope,system-ui,sans-serif; color:#c3c7ce">/</span>
+        <span style="font:500 13px Manrope,system-ui,sans-serif; color:#9ca3af">Temporada 1 · 2026</span>
+        <span style="font:500 13px Manrope,system-ui,sans-serif; color:#c3c7ce">/</span>
+        <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">Núñez Adolescentes</span>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
+          <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Grupo 41 de 80</span>
+          <div style="display:flex; gap:4px">
+            <div style="width:36px; height:36px; border:1px solid #e8e9ec; border-radius:9px; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg></div>
+            <div style="width:36px; height:36px; border:1px solid #e8e9ec; border-radius:9px; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6l6 6-6 6"></path></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:22px 28px 32px">
+      <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 22px; display:flex; align-items:center; gap:22px">
+        <div style="width:104px; height:72px; border-radius:10px; background:#f1f2f5; flex:none; display:flex; align-items:center; justify-content:center"><span style="font:500 9.5px ui-monospace,Menlo,monospace; color:#9ca3af">sin foto</span></div>
+        <div style="min-width:0; flex:1">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+            <h1 style="margin:0; font:600 22px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.02em">Núñez Adolescentes</h1>
+            <span style="height:24px; padding:0 10px; border-radius:6px; background:#eaf6ee; color:#12783f; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:6px"><span style="width:6px; height:6px; border-radius:999px; background:#12783f"></span>Activo</span>
+            <span style="height:24px; padding:0 10px; border-radius:6px; background:#f4f5f7; color:#4b5563; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center">Temporada 1 · 2026</span>
+          </div>
+          <p style="margin:8px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:#6b7280">Adolescentes · Sábados 17:00 · Cabildo 3390 · 7 mar – 12 dic</p>
+        </div>
+        <div style="display:flex; gap:8px; flex:none">
+          <span style="height:28px; padding:0 12px; border:1px solid #e8e9ec; border-radius:7px; font:600 12px Manrope,system-ui,sans-serif; color:#4b5563; display:flex; align-items:center">Adolescentes</span>
+        </div>
+      </div>
+
+      <div style="border-radius: 14px; padding: 24px 26px; margin-top: 16px; display: grid; grid-template-columns: minmax(0,1.25fr) minmax(0,2fr); gap: 32px; align-items: center; background-color: #4371C5">
+        <div style="min-width:0">
+          <p style="margin:0; font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(255,255,255,.5)">DIAGNÓSTICO</p>
+          <p style="margin:12px 0 0; font:600 27px/1.25 Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.02em">Sin datos para evaluar</p>
+          <p style="margin:12px 0 0; font:500 14px/1.6 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.72)">El grupo lleva 5 meses activo y nunca cargó una asistencia. No sabemos si se está reuniendo. Es el problema a resolver antes de mirar cualquier otro número.</p>
+          <div style="display:flex; gap:10px; margin-top:20px">
+            <div style="height:42px; padding:0 18px; border-radius:9px; background:#fff; color:#0f172a; display:flex; align-items:center; gap:8px; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">Escribirle a Rocío</div>
+            <div style="height:42px; padding:0 18px; border-radius:9px; background:rgba(255,255,255,.12); color:#fff; display:flex; align-items:center; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">Ver los otros 33 grupos así</div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px">
+          
+          <div style="background: rgba(255,255,255,.07); border-radius: 11px; padding: 16px; box-shadow: 0px 0px 0px 1px #E44A3B59">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(255,255,255,.5)">REUNIONES CARGADAS</p>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:10px"><span style="font: 600 25px Manrope,system-ui,sans-serif; color: #FF968A; letter-spacing: -.025em">0</span><span style="font:600 12px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5)">de 22</span></div>
+            <p style="margin:8px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.55)">Desde el 7 de marzo</p>
+          </div><div style="background:rgba(255,255,255,.07); border-radius:11px; padding:16px">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(255,255,255,.5)">PRESENTES POR REUNIÓN</p>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:10px"><span style="font:600 25px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5); letter-spacing:-.025em">—</span></div>
+            <p style="margin:8px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.55)">No se puede calcular</p>
+          </div>
+          <div style="background:rgba(255,255,255,.07); border-radius:11px; padding:16px">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(255,255,255,.5)">OCUPACIÓN</p>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:10px"><span style="font:600 25px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.025em">7/20</span></div>
+            <p style="margin:8px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.55)">35% del cupo</p>
+          </div>
+          <div style="background:rgba(255,255,255,.07); border-radius:11px; padding:16px">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(255,255,255,.5)">CO-ANFITRIÓN</p>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:10px"><span style="font:600 25px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.025em">Bruno T.</span></div>
+            <p style="margin:8px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.55)">Tiene reemplazo</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:minmax(0,1.9fr) minmax(0,1fr); gap:16px; margin-top:16px">
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+          <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Asistencia reunión a reunión</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">22 sábados transcurridos desde el inicio de la temporada.</p></div>
+          <div style="display:flex; gap:14px; margin-top:24px">
+            <div style="width:26px; flex:none; height:212px; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-end">
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">12</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">9</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">6</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">3</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">0</span>
+            </div>
+            <div style="flex:1; min-width:0; position:relative; height:212px; border-bottom:1px solid #e8e9ec">
+              <div style="position:absolute; left:0; right:0; top:0; height:1px; background:#f7f8fa"></div>
+              <div style="position:absolute; left:0; right:0; top:53px; height:1px; background:#f7f8fa"></div>
+              <div style="position:absolute; left:0; right:0; top:106px; height:1px; background:#f7f8fa"></div>
+              <div style="position:absolute; left:0; right:0; top:159px; height:1px; background:#f7f8fa"></div>
+              <div style="position:absolute; left:0; right:0; bottom:91px; border-top:2px dashed #dfe2e7"></div>
+              <div style="position:absolute; left:0; right:0; bottom:0; display:flex; align-items:flex-end; gap:7px; padding:0 2px">
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+                <div style="flex:1; height:6px; border-radius:3px 3px 0 0; background:#f1f2f5"></div>
+              </div>
+              <div style="position:absolute; left:0; right:0; top:52px; display:flex; flex-direction:column; align-items:center; text-align:center">
+                <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#374151">22 sábados sin ninguna carga</p>
+                <p style="margin:8px 0 0; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:#6b7280; max-width:400px">Cada barra vacía es una reunión que pudo haber pasado y no quedó registrada. Este grupo no aparece en ninguno de los promedios del dashboard.</p>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; gap:14px; margin-top:9px">
+            <div style="width:26px; flex:none"></div>
+            <div style="flex:1; min-width:0; display:flex; justify-content:space-between">
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">7 mar</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">abr</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">may</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">jun</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">jul</span>
+              <span style="font:500 11px Manrope,system-ui,sans-serif; color:#c3c7ce">1 ago</span>
+            </div>
+          </div>
+          <p style="margin:20px 0 0; padding-top:16px; border-top:1px solid #eef0f3; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">La última vez que Rocío entró a la app fue el 14 de abril. Los 7 inscriptos se anotaron en marzo y ninguno se dio de baja.</p>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+          <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Lo que sí sabemos</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Datos que no dependen del reporte del anfitrión.</p></div>
+          <div style="margin-top:18px">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f2f3f5"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Inscriptos</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">7 personas</span></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f2f3f5"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Bajas en la temporada</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">Ninguna</span></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f2f3f5"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Solicitudes sin responder</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#b42318">2 desde mayo</span></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Último ingreso del anfitrión</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">14 abr</span></div>
+          </div>
+          <div style="background:#f7f8fa; border:1px solid #eef0f3; border-radius:11px; padding:14px 16px; margin-top:18px">
+            <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">Contacto del liderazgo</p>
+            <p style="margin:8px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Rocío Ledesma · 11 3388 2044</p>
+            <p style="margin:4px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Bruno Tello · 11 3388 2045</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+<p class="dv-next">Probá pedirme: “sumá la versión mobile” · “el diagnóstico de <a class="dv-oid" href="#1a">1a</a> más discreto, sin fondo oscuro” · “la genealogía como árbol vertical”</p>
+</section>
+
+</x-dc>
+</body>
+</html>

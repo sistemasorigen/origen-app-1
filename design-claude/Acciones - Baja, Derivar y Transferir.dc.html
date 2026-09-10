@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#eceae6;font-family:Manrope,system-ui,sans-serif}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 Manrope,system-ui,sans-serif;color:#1a1a1a}.dv-tsub{max-width:660px;margin:0 0 22px;font:400 12px/1.6 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.5)}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:600 11.5px/1.3 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.65)}.dv-note{max-width:390px;margin:2px 0 0;font:400 11.5px/1.55 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.5)}.dv-card{max-width:100%;background:#fff;border-radius:22px;box-shadow:0 2px 10px rgba(0,0,0,.07);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.5)}a{color:#1a1a1a}a:hover{color:#2a78d6}</style></helmet>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">4. Dar de baja</span></div>
+<p class="dv-tsub">Las dos operaciones no comparten formulario: al entrar hay que elegir cuál, y cada una queda descripta con su consecuencia real antes de tocarla. Baja de un miembro es inmediata; cerrar el grupo es una solicitud que aprueba un administrador, y eso se dice con esas palabras en el propio botón.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="4a">
+  <div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Mobile · elegir qué hacer, y baja de un miembro</div>
+  <p class="dv-note">La bifurcación es lo primero, en dos tarjetas de peso distinto: la baja arriba (la frecuente) y cerrar el grupo abajo, separada por el rótulo TODO EL GRUPO. Cada una dice qué pasa después, no solo qué hace.</p>
+  <div style="display:flex; gap:20px; align-items:flex-start">
+    <div class="dv-card" style="width:390px; background:#f6f6f4">
+      <div style="background:#fff; border-radius:0 0 28px 28px; padding:16px 20px 18px">
+        <div style="display:flex; align-items:center; gap:14px">
+          <div style="width:40px; height:40px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+          <div><p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">Dar de baja</p><p style="margin:3px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Grupo Almagro Norte</p></div>
+        </div>
+      </div>
+      <div style="padding:22px 16px 28px">
+        <p style="margin:0 6px 10px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">UN MIEMBRO</p>
+        <div style="background:#fff; border-radius:26px; padding:20px; cursor:pointer">
+          <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">Dar de baja a un miembro</p>
+          <p style="margin:9px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">La persona sale del grupo <span style="color:oklch(0.52 0.19 25); font-weight:600">en el momento</span>. No pasa por aprobación y no se puede deshacer.</p>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:18px">
+            <span style="font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Elegir a la persona</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+        </div>
+        <p style="margin:26px 6px 10px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">TODO EL GRUPO</p>
+        <div style="background:#f0f0ed; border-radius:26px; padding:20px; cursor:pointer">
+          <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">Cerrar el grupo</p>
+          <p style="margin:9px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Se envía una <span style="font-weight:600; color:#0a0a0a">solicitud a un administrador</span>. El grupo sigue funcionando hasta que la aprueben.</p>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:18px">
+            <span style="font:600 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Pedir el cierre</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dv-card" style="width:390px; background:#f6f6f4">
+      <div style="background:#fff; border-radius:0 0 28px 28px; padding:16px 20px 18px">
+        <div style="display:flex; align-items:center; gap:14px">
+          <div style="width:40px; height:40px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+          <div><p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">Dar de baja a un miembro</p><p style="margin:3px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Grupo Almagro Norte</p></div>
+        </div>
+      </div>
+      <div style="padding:22px 16px 28px">
+        <p style="margin:0 6px 10px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">¿A QUIÉN?</p>
+        <div style="background:#fff; border-radius:26px; overflow:hidden">
+          <div style="display:flex; align-items:center; gap:14px; height:70px; padding:0 16px; cursor:pointer">
+            <div style="width:44px; height:44px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 14px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">TL</div>
+            <span style="flex:1; font:600 15.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Tomás Leiva</span>
+            <div style="width:26px; height:26px; border-radius:999px; background:#0a0a0a; display:flex; align-items:center; justify-content:center; flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></div>
+          </div>
+          <div style="height:1px; background:rgba(0,0,0,.06); margin:0 16px"></div>
+          <div style="display:flex; align-items:center; gap:14px; height:70px; padding:0 16px; cursor:pointer">
+            <div style="width:44px; height:44px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 14px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">CM</div>
+            <span style="flex:1; font:600 15.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Carla Medina</span>
+            <div style="width:26px; height:26px; border-radius:999px; background:#eeeeeb; flex:none"></div>
+          </div>
+        </div>
+        <p style="margin:24px 6px 10px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">MOTIVO</p>
+        <div style="display:flex; flex-wrap:wrap; gap:9px">
+          <div style="height:46px; padding:0 18px; border-radius:999px; background:#0a0a0a; color:#fff; display:flex; align-items:center; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Se mudó</div>
+          <div style="height:46px; padding:0 18px; border-radius:999px; background:#fff; color:rgba(0,0,0,.6); display:flex; align-items:center; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Dejó de asistir</div>
+          <div style="height:46px; padding:0 18px; border-radius:999px; background:#fff; color:rgba(0,0,0,.6); display:flex; align-items:center; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Pasó a otro grupo</div>
+          <div style="height:46px; padding:0 18px; border-radius:999px; background:#fff; color:rgba(0,0,0,.6); display:flex; align-items:center; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Otro</div>
+        </div>
+        <div style="background:#fff; border-radius:22px; padding:16px 18px; margin-top:14px; min-height:84px"><span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.35)">Detalles (opcional)</span></div>
+        <button style="width:100%; height:60px; margin-top:20px; border:0; border-radius:999px; background:#000; color:#fff; font:600 16.5px Manrope,system-ui,sans-serif; cursor:pointer">Continuar</button>
+        <p style="margin:12px 20px 0; font:500 12.5px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45); text-align:center">Vas a ver una confirmación antes de que se ejecute.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="4b">
+  <div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Las dos confirmaciones, lado a lado</div>
+  <p class="dv-note">Misma hoja, dos temperaturas. La baja nombra a la persona y pone en rojo lo irreversible. El cierre del grupo no usa rojo: no es destructivo todavía, es un pedido — y el botón lo dice (“Enviar solicitud”), con lo que pasa mientras se espera.</p>
+  <div style="display:flex; gap:20px; align-items:flex-start">
+    <div class="dv-card" style="width:390px; background:#f6f6f4">
+      <div style="position:relative">
+        <div style="padding:16px 20px 18px; background:#fff; border-radius:0 0 28px 28px">
+          <div style="display:flex; align-items:center; gap:14px">
+            <div style="width:40px; height:40px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+            <div><p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">Dar de baja a un miembro</p><p style="margin:3px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Grupo Almagro Norte</p></div>
+          </div>
+        </div>
+        <div style="padding:16px 16px 20px">
+          <div style="display:flex; align-items:center; gap:14px; height:62px; padding:0 16px; background:#fff; border-radius:22px"><div style="width:42px; height:42px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">TL</div><span style="flex:1; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Tomás Leiva</span></div>
+        </div>
+        <div style="position:absolute; inset:0; background:rgba(10,10,10,.38)"></div>
+      </div>
+      <div style="background:#fff; border-radius:30px 30px 0 0; padding:14px 22px 26px; margin-top:-24px; position:relative">
+        <div style="width:38px; height:4px; border-radius:999px; background:#e2e2de; margin:0 auto 20px"></div>
+        <p style="margin:0; font:600 21px/1.3 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">¿Dar de baja a Tomás Leiva?</p>
+        <p style="margin:12px 0 0; font:500 14.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Sale del grupo <span style="color:oklch(0.52 0.19 25); font-weight:600">de inmediato y no se puede deshacer</span>. Si vuelve, hay que inscribirlo otra vez.</p>
+        <div style="background:#f7f7f5; border-radius:20px; padding:14px 16px; margin-top:18px; display:flex; align-items:center; gap:12px">
+          <div style="width:40px; height:40px; border-radius:999px; background:#e8e8e5; display:flex; align-items:center; justify-content:center; font:600 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">TL</div>
+          <div><p style="margin:0; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Tomás Leiva</p><p style="margin:2px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Motivo: se mudó de barrio</p></div>
+        </div>
+        <button style="width:100%; height:58px; margin-top:20px; border:0; border-radius:999px; background:#000; color:#fff; font:600 16.5px Manrope,system-ui,sans-serif; cursor:pointer">Sí, dar de baja</button>
+        <button style="width:100%; height:56px; margin-top:10px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">Cancelar</button>
+      </div>
+    </div>
+
+    <div class="dv-card" style="width:390px; background:#f6f6f4">
+      <div style="position:relative">
+        <div style="padding:16px 20px 18px; background:#fff; border-radius:0 0 28px 28px">
+          <div style="display:flex; align-items:center; gap:14px">
+            <div style="width:40px; height:40px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+            <div><p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">Cerrar el grupo</p><p style="margin:3px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Grupo Almagro Norte</p></div>
+          </div>
+        </div>
+        <div style="padding:16px 16px 20px">
+          <div style="background:#fff; border-radius:22px; padding:16px 18px"><p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">MOTIVO</p><p style="margin:8px 0 0; font:500 14px Manrope,system-ui,sans-serif; color:#0a0a0a">Terminó la temporada</p></div>
+        </div>
+        <div style="position:absolute; inset:0; background:rgba(10,10,10,.38)"></div>
+      </div>
+      <div style="background:#fff; border-radius:30px 30px 0 0; padding:14px 22px 26px; margin-top:-24px; position:relative">
+        <div style="width:38px; height:4px; border-radius:999px; background:#e2e2de; margin:0 auto 20px"></div>
+        <p style="margin:0; font:600 21px/1.3 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">¿Pedir el cierre del grupo?</p>
+        <p style="margin:12px 0 0; font:500 14.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Un administrador tiene que aprobarlo. Mientras espera, el grupo sigue activo y podés seguir tomando asistencia.</p>
+        <div style="background:#f7f7f5; border-radius:20px; padding:16px; margin-top:18px">
+          <div style="display:flex; align-items:center; justify-content:space-between; height:30px"><span style="font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5)">Grupo</span><span style="font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Almagro Norte</span></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; height:30px"><span style="font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5)">Miembros que quedan sin grupo</span><span style="font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">12</span></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; height:30px"><span style="font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5)">Motivo</span><span style="font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Terminó la temporada</span></div>
+        </div>
+        <button style="width:100%; height:58px; margin-top:20px; border:0; border-radius:999px; background:#000; color:#fff; font:600 16.5px Manrope,system-ui,sans-serif; cursor:pointer">Enviar solicitud</button>
+        <button style="width:100%; height:56px; margin-top:10px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="4c">
+  <div class="dv-olabel"><a class="dv-oid" href="#4c">4c</a>Desktop · las dos operaciones nunca juntas</div>
+  <p class="dv-note">En desktop hay lugar para mostrar las dos tarjetas de bifurcación una al lado de la otra, pero el formulario aparece recién debajo de la elegida: nunca hay dos formularios abiertos al mismo tiempo. La confirmación sigue siendo un diálogo centrado con el mismo contenido de la hoja móvil.</p>
+  <div class="dv-card" style="width:1160px; background:#f6f6f4; border-radius:22px">
+    <div style="background:#fff; padding:18px 32px">
+      <div style="display:flex; align-items:center; gap:14px">
+        <div style="width:44px; height:44px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+        <span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5)">Almagro Norte</span>
+        <span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.28)">/</span>
+        <span style="font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Dar de baja</span>
+      </div>
+    </div>
+    <div style="padding:28px 32px 36px">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px">
+        <div style="background:#fff; border-radius:28px; padding:24px; box-shadow:0 0 0 2px #0a0a0a inset">
+          <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">UN MIEMBRO</p>
+          <p style="margin:12px 0 0; font:600 20px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">Dar de baja a un miembro</p>
+          <p style="margin:9px 0 0; font:500 14px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">La persona sale del grupo <span style="color:oklch(0.52 0.19 25); font-weight:600">en el momento</span>. No pasa por aprobación y no se puede deshacer.</p>
+        </div>
+        <div style="background:#f0f0ed; border-radius:28px; padding:24px; cursor:pointer">
+          <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">TODO EL GRUPO</p>
+          <p style="margin:12px 0 0; font:600 20px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">Cerrar el grupo</p>
+          <p style="margin:9px 0 0; font:500 14px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Se envía una <span style="font-weight:600; color:#0a0a0a">solicitud a un administrador</span>. El grupo sigue funcionando hasta que la aprueben.</p>
+        </div>
+      </div>
+
+      <div style="background:#fff; border-radius:28px; padding:28px; margin-top:20px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:32px; align-items:start">
+        <div>
+          <p style="margin:0 0 12px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">¿A QUIÉN?</p>
+          <div style="background:#f7f7f5; border-radius:24px; overflow:hidden">
+            <div style="display:flex; align-items:center; gap:14px; height:66px; padding:0 18px; cursor:pointer">
+              <div style="width:42px; height:42px; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center; font:600 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">TL</div>
+              <span style="flex:1; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Tomás Leiva</span>
+              <div style="width:26px; height:26px; border-radius:999px; background:#0a0a0a; display:flex; align-items:center; justify-content:center; flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></div>
+            </div>
+            <div style="height:1px; background:rgba(0,0,0,.06); margin:0 18px"></div>
+            <div style="display:flex; align-items:center; gap:14px; height:66px; padding:0 18px; cursor:pointer">
+              <div style="width:42px; height:42px; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center; font:600 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">CM</div>
+              <span style="flex:1; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Carla Medina</span>
+              <div style="width:26px; height:26px; border-radius:999px; background:#eeeeeb; flex:none"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p style="margin:0 0 12px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">MOTIVO</p>
+          <div style="display:flex; flex-wrap:wrap; gap:9px">
+            <div style="height:46px; padding:0 18px; border-radius:999px; background:#0a0a0a; color:#fff; display:flex; align-items:center; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Se mudó</div>
+            <div style="height:46px; padding:0 18px; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.6); display:flex; align-items:center; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Dejó de asistir</div>
+            <div style="height:46px; padding:0 18px; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.6); display:flex; align-items:center; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Otro</div>
+          </div>
+          <div style="background:#f7f7f5; border-radius:22px; padding:16px 18px; margin-top:12px; min-height:76px"><span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.35)">Detalles (opcional)</span></div>
+          <div style="display:flex; align-items:center; gap:16px; margin-top:20px">
+            <button style="height:56px; padding:0 32px; border:0; border-radius:999px; background:#000; color:#fff; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">Continuar</button>
+            <span style="font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Vas a ver una confirmación antes de que se ejecute.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+<p class="dv-next">Probá pedirme: “el borde negro de la tarjeta elegida en <a class="dv-oid" href="#4c">4c</a> me molesta” · “sacale el rojo a <a class="dv-oid" href="#4b">4b</a>” · “agregá el estado de éxito después de la baja”</p>
+</section>
+
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">5. Derivar a otro grupo</span></div>
+<p class="dv-tsub">Dos pasos con el mismo indicador. La regla que más se malinterpreta — la persona no se va hasta que el otro anfitrión acepta — está en el paso 2 como línea fija sobre la lista, y otra vez en la confirmación. Los grupos llenos se muestran, se pueden elegir, y avisan que quedan en lista de espera.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="5a">
+  <div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>Mobile · paso 1 y paso 2</div>
+  <p class="dv-note">Si la persona está inscripta con su pareja, el aviso aparece pegado a su fila en el paso 1, no al final: se decide sabiendo que se van los dos. Cada grupo destino muestra anfitrión, día, ubicación y lugares libres, que es lo que define la elección.</p>
+  <div style="display:flex; gap:20px; align-items:flex-start">
+    <div class="dv-card" style="width:390px; background:#f6f6f4">
+      <div style="background:#fff; border-radius:0 0 28px 28px; padding:16px 20px 20px">
+        <div style="display:flex; align-items:center; gap:14px">
+          <div style="width:40px; height:40px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+          <div><p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">Derivar a otro grupo</p><p style="margin:3px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Grupo Almagro Norte</p></div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px">
+          <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">PASO 1 DE 2</p>
+          <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">¿A quién derivás?</p>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:12px"><div style="flex:1; height:5px; border-radius:999px; background:#0a0a0a"></div><div style="flex:1; height:5px; border-radius:999px; background:#e6e6e2"></div></div>
+      </div>
+      <div style="padding:20px 16px 28px">
+        <div style="background:#fff; border-radius:26px; overflow:hidden">
+          <div style="display:flex; align-items:center; gap:14px; height:70px; padding:0 16px; cursor:pointer">
+            <div style="width:44px; height:44px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 14px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">CM</div>
+            <span style="flex:1; font:600 15.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Carla Medina</span>
+            <div style="width:26px; height:26px; border-radius:999px; background:#eeeeeb; flex:none"></div>
+          </div>
+          <div style="height:1px; background:rgba(0,0,0,.06); margin:0 16px"></div>
+          <div style="padding-bottom:14px">
+            <div style="display:flex; align-items:center; gap:14px; height:70px; padding:0 16px; cursor:pointer">
+              <div style="display:flex; flex:none; width:72px"><div style="width:42px; height:42px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">DC</div><div style="width:42px; height:42px; border-radius:999px; background:#e8e8e5; box-shadow:0 0 0 3px #fff; margin-left:-12px; display:flex; align-items:center; justify-content:center; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">VA</div></div>
+              <div style="flex:1; min-width:0"><p style="margin:0; font:600 15.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Diego y Valeria</p><p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Pareja · 1 inscripción</p></div>
+              <div style="width:26px; height:26px; border-radius:999px; background:#0a0a0a; display:flex; align-items:center; justify-content:center; flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></div>
+            </div>
+            <div style="margin:0 16px; background:#0a0a0a; border-radius:18px; padding:14px 16px">
+              <p style="margin:0; font:500 13px/1.55 Manrope,system-ui,sans-serif; color:#fff">Están inscriptos juntos: <span style="font-weight:600">los dos se derivan al mismo grupo</span>. No se puede mandar a uno solo.</p>
+            </div>
+          </div>
+          <div style="height:1px; background:rgba(0,0,0,.06); margin:0 16px"></div>
+          <div style="display:flex; align-items:center; gap:14px; height:70px; padding:0 16px; cursor:pointer">
+            <div style="width:44px; height:44px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 14px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">FN</div>
+            <span style="flex:1; font:600 15.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Federico Navarro</span>
+            <div style="width:26px; height:26px; border-radius:999px; background:#eeeeeb; flex:none"></div>
+          </div>
+        </div>
+        <button style="width:100%; height:60px; margin-top:20px; border:0; border-radius:999px; background:#000; color:#fff; font:600 16.5px Manrope,system-ui,sans-serif; cursor:pointer">Elegir el grupo destino</button>
+      </div>
+    </div>
+
+    <div class="dv-card" style="width:390px; background:#f6f6f4">
+      <div style="background:#fff; border-radius:0 0 28px 28px; padding:16px 20px 20px">
+        <div style="display:flex; align-items:center; gap:14px">
+          <div style="width:40px; height:40px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+          <div><p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">Derivar a otro grupo</p><p style="margin:3px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Diego y Valeria · 2 personas</p></div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px">
+          <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">PASO 2 DE 2</p>
+          <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">¿A qué grupo?</p>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:12px"><div style="flex:1; height:5px; border-radius:999px; background:#0a0a0a"></div><div style="flex:1; height:5px; border-radius:999px; background:#0a0a0a"></div></div>
+      </div>
+      <div style="padding:20px 16px 28px">
+        <div style="height:56px; border-radius:999px; background:#fff; display:flex; align-items:center; gap:11px; padding:0 20px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+          <span style="flex:1; font:500 15.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.35)">Buscar un grupo</span>
+        </div>
+        <div style="background:#0a0a0a; border-radius:20px; padding:15px 18px; margin-top:14px">
+          <p style="margin:0; font:500 13px/1.55 Manrope,system-ui,sans-serif; color:#fff">Hasta que el otro anfitrión acepte, <span style="font-weight:600">la persona sigue en tu grupo</span>.</p>
+        </div>
+        <p style="margin:22px 6px 10px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">GRUPOS DISPONIBLES</p>
+        <div style="display:flex; flex-direction:column; gap:10px">
+          <div style="background:#fff; border-radius:24px; padding:18px; cursor:pointer">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px">
+              <p style="margin:0; font:600 16.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Caballito Sur</p>
+              <span style="font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5); white-space:nowrap">4 lugares</span>
+            </div>
+            <p style="margin:8px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Paula Ferreyra · Martes 20:30<br>Av. La Plata 1240</p>
+          </div>
+          <div style="background:#fff; border-radius:24px; padding:18px; cursor:pointer">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px">
+              <p style="margin:0; font:600 16.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Palermo Online</p>
+              <span style="font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5); white-space:nowrap">7 lugares</span>
+            </div>
+            <p style="margin:8px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Ignacio Ruiz · Miércoles 21:00<br>Online</p>
+          </div>
+          <div style="background:#f0f0ed; border-radius:24px; padding:18px; cursor:pointer">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px">
+              <p style="margin:0; font:600 16.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Villa Crespo Centro</p>
+              <span style="height:26px; padding:0 11px; border-radius:999px; background:#0a0a0a; color:#fff; font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center; white-space:nowrap">Lleno</span>
+            </div>
+            <p style="margin:8px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Sergio Duarte · Jueves 20:00<br>Thames 850</p>
+            <p style="margin:10px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Podés derivar igual: queda en lista de espera.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="5b">
+  <div class="dv-olabel"><a class="dv-oid" href="#5b">5b</a>Confirmación · y desktop</div>
+  <p class="dv-note">La confirmación resume las tres cosas que importan: quiénes se van, a dónde, y qué pasa mientras se espera. En desktop el paso 1 y el paso 2 conviven en dos columnas — la elección de persona no se pierde de vista al buscar grupo — y el aviso queda arriba de la lista, siempre visible.</p>
+  <div style="display:flex; gap:20px; align-items:flex-start">
+    <div class="dv-card" style="width:390px; background:#f6f6f4">
+      <div style="position:relative">
+        <div style="padding:16px 20px 18px; background:#fff; border-radius:0 0 28px 28px">
+          <div style="display:flex; align-items:center; gap:14px">
+            <div style="width:40px; height:40px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+            <div><p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">Derivar a otro grupo</p><p style="margin:3px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Diego y Valeria · 2 personas</p></div>
+          </div>
+        </div>
+        <div style="padding:16px 16px 20px">
+          <div style="background:#fff; border-radius:22px; padding:16px 18px"><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Caballito Sur</p><p style="margin:6px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5)">Paula Ferreyra · Martes 20:30</p></div>
+        </div>
+        <div style="position:absolute; inset:0; background:rgba(10,10,10,.38)"></div>
+      </div>
+      <div style="background:#fff; border-radius:30px 30px 0 0; padding:14px 22px 26px; margin-top:-24px; position:relative">
+        <div style="width:38px; height:4px; border-radius:999px; background:#e2e2de; margin:0 auto 20px"></div>
+        <p style="margin:0; font:600 21px/1.3 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">¿Derivar a Diego y Valeria?</p>
+        <p style="margin:12px 0 0; font:500 14.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Se envía el pedido a Paula Ferreyra. Hasta que lo acepte, <span style="font-weight:600; color:#0a0a0a">los dos siguen en tu grupo</span>.</p>
+        <div style="background:#f7f7f5; border-radius:20px; padding:16px; margin-top:18px">
+          <div style="display:flex; align-items:center; justify-content:space-between; height:30px"><span style="font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5)">Se derivan</span><span style="font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">2 personas</span></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; height:30px"><span style="font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5)">Grupo destino</span><span style="font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Caballito Sur</span></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; height:30px"><span style="font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5)">Anfitriona</span><span style="font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Paula Ferreyra</span></div>
+        </div>
+        <button style="width:100%; height:58px; margin-top:20px; border:0; border-radius:999px; background:#000; color:#fff; font:600 16.5px Manrope,system-ui,sans-serif; cursor:pointer">Enviar la derivación</button>
+        <button style="width:100%; height:56px; margin-top:10px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">Cancelar</button>
+      </div>
+    </div>
+
+    <div class="dv-card" style="width:1000px; background:#f6f6f4; border-radius:22px">
+      <div style="background:#fff; padding:18px 32px">
+        <div style="display:flex; align-items:center; gap:14px">
+          <div style="width:44px; height:44px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+          <span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5)">Almagro Norte</span>
+          <span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.28)">/</span>
+          <span style="font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Derivar a otro grupo</span>
+        </div>
+      </div>
+      <div style="padding:28px 32px 36px; display:grid; grid-template-columns:minmax(0,330px) minmax(0,1fr); gap:24px; align-items:start">
+        <div style="background:#fff; border-radius:28px; padding:20px; position:sticky; top:28px">
+          <p style="margin:0 4px 12px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">¿A QUIÉN DERIVÁS?</p>
+          <div style="display:flex; align-items:center; gap:13px; padding:12px; border-radius:22px; background:#f2f2f0">
+            <div style="display:flex; flex:none; width:72px"><div style="width:42px; height:42px; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">DC</div><div style="width:42px; height:42px; border-radius:999px; background:#e8e8e5; box-shadow:0 0 0 3px #f2f2f0; margin-left:-12px; display:flex; align-items:center; justify-content:center; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">VA</div></div>
+            <div style="min-width:0"><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Diego y Valeria</p><p style="margin:2px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5)">Pareja · se van juntos</p></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:13px; padding:12px; cursor:pointer">
+            <div style="width:42px; height:42px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">CM</div>
+            <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Carla Medina</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:13px; padding:12px; cursor:pointer">
+            <div style="width:42px; height:42px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">FN</div>
+            <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Federico Navarro</p>
+          </div>
+        </div>
+
+        <div style="min-width:0">
+          <div style="background:#0a0a0a; border-radius:24px; padding:18px 22px">
+            <p style="margin:0; font:500 14px/1.55 Manrope,system-ui,sans-serif; color:#fff">Hasta que el otro anfitrión acepte, <span style="font-weight:600">las personas siguen en tu grupo</span>. Se derivan las dos juntas.</p>
+          </div>
+          <div style="height:54px; border-radius:999px; background:#fff; display:flex; align-items:center; gap:11px; padding:0 20px; margin-top:16px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+            <span style="flex:1; font:500 15px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.35)">Buscar un grupo</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px">
+            <div style="background:#fff; border-radius:24px; padding:18px; cursor:pointer">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px"><p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">Caballito Sur</p><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5); white-space:nowrap">4 lugares</span></div>
+              <p style="margin:8px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Paula Ferreyra · Martes 20:30<br>Av. La Plata 1240</p>
+            </div>
+            <div style="background:#fff; border-radius:24px; padding:18px; cursor:pointer">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px"><p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">Palermo Online</p><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5); white-space:nowrap">7 lugares</span></div>
+              <p style="margin:8px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Ignacio Ruiz · Miércoles 21:00<br>Online</p>
+            </div>
+            <div style="background:#f0f0ed; border-radius:24px; padding:18px; cursor:pointer">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px"><p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Villa Crespo Centro</p><span style="height:24px; padding:0 10px; border-radius:999px; background:#0a0a0a; color:#fff; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; white-space:nowrap">Lleno</span></div>
+              <p style="margin:8px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Sergio Duarte · Jueves 20:00<br>Thames 850</p>
+            </div>
+            <div style="background:#fff; border-radius:24px; padding:18px; cursor:pointer">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px"><p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">Belgrano Norte</p><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5); white-space:nowrap">2 lugares</span></div>
+              <p style="margin:8px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Lorena Vidal · Viernes 19:30<br>Juramento 2200</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+<p class="dv-next">Probá pedirme: “en <a class="dv-oid" href="#5a">5a</a> el aviso de pareja como hoja” · “ordená los grupos por cercanía” · “agregá el estado enviado a la espera de respuesta”</p>
+</section>
+
+<section class="dv-turn" id="t6">
+<div class="dv-thd"><a class="dv-tid" href="#t6">6</a><span class="dv-tname">6. Transferir el grupo</span></div>
+<p class="dv-tsub">El único flujo que cambia de fondo: al llegar al paso 2, la pantalla se pone negra y se queda así. No hay rojo, no hay signos de alarma, no hay copy dramático — el peso lo carga la inversión de color y el resumen literal de lo que va a cambiar. El paso 3 pide escribir el nombre del grupo, la única fricción explícita de las seis pantallas.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="6a">
+  <div class="dv-olabel"><a class="dv-oid" href="#6a">6a</a>Mobile · los tres pasos</div>
+  <p class="dv-note">Paso 1 en claro, como cualquier buscador. Paso 2 y 3 en negro: mismo layout, mismos radios, mismas píldoras — solo se invierte el color, y eso alcanza para que se sienta distinto sin asustar.</p>
+  <div style="display:flex; gap:20px; align-items:flex-start">
+    <div class="dv-card" style="width:390px; background:#f6f6f4">
+      <div style="background:#fff; border-radius:0 0 28px 28px; padding:16px 20px 20px">
+        <div style="display:flex; align-items:center; gap:14px">
+          <div style="width:40px; height:40px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+          <div><p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.01em">Transferir el grupo</p><p style="margin:3px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Grupo Almagro Norte</p></div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px">
+          <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">PASO 1 DE 3</p>
+          <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">¿Quién recibe el grupo?</p>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:12px"><div style="flex:1; height:5px; border-radius:999px; background:#0a0a0a"></div><div style="flex:1; height:5px; border-radius:999px; background:#e6e6e2"></div><div style="flex:1; height:5px; border-radius:999px; background:#e6e6e2"></div></div>
+      </div>
+      <div style="padding:20px 16px 28px">
+        <div style="height:56px; border-radius:999px; background:#fff; display:flex; align-items:center; gap:11px; padding:0 20px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+          <span style="flex:1; font:500 15.5px Manrope,system-ui,sans-serif; color:#0a0a0a">luc</span>
+        </div>
+        <p style="margin:22px 6px 10px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.38)">MIEMBROS DEL GRUPO</p>
+        <div style="background:#fff; border-radius:26px; overflow:hidden">
+          <div style="display:flex; align-items:center; gap:14px; height:70px; padding:0 16px; cursor:pointer">
+            <div style="width:44px; height:44px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 14px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">LP</div>
+            <div style="flex:1; min-width:0"><p style="margin:0; font:600 15.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Lucía Prieto</p><p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Co-anfitriona desde marzo</p></div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+          <div style="height:1px; background:rgba(0,0,0,.06); margin:0 16px"></div>
+          <div style="display:flex; align-items:center; gap:14px; height:70px; padding:0 16px; cursor:pointer">
+            <div style="width:44px; height:44px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 14px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">LB</div>
+            <div style="flex:1; min-width:0"><p style="margin:0; font:600 15.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Luciano Bravo</p><p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45)">Miembro desde abril</p></div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+        </div>
+        <p style="margin:20px 20px 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45); text-align:center">Podés transferir a cualquier persona con cuenta en la app, no hace falta que sea miembro.</p>
+      </div>
+    </div>
+
+    <div class="dv-card" style="width:390px; background:#0a0a0a">
+      <div style="padding:16px 20px 20px">
+        <div style="display:flex; align-items:center; gap:14px">
+          <div style="width:40px; height:40px; border-radius:999px; background:rgba(255,255,255,.09); display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+          <div><p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.01em">Transferir el grupo</p><p style="margin:3px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5)">Grupo Almagro Norte</p></div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px">
+          <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(255,255,255,.45)">PASO 2 DE 3</p>
+          <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5)">Confirmá quién es</p>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:12px"><div style="flex:1; height:5px; border-radius:999px; background:#fff"></div><div style="flex:1; height:5px; border-radius:999px; background:#fff"></div><div style="flex:1; height:5px; border-radius:999px; background:rgba(255,255,255,.2)"></div></div>
+      </div>
+      <div style="padding:12px 16px 28px">
+        <div style="background:#161615; border-radius:28px; padding:24px 20px; text-align:center">
+          <div style="width:76px; height:76px; border-radius:999px; background:rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center; font:600 24px Manrope,system-ui,sans-serif; color:#fff; margin:0 auto">LP</div>
+          <p style="margin:16px 0 0; font:600 22px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.015em">Lucía Prieto</p>
+          <p style="margin:6px 0 0; font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5)">Co-anfitriona desde marzo · 11 5533 7788</p>
+        </div>
+        <p style="margin:24px 6px 10px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(255,255,255,.45)">QUÉ CAMBIA</p>
+        <div style="background:#161615; border-radius:24px; padding:6px 18px">
+          <div style="display:flex; align-items:center; gap:12px; height:52px"><span style="flex:1; font:500 14px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.6)">Anfitrión del grupo</span><span style="font:600 14px Manrope,system-ui,sans-serif; color:#fff">Lucía Prieto</span></div>
+          <div style="height:1px; background:rgba(255,255,255,.07)"></div>
+          <div style="display:flex; align-items:center; gap:12px; height:52px"><span style="flex:1; font:500 14px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.6)">Tu rol</span><span style="font:600 14px Manrope,system-ui,sans-serif; color:#fff">Miembro</span></div>
+          <div style="height:1px; background:rgba(255,255,255,.07)"></div>
+          <div style="display:flex; align-items:center; gap:12px; height:52px"><span style="flex:1; font:500 14px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.6)">Asistencia y solicitudes</span><span style="font:600 14px Manrope,system-ui,sans-serif; color:#fff">Pasan a Lucía</span></div>
+        </div>
+        <p style="margin:18px 8px 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.55)">Dejás de administrar el grupo. Para volver a ser anfitrión, Lucía tendría que transferírtelo de nuevo.</p>
+        <div style="display:flex; gap:10px; margin-top:22px">
+          <button style="height:58px; padding:0 26px; border:0; border-radius:999px; background:rgba(255,255,255,.1); color:#fff; font:600 15.5px Manrope,system-ui,sans-serif; cursor:pointer">Volver</button>
+          <button style="flex:1; height:58px; border:0; border-radius:999px; background:#fff; color:#0a0a0a; font:600 16.5px Manrope,system-ui,sans-serif; cursor:pointer">Continuar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dv-card" style="width:390px; background:#0a0a0a">
+      <div style="padding:16px 20px 20px">
+        <div style="display:flex; align-items:center; gap:14px">
+          <div style="width:40px; height:40px; border-radius:999px; background:rgba(255,255,255,.09); display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+          <div><p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.01em">Transferir el grupo</p><p style="margin:3px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5)">A Lucía Prieto</p></div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px">
+          <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(255,255,255,.45)">PASO 3 DE 3</p>
+          <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5)">Transferir</p>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:12px"><div style="flex:1; height:5px; border-radius:999px; background:#fff"></div><div style="flex:1; height:5px; border-radius:999px; background:#fff"></div><div style="flex:1; height:5px; border-radius:999px; background:#fff"></div></div>
+      </div>
+      <div style="padding:24px 20px 32px">
+        <p style="margin:0; font:600 26px/1.25 Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.02em">Esto no se puede deshacer desde tu cuenta</p>
+        <p style="margin:14px 0 0; font:500 14.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.6)">Para confirmar, escribí el nombre del grupo tal como aparece arriba.</p>
+        <div style="height:60px; border-radius:20px; background:rgba(255,255,255,.08); display:flex; align-items:center; padding:0 20px; margin-top:20px"><span style="font:500 16px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.35)">Almagro Norte</span></div>
+        <button style="width:100%; height:60px; margin-top:20px; border:0; border-radius:999px; background:rgba(255,255,255,.15); color:rgba(255,255,255,.45); font:600 16.5px Manrope,system-ui,sans-serif">Transferir el grupo</button>
+        <button style="width:100%; height:56px; margin-top:10px; border:0; border-radius:999px; background:transparent; color:rgba(255,255,255,.6); font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">Cancelar</button>
+        <p style="margin:20px 8px 0; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.4); text-align:center">El botón se activa cuando el nombre coincide. Lucía recibe un aviso en la app.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="6b">
+  <div class="dv-olabel"><a class="dv-oid" href="#6b">6b</a>Desktop · paso 2</div>
+  <p class="dv-note">En desktop no se estira: la transferencia queda como una columna angosta centrada sobre fondo negro a todo el ancho. El ancho extra se usa para no partir el resumen de “qué cambia”, no para agregar cosas.</p>
+  <div class="dv-card" style="width:1160px; background:#0a0a0a; border-radius:22px">
+    <div style="padding:18px 32px; border-bottom:1px solid rgba(255,255,255,.08)">
+      <div style="display:flex; align-items:center; gap:14px">
+        <div style="width:44px; height:44px; border-radius:999px; background:rgba(255,255,255,.09); display:flex; align-items:center; justify-content:center; flex:none"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></div>
+        <span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5)">Almagro Norte</span>
+        <span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.3)">/</span>
+        <span style="font:600 14.5px Manrope,system-ui,sans-serif; color:#fff">Transferir el grupo</span>
+      </div>
+    </div>
+    <div style="padding:40px 32px 56px; display:flex; justify-content:center">
+      <div style="width:520px; max-width:100%">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(255,255,255,.45)">PASO 2 DE 3</p>
+          <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5)">Confirmá quién es</p>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:12px"><div style="flex:1; height:5px; border-radius:999px; background:#fff"></div><div style="flex:1; height:5px; border-radius:999px; background:#fff"></div><div style="flex:1; height:5px; border-radius:999px; background:rgba(255,255,255,.2)"></div></div>
+        <div style="background:#161615; border-radius:30px; padding:32px; margin-top:24px; display:flex; align-items:center; gap:20px">
+          <div style="width:82px; height:82px; border-radius:999px; background:rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center; font:600 26px Manrope,system-ui,sans-serif; color:#fff; flex:none">LP</div>
+          <div style="min-width:0">
+            <p style="margin:0; font:600 26px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.02em">Lucía Prieto</p>
+            <p style="margin:6px 0 0; font:500 14px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.5)">Co-anfitriona desde marzo · 11 5533 7788</p>
+          </div>
+        </div>
+        <p style="margin:28px 4px 12px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(255,255,255,.45)">QUÉ CAMBIA</p>
+        <div style="background:#161615; border-radius:26px; padding:8px 22px">
+          <div style="display:flex; align-items:center; gap:12px; height:56px"><span style="flex:1; font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.6)">Anfitrión del grupo</span><span style="font:600 14.5px Manrope,system-ui,sans-serif; color:#fff">Lucía Prieto</span></div>
+          <div style="height:1px; background:rgba(255,255,255,.07)"></div>
+          <div style="display:flex; align-items:center; gap:12px; height:56px"><span style="flex:1; font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.6)">Tu rol</span><span style="font:600 14.5px Manrope,system-ui,sans-serif; color:#fff">Miembro</span></div>
+          <div style="height:1px; background:rgba(255,255,255,.07)"></div>
+          <div style="display:flex; align-items:center; gap:12px; height:56px"><span style="flex:1; font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.6)">Asistencia y solicitudes</span><span style="font:600 14.5px Manrope,system-ui,sans-serif; color:#fff">Pasan a Lucía</span></div>
+        </div>
+        <p style="margin:20px 4px 0; font:500 13.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.55)">Dejás de administrar el grupo. Para volver a ser anfitrión, Lucía tendría que transferírtelo de nuevo.</p>
+        <div style="display:flex; gap:10px; margin-top:28px">
+          <button style="height:58px; padding:0 28px; border:0; border-radius:999px; background:rgba(255,255,255,.1); color:#fff; font:600 15.5px Manrope,system-ui,sans-serif; cursor:pointer">Volver</button>
+          <button style="height:58px; padding:0 40px; border:0; border-radius:999px; background:#fff; color:#0a0a0a; font:600 16.5px Manrope,system-ui,sans-serif; cursor:pointer">Continuar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+<p class="dv-next">Probá pedirme: “escribir el nombre en <a class="dv-oid" href="#6a">6a</a> es demasiada fricción” · “sumá el aviso que recibe Lucía” · “mostrame las 6 pantallas juntas en un mapa”</p>
+</section>
+</x-dc>
+</body>
+</html>

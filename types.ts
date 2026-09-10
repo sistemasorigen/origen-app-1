@@ -649,6 +649,36 @@ export interface GroupTag {
     color?: string; // e.g. 'bg-blue-100 text-blue-800'
 }
 
+/**
+ * Lo que la pantalla de re-apertura puede cambiar antes de crear el clon.
+ *
+ * Todo es opcional a propósito: un campo `undefined` se copia tal cual del
+ * grupo que terminó. `coHostId: null` sí es un valor — significa sacar al
+ * co-anfitrión, que es distinto de no haberlo tocado.
+ *
+ * Lo que NO se puede pisar y por eso no está acá: el anfitrión, el estado
+ * (el clon nace `pending` y lo aprueba un admin) y `parentGroupId`, que es
+ * lo que sostiene el linaje entre temporadas.
+ */
+export interface CamposReapertura {
+    name?: string;
+    meetingDay?: string;
+    meetingTime?: string;
+    location?: string;
+    isOnline?: boolean;
+    maxCapacity?: number;
+    description?: string;
+    imageUrl?: string;
+    categoryId?: string;
+    tags?: string[];
+    coHostId?: string | null;
+    coHostFirstName?: string;
+    coHostLastName?: string;
+    minAge?: number;
+    maxAge?: number;
+    targetGender?: 'Hombre' | 'Mujer' | 'Mixto';
+}
+
 export interface Group {
     id: string;
     name: string;
@@ -1356,3 +1386,220 @@ export const TRIVIA_ICONOS: Record<TriviaColor, string> = {
     naranja:  '★',
     violeta:  '♥',
 };
+
+// --- REPORTES GCX ---
+// Capa de datos de /reportes (Grupos de Conexión). Todas las funciones del
+// servicio reciben los mismos filtros: temporada + año.
+
+export type TemporadaGCX = 'S1' | 'S2' | 'S3';
+
+/**
+ * Gráfico 1 — participación real de las personas inscriptas.
+ *
+ * `sinDatos` NO es un caso de borde: hoy 11 de 26 grupos de S1 2026 no
+ * cargan ninguna asistencia. Si la UI muestra el porcentaje sobre `total`
+ * en vez de sobre `asistieron + nuncaAsistieron`, miente.
+ */
+export interface AsistenciaPersonasReporte {
+    asistieron: number;
+    nuncaAsistieron: number;
+    sinDatos: number;   // personas inscriptas en grupos que no reportan
+    total: number;
+}
+
+/** Gráfico 2 — disciplina de carga, no participación. */
+export interface GruposQueReportanReporte {
+    reportan: number;
+    noReportan: number;
+    total: number;
+    /** Para el "Ver los N grupos" del diseño. */
+    idsQueNoReportan: string[];
+}
+
+/**
+ * Gráfico 5 — un día en el que al menos un grupo cargó asistencia.
+ *
+ * Sólo aparecen los días con carga: un grupo que se reúne los jueves no
+ * genera una entrada del martes, y una semana entera sin que nadie cargue
+ * simplemente no está en la lista. El eje es "días con actividad", no un
+ * calendario completo de la temporada.
+ */
+export interface AsistenciaPorFechaDia {
+    fecha: string;   // 'YYYY-MM-DD'
+    /**
+     * Los GCX que cargaron ese día, ordenados por nombre, cada uno con sus
+     * presentes contra su cupo.
+     *
+     * A propósito NO hay un total de presentes del día: sumar los asistentes
+     * de diez grupos distintos da un número que no significa nada — cada uno
+     * tiene su propio cupo, y "69 presentes" no se puede leer contra nada.
+     * El dato que sirve es el de cada grupo por separado.
+     */
+    grupos: Array<{ id: string; nombre: string; presentes: number; capacidad: number }>;
+    /**
+     * Los GCX que ese día DEBÍAN cargar y no cargaron.
+     *
+     * El denominador no son todos los grupos de la temporada: son los que se
+     * reúnen ese día de la semana y ya estaban vigentes en esa fecha. Un
+     * grupo de los lunes no "falta" un jueves, y uno que arrancó en agosto no
+     * falta en junio.
+     */
+    sinCargar: Array<{ id: string; nombre: string; capacidad: number }>;
+}
+
+/**
+ * Gráfico 3 — una fila por categoría.
+ *
+ * `noEspecifica` y `sinDato` NO son lo mismo: el primero es quien eligió
+ * "No especificar" y por eso se grafica; el segundo es una inscripción sin
+ * cuenta detrás, de la que no se sabe nada, y queda fuera del gráfico.
+ *
+ * Las parejas cuentan como dos: una inscripción con `partner_data` suma el
+ * titular y su pareja por separado, aunque haya entrado por un solo
+ * formulario.
+ */
+export interface GeneroPorCategoriaFila {
+    categoriaId: string;
+    categoriaNombre: string;
+    masculino: number;
+    femenino: number;
+    noEspecifica: number;
+    sinDato: number;
+}
+
+/** Gráfico 4 — edades individuales, para que la UI decida si promedia o distribuye. */
+export interface EdadesPorCategoriaFila {
+    categoriaId: string;
+    categoriaNombre: string;
+    masculino: number[];
+    femenino: number[];
+    noEspecifica: number[];
+    sinDato: number;
+}
+
+/**
+ * Gráficos 6 y 7 — disciplina de carga de cada grupo de la temporada.
+ *
+ * Hay una fila por grupo, incluidos los que nunca cargaron nada (`cargadas`
+ * en 0). `esperadas` es cuántas veces cayó su día de encuentro entre su
+ * inicio y hoy, así que `sinCargar` es deuda real y no "todavía no llegó".
+ */
+export interface CargaPorGrupoFila {
+    groupId: string;
+    nombre: string;
+    /** Días distintos en los que cargó al menos una reunión. */
+    cargadas: number;
+    esperadas: number;
+    /** esperadas − cargadas, con piso en 0: un grupo puede cargar reuniones
+     *  extra fuera de su día y quedar por encima de lo esperado. */
+    sinCargar: number;
+    /** Personas aprobadas del grupo. La pareja de una inscripción cuenta
+     *  como una persona más. */
+    personas: number;
+    /** De esas personas, cuántas figuran presentes en alguna reunión. */
+    asistieron: number;
+}
+
+/** Un renglón de la planilla de grupos del dashboard. */
+export interface TablaGrupoReporteFila {
+    groupId: string;
+    nombre: string;
+    anfitrion: string;
+    coAnfitrion: string | null;   // el 87% no tiene: null explícito, no ''
+    inscriptos: number;
+    capacidad: number;
+    reportaAsistencia: boolean;
+    // Contexto que la tabla del diseño muestra bajo el nombre del grupo.
+    categoriaNombre: string;
+    diaReunion: string;
+    horaReunion: string;
+    esOnline: boolean;
+}
+
+
+/**
+ * KPIs del tablero de /reportes/gcx. Cuenta SOLO inscripciones APPROVED,
+ * a diferencia de getGroupRegistrationAnalytics, que suma también PENDING
+ * y REJECTED (133 vs 127 en S1 2026).
+ */
+export interface KPIsReportesGCX {
+    totalGrupos: number;
+    anfitriones: number;
+    coAnfitriones: number;
+    personasUnicas: number;
+    inscripcionesTotales: number;
+    /** Cuántas PERSONAS están en 1, en 2, o en 3 o más grupos. Suma personasUnicas. */
+    distribucion: { unGrupo: number; dosGrupos: number; tresOMas: number };
+}
+
+/** Todo el tablero de una temporada, con una sola pasada por la base. */
+
+/** Una fila de la tabla de miembros del detalle de un grupo. */
+export interface MiembroDetalleReporte {
+    registrationId: string;
+    nombre: string;
+    telefono?: string;
+    email?: string;
+    esPareja: boolean;
+    nombrePareja?: string;
+    derivadoDe?: string;      // nombre del grupo de origen
+    reunionesAsistidas: number;
+    // Reuniones cargadas DESDE que esta persona se inscribió, no el total
+    // del grupo — alguien que entró en abril no puede deber las reuniones
+    // de marzo.
+    totalReuniones: number;
+}
+
+export interface ReunionDetalleReporte {
+    fecha: string;
+    presentes: number;
+    total: number;
+}
+
+/** Todo lo de un grupo para la vista de análisis (/reportes/gcx/:groupId). */
+export interface DetalleGrupoReporte {
+    grupo: Group;
+    temporada: TemporadaGCX | null;
+    anio: number | null;
+    anfitrion: { nombre: string; telefono?: string } | null;
+    coAnfitrion: { nombre: string; telefono?: string } | null;
+    miembros: MiembroDetalleReporte[];
+    asistencia: {
+        reuniones: ReunionDetalleReporte[];
+        promedioPresentes: number;
+        reportaAsistencia: boolean;   // false = nunca cargó nada
+        // No pedido en la spec original: cuántas reuniones deberían haber
+        // pasado según el día de encuentro del grupo, desde el inicio hasta
+        // hoy (o el fin de temporada si ya terminó). Es lo que le da sentido
+        // a un "14" — sin esto, 14 reuniones cargadas no dice si el grupo
+        // reporta bien o le faltan la mitad.
+        reunionesEsperadas: number;
+    };
+    genealogia: {
+        vieneDe: { id: string; nombre: string } | null;
+        dioOrigenA: Array<{ id: string; nombre: string }>;
+    };
+    // No pedido en la spec original: promedio de presentes por reunión de
+    // TODOS los grupos de la misma temporada/año que cargaron asistencia.
+    // Es la comparación que el diseño usa para decir si "6,8 personas por
+    // reunión" es bueno o malo — sin una referencia, el número no dice nada.
+    // null si la temporada del grupo no se pudo determinar.
+    promedioIglesia: number | null;
+    // No pedido en la spec original: cuántas solicitudes PENDING tiene el
+    // grupo hoy. Sale gratis — ya se pide la lista completa de inscripciones
+    // para calcular el resto — y es justo el tipo de dato que el diseño
+    // pide mostrar en el estado "nunca reportó": lo poco que sí se sabe
+    // sin depender de que el anfitrión cargue nada.
+    solicitudesPendientes: number;
+}
+
+export interface ReportesGCXTemporada {
+    kpis: KPIsReportesGCX;
+    asistenciaPersonas: AsistenciaPersonasReporte;
+    gruposQueReportan: GruposQueReportanReporte;
+    generoPorCategoria: GeneroPorCategoriaFila[];
+    edadesPorCategoria: EdadesPorCategoriaFila[];
+    asistenciaPorFecha: AsistenciaPorFechaDia[];
+    cargaPorGrupo: CargaPorGrupoFila[];
+    tablaGrupos: TablaGrupoReporteFila[];
+}

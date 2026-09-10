@@ -139,7 +139,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
             />
 
             {/* Main Content Area */}
-            <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+            <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 print:ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
 
                 {renderModuleBackground()}
 
@@ -151,7 +151,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                 )}
 
                 {/* Navbar */}
-                <header className={`sticky top-0 z-30 flex-shrink-0 h-16 border-b transition-colors duration-300 ${isNavbarTransparent
+                <header className={`no-print print:hidden sticky top-0 z-30 flex-shrink-0 h-16 border-b transition-colors duration-300 ${isNavbarTransparent
                     ? 'bg-transparent border-transparent'
                     : 'bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-slate-200 dark:border-zinc-800'
                     }`}>
@@ -254,7 +254,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                     que no se pierde el acceso al menú al scrollear. */}
                 <main
                     id="main-content"
-                    className={`flex-1 w-full mx-auto animate-fadeIn relative z-10 ${isDashboard ? '-mt-16' : ''} ${!isFullWidthPage ? 'max-w-7xl px-4 sm:px-6 lg:px-8 py-8' : ''} ${currentSong ? 'pb-32' : 'pb-8'}`}
+                    className={`flex-1 w-full mx-auto animate-fadeIn relative z-10 print:max-w-none print:p-0 print:m-0 ${isDashboard ? '-mt-16 print:mt-0' : ''} ${!isFullWidthPage ? 'max-w-7xl px-4 sm:px-6 lg:px-8 py-8' : ''} ${currentSong ? 'pb-32' : 'pb-8'}`}
                     role="main"
                 >
                     {children}

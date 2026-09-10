@@ -1,7 +1,7 @@
 
 import { supabase } from './supabaseClient';
 import { db } from './dbService';
-import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant } from '../types';
+import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
 const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
@@ -19,6 +19,203 @@ const getSeasonFromDate = (
     if (md >= 629 && md <= 823) return 'S2';
     if (md >= 1005 && md <= 1129) return 'S3';
     return null;
+};
+
+// ── Reportes GCX — piezas compartidas por los cinco reportes ─────────────
+// (las funciones públicas viven en supabaseService, bloque "REPORTES GCX")
+
+interface UsuarioReporte {
+    id: string;
+    name: string;
+    gender: string | null;
+    age: number | null;
+    birthDate: string | null;
+}
+
+interface BaseReportesGCX {
+    grupos: any[];               // filas crudas de groups, ya filtradas por temporada
+    inscripciones: any[];        // filas de group_registrations con status APPROVED
+    gruposQueReportan: Set<string>;
+    idsPresentes: Set<string>;   // ids de inscripción que aparecen en alguna asistencia
+    usuarios: Map<string, UsuarioReporte>;
+    categorias: GroupCategory[];
+    // Cuántas personas hubo presentes en CADA reunión cargada de la
+    // temporada, de todos los grupos. Se guarda ya calculado (no las filas
+    // crudas) porque lo único que se necesita de acá es el promedio de la
+    // iglesia — usado hoy solo por getDetalleGrupoReporte, para no volver a
+    // pedir group_attendance de toda la temporada cuando ya se pidió acá.
+    presentesPorReunion: number[];
+    // Una entrada por reunión cargada de la temporada. Se guardan crudas y no
+    // agregadas por fecha porque el volumen es chico (226 filas en toda la
+    // base) y agrupar del lado de quien consume sale más barato que decidir
+    // acá una forma que después no sirva.
+    reuniones: Array<{ groupId: string; fecha: string; presentes: number }>;
+}
+
+// Cachea la PROMESA, no el resultado: si los cinco gráficos del tablero
+// arrancan a la vez, los cinco esperan la misma consulta en lugar de
+// disparar cinco. El TTL es corto a propósito — es un tablero de lectura,
+// pero tampoco tiene que quedar pegado si alguien recarga después de tocar
+// un dato.
+const BASE_REPORTES_TTL_MS = 30_000;
+const baseReportesCache = new Map<string, { momento: number; promesa: Promise<BaseReportesGCX | null> }>();
+
+// Se prefiere calcular de birth_date, que no se desactualiza, y se cae a
+// users.age cuando no hay fecha. Hacen falta las dos: hoy 333 de 396
+// usuarios tienen birth_date y 390 tienen age.
+const edadDeUsuario = (u?: UsuarioReporte): number | null => {
+    if (!u) return null;
+    if (u.birthDate) {
+        const nac = new Date(u.birthDate + 'T12:00:00');
+        if (!Number.isNaN(nac.getTime())) {
+            const hoy = new Date();
+            let edad = hoy.getFullYear() - nac.getFullYear();
+            const mes = hoy.getMonth() - nac.getMonth();
+            if (mes < 0 || (mes === 0 && hoy.getDate() < nac.getDate())) edad -= 1;
+            if (edad >= 0 && edad < 130) return edad;
+        }
+    }
+    return u.age ?? null;
+};
+
+/**
+ * Tres géneros y un `null`, que NO son cuatro formas de lo mismo.
+ *
+ * `noEspecifica` es una respuesta: la persona eligió "No especificar" en el
+ * registro o en su perfil. `null` es la ausencia de respuesta — una
+ * inscripción cargada a mano por el anfitrión, sin cuenta detrás. Mezclarlas
+ * borra la diferencia entre alguien que decidió no decirlo y alguien a quien
+ * nunca se le preguntó.
+ */
+const generoNormalizado = (u?: UsuarioReporte): 'masculino' | 'femenino' | 'noEspecifica' | null => {
+    const g = (u?.gender || '').trim().toLowerCase();
+    if (g.startsWith('m')) return 'masculino';
+    if (g.startsWith('f')) return 'femenino';
+    // Cualquier otro valor guardado es una respuesta explícita ('No
+    // especificar' es la que ofrece la UI). Vacío o ausente sí es sin dato.
+    return g ? 'noEspecifica' : null;
+};
+
+/**
+ * Recorre las inscripciones agrupando por categoría del grupo. Sirve para
+ * los gráficos 3 y 4, que solo difieren en qué guardan por persona: un
+ * conteo o la edad.
+ *
+ * Cada inscripción son una o dos personas (titular y pareja). La pareja
+ * solo tiene datos demográficos si está enlazada por partner_user_id;
+ * partner_data guarda nombre, apellido, email y teléfono, nunca género ni
+ * fecha de nacimiento.
+ */
+const agruparPorCategoria = (
+    base: BaseReportesGCX,
+    modo: 'genero' | 'edad',
+    edadMin = 10,
+    edadMax = 100
+) => {
+    const nombreCategoria = new Map(base.categorias.map(c => [c.id, c.name]));
+    const categoriaDeGrupo = new Map<string, string>(
+        base.grupos.map((g: any) => [g.id, g.category_id || ''])
+    );
+
+    const filas = new Map<string, {
+        categoriaId: string; categoriaNombre: string;
+        masculino: any; femenino: any; noEspecifica: any; sinDato: number;
+    }>();
+
+    const filaDe = (categoriaId: string) => {
+        let fila = filas.get(categoriaId);
+        if (!fila) {
+            fila = {
+                categoriaId,
+                categoriaNombre: nombreCategoria.get(categoriaId) || 'Sin categoría',
+                masculino: modo === 'edad' ? [] : 0,
+                femenino: modo === 'edad' ? [] : 0,
+                noEspecifica: modo === 'edad' ? [] : 0,
+                sinDato: 0,
+            };
+            filas.set(categoriaId, fila);
+        }
+        return fila;
+    };
+
+    base.inscripciones.forEach((r: any) => {
+        const categoriaId = categoriaDeGrupo.get(r.group_id) ?? '';
+        const fila = filaDe(categoriaId);
+
+        const personas: Array<string | null> = [r.user_id || null];
+        if (r.partner_data) personas.push(r.partner_user_id || null);
+
+        personas.forEach(userId => {
+            const u = userId ? base.usuarios.get(userId) : undefined;
+            const genero = generoNormalizado(u);
+
+            if (modo === 'genero') {
+                if (genero) fila[genero] += 1;
+                else fila.sinDato += 1;
+                return;
+            }
+
+            const edad = edadDeUsuario(u);
+            // Sin género no hay a qué barra mandarla, y sin edad no hay qué
+            // graficar: los dos casos son "sin dato", nunca un cero que
+            // arrastre el promedio para abajo. 'noEspecifica' NO cae acá: es
+            // una respuesta y tiene su propia barra.
+            if (!genero || edad === null || edad < edadMin || edad > edadMax) {
+                fila.sinDato += 1;
+                return;
+            }
+            (fila[genero] as number[]).push(edad);
+        });
+    });
+
+    // De mayor a menor, que es como el diseño las lee: un ranking.
+    const peso = (f: any) => modo === 'edad'
+        ? f.masculino.length + f.femenino.length + f.noEspecifica.length
+        : f.masculino + f.femenino + f.noEspecifica;
+
+    return Array.from(filas.values()).sort((a, b) => peso(b) - peso(a));
+};
+
+// Nombre del día → índice de Date.getDay() (0 = domingo). Mismo vocabulario
+// que components/GCX/formulario-grupo (DIAS_DE_REUNION), con y sin tilde por
+// si algún registro viejo la perdió al guardarse.
+const DIA_A_INDICE_JS: Record<string, number> = {
+    'Domingo': 0, 'Lunes': 1, 'Martes': 2,
+    'Miércoles': 3, 'Miercoles': 3,
+    'Jueves': 4, 'Viernes': 5,
+    'Sábado': 6, 'Sabado': 6,
+};
+
+/**
+ * Cuántas veces debería haber caído el día de encuentro del grupo entre su
+ * inicio y hoy (o el fin de temporada, si ya terminó). Es el "de 16" que le
+ * da sentido a "14 reuniones cargadas": sin esto, 14 es un número sin piso
+ * ni techo.
+ */
+const contarReunionesEsperadas = (startDate: string, endDate: string | null | undefined, meetingDay: string): number => {
+    const indiceDia = DIA_A_INDICE_JS[meetingDay];
+    if (!startDate || indiceDia === undefined) return 0;
+
+    const inicio = new Date(startDate + 'T12:00:00');
+    if (Number.isNaN(inicio.getTime())) return 0;
+
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    // Si la temporada ya terminó, el límite es su fin — no tiene sentido
+    // contar reuniones "esperadas" en semanas que todavía no llegaron para
+    // un grupo que sigue activo, pero tampoco después de que cerró.
+    const limiteStr = endDate && endDate < hoyStr ? endDate : hoyStr;
+    const limite = new Date(limiteStr + 'T12:00:00');
+    if (limite < inicio) return 0;
+
+    const cursor = new Date(inicio);
+    while (cursor.getDay() !== indiceDia) cursor.setDate(cursor.getDate() + 1);
+
+    let cuenta = 0;
+    while (cursor <= limite) {
+        cuenta += 1;
+        cursor.setDate(cursor.getDate() + 7);
+    }
+    return cuenta;
 };
 
 // EXPORTED standalone function for direct use
@@ -2810,11 +3007,22 @@ export const supabaseService = {
     }
   },
 
+  /**
+   * Re-apertura: crea un grupo NUEVO copiado del original y marca al original
+   * como `finished`. No revive nada — el histórico del grupo que terminó
+   * queda intacto y colgado del clon por `parent_group_id`.
+   *
+   * `cambios` deja que la pantalla de re-apertura ajuste los datos antes de
+   * crear el clon. Sin él, la única forma de corregir un horario o una
+   * capacidad para la temporada nueva era esperar la aprobación y recién
+   * después editar el grupo.
+   */
   async cloneGroupForNewSeason(
     originalGroupId: string,
     newStartDate: string,
     newEndDate: string,
-    isAdminView: boolean = false
+    isAdminView: boolean = false,
+    cambios?: CamposReapertura
   ): Promise<Group | null> {
     try {
       console.log('[Groups] Cloning group for new season:', originalGroupId);
@@ -2858,6 +3066,32 @@ export const supabaseService = {
         admin_note:         '',
         parent_group_id:    originalGroupId,
       };
+
+      // Lo que la pantalla de re-apertura mandó pisa lo copiado. Se compara
+      // contra `undefined`, no truthy: `false` (is_online), `0` (min_age) y
+      // `null` (sacar el co-anfitrión) son valores legítimos que un chequeo
+      // truthy descartaría en silencio.
+      if (cambios) {
+        const pisar = (columna: string, valor: unknown) => {
+          if (valor !== undefined) newGroupData[columna] = valor;
+        };
+        pisar('name',               cambios.name);
+        pisar('meeting_day',        cambios.meetingDay);
+        pisar('meeting_time',       cambios.meetingTime);
+        pisar('location',           cambios.location);
+        pisar('is_online',          cambios.isOnline);
+        pisar('max_capacity',       cambios.maxCapacity);
+        pisar('description',        cambios.description);
+        pisar('image_url',          cambios.imageUrl);
+        pisar('category_id',        cambios.categoryId);
+        pisar('tags',               cambios.tags);
+        pisar('co_host_id',         cambios.coHostId);
+        pisar('co_host_first_name', cambios.coHostFirstName);
+        pisar('co_host_last_name',  cambios.coHostLastName);
+        pisar('min_age',            cambios.minAge);
+        pisar('max_age',            cambios.maxAge);
+        pisar('target_gender',      cambios.targetGender);
+      }
 
       const { data: newGroup, error: insertError } = await supabase
         .from('groups')
@@ -5771,6 +6005,796 @@ export const supabaseService = {
       return { totalGroups, totalHosts, totalCoHosts, totalRegistrations, uniquePeople, distribution };
     } catch (err) {
       console.error('[supabaseService] Exception calculating group registration analytics:', err);
+      return null;
+    }
+  },
+
+  // ════════════════════════════════════════════════════════════════════
+  // REPORTES GCX — capa de datos de /reportes
+  //
+  // Estas cinco funciones se SUMAN a getGroupRegistrationAnalytics (arriba),
+  // que sigue siendo la fuente de los KPIs. No la reemplazan.
+  //
+  // ⚠️ OJO CON LA BASE DE CÁLCULO. getGroupRegistrationAnalytics cuenta
+  // TODAS las inscripciones de los grupos de la temporada, sin filtrar por
+  // status: para S1 2026 son 133, de las cuales 6 están PENDING o REJECTED.
+  // Estas funciones nuevas cuentan solo las APPROVED (113 filas + 14
+  // parejas = 127 personas). Los dos números son correctos y miden cosas
+  // distintas — la UI no puede mezclarlos en una misma frase.
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Trae de una sola vez lo que comparten los cinco reportes.
+   *
+   * El volumen es chico (86 grupos, 572 inscripciones, 226 asistencias en
+   * toda la base), así que agregar del lado del cliente sale más barato que
+   * mantener cinco RPCs. Lo que NO es aceptable es pedir lo mismo cinco
+   * veces, así que el resultado se cachea unos segundos: cuando el tablero
+   * monta y dispara los cinco gráficos juntos, se hace una sola pasada.
+   */
+  async _cargarBaseReportesGCX(season: TemporadaGCX, year: number): Promise<BaseReportesGCX | null> {
+    const clave = `${season}-${year}`;
+    const enCache = baseReportesCache.get(clave);
+    if (enCache && Date.now() - enCache.momento < BASE_REPORTES_TTL_MS) {
+      return enCache.promesa;
+    }
+
+    const promesa = (async (): Promise<BaseReportesGCX | null> => {
+      try {
+        const { data: gruposRaw, error: errGrupos } = await supabase
+          .from('groups')
+          .select('id, name, status, start_date, host_id, co_host_id, co_host_first_name, co_host_last_name, leader_name, leader_surname, category_id, max_capacity, meeting_day, meeting_time, is_online');
+
+        if (errGrupos) {
+          console.error('[ReportesGCX] Error trayendo grupos:', errGrupos);
+          return null;
+        }
+
+        // Mismo filtro, exactamente, que getGroupRegistrationAnalytics: si
+        // acá se filtrara distinto, la tabla no cerraría con los KPIs.
+        const grupos = (gruposRaw || []).filter((g: any) => {
+          if (g.status !== 'approved') return false;
+          if (getSeasonFromDate(g.start_date) !== season) return false;
+          const anioGrupo = g.start_date
+            ? new Date(g.start_date + 'T12:00:00').getFullYear()
+            : null;
+          return anioGrupo === year;
+        });
+
+        if (grupos.length === 0) {
+          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [] };
+        }
+
+        const idsGrupos = grupos.map((g: any) => g.id);
+
+        const [resInscripciones, resAsistencias, categorias] = await Promise.all([
+          supabase
+            .from('group_registrations')
+            .select('id, group_id, user_id, status, partner_data, partner_user_id, email, first_name, last_name')
+            .in('group_id', idsGrupos),
+          supabase
+            .from('group_attendance')
+            .select('group_id, present_members, date')
+            .in('group_id', idsGrupos),
+          supabaseService.getGroupCategories(),
+        ]);
+
+        if (resInscripciones.error) {
+          console.error('[ReportesGCX] Error trayendo inscripciones:', resInscripciones.error);
+          return null;
+        }
+        if (resAsistencias.error) {
+          console.error('[ReportesGCX] Error trayendo asistencias:', resAsistencias.error);
+          return null;
+        }
+
+        const inscripciones = (resInscripciones.data || [])
+          .filter((r: any) => String(r.status || '').toUpperCase() === 'APPROVED');
+
+        // Un grupo "reporta" si cargó al menos una reunión, aunque haya ido
+        // nadie: la fila existe, que es lo que mide este indicador.
+        const gruposQueReportan = new Set<string>();
+        // present_members guarda ids de INSCRIPCIÓN, y la pareja va con el
+        // sufijo "-partner" (lo arma PaginaAsistenciaGrupo). 127 de los 1184
+        // ids cargados hoy son de ese tipo: sin contemplarlo, toda pareja
+        // figuraría como que nunca asistió.
+        const idsPresentes = new Set<string>();
+        const presentesPorReunion: number[] = [];
+        const reuniones: Array<{ groupId: string; fecha: string; presentes: number }> = [];
+        (resAsistencias.data || []).forEach((a: any) => {
+          gruposQueReportan.add(a.group_id);
+          const presentes = Array.isArray(a.present_members) ? a.present_members : [];
+          presentes.forEach((id: unknown) => idsPresentes.add(String(id)));
+          presentesPorReunion.push(presentes.length);
+          // `date` es DATE en Postgres y llega como 'YYYY-MM-DD'. Una fila sin
+          // fecha no puede ubicarse en el calendario y se descarta acá en vez
+          // de dibujar una columna "Invalid Date".
+          if (a.date) {
+            reuniones.push({
+              groupId: a.group_id,
+              fecha: String(a.date).split('T')[0],
+              presentes: presentes.length,
+            });
+          }
+        });
+
+        // Un solo pedido de usuarios, con los ids que realmente hacen falta:
+        // inscriptos, parejas con cuenta, anfitriones y co-anfitriones.
+        const idsUsuarios = new Set<string>();
+        inscripciones.forEach((r: any) => {
+          if (r.user_id) idsUsuarios.add(r.user_id);
+          if (r.partner_user_id) idsUsuarios.add(r.partner_user_id);
+        });
+        grupos.forEach((g: any) => {
+          if (g.host_id) idsUsuarios.add(g.host_id);
+          if (g.co_host_id) idsUsuarios.add(g.co_host_id);
+        });
+
+        const usuarios = new Map<string, UsuarioReporte>();
+        if (idsUsuarios.size > 0) {
+          const { data: usuariosRaw, error: errUsuarios } = await supabase
+            .from('users')
+            .select('id, name, gender, age, birth_date')
+            .in('id', Array.from(idsUsuarios));
+
+          if (errUsuarios) {
+            console.error('[ReportesGCX] Error trayendo usuarios:', errUsuarios);
+            return null;
+          }
+          (usuariosRaw || []).forEach((u: any) => {
+            usuarios.set(u.id, {
+              id: u.id,
+              name: u.name || '',
+              gender: u.gender || null,
+              age: typeof u.age === 'number' ? u.age : null,
+              birthDate: u.birth_date || null,
+            });
+          });
+        }
+
+        return { grupos, inscripciones, gruposQueReportan, idsPresentes, usuarios, categorias, presentesPorReunion, reuniones };
+      } catch (err) {
+        console.error('[ReportesGCX] Excepción cargando la base:', err);
+        return null;
+      }
+    })();
+
+    baseReportesCache.set(clave, { momento: Date.now(), promesa });
+    return promesa;
+  },
+
+  /**
+   * Gráfico 1 — De los inscriptos aprobados de la temporada, cuántos
+   * asistieron al menos una vez y cuántos nunca.
+   *
+   * DEFINICIÓN ELEGIDA (pendiente de confirmar con Ignacio): se cuenta
+   * "fue al menos una vez", NO el promedio de ocupación reunión a reunión.
+   * Responde mejor a "¿quién está participando de verdad?" y no se
+   * distorsiona si un grupo cargó pocas reuniones. Para cambiarla a
+   * promedio de ocupación hay que reescribir esta función entera: el
+   * promedio necesita recorrer cada fila de group_attendance, no el
+   * conjunto de ids presentes.
+   *
+   * OJO: solo cuenta sobre los grupos que efectivamente cargaron
+   * asistencia. Hoy 11 de 26 no cargan ninguna, así que `sinDatos` es parte
+   * del resultado y la UI tiene que mostrarlo — si no, el porcentaje miente.
+   */
+  async getAsistenciaPersonas(
+    season: TemporadaGCX,
+    year: number
+  ): Promise<AsistenciaPersonasReporte | null> {
+    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    if (!base) return null;
+
+    let asistieron = 0;
+    let nuncaAsistieron = 0;
+    let sinDatos = 0;
+
+    base.inscripciones.forEach((r: any) => {
+      const grupoReporta = base.gruposQueReportan.has(r.group_id);
+      // Titular y pareja son dos personas y se cuentan por separado, igual
+      // que en getGroupRegistrationAnalytics.
+      const personas: string[] = [String(r.id)];
+      if (r.partner_data) personas.push(`${r.id}-partner`);
+
+      personas.forEach(idPersona => {
+        if (!grupoReporta) { sinDatos += 1; return; }
+        if (base.idsPresentes.has(idPersona)) asistieron += 1;
+        else nuncaAsistieron += 1;
+      });
+    });
+
+    return { asistieron, nuncaAsistieron, sinDatos, total: asistieron + nuncaAsistieron + sinDatos };
+  },
+
+  /**
+   * KPIs del tablero nuevo. Mismos indicadores que
+   * getGroupRegistrationAnalytics, pero contando SOLO inscripciones
+   * APPROVED.
+   *
+   * La función vieja cuenta también PENDING y REJECTED (133 vs 127 en
+   * S1 2026). No es un bug: miden cosas distintas. Pero el tablero nuevo no
+   * puede mostrar 133 arriba y 127 en los gráficos.
+   *
+   * getGroupRegistrationAnalytics NO se toca: la sigue usando /reportes
+   * (Pastores.tsx).
+   */
+  async getKPIsReportesGCX(
+    season: TemporadaGCX,
+    year: number
+  ): Promise<KPIsReportesGCX | null> {
+    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    if (!base) return null;
+
+    const anfitriones = new Set<string>();
+    const coAnfitriones = new Set<string>();
+    base.grupos.forEach((g: any) => {
+      if (g.host_id) anfitriones.add(g.host_id);
+      // Misma exclusión que en getTablaGruposReporte: nadie es su propio
+      // co-anfitrión. Sin esto, 3 de los 26 grupos de S1 2026 inflarían el
+      // indicador con el anfitrión contado dos veces.
+      if (g.co_host_id && g.co_host_id !== g.host_id) coAnfitriones.add(g.co_host_id);
+    });
+
+    // Misma clave de identidad que la función vieja: user_id, y si no hay
+    // cuenta, el email. Una persona en dos grupos es una sola persona.
+    const vecesPorPersona = new Map<string, number>();
+    const sumar = (clave: string) => vecesPorPersona.set(clave, (vecesPorPersona.get(clave) || 0) + 1);
+
+    let inscripcionesTotales = 0;
+    base.inscripciones.forEach((r: any) => {
+      inscripcionesTotales += 1;
+      sumar(r.user_id || r.email || `reg-${r.id}`);
+
+      if (r.partner_data) {
+        inscripcionesTotales += 1;
+        const pd = r.partner_data as any;
+        const clave = r.partner_user_id
+          || pd?.email
+          || `${pd?.firstName || ''}${pd?.lastName || ''}`
+          || `pareja-${r.id}`;
+        sumar(clave);
+      }
+    });
+
+    const distribucion = { unGrupo: 0, dosGrupos: 0, tresOMas: 0 };
+    vecesPorPersona.forEach(veces => {
+      if (veces === 1) distribucion.unGrupo += 1;
+      else if (veces === 2) distribucion.dosGrupos += 1;
+      else distribucion.tresOMas += 1;
+    });
+
+    return {
+      totalGrupos: base.grupos.length,
+      anfitriones: anfitriones.size,
+      coAnfitriones: coAnfitriones.size,
+      personasUnicas: vecesPorPersona.size,
+      inscripcionesTotales,
+      distribucion,
+    };
+  },
+
+  /**
+   * Gráfico 2 — Cuántos grupos de la temporada cargaron al menos una
+   * asistencia y cuántos ninguna.
+   */
+  async getGruposQueReportan(
+    season: TemporadaGCX,
+    year: number
+  ): Promise<GruposQueReportanReporte | null> {
+    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    if (!base) return null;
+
+    const idsQueNoReportan = base.grupos
+      .filter((g: any) => !base.gruposQueReportan.has(g.id))
+      .map((g: any) => g.id);
+
+    const total = base.grupos.length;
+    const noReportan = idsQueNoReportan.length;
+    return { reportan: total - noReportan, noReportan, total, idsQueNoReportan };
+  },
+
+  /**
+   * Gráfico 3 — Inscriptos por categoría, separados por género.
+   *
+   * Cobertura verificada: 390 de 396 usuarios tienen género cargado, pero
+   * las inscripciones sin `user_id` no tienen a quién preguntarle — son
+   * personas anotadas a mano por el anfitrión, sin cuenta en la app. Por eso
+   * `sinDato` se devuelve aparte: la UI lo comunica en vez de esconderlo.
+   *
+   * Las parejas caen siempre en `sinDato` salvo que tengan
+   * `partner_user_id`: `partner_data` guarda nombre, apellido, email y
+   * teléfono, nunca el género.
+   */
+  async getGeneroPorCategoria(
+    season: TemporadaGCX,
+    year: number
+  ): Promise<GeneroPorCategoriaFila[] | null> {
+    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    if (!base) return null;
+    return agruparPorCategoria(base, 'genero') as GeneroPorCategoriaFila[];
+  },
+
+  /**
+   * Gráfico 4 — Edades de los inscriptos por categoría, separadas por
+   * género. `edadMin`/`edadMax` filtran (por defecto 10 a 100).
+   *
+   * De dónde sale la edad: se prefiere calcularla de `birth_date`, que no se
+   * desactualiza, y se cae a `users.age` cuando no hay fecha. Hacen falta
+   * las dos: hoy 333 de 396 usuarios tienen `birth_date` y 390 tienen
+   * `age` — usar solo una perdería gente.
+   */
+  async getEdadesPorCategoria(
+    season: TemporadaGCX,
+    year: number,
+    edadMin: number = 10,
+    edadMax: number = 100
+  ): Promise<EdadesPorCategoriaFila[] | null> {
+    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    if (!base) return null;
+    return agruparPorCategoria(base, 'edad', edadMin, edadMax) as EdadesPorCategoriaFila[];
+  },
+
+  /**
+   * Gráfico 5 — qué GCX cargaron asistencia cada día.
+   *
+   * Devuelve un día por cada fecha en la que al menos un grupo cargó una
+   * reunión, con la lista de grupos de ese día. Los días sin ninguna carga
+   * NO aparecen: el eje son los días con actividad, no el calendario entero
+   * de la temporada (que tendría el doble de columnas, casi todas vacías,
+   * porque los grupos se reparten entre los siete días de la semana).
+   *
+   * Un grupo que cargó dos reuniones el mismo día figura una sola vez, con
+   * los presentes sumados: la pregunta es qué grupos reportaron ese día.
+   *
+   * Cada día trae además `sinCargar`: los grupos que se reúnen ese día de la
+   * semana, ya estaban vigentes, y no cargaron. Ese es el denominador útil —
+   * contra los 30 grupos de la temporada el número sería ~21 todos los días,
+   * porque los grupos se reparten entre los siete días de la semana.
+   */
+  async getAsistenciaPorFecha(
+    season: TemporadaGCX,
+    year: number
+  ): Promise<AsistenciaPorFechaDia[] | null> {
+    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    if (!base) return null;
+
+    // El día de reunión y la ventana de vigencia hacen falta para el otro
+    // lado del gráfico: quién DEBÍA cargar ese día.
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const soloFecha = (v: unknown) => v ? String(v).split('T')[0] : null;
+
+    const datosGrupo = new Map<string, {
+      nombre: string;
+      capacidad: number;
+      diaIndice: number | undefined;
+      inicio: string | null;
+      fin: string | null;
+    }>(
+      base.grupos.map((g: any) => [g.id, {
+        nombre: g.name || 'Sin nombre',
+        capacidad: Number(g.max_capacity) || 0,
+        diaIndice: DIA_A_INDICE_JS[g.meeting_day],
+        inicio: soloFecha(g.start_date),
+        fin: soloFecha(g.end_date),
+      }])
+    );
+
+    const porFecha = new Map<string, Map<string, number>>();
+    base.reuniones.forEach(r => {
+      if (!datosGrupo.has(r.groupId)) return;
+      if (!porFecha.has(r.fecha)) porFecha.set(r.fecha, new Map());
+      const delDia = porFecha.get(r.fecha)!;
+      delDia.set(r.groupId, (delDia.get(r.groupId) || 0) + r.presentes);
+    });
+
+    return [...porFecha.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([fecha, delDia]) => {
+        const indiceDia = new Date(`${fecha}T12:00:00`).getDay();
+
+        // Debía cargar: se reúne ese día de la semana Y la fecha cae dentro de
+        // su vigencia. Comparar strings 'YYYY-MM-DD' alcanza y evita otra
+        // ronda de Date con husos horarios. El tope de hoy es por las dudas:
+        // porFecha sólo tiene fechas con carga, pero una fila con fecha
+        // futura mal cargada no debe generar "faltantes" de una reunión que
+        // todavía no pasó.
+        const debiaCargar = (g: { diaIndice?: number; inicio: string | null; fin: string | null }) =>
+          g.diaIndice === indiceDia
+          && fecha <= hoyStr
+          && (!g.inicio || g.inicio <= fecha)
+          && (!g.fin || fecha <= g.fin);
+
+        return {
+          fecha,
+          grupos: [...delDia.entries()]
+            .map(([id, presentes]) => {
+              const g = datosGrupo.get(id)!;
+              return { id, nombre: g.nombre, presentes, capacidad: g.capacidad };
+            })
+            .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+          sinCargar: [...datosGrupo.entries()]
+            .filter(([id, g]) => !delDia.has(id) && debiaCargar(g))
+            .map(([id, g]) => ({ id, nombre: g.nombre, capacidad: g.capacidad }))
+            .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+        };
+      });
+  },
+
+  /**
+   * Gráficos 6 y 7 — cuánto carga cada grupo de la temporada.
+   *
+   * Una fila por grupo, TODOS los grupos, incluidos los que nunca cargaron
+   * nada: los dos gráficos parten el mismo padrón por perspectivas opuestas
+   * (quién más carga / quién menos), así que ninguno puede filtrar filas.
+   *
+   * `cargadas` cuenta DÍAS distintos, no filas de asistencia, para que el
+   * número cierre con el del calendario de carga de la misma pantalla.
+   */
+  async getCargaPorGrupo(
+    season: TemporadaGCX,
+    year: number
+  ): Promise<CargaPorGrupoFila[] | null> {
+    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    if (!base) return null;
+
+    const diasPorGrupo = new Map<string, Set<string>>();
+    base.reuniones.forEach(r => {
+      if (!diasPorGrupo.has(r.groupId)) diasPorGrupo.set(r.groupId, new Set());
+      diasPorGrupo.get(r.groupId)!.add(r.fecha);
+    });
+
+    // Personas y asistentes por grupo. Misma convención de ids que
+    // getAsistenciaPersonas: el titular es el id de la inscripción y la
+    // pareja lleva el sufijo '-partner', que es lo que guarda
+    // present_members. Sin el sufijo, toda pareja figuraría como ausente.
+    const gentePorGrupo = new Map<string, { personas: number; asistieron: number }>();
+    base.inscripciones.forEach((r: any) => {
+      const acc = gentePorGrupo.get(r.group_id) || { personas: 0, asistieron: 0 };
+      const ids = [String(r.id)];
+      if (r.partner_data) ids.push(`${r.id}-partner`);
+      ids.forEach(id => {
+        acc.personas += 1;
+        if (base.idsPresentes.has(id)) acc.asistieron += 1;
+      });
+      gentePorGrupo.set(r.group_id, acc);
+    });
+
+    return base.grupos.map((g: any) => {
+      const cargadas = diasPorGrupo.get(g.id)?.size ?? 0;
+      const gente = gentePorGrupo.get(g.id) || { personas: 0, asistieron: 0 };
+      const esperadas = contarReunionesEsperadas(
+        g.start_date ? String(g.start_date).split('T')[0] : '',
+        g.end_date ? String(g.end_date).split('T')[0] : null,
+        g.meeting_day
+      );
+      return {
+        groupId: g.id,
+        nombre: g.name || 'Sin nombre',
+        cargadas,
+        esperadas,
+        sinCargar: Math.max(0, esperadas - cargadas),
+        personas: gente.personas,
+        asistieron: gente.asistieron,
+      };
+    });
+  },
+
+  /**
+   * Tabla del dashboard — un renglón por grupo de la temporada.
+   *
+   * `inscriptos` cuenta PERSONAS aprobadas (la pareja suma 1), para que
+   * "8/12" se lea contra la capacidad real del grupo.
+   */
+  async getTablaGruposReporte(
+    season: TemporadaGCX,
+    year: number
+  ): Promise<TablaGrupoReporteFila[] | null> {
+    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    if (!base) return null;
+
+    const porGrupo = new Map<string, number>();
+    base.inscripciones.forEach((r: any) => {
+      porGrupo.set(r.group_id, (porGrupo.get(r.group_id) || 0) + (r.partner_data ? 2 : 1));
+    });
+
+    const nombreCategoria = new Map(base.categorias.map(c => [c.id, c.name]));
+
+    return base.grupos.map((g: any) => {
+      const host = g.host_id ? base.usuarios.get(g.host_id) : undefined;
+      // Nadie es su propio co-anfitrión. Hoy 3 de los 26 grupos de S1 2026
+      // tienen co_host_id == host_id (dato mal cargado); mostrarlo haría
+      // parecer que el grupo tiene dos líderes cuando tiene uno.
+      const coHostEsOtraPersona = !!g.co_host_id && g.co_host_id !== g.host_id;
+      const coHost = coHostEsOtraPersona ? base.usuarios.get(g.co_host_id) : undefined;
+
+      // leader_name está desnormalizado en groups y queda viejo después de
+      // una transferencia de titularidad, así que manda el usuario real.
+      const anfitrion = host?.name?.trim()
+        || `${g.leader_name || ''} ${g.leader_surname || ''}`.trim()
+        || 'Sin anfitrión';
+
+      const coAnfitrionManual = `${g.co_host_first_name || ''} ${g.co_host_last_name || ''}`.trim();
+      const coAnfitrion = coHost?.name?.trim() || coAnfitrionManual || null;
+
+      return {
+        groupId: g.id,
+        nombre: g.name || 'Sin nombre',
+        anfitrion,
+        coAnfitrion,
+        inscriptos: porGrupo.get(g.id) || 0,
+        capacidad: g.max_capacity || 0,
+        reportaAsistencia: base.gruposQueReportan.has(g.id),
+        categoriaNombre: nombreCategoria.get(g.category_id) || 'Sin categoría',
+        diaReunion: g.meeting_day || '',
+        horaReunion: g.meeting_time || '',
+        esOnline: !!g.is_online,
+      };
+    });
+  },
+
+  /**
+   * Todo el tablero de una temporada. Es lo que conviene llamar desde la
+   * pantalla: las cinco funciones comparten la misma pasada por la base.
+   */
+  async getReportesGCX(
+    season: TemporadaGCX,
+    year: number
+  ): Promise<ReportesGCXTemporada | null> {
+    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    if (!base) return null;
+
+    const [kpis, asistenciaPersonas, gruposQueReportan, generoPorCategoria, edadesPorCategoria, asistenciaPorFecha, cargaPorGrupo, tablaGrupos] =
+      await Promise.all([
+        supabaseService.getKPIsReportesGCX(season, year),
+        supabaseService.getAsistenciaPersonas(season, year),
+        supabaseService.getGruposQueReportan(season, year),
+        supabaseService.getGeneroPorCategoria(season, year),
+        supabaseService.getEdadesPorCategoria(season, year),
+        supabaseService.getAsistenciaPorFecha(season, year),
+        supabaseService.getCargaPorGrupo(season, year),
+        supabaseService.getTablaGruposReporte(season, year),
+      ]);
+
+    if (!kpis || !asistenciaPersonas || !gruposQueReportan || !generoPorCategoria || !edadesPorCategoria || !asistenciaPorFecha || !cargaPorGrupo || !tablaGrupos) {
+      return null;
+    }
+    return { kpis, asistenciaPersonas, gruposQueReportan, generoPorCategoria, edadesPorCategoria, asistenciaPorFecha, cargaPorGrupo, tablaGrupos };
+  },
+
+  /**
+   * Todo lo de un grupo para la vista de análisis (/reportes/gcx/:groupId).
+   * Solo inscripciones APPROVED, igual que el resto del tablero nuevo.
+   *
+   * NO reusa _cargarBaseReportesGCX: esa función trae los ~26-30 grupos de
+   * toda la temporada para poder comparar entre ellos, y acá hace falta uno
+   * solo — traer la temporada entera para quedarse con un grupo sería tirar
+   * el resto. Las consultas van scopeadas a este groupId. La única
+   * excepción es el promedio de la iglesia (ver más abajo): ese sí necesita
+   * la temporada completa, así que ahí sí se reusa la base cacheada en vez
+   * de duplicar la consulta.
+   */
+  async getDetalleGrupoReporte(groupId: string): Promise<DetalleGrupoReporte | null> {
+    try {
+      const { data: grupoRaw, error: errGrupo } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('id', groupId)
+        .maybeSingle();
+
+      if (errGrupo) {
+        console.error('[DetalleGrupoReporte] Error trayendo el grupo:', errGrupo);
+        return null;
+      }
+      // Id inválido o inexistente: se distingue de un error de red devolviendo
+      // null igual, la página lo lee como "no encontrado" en los dos casos.
+      if (!grupoRaw) return null;
+
+      const grupo = supabaseService._dbRowToGroup(grupoRaw);
+      const temporada = getSeasonFromDate(grupoRaw.start_date);
+      const anio = grupoRaw.start_date
+        ? new Date(grupoRaw.start_date + 'T12:00:00').getFullYear()
+        : null;
+
+      const [resInscripciones, resAsistencias] = await Promise.all([
+        supabase
+          .from('group_registrations')
+          .select('id, first_name, last_name, email, phone, status, timestamp, partner_data, transfer_from_group_id')
+          .eq('group_id', groupId),
+        supabase
+          .from('group_attendance')
+          .select('date, present_members')
+          .eq('group_id', groupId)
+          .order('date', { ascending: true }),
+      ]);
+
+      if (resInscripciones.error) {
+        console.error('[DetalleGrupoReporte] Error trayendo inscripciones:', resInscripciones.error);
+        return null;
+      }
+      if (resAsistencias.error) {
+        console.error('[DetalleGrupoReporte] Error trayendo asistencia:', resAsistencias.error);
+        return null;
+      }
+
+      const todasLasInscripciones = resInscripciones.data || [];
+      const aprobadas = todasLasInscripciones.filter(
+        (r: any) => String(r.status || '').toUpperCase() === 'APPROVED'
+      );
+      const filasAsistencia = resAsistencias.data || [];
+
+      // Ids válidos de personas de ESTE grupo (titular + pareja con el
+      // sufijo "-partner"), sin importar el status actual: una asistencia se
+      // carga sobre gente que en su momento estaba aprobada, y no vale la
+      // pena descartar una presencia real solo porque después se dio de baja.
+      const idsValidos = new Set<string>();
+      todasLasInscripciones.forEach((r: any) => {
+        idsValidos.add(String(r.id));
+        if (r.partner_data) idsValidos.add(`${r.id}-partner`);
+      });
+
+      // ── Anfitrión y co-anfitrión ─────────────────────────────────────
+      const idsUsuarios = new Set<string>();
+      if (grupoRaw.host_id) idsUsuarios.add(grupoRaw.host_id);
+      // Mismo criterio que getTablaGruposReporte: nadie es su propio
+      // co-anfitrión (3 de 26 grupos de S1 2026 tienen ese dato mal cargado).
+      const coHostEsOtraPersona = !!grupoRaw.co_host_id && grupoRaw.co_host_id !== grupoRaw.host_id;
+      if (coHostEsOtraPersona) idsUsuarios.add(grupoRaw.co_host_id);
+
+      const usuarios = new Map<string, { name: string; phone: string | null }>();
+      if (idsUsuarios.size > 0) {
+        const { data: usuariosRaw, error: errUsuarios } = await supabase
+          .from('users')
+          .select('id, name, phone')
+          .in('id', Array.from(idsUsuarios));
+        if (errUsuarios) {
+          console.error('[DetalleGrupoReporte] Error trayendo usuarios:', errUsuarios);
+        } else {
+          (usuariosRaw || []).forEach((u: any) =>
+            usuarios.set(u.id, { name: u.name || '', phone: u.phone || null })
+          );
+        }
+      }
+
+      const hostUsuario = grupoRaw.host_id ? usuarios.get(grupoRaw.host_id) : undefined;
+      // leader_name/leader_surname están desnormalizados en groups y quedan
+      // viejos después de una transferencia de titularidad — manda el
+      // usuario real cuando existe, igual que en getTablaGruposReporte.
+      const nombreAnfitrion = hostUsuario?.name?.trim()
+        || `${grupoRaw.leader_name || ''} ${grupoRaw.leader_surname || ''}`.trim();
+      const anfitrion = nombreAnfitrion
+        ? { nombre: nombreAnfitrion, telefono: hostUsuario?.phone || grupoRaw.leader_phone || undefined }
+        : null;
+
+      const coHostUsuario = coHostEsOtraPersona ? usuarios.get(grupoRaw.co_host_id) : undefined;
+      const coAnfitrionManual = `${grupoRaw.co_host_first_name || ''} ${grupoRaw.co_host_last_name || ''}`.trim();
+      const nombreCoAnfitrion = coHostUsuario?.name?.trim() || coAnfitrionManual;
+      const coAnfitrion = nombreCoAnfitrion
+        ? { nombre: nombreCoAnfitrion, telefono: coHostUsuario?.phone || undefined }
+        : null;
+
+      // ── Genealogía ────────────────────────────────────────────────────
+      // Un solo pedido de nombres para el padre (parent_group_id) y para
+      // todos los grupos de origen de las derivaciones que llegaron acá
+      // (transfer_from_group_id) — normalmente 0 o 1 grupo distinto.
+      const idsGenealogiaOrigen = new Set<string>();
+      if (grupoRaw.parent_group_id) idsGenealogiaOrigen.add(grupoRaw.parent_group_id);
+      aprobadas.forEach((r: any) => {
+        if (r.transfer_from_group_id) idsGenealogiaOrigen.add(r.transfer_from_group_id);
+      });
+
+      const [resOrigenes, resHijos] = await Promise.all([
+        idsGenealogiaOrigen.size > 0
+          ? supabase.from('groups').select('id, name').in('id', Array.from(idsGenealogiaOrigen))
+          : Promise.resolve({ data: [] as any[], error: null }),
+        supabase.from('groups').select('id, name').eq('parent_group_id', groupId),
+      ]);
+
+      if (resHijos.error) {
+        console.error('[DetalleGrupoReporte] Error trayendo grupos derivados:', resHijos.error);
+      }
+      const nombreGrupoPorId = new Map<string, string>(
+        (resOrigenes.data || []).map((g: any) => [g.id, g.name])
+      );
+
+      const genealogia = {
+        vieneDe: grupoRaw.parent_group_id
+          ? { id: grupoRaw.parent_group_id, nombre: nombreGrupoPorId.get(grupoRaw.parent_group_id) || 'Grupo anterior' }
+          : null,
+        dioOrigenA: (resHijos.data || []).map((g: any) => ({ id: g.id, nombre: g.name })),
+      };
+
+      // ── Asistencia reunión a reunión ─────────────────────────────────
+      // "total" de cada reunión cuenta a quienes ya estaban inscriptos para
+      // esa fecha (por r.timestamp), no el padrón de hoy: un grupo que creció
+      // en junio no puede mostrar julio lleno en la reunión de marzo.
+      const reuniones: { fecha: string; presentes: number; total: number }[] = filasAsistencia.map((a: any) => {
+        const presentesRaw = Array.isArray(a.present_members) ? a.present_members.map(String) : [];
+        const presentesValidos = presentesRaw.filter((id: string) => idsValidos.has(id));
+        const totalEnEsaFecha = aprobadas.reduce((acc: number, r: any) => {
+          const yaEstabaInscripto = !r.timestamp || r.timestamp.slice(0, 10) <= a.date;
+          if (!yaEstabaInscripto) return acc;
+          return acc + (r.partner_data ? 2 : 1);
+        }, 0);
+        return { fecha: a.date, presentes: presentesValidos.length, total: totalEnEsaFecha };
+      });
+
+      const reportaAsistencia = reuniones.length > 0;
+      const promedioPresentes = reportaAsistencia
+        ? reuniones.reduce((acc, r) => acc + r.presentes, 0) / reuniones.length
+        : 0;
+
+      const reunionesEsperadas = contarReunionesEsperadas(
+        grupoRaw.start_date, grupoRaw.end_date, grupoRaw.meeting_day
+      );
+
+      // ── Miembros ──────────────────────────────────────────────────────
+      const miembros: MiembroDetalleReporte[] = aprobadas.map((r: any) => {
+        const pd = r.partner_data as any;
+        const nombre = `${r.first_name || ''} ${r.last_name || ''}`.trim() || 'Sin nombre';
+        const nombrePareja = pd ? `${pd.firstName || ''} ${pd.lastName || ''}`.trim() : undefined;
+
+        // Reuniones cargadas desde que ESTA persona se inscribió — alguien
+        // que entró en abril no puede deber las reuniones de marzo.
+        const reunionesDelPeriodo = filasAsistencia.filter(
+            (a: any) => !r.timestamp || a.date >= r.timestamp.slice(0, 10)
+        );
+        const idTitular = String(r.id);
+        const idPareja = `${r.id}-partner`;
+        // "Asistió" = vino al menos uno de los dos de la pareja. La
+        // inscripción es UNA sola fila y así se muestra en la tabla; el
+        // detalle por persona vive en Constancia de los miembros, en la
+        // página, no en este número.
+        const reunionesAsistidas = reunionesDelPeriodo.filter((a: any) => {
+          const presentesRaw = Array.isArray(a.present_members) ? a.present_members.map(String) : [];
+          return presentesRaw.includes(idTitular) || (!!pd && presentesRaw.includes(idPareja));
+        }).length;
+
+        return {
+          registrationId: idTitular,
+          nombre,
+          telefono: r.phone || undefined,
+          email: r.email || undefined,
+          esPareja: !!pd,
+          nombrePareja: nombrePareja || undefined,
+          derivadoDe: r.transfer_from_group_id ? nombreGrupoPorId.get(r.transfer_from_group_id) : undefined,
+          reunionesAsistidas,
+          totalReuniones: reunionesDelPeriodo.length,
+        };
+      });
+
+      // ── Promedio de la iglesia ────────────────────────────────────────
+      // No pedido en la spec original, pero sin esto "6,8 personas por
+      // reunión" no dice si está bien o mal — es la comparación que usa el
+      // diseño. Reusa la base cacheada de la temporada en vez de pedir de
+      // nuevo toda la asistencia: si el dashboard ya se visitó, esto sale
+      // gratis; si no, es UNA consulta extra, no cinco.
+      let promedioIglesia: number | null = null;
+      if (temporada && anio) {
+        const base = await supabaseService._cargarBaseReportesGCX(temporada, anio);
+        if (base && base.presentesPorReunion.length > 0) {
+          promedioIglesia = base.presentesPorReunion.reduce((a, b) => a + b, 0) / base.presentesPorReunion.length;
+        }
+      }
+
+      const solicitudesPendientes = todasLasInscripciones.filter(
+        (r: any) => String(r.status || '').toUpperCase() === 'PENDING'
+      ).length;
+
+      return {
+        grupo,
+        temporada,
+        anio,
+        anfitrion,
+        coAnfitrion,
+        miembros,
+        asistencia: { reuniones, promedioPresentes, reportaAsistencia, reunionesEsperadas },
+        genealogia,
+        promedioIglesia,
+        solicitudesPendientes,
+      };
+    } catch (err) {
+      console.error('[DetalleGrupoReporte] Excepción:', err);
       return null;
     }
   },

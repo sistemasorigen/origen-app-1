@@ -3,6 +3,23 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { User, GroupRegistration } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import { ArrowLeft, Check, Search, Clock, Mail, Phone, Loader2, Heart, X, UserPlus, Edit2, Shuffle } from 'lucide-react';
+import { T, btnPrimario, btnSecundario, Encabezado, Vacio } from '../../components/GCX/patron';
+
+// "hace 2 días", "hace 5 horas". Antigüedad relativa: para decidir una
+// solicitud importa cuánto lleva esperando, no la fecha exacta.
+const hace = (iso?: string): string => {
+    if (!iso) return '';
+    const ms = Date.now() - new Date(iso).getTime();
+    if (!Number.isFinite(ms) || ms < 0) return '';
+    const min = Math.floor(ms / 60000);
+    if (min < 60) return min <= 1 ? 'recién' : `hace ${min} minutos`;
+    const hs = Math.floor(min / 60);
+    if (hs < 24) return `hace ${hs} ${hs === 1 ? 'hora' : 'horas'}`;
+    const d = Math.floor(hs / 24);
+    if (d < 30) return `hace ${d} ${d === 1 ? 'día' : 'días'}`;
+    const m = Math.floor(d / 30);
+    return `hace ${m} ${m === 1 ? 'mes' : 'meses'}`;
+};
 
 const getInitials = (firstName?: string, lastName?: string): string => {
     const a = (firstName || '').trim()[0] || '';
@@ -169,146 +186,211 @@ const PaginaSolicitudesGrupo: React.FC<{ currentUser: User }> = ({ currentUser }
     );
 
     return (
-        <div className="min-h-screen bg-white dark:bg-black">
-            <div className="max-w-2xl mx-auto px-4 md:px-8 py-8">
+        <div id="gcx-accion" className={`min-h-screen ${T.fondo} ${T.fuente} ${T.tinta}`}>
 
-                <button
-                    onClick={() => navigate(`/mis-grupos/${groupId}`)}
-                    className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-black dark:hover:text-white transition-colors mb-6 font-black uppercase tracking-widest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    {groupName}
-                </button>
-
-                <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-black dark:text-white mb-6">
-                    Solicitudes
-                </h1>
-
-                {/* FILTERS & SEARCH */}
-                <div className="flex flex-col gap-4 mb-6">
-                    <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
-                        <button
-                            onClick={() => setFilter('PENDING')}
-                            className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${filter === 'PENDING' ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm' : 'text-slate-500 hover:text-black dark:hover:text-white'}`}
+            <div className="bg-white dark:bg-[#1b1b1a] rounded-b-[28px] px-5 pt-4 pb-[18px] lg:px-8 lg:py-5">
+                <div className="max-w-[760px] mx-auto flex items-center gap-3.5">
+                    <div className="flex-1 min-w-0">
+                        <Encabezado
+                            accion="Solicitudes"
+                            grupo={groupName}
+                            onVolver={() => navigate(`/mis-grupos/${groupId}`)}
+                        />
+                    </div>
+                    {pendingCount > 0 && (
+                        <span
+                            className="min-w-[28px] h-7 px-2.5 rounded-full text-white text-[14px] font-semibold flex items-center justify-center shrink-0"
+                            style={{ background: 'oklch(0.58 0.2 25)' }}
                         >
-                            Solicitudes
-                            {pendingCount > 0 && (
-                                <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black tabular-nums ${filter === 'PENDING' ? 'bg-amber-400 text-black' : 'bg-amber-400 text-black'}`}>
-                                    {pendingCount}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setFilter('APPROVED')}
-                            className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${filter === 'APPROVED' ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm' : 'text-slate-500 hover:text-black dark:hover:text-white'}`}
-                        >
-                            Miembros
-                        </button>
+                            {pendingCount}
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            <div className="max-w-[760px] mx-auto px-4 pt-4 pb-8">
+
+                {/* Filtro y búsqueda — no están en los artboards, pero la
+                    pantalla ya los tenía y sirven. Se traen al mismo idioma:
+                    píldoras y buscador de 56px. */}
+                <div className="flex flex-col gap-3">
+                    <div className="flex gap-2">
+                        {(['PENDING', 'APPROVED'] as const).map(f => (
+                            <button
+                                key={f}
+                                type="button"
+                                onClick={() => setFilter(f)}
+                                aria-pressed={filter === f}
+                                className={`h-[46px] px-[18px] rounded-full text-[14px] font-semibold transition-colors ${filter === f
+                                    ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
+                                    : 'bg-white dark:bg-[#1b1b1a] text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white'}`}
+                            >
+                                {f === 'PENDING' ? 'Pendientes' : 'Miembros'}
+                            </button>
+                        ))}
                     </div>
 
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <div className="h-[56px] rounded-full bg-white dark:bg-[#1b1b1a] flex items-center gap-3 px-5">
+                        <Search className="w-[18px] h-[18px] shrink-0 text-black/40 dark:text-white/40" strokeWidth={2.2} />
                         <input
                             type="text"
-                            placeholder="Buscar por nombre o email..."
+                            placeholder="Buscar por nombre o email"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white dark:bg-black text-black dark:text-white border border-slate-200 dark:border-slate-700 font-medium text-sm focus:outline-none focus:border-slate-900 dark:focus:border-white transition-colors"
+                            className="flex-1 min-w-0 outline-none text-[15.5px] font-medium placeholder:text-black/35 dark:placeholder:text-white/35"
+                            style={{ background: 'transparent', border: 0, borderRadius: 0 }}
                         />
                     </div>
                 </div>
 
                 {/* LIST */}
-                <div className="space-y-3">
+                <div className="flex flex-col gap-3.5 mt-4">
                     {loading ? (
-                        <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-slate-300" /></div>
+                        <div className="flex justify-center py-10"><Loader2 className="w-7 h-7 animate-spin text-black/20 dark:text-white/20" /></div>
                     ) : filteredApplicants.length === 0 ? (
-                        <div className="text-center py-10 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                            <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                {searchTerm ? `Sin resultados para "${searchTerm}"` : filter === 'PENDING' ? 'No hay solicitudes pendientes.' : 'Todavía no hay miembros aprobados.'}
-                            </p>
+                        <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px]">
+                            <Vacio
+                                titulo={searchTerm
+                                    ? 'Sin resultados'
+                                    : filter === 'PENDING' ? 'No hay solicitudes pendientes' : 'Todavía no hay miembros'}
+                                detalle={searchTerm
+                                    ? `No encontramos a nadie con "${searchTerm}".`
+                                    : filter === 'PENDING'
+                                        ? 'Cuando alguien pida unirse al grupo te va a aparecer acá.'
+                                        : 'Cuando apruebes una solicitud, la persona aparece en esta lista.'}
+                                accion={searchTerm
+                                    ? { texto: 'Limpiar búsqueda', onClick: () => setSearchTerm('') }
+                                    : { texto: 'Volver al grupo', onClick: () => navigate(`/mis-grupos/${groupId}`) }}
+                            />
                         </div>
                     ) : (
-                        filteredApplicants.map((app) => (
-                            <div key={app.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 transition-colors">
-                                <div className="flex items-start gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-black flex items-center justify-center shrink-0">
-                                        {getInitials(app.firstName, app.lastName)}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start gap-2">
-                                            <h3 className="font-bold text-sm truncate text-black dark:text-white">{app.firstName} {app.lastName}</h3>
+                        filteredApplicants.map((app) => {
+                            const p = app.partnerData;
+                            const derivada = !!app.transferFromGroupId;
+                            const origen = derivada ? nombresOrigen[app.transferFromGroupId!] : null;
+                            return (
+                                <div key={app.id} className="bg-white dark:bg-[#1b1b1a] rounded-[26px] overflow-hidden">
+
+                                    {/* Derivada: la advertencia va arriba de todo y en negro.
+                                        Aprobar acá tiene un efecto en OTRO grupo — eso no
+                                        puede quedar como una nota al pie. */}
+                                    {derivada && (
+                                        <div className="bg-[#0a0a0a] dark:bg-white px-[18px] py-[15px]">
+                                            <p className="text-[11.5px] font-semibold uppercase tracking-[.07em] text-white/50 dark:text-black/50">
+                                                Derivado desde otro grupo
+                                            </p>
+                                            <p className="mt-1.5 text-[13.5px] leading-[1.55] font-medium text-white dark:text-black">
+                                                {origen ? <>Viene del <span className="font-semibold">{origen}</span>. </> : 'Viene de otro grupo. '}
+                                                Si aceptás, sale de ese grupo automáticamente.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <div className="p-[18px]">
+                                        <div className="flex items-center gap-3.5">
+                                            {p ? (
+                                                <div className="flex shrink-0 w-[76px]">
+                                                    <div className={`w-[46px] h-[46px] rounded-full ${T.chip} flex items-center justify-center text-[13.5px] font-semibold text-black/60 dark:text-white/60`}>
+                                                        {getInitials(app.firstName, app.lastName)}
+                                                    </div>
+                                                    <div className="w-[46px] h-[46px] -ml-3.5 rounded-full bg-[#e8e8e5] dark:bg-[#333331] ring-[3px] ring-white dark:ring-[#1b1b1a] flex items-center justify-center text-[13.5px] font-semibold text-black/60 dark:text-white/60">
+                                                        {getInitials(p.firstName, p.lastName)}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className={`w-[46px] h-[46px] shrink-0 rounded-full ${T.chip} flex items-center justify-center text-[14.5px] font-semibold text-black/60 dark:text-white/60`}>
+                                                    {getInitials(app.firstName, app.lastName)}
+                                                </div>
+                                            )}
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-[16.5px] font-semibold truncate">{app.firstName} {app.lastName}</p>
+                                                <p className="mt-0.5 text-[12.5px] font-medium text-black/45 dark:text-white/45 truncate">
+                                                    {p
+                                                        ? 'Se inscribe con su pareja · 2 lugares'
+                                                        : `${derivada ? 'Derivado' : 'Pidió unirse'} ${hace(app.timestamp)}`}
+                                                </p>
+                                            </div>
                                             {app.status !== 'PENDING' && (
-                                                <span className={`shrink-0 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide rounded-full ${app.status === 'APPROVED' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>
+                                                <span className={`shrink-0 h-[26px] px-3 rounded-full text-[12px] font-semibold flex items-center ${app.status === 'APPROVED'
+                                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
+                                                    : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'}`}>
                                                     {app.status === 'APPROVED' ? 'Aprobado' : 'Rechazado'}
                                                 </span>
                                             )}
                                         </div>
 
-                                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 space-y-0.5">
-                                            <div className="flex items-center gap-1.5"><Phone className="w-3 h-3 shrink-0" /> {app.phone}</div>
-                                            {app.email && <div className="flex items-center gap-1.5 truncate"><Mail className="w-3 h-3 shrink-0" /> <span className="truncate">{app.email}</span></div>}
-                                            <div className="flex items-center gap-1.5 opacity-70"><Clock className="w-3 h-3 shrink-0" /> {new Date(app.timestamp).toLocaleDateString('es-AR')}</div>
+                                        {/* Contacto en filas tocables: llamar o escribir sin
+                                            salir de la pantalla. */}
+                                        <div className={`${T.interna} rounded-[20px] mt-3.5 overflow-hidden`}>
+                                            {app.phone && (
+                                                <a
+                                                    href={`https://wa.me/${app.phone.replace(/\D/g, '')}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="flex items-center gap-2.5 h-[52px] px-4 transition-colors hover:bg-black/[.03] dark:hover:bg-white/[.04]"
+                                                >
+                                                    <span className="flex-1 text-[14.5px] font-medium text-black/70 dark:text-white/70 truncate">{app.phone}</span>
+                                                    <span className="text-[13px] font-semibold shrink-0">Escribir</span>
+                                                </a>
+                                            )}
+                                            {app.phone && app.email && <div className="h-px bg-black/[.06] dark:bg-white/[.08] mx-4" />}
+                                            {app.email && (
+                                                <div className="flex items-center h-[52px] px-4">
+                                                    <span className="flex-1 text-[14.5px] font-medium text-black/70 dark:text-white/70 truncate">{app.email}</span>
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {app.status === 'APPROVED' && app.partnerData && (
-                                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-start gap-2.5">
-                                                <div className="w-7 h-7 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-500 text-[10px] font-black flex items-center justify-center shrink-0">
-                                                    {getInitials(app.partnerData.firstName, app.partnerData.lastName)}
+                                        {/* Acompañante: editable ANTES de aprobar. */}
+                                        {p && (
+                                            <div className={`${T.interna} rounded-[20px] mt-2.5 px-4 py-3.5`}>
+                                                <div className="flex items-baseline justify-between gap-3">
+                                                    <p className="text-[11.5px] font-semibold uppercase tracking-[.07em] text-black/40 dark:text-white/40">Acompañante</p>
+                                                    {!app.partnerUserId && (
+                                                        <button type="button" onClick={() => openPartnerModal(app)} className="text-[13px] font-semibold shrink-0 hover:opacity-70 transition-opacity">
+                                                            Corregir datos
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-[9px] font-black uppercase tracking-wide text-purple-500">Pareja</span>
-                                                        {app.partnerUserId && <span className="text-[9px] font-black uppercase tracking-wide bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full">Vinculado</span>}
-                                                    </div>
-                                                    <p className="text-sm font-bold text-black dark:text-white truncate">{app.partnerData.firstName} {app.partnerData.lastName}</p>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><Phone className="w-3 h-3 shrink-0" /> {app.partnerData.phone}</p>
-                                                </div>
-                                                {!app.partnerUserId && (
-                                                    <button onClick={() => openPartnerModal(app)} className="shrink-0 flex items-center gap-1 text-[10px] font-black uppercase text-slate-400 hover:text-black dark:hover:text-white transition-colors">
-                                                        <Edit2 className="w-3 h-3" /> Editar
-                                                    </button>
-                                                )}
+                                                <p className="mt-2 text-[15px] font-semibold truncate">{p.firstName} {p.lastName}</p>
+                                                <p className="mt-1 text-[13.5px] font-medium text-black/50 dark:text-white/50 truncate">
+                                                    {p.phone || 'sin teléfono'} · {p.email || 'sin email'}
+                                                </p>
                                             </div>
                                         )}
-                                        {app.status === 'APPROVED' && !app.partnerData && (
-                                            <button onClick={() => openPartnerModal(app)} className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 w-full flex items-center gap-1.5 text-[10px] font-black uppercase text-purple-500 hover:text-purple-700 transition-colors">
-                                                <UserPlus className="w-3.5 h-3.5" /> Agregar pareja
+
+                                        {app.status === 'APPROVED' && !p && (
+                                            <button
+                                                type="button"
+                                                onClick={() => openPartnerModal(app)}
+                                                className={`w-full h-[52px] mt-2.5 rounded-[20px] ${T.interna} text-[14.5px] font-semibold text-black/60 dark:text-white/60 transition-colors hover:text-black dark:hover:text-white`}
+                                            >
+                                                Agregar pareja
                                             </button>
+                                        )}
+
+                                        {app.status === 'PENDING' && (
+                                            <div className="flex gap-2.5 mt-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleStatusUpdate(app.id, 'REJECTED')}
+                                                    className={`${btnSecundario} h-[54px] px-[22px] text-[15.5px]`}
+                                                >
+                                                    Rechazar
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleStatusUpdate(app.id, 'APPROVED')}
+                                                    className={`${btnPrimario} flex-1 h-[54px] text-[16px]`}
+                                                >
+                                                    {p ? 'Aprobar a los dos' : 'Aprobar'}
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
-
-                                {app.transferFromGroupId && (
-                                    <div className="flex items-center gap-2 px-3 py-2 mt-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
-                                        <Shuffle className="w-4 h-4 text-amber-600 shrink-0" />
-                                        <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-                                            {nombresOrigen[app.transferFromGroupId]
-                                                ? `Derivado desde ${nombresOrigen[app.transferFromGroupId]} — si aceptás, sale de ese grupo automáticamente.`
-                                                : 'Derivado desde otro grupo — si aceptás, sale de ese grupo automáticamente.'}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {app.status === 'PENDING' && (
-                                    <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-                                        <button
-                                            onClick={() => handleStatusUpdate(app.id, 'REJECTED')}
-                                            className="flex-1 py-2.5 text-[10px] font-black uppercase tracking-wide rounded-lg border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-                                        >
-                                            Rechazar
-                                        </button>
-                                        <button
-                                            onClick={() => handleStatusUpdate(app.id, 'APPROVED')}
-                                            className="flex-1 py-2.5 text-[10px] font-black uppercase tracking-wide rounded-lg bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                                        >
-                                            <Check className="w-3.5 h-3.5" /> Aprobar
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>

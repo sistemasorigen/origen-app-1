@@ -348,13 +348,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 { label: 'Predicciones y resultados', path: '/prode/resultados', roles: [] },
             ]
         },
-        {
-            label: 'Tutoriales',
-            icon: Book,
-            path: '/tutoriales',
-            roles: [],
-            requiresAuth: true
-        }
+        // Tutoriales queda oculto: la entrada del menú y la ruta /tutoriales
+        // están desactivadas. Para reponerlo hay que volver a agregar esta
+        // entrada Y reactivar la ruta en App.tsx, que hoy redirige a inicio.
+        // {
+        //     label: 'Tutoriales',
+        //     icon: Book,
+        //     path: '/tutoriales',
+        //     roles: [],
+        //     requiresAuth: true
+        // }
     ];
 
     // ─────────────────────────────────────────────────────────────────────
@@ -377,6 +380,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Panel GCX',
             icon: LayoutDashboard,
             path: '/admingcx',
+            // Reportes cuelga de acá pero vive bajo otro prefijo. Sin esto,
+            // estar en el tablero de GCX dejaba el menú entero apagado y el
+            // desplegable cerrado: el sub-ítem se enciende bien, pero no hay
+            // forma de verlo. Mismo caso que "Panel de eventos" más abajo.
+            activePaths: ['/reportes/gcx'],
             roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS],
             subGroups: [
                 {
@@ -396,14 +404,17 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 { label: 'Etiquetas', path: '/admingcx/etiquetas', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Configuración', path: '/admingcx/configuracion', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
                 { label: 'Temporadas', path: '/admingcx/temporadas', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] },
+                // El tablero de GCX, no /reportes (que es Pastores.tsx y sigue
+                // colgando de Punto de información). El prefijo lo mantiene
+                // encendido en el detalle de un grupo y en la comparación.
+                { label: 'Reportes', path: '/reportes/gcx', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] },
             ]
         },
         {
             // Los grupos que lleva el anfitrión. Va suelto y no colgado de
             // "Panel GCX": ese desplegable es el /admingcx del encargado de
             // grupos, y estos dos ni comparten rutas ni roles.
-            label: 'Mis grupos',
+            label: 'Panel de Anfitrión',
             icon: Users,
             path: '/mis-grupos',
             roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]

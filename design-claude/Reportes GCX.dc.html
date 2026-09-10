@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#eceae6;font-family:Manrope,system-ui,sans-serif}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 Manrope,system-ui,sans-serif;color:#1a1a1a}.dv-tsub{max-width:700px;margin:0 0 22px;font:400 12px/1.6 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.5)}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:600 11.5px/1.3 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.65)}.dv-note{max-width:420px;margin:2px 0 0;font:400 11.5px/1.55 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.5)}*,*::before,*::after{box-sizing:border-box}.dv-frame{max-width:100%;background:#f7f8fa;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 Manrope,system-ui,sans-serif;color:rgba(0,0,0,.5)}a{color:#1a1a1a}a:hover{color:#2a78d6}</style></helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Pantalla 1 · Dashboard principal (desktop)</span></div>
+<p class="dv-tsub">La jerarquía va de lo general a lo particular en cuatro alturas: una tira de indicadores que responde “¿cómo venimos?” en dos segundos, una fila de tortas con la salud de participación, una fila de barras con la composición demográfica, y la tabla al final para bajar al grupo puntual. Nada tiene el mismo tamaño: el peso baja a medida que se baja en la página.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+  <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Dashboard completo · 1440px</div>
+  <p class="dv-note">Las 34 barras se resuelven girando el gráfico: barras horizontales, 17 filas, el nombre de la categoría alineado a la izquierda en tamaño normal y las dos barras apiladas dentro de cada fila. Ordenadas de mayor a menor, se leen como un ranking y ninguna etiqueta se rota ni se corta. La cobertura parcial va como una línea al pie de cada tarjeta, con el número real, sin banners.</p>
+  <div class="dv-frame" style="width:1440px">
+
+    <div style="background:#fff; border-bottom:1px solid #e8e9ec; padding:20px 28px">
+      <div style="display:flex; align-items:center; gap:28px">
+        <div style="min-width:0; flex:1">
+          <h1 style="margin:0; font:600 19px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.01em">Reportes Grupo de Conexión</h1>
+          <p style="margin:5px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:#6b7280">Participación, composición y desempeño de los 26 grupos activos.</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:4px; background:#f4f5f7; border:1px solid #e8e9ec; border-radius:10px; padding:4px">
+          <div style="width:32px; height:32px; border-radius:7px; background:#fff; border:1px solid #e8e9ec; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg></div>
+          <span style="min-width:66px; text-align:center; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">2026</span>
+          <div style="width:32px; height:32px; border-radius:7px; background:#fff; border:1px solid #e8e9ec; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6l6 6-6 6"></path></svg></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px">
+          <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Temporada</span>
+          <div style="display:flex; gap:3px; background:#f4f5f7; border:1px solid #e8e9ec; border-radius:10px; padding:3px">
+            <div style="width:38px; height:32px; border-radius:7px; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">1</div>
+            <div style="width:38px; height:32px; border-radius:7px; color:#4b5563; display:flex; align-items:center; justify-content:center; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">2</div>
+            <div style="width:38px; height:32px; border-radius:7px; color:#4b5563; display:flex; align-items:center; justify-content:center; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">3</div>
+          </div>
+          <div style="height:38px; padding:0 16px; border-radius:10px; background:#2563eb; display:flex; align-items:center; gap:8px; font:600 13.5px Manrope,system-ui,sans-serif; color:#fff; cursor:pointer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg>Comparar temporadas
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:22px 28px 32px">
+
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:14px">
+        <div>
+          <p style="margin:0; font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:#6b7280">CÓMO VENIMOS</p>
+          <p style="margin:6px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Comparado con la temporada anterior.</p>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px">
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Personas inscriptas</p><p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">En los grupos de la temporada.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:10px; margin-top:16px">
+            <span style="font:600 32px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.025em">133</span>
+            <span style="height:22px; padding:0 8px; border-radius:6px; background:#eaf6ee; color:#12783f; font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center">+32</span>
+          </div>
+          <p style="margin:14px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">32 inscripciones más que la temporada anterior, repartidas en 6 grupos nuevos.</p>
+        </div>
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Grupos activos</p><p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Aprobados y en funcionamiento.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:10px; margin-top:16px">
+            <span style="font:600 32px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.025em">26</span>
+            <span style="height:22px; padding:0 8px; border-radius:6px; background:#eaf6ee; color:#12783f; font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center">+4</span>
+          </div>
+          <p style="margin:14px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Ocupación promedio del 71%. Hay 4 grupos con el cupo completo.</p>
+        </div>
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Asistencia promedio</p><p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Sobre los grupos que reportan.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:10px; margin-top:16px">
+            <span style="font:600 32px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.025em">68%</span>
+            <span style="height:22px; padding:0 8px; border-radius:6px; background:#fdeeee; color:#b42318; font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center">−3%</span>
+          </div>
+          <p style="margin:14px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Bajó 3 puntos. La caída se concentra en los grupos de los sábados.</p>
+        </div>
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Grupos que reportan</p><p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Cargan la asistencia cada semana.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:10px; margin-top:16px">
+            <span style="font:600 32px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.025em">57%</span>
+            <span style="height:22px; padding:0 8px; border-radius:6px; background:#eaf6ee; color:#12783f; font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center">+6%</span>
+          </div>
+          <p style="margin:14px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">11 grupos no cargaron nada todavía. Es lo que limita el resto del tablero.</p>
+        </div>
+      </div>
+
+      <div style="height:1px; background:#e8e9ec; margin:26px 0"></div>
+
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:14px">
+        <div>
+          <p style="margin:0; font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:#6b7280">PANORAMA DE LA TEMPORADA</p>
+          <p style="margin:6px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Todo lo de abajo responde al año y la temporada elegidos en el encabezado.</p>
+        </div>
+        <div style="display:flex; gap:3px; background:#f4f5f7; border:1px solid #e8e9ec; border-radius:10px; padding:3px; flex:none">
+          <div style="height:32px; padding:0 15px; border-radius:7px; background:#fff; border:1px solid #e8e9ec; display:flex; align-items:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#0f172a; cursor:pointer">Activos</div>
+          <div style="height:32px; padding:0 15px; border-radius:7px; display:flex; align-items:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#4b5563; cursor:pointer">Finalizados</div>
+          <div style="height:32px; padding:0 15px; border-radius:7px; display:flex; align-items:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#4b5563; cursor:pointer">Todos</div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.55fr); gap:16px">
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Grupos</p><p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Activos en la temporada.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <p style="margin:18px 0 0; font:600 34px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.03em">26</p>
+          <p style="margin:12px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Ocupación promedio del 71%. Hay 4 grupos con el cupo completo.</p>
+        </div>
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Anfitriones</p><p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Líderes principales únicos.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <p style="margin:18px 0 0; font:600 34px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.03em">24</p>
+          <p style="margin:12px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Dos personas lideran dos grupos cada una.</p>
+        </div>
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px; box-shadow:0 0 0 1px #f3ddc4 inset">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Co-anfitriones</p><p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Líderes de apoyo únicos.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:10px; margin-top:18px">
+            <span style="font:600 34px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.03em">5</span>
+            <span style="height:22px; padding:0 8px; border-radius:6px; background:#fdf3e5; color:#8a5a12; font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center">1 de cada 5 grupos</span>
+          </div>
+          <p style="margin:12px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">21 grupos dependen de una sola persona: si el anfitrión falta, no hay quien conduzca ni quien reporte.</p>
+        </div>
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Personas únicas</p><p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Usuarios distintos inscriptos.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <p style="margin:18px 0 0; font:600 34px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.03em">102</p>
+          <p style="margin:12px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Es la cantidad real de gente alcanzada por los grupos.</p>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Inscripciones totales</p><p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Una persona puede estar en varios grupos.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <div style="display:flex; align-items:flex-end; gap:22px; margin-top:14px">
+            <div style="flex:none">
+              <p style="margin:0; font:600 34px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.03em">133</p>
+              <p style="margin:6px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">102 personas · 1,3 grupos<br>por persona</p>
+            </div>
+            <div style="flex:1; min-width:0">
+              <div style="display:flex; align-items:center; gap:11px">
+                <span style="width:62px; flex:none; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">En 1 grupo</span>
+                <div style="flex:1; min-width:0; height:9px; border-radius:3px; background:#eef0f3; overflow:hidden"><div style="width:100%; height:100%; background:#2563eb"></div></div>
+                <span style="width:22px; text-align:right; font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">75</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:11px; margin-top:9px">
+                <span style="width:62px; flex:none; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">En 2 grupos</span>
+                <div style="flex:1; min-width:0; height:9px; border-radius:3px; background:#eef0f3; overflow:hidden"><div style="width:67%; height:100%; background:#7c3aed"></div></div>
+                <span style="width:22px; text-align:right; font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">50</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:11px; margin-top:9px">
+                <span style="width:62px; flex:none; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">En 3 o más</span>
+                <div style="flex:1; min-width:0; height:9px; border-radius:3px; background:#eef0f3; overflow:hidden"><div style="width:11%; height:100%; background:#ec4899"></div></div>
+                <span style="width:22px; text-align:right; font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">8</span>
+              </div>
+            </div>
+          </div>
+          <p style="margin:14px 0 0; padding-top:12px; border-top:1px solid #eef0f3; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">58 personas participan de más de un grupo. Son las que sostienen la vida de los grupos y también las que se saturan primero.</p>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) minmax(0,1fr); gap:16px; margin-top:16px">
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px; display:flex; flex-direction:column">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Asistencia de personas</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Qué parte de los inscriptos está asistiendo.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:24px; margin-top:22px; flex:1">
+            <div style="position:relative; width:168px; height:168px; flex:none; border-radius:999px; background:conic-gradient(#2563eb 0 68%, #dbe4f5 68% 100%)">
+              <div style="position:absolute; inset:26px; border-radius:999px; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center">
+                <span style="font:600 30px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.03em">68%</span>
+                <span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#9ca3af; margin-top:2px">asiste</span>
+              </div>
+            </div>
+            <div style="min-width:0; flex:1">
+              <div style="display:flex; align-items:center; gap:10px"><span style="width:9px; height:9px; border-radius:999px; background:#2563eb; flex:none"></span><span style="flex:1; font:600 13px Manrope,system-ui,sans-serif; color:#374151">Asiste</span><span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">39</span></div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:12px"><span style="width:9px; height:9px; border-radius:999px; background:#c9d4ea; flex:none"></span><span style="flex:1; font:600 13px Manrope,system-ui,sans-serif; color:#374151">No asiste</span><span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">19</span></div>
+              <div style="height:1px; background:#eef0f3; margin:16px 0"></div>
+              <div style="display:flex; align-items:center; gap:10px"><span style="flex:1; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Base del cálculo</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">58</span></div>
+            </div>
+          </div>
+          <p style="margin:20px 0 0; padding-top:16px; border-top:1px solid #eef0f3; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Se calcula solo con los 15 grupos que cargaron asistencia: 58 de las 102 personas inscriptas. Los 11 grupos que no reportan quedan fuera.</p>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px; display:flex; flex-direction:column">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Grupos que reportan</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Disciplina de carga, no participación.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:22px; margin-top:22px; flex:1">
+            <div style="position:relative; width:148px; height:148px; flex:none; border-radius:999px; background:conic-gradient(#7c3aed 0 57%, #e6e0f8 57% 100%)">
+              <div style="position:absolute; inset:23px; border-radius:999px; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center">
+                <span style="font:600 27px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.03em">57%</span>
+                <span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#9ca3af; margin-top:2px">reporta</span>
+              </div>
+            </div>
+            <div style="min-width:0; flex:1">
+              <div style="display:flex; align-items:center; gap:10px"><span style="width:9px; height:9px; border-radius:999px; background:#7c3aed; flex:none"></span><span style="flex:1; font:600 13px Manrope,system-ui,sans-serif; color:#374151">Reporta</span><span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">15</span></div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:12px"><span style="width:9px; height:9px; border-radius:999px; background:#dcd4f4; flex:none"></span><span style="flex:1; font:600 13px Manrope,system-ui,sans-serif; color:#374151">No reporta</span><span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">11</span></div>
+              <div style="height:1px; background:#eef0f3; margin:16px 0"></div>
+              <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver los 11 grupos</span>
+            </div>
+          </div>
+          <p style="margin:20px 0 0; padding-top:16px; border-top:1px solid #eef0f3; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Sobre los 26 grupos activos de la temporada. Un grupo cuenta como que reporta si cargó al menos una reunión.</p>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px">
+            <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Cobertura de los datos</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Qué parte del padrón alimenta cada gráfico.</p></div>
+            <span style="font:600 15px Manrope,system-ui,sans-serif; color:#c3c7ce; line-height:.6">···</span>
+          </div>
+          <div style="margin-top:22px">
+            <div style="display:flex; align-items:baseline; justify-content:space-between"><span style="font:600 13px Manrope,system-ui,sans-serif; color:#374151">Género y edades</span><span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">112 de 133</span></div>
+            <div style="height:8px; border-radius:999px; background:#eef0f3; margin-top:10px; overflow:hidden"><div style="width:84%; height:100%; border-radius:999px; background:#2563eb"></div></div>
+            <p style="margin:10px 0 0; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">21 inscripciones fueron cargadas a mano por su anfitrión y no tienen datos demográficos.</p>
+          </div>
+          <div style="height:1px; background:#eef0f3; margin:20px 0"></div>
+          <div>
+            <div style="display:flex; align-items:baseline; justify-content:space-between"><span style="font:600 13px Manrope,system-ui,sans-serif; color:#374151">Asistencia</span><span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">58 de 102</span></div>
+            <div style="height:8px; border-radius:999px; background:#eef0f3; margin-top:10px; overflow:hidden"><div style="width:57%; height:100%; border-radius:999px; background:#7c3aed"></div></div>
+            <p style="margin:10px 0 0; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Depende de que el anfitrión cargue la reunión. Es el número que más conviene subir.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:16px">
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px">
+            <div style="min-width:0"><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Género por categoría</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Inscriptos por categoría de grupo, ordenados de mayor a menor.</p></div>
+            <div style="display:flex; align-items:center; gap:16px; flex:none">
+              <div style="display:flex; align-items:center; gap:7px"><span style="width:9px; height:9px; border-radius:2px; background:#2563eb"></span><span style="font:600 12px Manrope,system-ui,sans-serif; color:#4b5563">Masculino</span></div>
+              <div style="display:flex; align-items:center; gap:7px"><span style="width:9px; height:9px; border-radius:2px; background:#ec4899"></span><span style="font:600 12px Manrope,system-ui,sans-serif; color:#4b5563">Femenino</span></div>
+            </div>
+          </div>
+
+          <div style="margin-top:22px; display:flex; flex-direction:column; gap:13px">
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Matrimonios jóvenes</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:88%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">44</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:92%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">46</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Jóvenes adultos</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:76%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">38</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:84%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">42</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Mujeres</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:0%; height:11px; border-radius:3px; background:#2563eb; min-width:2px"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#c3c7ce">0</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:74%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">37</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Emprendedores con Propósito</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:62%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">31</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:48%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">24</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Hombres</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:66%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">33</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:0%; height:11px; border-radius:3px; background:#ec4899; min-width:2px"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#c3c7ce">0</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Estudio bíblico</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:54%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">27</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:58%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">29</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Adolescentes</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:44%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">22</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:52%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">26</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Recién casados</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:38%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">19</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:40%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">20</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Padres y madres</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:30%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">15</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:36%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">18</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Profesionales</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:28%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">14</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:24%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">12</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Universitarios</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:22%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">11</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:26%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">13</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Adultos mayores</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:18%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">9</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:24%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">12</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Servidores</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:16%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">8</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:20%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">10</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Nuevos creyentes</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:14%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">7</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:16%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">8</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Familias con hijos</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:12%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">6</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:14%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">7</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Oración</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:8%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">4</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:12%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">6</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Sin categoría</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:6%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">3</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:8%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">4</span></div></div></div>
+          </div>
+
+          <p style="margin:20px 0 0; padding-top:16px; border-top:1px solid #eef0f3; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Sobre 112 de 133 inscripciones. Las 21 personas cargadas a mano por su anfitrión no tienen género registrado y no entran en el gráfico.</p>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px">
+            <div style="min-width:0"><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Edades por categoría</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Edad promedio de hombres y mujeres en cada categoría.</p></div>
+            <div style="display:flex; align-items:center; gap:16px; flex:none">
+              <div style="display:flex; align-items:center; gap:7px"><span style="width:9px; height:9px; border-radius:2px; background:#2563eb"></span><span style="font:600 12px Manrope,system-ui,sans-serif; color:#4b5563">Masculino</span></div>
+              <div style="display:flex; align-items:center; gap:7px"><span style="width:9px; height:9px; border-radius:2px; background:#ec4899"></span><span style="font:600 12px Manrope,system-ui,sans-serif; color:#4b5563">Femenino</span></div>
+            </div>
+          </div>
+
+          <div style="background:#f7f8fa; border:1px solid #eef0f3; border-radius:11px; padding:14px 16px; margin-top:18px">
+            <div style="display:flex; align-items:center; justify-content:space-between">
+              <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">Rango etario</span>
+              <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb">10 – 100 años</span>
+            </div>
+            <div style="position:relative; height:6px; border-radius:999px; background:#e3e6eb; margin-top:14px">
+              <div style="position:absolute; left:0; right:0; top:0; bottom:0; border-radius:999px; background:#2563eb"></div>
+              <div style="position:absolute; left:-7px; top:-4px; width:14px; height:14px; border-radius:999px; background:#fff; border:2px solid #2563eb"></div>
+              <div style="position:absolute; right:-7px; top:-4px; width:14px; height:14px; border-radius:999px; background:#fff; border:2px solid #2563eb"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:9px"><span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">10</span><span style="font:500 11px Manrope,system-ui,sans-serif; color:#9ca3af">100</span></div>
+          </div>
+
+          <div style="margin-top:18px; display:flex; flex-direction:column; gap:13px">
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Adultos mayores</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:71%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">71</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:68%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">68</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Padres y madres</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:52%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">52</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:49%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">49</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Matrimonios jóvenes</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:44%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">44</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:41%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">41</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Emprendedores con Propósito</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:42%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">42</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:39%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">39</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Profesionales</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:38%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">38</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:36%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">36</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Servidores</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:36%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">36</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:34%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">34</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Estudio bíblico</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:35%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">35</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:33%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">33</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Mujeres</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:0%; height:11px; border-radius:3px; background:#2563eb; min-width:2px"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#c3c7ce">—</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:33%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">33</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Hombres</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:32%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">32</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:0%; height:11px; border-radius:3px; background:#ec4899; min-width:2px"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#c3c7ce">—</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Recién casados</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:31%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">31</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:29%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">29</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Nuevos creyentes</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:30%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">30</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:28%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">28</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Oración</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:29%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">29</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:31%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">31</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Familias con hijos</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:28%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">28</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:27%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">27</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Jóvenes adultos</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:26%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">26</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:25%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">25</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Sin categoría</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:25%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">25</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:24%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">24</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Universitarios</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:22%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">22</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:21%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">21</span></div></div></div>
+            <div style="display:flex; align-items:center; gap:14px"><span style="width:152px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; text-align:right">Adolescentes</span><div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px"><div style="display:flex; align-items:center; gap:8px"><div style="width:16%; height:11px; border-radius:3px; background:#2563eb"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">16</span></div><div style="display:flex; align-items:center; gap:8px"><div style="width:15%; height:11px; border-radius:3px; background:#ec4899"></div><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#6b7280">15</span></div></div></div>
+          </div>
+
+          <p style="margin:20px 0 0; padding-top:16px; border-top:1px solid #eef0f3; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:#6b7280">Sobre 112 de 133 inscripciones. Las 21 personas cargadas a mano no tienen fecha de nacimiento registrada.</p>
+        </div>
+      </div>
+
+      <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; margin-top:16px; overflow:hidden">
+        <div style="padding:20px 22px; display:flex; align-items:flex-start; justify-content:space-between; gap:20px">
+          <div style="min-width:0"><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Detalle por grupo</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">26 grupos activos en la temporada 1 de 2026.</p></div>
+          <div style="display:flex; align-items:center; gap:10px; flex:none">
+            <div style="height:36px; padding:0 14px; border:1px solid #e8e9ec; border-radius:9px; display:flex; align-items:center; gap:9px; min-width:230px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+              <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Buscar un grupo o anfitrión</span>
+            </div>
+            <div style="height:36px; padding:0 14px; border:1px solid #e8e9ec; border-radius:9px; display:flex; align-items:center; gap:8px; font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; cursor:pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 11l5 5 5-5M4 20h16"></path></svg>Exportar
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1.6fr) 150px; gap:20px; padding:11px 22px; background:#f7f8fa; border-top:1px solid #eef0f3; border-bottom:1px solid #eef0f3">
+          <span style="font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.04em; color:#6b7280">GRUPO</span>
+          <span style="font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.04em; color:#6b7280">ANFITRIÓN</span>
+          <span style="font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.04em; color:#6b7280">CO-ANFITRIÓN</span>
+          <span style="font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.04em; color:#6b7280">OCUPACIÓN</span>
+          <span></span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1.6fr) 150px; gap:20px; padding:14px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+          <div style="min-width:0"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Almagro Norte</p><p style="margin:3px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#9ca3af">Jóvenes adultos · Jueves 20:00</p></div>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#374151">Martín Sosa</span>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#374151">Lucía Prieto</span>
+          <div style="display:flex; align-items:center; gap:11px"><div style="flex:1; min-width:0; height:7px; border-radius:999px; background:#eef0f3; overflow:hidden"><div style="width:100%; height:100%; border-radius:999px; background:#2563eb"></div></div><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; white-space:nowrap">12/12</span></div>
+          <div style="height:32px; border:1px solid #e8e9ec; border-radius:8px; display:flex; align-items:center; justify-content:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver más detalles</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1.6fr) 150px; gap:20px; padding:14px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+          <div style="min-width:0"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Caballito Sur</p><p style="margin:3px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#9ca3af">Matrimonios jóvenes · Martes 20:30</p></div>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#374151">Paula Ferreyra</span>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#d5d8dd">—</span>
+          <div style="display:flex; align-items:center; gap:11px"><div style="flex:1; min-width:0; height:7px; border-radius:999px; background:#eef0f3; overflow:hidden"><div style="width:67%; height:100%; border-radius:999px; background:#2563eb"></div></div><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; white-space:nowrap">8/12</span></div>
+          <div style="height:32px; border:1px solid #e8e9ec; border-radius:8px; display:flex; align-items:center; justify-content:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver más detalles</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1.6fr) 150px; gap:20px; padding:14px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+          <div style="min-width:0"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Palermo Online</p><p style="margin:3px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#9ca3af">Profesionales · Miércoles 21:00 · Online</p></div>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#374151">Ignacio Ruiz</span>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#d5d8dd">—</span>
+          <div style="display:flex; align-items:center; gap:11px"><div style="flex:1; min-width:0; height:7px; border-radius:999px; background:#eef0f3; overflow:hidden"><div style="width:53%; height:100%; border-radius:999px; background:#2563eb"></div></div><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; white-space:nowrap">8/15</span></div>
+          <div style="height:32px; border:1px solid #e8e9ec; border-radius:8px; display:flex; align-items:center; justify-content:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver más detalles</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1.6fr) 150px; gap:20px; padding:14px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+          <div style="min-width:0"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Villa Crespo Centro</p><p style="margin:3px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#9ca3af">Estudio bíblico · Jueves 20:00</p></div>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#374151">Sergio Duarte</span>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#d5d8dd">—</span>
+          <div style="display:flex; align-items:center; gap:11px"><div style="flex:1; min-width:0; height:7px; border-radius:999px; background:#eef0f3; overflow:hidden"><div style="width:100%; height:100%; border-radius:999px; background:#2563eb"></div></div><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; white-space:nowrap">10/10</span></div>
+          <div style="height:32px; border:1px solid #e8e9ec; border-radius:8px; display:flex; align-items:center; justify-content:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver más detalles</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1.6fr) 150px; gap:20px; padding:14px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+          <div style="min-width:0"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Belgrano Norte</p><p style="margin:3px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#9ca3af">Emprendedores con Propósito · Viernes 19:30</p></div>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#374151">Lorena Vidal</span>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#d5d8dd">—</span>
+          <div style="display:flex; align-items:center; gap:11px"><div style="flex:1; min-width:0; height:7px; border-radius:999px; background:#eef0f3; overflow:hidden"><div style="width:80%; height:100%; border-radius:999px; background:#2563eb"></div></div><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; white-space:nowrap">8/10</span></div>
+          <div style="height:32px; border:1px solid #e8e9ec; border-radius:8px; display:flex; align-items:center; justify-content:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver más detalles</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1.6fr) 150px; gap:20px; padding:14px 22px; align-items:center; border-bottom:1px solid #f2f3f5">
+          <div style="min-width:0"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Núñez Adolescentes</p><p style="margin:3px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#9ca3af">Adolescentes · Sábados 17:00</p></div>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#374151">Rocío Ledesma</span>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#374151">Bruno Tello</span>
+          <div style="display:flex; align-items:center; gap:11px"><div style="flex:1; min-width:0; height:7px; border-radius:999px; background:#eef0f3; overflow:hidden"><div style="width:35%; height:100%; border-radius:999px; background:#2563eb"></div></div><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; white-space:nowrap">7/20</span></div>
+          <div style="height:32px; border:1px solid #e8e9ec; border-radius:8px; display:flex; align-items:center; justify-content:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver más detalles</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1.6fr) 150px; gap:20px; padding:14px 22px; align-items:center">
+          <div style="min-width:0"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0f172a">Flores Mujeres</p><p style="margin:3px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#9ca3af">Mujeres · Lunes 10:00</p></div>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#374151">Adriana Cortés</span>
+          <span style="font:500 13px Manrope,system-ui,sans-serif; color:#d5d8dd">—</span>
+          <div style="display:flex; align-items:center; gap:11px"><div style="flex:1; min-width:0; height:7px; border-radius:999px; background:#eef0f3; overflow:hidden"><div style="width:75%; height:100%; border-radius:999px; background:#2563eb"></div></div><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; white-space:nowrap">9/12</span></div>
+          <div style="height:32px; border:1px solid #e8e9ec; border-radius:8px; display:flex; align-items:center; justify-content:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver más detalles</div>
+        </div>
+
+        <div style="padding:14px 22px; border-top:1px solid #eef0f3; display:flex; align-items:center; justify-content:space-between; background:#fcfcfd">
+          <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Mostrando 7 de 26 grupos. La columna de co-anfitrión está cargada en 5 de los 26.</span>
+          <div style="display:flex; align-items:center; gap:6px">
+            <div style="height:32px; padding:0 13px; border:1px solid #e8e9ec; border-radius:8px; display:flex; align-items:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Anterior</div>
+            <div style="height:32px; padding:0 13px; border:1px solid #e8e9ec; border-radius:8px; display:flex; align-items:center; font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; cursor:pointer">Siguiente</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1b">
+  <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Estados · sin datos y cargando</div>
+  <p class="dv-note">La fila de indicadores en cero usa tarjetas de borde punteado y el mismo alto, con la explicación ocupando el lugar del quinto indicador: se lee como una temporada que no arrancó, no como una carga fallida. Los tres estados de gráfico usan la misma tarjeta y la misma altura, así el tablero no salta al cambiar de temporada. Sin datos explica por qué está vacío y ofrece la salida; cargando usa bloques grises con la forma del contenido real, no un spinner centrado.</p>
+  <div style="width:1120px; display:flex; flex-direction:column; gap:16px">
+    <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+      <p style="margin:0; font:600 11.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:#6b7280">PANORAMA DE LA TEMPORADA</p>
+      <p style="margin:6px 0 18px; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">Temporada 3 de 2026 · todavía no arrancó.</p>
+      <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.55fr); gap:16px">
+        <div style="border:1px dashed #dfe2e7; border-radius:14px; padding:18px 20px"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#6b7280">Grupos</p><p style="margin:18px 0 0; font:600 34px Manrope,system-ui,sans-serif; color:#c3c7ce; letter-spacing:-.03em">0</p></div>
+        <div style="border:1px dashed #dfe2e7; border-radius:14px; padding:18px 20px"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#6b7280">Anfitriones</p><p style="margin:18px 0 0; font:600 34px Manrope,system-ui,sans-serif; color:#c3c7ce; letter-spacing:-.03em">0</p></div>
+        <div style="border:1px dashed #dfe2e7; border-radius:14px; padding:18px 20px"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#6b7280">Co-anfitriones</p><p style="margin:18px 0 0; font:600 34px Manrope,system-ui,sans-serif; color:#c3c7ce; letter-spacing:-.03em">0</p></div>
+        <div style="border:1px dashed #dfe2e7; border-radius:14px; padding:18px 20px"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#6b7280">Personas únicas</p><p style="margin:18px 0 0; font:600 34px Manrope,system-ui,sans-serif; color:#c3c7ce; letter-spacing:-.03em">0</p></div>
+        <div style="border:1px dashed #dfe2e7; border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; justify-content:center">
+          <p style="margin:0; font:600 14px Manrope,system-ui,sans-serif; color:#374151">La temporada 3 todavía no tiene grupos</p>
+          <p style="margin:8px 0 0; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:#6b7280">Los grupos se crean unas semanas antes del inicio. Los indicadores se llenan solos cuando aparezca el primero.</p>
+          <span style="margin-top:14px; font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver la temporada 2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; width:1120px">
+    <div style="width:326px; background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+      <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Asistencia de personas</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Qué parte de los inscriptos está asistiendo.</p></div>
+      <div style="height:230px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center">
+        <div style="width:72px; height:72px; border-radius:999px; border:2px dashed #dfe2e7"></div>
+        <p style="margin:18px 0 0; font:600 14px Manrope,system-ui,sans-serif; color:#374151">Todavía no hay asistencia cargada</p>
+        <p style="margin:8px 0 0; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:#6b7280; max-width:230px">Ningún grupo reportó reuniones en la temporada 3 de 2026. El gráfico aparece con la primera carga.</p>
+        <span style="margin-top:16px; font:600 12.5px Manrope,system-ui,sans-serif; color:#2563eb; cursor:pointer">Ver temporada 2</span>
+      </div>
+    </div>
+
+    <div style="width:326px; background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+      <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Grupos que reportan</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Disciplina de carga, no participación.</p></div>
+      <div style="height:230px; display:flex; align-items:center; gap:20px">
+        <div style="width:130px; height:130px; border-radius:999px; background:#f1f2f5; flex:none"></div>
+        <div style="flex:1; min-width:0">
+          <div style="height:11px; width:80%; border-radius:4px; background:#f1f2f5"></div>
+          <div style="height:11px; width:60%; border-radius:4px; background:#f1f2f5; margin-top:12px"></div>
+          <div style="height:1px; background:#eef0f3; margin:18px 0"></div>
+          <div style="height:11px; width:70%; border-radius:4px; background:#f1f2f5"></div>
+        </div>
+      </div>
+      <p style="margin:0; padding-top:16px; border-top:1px solid #eef0f3; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Cargando datos de la temporada…</p>
+    </div>
+
+    <div style="width:292px; background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+      <div><p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Género por categoría</p><p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Inscriptos por categoría de grupo.</p></div>
+      <div style="height:230px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center">
+        <div style="width:72px; height:72px; border-radius:14px; border:2px dashed #dfe2e7"></div>
+        <p style="margin:18px 0 0; font:600 14px Manrope,system-ui,sans-serif; color:#374151">No hay grupos en esta temporada</p>
+        <p style="margin:8px 0 0; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:#6b7280; max-width:210px">El año 2027 todavía no tiene grupos creados.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+<p class="dv-next">Probá pedirme: “seguí con comparar temporadas” · “las categorías de <a class="dv-oid" href="#1a">1a</a> ordenadas alfabéticamente” · “sacá la tarjeta de cobertura y dejá solo las notas al pie”</p>
+</section>
+
+</x-dc>
+</body>
+</html>

@@ -2,6 +2,23 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabaseClient';
 
+// ════════════════════════════════════════════════════════════════════════
+// Interruptor único de los tutoriales.
+//
+// En false no se muestra nada: ni la invitación ("¿Querés un recorrido?"),
+// ni el recorrido guiado de joyride, ni los globos por campo de crear y
+// editar grupo. Las ocho pantallas que usan este hook lo siguen llamando
+// igual — reciben isActive y showInvitation siempre en false — así que no
+// hubo que tocarlas una por una.
+//
+// Apaga también el ?restartTutorial=true de la URL y el "grupo de ejemplo"
+// del panel del anfitrión, que dependía de isActive.
+//
+// Para reactivar todo: poner true. La página /tutoriales, además, está
+// desactivada aparte en App.tsx y en MenuDeslizable.tsx.
+// ════════════════════════════════════════════════════════════════════════
+const TUTORIALES_ACTIVOS = false;
+
 interface UseTutorialReturn {
     isActive: boolean;
     showInvitation: boolean;
@@ -24,6 +41,7 @@ export const useTutorial = (tourId: string): UseTutorialReturn => {
 
     // Check URL override for restarting tutorial
     useEffect(() => {
+        if (!TUTORIALES_ACTIVOS) return;
         const searchParams = new URLSearchParams(window.location.search);
         if (searchParams.get('restartTutorial') === 'true') {
             setIsActive(true);
@@ -37,6 +55,9 @@ export const useTutorial = (tourId: string): UseTutorialReturn => {
 
     // Check user progress on mount
     useEffect(() => {
+        // Apagado: ni se consulta el progreso ni se arma el timer que
+        // levanta la invitación al segundo de entrar.
+        if (!TUTORIALES_ACTIVOS) return;
         if (!user) return;
 
         // Wait for profile to be fully synced to avoid false positives with partial user data
@@ -98,6 +119,7 @@ export const useTutorial = (tourId: string): UseTutorialReturn => {
 
     const startTutorial = useCallback(() => {
         setShowInvitation(false);
+        if (!TUTORIALES_ACTIVOS) return;
         setIsActive(true);
         setTourSessionId(Date.now());
     }, []);
@@ -118,6 +140,7 @@ export const useTutorial = (tourId: string): UseTutorialReturn => {
     }, []);
 
     const resetTutorial = useCallback(async () => {
+        if (!TUTORIALES_ACTIVOS) return;
         if (!user) return;
 
         try {
@@ -149,8 +172,10 @@ export const useTutorial = (tourId: string): UseTutorialReturn => {
     }, [user, tourId, refreshSession]);
 
     return {
-        isActive,
-        showInvitation,
+        // Forzados acá además de en los efectos: aunque algo llegara a
+        // prender el estado, nada se monta.
+        isActive: TUTORIALES_ACTIVOS && isActive,
+        showInvitation: TUTORIALES_ACTIVOS && showInvitation,
         hasSeen,
         tourSessionId,
         startTutorial,
