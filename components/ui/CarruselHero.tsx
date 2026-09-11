@@ -316,11 +316,24 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
     return (
         <div
             ref={rootRef}
-            // Con encuadre configurado manda la proporción; el min-height evita
-            // que un marco panorámico (ej 1920×480) colapse a una franja de
-            // 90px en un teléfono. Ahí el recorte lo resuelve el punto focal.
+            // Con encuadre configurado manda la proporción cargada en el
+            // admin, pero acotada arriba y abajo: una sola proporción da
+            // alturas inservibles en los dos extremos del rango de pantallas.
+            //
+            // · Piso — un marco 1920×1080 en un teléfono de 393px se resuelve
+            //   en 221px de alto. Ahí el titular no entra: arranca por debajo
+            //   de la navbar transparente que va montada encima y la bajada
+            //   termina contra los puntos del carrusel. El piso lo lleva al
+            //   mismo alto que ya usa el respaldo sin encuadre (46vh), con un
+            //   tope en px para que un teléfono chico no quede sin pantalla.
+            // · Techo — esa misma proporción en un monitor de 1920 da 936px de
+            //   banner: la portada se come la primera pantalla entera y no
+            //   queda nada más a la vista.
+            //
+            // Lo que sobra del encuadre en cualquiera de los dos casos lo
+            // recorta el punto focal, que es justamente para lo que está.
             className={`relative w-full ${aspectRatio ? '' : heightClass} group overflow-hidden bg-black`}
-            style={aspectRatio ? { aspectRatio, minHeight: '240px' } : undefined}
+            style={aspectRatio ? { aspectRatio, minHeight: 'min(58vh, 380px)', maxHeight: 'min(86vh, 720px)' } : undefined}
             onMouseEnter={handleUserInteraction}
             onMouseLeave={resumeNow}
             onTouchStart={handleUserInteraction}
@@ -538,7 +551,11 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                                         // en el banner en vez de anclado abajo a la izquierda.
                                         // La legibilidad ya no la da el contorno del texto sino
                                         // el velo degradado — ver getOverlayClass().
-                                        <div className="w-full h-full flex items-center justify-center">
+                                        // El pt-16 compensa los 64px de navbar transparente
+                                        // montada encima, y el pb-12 los puntos del carrusel:
+                                        // sin esos dos resguardos el bloque se centra contra el
+                                        // alto total y se mete abajo de una cosa o de la otra.
+                                        <div className="w-full h-full flex items-center justify-center pt-16 pb-12">
                                             <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
                                                 {/* Dos escalones de tamaño, de mayor a menor:
                                                     principal → destacado. Van en un solo h1 para
@@ -547,7 +564,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
 
                                                     <h1 className={`uppercase tracking-tight text-white drop-shadow-lg ${animBase} ${isActive ? animActive : ''}`}>
                                                         {/* 1 · TEXTO PRINCIPAL */}
-                                                        <span className="block text-3xl md:text-5xl lg:text-6xl font-bold leading-[1.05]">
+                                                        <span className="block text-[26px] sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.08]">
                                                             {slide.title || slide.titlePrefix}
                                                         </span>
                                                         {/* 2 · TEXTO DESTACADO — un escalón abajo en
@@ -555,14 +572,14 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                                                             se lee como bajada del principal y no
                                                             como un segundo titular del mismo rango. */}
                                                         {slide.titleHighlight && (
-                                                            <span className="block mt-1 text-xl md:text-3xl lg:text-4xl font-bold leading-[1.05] text-white/90">
+                                                            <span className="block mt-1 text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-[1.15] text-white/90">
                                                                 {slide.titleHighlight}
                                                             </span>
                                                         )}
                                                     </h1>
 
                                                     {(slide.subtitle || slide.description) && (
-                                                        <p className={`mt-3 md:mt-4 text-base md:text-lg font-medium text-white/90 max-w-lg mx-auto ${animBase} ${isActive ? `${animActive} animation-delay-200` : ''}`}>
+                                                        <p className={`mt-2.5 sm:mt-3 md:mt-4 text-sm sm:text-base md:text-lg font-medium text-white/90 max-w-lg mx-auto ${animBase} ${isActive ? `${animActive} animation-delay-200` : ''}`}>
                                                             {slide.subtitle || slide.description}
                                                         </p>
                                                     )}
