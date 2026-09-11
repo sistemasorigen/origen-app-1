@@ -342,13 +342,23 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                 No usa scroll nativo porque prefers-reduced-motion convierte
                 scroll-behavior:smooth en salto instantáneo; transform en
                 cambio siempre se anima porque esa preferencia no lo toca. */}
+            {/* Las capas se anclan con `absolute inset-0` y no con `h-full`.
+                Cuando hay encuadre, el alto de la raíz no sale de un `height`
+                sino de `aspect-ratio` + `min-height`, y WebKit no toma eso
+                como alto definido: todos los `height: 100%` de abajo colapsan
+                a `auto` y el medio vuelve a su proporción natural. En un
+                iPhone eso dejaba la foto cortada a 221px con el resto del
+                banner en negro. Chrome sí resuelve el porcentaje, así que el
+                defecto sólo se ve en Safari/iOS. Con `inset-0` el alto queda
+                fijado por el bloque contenedor y no hay porcentaje que
+                resolver. */}
             <div
-                className="w-full h-full"
+                className="absolute inset-0"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >
                 <div
-                    className="flex w-full h-full"
+                    className="absolute inset-0 flex"
                     style={{
                         transform: `translateX(-${index * 100}%)`,
                         transition: animate ? `transform ${TRANSITION_MS}ms cubic-bezier(0.25, 0.1, 0.25, 1)` : 'none',
@@ -391,14 +401,14 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
                                     tabIndex={-1}
                                     aria-hidden="true"
                                     style={getMediaFrameStyle(slide)}
-                                    className={`w-full h-full pointer-events-none select-none ${theme === 'prode' ? 'object-contain bg-white' : 'object-cover'} ${getImageClass()}`}
+                                    className={`absolute inset-0 w-full h-full pointer-events-none select-none ${theme === 'prode' ? 'object-contain bg-white' : 'object-cover'} ${getImageClass()}`}
                                 />
                             ) : slide.imageUrl ? (
                                 <img
                                     src={slide.imageUrl}
                                     alt={slide.title || slide.titlePrefix || ''}
                                     style={getMediaFrameStyle(slide)}
-                                    className={`w-full h-full ${theme === 'prode' ? 'object-contain bg-white' : 'object-cover'} ${getImageClass()}`}
+                                    className={`absolute inset-0 w-full h-full ${theme === 'prode' ? 'object-contain bg-white' : 'object-cover'} ${getImageClass()}`}
                                 />
                             ) : null /* sin imagen ni video: queda el fondo negro del contenedor, nunca un ícono de imagen rota */}
 
