@@ -782,7 +782,7 @@ const AppContent: React.FC = () => {
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/coordinators" element={
-                                    (user && hasRole(user, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN]))
+                                    (user && hasRole(user, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS]))
                                         ? <Coordinators currentUser={user} />
                                         : <Navigate to="/" />
                                 } />

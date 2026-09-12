@@ -58,7 +58,14 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
         ? currentUser.coordinatorVariants
         : (currentUser.coordinatorVariant ? [currentUser.coordinatorVariant] : []);
 
-    const categoryFilters = Array.from(new Set(
+    // ADMIN_GROUPS y SUPER_ADMIN ven el panel entero. Sin esto, un admin que
+    // además está asignado como coordinador de un departamento quedaba
+    // recortado a ese departamento: el panel filtraba solo por variantes y no
+    // contemplaba el rol. Es el mismo criterio que useRole.ts ya expone como
+    // isAdmin = isSuperAdmin || isGroupsAdmin.
+    const tieneAccesoTotal = hasRole(currentUser, [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS]);
+
+    const categoryFilters = tieneAccesoTotal ? [] : Array.from(new Set(
         coordinatorVariants
             .map(v => coordinatorVariantToCategory(v))
             .filter((c): c is string => !!c)
@@ -67,7 +74,7 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     // Find category name(s) for display
     const categoryName = categoryFilters.length > 0
         ? categoryFilters.join(' + ')
-        : (hasRole(currentUser, [UserRole.SUPER_ADMIN]) ? 'Todas las Categorías (Global)' : '');
+        : (tieneAccesoTotal ? 'Todas las Categorías (Global)' : '');
 
     // Load all data
     useEffect(() => {
@@ -135,7 +142,7 @@ const Coordinators: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     ];
 
     // No variant assigned alert
-    if (categoryFilters.length === 0 && !hasRole(currentUser, [UserRole.SUPER_ADMIN])) {
+    if (categoryFilters.length === 0 && !tieneAccesoTotal) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950 p-4">
                 <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-8 shadow-sm max-w-md text-center">
