@@ -3472,11 +3472,12 @@ export const supabaseService = {
   // Find a user by email to link partner accounts
   async findUserByEmail(email: string): Promise<{ id: string; name: string; phone?: string } | null> {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, phone')
-        .eq('email', email.toLowerCase().trim())
-        .maybeSingle();
+      // Email exacto, vía servidor. El teléfono solo vuelve si quien busca es
+      // anfitrión o staff; un usuario común que se anota en pareja recibe el
+      // nombre y completa el teléfono a mano.
+      const { data: filas, error } = await supabase
+        .rpc('buscar_usuario_por_email', { p_email: email });
+      const data = ((filas as { id: string; name: string; phone: string | null }[] | null) || [])[0] || null;
 
       if (error) {
         console.error('[Users] Find by email error:', error);
@@ -4790,11 +4791,14 @@ export const supabaseService = {
    */
   async searchUsersGlobal(term: string): Promise<User[]> {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .ilike('name', `%${escapeLikePattern(term)}%`)
-        .limit(20);
+      // Por nombre, hasta 20. El servidor escapa los comodines y solo
+      // responde a anfitriones y staff.
+      const { data, error } = await supabase.rpc('buscar_personas', {
+        p_termino: term,
+        p_por_email: false,
+        p_solo_activos: false,
+        p_limite: 20
+      });
 
       if (error) {
         console.error('[User Search] Error:', error);
@@ -4876,22 +4880,12 @@ export const supabaseService = {
     role: string;
   }[]> {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, email, phone, role, roles')
-        .or(
-          `name.ilike.%${term}%,` +
-          `email.ilike.%${term}%`
-        )
-        .eq('is_active', true)
-        .limit(10)
-        // Forzar lectura desde la DB sin caché
-        // para que los cambios de rol sean inmediatos
-        .throwOnError();
-
-      // Invalidar caché del cliente después de la query
-      // usando timestamp para evitar resultados stale
-      const _bust = Date.now();
+      const { data, error } = await supabase.rpc('buscar_personas', {
+        p_termino: term,
+        p_por_email: true,
+        p_solo_activos: true,
+        p_limite: 10
+      });
 
       if (error) throw error;
 
@@ -5120,9 +5114,7 @@ export const supabaseService = {
       // Resolver nombres de los originantes en un solo query
       const fromIds = [...new Set(data.map((r: any) => r.from_user_id as string))];
       const { data: usersData } = await supabase
-        .from('users')
-        .select('id, name')
-        .in('id', fromIds);
+        .rpc('nombres_de_usuarios', { p_ids: fromIds });
 
       const nameMap: Record<string, string> = {};
       (usersData || []).forEach((u: any) => { nameMap[u.id] = u.name || ''; });

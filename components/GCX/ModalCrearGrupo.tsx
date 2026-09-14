@@ -260,12 +260,16 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         const timer = setTimeout(async () => {
             setIsSearchingCoHost(true);
             try {
-                const { data } = await supabase
-                    .from('users')
-                    .select('id, name, email, role')
-                    .or(`name.ilike.%${coHostSearchTerm}%,email.ilike.%${coHostSearchTerm}%`)
-                    .eq('is_active', true)
-                    .limit(8);
+                // users ya no es legible por cualquier usuario: la búsqueda
+                // pasa por el servidor, que solo la permite a anfitriones y
+                // staff. Además tolera comas y comodines en lo tipeado, que
+                // rompían el filtro .or() armado a mano.
+                const { data } = await supabase.rpc('buscar_personas', {
+                    p_termino: coHostSearchTerm,
+                    p_por_email: true,
+                    p_solo_activos: true,
+                    p_limite: 8
+                });
                 setCoHostResults((data as any[]) || []);
                 setIsCoHostDropdownOpen(true);
             } catch { setCoHostResults([]); }

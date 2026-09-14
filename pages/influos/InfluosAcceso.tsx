@@ -104,9 +104,10 @@ const getTribaTheme = (tribu?: string) => {
 };
 
 // --------------- COMPONENT ---------------
-// NOTE: Anonymous access depends on SQL policy "influos_public_read".
-// If the policy is not yet applied, the query will return empty and the user
-// will see the 'notfound' screen. Run sql/influos_public_select_policy.sql first.
+// La búsqueda usa buscar_tribu_influos(): nombre y apellido exactos (sin
+// importar espacios, mayúsculas ni tildes) y devuelve solo nombre, tribu y si
+// es la primera vez. Funciona con y sin sesión y no expone al resto de los
+// inscriptos, que son menores.
 
 type Screen = 'landing' | 'search' | 'found' | 'notfound';
 
@@ -130,12 +131,10 @@ const InfluosAcceso: React.FC = () => {
         setSearchError(null);
 
         try {
-            const { data, error } = await supabase
-                .from('influos_attendees')
-                .select('id, first_name, last_name, tribe, is_first_time')
-                .ilike('first_name', `%${firstName}%`)
-                .ilike('last_name', `%${lastName}%`)
-                .limit(1);
+            const { data, error } = await supabase.rpc('buscar_tribu_influos', {
+                p_first_name: firstName,
+                p_last_name: lastName
+            });
 
             if (error) throw error;
 
