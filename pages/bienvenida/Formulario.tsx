@@ -123,10 +123,6 @@ const Formulario: React.FC = () => {
         }
     };
 
-    // Normaliza un número a solo dígitos para comparar sin importar el formato
-    const normalizePhone = (phone: string): string =>
-        phone.replace(/\D/g, '');
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -153,37 +149,30 @@ const Formulario: React.FC = () => {
             const dialDigits = selectedCountry.dialCode.replace(/\D/g, '');
             const phoneNormalized = `${dialDigits}${localDigits}`;
 
-            // PASO A: buscar por nombre vía RPC. El .ilike() que había antes
-            // era un match exacto: no toleraba un espacio sobrante en el dato
-            // cargado en recepción, y la persona no se encontraba a sí misma.
-            // El RPC compara con btrim() + lower() de los dos lados.
-            const { data: byName, error: nameSearchError } = await supabase
-                .rpc('search_welcome_visitor', {
+            // Búsqueda y guardado ocurren en el servidor. Antes el navegador
+            // recibía los teléfonos de todas las personas con ese nombre y
+            // comparaba acá, lo que obligaba a dejar welcome_visitors legible
+            // sin sesión. La función aplica la misma regla: nombre y apellido
+            // sin espacios ni mayúsculas, y los últimos N ≥ 8 dígitos del
+            // teléfono iguales.
+            const { data: resultado, error: rpcError } = await supabase
+                .rpc('completar_formulario_bienvenida', {
                     p_first_name: formData.firstName.trim(),
-                    p_last_name: formData.lastName.trim()
+                    p_last_name: formData.lastName.trim(),
+                    p_phone: phoneNormalized,
+                    p_email: formData.email,
+                    p_experience: formData.experience,
+                    p_is_first_time: formData.is_first_time === null ? false : formData.is_first_time,
+                    p_interest_areas: formData.interest_areas,
+                    p_prayer_request: formData.prayer_request
                 });
 
-            if (nameSearchError) {
-                console.error('Search error', nameSearchError);
-                toast.error('Error al buscar registro.');
-                setIsLoading(false);
-                return;
-            }
+            if (rpcError) throw rpcError;
 
-            // PASO B: de los que matchean el nombre, encontrar el que
-            // tiene el teléfono más cercano comparando sufijos de dígitos
-            const existingVisitor = (byName || []).find(v => {
-                const dbPhoneNorm = normalizePhone(v.phone || '');
-                const minLen = Math.min(phoneNormalized.length, dbPhoneNorm.length);
-                // Mínimo 8 dígitos para evitar falsos positivos
-                if (minLen < 8) return false;
-                return (
-                    dbPhoneNorm.endsWith(phoneNormalized.slice(-minLen)) ||
-                    phoneNormalized.endsWith(dbPhoneNorm.slice(-minLen))
-                );
-            }) || null;
-
-            if (!existingVisitor) {
+            // YA_PROCESADO: la persona existe pero el equipo ya avanzó su
+            // etapa. Se muestra el mismo agradecimiento de siempre; no hay
+            // nada que guardar.
+            if (resultado === 'NO_ENCONTRADO') {
                 toast.error(
                     'No encontramos tu registro. ' +
                     'Verificá que el nombre y teléfono ' +
@@ -192,22 +181,6 @@ const Formulario: React.FC = () => {
                 setTimeout(() => navigate('/auth'), 3000);
                 return;
             }
-
-            const updateData = {
-                email: formData.email,
-                experience_description: formData.experience,
-                stage: 'FILLED_FORM',
-                is_first_time: formData.is_first_time === null ? false : formData.is_first_time,
-                interest_areas: formData.interest_areas,
-                prayer_request: formData.prayer_request
-            };
-
-            const { error: updateError } = await supabase
-                .from('welcome_visitors')
-                .update(updateData)
-                .eq('id', existingVisitor.id);
-
-            if (updateError) throw updateError;
 
             sessionStorage.setItem(FORM_RATE_KEY, Date.now().toString());
             setStep(2);

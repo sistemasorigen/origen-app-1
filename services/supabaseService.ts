@@ -1924,7 +1924,11 @@ export const supabaseService = {
         id: userId,
         email: authUser.email,
         name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuario',
-        role: UserRole.VIEWER,
+        // Sin role: si la fila ya existe, el upsert se convierte en UPDATE y
+        // un role fijo pisaba el que tuviera (así quedaron varios anfitriones
+        // y admins con role = VIEWER en enero de 2026). Si no existe, la
+        // columna toma su default y el trigger proteger_columnas_de_rol
+        // garantiza VIEWER.
         is_active: true,
         phone: profileData.phone,
         age: profileData.age,
