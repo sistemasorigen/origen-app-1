@@ -1,124 +1,71 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GroupRegistration } from '../../types';
+import { GroupRegistration, Group } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import AdminGCXLayout from '../../components/layout/AdminGCXLayout';
-import { Check, Search, User, Clock, Mail, Loader2, Trash2, Heart, X, UserPlus, Edit2 } from 'lucide-react';
+import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
+import PestanasGrupoAdmin from '../../components/GCX/PestanasGrupoAdmin';
+import ModalParejaInscripcion, { DatosPareja } from '../../components/GCX/ModalParejaInscripcion';
+import { Search, Loader2, X, Plus, Mail } from 'lucide-react';
 
-const InscriptosGrupoContent: React.FC = () => {
+/**
+ * Inscriptos de un grupo (design-claude/Admin GCX - Detalle e Inscriptos).
+ *
+ * Una lista sola, sin pestañas por estado: cada fila dice en qué estado
+ * está, y las que esperan respuesta van primero. Las inscripciones de
+ * parejas se reconocen de lejos por el filo rosa y el "Pareja ·" del
+ * renglón chico, porque son las que ocupan dos lugares.
+ */
+
+const ROSA = '#9d1d5c';
+
+const iniciales = (nombre: string) =>
+    (nombre || '').split(' y ')[0].split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?';
+
+const estilosEstado = (estado: GroupRegistration['status']) => {
+    if (estado === 'APPROVED') return { bg: '#e9f6ed', fg: '#15803d', dot: '#16a34a', label: 'Aprobada' };
+    if (estado === 'PENDING') return { bg: '#fdf0dc', fg: '#7a4f10', dot: '#b45309', label: 'Pendiente' };
+    return { bg: '#fdecea', fg: '#a32218', dot: '#c62a1d', label: 'Rechazada' };
+};
+
+const GRID = 'grid-cols-[minmax(0,2.1fr)_minmax(0,1.1fr)_minmax(0,1.6fr)_124px_200px]';
+
+interface ContenidoProps {
+    onGrupo: (grupo: Group, inscriptos: number) => void;
+}
+
+const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
     const { groupId } = useParams<{ groupId: string }>();
     const navigate = useNavigate();
+    const { showToast } = useAdminGCXToast();
 
-    const [groupName, setGroupName] = useState('');
+    const [group, setGroup] = useState<Group | null>(null);
     const [loadingGroup, setLoadingGroup] = useState(true);
-
     const [applicants, setApplicants] = useState<GroupRegistration[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('PENDING');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [query, setQuery] = useState('');
+    const [enCurso, setEnCurso] = useState<string | null>(null);
 
-    // ── Modal de agregar/editar pareja ──
-    const [editingPartnerFor, setEditingPartnerFor] = useState<GroupRegistration | null>(null);
-    const [partnerModalHasEmail, setPartnerModalHasEmail] = useState<boolean | null>(null);
-    const [partnerModalFirstName, setPartnerModalFirstName] = useState('');
-    const [partnerModalLastName, setPartnerModalLastName] = useState('');
-    const [partnerModalEmail, setPartnerModalEmail] = useState('');
-    const [partnerModalPhone, setPartnerModalPhone] = useState('');
-    const [partnerModalAccount, setPartnerModalAccount] = useState<{ id: string; name: string; phone?: string } | null>(null);
-    const [partnerModalChecked, setPartnerModalChecked] = useState(false);
-    const [partnerModalChecking, setPartnerModalChecking] = useState(false);
-    const [partnerModalSaving, setPartnerModalSaving] = useState(false);
-    const [partnerModalError, setPartnerModalError] = useState<string | null>(null);
+    // Acompañante
+    const [editandoPareja, setEditandoPareja] = useState<GroupRegistration | null>(null);
+    const [guardandoPareja, setGuardandoPareja] = useState(false);
 
-    const openPartnerModal = (app: GroupRegistration) => {
-        setEditingPartnerFor(app);
-        setPartnerModalError(null);
-        if (app.partnerData) {
-            setPartnerModalHasEmail(!!app.partnerData.email);
-            setPartnerModalFirstName(app.partnerData.firstName);
-            setPartnerModalLastName(app.partnerData.lastName);
-            setPartnerModalEmail(app.partnerData.email || '');
-            setPartnerModalPhone(app.partnerData.phone);
-            setPartnerModalChecked(true);
-        } else {
-            setPartnerModalHasEmail(null);
-            setPartnerModalFirstName(''); setPartnerModalLastName('');
-            setPartnerModalEmail(''); setPartnerModalPhone('');
-            setPartnerModalChecked(false);
-        }
-        setPartnerModalAccount(null);
-    };
-
-    const closePartnerModal = () => setEditingPartnerFor(null);
-
-    const handlePartnerModalEmailBlur = async () => {
-        if (!partnerModalEmail) return;
-        setPartnerModalChecking(true);
-        try {
-            const foundUser = await supabaseService.findUserByEmail(partnerModalEmail);
-            setPartnerModalAccount(foundUser);
-            if (foundUser) {
-                const parts = foundUser.name ? foundUser.name.split(' ') : [];
-                setPartnerModalFirstName(parts[0] || partnerModalFirstName);
-                setPartnerModalLastName(parts.slice(1).join(' ') || partnerModalLastName);
-                setPartnerModalPhone(foundUser.phone || partnerModalPhone);
-            }
-        } finally {
-            setPartnerModalChecking(false);
-            setPartnerModalChecked(true);
-        }
-    };
-
-    const handleSavePartner = async () => {
-        if (!editingPartnerFor) return;
-        setPartnerModalError(null);
-        if (!partnerModalFirstName.trim() || !partnerModalLastName.trim() || !partnerModalPhone.trim() || (partnerModalHasEmail && !partnerModalEmail.trim())) {
-            setPartnerModalError('Completá todos los campos.');
-            return;
-        }
-        setPartnerModalSaving(true);
-        const partnerData = partnerModalHasEmail
-            ? { firstName: partnerModalFirstName, lastName: partnerModalLastName, email: partnerModalEmail, phone: partnerModalPhone }
-            : { firstName: partnerModalFirstName, lastName: partnerModalLastName, phone: partnerModalPhone };
-        const success = await supabaseService.updateRegistrationPartnerData(
-            editingPartnerFor.id,
-            partnerData,
-            partnerModalAccount?.id || null
-        );
-        setPartnerModalSaving(false);
-        if (success) {
-            setApplicants(prev => prev.map(a => a.id === editingPartnerFor.id
-                ? { ...a, partnerData, partnerUserId: partnerModalAccount?.id }
-                : a
-            ));
-            closePartnerModal();
-        } else {
-            setPartnerModalError('Error al guardar. Intentá de nuevo.');
-        }
-    };
-
-    const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
-    const [isSending, setIsSending] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [sendResult, setSendResult] = useState<{ success: boolean; message: string } | null>(null);
-
-    const fetchGroupName = useCallback(async () => {
+    const fetchGroup = useCallback(async () => {
         if (!groupId) return;
         setLoadingGroup(true);
         try {
-            const allGroups = await supabaseService.getGroupsForAdmin();
-            const found = allGroups.find(g => g.id === groupId);
+            const todos = await supabaseService.getGroupsForAdmin();
+            const found = todos.find(g => g.id === groupId);
             if (!found) {
                 navigate('/admingcx/gestion-de-grupos', { replace: true });
                 return;
             }
-            setGroupName(found.name);
+            setGroup(found);
         } finally {
             setLoadingGroup(false);
         }
     }, [groupId, navigate]);
 
-    useEffect(() => { fetchGroupName(); }, [fetchGroupName]);
+    useEffect(() => { fetchGroup(); }, [fetchGroup]);
 
     const fetchApplicants = useCallback(async () => {
         if (!groupId) return;
@@ -130,306 +77,382 @@ const InscriptosGrupoContent: React.FC = () => {
 
     useEffect(() => { fetchApplicants(); }, [fetchApplicants]);
 
-    const handleStatusUpdate = async (id: string, status: 'APPROVED' | 'REJECTED') => {
-        const success = await supabaseService.updateRegistrationStatus(id, status);
-        if (success) {
-            setApplicants(prev => prev.map(app => app.id === id ? { ...app, status } : app));
+    useEffect(() => {
+        if (group) onGrupo(group, applicants.length);
+    }, [group, applicants.length, onGrupo]);
+
+    // ── Acciones sobre una inscripción ───────────────────────────
+    const cambiarEstado = async (r: GroupRegistration, status: 'APPROVED' | 'REJECTED') => {
+        setEnCurso(r.id);
+        const ok = await supabaseService.updateRegistrationStatus(r.id, status);
+        setEnCurso(null);
+        if (ok) {
+            setApplicants(prev => prev.map(a => a.id === r.id ? { ...a, status } : a));
+            showToast(status === 'APPROVED' ? 'Inscripción aprobada' : 'Inscripción rechazada');
+        } else {
+            showToast('No se pudo cambiar el estado de la inscripción', 'error');
         }
     };
 
-    const approvedApplicants = applicants.filter(a => a.status === 'APPROVED');
-
-    const toggleSelection = (id: string) => {
-        const newSelection = new Set(selectedMembers);
-        if (newSelection.has(id)) newSelection.delete(id);
-        else newSelection.add(id);
-        setSelectedMembers(newSelection);
+    const sacar = async (r: GroupRegistration) => {
+        const nombre = `${r.firstName} ${r.lastName}`.trim();
+        if (!window.confirm(`¿Sacar a ${nombre} del grupo? La inscripción se borra y el lugar queda libre.`)) return;
+        setEnCurso(r.id);
+        const ok = await supabaseService.deleteGroupRegistration(r.id, groupId!);
+        setEnCurso(null);
+        if (ok) {
+            setApplicants(prev => prev.filter(a => a.id !== r.id));
+            showToast(`${nombre} salió del grupo`);
+        } else {
+            showToast('No se pudo sacar a esa persona', 'error');
+        }
     };
 
-    const toggleSelectAll = () => {
-        const approvedIds = approvedApplicants.map(a => a.id);
-        const allSelected = approvedIds.every(id => selectedMembers.has(id));
-        setSelectedMembers(allSelected ? new Set() : new Set(approvedIds));
-    };
-
-    const handleBulkResend = async () => {
-        if (selectedMembers.size === 0) return;
-        setIsSending(true);
-        setSendResult(null);
+    const reenviar = async (r: GroupRegistration) => {
+        setEnCurso(r.id);
         try {
-            const result = await supabaseService.resendGroupConfirmationEmails(Array.from(selectedMembers));
-            setSendResult(result);
-            if (result.success) setSelectedMembers(new Set());
-        } catch (error) {
-            setSendResult({ success: false, message: 'Error inesperado al enviar correos' });
+            const resultado = await supabaseService.resendGroupConfirmationEmails([r.id]);
+            showToast(resultado.message, resultado.success ? 'success' : 'error');
+        } catch {
+            showToast('No se pudo reenviar el mail', 'error');
         } finally {
-            setIsSending(false);
+            setEnCurso(null);
         }
     };
 
-    const handleBulkDelete = async () => {
-        if (selectedMembers.size === 0) return;
-        if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${selectedMembers.size} miembro(s)?`)) return;
-        setIsDeleting(true);
-        setSendResult(null);
-        try {
-            const result = await supabaseService.bulkRemoveGroupMembers(Array.from(selectedMembers));
-            setSendResult(result);
-            if (result.success) {
-                setApplicants(prev => prev.filter(a => !selectedMembers.has(a.id)));
-                setSelectedMembers(new Set());
-            }
-        } catch (error) {
-            setSendResult({ success: false, message: 'Error inesperado al eliminar miembros' });
-        } finally {
-            setIsDeleting(false);
+    const guardarPareja = async (datos: DatosPareja, userId: string | null) => {
+        if (!editandoPareja) return;
+        setGuardandoPareja(true);
+        const ok = await supabaseService.updateRegistrationPartnerData(editandoPareja.id, datos, userId);
+        setGuardandoPareja(false);
+        if (ok) {
+            setApplicants(prev => prev.map(a => a.id === editandoPareja.id
+                ? { ...a, partnerData: datos, partnerUserId: userId || undefined }
+                : a));
+            setEditandoPareja(null);
+            showToast('Pareja guardada');
+        } else {
+            showToast('No se pudo guardar la pareja', 'error');
         }
     };
 
-    const filteredApplicants = applicants.filter(app => {
-        if (filter !== 'ALL' && app.status !== filter) return false;
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            const fullName = `${app.firstName} ${app.lastName}`.toLowerCase();
-            const email = (app.email || '').toLowerCase();
-            return fullName.includes(term) || email.includes(term);
-        }
-        return true;
+    // ── Datos de la lista ────────────────────────────────────────
+    const q = query.trim().toLowerCase();
+    const filtrados = applicants.filter(r => {
+        if (!q) return true;
+        const nombre = `${r.firstName} ${r.lastName}`.toLowerCase();
+        const pareja = r.partnerData ? `${r.partnerData.firstName} ${r.partnerData.lastName}`.toLowerCase() : '';
+        return nombre.includes(q) || pareja.includes(q)
+            || (r.phone || '').includes(q) || (r.email || '').toLowerCase().includes(q);
     });
 
-    const allApprovedSelected = approvedApplicants.length > 0 && approvedApplicants.every(a => selectedMembers.has(a.id));
+    // Las que esperan respuesta van primero: son las únicas que piden una
+    // decisión, y sin pestañas de estado quedarían perdidas entre las demás.
+    const orden = { PENDING: 0, APPROVED: 1, REJECTED: 2 } as const;
+    const lista = [...filtrados].sort((a, b) => (orden[a.status] ?? 3) - (orden[b.status] ?? 3));
+
+    const nParejas = applicants.filter(r => !!r.partnerData).length;
+    const nPendientes = applicants.filter(r => r.status === 'PENDING').length;
+
+    const datosDe = (r: GroupRegistration) => {
+        const esPareja = !!r.partnerData;
+        const nombrePareja = esPareja ? `${r.partnerData!.firstName} ${r.partnerData!.lastName}`.trim() : '';
+        return {
+            esPareja,
+            nombre: esPareja
+                ? `${r.firstName} ${r.lastName} y ${nombrePareja}`.trim()
+                : `${r.firstName} ${r.lastName}`.trim(),
+            meta: esPareja
+                ? `Pareja · ${r.partnerUserId
+                    ? `${r.partnerData!.firstName} tiene cuenta vinculada`
+                    : r.partnerData!.email
+                        ? `${r.partnerData!.firstName} cargada a mano`
+                        : `${r.partnerData!.firstName} cargada a mano, sin email`}`
+                : 'Inscripción individual',
+        };
+    };
+
+    const botonChico = 'h-8 rounded-full px-3 text-[12px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1';
+    const iconoChico = 'flex h-8 w-8 flex-none items-center justify-center rounded-full transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1';
+
+    const acciones = (r: GroupRegistration, movil: boolean) => {
+        const { esPareja } = datosDe(r);
+        const ocupado = enCurso === r.id;
+
+        if (r.status === 'PENDING') {
+            return (
+                <>
+                    <button onClick={() => cambiarEstado(r, 'APPROVED')} disabled={ocupado} className={`${botonChico} ${movil ? 'h-[42px] flex-1 text-[13.5px]' : ''} bg-[#0a0a0a] text-white`}>
+                        Aprobar
+                    </button>
+                    <button onClick={() => cambiarEstado(r, 'REJECTED')} disabled={ocupado} className={`${botonChico} ${movil ? 'h-[42px] flex-1 text-[13.5px]' : ''} bg-[#fdecea] text-[#a32218]`}>
+                        Rechazar
+                    </button>
+                </>
+            );
+        }
+
+        if (r.status === 'REJECTED') {
+            return (
+                <>
+                    <button onClick={() => cambiarEstado(r, 'APPROVED')} disabled={ocupado} className={`${botonChico} ${movil ? 'h-[42px] flex-1 text-[13.5px]' : ''} bg-[#f2f2f0] text-black/[.66]`}>
+                        Volver a aprobar
+                    </button>
+                    <button
+                        onClick={() => sacar(r)}
+                        disabled={ocupado}
+                        aria-label={`Sacar a ${r.firstName} del grupo`}
+                        className={`${iconoChico} ${movil ? 'h-[42px] w-[46px]' : ''} bg-[#fdecea] text-[#a32218]`}
+                    >
+                        <X className="h-[14px] w-[14px]" strokeWidth={2.4} />
+                    </button>
+                </>
+            );
+        }
+
+        return (
+            <>
+                <button
+                    onClick={() => setEditandoPareja(r)}
+                    disabled={ocupado}
+                    className={`${botonChico} ${movil ? 'h-[42px] flex-1 text-[13.5px]' : ''} whitespace-nowrap`}
+                    style={esPareja
+                        ? { background: '#fbeef4', color: ROSA }
+                        : { background: '#f2f2f0', color: 'rgba(0,0,0,.66)' }}
+                >
+                    {esPareja ? (movil ? 'Ver o editar la pareja' : 'Ver pareja') : (movil ? 'Sumar una pareja' : 'Sumar pareja')}
+                </button>
+                {!!r.email && (
+                    <button
+                        onClick={() => reenviar(r)}
+                        disabled={ocupado}
+                        title="Reenviar el mail de confirmación"
+                        aria-label={`Reenviar el mail de confirmación a ${r.firstName}`}
+                        className={`${iconoChico} ${movil ? 'h-[42px] w-[46px]' : ''} bg-[#f2f2f0] text-black/[.6]`}
+                    >
+                        {ocupado ? <Loader2 className="h-[14px] w-[14px] animate-spin" /> : <Mail className="h-[14px] w-[14px]" />}
+                    </button>
+                )}
+                <button
+                    onClick={() => sacar(r)}
+                    disabled={ocupado}
+                    aria-label={`Sacar a ${r.firstName} del grupo`}
+                    className={`${iconoChico} ${movil ? 'h-[42px] w-[46px]' : ''} bg-[#fdecea] text-[#a32218]`}
+                >
+                    <X className="h-[14px] w-[14px]" strokeWidth={2.4} />
+                </button>
+            </>
+        );
+    };
 
     if (loadingGroup) return (
-        <div className="flex justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+        <div className="flex justify-center rounded-[20px] bg-white py-20">
+            <Loader2 className="h-7 w-7 animate-spin text-black/20" />
         </div>
     );
 
+    const pill = (r: GroupRegistration) => {
+        const c = estilosEstado(r.status);
+        return (
+            <span
+                className="flex h-[26px] w-fit flex-none items-center gap-1.5 whitespace-nowrap rounded-full px-[11px] text-[11.5px] font-semibold"
+                style={{ background: c.bg, color: c.fg }}
+            >
+                <span className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: c.dot }} />
+                {c.label}
+            </span>
+        );
+    };
+
     return (
-        <div className="max-w-2xl">
-            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">
-                Solicitudes: {groupName}
-            </h1>
-
-            <div className="flex flex-col gap-4 mb-4">
-                <div className="flex bg-neutral-100 p-1 rounded-lg">
-                    <button
-                        onClick={() => setFilter('PENDING')}
-                        className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${filter === 'PENDING' ? 'bg-black text-white shadow-sm' : 'text-neutral-500 hover:text-black'}`}
-                    >
-                        Solicitudes
-                    </button>
-                    <button
-                        onClick={() => setFilter('APPROVED')}
-                        className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${filter === 'APPROVED' ? 'bg-black text-white shadow-sm' : 'text-neutral-500 hover:text-black'}`}
-                    >
-                        Miembros
-                    </button>
-                </div>
-
-                <div className="flex gap-2">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2 bg-white border-2 border-black font-bold text-sm focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] outline-none transition-all"
-                        />
-                    </div>
-                    {filter === 'APPROVED' && approvedApplicants.length > 0 && (
+        <>
+            {/* Buscador y alta */}
+            <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex h-[42px] min-w-[180px] flex-1 items-center gap-2.5 rounded-full bg-white pl-[17px] pr-2">
+                    <Search className="h-4 w-4 flex-none text-black/[.58]" />
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        placeholder="Buscar por nombre, teléfono o email"
+                        aria-label="Buscar inscriptos"
+                        className="campo-desnudo min-w-0 flex-1 bg-transparent text-[13.5px] font-medium text-[#0a0a0a]"
+                    />
+                    {query && (
                         <button
-                            onClick={toggleSelectAll}
-                            className={`px-3 border-2 border-black font-bold text-xs uppercase flex items-center gap-1 hover:bg-black hover:text-white transition-all ${allApprovedSelected ? 'bg-black text-white' : 'bg-white'}`}
+                            onClick={() => setQuery('')}
+                            aria-label="Limpiar la búsqueda"
+                            className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full bg-[#f2f2f0] text-[#0a0a0a]"
                         >
-                            <Check className={`w-3 h-3 ${allApprovedSelected ? 'opacity-100' : 'opacity-0'}`} />
-                            Todos
+                            <X className="h-[13px] w-[13px]" />
                         </button>
                     )}
                 </div>
+                <button
+                    onClick={() => navigate('/admingcx/gestion-de-grupos/agregar-grupo', { state: { groupId } })}
+                    className="flex h-[42px] flex-none items-center gap-2 rounded-full bg-[#0a0a0a] px-5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                >
+                    <Plus className="h-[15px] w-[15px]" />
+                    Agregar a mano
+                </button>
             </div>
 
-            {sendResult && (
-                <div className={`mb-4 p-3 border-2 text-xs font-black uppercase ${sendResult.success ? 'bg-green-50 border-green-500 text-green-700' : 'bg-red-50 border-red-500 text-red-700'}`}>
-                    {sendResult.message}
-                </div>
-            )}
+            <p className="mx-0.5 mt-3.5 text-[12px] font-semibold text-black/[.62]">
+                {loading
+                    ? 'Cargando las inscripciones…'
+                    : applicants.length === 0
+                        ? 'Todavía sin inscriptos'
+                        : `${lista.length} de ${applicants.length} inscripciones${nParejas > 0 ? ` · ${nParejas} ${nParejas === 1 ? 'es pareja' : 'son parejas'}` : ''}${nPendientes > 0 ? ` · ${nPendientes} ${nPendientes === 1 ? 'espera respuesta' : 'esperan respuesta'}` : ''}`}
+            </p>
 
-            <div className="space-y-3 mb-6">
-                {loading ? (
-                    <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin" /></div>
-                ) : filteredApplicants.length === 0 ? (
-                    <div className="text-center py-10 opacity-50">
-                        <Search className="w-8 h-8 mx-auto mb-2" />
-                        <p className="text-xs font-bold uppercase">Sin resultados</p>
-                    </div>
-                ) : (
-                    filteredApplicants.map((app) => (
-                        <div key={app.id} className={`p-3 border-2 transition-all rounded-lg ${selectedMembers.has(app.id) ? 'border-black bg-blue-50' : 'border-neutral-200 hover:border-black'}`}>
-                            <div className="flex justify-between items-start gap-3">
-                                {app.status === 'APPROVED' && (
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedMembers.has(app.id)}
-                                        onChange={() => toggleSelection(app.id)}
-                                        className="mt-1 w-4 h-4 accent-black border-2 border-black cursor-pointer"
-                                    />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-start">
-                                        <h3 className="font-bold truncate">{app.firstName} {app.lastName}</h3>
-                                        {app.status !== 'PENDING' && (
-                                            <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 ${app.status === 'APPROVED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                {app.status === 'APPROVED' ? 'OK' : 'NO'}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="text-xs text-neutral-500 mt-1 space-y-0.5">
-                                        <div className="flex items-center gap-1"><User className="w-3 h-3" /> {app.phone}</div>
-                                        {app.email && <div className="flex items-center gap-1"><Mail className="w-3 h-3" /> {app.email}</div>}
-                                        <div className="flex items-center gap-1 opacity-70"><Clock className="w-3 h-3" /> {new Date(app.timestamp).toLocaleDateString()}</div>
-                                    </div>
-                                    {app.status === 'APPROVED' && app.partnerData && (
-                                        <div className="mt-2 pt-2 border-t border-neutral-200 flex items-start justify-between gap-2">
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-1 mb-1">
-                                                    <span className="text-[10px] font-black uppercase text-neutral-400">Pareja</span>
-                                                    {app.partnerUserId && <span className="bg-green-100 text-green-700 text-[10px] px-1 font-bold">VINCULADO</span>}
-                                                </div>
-                                                <p className="text-sm font-bold">{app.partnerData.firstName} {app.partnerData.lastName}</p>
-                                                <p className="text-xs text-neutral-500 flex items-center gap-1"><User className="w-3 h-3" /> {app.partnerData.phone}</p>
-                                            </div>
-                                            {!app.partnerUserId && (
-                                                <button onClick={() => openPartnerModal(app)} className="shrink-0 flex items-center gap-1 text-[10px] font-black uppercase text-purple-600 hover:text-purple-800">
-                                                    <Edit2 className="w-3 h-3" /> Editar
-                                                </button>
-                                            )}
+            {loading ? (
+                <div className="mt-3 flex justify-center rounded-[20px] bg-white py-20">
+                    <Loader2 className="h-7 w-7 animate-spin text-black/20" />
+                </div>
+            ) : lista.length === 0 ? (
+                <div className="mt-3 flex flex-col items-center rounded-[20px] bg-white px-[30px] py-[52px] text-center">
+                    <div className="h-[84px] w-[84px] rounded-full" style={{ background: 'repeating-linear-gradient(135deg,#eceae6 0 8px,#e3e1dc 8px 16px)' }} />
+                    <p className="mt-5 text-[17px] font-semibold text-[#0a0a0a]">
+                        {applicants.length === 0 ? 'El grupo todavía no tiene inscriptos' : 'Nadie coincide con la búsqueda'}
+                    </p>
+                    <p className="mt-[9px] max-w-[330px] text-[13.5px] font-medium leading-[1.6] text-black/[.62]">
+                        {applicants.length === 0
+                            ? group && (group.status === 'pending' || !group.status)
+                                ? 'Mientras esté pendiente de aprobación no aparece en el catálogo y nadie puede anotarse. Podés agregar gente a mano igual.'
+                                : 'Cuando alguien se anote desde el catálogo va a aparecer acá. También podés agregar gente a mano.'
+                            : 'Probá con el apellido, con parte del teléfono, o agregá la persona a mano si todavía no está.'}
+                    </p>
+                    <button
+                        onClick={() => applicants.length === 0
+                            ? navigate('/admingcx/gestion-de-grupos/agregar-grupo', { state: { groupId } })
+                            : setQuery('')}
+                        className="mt-5 h-[46px] rounded-full bg-[#0a0a0a] px-[22px] text-[14px] font-semibold text-white"
+                    >
+                        {applicants.length === 0 ? 'Agregar a mano' : 'Limpiar la búsqueda'}
+                    </button>
+                </div>
+            ) : (
+                <>
+                    {/* Escritorio */}
+                    <div className="mt-3 hidden overflow-hidden rounded-[20px] bg-white lg:block">
+                        <div className={`grid ${GRID} gap-3.5 border-b border-[#f0efec] bg-[#fafaf9] px-5 py-[11px]`}>
+                            {['Persona', 'Teléfono', 'Email', 'Estado'].map(h => (
+                                <span key={h} className="text-[11px] font-semibold uppercase tracking-[0.05em] text-black/[.6]">{h}</span>
+                            ))}
+                            <span />
+                        </div>
+
+                        {lista.map(r => {
+                            const { esPareja, nombre, meta } = datosDe(r);
+                            return (
+                                <div
+                                    key={r.id}
+                                    className={`grid ${GRID} h-[60px] items-center gap-3.5 border-b border-[#f4f3f1] px-5`}
+                                    style={esPareja ? { boxShadow: `inset 3px 0 0 ${ROSA}` } : undefined}
+                                >
+                                    <div className="flex min-w-0 items-center gap-[11px]">
+                                        <div
+                                            className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[11px] text-[11px] font-semibold"
+                                            style={esPareja
+                                                ? { background: '#fbeef4', color: ROSA }
+                                                : { background: '#f2f2f0', color: 'rgba(0,0,0,.58)' }}
+                                        >
+                                            {iniciales(nombre)}
                                         </div>
-                                    )}
-                                    {app.status === 'APPROVED' && !app.partnerData && (
-                                        <button onClick={() => openPartnerModal(app)} className="mt-2 pt-2 border-t border-neutral-200 w-full flex items-center gap-1.5 text-[10px] font-black uppercase text-purple-600 hover:text-purple-800">
-                                            <UserPlus className="w-3.5 h-3.5" /> Agregar pareja
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-[13.5px] font-semibold text-[#0a0a0a]">{nombre}</p>
+                                            <p className="mt-0.5 truncate text-[11.5px] font-medium" style={{ color: esPareja ? ROSA : 'rgba(0,0,0,.62)' }}>
+                                                {meta}
+                                            </p>
+                                        </div>
+                                    </div>
 
-                            {app.status === 'PENDING' && (
-                                <div className="flex gap-2 mt-3 pt-2 border-t-2 border-dotted border-neutral-200">
-                                    <button onClick={() => handleStatusUpdate(app.id, 'REJECTED')} className="flex-1 py-2 text-[10px] font-black uppercase bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors rounded">Rechazar</button>
-                                    <button onClick={() => handleStatusUpdate(app.id, 'APPROVED')} className="flex-1 py-2 text-[10px] font-black uppercase bg-black text-white hover:bg-neutral-800 transition-colors rounded">Aprobar</button>
-                                </div>
-                            )}
-                        </div>
-                    ))
-                )}
-            </div>
+                                    <span className="truncate text-[13px] font-medium text-black/[.66]">{r.phone || 'sin teléfono'}</span>
+                                    <span className="truncate text-[13px] font-medium text-black/[.66]">{r.email || 'sin email'}</span>
+                                    {pill(r)}
 
-            {selectedMembers.size > 0 && (
-                <div className="sticky bottom-4 pt-4 border-t-4 border-black bg-white flex items-center justify-between gap-2 overflow-x-auto rounded-t-lg shadow-lg px-3 pb-3">
-                    <span className="text-xs font-black uppercase whitespace-nowrap">{selectedMembers.size} Sel.</span>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={handleBulkResend}
-                            disabled={isSending}
-                            className="px-3 py-2 bg-neutral-100 border-2 border-black font-bold uppercase text-[10px] hover:bg-black hover:text-white transition-all flex items-center gap-1 whitespace-nowrap"
-                        >
-                            {isSending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
-                            Reenviar
-                        </button>
-                        <button
-                            onClick={handleBulkDelete}
-                            disabled={isSending || isDeleting}
-                            className="px-3 py-2 bg-red-50 border-2 border-red-500 text-red-600 font-bold uppercase text-[10px] hover:bg-red-600 hover:text-white transition-all flex items-center gap-1 whitespace-nowrap"
-                        >
-                            {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                            Eliminar
-                        </button>
+                                    <div className="flex justify-end gap-1.5">{acciones(r, false)}</div>
+                                </div>
+                            );
+                        })}
                     </div>
-                </div>
+
+                    {/* Mobile y tablet */}
+                    <div className="mt-3 flex flex-col gap-2.5 lg:hidden">
+                        {lista.map(r => {
+                            const { esPareja, nombre, meta } = datosDe(r);
+                            return (
+                                <div
+                                    key={r.id}
+                                    className="rounded-[20px] bg-white px-4 py-3.5"
+                                    style={esPareja ? { boxShadow: `inset 3px 0 0 ${ROSA}` } : undefined}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div
+                                            className="flex h-11 w-11 flex-none items-center justify-center rounded-[14px] text-[13px] font-semibold"
+                                            style={esPareja
+                                                ? { background: '#fbeef4', color: ROSA }
+                                                : { background: '#f2f2f0', color: 'rgba(0,0,0,.58)' }}
+                                        >
+                                            {iniciales(nombre)}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[15px] font-semibold text-[#0a0a0a]">{nombre}</p>
+                                            <p className="mt-[3px] text-[12.5px] font-medium" style={{ color: esPareja ? ROSA : 'rgba(0,0,0,.62)' }}>
+                                                {meta}
+                                            </p>
+                                        </div>
+                                        {pill(r)}
+                                    </div>
+
+                                    <div className="mt-3 flex flex-col gap-1">
+                                        <p className="text-[13px] font-medium text-black/[.66]">{r.phone || 'sin teléfono'}</p>
+                                        <p className="truncate text-[13px] font-medium text-black/[.66]">{r.email || 'sin email'}</p>
+                                    </div>
+
+                                    <div className="mt-3.5 flex gap-2">{acciones(r, true)}</div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
             )}
 
-            {/* Modal Agregar/Editar Pareja */}
-            {editingPartnerFor && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-sm bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between border-b-2 border-black pb-2">
-                            <div className="flex items-center gap-2">
-                                <Heart className="w-4 h-4 text-purple-600" />
-                                <h3 className="font-black uppercase text-sm">
-                                    {editingPartnerFor.partnerData ? 'Editar pareja' : 'Agregar pareja'}
-                                </h3>
-                            </div>
-                            <button onClick={closePartnerModal} className="text-neutral-400 hover:text-black">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div>
-                            <p className="text-[10px] font-black uppercase text-neutral-400 mb-1.5">¿Tiene email?</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => { setPartnerModalHasEmail(true); setPartnerModalChecked(false); setPartnerModalAccount(null); }} className={`py-2 border-2 border-black text-xs font-black uppercase transition-all ${partnerModalHasEmail === true ? 'bg-purple-600 text-white' : 'bg-white text-black hover:bg-neutral-100'}`}>Sí</button>
-                                <button onClick={() => { setPartnerModalHasEmail(false); setPartnerModalChecked(true); setPartnerModalAccount(null); setPartnerModalEmail(''); }} className={`py-2 border-2 border-black text-xs font-black uppercase transition-all ${partnerModalHasEmail === false ? 'bg-black text-white' : 'bg-white text-black hover:bg-neutral-100'}`}>No</button>
-                            </div>
-                        </div>
-
-                        {partnerModalHasEmail !== null && (
-                            <>
-                                {partnerModalHasEmail && (
-                                    <div>
-                                        <label className="text-[10px] font-bold uppercase block mb-1">Email</label>
-                                        <input
-                                            type="email" value={partnerModalEmail}
-                                            onChange={e => { setPartnerModalEmail(e.target.value); setPartnerModalChecked(false); setPartnerModalAccount(null); }}
-                                            onBlur={handlePartnerModalEmailBlur}
-                                            className="w-full h-10 px-3 border-2 border-black font-bold text-sm outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
-                                        />
-                                        {partnerModalAccount && <p className="text-[10px] font-bold text-green-700 mt-1">Cuenta encontrada: {partnerModalAccount.name}</p>}
-                                    </div>
-                                )}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-[10px] font-bold uppercase block mb-1">Nombre</label>
-                                        <input type="text" value={partnerModalFirstName} onChange={e => setPartnerModalFirstName(e.target.value)} disabled={partnerModalHasEmail === true && (!partnerModalChecked || partnerModalChecking)} className="w-full h-10 px-3 border-2 border-black font-bold text-sm outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all disabled:bg-neutral-100 disabled:text-neutral-400" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold uppercase block mb-1">Apellido</label>
-                                        <input type="text" value={partnerModalLastName} onChange={e => setPartnerModalLastName(e.target.value)} disabled={partnerModalHasEmail === true && (!partnerModalChecked || partnerModalChecking)} className="w-full h-10 px-3 border-2 border-black font-bold text-sm outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all disabled:bg-neutral-100 disabled:text-neutral-400" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-bold uppercase block mb-1">Teléfono</label>
-                                    <input type="tel" value={partnerModalPhone} onChange={e => setPartnerModalPhone(e.target.value)} disabled={partnerModalHasEmail === true && (!partnerModalChecked || partnerModalChecking)} className="w-full h-10 px-3 border-2 border-black font-bold text-sm outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all disabled:bg-neutral-100 disabled:text-neutral-400" />
-                                </div>
-                            </>
-                        )}
-
-                        {partnerModalError && <p className="text-xs text-red-600 font-semibold">{partnerModalError}</p>}
-
-                        <button
-                            onClick={handleSavePartner}
-                            disabled={partnerModalSaving}
-                            className="w-full h-11 bg-black text-white text-xs font-black uppercase tracking-wide border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                            {partnerModalSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                            Guardar
-                        </button>
-                    </div>
-                </div>
-            )}
-        </div>
+            <ModalParejaInscripcion
+                isOpen={!!editandoPareja}
+                onClose={() => setEditandoPareja(null)}
+                titular={editandoPareja ? `${editandoPareja.firstName} ${editandoPareja.lastName}`.trim() : ''}
+                inicial={editandoPareja
+                    ? { datos: editandoPareja.partnerData, userId: editandoPareja.partnerUserId || null }
+                    : undefined}
+                onGuardar={guardarPareja}
+                guardando={guardandoPareja}
+            />
+        </>
     );
 };
 
-const InscriptosGrupo: React.FC = () => (
-    <AdminGCXLayout
-        title="Inscriptos del Grupo"
-        backTo="/admingcx/gestion-de-grupos"
-        backLabel="Volver a Gestión de Grupos"
-    >
-        <InscriptosGrupoContent />
-    </AdminGCXLayout>
-);
+const InscriptosGrupo: React.FC = () => {
+    const { groupId } = useParams<{ groupId: string }>();
+    const [nombre, setNombre] = useState('Inscriptos del grupo');
+    const [nInscriptos, setNInscriptos] = useState<number | undefined>(undefined);
+
+    const recibirGrupo = useCallback((g: Group, inscriptos: number) => {
+        setNombre(g.name);
+        setNInscriptos(inscriptos);
+    }, []);
+
+    return (
+        <AdminGCXLayout
+            title={nombre}
+            backTo="/admingcx/gestion-de-grupos"
+            backLabel="Grupos"
+            subtitle=""
+            tabs={<PestanasGrupoAdmin activa="inscriptos" groupId={groupId} nInscriptos={nInscriptos} />}
+        >
+            <InscriptosGrupoContent onGrupo={recibirGrupo} />
+        </AdminGCXLayout>
+    );
+};
 
 export default InscriptosGrupo;

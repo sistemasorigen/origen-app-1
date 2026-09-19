@@ -306,8 +306,8 @@ const CrearGrupoAdminContent: React.FC = () => {
     };
 
     return (
-        <div className="max-w-2xl">
-            <form onSubmit={handleSubmit} className="space-y-6">
+        <div id="gcx-formulario-admin" className="max-w-[760px]">
+            <form onSubmit={handleSubmit} className="space-y-5 rounded-[20px] bg-white p-5">
 
                 {/* ASIGNAR ANFITRIÓN — exclusivo de la vista admin */}
                 <div className="bg-yellow-50 p-4 border-l-4 border-yellow-400">

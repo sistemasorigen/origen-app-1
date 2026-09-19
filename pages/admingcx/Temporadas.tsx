@@ -1,28 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import { AppConfig, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
+import { AppConfig, SeasonSettings, DEFAULT_SEASON_SETTINGS, Group } from '../../types';
 import { db } from '../../services/dbService';
 import { supabaseService } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 import { Loader2 } from 'lucide-react';
 
+/**
+ * Sección Temporadas del panel (design-claude/Admin GCX - Panel).
+ *
+ * Una tarjeta por temporada con su estado, las dos fechas y cuántos grupos
+ * arrancan adentro de ese rango. Mientras no se esté editando, la tarjeta
+ * es de sola lectura: son fechas que se tocan dos o tres veces al año.
+ */
+
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+/** "03-23" (MM-DD) → "23 mar" */
+const fechaLegible = (mmdd: string) => {
+    if (!mmdd || !mmdd.includes('-')) return '—';
+    const [mes, dia] = mmdd.split('-');
+    const i = parseInt(mes, 10) - 1;
+    if (isNaN(i) || !MESES[i]) return '—';
+    return `${parseInt(dia, 10)} ${MESES[i]}`;
+};
+
+/** "03-23" → 323, para comparar dos fechas sin año. */
+const aNumero = (mmdd: string) => {
+    if (!mmdd || !mmdd.includes('-')) return null;
+    const [mes, dia] = mmdd.split('-').map(n => parseInt(n, 10));
+    if (isNaN(mes) || isNaN(dia)) return null;
+    return mes * 100 + dia;
+};
+
 const TemporadasContent: React.FC = () => {
     const { showToast } = useAdminGCXToast();
     const [config, setConfig] = useState<AppConfig | null>(null);
+    const [groups, setGroups] = useState<Group[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingSeasons, setEditingSeasons] = useState<SeasonSettings | null>(null);
     const [isSavingSeasons, setIsSavingSeasons] = useState(false);
 
     useEffect(() => {
         setLoading(true);
-        supabaseService.getAppConfig().then(remoteConfig => {
-            if (remoteConfig) {
-                db.saveAppConfig(remoteConfig);
-                setConfig(remoteConfig);
-            } else {
-                setConfig(db.getAppConfig());
-            }
-            setLoading(false);
-        });
+        Promise.all([
+            supabaseService.getAppConfig().then(remoteConfig => {
+                if (remoteConfig) {
+                    db.saveAppConfig(remoteConfig);
+                    setConfig(remoteConfig);
+                } else {
+                    setConfig(db.getAppConfig());
+                }
+            }),
+            supabaseService.getGroupsForAdmin().then(setGroups).catch(() => setGroups([])),
+        ]).finally(() => setLoading(false));
     }, []);
 
     const handleSaveSeasonSettings = async () => {
@@ -42,7 +72,7 @@ const TemporadasContent: React.FC = () => {
             if (ok) {
                 setConfig(updatedConfig);
                 setEditingSeasons(null);
-                showToast('Configuración de temporadas guardada', 'success');
+                showToast('Temporadas guardadas');
             } else {
                 showToast('Error al guardar', 'error');
             }
@@ -55,162 +85,166 @@ const TemporadasContent: React.FC = () => {
 
     if (loading || !config) {
         return (
-            <div className="flex justify-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+            <div className="flex justify-center rounded-[20px] bg-white py-20">
+                <Loader2 className="h-7 w-7 animate-spin text-black/20" />
             </div>
         );
     }
 
     const seasonSettings: SeasonSettings = config?.groupsConfig?.seasonSettings ?? DEFAULT_SEASON_SETTINGS;
+    const enEdicion = !!editingSeasons;
+    const vista = editingSeasons ?? seasonSettings;
+
+    // Cuántos grupos arrancan dentro del rango de cada temporada. Se compara
+    // día y mes, sin año, porque las fechas de la temporada se guardan así.
+    const gruposDe = (inicio: string, fin: string) => {
+        const desde = aNumero(inicio);
+        const hasta = aNumero(fin);
+        if (desde === null || hasta === null) return 0;
+        return groups.filter(g => {
+            if (!g.startDate) return false;
+            const partes = g.startDate.split('-');
+            if (partes.length < 3) return false;
+            const md = parseInt(partes[1], 10) * 100 + parseInt(partes[2], 10);
+            return md >= desde && md <= hasta;
+        }).length;
+    };
+
+    const actualizar = (clave: 'S1' | 'S2' | 'S3', campo: 'label' | 'startDate' | 'endDate' | 'isOpen', valor: string | boolean) => {
+        if (!editingSeasons) return;
+        const copia: SeasonSettings = JSON.parse(JSON.stringify(editingSeasons));
+        (copia.seasons[clave] as any)[campo] = valor;
+        setEditingSeasons(copia);
+    };
+
+    const pill = (abierta: boolean) => abierta
+        ? { background: '#e9f6ed', color: '#15803d' }
+        : { background: '#f0efec', color: 'rgba(0,0,0,.62)' };
 
     return (
-            <div className="max-w-4xl">
-                <div className="bg-white p-8 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                    <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-black">
-                        <div>
-                            <h4 className="font-black text-base uppercase tracking-tight">Configuración de Temporadas</h4>
-                            <p className="text-xs font-medium text-neutral-500 mt-1">
-                                Habilitá o deshabilitá en qué temporadas se puede crear o re-abrir un grupo. También podés ajustar el año activo y las fechas exactas.
-                            </p>
-                        </div>
-                        {!editingSeasons ? (
+        <>
+            {/* Año activo y edición */}
+            <div className="flex flex-wrap items-center gap-3.5 rounded-[20px] bg-white px-5 py-4">
+                <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-black/[.58]">Año activo</p>
+                    {enEdicion ? (
+                        <input
+                            type="number"
+                            min={2024}
+                            max={2030}
+                            value={editingSeasons!.activeYear}
+                            onChange={e => setEditingSeasons({ ...editingSeasons!, activeYear: parseInt(e.target.value) || new Date().getFullYear() })}
+                            aria-label="Año activo de las temporadas"
+                            className="mt-1 h-11 w-28 px-3 text-[17px]"
+                        />
+                    ) : (
+                        <p className="mt-0.5 text-[21px] font-semibold tracking-[-0.018em] text-[#0a0a0a]">{seasonSettings.activeYear}</p>
+                    )}
+                    <p className="mt-1 text-[12.5px] font-medium text-black/[.62]">
+                        Las fechas de abajo se aplican a este año.
+                    </p>
+                </div>
+
+                <div className="flex flex-none gap-2">
+                    {!enEdicion ? (
+                        <button
+                            onClick={() => setEditingSeasons(JSON.parse(JSON.stringify(seasonSettings)))}
+                            className="h-[42px] rounded-full bg-[#0a0a0a] px-5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                        >
+                            Editar las temporadas
+                        </button>
+                    ) : (
+                        <>
                             <button
-                                onClick={() => setEditingSeasons(JSON.parse(JSON.stringify(seasonSettings)))}
-                                className="px-4 py-2 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all shrink-0"
+                                onClick={() => setEditingSeasons(null)}
+                                className="h-[42px] rounded-full bg-[#f2f2f0] px-5 text-[14px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                             >
-                                Editar
+                                Cancelar
                             </button>
-                        ) : (
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setEditingSeasons(null)}
-                                    className="px-4 py-2 text-xs font-black uppercase tracking-widest border-2 border-black hover:bg-neutral-100 transition-all"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={handleSaveSeasonSettings}
-                                    disabled={isSavingSeasons}
-                                    className="px-4 py-2 bg-black text-white text-xs font-black uppercase tracking-widest border-2 border-black hover:opacity-80 transition-all disabled:opacity-50 shrink-0"
-                                >
-                                    {isSavingSeasons ? 'Guardando...' : 'Guardar'}
-                                </button>
+                            <button
+                                onClick={handleSaveSeasonSettings}
+                                disabled={isSavingSeasons}
+                                className="h-[42px] rounded-full bg-[#0a0a0a] px-5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                            >
+                                {isSavingSeasons ? 'Guardando…' : 'Guardar'}
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* Las tres temporadas */}
+            <div className="mt-3 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+                {(['S1', 'S2', 'S3'] as const).map(clave => {
+                    const s = vista.seasons[clave];
+                    const cantidad = gruposDe(s.startDate, s.endDate);
+                    return (
+                        <div key={clave} className="rounded-[20px] bg-white p-5">
+                            <div className="flex items-center gap-2.5">
+                                {enEdicion ? (
+                                    <input
+                                        type="text"
+                                        value={s.label}
+                                        onChange={e => actualizar(clave, 'label', e.target.value)}
+                                        aria-label={`Nombre de la ${clave}`}
+                                        className="h-10 min-w-0 flex-1 px-3 text-[15px]"
+                                    />
+                                ) : (
+                                    <p className="min-w-0 flex-1 truncate text-[17px] font-semibold text-[#0a0a0a]">{s.label}</p>
+                                )}
+
+                                {enEdicion ? (
+                                    <button
+                                        onClick={() => actualizar(clave, 'isOpen', !s.isOpen)}
+                                        aria-pressed={s.isOpen}
+                                        className="flex h-[26px] flex-none items-center rounded-full px-[11px] text-[11.5px] font-semibold"
+                                        style={pill(s.isOpen)}
+                                    >
+                                        {s.isOpen ? 'Abierta' : 'Cerrada'}
+                                    </button>
+                                ) : (
+                                    <span
+                                        className="flex h-[26px] flex-none items-center rounded-full px-[11px] text-[11.5px] font-semibold"
+                                        style={pill(s.isOpen)}
+                                    >
+                                        {s.isOpen ? 'Abierta' : 'Cerrada'}
+                                    </span>
+                                )}
                             </div>
-                        )}
-                    </div>
 
-                    {/* Año activo */}
-                    <div className="mb-6 p-4 border-2 border-neutral-200 bg-neutral-50 flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-black uppercase tracking-widest text-neutral-600">Año activo de temporadas</p>
-                            <p className="text-[10px] font-medium text-neutral-400 mt-0.5">Las fechas de cada temporada se aplicarán a este año.</p>
-                        </div>
-                        {editingSeasons ? (
-                            <input
-                                type="number"
-                                min={2024}
-                                max={2030}
-                                value={editingSeasons.activeYear}
-                                onChange={e => setEditingSeasons({ ...editingSeasons, activeYear: parseInt(e.target.value) || new Date().getFullYear() })}
-                                className="w-24 h-10 px-3 border-2 border-black font-black text-center text-base focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                            />
-                        ) : (
-                            <span className="text-3xl font-black tabular-nums">{seasonSettings.activeYear}</span>
-                        )}
-                    </div>
-
-                    {/* Las 3 temporadas */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {(['S1', 'S2', 'S3'] as const).map(key => {
-                            const s = editingSeasons ? editingSeasons.seasons[key] : seasonSettings.seasons[key];
-                            const year = editingSeasons ? editingSeasons.activeYear : seasonSettings.activeYear;
-                            return (
-                                <div
-                                    key={key}
-                                    className={`border-2 p-5 transition-all ${s.isOpen ? 'border-black bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]' : 'border-neutral-200 bg-neutral-50'}`}
-                                >
-                                    <div className="flex items-center justify-between mb-4">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{key}</p>
-                                        {editingSeasons ? (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const updated = JSON.parse(JSON.stringify(editingSeasons));
-                                                    updated.seasons[key].isOpen = !updated.seasons[key].isOpen;
-                                                    setEditingSeasons(updated);
-                                                }}
-                                                className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider border-2 transition-all ${editingSeasons.seasons[key].isOpen ? 'bg-black border-black text-white' : 'bg-white border-neutral-300 text-neutral-400 hover:border-black'}`}
-                                            >
-                                                {editingSeasons.seasons[key].isOpen ? 'Abierta' : 'Cerrada'}
-                                            </button>
+                            <div className="mt-4 flex gap-2.5">
+                                {([['Inicio', 'startDate'], ['Fin', 'endDate']] as const).map(([rotulo, campo]) => (
+                                    <div key={campo} className="flex h-14 flex-1 flex-col justify-center rounded-[16px] bg-[#f7f7f5] px-[15px]">
+                                        <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.58]">{rotulo}</span>
+                                        {enEdicion ? (
+                                            <input
+                                                type="text"
+                                                placeholder="23-03"
+                                                maxLength={5}
+                                                value={(s[campo] || '').split('-').reverse().join('-')}
+                                                onChange={e => actualizar(clave, campo, e.target.value.split('-').reverse().join('-'))}
+                                                aria-label={`${rotulo} de la ${s.label} (día-mes)`}
+                                                className="campo-desnudo w-full bg-transparent text-[14px] font-medium tabular-nums text-[#0a0a0a]"
+                                            />
                                         ) : (
-                                            <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-wider ${s.isOpen ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-400'}`}>
-                                                {s.isOpen ? 'Abierta' : 'Cerrada'}
+                                            <span className="text-[14px] font-medium text-[#0a0a0a]">
+                                                {fechaLegible(s[campo])} {vista.activeYear}
                                             </span>
                                         )}
                                     </div>
+                                ))}
+                            </div>
 
-                                    {editingSeasons ? (
-                                        <input
-                                            type="text"
-                                            value={editingSeasons.seasons[key].label}
-                                            onChange={e => {
-                                                const updated = JSON.parse(JSON.stringify(editingSeasons));
-                                                updated.seasons[key].label = e.target.value;
-                                                setEditingSeasons(updated);
-                                            }}
-                                            className="w-full h-8 px-2 border-2 border-black font-black text-sm uppercase tracking-tight mb-3 focus:outline-none"
-                                        />
-                                    ) : (
-                                        <p className="font-black text-base uppercase tracking-tight mb-3">{s.label}</p>
-                                    )}
-
-                                    <div className="space-y-2">
-                                        <div>
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1">Inicio (DD-MM)</p>
-                                            {editingSeasons ? (
-                                                <input
-                                                    type="text"
-                                                    placeholder="23-03"
-                                                    maxLength={5}
-                                                    value={editingSeasons.seasons[key].startDate.split('-').reverse().join('-')}
-                                                    onChange={e => {
-                                                        const updated = JSON.parse(JSON.stringify(editingSeasons));
-                                                        updated.seasons[key].startDate = e.target.value.split('-').reverse().join('-');
-                                                        setEditingSeasons(updated);
-                                                    }}
-                                                    className="w-full h-8 px-2 border-2 border-black font-bold text-sm text-center tabular-nums focus:outline-none"
-                                                />
-                                            ) : (
-                                                <p className="text-sm font-bold tabular-nums text-neutral-600">{(s.startDate || '').split('-').reverse().join('-')} · {year}</p>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-1">Fin (DD-MM)</p>
-                                            {editingSeasons ? (
-                                                <input
-                                                    type="text"
-                                                    placeholder="17-05"
-                                                    maxLength={5}
-                                                    value={editingSeasons.seasons[key].endDate.split('-').reverse().join('-')}
-                                                    onChange={e => {
-                                                        const updated = JSON.parse(JSON.stringify(editingSeasons));
-                                                        updated.seasons[key].endDate = e.target.value.split('-').reverse().join('-');
-                                                        setEditingSeasons(updated);
-                                                    }}
-                                                    className="w-full h-8 px-2 border-2 border-black font-bold text-sm text-center tabular-nums focus:outline-none"
-                                                />
-                                            ) : (
-                                                <p className="text-sm font-bold tabular-nums text-neutral-600">{(s.endDate || '').split('-').reverse().join('-')} · {year}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                            <p className="mt-3.5 text-[12.5px] font-medium leading-[1.55] text-black/[.62]">
+                                {enEdicion
+                                    ? 'Las fechas se escriben día-mes, por ejemplo 23-03.'
+                                    : `${cantidad} ${cantidad === 1 ? 'grupo arranca' : 'grupos arrancan'} dentro de este rango. ${s.isOpen ? 'Los anfitriones pueden crear grupos en esta temporada.' : 'Está cerrada: no se pueden crear grupos.'}`}
+                            </p>
+                        </div>
+                    );
+                })}
             </div>
+        </>
     );
 };
 

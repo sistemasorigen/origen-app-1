@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
+<style>
+  body { margin:0; background:#EDEDEE; }
+  a { color:#0A0A0A; text-decoration:underline; text-underline-offset:3px; }
+  a:hover { opacity:.6; }
+  @keyframes gcRise { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+  @keyframes gcPulse { 0%,100% { opacity:1 } 50% { opacity:.25 } }
+  @keyframes gcSpin { to { transform:rotate(360deg) } }
+  @keyframes gcPop { 0% { transform:scale(.6); opacity:0 } 60% { transform:scale(1.08) } 100% { transform:scale(1); opacity:1 } }
+  [data-theme="dark"] a { color:#F7F7F8; }
+  [data-theme="dark"] [data-r="canvas"] { background:#0B0B0C !important; }
+  [data-theme="dark"] [data-r="surface"] { background:#17171A !important; color:#F7F7F8 !important; border-color:#2C2C30 !important; }
+  [data-theme="dark"] [data-r="panel"] { background:#212124 !important; }
+  [data-theme="dark"] [data-r="ink"] { color:#F7F7F8 !important; }
+  [data-theme="dark"] [data-r="muted"] { color:#9C9CA1 !important; }
+  [data-theme="dark"] [data-r="line"] { border-color:#2C2C30 !important; }
+  [data-theme="dark"] [data-r="btn"] { background:#F7F7F8 !important; color:#0A0A0A !important; }
+  [data-theme="dark"] [data-r="btn2"] { background:#26262A !important; color:#F7F7F8 !important; }
+  [data-theme="dark"] [data-r="outline"] { border-color:#F7F7F8 !important; color:#F7F7F8 !important; }
+  [data-theme="dark"] [data-r="ghostbtn"] { color:#F7F7F8 !important; }
+  [data-theme="dark"] [data-r="dot"], [data-theme="dark"] [data-r="fill"], [data-theme="dark"] [data-r="avatar"], [data-theme="dark"] [data-r="donemark"], [data-theme="dark"] [data-r="pulse"] { background:#F7F7F8 !important; color:#0A0A0A !important; }
+  [data-theme="dark"] [data-r="track"] { background:#303034 !important; }
+  [data-theme="dark"] [data-r="rail"] { background:#3A3A3E !important; }
+  [data-theme="dark"] [data-r="hollow"] { border-color:#4A4A50 !important; }
+  [data-theme="dark"] [data-r="handle"] { background:#3A3A3E !important; }
+  [data-theme="dark"] [data-r="floatchip"] { background:rgba(18,18,20,.9) !important; color:#F7F7F8 !important; }
+  [data-theme="dark"] [data-r="ghost"] { color:#2F2F34 !important; }
+  [data-theme="dark"] [data-r="rose"] { background:#2A1620 !important; border-color:rgba(236,75,127,.35) !important; }
+  [data-theme="dark"] [data-r="disabled"] { background:#26262A !important; color:#6E6E73 !important; }
+  [data-theme="dark"] [data-r="footerbar"] { background:#17171A !important; border-color:#2C2C30 !important; }
+  [data-theme="dark"] [data-r="input"] { background:#26262A !important; color:#F7F7F8 !important; }
+  [data-theme="dark"] [data-r="input"]:focus { background:#1C1C1F !important; color:#F7F7F8 !important; }
+  [data-theme="dark"] [data-r="input"]::placeholder { color:#7A7A80 !important; }
+  [data-theme="dark"] [data-r="frame"] { border-color:#2C2C30 !important; }
+</style>
+</helmet>
+<div data-r="canvas" data-theme="{{ theme }}" style="background:#EDEDEE; padding:56px 56px 96px; font-family:Manrope, system-ui, sans-serif; color:#0A0A0A; display:flex; flex-direction:column; gap:20px; min-height:100vh; box-sizing:border-box">
+
+  <header style="display:flex; align-items:flex-end; justify-content:space-between; gap:32px; flex-wrap:wrap; max-width:1400px">
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <span data-r="muted" style="font-size:12.5px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:#6F6F73">Grupos de Conexión · pieza 3</span>
+      <h1 data-r="ink" style="margin:0; font-size:42px; font-weight:800; letter-spacing:-.045em; line-height:1">El modal de inscripción</h1>
+      <p data-r="muted" style="margin:0; font-size:16px; font-weight:600; color:#6F6F73; max-width:640px; text-wrap:pretty">Variante A (común) y variante B (parejas) con todos sus estados: pasos, búsqueda de la pareja, vinculación, envío, error y confirmación. Todo clickeable.</p>
+    </div>
+    <div data-r="surface" style="display:flex; align-items:center; gap:4px; background:#FFFFFF; border:1px solid #DDDDDF; border-radius:999px; padding:5px">
+      <button type="button" onClick="{{ setLight }}" style="appearance:none; border:0; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; padding:11px 20px; border-radius:999px; background:{{ lightBg }}; color:{{ lightInk }}">Claro</button>
+      <button type="button" onClick="{{ setDark }}" style="appearance:none; border:0; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; padding:11px 20px; border-radius:999px; background:{{ darkBg }}; color:{{ darkInk }}">Oscuro</button>
+    </div>
+  </header>
+
+  <section style="display:flex; flex-direction:column; gap:88px; padding-top:32px">
+
+    <div id="1b" style="display:flex; flex-direction:column; gap:28px">
+      <p data-r="muted" style="margin:0; font-size:15.5px; font-weight:600; line-height:1.55; color:#6F6F73; max-width:820px; text-wrap:pretty">En mobile no es un modal: es una <strong data-r="ink" style="color:#0A0A0A">hoja que sube</strong> — el teclado no la rompe y se cierra con un gesto. La variante A entra en una sola pantalla. La variante B deja de crecer hacia abajo: <strong data-r="ink" style="color:#0A0A0A">tres pasos con barra de progreso</strong>, una decisión por pantalla, y el hallazgo de la pareja tratado como el momento lindo del flujo. Tocá los botones: los estados corren de verdad.</p>
+
+      <div style="display:flex; flex-wrap:wrap; gap:36px">
+
+        <div style="display:flex; flex-direction:column; gap:13px; width:390px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <span data-r="ink" style="font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase">A · Inscripción común</span>
+            <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">Cuatro campos precargados. Hoja media, nada de pasos.</span>
+          </div>
+          <div data-r="frame" style="position:relative; width:390px; height:720px; background:#F4F4F5; border:1px solid #DDDDDF; border-radius:40px; overflow:hidden; box-shadow:0 18px 40px rgba(10,10,10,.1)">
+            <div style="position:absolute; inset:0; background:rgba(10,10,10,.42)"></div>
+            <div style="display:grid; grid-template-rows:100%; position:absolute; left:0; right:0; bottom:0; height:600px">
+              <dc-import style="min-height:0; overflow:hidden" name="JoinFlow" sheet="true" hint-size="390px,600px"></dc-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:13px; width:390px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <span data-r="ink" style="font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase">B · Paso 1 · Tus datos</span>
+            <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">Parejas: rosa en el progreso, hoja casi completa.</span>
+          </div>
+          <div data-r="frame" style="position:relative; width:390px; height:720px; background:#F4F4F5; border:1px solid #DDDDDF; border-radius:40px; overflow:hidden; box-shadow:0 18px 40px rgba(10,10,10,.1)">
+            <div style="position:absolute; inset:0; background:rgba(10,10,10,.42)"></div>
+            <div style="display:grid; grid-template-rows:100%; position:absolute; left:0; right:0; bottom:0; height:672px">
+              <dc-import style="min-height:0; overflow:hidden" name="JoinFlow" sheet="true" couples="true" step="1" groupLine="Parejas en camino · Martes 21:00" hint-size="390px,672px"></dc-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:13px; width:390px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <span data-r="ink" style="font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase">B · Paso 2 · Una pregunta</span>
+            <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">Sin anidar: la segunda pregunta aparece al responder la primera.</span>
+          </div>
+          <div data-r="frame" style="position:relative; width:390px; height:720px; background:#F4F4F5; border:1px solid #DDDDDF; border-radius:40px; overflow:hidden; box-shadow:0 18px 40px rgba(10,10,10,.1)">
+            <div style="position:absolute; inset:0; background:rgba(10,10,10,.42)"></div>
+            <div style="display:grid; grid-template-rows:100%; position:absolute; left:0; right:0; bottom:0; height:672px">
+              <dc-import style="min-height:0; overflow:hidden" name="JoinFlow" sheet="true" couples="true" step="2" groupLine="Parejas en camino · Martes 21:00" hint-size="390px,672px"></dc-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:13px; width:390px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <span data-r="ink" style="font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase">B · Buscando la cuenta</span>
+            <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">El estado intermedio existe y dice a quién busca.</span>
+          </div>
+          <div data-r="frame" style="position:relative; width:390px; height:720px; background:#F4F4F5; border:1px solid #DDDDDF; border-radius:40px; overflow:hidden; box-shadow:0 18px 40px rgba(10,10,10,.1)">
+            <div style="position:absolute; inset:0; background:rgba(10,10,10,.42)"></div>
+            <div style="display:grid; grid-template-rows:100%; position:absolute; left:0; right:0; bottom:0; height:672px">
+              <dc-import style="min-height:0; overflow:hidden" name="JoinFlow" sheet="true" couples="true" step="2" partner="true" hasEmail="true" search="searching" groupLine="Parejas en camino · Martes 21:00" hint-size="390px,672px"></dc-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:13px; width:390px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <span data-r="ink" style="font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase">B · Pareja vinculada</span>
+            <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">El logro del flujo: la encontramos y solo falta un dato.</span>
+          </div>
+          <div data-r="frame" style="position:relative; width:390px; height:720px; background:#F4F4F5; border:1px solid #DDDDDF; border-radius:40px; overflow:hidden; box-shadow:0 18px 40px rgba(10,10,10,.1)">
+            <div style="position:absolute; inset:0; background:rgba(10,10,10,.42)"></div>
+            <div style="display:grid; grid-template-rows:100%; position:absolute; left:0; right:0; bottom:0; height:672px">
+              <dc-import style="min-height:0; overflow:hidden" name="JoinFlow" sheet="true" couples="true" step="2" partner="true" hasEmail="true" search="found" groupLine="Parejas en camino · Martes 21:00" hint-size="390px,672px"></dc-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:13px; width:390px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <span data-r="ink" style="font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase">B · Sin cuenta</span>
+            <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">No es un error: se cargan los datos y listo.</span>
+          </div>
+          <div data-r="frame" style="position:relative; width:390px; height:720px; background:#F4F4F5; border:1px solid #DDDDDF; border-radius:40px; overflow:hidden; box-shadow:0 18px 40px rgba(10,10,10,.1)">
+            <div style="position:absolute; inset:0; background:rgba(10,10,10,.42)"></div>
+            <div style="display:grid; grid-template-rows:100%; position:absolute; left:0; right:0; bottom:0; height:672px">
+              <dc-import style="min-height:0; overflow:hidden" name="JoinFlow" sheet="true" couples="true" step="2" partner="true" hasEmail="true" search="none" groupLine="Parejas en camino · Martes 21:00" hint-size="390px,672px"></dc-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:13px; width:390px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <span data-r="ink" style="font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase">B · Paso 3 · Revisar</span>
+            <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">Los dos nombres juntos antes de enviar. Final visible.</span>
+          </div>
+          <div data-r="frame" style="position:relative; width:390px; height:720px; background:#F4F4F5; border:1px solid #DDDDDF; border-radius:40px; overflow:hidden; box-shadow:0 18px 40px rgba(10,10,10,.1)">
+            <div style="position:absolute; inset:0; background:rgba(10,10,10,.42)"></div>
+            <div style="display:grid; grid-template-rows:100%; position:absolute; left:0; right:0; bottom:0; height:600px">
+              <dc-import style="min-height:0; overflow:hidden" name="JoinFlow" sheet="true" couples="true" step="3" partner="true" hasEmail="true" search="found" groupLine="Parejas en camino · Martes 21:00" hint-size="390px,600px"></dc-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:13px; width:390px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <span data-r="ink" style="font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase">B · Enviando y error</span>
+            <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">El botón se apaga y avisa; el error no borra nada.</span>
+          </div>
+          <div data-r="frame" style="position:relative; width:390px; height:720px; background:#F4F4F5; border:1px solid #DDDDDF; border-radius:40px; overflow:hidden; box-shadow:0 18px 40px rgba(10,10,10,.1)">
+            <div style="position:absolute; inset:0; background:rgba(10,10,10,.42)"></div>
+            <div style="display:grid; grid-template-rows:100%; position:absolute; left:0; right:0; bottom:0; height:640px">
+              <dc-import style="min-height:0; overflow:hidden" name="JoinFlow" sheet="true" couples="true" step="3" partner="true" hasEmail="true" search="found" phase="error" groupLine="Parejas en camino · Martes 21:00" hint-size="390px,640px"></dc-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:13px; width:390px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <span data-r="ink" style="font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase">Confirmación · falta la aprobación</span>
+            <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">"Todavía no estás anotado" dicho sin vueltas, con el estado a la vista.</span>
+          </div>
+          <div data-r="frame" style="position:relative; width:390px; height:720px; background:#F4F4F5; border:1px solid #DDDDDF; border-radius:40px; overflow:hidden; box-shadow:0 18px 40px rgba(10,10,10,.1)">
+            <div style="position:absolute; inset:0; background:rgba(10,10,10,.42)"></div>
+            <div style="display:grid; grid-template-rows:100%; position:absolute; left:0; right:0; bottom:0; height:680px">
+              <dc-import style="min-height:0; overflow:hidden" name="JoinFlow" sheet="true" couples="true" phase="done" hint-size="390px,680px"></dc-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:13px; width:840px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <span data-r="ink" style="font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase">Desktop · mismo contenido, modal centrado</span>
+            <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">520 px, nombre y apellido en dos columnas, el resto igual.</span>
+          </div>
+          <div data-r="frame" style="position:relative; width:840px; height:620px; background:#F4F4F5; border:1px solid #DDDDDF; border-radius:22px; overflow:hidden; box-shadow:0 18px 40px rgba(10,10,10,.1)">
+            <div style="position:absolute; inset:0; background:rgba(10,10,10,.5)"></div>
+            <div style="display:grid; grid-template-rows:100%; position:absolute; top:40px; left:50%; transform:translateX(-50%); width:520px; height:540px">
+              <dc-import style="min-height:0; overflow:hidden" name="JoinFlow" couples="true" step="2" partner="true" hasEmail="true" search="found" groupLine="Parejas en camino · Martes 21:00" hint-size="520px,540px"></dc-import>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  state = { theme: "light" };
+  renderVals() {
+    const dark = this.state.theme === "dark";
+    return {
+      theme: this.state.theme,
+      lightBg: dark ? "transparent" : "#0A0A0A",
+      lightInk: dark ? "#F7F7F8" : "#FFFFFF",
+      darkBg: dark ? "#F7F7F8" : "transparent",
+      darkInk: dark ? "#0A0A0A" : "#0A0A0A",
+      setLight: () => this.setState({ theme: "light" }),
+      setDark: () => this.setState({ theme: "dark" })
+    };
+  }
+}
+</script>
+</body>
+</html>

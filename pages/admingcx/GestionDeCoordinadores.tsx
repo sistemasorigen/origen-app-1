@@ -8,7 +8,7 @@ const GestionDeCoordinadoresContent: React.FC = () => {
 };
 
 const GestionDeCoordinadores: React.FC = () => (
-    <AdminGCXLayout title="Gestión de Coordinadores">
+    <AdminGCXLayout title="Coordinadores">
         <GestionDeCoordinadoresContent />
     </AdminGCXLayout>
 );

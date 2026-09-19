@@ -34,7 +34,7 @@ const GestionDeAnfitrionesContent: React.FC = () => {
 };
 
 const GestionDeAnfitriones: React.FC = () => (
-    <AdminGCXLayout title="Gestión de Anfitriones">
+    <AdminGCXLayout title="Anfitriones">
         <GestionDeAnfitrionesContent />
     </AdminGCXLayout>
 );

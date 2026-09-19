@@ -24,8 +24,9 @@ import { useTutorial } from '../../src/hooks/useTutorial';
 import TutorialInvitation from '../../components/onboarding/InvitacionTutorial';
 import TutorialController from '../../components/onboarding/ControladorTutorial';
 import { tours } from '../../src/config/tours';
-import GroupsAdminToolbar from '../../components/GCX/BarraHerramientasGruposAdmin';
+import GroupsAdminToolbar, { EstadoGrupo, TemporadaFiltro } from '../../components/GCX/BarraHerramientasGruposAdmin';
 import GroupsAdminList from '../../components/GCX/ListaGruposAdmin';
+import ModalModeracionGrupos from '../../components/GCX/ModalModeracionGrupos';
 
 
 
@@ -547,32 +548,31 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
 
     // Admin Status Filter
-    const [adminStatusFilter, setAdminStatusFilter] = useState<'ALL' | 'APPROVED' | 'FINALIZED' | 'PENDING'>('ALL');
-    const [adminFilterMode, setAdminFilterMode] = useState<'MANUAL' | 'SEASONS'>('MANUAL');
-    const [adminSeasonFilter, setAdminSeasonFilter] = useState<'S1' | 'S2' | 'S3'>('S1');
+    const [adminStatusFilter, setAdminStatusFilter] = useState<EstadoGrupo>('ALL');
+    // El estado y la temporada se aplican juntos, como en el panel de
+    // /admingcx: "Todas" deja la lista entera, que es como entraba hasta ahora.
+    const [adminSeasonFilter, setAdminSeasonFilter] = useState<TemporadaFiltro>('ALL');
     const [adminSearchTerm, setAdminSearchTerm] = useState('');
+    const [adminSeleccionados, setAdminSeleccionados] = useState<string[]>([]);
+    const [adminModeracionAbierta, setAdminModeracionAbierta] = useState(false);
+
+    // Grupos sin startDate no tienen temporada asignable y se excluyen.
+    const gruposDeTemporada = useMemo(() => {
+        if (adminSeasonFilter === 'ALL') return adminGroups;
+        return adminGroups.filter(g => g.startDate && getSeasonFromDate(g.startDate) === adminSeasonFilter);
+    }, [adminGroups, adminSeasonFilter]);
 
     const filteredAdminGroups = useMemo(() => {
-        let filtered = adminGroups;
+        let filtered = gruposDeTemporada;
 
-        // 1. Filter by Status or Season
-        if (adminFilterMode === 'MANUAL') {
-            if (adminStatusFilter !== 'ALL') {
-                filtered = filtered.filter(g => {
-                    const isFinished = isGroupFinished(g);
-                    if (adminStatusFilter === 'APPROVED') return g.status === 'approved' && !isFinished;
-                    if (adminStatusFilter === 'FINALIZED') return g.status === 'approved' && isFinished;
-                    if (adminStatusFilter === 'PENDING') return g.status === 'pending' || !g.status;
-                    return true;
-                });
-            }
-        } else {
-            // SEASONS MODE — filtrar por startDate dentro del rango de la temporada.
-            // Grupos sin startDate no tienen temporada asignable y se excluyen.
+        // 1. Filter by Status
+        if (adminStatusFilter !== 'ALL') {
             filtered = filtered.filter(g => {
-                if (!g.startDate) return false;
-                const season = getSeasonFromDate(g.startDate);
-                return season === adminSeasonFilter;
+                const isFinished = isGroupFinished(g);
+                if (adminStatusFilter === 'APPROVED') return g.status === 'approved' && !isFinished;
+                if (adminStatusFilter === 'FINALIZED') return g.status === 'approved' && isFinished;
+                if (adminStatusFilter === 'PENDING') return g.status === 'pending' || !g.status;
+                return true;
             });
         }
 
@@ -593,7 +593,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         }
 
         return filtered;
-    }, [adminGroups, adminStatusFilter, adminSearchTerm, categories, adminFilterMode, adminSeasonFilter]);
+    }, [gruposDeTemporada, adminStatusFilter, adminSearchTerm, categories]);
 
 
     // Fetch existing applications when postulation modal opens AND auto-fill form with user data
@@ -1138,6 +1138,75 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         } else {
             showToast('Error al eliminar grupo', 'error');
         }
+    };
+
+    // ── Moderación: acciones sobre los grupos tildados ───────────────
+    const handleAprobarSeleccionados = async () => {
+        const pendientes = adminGroups.filter(x => adminSeleccionados.includes(x.id) && (x.status === 'pending' || !x.status));
+        if (pendientes.length === 0) return;
+        if (!window.confirm(`¿Aprobar ${pendientes.length === 1 ? 'el grupo pendiente tildado' : `los ${pendientes.length} grupos pendientes tildados`}? Quedan visibles en el catálogo.`)) return;
+
+        const resultados = await Promise.all(pendientes.map(x => supabaseService.updateGroupStatus(x.id, 'approved')));
+        const ok = resultados.filter(Boolean).length;
+        setAdminModeracionAbierta(false);
+        setAdminSeleccionados([]);
+        fetchAdminGroups();
+        fetchGroups();
+        if (ok === pendientes.length) {
+            showToast(ok === 1 ? 'Grupo aprobado' : `${ok} grupos aprobados`);
+        } else {
+            showToast(`Se aprobaron ${ok} de ${pendientes.length}. Probá de nuevo con los que quedaron.`, 'error');
+        }
+    };
+
+    const handleEliminarSeleccionados = async () => {
+        const elegidos = adminGroups.filter(x => adminSeleccionados.includes(x.id));
+        if (elegidos.length === 0) return;
+        if (!window.confirm(`¿Eliminar ${elegidos.length === 1 ? 'el grupo tildado' : `los ${elegidos.length} grupos tildados`}? Esta acción no se puede deshacer.`)) return;
+
+        const resultados = await Promise.all(elegidos.map(x => deleteGroupDirect(x.id)));
+        const ok = resultados.filter(Boolean).length;
+        setAdminModeracionAbierta(false);
+        setAdminSeleccionados([]);
+        fetchAdminGroups();
+        fetchGroups();
+        showToast(ok === elegidos.length
+            ? (ok === 1 ? 'Grupo eliminado' : `${ok} grupos eliminados`)
+            : `Se eliminaron ${ok} de ${elegidos.length}.`, ok === elegidos.length ? 'success' : 'error');
+    };
+
+    // El archivo se arma con lo que la lista ya tiene en pantalla: no se pide
+    // nada nuevo ni sale nada del dispositivo.
+    const handleExportarAnfitriones = () => {
+        const elegidos = adminGroups.filter(x => adminSeleccionados.includes(x.id));
+        if (elegidos.length === 0) return;
+        const columnas = ['Grupo', 'Anfitrión', 'Teléfono', 'Co-anfitrión', 'Día', 'Horario', 'Lugar', 'Estado', 'Inscriptos', 'Cupo'];
+        const celda = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const filas = elegidos.map(x => [
+            x.name,
+            `${x.leaderName || ''} ${x.leaderSurname || ''}`.trim(),
+            x.leaderPhone || '',
+            [x.coHostFirstName, x.coHostLastName].filter(Boolean).join(' '),
+            x.meetingDay,
+            x.meetingTime,
+            x.isOnline ? 'Online' : x.location,
+            isGroupFinished(x) ? 'Finalizado' : (x.status || 'pending'),
+            x.registrations?.length || 0,
+            x.maxCapacity,
+        ].map(celda).join(','));
+
+        // El BOM es lo que hace que Excel abra el archivo como UTF-8 y no
+        // rompa los acentos; el salto CRLF es el que espera el mismo Excel.
+        const BOM = String.fromCharCode(0xFEFF);
+        const csv = BOM + [columnas.map(celda).join(','), ...filas].join('\r\n');
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `anfitriones-gcx-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setAdminModeracionAbierta(false);
+        showToast(`Archivo con ${elegidos.length} ${elegidos.length === 1 ? 'grupo' : 'grupos'} descargado`);
     };
 
     const handleToggleCapacityLock = async (group: Group) => {
@@ -1972,19 +2041,16 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                     <GroupsAdminToolbar
                                         searchTerm={adminSearchTerm}
                                         setSearchTerm={setAdminSearchTerm}
-                                        filterMode={adminFilterMode}
-                                        setFilterMode={setAdminFilterMode}
                                         statusFilter={adminStatusFilter}
                                         setStatusFilter={setAdminStatusFilter}
                                         seasonFilter={adminSeasonFilter}
                                         setSeasonFilter={setAdminSeasonFilter}
+                                        gruposDeTemporada={gruposDeTemporada}
+                                        resultados={filteredAdminGroups.length}
                                         pendingDropoutCount={pendingDropoutCount}
-                                        adminGroups={adminGroups}
                                         onCreateGroup={() => setIsCreateModalOpen(true)}
-                                        onAddMember={() => setIsAddMemberModalOpen(true)}
-                                        onDropoutInbox={() => setIsDropoutInboxOpen(true)}
-                                        isMobileMenuOpen={isMobileMenuOpen}
-                                        setIsMobileMenuOpen={setIsMobileMenuOpen}
+                                        onOpenModeracion={() => setAdminModeracionAbierta(true)}
+                                        onResetFiltros={() => { setAdminStatusFilter('ALL'); setAdminSeasonFilter('ALL'); setAdminSearchTerm(''); }}
                                     />
 
                                     <GroupsAdminList
@@ -1994,6 +2060,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         onReview={setReviewingGroup}
                                         onReopen={handleReopenGroup}
                                         onViewRegistrations={setViewingGroupRegistrations}
+                                        onAddMember={() => setIsAddMemberModalOpen(true)}
                                         onEdit={openEditModal}
                                         onDelete={handleDeleteGroup}
                                         onToggleCapacityLock={handleToggleCapacityLock}
@@ -2001,7 +2068,25 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                         openMenuGroupId={openMenuGroupId}
                                         setOpenMenuGroupId={setOpenMenuGroupId}
                                         isLoading={isLoading}
+                                        seleccionados={adminSeleccionados}
+                                        onToggleSeleccion={(id) => setAdminSeleccionados(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])}
+                                        onToggleTodos={() => setAdminSeleccionados(prev =>
+                                            filteredAdminGroups.every(x => prev.includes(x.id)) ? [] : filteredAdminGroups.map(x => x.id)
+                                        )}
+                                        resumen={`Mostrando ${filteredAdminGroups.length} de ${gruposDeTemporada.length} grupos.`}
+                                        vacioTitulo="Ningún grupo coincide"
+                                        vacioTexto="Probá con otro estado, otra temporada, o buscá por el nombre del anfitrión en vez del grupo."
+                                        vacioAccion="Limpiar los filtros"
+                                        onVacioAccion={() => { setAdminStatusFilter('ALL'); setAdminSeasonFilter('ALL'); setAdminSearchTerm(''); }}
                                     />
+
+                                    <button
+                                        onClick={() => setIsCreateModalOpen(true)}
+                                        className="mt-4 flex h-[54px] w-full items-center justify-center gap-2 rounded-full bg-[#0a0a0a] text-[16px] font-semibold text-white md:hidden"
+                                    >
+                                        <span className="text-[20px] leading-none">+</span>
+                                        Crear grupo
+                                    </button>
                                 </div>
                             )}
 
@@ -2946,6 +3031,19 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                     groupName={viewingGroupRegistrations.name}
                 />
             )}
+
+            {/* Moderación — acciones sobre los grupos tildados */}
+            <ModalModeracionGrupos
+                isOpen={adminModeracionAbierta}
+                onClose={() => setAdminModeracionAbierta(false)}
+                seleccionados={adminGroups.filter(x => adminSeleccionados.includes(x.id))}
+                pendingDropoutCount={pendingDropoutCount}
+                onSolicitudesDeBaja={() => { setAdminModeracionAbierta(false); setIsDropoutInboxOpen(true); }}
+                onAgregarMiembro={() => { setAdminModeracionAbierta(false); setIsAddMemberModalOpen(true); }}
+                onAprobarSeleccionados={handleAprobarSeleccionados}
+                onExportarAnfitriones={handleExportarAnfitriones}
+                onEliminarSeleccionados={handleEliminarSeleccionados}
+            />
 
             {/* Admin Dropout Inbox Modal */}
             <AdminDropoutInbox

@@ -1,304 +1,220 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, Plus, UserPlus, MailMinus, MoreVertical, CheckCircle, AlertCircle, Clock, Calendar, SlidersHorizontal } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, X, Plus, SlidersHorizontal, MoreHorizontal } from 'lucide-react';
 import { Group } from '../../types';
+
+/**
+ * Barra de la sección Grupos (design-claude/Admin GCX - Panel).
+ *
+ * Escritorio: buscador, temporada, Moderación y Crear grupo en una línea;
+ * abajo los chips de estado con su número. Mobile: buscador, Filtros —que
+ * abre una hoja con estado y temporada— y el botón de acciones.
+ */
+
+export type EstadoGrupo = 'ALL' | 'APPROVED' | 'PENDING' | 'FINALIZED';
+export type TemporadaFiltro = 'ALL' | 'S1' | 'S2' | 'S3';
 
 interface GroupsAdminToolbarProps {
     searchTerm: string;
     setSearchTerm: (term: string) => void;
-    filterMode: 'MANUAL' | 'SEASONS';
-    setFilterMode: (mode: 'MANUAL' | 'SEASONS') => void;
-    statusFilter: 'ALL' | 'APPROVED' | 'PENDING' | 'FINALIZED';
-    setStatusFilter: (status: 'ALL' | 'APPROVED' | 'PENDING' | 'FINALIZED') => void;
-    seasonFilter: 'S1' | 'S2' | 'S3';
-    setSeasonFilter: (season: 'S1' | 'S2' | 'S3') => void;
+    statusFilter: EstadoGrupo;
+    setStatusFilter: (status: EstadoGrupo) => void;
+    seasonFilter: TemporadaFiltro;
+    setSeasonFilter: (season: TemporadaFiltro) => void;
+    /** Grupos de la temporada elegida, para contar cada estado. */
+    gruposDeTemporada: Group[];
+    /** Cuántos quedan después de aplicar estado y búsqueda. */
+    resultados: number;
     pendingDropoutCount: number;
-    adminGroups: Group[];
     onCreateGroup: () => void;
-    onAddMember: () => void;
-    onDropoutInbox: () => void;
-    isMobileMenuOpen: boolean;
-    setIsMobileMenuOpen: (open: boolean) => void;
+    onOpenModeracion: () => void;
+    onResetFiltros: () => void;
 }
+
+const esFinalizado = (g: Group) => !!g.endDate && g.endDate < new Date().toISOString().split('T')[0];
 
 const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
     searchTerm, setSearchTerm,
-    filterMode, setFilterMode,
     statusFilter, setStatusFilter,
     seasonFilter, setSeasonFilter,
+    gruposDeTemporada,
+    resultados,
     pendingDropoutCount,
-    adminGroups,
     onCreateGroup,
-    onAddMember,
-    onDropoutInbox,
-    isMobileMenuOpen, setIsMobileMenuOpen
+    onOpenModeracion,
+    onResetFiltros,
 }) => {
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const filterRef = useRef<HTMLDivElement>(null);
+    const [hojaFiltros, setHojaFiltros] = useState(false);
 
-    const isGroupFinished = (g: Group) => g.endDate && g.endDate < new Date().toISOString().split('T')[0];
+    const cuenta = {
+        ALL: gruposDeTemporada.length,
+        APPROVED: gruposDeTemporada.filter(g => g.status === 'approved' && !esFinalizado(g)).length,
+        PENDING: gruposDeTemporada.filter(g => g.status === 'pending' || !g.status).length,
+        FINALIZED: gruposDeTemporada.filter(g => g.status === 'approved' && esFinalizado(g)).length,
+    };
 
-    const approvedCount = adminGroups.filter(g => g.status === 'approved' && !isGroupFinished(g)).length;
-    const finalizedCount = adminGroups.filter(g => g.status === 'approved' && isGroupFinished(g)).length;
-    const pendingCount = adminGroups.filter(g => g.status === 'pending' || !g.status).length;
+    const filtrosActivos = (statusFilter === 'ALL' ? 0 : 1) + (seasonFilter === 'ALL' ? 0 : 1);
 
-    // Close filter dropdown on outside click
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-                setIsFilterOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, []);
+    const chip = (activo: boolean, enHoja = false) =>
+        `h-9 px-3.5 rounded-full flex items-center gap-2 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${activo ? 'bg-[#0a0a0a] text-white' : `${enHoja ? 'bg-[#f7f7f5]' : 'bg-white'} text-black/[.64] hover:text-[#0a0a0a]`}`;
 
-    // Compute active filter badge
-    const hasActiveFilter = filterMode === 'SEASONS' || statusFilter !== 'ALL';
-    const activeFilterLabel = filterMode === 'SEASONS'
-        ? { S1: '1ª Temp', S2: '2ª Temp', S3: '3ª Temp' }[seasonFilter]
-        : statusFilter !== 'ALL'
-            ? { APPROVED: 'Aprobados', FINALIZED: 'Finalizados', PENDING: 'Pendientes' }[statusFilter]
-            : null;
+    const chipN = (activo: boolean) =>
+        `text-[12px] font-semibold ${activo ? 'text-white/70' : 'text-black/[.6]'}`;
+
+    const seg = (activo: boolean) =>
+        `h-9 px-[15px] rounded-full text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] ${activo ? 'bg-[#0a0a0a] text-white' : 'text-black/[.62] hover:text-[#0a0a0a]'}`;
+
+    const ancho = (activo: boolean) =>
+        `min-w-[64px] h-[52px] px-5 rounded-full text-[15px] font-semibold ${activo ? 'flex-1 bg-[#0a0a0a] text-white' : 'flex-none bg-[#f2f2f0] text-black/[.64]'}`;
+
+    const ESTADOS: { id: EstadoGrupo; label: string; punto?: string }[] = [
+        { id: 'ALL', label: 'Todos' },
+        { id: 'APPROVED', label: 'Aprobados', punto: '#16a34a' },
+        { id: 'PENDING', label: 'Pendientes', punto: '#b45309' },
+        { id: 'FINALIZED', label: 'Finalizados', punto: '#8f8f8a' },
+    ];
+
+    const TEMPORADAS: { id: TemporadaFiltro; corto: string; largo: string }[] = [
+        { id: 'ALL', corto: 'Todas', largo: 'Todas' },
+        { id: 'S1', corto: 'T1', largo: 'Temporada 1' },
+        { id: 'S2', corto: 'T2', largo: '2' },
+        { id: 'S3', corto: 'T3', largo: '3' },
+    ];
+
+    const chipsEstado = (enHoja = false) => (
+        <div className="flex flex-wrap gap-2">
+            {ESTADOS.map(e => {
+                const activo = statusFilter === e.id;
+                return (
+                    <button key={e.id} onClick={() => setStatusFilter(e.id)} className={chip(activo, enHoja)}>
+                        {e.punto && <span className="h-[7px] w-[7px] rounded-full" style={{ background: e.punto }} />}
+                        {e.label}
+                        <span className={chipN(activo)}>{cuenta[e.id]}</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
 
     return (
-        <div className="flex flex-col gap-2 sm:gap-4 mb-4 sm:mb-6 relative ml-4">
-
-            {/* Top Row: Title & Mobile Actions */}
-            <div className="flex justify-between items-start">
-                {/* Title */}
-                <div>
-                    <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight text-slate-900 leading-none">Moderación</h3>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Gestión de Grupos</p>
-                </div>
-
-                {/* Mobile 3-dots action menu */}
-                <div className="relative sm:hidden z-20">
-                    <button
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className={`p-2 rounded-lg transition-colors border ${isMobileMenuOpen ? 'bg-black text-white border-black' : 'bg-white text-slate-400 border-slate-200'}`}
-                    >
-                        <MoreVertical className="w-5 h-5" />
-                    </button>
-
-                    {isMobileMenuOpen && (
-                        <>
-                            <div className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px]" onClick={() => setIsMobileMenuOpen(false)} />
-                            <div className="absolute top-full right-0 mt-2 z-50 w-64 bg-white border-2 border-slate-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                                <button
-                                    onClick={() => { onCreateGroup(); setIsMobileMenuOpen(false); }}
-                                    className="flex items-center gap-3 px-4 py-3 bg-black text-white rounded-lg text-xs font-black uppercase tracking-wider hover:bg-zinc-800 transition-all"
-                                >
-                                    <Plus className="w-4 h-4 shrink-0" />
-                                    CREAR GRUPO
-                                </button>
-                                <button
-                                    onClick={() => { onAddMember(); setIsMobileMenuOpen(false); }}
-                                    className="flex items-center gap-3 px-4 py-3 bg-slate-50 text-slate-900 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-slate-100 transition-all border border-slate-200"
-                                >
-                                    <UserPlus className="w-4 h-4 shrink-0" />
-                                    AGREGAR PARTICIPANTE
-                                </button>
-                                <button
-                                    onClick={() => { onDropoutInbox(); setIsMobileMenuOpen(false); }}
-                                    className="flex items-center gap-3 px-4 py-3 bg-white text-slate-900 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-slate-50 transition-all justify-between border-2 border-slate-100"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <MailMinus className="w-4 h-4 shrink-0" />
-                                        SOLICITUDES DE BAJA
-                                    </div>
-                                    {pendingDropoutCount > 0 && (
-                                        <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                            {pendingDropoutCount}
-                                        </span>
-                                    )}
-                                </button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* Bottom Row: Search, Filter, and Desktop Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-
-                {/* Search Bar */}
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <>
+            <div className="flex flex-wrap items-center gap-2.5">
+                {/* Buscador */}
+                <div className="flex h-[42px] min-w-[132px] flex-1 items-center gap-2.5 rounded-full bg-white pl-[17px] pr-2 md:min-w-[180px]">
+                    <Search className="h-4 w-4 flex-none text-black/[.58]" />
                     <input
                         type="text"
-                        placeholder="Buscar grupo, líder..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-black transition-all placeholder:font-medium placeholder:text-slate-400"
+                        placeholder="Buscar por grupo o por líder"
+                        aria-label="Buscar grupos"
+                        className="campo-desnudo min-w-0 flex-1 bg-transparent text-[13.5px] font-medium text-[#0a0a0a]"
                     />
                     {searchTerm && (
                         <button
                             onClick={() => setSearchTerm('')}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full transition-colors"
+                            aria-label="Limpiar la búsqueda"
+                            className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full bg-[#f2f2f0] text-[#0a0a0a]"
                         >
-                            <X className="w-3 h-3 text-slate-400" />
+                            <X className="h-[13px] w-[13px]" />
                         </button>
                     )}
                 </div>
 
-                {/* Filter Button */}
-                <div className="relative shrink-0" ref={filterRef}>
-                    <button
-                        onClick={() => setIsFilterOpen(v => !v)}
-                        className={`flex justify-center items-center gap-1.5 px-4 py-2.5 rounded-lg border text-xs font-black uppercase tracking-wide transition-all ${isFilterOpen || hasActiveFilter
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-black'
-                            }`}
-                    >
-                        <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-                        <span>
-                            {activeFilterLabel ?? 'Filtros'}
+                {/* Mobile: filtros y acciones */}
+                <button
+                    onClick={() => setHojaFiltros(true)}
+                    className="flex h-[42px] flex-none items-center gap-1.5 rounded-full bg-white px-3 text-[13px] font-semibold text-black/[.64] md:hidden"
+                >
+                    <SlidersHorizontal className="h-[15px] w-[15px]" />
+                    Filtros
+                    <span className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${filtrosActivos ? 'bg-[#0a0a0a] text-white' : 'bg-[#f0efec] text-black/[.6]'}`}>
+                        {filtrosActivos}
+                    </span>
+                </button>
+                <button
+                    onClick={onOpenModeracion}
+                    aria-label="Moderación y acciones"
+                    className="relative flex h-[42px] w-[42px] flex-none items-center justify-center rounded-full bg-white text-black/[.58] md:hidden"
+                >
+                    <MoreHorizontal className="h-[18px] w-[18px]" />
+                    {pendingDropoutCount > 0 && (
+                        <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#a32218] px-1 text-[10px] font-semibold text-white">
+                            {pendingDropoutCount > 9 ? '9+' : pendingDropoutCount}
                         </span>
-                        {hasActiveFilter && (
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 sm:hidden" />
-                        )}
-                    </button>
-
-                    {/* Filter Dropdown Panel */}
-                    {isFilterOpen && (
-                        <>
-                            <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
-                            <div className="absolute top-full right-0 sm:left-auto sm:right-0 mt-2 z-50 w-72 max-w-[calc(100vw-2rem)] bg-white border-2 border-slate-900 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 space-y-4 animate-in fade-in zoom-in-95 duration-150 origin-top-right">
-
-                                {/* Mode Toggle: Manual / Temporadas */}
-                                <div>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Modo de Filtro</p>
-                                    <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
-                                        <button
-                                            onClick={() => { setFilterMode('MANUAL'); setStatusFilter('ALL'); }}
-                                            className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${filterMode === 'MANUAL' ? 'bg-white text-black shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                                        >
-                                            Manual
-                                        </button>
-                                        <button
-                                            onClick={() => { setFilterMode('SEASONS'); setStatusFilter('ALL'); }}
-                                            className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${filterMode === 'SEASONS' ? 'bg-white text-black shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                                        >
-                                            Temporadas
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Conditional filters */}
-                                {filterMode === 'MANUAL' ? (
-                                    <div>
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Estado</p>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                onClick={() => { setStatusFilter('ALL'); setIsFilterOpen(false); }}
-                                                className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase border-2 transition-all text-left ${statusFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}
-                                            >
-                                                Todos
-                                            </button>
-                                            <button
-                                                onClick={() => { setStatusFilter(statusFilter === 'APPROVED' ? 'ALL' : 'APPROVED'); setIsFilterOpen(false); }}
-                                                className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase border-2 transition-all flex items-center gap-1.5 ${statusFilter === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border-emerald-500' : 'bg-white text-emerald-700 border-emerald-100 hover:border-emerald-300'}`}
-                                            >
-                                                <CheckCircle className="w-3 h-3 shrink-0" />
-                                                Aprob <span className="font-black">({approvedCount})</span>
-                                            </button>
-                                            <button
-                                                onClick={() => { setStatusFilter(statusFilter === 'FINALIZED' ? 'ALL' : 'FINALIZED'); setIsFilterOpen(false); }}
-                                                className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase border-2 transition-all flex items-center gap-1.5 ${statusFilter === 'FINALIZED' ? 'bg-neutral-200 text-neutral-800 border-neutral-500' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'}`}
-                                            >
-                                                <Clock className="w-3 h-3 shrink-0" />
-                                                Finz <span className="font-black">({finalizedCount})</span>
-                                            </button>
-                                            <button
-                                                onClick={() => { setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING'); setIsFilterOpen(false); }}
-                                                className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase border-2 transition-all flex items-center gap-1.5 ${statusFilter === 'PENDING' ? 'bg-amber-100 text-amber-800 border-amber-500' : 'bg-white text-amber-700 border-amber-100 hover:border-amber-300'}`}
-                                            >
-                                                <AlertCircle className="w-3 h-3 shrink-0" />
-                                                Pend <span className="font-black">({pendingCount})</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div>
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Temporada</p>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {(['S1', 'S2', 'S3'] as const).map((s, i) => {
-                                                const colors = [
-                                                    { active: 'bg-blue-100 text-blue-900 border-blue-500', inactive: 'bg-white text-blue-800 border-blue-100 hover:border-blue-300' },
-                                                    { active: 'bg-purple-100 text-purple-900 border-purple-500', inactive: 'bg-white text-purple-800 border-purple-100 hover:border-purple-300' },
-                                                    { active: 'bg-pink-100 text-pink-900 border-pink-500', inactive: 'bg-white text-pink-800 border-pink-100 hover:border-pink-300' },
-                                                ];
-                                                return (
-                                                    <button
-                                                        key={s}
-                                                        onClick={() => {
-                                                            // Activar modo SEASONS automáticamente al elegir una temporada
-                                                            // sin necesitar que el usuario cambie el toggle primero.
-                                                            setFilterMode('SEASONS');
-                                                            setSeasonFilter(s);
-                                                            setIsFilterOpen(false);
-                                                        }}
-                                                        className={`px-2 py-2 rounded-lg text-[10px] font-black uppercase border-2 transition-all flex items-center justify-center gap-1 ${seasonFilter === s ? colors[i].active : colors[i].inactive}`}
-                                                    >
-                                                        <Calendar className="w-3 h-3 shrink-0" />
-                                                        {i + 1}ª T.
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Clear button */}
-                                {hasActiveFilter && (
-                                    <button
-                                        onClick={() => { setFilterMode('MANUAL'); setStatusFilter('ALL'); setIsFilterOpen(false); }}
-                                        className="w-full py-2 text-[10px] font-black uppercase text-slate-500 hover:text-red-600 border border-dashed border-slate-200 hover:border-red-200 rounded-lg transition-all"
-                                    >
-                                        Limpiar filtros
-                                    </button>
-                                )}
-                            </div>
-                        </>
                     )}
-                </div>
+                </button>
 
-                {/* Desktop Action Buttons */}
-                <div className="hidden sm:flex items-center gap-2.5 shrink-0">
+                {/* Escritorio: temporada, moderación y crear */}
+                <div className="hidden flex-none items-center gap-2.5 md:flex">
+                    <div className="flex gap-[3px] rounded-full bg-[#eceae6] p-[3px]">
+                        {TEMPORADAS.map(t => (
+                            <button key={t.id} onClick={() => setSeasonFilter(t.id)} className={seg(seasonFilter === t.id)}>
+                                {t.corto}
+                            </button>
+                        ))}
+                    </div>
                     <button
-                        onClick={onCreateGroup}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-black text-white border-2 border-black rounded-full text-xs font-black uppercase tracking-wider hover:bg-zinc-800 active:scale-95 transition-all whitespace-nowrap min-h-[40px] shadow-sm hover:shadow-md"
+                        onClick={onOpenModeracion}
+                        className="relative flex h-[42px] items-center gap-2 rounded-full bg-white px-[17px] text-[13px] font-semibold text-black/[.64] transition-colors hover:text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                     >
-                        <Plus className="w-4 h-4 shrink-0" />
-                        <span>CREAR GRUPO</span>
-                    </button>
-
-                    <button
-                        onClick={onAddMember}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-white text-black border-2 border-slate-200 rounded-full text-xs font-black uppercase tracking-wider hover:border-black active:scale-95 transition-all whitespace-nowrap min-h-[40px]"
-                    >
-                        <UserPlus className="w-4 h-4 shrink-0" />
-                        <span>AGREGAR MIEMBRO</span>
-                    </button>
-
-                    <button
-                        onClick={onDropoutInbox}
-                        className={`relative flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-xs font-black uppercase tracking-wider active:scale-95 transition-all whitespace-nowrap min-h-[40px] ${pendingDropoutCount > 0
-                            ? 'bg-orange-50 text-orange-700 border-orange-200 hover:border-orange-400 hover:bg-orange-100'
-                            : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-800'
-                            }`}
-                    >
-                        <MailMinus className="w-4 h-4 shrink-0" />
-                        <span>SOLICITUDES DE BAJA</span>
+                        <SlidersHorizontal className="h-[15px] w-[15px]" />
+                        Moderación
                         {pendingDropoutCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
-                                {pendingDropoutCount > 9 ? '9+' : pendingDropoutCount}
+                            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#a32218] px-1.5 text-[11px] font-semibold text-white">
+                                {pendingDropoutCount}
                             </span>
                         )}
                     </button>
+                    <button
+                        onClick={onCreateGroup}
+                        className="flex h-[42px] items-center gap-2 rounded-full bg-[#0a0a0a] px-5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                    >
+                        <Plus className="h-[15px] w-[15px]" />
+                        Crear grupo
+                    </button>
                 </div>
             </div>
-        </div>
+
+            {/* Chips de estado — escritorio */}
+            <div className="mt-3.5 hidden md:block">{chipsEstado()}</div>
+
+            {/* Resumen — mobile */}
+            <p className="mx-0.5 mt-3.5 text-[12px] font-semibold text-black/[.62] md:hidden">
+                {resultados} de {gruposDeTemporada.length} grupos
+            </p>
+
+            {/* Hoja de filtros — mobile */}
+            {hojaFiltros && (
+                <div className="fixed inset-0 z-[60] md:hidden">
+                    <div className="absolute inset-0 bg-[rgba(10,10,10,.4)]" onClick={() => setHojaFiltros(false)} />
+                    <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-auto rounded-t-[28px] bg-white px-[18px] pb-6 pt-3.5">
+                        <div className="mx-auto mb-[18px] h-1 w-[38px] rounded-full bg-[#e2e2de]" />
+                        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">Estado</p>
+                        {chipsEstado(true)}
+                        <p className="mb-3 mt-[22px] text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">Temporada</p>
+                        <div className="flex gap-2">
+                            {TEMPORADAS.map(t => (
+                                <button key={t.id} onClick={() => setSeasonFilter(t.id)} className={ancho(seasonFilter === t.id)}>
+                                    {seasonFilter === t.id ? t.largo : t.corto}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => setHojaFiltros(false)}
+                            className="mt-[22px] h-[54px] w-full rounded-full bg-[#0a0a0a] text-[16px] font-semibold text-white"
+                        >
+                            Ver {resultados} grupos
+                        </button>
+                        <button
+                            onClick={() => { onResetFiltros(); setHojaFiltros(false); }}
+                            className="mt-[9px] h-12 w-full rounded-full bg-[#f2f2f0] text-[15px] font-semibold text-[#0a0a0a]"
+                        >
+                            Limpiar filtros
+                        </button>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 

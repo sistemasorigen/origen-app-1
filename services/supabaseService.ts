@@ -2750,6 +2750,7 @@ export const supabaseService = {
       maxAge: row.max_age || 100,
       targetGender: row.target_gender || 'Mixto',
       adminNote: row.admin_note || '', // Admin review note
+      createdAt: row.created_at,
       parentGroupId: row.parent_group_id || undefined,
       registrations: (row.registrations || []).map((r: any) => ({
         id: r.id,

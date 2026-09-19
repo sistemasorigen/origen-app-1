@@ -1,19 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GroupCategory } from '../../types';
+import { GroupCategory, Group } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
-import { Check, Edit2, Trash2, Loader2 } from 'lucide-react';
+import AdminGCXLayout, { useAdminGCXToast, usePanelGCXConteos } from '../../components/layout/AdminGCXLayout';
+import ModalPanelGCX, { BotonPrincipal, BotonSecundario } from '../../components/GCX/ModalPanelGCX';
+import { Loader2, Plus } from 'lucide-react';
+
+/**
+ * Sección Categorías del panel (design-claude/Admin GCX - Panel).
+ *
+ * Una fila por categoría con cuántos grupos la usan, que es el dato que
+ * dice si conviene tocarla o no. El color se edita en el mismo modal que
+ * el nombre.
+ */
 
 const CategoriasContent: React.FC = () => {
     const { showToast } = useAdminGCXToast();
+    const { registrarConteo } = usePanelGCXConteos();
     const [categories, setCategories] = useState<GroupCategory[]>([]);
+    const [groups, setGroups] = useState<Group[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const [newCategoryName, setNewCategoryName] = useState('');
-    const [newCategoryColor, setNewCategoryColor] = useState('#000000');
-    const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
-    const [editingCategoryName, setEditingCategoryName] = useState('');
-    const [editingCategoryColor, setEditingCategoryColor] = useState('');
+    const [editando, setEditando] = useState<GroupCategory | null>(null);
+    const [esNueva, setEsNueva] = useState(false);
+    const [guardando, setGuardando] = useState(false);
 
     const fetchCategories = useCallback(async () => {
         const cats = await supabaseService.getGroupCategories();
@@ -22,154 +31,183 @@ const CategoriasContent: React.FC = () => {
 
     useEffect(() => {
         setLoading(true);
-        fetchCategories().finally(() => setLoading(false));
+        Promise.all([
+            fetchCategories(),
+            supabaseService.getGroupsForAdmin().then(setGroups).catch(() => setGroups([])),
+        ]).finally(() => setLoading(false));
     }, [fetchCategories]);
 
-    const handleAddCategory = async () => {
-        if (!newCategoryName.trim()) return showToast('El nombre de la categoría es obligatorio', 'error');
-        const newCat: GroupCategory = {
-            id: newCategoryName.trim(),
-            name: newCategoryName.trim(),
-            color: newCategoryColor
+    useEffect(() => {
+        if (categories.length > 0) registrarConteo('categorias', categories.length);
+    }, [categories.length, registrarConteo]);
+
+    const usoDe = (id: string) => groups.filter(g => g.categoryId === id).length;
+
+    const abrirNueva = () => {
+        setEsNueva(true);
+        setEditando({ id: '', name: '', color: '#0a0a0a' });
+    };
+
+    const abrirEdicion = (cat: GroupCategory) => {
+        setEsNueva(false);
+        setEditando({ ...cat });
+    };
+
+    const guardar = async () => {
+        if (!editando) return;
+        const nombre = editando.name.trim();
+        if (!nombre) {
+            showToast('La categoría necesita un nombre', 'error');
+            return;
+        }
+        setGuardando(true);
+        // El id de una categoría nueva es su nombre: así lo venía guardando
+        // el panel y así lo referencian los grupos ya creados.
+        const cat: GroupCategory = {
+            id: esNueva ? nombre : editando.id,
+            name: nombre,
+            color: editando.color,
         };
-        const success = await supabaseService.saveGroupCategory(newCat);
-        if (success) {
+        const ok = await supabaseService.saveGroupCategory(cat);
+        setGuardando(false);
+        if (ok) {
             await fetchCategories();
-            setNewCategoryName('');
-            setNewCategoryColor('#000000');
-            showToast('Categoría creada');
+            setEditando(null);
+            showToast(esNueva ? 'Categoría creada' : 'Categoría actualizada');
         } else {
-            showToast('Error al crear categoría', 'error');
+            showToast(esNueva ? 'Error al crear la categoría' : 'Error al actualizar la categoría', 'error');
         }
     };
 
-    const startEditCategory = (cat: GroupCategory) => {
-        setEditingCategoryId(cat.id);
-        setEditingCategoryName(cat.name);
-        setEditingCategoryColor(cat.color);
-    };
+    const borrar = async (cat: GroupCategory) => {
+        const enUso = usoDe(cat.id);
+        const aviso = enUso > 0
+            ? `"${cat.name}" la usan ${enUso} ${enUso === 1 ? 'grupo' : 'grupos'}. Si la borrás, esos grupos quedan sin categoría. ¿Seguimos?`
+            : `¿Borrar la categoría "${cat.name}"?`;
+        if (!window.confirm(aviso)) return;
 
-    const handleUpdateCategory = async (id: string) => {
-        if (!editingCategoryName.trim()) return showToast('Nombre inválido', 'error');
-        const cat: GroupCategory = { id, name: editingCategoryName, color: editingCategoryColor };
-        const success = await supabaseService.saveGroupCategory(cat);
-        if (success) {
+        const ok = await supabaseService.deleteGroupCategory(cat.id);
+        if (ok) {
             await fetchCategories();
-            setEditingCategoryId(null);
-            showToast('Categoría actualizada');
-        } else {
-            showToast('Error al actualizar categoría', 'error');
-        }
-    };
-
-    const handleDeleteCategory = async (id: string) => {
-        const success = await supabaseService.deleteGroupCategory(id);
-        if (success) {
-            await fetchCategories();
+            setEditando(null);
             showToast('Categoría eliminada');
         } else {
-            showToast('Error al eliminar categoría', 'error');
+            showToast('Error al eliminar la categoría', 'error');
         }
     };
 
-    return (
-        loading ? (
-            <div className="flex justify-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+    if (loading) {
+        return (
+            <div className="flex justify-center rounded-[20px] bg-white py-20">
+                <Loader2 className="h-7 w-7 animate-spin text-black/20" />
             </div>
-        ) : (
-                <div className="max-w-5xl">
-                    {/* Create Form */}
-                    <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 mb-8 flex flex-col md:flex-row gap-4 md:items-end">
-                        <div className="flex-1">
-                            <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Nombre Categoría</label>
-                            <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="w-full p-3 border border-slate-300 rounded text-sm focus:border-black outline-none bg-white" placeholder="Ej. Jóvenes" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Color</label>
-                            <input type="color" value={newCategoryColor} onChange={e => setNewCategoryColor(e.target.value)} className="w-full md:w-16 h-11 border border-slate-300 rounded cursor-pointer bg-white p-1" />
-                        </div>
-                        <button onClick={handleAddCategory} className="px-6 py-3 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-slate-800 rounded">
-                            Crear
-                        </button>
-                    </div>
+        );
+    }
 
-                    {/* Mobile List View */}
-                    <div className="md:hidden space-y-3">
-                        {categories.map(cat => (
-                            <div key={cat.id} className="bg-white p-4 border border-slate-200 rounded-lg shadow-sm flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                                    {editingCategoryId === cat.id ? (
-                                        <input type="text" value={editingCategoryName} onChange={e => setEditingCategoryName(e.target.value)} className="border p-1 rounded text-sm w-32" />
-                                    ) : (
-                                        <span className="font-bold text-sm">{cat.name}</span>
-                                    )}
-                                </div>
-                                <div className="flex gap-2">
-                                    {editingCategoryId === cat.id ? (
-                                        <button onClick={() => handleUpdateCategory(cat.id)} className="p-2 bg-green-50 text-green-600 rounded"><Check className="w-4 h-4" /></button>
-                                    ) : (
-                                        <button onClick={() => startEditCategory(cat)} className="p-2 bg-slate-50 text-slate-600 rounded"><Edit2 className="w-4 h-4" /></button>
-                                    )}
-                                    <button onClick={() => handleDeleteCategory(cat.id)} className="p-2 bg-red-50 text-red-600 rounded"><Trash2 className="w-4 h-4" /></button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+    return (
+        <>
+            <div className="overflow-hidden rounded-[18px] bg-white">
+                {categories.length === 0 && (
+                    <p className="px-[18px] py-10 text-center text-[13.5px] font-medium text-black/[.55]">
+                        Todavía no hay categorías. Creá la primera para poder clasificar los grupos.
+                    </p>
+                )}
 
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block bg-off-white border border-slate-200 rounded-lg overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-bold text-slate-500">
-                                <tr>
-                                    <th className="p-4">Nombre</th>
-                                    <th className="p-4">Color</th>
-                                    <th className="p-4 text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {categories.map(cat => (
-                                    <tr key={cat.id} className="hover:bg-slate-50">
-                                        <td className="p-4">
-                                            {editingCategoryId === cat.id ? (
-                                                <input type="text" value={editingCategoryName} onChange={e => setEditingCategoryName(e.target.value)} className="w-full p-2 border border-slate-300 rounded text-sm outline-none focus:border-black" />
-                                            ) : (
-                                                <span className="font-bold text-sm text-slate-900">{cat.name}</span>
-                                            )}
-                                        </td>
-                                        <td className="p-4">
-                                            {editingCategoryId === cat.id ? (
-                                                <input type="color" value={editingCategoryColor} onChange={e => setEditingCategoryColor(e.target.value)} className="w-10 h-8 border border-slate-300 rounded cursor-pointer" />
-                                            ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full border border-slate-200" style={{ backgroundColor: cat.color }}></div>
-                                                    <span className="text-xs text-slate-400 font-mono">{cat.color}</span>
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                {editingCategoryId === cat.id ? (
-                                                    <button onClick={() => handleUpdateCategory(cat.id)} className="p-2 bg-green-50 text-green-600 rounded hover:bg-green-100"><Check className="w-4 h-4" /></button>
-                                                ) : (
-                                                    <button onClick={() => startEditCategory(cat)} className="p-2 text-slate-400 hover:text-black hover:bg-slate-100 rounded"><Edit2 className="w-4 h-4" /></button>
-                                                )}
-                                                <button onClick={() => handleDeleteCategory(cat.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                {categories.map(cat => {
+                    const uso = usoDe(cat.id);
+                    return (
+                        <div key={cat.id} className="flex h-14 items-center gap-3.5 border-b border-[#f4f3f1] px-[18px] last:border-b-0">
+                            <span className="h-[18px] w-[18px] flex-none rounded-full" style={{ background: cat.color || '#0a0a0a' }} />
+                            <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-[#0a0a0a]">{cat.name}</span>
+                            <span className="whitespace-nowrap text-[12.5px] font-medium text-black/[.62]">
+                                {uso === 0 ? 'Sin grupos' : `${uso} ${uso === 1 ? 'grupo' : 'grupos'}`}
+                            </span>
+                            <button
+                                onClick={() => abrirEdicion(cat)}
+                                className="h-8 flex-none rounded-full bg-[#f2f2f0] px-[13px] text-[12px] font-semibold text-black/[.66] transition-colors hover:text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a]"
+                            >
+                                Editar
+                            </button>
+                        </div>
+                    );
+                })}
+
+                <div className="px-[18px] py-3.5">
+                    <button
+                        onClick={abrirNueva}
+                        className="flex h-[42px] items-center gap-2 rounded-full bg-[#0a0a0a] px-[18px] text-[13.5px] font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                    >
+                        <Plus className="h-[15px] w-[15px]" />
+                        Nueva categoría
+                    </button>
                 </div>
-        )
+            </div>
+
+            <ModalPanelGCX
+                isOpen={!!editando}
+                onClose={() => setEditando(null)}
+                titulo={esNueva ? 'Nueva categoría' : 'Editar la categoría'}
+                subtitulo={esNueva
+                    ? 'Aparece en el selector al crear un grupo.'
+                    : `La usan ${editando ? usoDe(editando.id) : 0} grupos.`}
+                pie={
+                    <>
+                        {!esNueva && editando && (
+                            <BotonSecundario onClick={() => borrar(editando)} className="bg-[#fdecea] text-[#a32218]">
+                                Borrar
+                            </BotonSecundario>
+                        )}
+                        <BotonPrincipal onClick={guardar} disabled={guardando}>
+                            {guardando ? 'Guardando…' : esNueva ? 'Crear la categoría' : 'Guardar'}
+                        </BotonPrincipal>
+                    </>
+                }
+            >
+                {editando && (
+                    <div className="flex flex-col gap-2.5 pb-1">
+                        <div className="flex h-[58px] flex-col justify-center rounded-[18px] bg-[#f7f7f5] px-[17px]">
+                            <label htmlFor="cat-nombre" className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.58]">
+                                Nombre
+                            </label>
+                            <input
+                                id="cat-nombre"
+                                type="text"
+                                value={editando.name}
+                                onChange={e => setEditando({ ...editando, name: e.target.value })}
+                                placeholder="Ej. Matrimonios jóvenes"
+                                autoFocus
+                                className="campo-desnudo w-full bg-transparent text-[14.5px] font-medium text-[#0a0a0a]"
+                            />
+                        </div>
+
+                        <div className="flex h-[58px] items-center gap-3 rounded-[18px] bg-[#f7f7f5] px-[17px]">
+                            <div className="flex-1">
+                                <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.58]">Color</p>
+                                <p className="text-[14.5px] font-medium text-black/[.6]">Se ve en el catálogo público</p>
+                            </div>
+                            <input
+                                type="color"
+                                value={editando.color || '#0a0a0a'}
+                                onChange={e => setEditando({ ...editando, color: e.target.value })}
+                                aria-label="Color de la categoría"
+                                className="h-10 w-14 flex-none"
+                            />
+                        </div>
+
+                        {!esNueva && (
+                            <p className="mt-1 text-[12.5px] font-medium leading-[1.55] text-black/[.62]">
+                                Cambiar el nombre no despega a los grupos que ya la tienen.
+                            </p>
+                        )}
+                    </div>
+                )}
+            </ModalPanelGCX>
+        </>
     );
 };
 
 const Categorias: React.FC = () => (
-    <AdminGCXLayout title="Categorías de Grupo">
+    <AdminGCXLayout title="Categorías">
         <CategoriasContent />
     </AdminGCXLayout>
 );

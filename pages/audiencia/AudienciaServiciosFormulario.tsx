@@ -44,16 +44,22 @@ const STEP2_FIELDS: FieldDef[] = [
     { key: 'ninos_hd', label: 'Niños HD' }, { key: 'borders', label: 'Borders' },
 ];
 
-// "podcast" y "oracion" ya no se cargan desde el formulario (dejaron de
-// medirse), pero siguen siendo columnas reales con datos históricos —
-// 49 y 52 registros respectivamente al momento de este cambio. Por eso
-// EMPTY_FORM y la carga de editRecord más abajo los siguen incluyendo:
-// un registro nuevo los manda en 0, y uno existente conserva su valor
-// real sin que haya UI para tocarlo, en vez de resetearlo al editar.
+// "podcast" y "oracion" solo se cargan cuando la categoría es "Martes";
+// en el resto de las categorías no hay UI para tocarlos. Siguen siendo
+// columnas reales con datos históricos — 49 y 52 registros al momento de
+// este cambio — así que EMPTY_FORM y la carga de editRecord los siguen
+// incluyendo: un registro nuevo los manda en 0 y uno existente conserva
+// su valor real aunque su categoría no muestre los campos.
 const STEP3_FIELDS: FieldDef[] = [
     { key: 'online', label: 'Online' }, { key: 'voluntarios_repetidos', label: 'Voluntarios Repetidos' },
     { key: 'aceptaron', label: 'Aceptaron' }, { key: 'asistieron_primera_vez', label: 'Asistieron por Primera Vez' },
     { key: 'reconciliaron', label: 'Reconciliaron' },
+];
+
+// Métricas que solo se miden en la categoría "Martes".
+const MARTES_FIELDS: FieldDef[] = [
+    { key: 'podcast', label: 'Podcast' },
+    { key: 'oracion', label: 'Oración' },
 ];
 
 const STEPS = [
@@ -176,6 +182,17 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
     const setField = (key: keyof FormData, value: string | number | any[]) => {
         setForm(prev => ({ ...prev, [key]: value }));
         if (key === 'service_date') setDateError('');
+    };
+
+    // Salir de "Martes" limpia sus dos métricas: si no, quedan guardadas sin
+    // que nadie las vea en pantalla. Se limpian solo cuando la persona cambia
+    // la categoría a mano, para no pisar lo que ya tenía un registro viejo.
+    const setCategoria = (value: string) => {
+        setForm(prev => ({
+            ...prev,
+            category: value,
+            ...(prev.category === 'Martes' && value !== 'Martes' ? { podcast: 0, oracion: 0 } : {}),
+        }));
     };
 
     // Limpiar error de fecha cuando se completa el campo
@@ -399,7 +416,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                 </label>
                                 <select
                                     value={form.category ?? ''}
-                                    onChange={(e) => setField('category', e.target.value)}
+                                    onChange={(e) => setCategoria(e.target.value)}
                                     className={selectCls}
                                 >
                                     <option value="">— Seleccioná una categoría —</option>
@@ -475,6 +492,9 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {STEP3_FIELDS.map((f) => (
+                                <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
+                            ))}
+                            {form.category === 'Martes' && MARTES_FIELDS.map((f) => (
                                 <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
                             ))}
                         </div>

@@ -295,6 +295,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         navigate(path);
         setCuentaAbierta(false);
         onClose();
+        // En escritorio el sidebar no se desmonta, así que "cerrarse" es
+        // volver al riel de íconos. Se hace al navegar —no al abrir un
+        // desplegable— para que sea el mismo trato que en mobile: elegiste
+        // adónde ir, el menú se corre y la pantalla queda con todo el ancho.
+        if (type === 'sidebar' && !isCollapsed) onToggleCollapse?.();
         // Subir al tope al navegar desde el menú. Sin esto, cambiar de vista dentro
         // de la misma ruta (ej. Punto de Información: de un panel admin a "Inicio")
         // deja la página a mitad de scroll. El pequeño delay espera a que el drawer

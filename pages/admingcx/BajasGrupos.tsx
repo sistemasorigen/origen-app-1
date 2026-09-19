@@ -2,7 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { DropoutRequest } from '../../types';
 import { supabaseService, deleteGroupDirect } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
-import { Inbox, UserMinus, Users, CheckCircle, Archive, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
+import { CheckCircle, Archive, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
+
+/**
+ * Solicitudes de baja (design-claude/Admin GCX - Panel).
+ *
+ * Cuelga de la sección Grupos y se abre desde Moderación. Cada solicitud
+ * dice de entrada qué pasa si se ejecuta: se cierra un grupo entero o sale
+ * una persona. La confirmación sigue siendo de dos toques.
+ */
 
 const BajasGruposContent: React.FC = () => {
     const { showToast } = useAdminGCXToast();
@@ -78,117 +86,115 @@ const BajasGruposContent: React.FC = () => {
         });
     };
 
+    const boton = 'h-10 rounded-full px-[17px] text-[13.5px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2';
+
     return (
-        <div className="max-w-3xl">
-            <div className="mb-6 flex items-center justify-between">
-                <p className="text-sm text-slate-500">
-                    {loading ? 'Cargando...' : `${requests.length} solicitud(es) pendiente(s)`}
+        <div className="max-w-[760px]">
+            <div className="mb-3.5 flex items-center justify-between gap-3">
+                <p className="text-[12.5px] font-medium text-black/[.62]">
+                    {loading
+                        ? 'Cargando…'
+                        : requests.length === 0
+                            ? 'Sin solicitudes pendientes'
+                            : `${requests.length} ${requests.length === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'}`}
                 </p>
                 <button
                     onClick={fetchRequests}
                     disabled={loading}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                    title="Actualizar"
+                    className="flex h-9 items-center gap-2 rounded-full bg-white px-3.5 text-[12.5px] font-semibold text-black/[.64] transition-colors hover:text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                 >
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`h-[14px] w-[14px] ${loading ? 'animate-spin' : ''}`} />
+                    Actualizar
                 </button>
             </div>
 
             {loading && (
-                <div className="flex justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+                <div className="flex justify-center rounded-[20px] bg-white py-20">
+                    <Loader2 className="h-7 w-7 animate-spin text-black/20" />
                 </div>
             )}
 
             {!loading && requests.length === 0 && (
-                <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl">
-                    <Inbox className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500 font-medium">No hay solicitudes pendientes</p>
-                    <p className="text-sm text-slate-400 mt-1">Las nuevas solicitudes aparecerán aquí</p>
+                <div className="flex flex-col items-center rounded-[20px] bg-white px-8 py-14 text-center">
+                    <div className="h-[88px] w-[88px] rounded-full" style={{ background: 'repeating-linear-gradient(135deg,#eceae6 0 8px,#e3e1dc 8px 16px)' }} />
+                    <p className="mt-[22px] text-[17px] font-semibold text-[#0a0a0a]">No hay solicitudes de baja</p>
+                    <p className="mt-[9px] max-w-[340px] text-[13.5px] font-medium leading-[1.6] text-black/[.62]">
+                        Cuando un anfitrión pida cerrar su grupo, o sacar a alguien de él, la solicitud llega acá.
+                    </p>
                 </div>
             )}
 
             {!loading && requests.length > 0 && (
-                <div className="space-y-3">
-                    {requests.map((request) => (
-                        <div
-                            key={request.id}
-                            className={`bg-white border-2 rounded-xl overflow-hidden transition-all ${request.requestType === 'GROUP' ? 'border-red-300' : 'border-slate-200'}`}
-                        >
-                            <div className={`px-4 py-3 flex items-start justify-between gap-3 ${request.requestType === 'GROUP' ? 'bg-red-50' : 'bg-slate-50'}`}>
-                                <div className="flex items-center gap-3">
-                                    {request.requestType === 'GROUP' ? (
-                                        <Users className="w-5 h-5 text-red-600 shrink-0" />
-                                    ) : (
-                                        <UserMinus className="w-5 h-5 text-slate-600 shrink-0" />
-                                    )}
-                                    <div>
-                                        <p className="font-bold text-black text-sm uppercase">
-                                            Baja de {request.requestType === 'GROUP' ? 'Grupo' : 'Usuario'}
-                                        </p>
-                                        <p className="text-xs text-slate-500">
-                                            Por: {request.hostName} • {formatDate(request.createdAt)}
-                                        </p>
-                                    </div>
-                                </div>
-                                {request.requestType === 'GROUP' && (
-                                    <span className="px-2 py-1 bg-red-100 text-red-700 text-[10px] font-bold uppercase rounded-full shrink-0">
-                                        Crítico
+                <div className="flex flex-col gap-2.5">
+                    {requests.map((request) => {
+                        const esGrupo = request.requestType === 'GROUP';
+                        const confirmando = confirmingId === request.id;
+                        const procesando = processingId === request.id;
+                        return (
+                            <div key={request.id} className="rounded-[20px] bg-white p-5">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-[15.5px] font-semibold text-[#0a0a0a]">
+                                        {esGrupo ? request.groupName : (request.targetUserName || 'Usuario desconocido')}
+                                    </p>
+                                    <span
+                                        className="flex h-[26px] items-center rounded-full px-[11px] text-[11.5px] font-semibold"
+                                        style={esGrupo
+                                            ? { background: '#fdecea', color: '#a32218' }
+                                            : { background: '#f0efec', color: 'rgba(0,0,0,.62)' }}
+                                    >
+                                        {esGrupo ? 'Se cierra el grupo entero' : 'Sale una persona'}
                                     </span>
-                                )}
-                            </div>
+                                </div>
+                                <p className="mt-1 text-[12.5px] font-medium text-black/[.62]">
+                                    {esGrupo ? '' : `${request.groupName} · `}Lo pidió {request.hostName} · {formatDate(request.createdAt)}
+                                </p>
 
-                            <div className="px-4 py-3 space-y-3">
-                                <div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase mb-1">
-                                        {request.requestType === 'GROUP' ? 'Grupo' : 'Usuario'}
-                                    </p>
-                                    <p className="font-bold text-black">
-                                        {request.requestType === 'GROUP' ? request.groupName : request.targetUserName || 'Usuario desconocido'}
-                                    </p>
-                                    {request.requestType === 'USER' && (
-                                        <p className="text-xs text-slate-500">Grupo: {request.groupName}</p>
+                                <div className="mt-3.5 rounded-[16px] bg-[#f7f7f5] px-[15px] py-3">
+                                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.58]">Razón</p>
+                                    <p className="mt-0.5 text-[13.5px] font-medium text-[#0a0a0a]">{request.reason}</p>
+                                    {request.details && (
+                                        <p className="mt-2 text-[13px] font-medium leading-[1.55] text-black/[.62]">{request.details}</p>
                                     )}
                                 </div>
 
-                                <div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase mb-1">Razón</p>
-                                    <p className="text-sm text-black font-medium">{request.reason}</p>
-                                </div>
-
-                                {request.details && (
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-400 uppercase mb-1">Detalles</p>
-                                        <p className="text-sm text-slate-600">{request.details}</p>
-                                    </div>
-                                )}
-
-                                <div className="flex gap-2 pt-2">
+                                <div className="mt-3.5 flex flex-wrap gap-2">
                                     <button
                                         onClick={() => handleExecuteDropout(request)}
-                                        disabled={processingId === request.id}
-                                        className={`flex-1 flex items-center justify-center gap-2 p-3 font-bold uppercase text-xs rounded-lg transition-all disabled:opacity-50 ${confirmingId === request.id ? 'bg-orange-500 text-white hover:bg-orange-600 animate-pulse' : request.requestType === 'GROUP' ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-black text-white hover:bg-slate-800'}`}
+                                        disabled={procesando}
+                                        className={`${boton} flex items-center gap-2 ${confirmando
+                                            ? 'bg-[#fdf0dc] text-[#7a4f10]'
+                                            : esGrupo
+                                                ? 'bg-[#fdecea] text-[#a32218]'
+                                                : 'bg-[#0a0a0a] text-white'}`}
                                     >
-                                        {processingId === request.id ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : confirmingId === request.id ? (
-                                            <><AlertTriangle className="w-4 h-4" /> ¡Click para Confirmar!</>
+                                        {procesando ? (
+                                            <><Loader2 className="h-4 w-4 animate-spin" /> Ejecutando…</>
+                                        ) : confirmando ? (
+                                            <><AlertTriangle className="h-4 w-4" /> Tocá de nuevo para confirmar</>
                                         ) : (
-                                            <><CheckCircle className="w-4 h-4" /> Ejecutar Baja</>
+                                            <><CheckCircle className="h-4 w-4" /> {esGrupo ? 'Eliminar el grupo' : 'Sacar a la persona'}</>
                                         )}
                                     </button>
                                     <button
                                         onClick={() => handleArchive(request)}
-                                        disabled={processingId === request.id}
-                                        className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-slate-300 text-slate-600 font-bold uppercase text-xs rounded-lg hover:bg-slate-100 transition-all disabled:opacity-50"
+                                        disabled={procesando}
+                                        className={`${boton} flex items-center gap-2 bg-[#f2f2f0] text-black/[.66]`}
                                     >
-                                        <Archive className="w-4 h-4" />
-                                        Archivar
+                                        <Archive className="h-4 w-4" />
+                                        Archivar sin hacer nada
                                     </button>
                                 </div>
+
+                                {confirmando && (
+                                    <p className="mt-2.5 text-[12.5px] font-medium text-[#7a4f10]">
+                                        {esGrupo
+                                            ? 'Se borra el grupo y sus inscripciones. No se puede deshacer.'
+                                            : 'La persona pierde su lugar en el grupo. No se puede deshacer.'}
+                                    </p>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
@@ -197,9 +203,9 @@ const BajasGruposContent: React.FC = () => {
 
 const BajasGrupos: React.FC = () => (
     <AdminGCXLayout
-        title="Solicitudes de Baja"
+        title="Solicitudes de baja"
         backTo="/admingcx/gestion-de-grupos"
-        backLabel="Volver a Gestión de Grupos"
+        backLabel="Volver a Grupos"
     >
         <BajasGruposContent />
     </AdminGCXLayout>

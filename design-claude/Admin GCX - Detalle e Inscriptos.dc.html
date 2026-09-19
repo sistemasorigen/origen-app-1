@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}input,button{font-family:inherit}input:focus{outline:none}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; align-items:center; gap:14px; background:#fff; border-radius:999px; padding:6px 18px 6px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ showDesktop }}" style="{{ deskBtn }}">Desktop</button>
+      <button onClick="{{ showMobile }}" style="{{ mobBtn }}">Mobile</button>
+    </div>
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">ESTADO DEL GRUPO</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ setPendiente }}" style="{{ btnPend }}">Pendiente</button>
+      <button onClick="{{ setAprobado }}" style="{{ btnAprob }}">Aprobado</button>
+      <button onClick="{{ setRechazado }}" style="{{ btnRech }}">Rechazado</button>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; background:#f6f6f4; border-radius:22px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:hidden; display:flex; flex-direction:column; width:{{ frameW }}; height:{{ frameH }}">
+
+    <div style="flex:none; background:#fff; border-bottom:1px solid #ecebe8; padding:{{ headPad }}">
+      <div style="display:flex; align-items:center; gap:12px">
+        <button onClick="{{ goDetalle }}" style="height:34px; padding:0 13px 0 10px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; gap:7px; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64); cursor:pointer; flex:none">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>Grupos
+        </button>
+        <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1">{{ grupoNombre }}</span>
+        <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+          <div style="width:36px; height:36px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); flex:none">PA</div>
+        </sc-if>
+      </div>
+      <div style="display:flex; gap:4px; margin-top:12px; overflow:auto">
+        <button onClick="{{ goDetalle }}" style="{{ tabDetalle }}">Ficha del grupo</button>
+        <button onClick="{{ goInscriptos }}" style="{{ tabInscriptos }}">Inscriptos<span style="{{ tabInscN }}">{{ nInscriptos }}</span></button>
+        <button onClick="{{ goAgregar }}" style="{{ tabAgregar }}">Agregar a mano</button>
+      </div>
+    </div>
+
+    <div style="flex:1; min-height:0; overflow:auto; padding:{{ bodyPad }}">
+
+      <sc-if value="{{ isDetalle }}" hint-placeholder-val="{{ true }}">
+
+        <sc-if value="{{ esPendiente }}" hint-placeholder-val="{{ true }}">
+          <div style="background:#fff; border-radius:20px; padding:20px 22px; box-shadow:0 0 0 1.5px #f0d9b4 inset">
+            <div style="display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap">
+              <div style="min-width:220px; flex:1">
+                <span style="height:26px; padding:0 11px; border-radius:999px; background:#fdf0dc; color:#7a4f10; font:600 11.5px Manrope,system-ui,sans-serif; display:inline-flex; align-items:center; gap:6px"><span style="width:6px; height:6px; border-radius:999px; background:#b45309"></span>Pendiente de aprobación</span>
+                <p style="margin:12px 0 0; font:600 20px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">Este grupo espera tu revisión</p>
+                <p style="margin:7px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Lo creó Rocío Ledesma hace 3 días. Mientras esté pendiente no aparece en el catálogo público y nadie puede anotarse.</p>
+              </div>
+              <div style="{{ accionesFila }}">
+                <button onClick="{{ openRechazar }}" style="{{ accionBtn }} height:48px; padding:0 20px; border:0; border-radius:999px; background:#fdecea; color:#a32218; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Rechazar</button>
+                <button onClick="{{ openAprobar }}" style="{{ accionBtn }} height:48px; padding:0 26px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Aprobar el grupo</button>
+              </div>
+            </div>
+
+            <p style="margin:20px 0 10px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.58)">ANTES DE DECIDIR</p>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px">
+              <div style="background:#f7f7f5; border-radius:16px; padding:14px 16px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg>
+                  <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a">Ficha completa</span>
+                </div>
+                <p style="margin:7px 0 0; font:500 12.5px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Tiene descripción, categoría, horario y capacidad cargados.</p>
+              </div>
+              <div style="background:#f7f7f5; border-radius:16px; padding:14px 16px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <span style="width:15px; height:15px; border-radius:999px; background:#b45309; flex:none"></span>
+                  <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a">Sin co-anfitrión</span>
+                </div>
+                <p style="margin:7px 0 0; font:500 12.5px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Si Rocío falta, nadie conduce ni reporta. Pasa en 70 de los 80 grupos.</p>
+              </div>
+              <div style="background:#f7f7f5; border-radius:16px; padding:14px 16px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <span style="width:15px; height:15px; border-radius:999px; background:#b45309; flex:none"></span>
+                  <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a">Ya lidera 1 grupo</span>
+                </div>
+                <p style="margin:7px 0 0; font:500 12.5px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Núñez Adolescentes, sábados 17:00. Este sería el segundo, mismo día.</p>
+              </div>
+              <div style="background:#f7f7f5; border-radius:16px; padding:14px 16px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg>
+                  <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a">Zona sin cubrir</span>
+                </div>
+                <p style="margin:7px 0 0; font:500 12.5px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">No hay otro grupo de adolescentes en Villa Urquiza.</p>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ esAprobado }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff; border-radius:20px; padding:18px 22px; display:flex; align-items:center; gap:14px; flex-wrap:wrap">
+            <div style="min-width:200px; flex:1">
+              <span style="height:26px; padding:0 11px; border-radius:999px; background:#e9f6ed; color:#15803d; font:600 11.5px Manrope,system-ui,sans-serif; display:inline-flex; align-items:center; gap:6px"><span style="width:6px; height:6px; border-radius:999px; background:#16a34a"></span>Aprobado y activo</span>
+              <p style="margin:10px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Aprobado por Pablo Arce el 12 de marzo. Visible en el catálogo público.</p>
+            </div>
+            <div style="{{ accionesFila }}">
+              <button onClick="{{ goInscriptos }}" style="{{ accionBtn }} height:44px; padding:0 18px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">Ver inscriptos</button>
+              <button style="{{ accionBtn }} height:44px; padding:0 18px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">Editar ficha</button>
+              <button style="{{ accionBtn }} height:44px; padding:0 18px; border:0; border-radius:999px; background:#fdecea; color:#a32218; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">Finalizar temporada</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ esRechazado }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff; border-radius:20px; padding:20px 22px; box-shadow:0 0 0 1.5px #f3cdc8 inset">
+            <div style="display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap">
+              <div style="min-width:220px; flex:1">
+                <span style="height:26px; padding:0 11px; border-radius:999px; background:#fdecea; color:#a32218; font:600 11.5px Manrope,system-ui,sans-serif; display:inline-flex; align-items:center; gap:6px"><span style="width:6px; height:6px; border-radius:999px; background:#c62a1d"></span>Rechazado</span>
+                <p style="margin:12px 0 0; font:600 19px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">Rechazado el 15 de marzo por Pablo Arce</p>
+                <p style="margin:9px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Motivo que se le envió a Rocío: “Ya tenés un grupo el mismo día y horario. Te propongo mover este a otro día o sumar un co-anfitrión que lo conduzca.”</p>
+              </div>
+              <div style="{{ accionesFila }}">
+                <button style="{{ accionBtn }} height:46px; padding:0 20px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Escribirle a Rocío</button>
+                <button onClick="{{ openAprobar }}" style="{{ accionBtn }} height:46px; padding:0 20px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Reconsiderar y aprobar</button>
+              </div>
+            </div>
+            <p style="margin:18px 0 0; padding-top:16px; border-top:1px solid #f0efec; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">El anfitrión puede corregir la ficha y volver a enviarla. Si lo hace, el grupo vuelve a aparecer como pendiente.</p>
+          </div>
+        </sc-if>
+
+        <div style="display:grid; grid-template-columns:{{ fichaCols }}; gap:14px; margin-top:14px">
+          <div style="background:#fff; border-radius:20px; overflow:hidden">
+            <div style="height:{{ fotoH }}; background:repeating-linear-gradient(135deg,#e6e4e0 0 10px,#dedbd6 10px 20px); display:flex; align-items:flex-end; justify-content:center; padding-bottom:12px">
+              <span style="font:500 10.5px ui-monospace,Menlo,monospace; letter-spacing:.06em; color:rgba(0,0,0,.5)">foto de portada</span>
+            </div>
+            <div style="padding:20px 22px">
+              <h1 style="margin:0; font:600 22px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.018em">{{ grupoNombre }}</h1>
+              <p style="margin:8px 0 0; font:500 13.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">“Un grupo para los chicos del barrio que se juntan los sábados a la tarde. Jugamos, merendamos y leemos algo corto de la biblia. Vienen con o sin sus papás.”</p>
+              <div style="display:flex; gap:7px; margin-top:14px; flex-wrap:wrap">
+                <span style="height:30px; padding:0 13px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">Adolescentes</span>
+                <span style="height:30px; padding:0 13px; border-radius:999px; background:#f7f7f5; display:flex; align-items:center; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Con merienda</span>
+                <span style="height:30px; padding:0 13px; border-radius:999px; background:#f7f7f5; display:flex; align-items:center; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Barrio</span>
+                <span style="height:30px; padding:0 13px; border-radius:999px; background:#f7f7f5; display:flex; align-items:center; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Mixto</span>
+              </div>
+
+              <div style="margin-top:20px">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid #f4f3f1"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Día y horario</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">Sábados 18:00</span></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid #f4f3f1"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Modalidad</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">Presencial · Triunvirato 4180</span></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid #f4f3f1"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Temporada</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">T1 2026 · 3 mar a 18 dic</span></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid #f4f3f1"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Apunta a</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">Mixto · 12 a 17 años</span></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Creado</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">16 sep 2026</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:14px">
+            <div style="background:#fff; border-radius:20px; padding:20px 22px">
+              <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Liderazgo</p>
+              <div style="display:flex; align-items:center; gap:12px; margin-top:16px">
+                <div style="width:42px; height:42px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); flex:none">RL</div>
+                <div style="min-width:0"><p style="margin:0; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a">Rocío Ledesma</p><p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Anfitriona · 11 3388 2044</p></div>
+              </div>
+              <div style="background:#fdf7ee; border-radius:16px; padding:14px 16px; margin-top:14px">
+                <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:#7a4f10">No cargó co-anfitrión</p>
+                <p style="margin:7px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Para quien evalúa es un dato, no un campo vacío: el grupo queda sin respaldo si la anfitriona falta.</p>
+                <button style="height:38px; padding:0 16px; margin-top:12px; border:0; border-radius:999px; background:#fff; color:#0a0a0a; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer">Asignar co-anfitrión</button>
+              </div>
+            </div>
+
+            <div style="background:#fff; border-radius:20px; padding:20px 22px">
+              <div style="display:flex; align-items:center; gap:12px">
+                <p style="margin:0; flex:1; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Ocupación</p>
+                <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ ocupacion }}</span>
+              </div>
+              <div style="height:8px; border-radius:999px; background:#f0efec; overflow:hidden; margin-top:14px"><div style="width:{{ ocupacionPct }}; height:100%; background:#0a0a0a"></div></div>
+              <p style="margin:12px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ ocupacionNota }}</p>
+              <button onClick="{{ goInscriptos }}" style="width:100%; height:46px; margin-top:16px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Ver los inscriptos</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isInscriptos }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <div style="flex:1; min-width:180px; height:42px; border-radius:999px; background:#fff; display:flex; align-items:center; gap:10px; padding:0 8px 0 17px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.58)" stroke-width="2.2" stroke-linecap="round" style="flex:none"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+            <input type="text" value="{{ query }}" onChange="{{ onQuery }}" placeholder="Buscar por nombre, teléfono o email" style="flex:1; min-width:0; border:0; background:transparent; font:500 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+            <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ clearQuery }}" style="width:30px; height:30px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            </sc-if>
+          </div>
+          <button onClick="{{ goAgregar }}" style="height:42px; padding:0 20px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 14px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:8px; cursor:pointer; flex:none">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Agregar a mano
+          </button>
+        </div>
+
+        <p style="margin:14px 2px 0; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ resumenInscriptos }}</p>
+
+        <sc-if value="{{ hayInscriptos }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#fff; border-radius:20px; margin-top:12px; overflow:hidden">
+              <div style="display:grid; grid-template-columns:minmax(0,2.1fr) minmax(0,1.1fr) minmax(0,1.6fr) 124px 150px; gap:14px; padding:11px 20px; background:#fafaf9; border-bottom:1px solid #f0efec">
+                <span style="font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.05em; color:rgba(0,0,0,.6)">PERSONA</span>
+                <span style="font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.05em; color:rgba(0,0,0,.6)">TELÉFONO</span>
+                <span style="font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.05em; color:rgba(0,0,0,.6)">EMAIL</span>
+                <span style="font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.05em; color:rgba(0,0,0,.6)">ESTADO</span>
+                <span></span>
+              </div>
+              <sc-for list="{{ inscriptos }}" as="m" hint-placeholder-count="8">
+                <div style="{{ m.rowStyle }}">
+                  <div style="display:flex; align-items:center; gap:11px; min-width:0">
+                    <div style="{{ m.avatar }}">{{ m.ini }}</div>
+                    <div style="min-width:0">
+                      <p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.nombre }}</p>
+                      <p style="margin:2px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:{{ m.metaInk }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.meta }}</p>
+                    </div>
+                  </div>
+                  <span style="font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.tel }}</span>
+                  <span style="font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.email }}</span>
+                  <span style="{{ m.pill }}"><span style="{{ m.dot }}"></span>{{ m.estadoLabel }}</span>
+                  <div style="display:flex; gap:6px; justify-content:flex-end">
+                    <sc-if value="{{ m.esPareja }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ m.editarPareja }}" style="height:32px; padding:0 12px; border:0; border-radius:999px; background:#fbeef4; font:600 12px Manrope,system-ui,sans-serif; color:#9d1d5c; cursor:pointer; white-space:nowrap">Ver pareja</button>
+                    </sc-if>
+                    <sc-if value="{{ m.sinPareja }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ m.editarPareja }}" style="height:32px; padding:0 12px; border:0; border-radius:999px; background:#f2f2f0; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); cursor:pointer; white-space:nowrap">Sumar pareja</button>
+                    </sc-if>
+                    <button style="width:32px; height:32px; border:0; border-radius:999px; background:#fdecea; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a32218" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px">
+              <sc-for list="{{ inscriptos }}" as="m" hint-placeholder-count="6">
+                <div style="{{ m.cardStyle }}">
+                  <div style="display:flex; align-items:flex-start; gap:12px">
+                    <div style="{{ m.avatarM }}">{{ m.ini }}</div>
+                    <div style="min-width:0; flex:1">
+                      <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ m.nombre }}</p>
+                      <p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:{{ m.metaInk }}">{{ m.meta }}</p>
+                    </div>
+                    <span style="{{ m.pill }}"><span style="{{ m.dot }}"></span>{{ m.estadoLabel }}</span>
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:4px; margin-top:12px">
+                    <p style="margin:0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">{{ m.tel }}</p>
+                    <p style="margin:0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); overflow:hidden; text-overflow:ellipsis">{{ m.email }}</p>
+                  </div>
+                  <div style="display:flex; gap:8px; margin-top:14px">
+                    <button onClick="{{ m.editarPareja }}" style="{{ m.btnParejaM }}">{{ m.btnParejaLabel }}</button>
+                    <button style="width:46px; height:42px; border:0; border-radius:999px; background:#fdecea; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a32218" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ inscriptosVacio }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff; border-radius:20px; margin-top:12px; padding:52px 30px; display:flex; flex-direction:column; align-items:center; text-align:center">
+            <div style="width:84px; height:84px; border-radius:999px; background:repeating-linear-gradient(135deg,#eceae6 0 8px,#e3e1dc 8px 16px)"></div>
+            <p style="margin:20px 0 0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ vacioTitulo }}</p>
+            <p style="margin:9px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); max-width:330px">{{ vacioTexto }}</p>
+            <button onClick="{{ vacioAccionFn }}" style="height:46px; padding:0 22px; margin-top:20px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">{{ vacioAccion }}</button>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ isAgregar }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid; grid-template-columns:{{ agregarCols }}; gap:14px">
+          <div style="background:#fff; border-radius:20px; padding:20px 22px">
+            <div style="display:flex; align-items:center; gap:10px">
+              <span style="width:26px; height:26px; border-radius:999px; background:#0a0a0a; color:#fff; font:600 12.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; justify-content:center; flex:none">1</span>
+              <p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">¿A qué grupo lo anotás?</p>
+            </div>
+            <div style="height:42px; border-radius:999px; background:#f7f7f5; display:flex; align-items:center; gap:10px; padding:0 17px; margin-top:14px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.58)" stroke-width="2.2" stroke-linecap="round" style="flex:none"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+              <input type="text" value="{{ gQuery }}" onChange="{{ onGQuery }}" placeholder="Buscar entre los 80 grupos" style="flex:1; min-width:0; border:0; background:transparent; font:500 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+            </div>
+            <div style="display:flex; flex-direction:column; gap:7px; margin-top:12px; max-height:290px; overflow:auto">
+              <sc-for list="{{ gruposLista }}" as="g" hint-placeholder-count="5">
+                <button onClick="{{ g.elegir }}" style="{{ g.style }}">
+                  <span style="min-width:0; flex:1; text-align:left">
+                    <span style="display:block; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ g.nombre }}</span>
+                    <span style="display:block; margin-top:3px; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ g.meta }}</span>
+                  </span>
+                  <sc-if value="{{ g.esPareja }}" hint-placeholder-val="{{ false }}">
+                    <span style="height:24px; padding:0 10px; border-radius:999px; background:#fbeef4; color:#9d1d5c; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center; flex:none; white-space:nowrap">De parejas</span>
+                  </sc-if>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#fff; border-radius:20px; padding:20px 22px">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+              <span style="{{ paso2Num }}">2</span>
+              <p style="margin:0; flex:1; min-width:140px; font:600 16px Manrope,system-ui,sans-serif; color:{{ paso2Ink }}">Datos de la persona</p>
+              <sc-if value="{{ grupoEsPareja }}" hint-placeholder-val="{{ false }}">
+                <span style="height:26px; padding:0 11px; border-radius:999px; background:#fbeef4; color:#9d1d5c; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; flex:none">Grupo de parejas</span>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ sinGrupo }}" hint-placeholder-val="{{ true }}">
+              <p style="margin:14px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Elegí primero el grupo. Los campos son los mismos siempre; si el grupo es de parejas se habilita el segundo bloque que ya está acá abajo.</p>
+            </sc-if>
+
+            <div style="margin-top:16px">
+              <p style="margin:0 0 10px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.58)">TITULAR DE LA INSCRIPCIÓN</p>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:9px">
+                <div style="{{ campo }}"><span style="font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">NOMBRE Y APELLIDO</span><span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Ej. Marcela Godoy</span></div>
+                <div style="{{ campo }}"><span style="font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">TELÉFONO</span><span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">11 5533 1200</span></div>
+                <div style="{{ campo }}"><span style="font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">EMAIL</span><span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Opcional</span></div>
+              </div>
+            </div>
+
+            <div style="{{ bloquePareja }}">
+              <div style="display:flex; align-items:center; gap:10px">
+                <p style="margin:0; flex:1; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:{{ parejaLabelInk }}">ACOMPAÑANTE</p>
+                <span style="{{ parejaEstadoPill }}">{{ parejaEstadoLabel }}</span>
+              </div>
+              <sc-if value="{{ grupoEsPareja }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:9px; margin-top:12px">
+                  <div style="{{ campoPareja }}"><span style="font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:#9d1d5c">EMAIL DEL ACOMPAÑANTE</span><span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">valeria@mail.com</span></div>
+                  <div style="{{ campoPareja }}"><span style="font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:#9d1d5c">TELÉFONO</span><span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">11 6033 1180</span></div>
+                </div>
+                <button onClick="{{ openPareja }}" style="height:42px; padding:0 18px; margin-top:12px; border:0; border-radius:999px; background:#fbeef4; color:#9d1d5c; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">Buscar si ya tiene cuenta</button>
+              </sc-if>
+              <sc-if value="{{ grupoNoPareja }}" hint-placeholder-val="{{ true }}">
+                <p style="margin:10px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ parejaNota }}</p>
+              </sc-if>
+            </div>
+
+            <div style="display:flex; gap:9px; margin-top:18px; flex-wrap:wrap">
+              <button style="{{ btnGuardar }}">{{ btnGuardarLabel }}</button>
+              <button onClick="{{ goInscriptos }}" style="height:48px; padding:0 20px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ modalAprobar }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:50; background:rgba(10,10,10,.42)" onClick="{{ closeModal }}"></div>
+      <div style="{{ modalBox }}">
+        <div style="padding:22px 24px">
+          <p style="margin:0; font:600 19px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">Aprobar {{ grupoNombre }}</p>
+          <p style="margin:10px 0 0; font:500 13.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">El grupo pasa a estar activo, aparece en el catálogo público y Rocío puede empezar a recibir solicitudes. Se le avisa por email.</p>
+          <div style="background:#f7f7f5; border-radius:16px; padding:14px 16px; margin-top:16px">
+            <p style="margin:0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">Queda sin co-anfitrión. Podés aprobarlo igual y asignarle uno después desde la ficha.</p>
+          </div>
+          <div style="display:flex; gap:9px; margin-top:20px; flex-wrap:wrap">
+            <button onClick="{{ confirmAprobar }}" style="flex:1; min-width:150px; height:50px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Aprobar</button>
+            <button onClick="{{ closeModal }}" style="height:50px; padding:0 22px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Volver</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ modalRechazar }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:50; background:rgba(10,10,10,.42)" onClick="{{ closeModal }}"></div>
+      <div style="{{ modalBox }}">
+        <div style="padding:22px 24px">
+          <span style="height:26px; padding:0 11px; border-radius:999px; background:#fdecea; color:#a32218; font:600 11.5px Manrope,system-ui,sans-serif; display:inline-flex; align-items:center">Se le envía al anfitrión</span>
+          <p style="margin:14px 0 0; font:600 19px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">Rechazar {{ grupoNombre }}</p>
+          <p style="margin:10px 0 0; font:500 13.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">Rocío recibe el motivo que escribas y puede corregir la ficha y volver a enviarla. El grupo no se borra.</p>
+          <div style="background:#f7f7f5; border-radius:18px; padding:14px 16px; margin-top:16px; min-height:96px">
+            <p style="margin:0; font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">MOTIVO PARA EL ANFITRIÓN</p>
+            <p style="margin:8px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Ya tenés un grupo el mismo día y horario…</p>
+          </div>
+          <div style="display:flex; gap:9px; margin-top:20px; flex-wrap:wrap">
+            <button onClick="{{ confirmRechazar }}" style="flex:1; min-width:170px; height:50px; border:0; border-radius:999px; background:#c62a1d; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Rechazar y avisarle</button>
+            <button onClick="{{ closeModal }}" style="height:50px; padding:0 22px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Volver</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ modalPareja }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:50; background:rgba(10,10,10,.42)" onClick="{{ closeModal }}"></div>
+      <div style="{{ modalBox }}">
+        <div style="padding:20px 24px 22px">
+          <div style="display:flex; align-items:flex-start; gap:14px">
+            <div style="min-width:0; flex:1">
+              <span style="height:26px; padding:0 11px; border-radius:999px; background:#fbeef4; color:#9d1d5c; font:600 11.5px Manrope,system-ui,sans-serif; display:inline-flex; align-items:center">Acompañante</span>
+              <p style="margin:12px 0 0; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">{{ parejaTitulo }}</p>
+              <p style="margin:7px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Una inscripción, dos personas. La inscripción sigue a nombre de {{ parejaTitular }}.</p>
+            </div>
+            <button onClick="{{ closeModal }}" style="width:36px; height:36px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:7px; margin-top:18px">
+            <div style="{{ stepBar1 }}"></div>
+            <div style="{{ stepBar2 }}"></div>
+            <div style="{{ stepBar3 }}"></div>
+            <span style="font:600 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); white-space:nowrap; margin-left:6px">{{ stepLabel }}</span>
+          </div>
+
+          <sc-if value="{{ pasoEmail }}" hint-placeholder-val="{{ true }}">
+            <p style="margin:20px 0 0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">¿El acompañante tiene email?</p>
+            <p style="margin:8px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Con el email buscamos si ya tiene cuenta en la app y evitamos cargar datos dos veces.</p>
+            <div style="display:flex; gap:9px; margin-top:18px; flex-wrap:wrap">
+              <button onClick="{{ conEmail }}" style="flex:1; min-width:130px; height:52px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Sí, tiene email</button>
+              <button onClick="{{ sinEmail }}" style="flex:1; min-width:130px; height:52px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">No tiene</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ pasoBuscar }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:20px 0 0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">Buscar la cuenta por email</p>
+            <div style="height:54px; border-radius:18px; background:#f7f7f5; display:flex; align-items:center; gap:10px; padding:0 18px; margin-top:14px">
+              <input type="text" value="{{ pEmail }}" onChange="{{ onPEmail }}" placeholder="valeria@mail.com" style="flex:1; min-width:0; border:0; background:transparent; font:500 15px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+            </div>
+            <div style="display:flex; gap:7px; margin-top:10px; flex-wrap:wrap">
+              <button onClick="{{ fillConCuenta }}" style="height:34px; padding:0 13px; border:0; border-radius:999px; background:#f2f2f0; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64); cursor:pointer">valeria@mail.com · tiene cuenta</button>
+              <button onClick="{{ fillSinCuenta }}" style="height:34px; padding:0 13px; border:0; border-radius:999px; background:#f2f2f0; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64); cursor:pointer">nuevo@mail.com · sin cuenta</button>
+            </div>
+            <div style="display:flex; gap:9px; margin-top:18px; flex-wrap:wrap">
+              <button onClick="{{ buscarCuenta }}" style="flex:1; min-width:150px; height:52px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Buscar cuenta</button>
+              <button onClick="{{ volverPaso1 }}" style="height:52px; padding:0 20px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Atrás</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ pasoEncontrada }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#f3faf5; border-radius:18px; padding:16px 18px; margin-top:20px">
+              <div style="display:flex; align-items:center; gap:12px">
+                <div style="width:42px; height:42px; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); flex:none">VA</div>
+                <div style="min-width:0"><p style="margin:0; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Valeria Aguirre</p><p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">valeria@mail.com · cuenta desde 2024</p></div>
+                <span style="height:24px; padding:0 10px; border-radius:999px; background:#e9f6ed; color:#15803d; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center; flex:none">Vinculada</span>
+              </div>
+            </div>
+            <p style="margin:16px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Los datos vienen de su cuenta. Solo falta el teléfono para contactarla.</p>
+            <div style="height:54px; border-radius:18px; background:#f7f7f5; padding:0 18px; display:flex; flex-direction:column; justify-content:center; margin-top:12px">
+              <span style="font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">TELÉFONO</span>
+              <span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">11 6033 1180</span>
+            </div>
+            <div style="display:flex; gap:9px; margin-top:18px; flex-wrap:wrap">
+              <button onClick="{{ closeModal }}" style="flex:1; min-width:150px; height:52px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Guardar la pareja</button>
+              <button onClick="{{ volverPaso2 }}" style="height:52px; padding:0 20px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Atrás</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ pasoManual }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:20px 0 0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ manualTitulo }}</p>
+            <p style="margin:8px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ manualNota }}</p>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:9px; margin-top:14px">
+              <div style="{{ campo }}"><span style="font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">NOMBRE</span><span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Valeria</span></div>
+              <div style="{{ campo }}"><span style="font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">APELLIDO</span><span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Aguirre</span></div>
+              <div style="{{ campo }}"><span style="font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">TELÉFONO</span><span style="font:500 14.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">11 6033 1180</span></div>
+            </div>
+            <div style="display:flex; gap:9px; margin-top:18px; flex-wrap:wrap">
+              <button onClick="{{ closeModal }}" style="flex:1; min-width:150px; height:52px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Guardar la pareja</button>
+              <button onClick="{{ volverPaso2 }}" style="height:52px; padding:0 20px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Atrás</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:940}}">
+class Component extends DCLogic {
+  state = {
+    device: 'desktop', screen: 'detalle', estado: 'pendiente', modal: null,
+    query: '', gQuery: '', grupoElegido: null,
+    pStep: 1, pEmail: '', pCuenta: null, parejaTitular: 'Julieta Ramos', parejaNueva: true
+  };
+
+  ini(n) {
+    const partes = n.split(' y ')[0].split(' ').filter(Boolean);
+    return partes.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  personas() {
+    const p = (nombre, tel, email, estado, pareja) => ({ nombre, tel, email, estado, pareja });
+    return [
+      p('Julieta Ramos', '11 5544 2210', 'julieta.ramos@mail.com', 'aprobada', null),
+      p('Diego Cabrera y Valeria Aguirre', '11 6033 1180', 'diego.cabrera@mail.com', 'aprobada', 'Valeria tiene cuenta vinculada'),
+      p('Carla Medina', '11 4477 9032', 'carla.medina@mail.com', 'aprobada', null),
+      p('Rodrigo Benítez y Ana Bianchi', '11 4477 9033', 'rodrigo.b@mail.com', 'aprobada', 'Ana cargada a mano, sin email'),
+      p('Nicolás Guerra', '11 6120 8834', 'nico.guerra@mail.com', 'aprobada', null),
+      p('Federico Navarro', '11 2200 8891', 'fede.navarro@mail.com', 'aprobada', null),
+      p('Micaela Duarte y Lucas Ferrer', '11 3390 4417', 'mica.duarte@mail.com', 'pendiente', 'Lucas sin datos todavía'),
+      p('Tomás Leiva', '11 2299 4410', 'sin email', 'aprobada', null),
+      p('Brenda Ojeda', '11 5588 1203', 'brenda.ojeda@mail.com', 'aprobada', null),
+      p('Iván Sotelo', '11 6677 2290', 'ivan.sotelo@mail.com', 'rechazada', null),
+      p('Sofía Arrieta y Pedro Lamas', '11 4412 9987', 'sofia.arrieta@mail.com', 'aprobada', 'Pedro tiene cuenta vinculada'),
+      p('Gonzalo Pérez Vila', '11 5511 3376', 'gonzalo.pv@mail.com', 'pendiente', null),
+      p('Mariana Escobar', '11 3322 7741', 'mariana.e@mail.com', 'aprobada', null),
+      p('Lautaro Quiroga', '11 2288 5540', 'lautaro.q@mail.com', 'aprobada', null),
+      p('Camila Ostrovsky y Bruno Tello', '11 6690 1123', 'camila.o@mail.com', 'aprobada', 'Bruno cargado a mano, sin email'),
+      p('Malena Ríos', '11 4455 6672', 'malena.rios@mail.com', 'aprobada', null),
+      p('Facundo Iriarte', '11 5566 8812', 'facu.iriarte@mail.com', 'pendiente', null),
+      p('Agustina Pardo', '11 3344 1190', 'agus.pardo@mail.com', 'aprobada', null),
+      p('Emilia Roldán y Santiago Vera', '11 6612 4408', 'emilia.roldan@mail.com', 'aprobada', 'Santiago tiene cuenta vinculada'),
+      p('Joaquín Alderete', '11 2277 9934', 'sin email', 'aprobada', null),
+      p('Pilar Quinteros', '11 5599 3348', 'pilar.q@mail.com', 'aprobada', null),
+      p('Ramiro Coscia', '11 4433 2218', 'ramiro.coscia@mail.com', 'rechazada', null)
+    ];
+  }
+
+  grupos() {
+    const g = (nombre, meta, pareja) => ({ nombre, meta, pareja });
+    return [
+      g('Villa Urquiza Jóvenes', 'Adolescentes · sábados 18:00 · 0/15', false),
+      g('Almagro Norte', 'Jóvenes adultos · jueves 20:00 · 12/12', false),
+      g('Caballito Matrimonios', 'Matrimonios jóvenes · viernes 21:00 · 4/12', true),
+      g('Devoto Matrimonios', 'Matrimonios jóvenes · sábados 20:00 · 12/12', true),
+      g('Palermo Online', 'Profesionales · miércoles 21:00 · 8/15', false),
+      g('Flores Mujeres', 'Mujeres · lunes 10:00 · 9/12', false),
+      g('Boedo Familias', 'Familias con hijos · domingos 17:00 · 9/16', true),
+      g('Recoleta Profesionales', 'Profesionales · martes 20:00 · 13/14', false),
+      g('Saavedra Hombres', 'Hombres · martes 7:00 · 6/10', false)
+    ];
+  }
+
+  estilosEstado(e) {
+    if (e === 'aprobada') return { bg: '#e9f6ed', fg: '#15803d', dot: '#16a34a', label: 'Aprobada' };
+    if (e === 'pendiente') return { bg: '#fdf0dc', fg: '#7a4f10', dot: '#b45309', label: 'Pendiente' };
+    return { bg: '#fdecea', fg: '#a32218', dot: '#c62a1d', label: 'Rechazada' };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const desk = s.device === 'desktop';
+    const ROSA = '#9d1d5c';
+
+    const q = s.query.trim().toLowerCase();
+    const todas = this.personas();
+    const lista = todas.filter(p => !q || p.nombre.toLowerCase().includes(q) || p.tel.includes(q) || p.email.toLowerCase().includes(q));
+    const nParejas = todas.filter(p => p.pareja).length;
+
+    const seg = (on) => 'height:32px; padding:0 14px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer';
+    const tab = (on) => 'height:38px; padding:0 16px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : '#f2f2f0') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 13px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:8px; cursor:pointer; flex:none';
+    const campo = 'height:58px; border-radius:18px; background:#f7f7f5; padding:0 17px; display:flex; flex-direction:column; justify-content:center';
+
+    const inscriptos = lista.map((p, i) => {
+      const c = this.estilosEstado(p.estado);
+      const esPareja = !!p.pareja;
+      return {
+        nombre: p.nombre, tel: p.tel, email: p.email, ini: this.ini(p.nombre),
+        meta: esPareja ? 'Pareja · ' + p.pareja : 'Inscripción individual',
+        metaInk: esPareja ? ROSA : 'rgba(0,0,0,.62)',
+        esPareja, sinPareja: !esPareja,
+        estadoLabel: c.label,
+        pill: 'height:26px; padding:0 11px; border-radius:999px; background:' + c.bg + '; color:' + c.fg + '; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:6px; width:fit-content; white-space:nowrap; flex:none',
+        dot: 'width:6px; height:6px; border-radius:999px; background:' + c.dot + '; flex:none',
+        avatar: 'width:34px; height:34px; border-radius:11px; flex:none; display:flex; align-items:center; justify-content:center; font:600 11px Manrope,system-ui,sans-serif; background:' + (esPareja ? '#fbeef4' : '#f2f2f0') + '; color:' + (esPareja ? ROSA : 'rgba(0,0,0,.58)'),
+        avatarM: 'width:44px; height:44px; border-radius:14px; flex:none; display:flex; align-items:center; justify-content:center; font:600 13px Manrope,system-ui,sans-serif; background:' + (esPareja ? '#fbeef4' : '#f2f2f0') + '; color:' + (esPareja ? ROSA : 'rgba(0,0,0,.58)'),
+        rowStyle: 'display:grid; grid-template-columns:minmax(0,2.1fr) minmax(0,1.1fr) minmax(0,1.6fr) 124px 150px; gap:14px; padding:0 20px; height:60px; align-items:center; border-bottom:1px solid #f4f3f1; box-shadow:' + (esPareja ? 'inset 3px 0 0 ' + ROSA : 'none'),
+        cardStyle: 'background:#fff; border-radius:20px; padding:14px 16px; box-shadow:' + (esPareja ? 'inset 3px 0 0 ' + ROSA : 'none'),
+        btnParejaM: 'flex:1; height:42px; border:0; border-radius:999px; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer; background:' + (esPareja ? '#fbeef4' : '#f2f2f0') + '; color:' + (esPareja ? ROSA : 'rgba(0,0,0,.66)'),
+        btnParejaLabel: esPareja ? 'Ver o editar la pareja' : 'Sumar una pareja',
+        editarPareja: () => this.setState({ modal: 'pareja', pStep: 1, pEmail: '', pCuenta: null, parejaTitular: p.nombre.split(' y ')[0], parejaNueva: !esPareja })
+      };
+    });
+
+    const gq = s.gQuery.trim().toLowerCase();
+    const gruposLista = this.grupos().filter(g => !gq || g.nombre.toLowerCase().includes(gq)).map(g => {
+      const on = s.grupoElegido === g.nombre;
+      return {
+        nombre: g.nombre, meta: g.meta, esPareja: g.pareja,
+        style: 'width:100%; min-height:58px; padding:11px 15px; border:0; border-radius:18px; background:' + (on ? '#f0efec' : '#fcfcfb') + '; box-shadow:' + (on ? 'inset 0 0 0 1.5px #0a0a0a' : 'none') + '; display:flex; align-items:center; gap:10px; cursor:pointer; text-align:left',
+        elegir: () => this.setState({ grupoElegido: g.nombre })
+      };
+    });
+
+    const elegido = this.grupos().find(g => g.nombre === s.grupoElegido);
+    const esPar = !!(elegido && elegido.pareja);
+
+    const stepOn = (n) => 'flex:1; height:5px; border-radius:999px; background:' + (s.pStep >= n ? '#0a0a0a' : '#eceae6');
+    const pasos = { 1: 'Paso 1 de 3', 2: 'Paso 2 de 3', 3: 'Paso 3 de 3' };
+
+    return {
+      isDesktop: desk, isMobile: !desk,
+      frameW: desk ? '1280px' : '390px',
+      frameH: desk ? '800px' : '800px',
+      headPad: desk ? '16px 26px' : '14px 16px',
+      bodyPad: desk ? '18px 26px 30px' : '16px 16px 28px',
+      modalBox: 'position:absolute; z-index:51; background:#fff; border-radius:26px; box-shadow:0 20px 50px rgba(0,0,0,.25); ' + (desk ? 'top:70px; left:50%; transform:translateX(-50%); width:560px;' : 'left:12px; right:12px; top:40px;'),
+      showDesktop: () => this.setState({ device: 'desktop' }),
+      showMobile: () => this.setState({ device: 'mobile' }),
+      deskBtn: seg(desk), mobBtn: seg(!desk),
+
+      setPendiente: () => this.setState({ estado: 'pendiente', screen: 'detalle', modal: null }),
+      setAprobado: () => this.setState({ estado: 'aprobado', screen: 'detalle', modal: null }),
+      setRechazado: () => this.setState({ estado: 'rechazado', screen: 'detalle', modal: null }),
+      btnPend: seg(s.estado === 'pendiente'), btnAprob: seg(s.estado === 'aprobado'), btnRech: seg(s.estado === 'rechazado'),
+      esPendiente: s.estado === 'pendiente', esAprobado: s.estado === 'aprobado', esRechazado: s.estado === 'rechazado',
+
+      grupoNombre: 'Villa Urquiza Jóvenes',
+      isDetalle: s.screen === 'detalle', isInscriptos: s.screen === 'inscriptos', isAgregar: s.screen === 'agregar',
+      goDetalle: () => this.setState({ screen: 'detalle', modal: null }),
+      goInscriptos: () => this.setState({ screen: 'inscriptos', modal: null }),
+      goAgregar: () => this.setState({ screen: 'agregar', modal: null }),
+      tabDetalle: tab(s.screen === 'detalle'), tabInscriptos: tab(s.screen === 'inscriptos'), tabAgregar: tab(s.screen === 'agregar'),
+      tabInscN: 'height:21px; padding:0 8px; border-radius:999px; background:' + (s.screen === 'inscriptos' ? 'rgba(255,255,255,.18)' : '#eceae6') + '; color:' + (s.screen === 'inscriptos' ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center',
+
+      accionesFila: 'display:flex; gap:9px; flex:1 1 auto; min-width:0; flex-wrap:wrap' + (desk ? '' : '; width:100%'),
+      accionBtn: desk ? 'flex:none;' : 'flex:1 1 100%; min-width:0;',
+      fichaCols: desk ? 'minmax(0,1.6fr) minmax(0,1fr)' : 'minmax(0,1fr)',
+      agregarCols: desk ? 'minmax(0,1fr) minmax(0,1.3fr)' : 'minmax(0,1fr)',
+      fotoH: desk ? '210px' : '150px',
+      nInscriptos: s.estado === 'pendiente' ? 0 : todas.length,
+      ocupacion: s.estado === 'pendiente' ? '0 de 15' : todas.length + ' de 24',
+      ocupacionPct: s.estado === 'pendiente' ? '0%' : '92%',
+      ocupacionNota: s.estado === 'pendiente'
+        ? 'Nadie puede anotarse mientras el grupo esté pendiente.'
+        : '2 lugares libres. ' + nParejas + ' inscripciones son de parejas, así que cuentan doble.',
+
+      query: s.query, hasQuery: s.query.length > 0,
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      clearQuery: () => this.setState({ query: '' }),
+      inscriptos, hayInscriptos: lista.length > 0 && s.estado !== 'pendiente',
+      inscriptosVacio: lista.length === 0 || s.estado === 'pendiente',
+      resumenInscriptos: s.estado === 'pendiente' ? 'Todavía sin inscriptos' : lista.length + ' de ' + todas.length + ' inscripciones · ' + nParejas + ' son parejas',
+      vacioTitulo: s.estado === 'pendiente' ? 'El grupo todavía no tiene inscriptos' : 'Nadie coincide con la búsqueda',
+      vacioTexto: s.estado === 'pendiente'
+        ? 'Mientras esté pendiente de aprobación no aparece en el catálogo y nadie puede anotarse. Podés agregar gente a mano igual.'
+        : 'Probá con el apellido, con parte del teléfono, o agregá la persona a mano si todavía no está.',
+      vacioAccion: s.estado === 'pendiente' ? 'Agregar a mano' : 'Limpiar la búsqueda',
+      vacioAccionFn: s.estado === 'pendiente' ? () => this.setState({ screen: 'agregar' }) : () => this.setState({ query: '' }),
+
+      gQuery: s.gQuery, onGQuery: (e) => this.setState({ gQuery: e.target.value }),
+      gruposLista,
+      sinGrupo: !s.grupoElegido, grupoEsPareja: esPar, grupoNoPareja: !esPar,
+      paso2Num: 'width:26px; height:26px; border-radius:999px; font:600 12.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; justify-content:center; flex:none; background:' + (s.grupoElegido ? '#0a0a0a' : '#eceae6') + '; color:' + (s.grupoElegido ? '#fff' : 'rgba(0,0,0,.6)'),
+      paso2Ink: s.grupoElegido ? '#0a0a0a' : 'rgba(0,0,0,.6)',
+      campo, campoPareja: 'height:58px; border-radius:18px; background:#fdf4f8; padding:0 17px; display:flex; flex-direction:column; justify-content:center',
+      bloquePareja: 'margin-top:18px; padding:16px 18px; border-radius:20px; background:' + (esPar ? '#fdf4f8' : '#fbfbfa') + '; box-shadow:' + (esPar ? 'inset 0 0 0 1.5px #f3d3e2' : 'inset 0 0 0 1.5px #f0efec'),
+      parejaLabelInk: esPar ? ROSA : 'rgba(0,0,0,.58)',
+      parejaEstadoPill: 'height:24px; padding:0 10px; border-radius:999px; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center; flex:none; background:' + (esPar ? '#fff' : '#f2f2f0') + '; color:' + (esPar ? ROSA : 'rgba(0,0,0,.6)'),
+      parejaEstadoLabel: esPar ? 'Obligatorio' : 'No se pide',
+      parejaNota: s.grupoElegido
+        ? 'Este grupo no es de parejas, así que el bloque queda inactivo. Si después cambia, se habilita acá mismo.'
+        : 'El bloque está siempre a la vista: se habilita si el grupo que elegís es de parejas, así el formulario no cambia de forma.',
+      btnGuardar: 'flex:1; min-width:180px; height:48px; border:0; border-radius:999px; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer; background:' + (s.grupoElegido ? '#0a0a0a' : '#eceae6') + '; color:' + (s.grupoElegido ? '#fff' : 'rgba(0,0,0,.5)'),
+      btnGuardarLabel: !s.grupoElegido ? 'Elegí un grupo primero' : (esPar ? 'Agregar la pareja al grupo' : 'Agregar al grupo'),
+
+      modalAprobar: s.modal === 'aprobar', modalRechazar: s.modal === 'rechazar', modalPareja: s.modal === 'pareja',
+      openAprobar: () => this.setState({ modal: 'aprobar' }),
+      openRechazar: () => this.setState({ modal: 'rechazar' }),
+      openPareja: () => this.setState({ modal: 'pareja', pStep: 1, pEmail: '', pCuenta: null, parejaTitular: 'la persona titular', parejaNueva: true }),
+      closeModal: () => this.setState({ modal: null }),
+      confirmAprobar: () => this.setState({ modal: null, estado: 'aprobado' }),
+      confirmRechazar: () => this.setState({ modal: null, estado: 'rechazado' }),
+
+      parejaTitulo: s.parejaNueva ? 'Sumar una pareja a la inscripción' : 'Datos de la pareja',
+      parejaTitular: s.parejaTitular,
+      stepBar1: stepOn(1), stepBar2: stepOn(2), stepBar3: stepOn(3), stepLabel: pasos[s.pStep],
+      pasoEmail: s.pStep === 1, pasoBuscar: s.pStep === 2 && s.pCuenta === null,
+      pasoEncontrada: s.pStep === 3 && s.pCuenta === 'si',
+      pasoManual: s.pStep === 3 && s.pCuenta === 'no',
+      pEmail: s.pEmail,
+      onPEmail: (e) => this.setState({ pEmail: e.target.value }),
+      conEmail: () => this.setState({ pStep: 2, pCuenta: null }),
+      sinEmail: () => this.setState({ pStep: 3, pCuenta: 'no' }),
+      fillConCuenta: () => this.setState({ pEmail: 'valeria@mail.com' }),
+      fillSinCuenta: () => this.setState({ pEmail: 'nuevo@mail.com' }),
+      buscarCuenta: () => this.setState({ pStep: 3, pCuenta: s.pEmail.toLowerCase().indexOf('valeria') >= 0 ? 'si' : 'no' }),
+      volverPaso1: () => this.setState({ pStep: 1, pCuenta: null }),
+      volverPaso2: () => this.setState({ pStep: s.pCuenta === 'no' && s.pEmail === '' ? 1 : 2, pCuenta: null }),
+      manualTitulo: s.pEmail === '' ? 'Cargar los datos a mano' : 'No hay cuenta con ese email',
+      manualNota: s.pEmail === ''
+        ? 'Sin email no hay cuenta que vincular, así que los datos quedan cargados a mano. No va a poder entrar a la app.'
+        : 'Se carga a mano y queda invitada: cuando cree su cuenta con ese email, la inscripción se vincula sola.'
+    };
+  }
+}
+</script>
+</body>
+</html>

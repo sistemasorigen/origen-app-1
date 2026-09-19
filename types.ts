@@ -716,6 +716,9 @@ export interface Group {
     // Linaje de temporadas: apunta al grupo de la temporada anterior del que fue re-abierto
     parentGroupId?: string;
 
+    // Cuándo se creó, para poder decir hace cuánto espera una solicitud
+    createdAt?: string;
+
     // UI/Display Helpers (Join results)
     hostName?: string;
     hostLastName?: string;

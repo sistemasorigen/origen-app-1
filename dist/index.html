@@ -395,6 +395,127 @@
       color: #ffffff !important;
     }
 
+    /* Modales de inscripción a GCX (design-claude/JoinFlow). El override
+       global de arriba le pone a todo campo fondo blanco, borde slate y un
+       anillo de foco azul; en esta hoja el campo va gris sin borde visible y
+       el foco es negro, o rosa en el tramo de la pareja. Scopeado por id, que
+       le gana al !important global por especificidad. */
+    /* Para ganarle al override global hay que repetir su cadena de :not(),
+       y eso le da a la regla base más especificidad que a cualquier regla de
+       estado escrita con un selector más corto: el foco nunca llegaría a
+       pintarse. Por eso la base consume variables y cada estado solo las
+       redefine; las variables se resuelven por herencia, no por especificidad. */
+    #gcx-inscripcion {
+      --insc-campo-fondo: #f4f4f5;
+      --insc-campo-tinta: #0a0a0a;
+      --insc-campo-borde: transparent;
+    }
+
+    .dark #gcx-inscripcion {
+      --insc-campo-fondo: #26262a;
+      --insc-campo-tinta: #f7f7f8;
+    }
+
+    #gcx-inscripcion input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]) {
+      background-color: var(--insc-campo-fondo) !important;
+      color: var(--insc-campo-tinta) !important;
+      border: 1.5px solid var(--insc-campo-borde) !important;
+      border-radius: 16px !important;
+      padding: 15px 16px;
+      font-weight: 600;
+      /* 16px es el mínimo que no dispara el zoom automático de iOS al enfocar */
+      font-size: 16px;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    /* El foco se ve por el borde y el fondo: el campo pasa de gris sin borde a
+       blanco con borde negro, o rosa en el tramo de la pareja. */
+    #gcx-inscripcion input:focus {
+      --insc-campo-fondo: #ffffff;
+      --insc-campo-borde: #0a0a0a;
+    }
+
+    .dark #gcx-inscripcion input:focus {
+      --insc-campo-fondo: #1c1c1f;
+      --insc-campo-borde: #f7f7f8;
+    }
+
+    #gcx-inscripcion input.campo-pareja:focus {
+      --insc-campo-borde: #ec4b7f;
+    }
+
+    /* Más específica que :focus a propósito: el error sigue a la vista
+       mientras la persona corrige el campo. */
+    #gcx-inscripcion input.campo-error {
+      --insc-campo-borde: #d92d20;
+      --insc-campo-fondo: #fef3f2;
+    }
+
+    #gcx-inscripcion input:disabled {
+      --insc-campo-fondo: #f0f0f1;
+      --insc-campo-tinta: #9a9aa0;
+    }
+
+    .dark #gcx-inscripcion input:disabled {
+      --insc-campo-fondo: #26262a;
+      --insc-campo-tinta: #6e6e73;
+    }
+
+    #gcx-inscripcion ::placeholder {
+      color: #9a9aa0 !important;
+    }
+
+    .dark #gcx-inscripcion ::placeholder {
+      color: #7a7a80 !important;
+    }
+
+    /* index.css tiene un "modo foco": mientras hay un modal abierto esconde
+       todo <header> y <nav> de la página para que no se vean por detrás. Esa
+       regla alcanzaba también a la cabecera de esta hoja, que vive adentro del
+       modal: quedaba con altura 0 y sin título ni barra de pasos. Se exceptúa
+       por id, que le gana en especificidad. */
+    body[data-modal-active="true"] #gcx-inscripcion header {
+      display: flex !important;
+    }
+
+    /* Las cuatro animaciones del diseño: entrada de cada bloque nuevo, latido
+       del paso en curso, spinner y el sello de "encontramos a tu pareja". */
+    @keyframes inscSube {
+      from { opacity: 0; transform: translateY(10px) }
+      to { opacity: 1; transform: translateY(0) }
+    }
+
+    @keyframes inscLate {
+      0%, 100% { opacity: 1 }
+      50% { opacity: .25 }
+    }
+
+    @keyframes inscGira {
+      to { transform: rotate(360deg) }
+    }
+
+    @keyframes inscSello {
+      0% { transform: scale(.6); opacity: 0 }
+      60% { transform: scale(1.08) }
+      100% { transform: scale(1); opacity: 1 }
+    }
+
+    .insc-sube { animation: inscSube .3s ease both }
+    .insc-late { animation: inscLate 1.8s ease-in-out infinite }
+    .insc-gira { animation: inscGira .8s linear infinite }
+    .insc-sello { animation: inscSello .45s cubic-bezier(.2, .9, .3, 1.2) both }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .insc-sube,
+      .insc-late,
+      .insc-gira,
+      .insc-sello {
+        animation: none !important;
+      }
+    }
+
     /* Pantalla de crear / editar un grupo. Los campos van embutidos en
        recuadros grises adentro de tarjetas blancas, así que acá el control
        casi siempre es .campo-desnudo; esto es el piso para el resto. */
@@ -416,6 +537,7 @@
     /* La caja de portada la dibuja SubidaImagen, que trae su propio borde
        punteado y radio 12. Se reviste desde acá en vez de tocar ese
        componente, que lo usan muchas pantallas con otro aspecto. */
+    #gcx-panel .caja-portada>div,
     #gcx-formulario .caja-portada>div {
       border: 0 !important;
       border-radius: 20px !important;
@@ -424,6 +546,109 @@
 
     .dark #gcx-formulario .caja-portada>div {
       background-color: #232322 !important;
+    }
+
+    /* Panel GCX (design-claude/Admin GCX - Panel). El override global le pone
+       a todo campo fondo blanco, borde slate y anillo azul, y acá los campos
+       van sobre gris claro, con radio grande y foco negro. Mismo recurso que
+       en los modales de inscripción: la base consume variables y cada estado
+       solo las redefine, así el foco no tiene que ganarle en especificidad a
+       una regla que repite la cadena de :not(). */
+    #gcx-panel {
+      --panel-campo-fondo: #f7f7f5;
+      --panel-campo-borde: transparent;
+    }
+
+    #gcx-panel input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
+    #gcx-panel textarea,
+    #gcx-panel select {
+      background-color: var(--panel-campo-fondo) !important;
+      color: #0a0a0a !important;
+      border: 1.5px solid var(--panel-campo-borde) !important;
+      border-radius: 14px !important;
+      font-size: 15px;
+      font-weight: 500;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    #gcx-panel input:focus,
+    #gcx-panel textarea:focus,
+    #gcx-panel select:focus {
+      --panel-campo-fondo: #ffffff;
+      --panel-campo-borde: #0a0a0a;
+    }
+
+    /* El color de una categoría se elige con el selector nativo: sin fondo
+       gris ni borde encima, que lo taparían. */
+    #gcx-panel input[type="color"] {
+      border: 0 !important;
+      border-radius: 14px !important;
+      background: transparent !important;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    #gcx-panel ::placeholder {
+      color: rgba(0, 0, 0, .45) !important;
+    }
+
+    /* Crear y editar un grupo desde el panel. Son dos formularios largos que
+       vienen del estilo anterior —borde negro duro, sombra desplazada y radio
+       0— y acá se los reviste para que entren en la misma familia que el
+       resto del panel, sin tocar su lógica. Es una capa de compatibilidad,
+       no el diseño definitivo de esas dos pantallas. */
+    #gcx-formulario-admin input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
+    #gcx-formulario-admin textarea,
+    #gcx-formulario-admin select {
+      background-color: #f7f7f5 !important;
+      color: #0a0a0a !important;
+      border: 1.5px solid transparent !important;
+      border-radius: 16px !important;
+      font-weight: 500;
+    }
+
+    #gcx-formulario-admin input:focus,
+    #gcx-formulario-admin textarea:focus,
+    #gcx-formulario-admin select:focus {
+      background-color: #ffffff !important;
+      border-color: #0a0a0a !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    /* El borde negro duro y las sombras desplazadas se apagan por clase:
+       son cientos de usos repartidos en los dos archivos. */
+    #gcx-formulario-admin [class*="border-black"],
+    #gcx-formulario-admin [class*="border-neutral-2"],
+    #gcx-formulario-admin [class*="border-slate-2"] {
+      border-color: #f0efec !important;
+    }
+
+    #gcx-formulario-admin [class*="shadow-["] {
+      box-shadow: none !important;
+    }
+
+    #gcx-formulario-admin .rounded-none {
+      border-radius: 16px !important;
+    }
+
+    #gcx-formulario-admin button {
+      border-radius: 999px !important;
+    }
+
+    /* El amarillo de aviso de esas pantallas se traduce al ámbar del panel. */
+    #gcx-formulario-admin [class*="bg-yellow-"] {
+      background-color: #fdf0dc !important;
+      color: #7a4f10 !important;
+    }
+
+    #gcx-formulario-admin [class*="border-yellow-"] {
+      border-color: #f3dfbe !important;
+    }
+
+    #gcx-formulario-admin .border-dashed {
+      border-radius: 20px !important;
     }
 
     /* Campos "desnudos": el recuadro lo dibuja el contenedor y el control
@@ -436,6 +661,10 @@
        Va ÚLTIMO a propósito: repetir la cadena de :not() lo deja en (1,6,1),
        que empata con los .dark de arriba, y en un empate gana el que está
        después. Si se mueve, en oscuro los campos vuelven a pintarse. */
+    #gcx-panel input.campo-desnudo:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    #gcx-panel textarea.campo-desnudo,
+    #gcx-panel select.campo-desnudo,
+    #gcx-panel .campo-desnudo:focus,
     #gcx-accion input.campo-desnudo:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
     #gcx-accion textarea.campo-desnudo,
     #gcx-accion select.campo-desnudo,
@@ -656,7 +885,7 @@
         }
       })();
   </script>
-  <script type="module" crossorigin src="/assets/index-3iLpqUSL.js"></script>
+  <script type="module" crossorigin src="/assets/index-Hw59-Gde.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-Cb6HN1W0.css">
 </head>
 
@@ -664,7 +893,7 @@
   <!-- Accessibility: Skip to main content link -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <div id="root"></div>
+  <div id="root"></div>
 </body>
 
 </html>

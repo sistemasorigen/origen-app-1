@@ -2,10 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { AppConfig, BannerSlide } from '../../types';
 import { db } from '../../services/dbService';
 import { supabaseService } from '../../services/supabaseService';
-import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
+import AdminGCXLayout, { useAdminGCXToast, usePanelGCXConteos } from '../../components/layout/AdminGCXLayout';
 import ImageUpload from '../../components/media/SubidaImagen';
-import NeoModal from '../../components/ui/NeoModal';
-import { Edit2, Trash2, Loader2 } from 'lucide-react';
+import ModalPanelGCX, { BotonPrincipal, BotonSecundario } from '../../components/GCX/ModalPanelGCX';
+import { Loader2, Plus } from 'lucide-react';
+
+/**
+ * Sección Página pública del panel (design-claude/Admin GCX - Panel).
+ *
+ * El carrusel que ve cualquiera arriba del catálogo de grupos: las imágenes
+ * en el orden en que se muestran, y una baldosa punteada para sumar otra.
+ */
 
 const generateUUID = (): string => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -20,10 +27,10 @@ const generateUUID = (): string => {
 
 const ConfiguracionContent: React.FC = () => {
     const { showToast } = useAdminGCXToast();
+    const { registrarConteo } = usePanelGCXConteos();
     const [config, setConfig] = useState<AppConfig | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
     const [editingSlide, setEditingSlide] = useState<Partial<BannerSlide> | null>(null);
 
     useEffect(() => {
@@ -38,6 +45,12 @@ const ConfiguracionContent: React.FC = () => {
             setLoading(false);
         });
     }, []);
+
+    const slides = config?.groupsConfig?.banners || [];
+
+    useEffect(() => {
+        if (config) registrarConteo('publica', slides.length);
+    }, [config, slides.length, registrarConteo]);
 
     const handleSaveSlide = () => {
         if (!editingSlide) return;
@@ -64,77 +77,105 @@ const ConfiguracionContent: React.FC = () => {
         supabaseService.saveAppConfig(newConfig);
 
         setConfig(newConfig);
-        setIsSlideModalOpen(false);
         setEditingSlide(null);
-        showToast('Slide guardado');
+        showToast('Imagen guardada');
     };
 
     const handleDeleteSlide = (id: string) => {
+        if (!window.confirm('¿Sacar esta imagen del carrusel?')) return;
         const currentConfig = db.getAppConfig();
         const updatedSlides = (currentConfig.groupsConfig?.banners || []).filter(s => s.id !== id);
-        const newConfig = { ...currentConfig, groupsConfig: { ...currentConfig.groupsConfig, banners: updatedSlides, activeBlurLevel: currentConfig.groupsConfig?.activeBlurLevel || 'md' } };
+        const newConfig = {
+            ...currentConfig,
+            groupsConfig: {
+                ...currentConfig.groupsConfig,
+                banners: updatedSlides,
+                activeBlurLevel: currentConfig.groupsConfig?.activeBlurLevel || 'md'
+            }
+        };
         db.saveAppConfig(newConfig);
         supabaseService.saveAppConfig(newConfig);
         setConfig(newConfig);
-        showToast('Slide eliminado');
+        setEditingSlide(null);
+        showToast('Imagen eliminada');
     };
 
     if (loading || !config) {
         return (
-            <div className="flex justify-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+            <div className="flex justify-center rounded-[20px] bg-white py-20">
+                <Loader2 className="h-7 w-7 animate-spin text-black/20" />
             </div>
         );
     }
 
+    const esNueva = !editingSlide?.id;
+
     return (
         <>
-            <div className="max-w-6xl">
-                <div className="bg-white p-8 border border-slate-200 shadow-lg mb-8 rounded-lg">
-                    <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                        <h4 className="font-bold text-lg uppercase">Hero Banner (Carrusel)</h4>
-                        <button
-                            onClick={() => { setEditingSlide({ id: '', imageUrl: '', title: '', subtitle: '' }); setIsSlideModalOpen(true); }}
-                            className="px-4 py-2 bg-black text-white text-xs font-bold uppercase hover:bg-slate-800 rounded-lg"
-                        >
-                            + Agregar Banner
-                        </button>
-                    </div>
+            <div className="rounded-[20px] bg-white p-5">
+                <p className="text-[15px] font-semibold text-[#0a0a0a]">Carrusel del catálogo público</p>
+                <p className="mb-[18px] mt-1.5 text-[12.5px] font-medium text-black/[.62]">
+                    {slides.length === 0
+                        ? 'Sin imágenes propias se muestran las que trae la app por defecto.'
+                        : 'Se muestran en este orden arriba de la lista de grupos.'}
+                </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {(config.groupsConfig?.banners || []).map(slide => (
-                            <div key={slide.id} className="border-2 border-slate-200 rounded-lg group relative overflow-hidden">
-                                <div className="aspect-video bg-slate-100 relative overflow-hidden">
-                                    <img src={slide.imageUrl} className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                        <button onClick={() => { setEditingSlide(slide); setIsSlideModalOpen(true); }} className="p-2 bg-white text-black hover:bg-slate-200 rounded-lg"><Edit2 className="w-4 h-4" /></button>
-                                        <button onClick={() => handleDeleteSlide(slide.id)} className="p-2 bg-red-600 text-white hover:bg-red-700 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                                    </div>
-                                </div>
-                                <div className="p-4">
-                                    <h5 className="font-bold text-sm uppercase text-black">{slide.title || 'Sin título'}</h5>
-                                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">{slide.subtitle || 'Sin subtítulo'}</p>
-                                </div>
-                            </div>
-                        ))}
-                        {(config.groupsConfig?.banners || []).length === 0 && (
-                            <div className="p-8 text-center text-slate-400 text-sm border-2 border-dashed border-slate-200 col-span-full rounded-lg">
-                                No hay banners configurados. Se mostrarán los predeterminados.
-                            </div>
-                        )}
-                    </div>
+                <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
+                    {slides.map((slide, i) => (
+                        <button
+                            key={slide.id}
+                            onClick={() => setEditingSlide(slide)}
+                            className="group relative flex h-[120px] items-end overflow-hidden rounded-[16px] bg-[#eceae6] p-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                        >
+                            {slide.imageUrl && (
+                                <img src={slide.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                            )}
+                            <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/45 to-transparent" />
+                            <span className="relative flex h-[26px] items-center rounded-full bg-white/95 px-[11px] text-[11.5px] font-semibold text-[#0a0a0a]">
+                                {i + 1}
+                            </span>
+                            {slide.title && (
+                                <span className="relative ml-2 truncate text-[12px] font-semibold text-white">
+                                    {slide.title}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+
+                    <button
+                        onClick={() => setEditingSlide({ id: '', imageUrl: '', title: '', subtitle: '' })}
+                        className="flex h-[120px] flex-col items-center justify-center gap-2 rounded-[16px] border-[1.5px] border-dashed border-[#d8d6d1] text-black/[.6] transition-colors hover:border-[#0a0a0a] hover:text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                    >
+                        <Plus className="h-5 w-5" />
+                        <span className="text-[12.5px] font-semibold">Subir imagen</span>
+                    </button>
                 </div>
             </div>
 
-            {isSlideModalOpen && editingSlide && (
-                <NeoModal
-                    isOpen={isSlideModalOpen}
-                    onClose={() => { setIsSlideModalOpen(false); setEditingSlide(null); }}
-                    title="Editor de Banner"
-                >
-                    <div className="space-y-5">
-                        <div>
-                            <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Imagen</label>
+            <ModalPanelGCX
+                isOpen={!!editingSlide}
+                onClose={() => setEditingSlide(null)}
+                titulo={esNueva ? 'Nueva imagen del carrusel' : 'Editar la imagen'}
+                subtitulo="El título y el texto se ven encima de la imagen."
+                pie={
+                    <>
+                        {!esNueva && editingSlide?.id && (
+                            <BotonSecundario
+                                onClick={() => handleDeleteSlide(editingSlide.id as string)}
+                                className="bg-[#fdecea] text-[#a32218]"
+                            >
+                                Sacar del carrusel
+                            </BotonSecundario>
+                        )}
+                        <BotonPrincipal onClick={handleSaveSlide} disabled={!editingSlide?.imageUrl}>
+                            {esNueva ? 'Sumar al carrusel' : 'Guardar'}
+                        </BotonPrincipal>
+                    </>
+                }
+            >
+                {editingSlide && (
+                    <div className="flex flex-col gap-2.5 pb-1">
+                        <div className="caja-portada">
                             <ImageUpload
                                 currentImage={editingSlide.imageUrl || ''}
                                 folder="groups-banners"
@@ -142,39 +183,49 @@ const ConfiguracionContent: React.FC = () => {
                                 aspectRatio="wide"
                             />
                         </div>
-                        <div>
-                            <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Título</label>
+
+                        <div className="flex h-[58px] flex-col justify-center rounded-[18px] bg-[#f7f7f5] px-[17px]">
+                            <label htmlFor="banner-titulo" className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.58]">
+                                Título
+                            </label>
                             <input
+                                id="banner-titulo"
                                 type="text"
-                                placeholder="GRUPOS DE CONEXIÓN"
                                 value={editingSlide.title || ''}
                                 onChange={e => setEditingSlide({ ...editingSlide, title: e.target.value })}
-                                className="w-full p-3 border border-slate-200 rounded-lg text-sm outline-none focus:border-black font-bold uppercase"
+                                placeholder="Grupos de conexión"
+                                className="campo-desnudo w-full bg-transparent text-[14.5px] font-medium text-[#0a0a0a]"
                             />
                         </div>
-                        <div>
-                            <label className="text-xs font-bold uppercase text-slate-500 mb-1 block">Sub-título</label>
+
+                        <div className="flex h-[58px] flex-col justify-center rounded-[18px] bg-[#f7f7f5] px-[17px]">
+                            <label htmlFor="banner-sub" className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.58]">
+                                Texto
+                            </label>
                             <input
+                                id="banner-sub"
                                 type="text"
-                                placeholder="Un lugar para conocer a otros..."
                                 value={editingSlide.subtitle || ''}
                                 onChange={e => setEditingSlide({ ...editingSlide, subtitle: e.target.value })}
-                                className="w-full p-3 border border-slate-200 rounded-lg text-sm outline-none focus:border-black"
+                                placeholder="Un lugar para conocer a otros"
+                                className="campo-desnudo w-full bg-transparent text-[14.5px] font-medium text-[#0a0a0a]"
                             />
                         </div>
+
+                        {!editingSlide.imageUrl && (
+                            <p className="mt-1 text-[12.5px] font-medium text-black/[.62]">
+                                Subí una imagen para poder guardar.
+                            </p>
+                        )}
                     </div>
-                    <div className="pt-6 border-t border-slate-100 flex justify-end gap-3 mt-6">
-                        <button onClick={() => { setIsSlideModalOpen(false); setEditingSlide(null); }} className="px-6 py-3 text-xs font-bold uppercase text-slate-500 hover:text-black">Cancelar</button>
-                        <button onClick={handleSaveSlide} className="px-6 py-3 bg-black text-white text-xs font-bold uppercase rounded-lg shadow-lg hover:bg-slate-800">Guardar</button>
-                    </div>
-                </NeoModal>
-            )}
+                )}
+            </ModalPanelGCX>
         </>
     );
 };
 
 const Configuracion: React.FC = () => (
-    <AdminGCXLayout title="Configuración Global">
+    <AdminGCXLayout title="Página pública">
         <ConfiguracionContent />
     </AdminGCXLayout>
 );

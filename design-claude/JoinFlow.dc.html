@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
+<style>
+@keyframes gcRise { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+@keyframes gcPulse { 0%,100% { opacity:1 } 50% { opacity:.25 } }
+@keyframes gcSpin { to { transform:rotate(360deg) } }
+@keyframes gcPop { 0% { transform:scale(.6); opacity:0 } 60% { transform:scale(1.08) } 100% { transform:scale(1); opacity:1 } }
+</style>
+</helmet>
+<section data-r="surface" style="display:flex; flex-direction:column; width:100%; height:100%; min-height:0; background:#FFFFFF; font-family:Manrope, system-ui, sans-serif; color:#0A0A0A; overflow:hidden; border-radius:{{ radius }}">
+
+  <sc-if value="{{ isSheet }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex; justify-content:center; padding:10px 0 2px; flex:none">
+      <span data-r="handle" style="width:42px; height:5px; border-radius:999px; background:#DCDCDE"></span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showForm }}" hint-placeholder-val="{{ true }}">
+    <header style="display:flex; flex-direction:column; gap:14px; padding:18px 22px 16px; flex:none">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px">
+        <div style="display:flex; flex-direction:column; gap:5px; min-width:0">
+          <h2 style="margin:0; font-size:24px; font-weight:800; letter-spacing:-.03em; line-height:1.1">{{ title }}</h2>
+          <p data-r="muted" style="margin:0; font-size:14.5px; font-weight:600; color:#6F6F73">{{ groupLine }}</p>
+        </div>
+        <button type="button" onClick="{{ onClose }}" data-r="btn2" style="appearance:none; border:0; cursor:pointer; flex:none; width:38px; height:38px; border-radius:50%; background:#F4F4F5; color:#0A0A0A; display:flex; align-items:center; justify-content:center" style-hover="background:#EAEAEB">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+        </button>
+      </div>
+      <sc-if value="{{ isCouples }}">
+        <div style="display:flex; flex-direction:column; gap:9px">
+          <div style="display:flex; gap:6px">
+            <span style="flex:1; height:4px; border-radius:999px; background:{{ seg1 }}"></span>
+            <span style="flex:1; height:4px; border-radius:999px; background:{{ seg2 }}"></span>
+            <span style="flex:1; height:4px; border-radius:999px; background:{{ seg3 }}"></span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#C92F63">
+            <span>Paso {{ step }} de 3</span>
+            <span data-r="muted" style="color:#6F6F73; text-transform:none; letter-spacing:0; font-weight:600">{{ stepName }}</span>
+          </div>
+        </div>
+      </sc-if>
+    </header>
+
+    <div data-r="line" style="flex:1; min-height:0; overflow:auto; padding:6px 22px 22px; border-top:1px solid #F0F0F1">
+
+      <sc-if value="{{ showStep1 }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; flex-direction:column; gap:16px; padding-top:16px">
+          <div data-r="panel" style="display:flex; align-items:center; gap:10px; background:#F7F7F8; border-radius:14px; padding:12px 14px">
+            <span style="width:7px; height:7px; border-radius:50%; background:#0A0A0A" data-r="dot"></span>
+            <span style="font-size:13.5px; font-weight:600">Traemos los datos de tu cuenta. Corregí lo que haga falta.</span>
+          </div>
+          <sc-if value="{{ isCouples }}">
+            <h3 style="margin:0; font-size:15px; font-weight:800; letter-spacing:-.01em">Tus datos</h3>
+          </sc-if>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:14px">
+            <label style="display:flex; flex-direction:column; gap:7px">
+              <span data-r="muted" style="font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6F6F73">Nombre</span>
+              <input defaultValue="Martín" data-r="input" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:16px; font-weight:600; color:#0A0A0A; background:#F4F4F5; border:1.5px solid transparent; border-radius:16px; padding:15px 16px; outline:none" style-focus="border-color:#0A0A0A; background:#FFFFFF" />
+            </label>
+            <label style="display:flex; flex-direction:column; gap:7px">
+              <span data-r="muted" style="font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6F6F73">Apellido</span>
+              <input defaultValue="Ferrari" data-r="input" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:16px; font-weight:600; color:#0A0A0A; background:#F4F4F5; border:1.5px solid transparent; border-radius:16px; padding:15px 16px; outline:none" style-focus="border-color:#0A0A0A; background:#FFFFFF" />
+            </label>
+          </div>
+          <label style="display:flex; flex-direction:column; gap:7px">
+            <span data-r="muted" style="font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6F6F73">Email</span>
+            <input defaultValue="martin.ferrari@gmail.com" data-r="input" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:16px; font-weight:600; color:#0A0A0A; background:#F4F4F5; border:1.5px solid transparent; border-radius:16px; padding:15px 16px; outline:none" style-focus="border-color:#0A0A0A; background:#FFFFFF" />
+          </label>
+          <label style="display:flex; flex-direction:column; gap:7px">
+            <span data-r="muted" style="font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6F6F73">Teléfono</span>
+            <input defaultValue="+54 9 11 5514 2208" data-r="input" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:16px; font-weight:600; color:#0A0A0A; background:#F4F4F5; border:1.5px solid transparent; border-radius:16px; padding:15px 16px; outline:none" style-focus="border-color:#0A0A0A; background:#FFFFFF" />
+          </label>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showStep2 }}">
+        <div style="display:flex; flex-direction:column; gap:18px; padding-top:18px">
+          <div style="display:flex; flex-direction:column; gap:12px">
+            <h3 style="margin:0; font-size:19px; font-weight:800; letter-spacing:-.02em">¿Querés inscribir a tu pareja?</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+              <button type="button" onClick="{{ onPartnerYes }}" style="appearance:none; cursor:pointer; font-family:inherit; font-size:16px; font-weight:700; padding:15px 12px; border-radius:18px; background:{{ yesBg }}; color:{{ yesInk }}; border:1.5px solid {{ yesBorder }}">Sí, los dos</button>
+              <button type="button" onClick="{{ onPartnerNo }}" style="appearance:none; cursor:pointer; font-family:inherit; font-size:16px; font-weight:700; padding:15px 12px; border-radius:18px; background:{{ noBg }}; color:{{ noInk }}; border:1.5px solid {{ noBorder }}">Voy solo/a</button>
+            </div>
+          </div>
+
+          <sc-if value="{{ partnerNo }}">
+            <div data-r="panel" style="background:#F7F7F8; border-radius:18px; padding:16px; font-size:14px; font-weight:600; line-height:1.5; animation:gcRise .3s ease both">Perfecto. El grupo es de parejas, así que contale al anfitrión si tu pareja se suma más adelante.</div>
+          </sc-if>
+
+          <sc-if value="{{ partnerYes }}">
+            <div data-r="line" style="display:flex; flex-direction:column; gap:12px; border-top:1px solid #F0F0F1; padding-top:18px; animation:gcRise .3s ease both">
+              <h3 style="margin:0; font-size:19px; font-weight:800; letter-spacing:-.02em">¿Tu pareja tiene email?</h3>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+                <button type="button" onClick="{{ onEmailYes }}" style="appearance:none; cursor:pointer; font-family:inherit; font-size:16px; font-weight:700; padding:15px 12px; border-radius:18px; background:{{ eYesBg }}; color:{{ eYesInk }}; border:1.5px solid {{ eYesBorder }}">Sí, tiene</button>
+                <button type="button" onClick="{{ onEmailNo }}" style="appearance:none; cursor:pointer; font-family:inherit; font-size:16px; font-weight:700; padding:15px 12px; border-radius:18px; background:{{ eNoBg }}; color:{{ eNoInk }}; border:1.5px solid {{ eNoBorder }}">No tiene</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ askEmail }}">
+            <div style="display:flex; flex-direction:column; gap:12px; animation:gcRise .3s ease both">
+              <label style="display:flex; flex-direction:column; gap:7px">
+                <span data-r="muted" style="font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6F6F73">Email de tu pareja</span>
+                <input defaultValue="sofia.ramirez@gmail.com" data-r="input" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:16px; font-weight:600; color:#0A0A0A; background:#F4F4F5; border:1.5px solid transparent; border-radius:16px; padding:15px 16px; outline:none" style-focus="border-color:#EC4B7F; background:#FFFFFF" />
+              </label>
+              <button type="button" onClick="{{ onSearch }}" data-r="outline" style="appearance:none; cursor:pointer; align-self:flex-start; font-family:inherit; font-size:14.5px; font-weight:700; padding:12px 20px; border-radius:999px; background:transparent; color:#0A0A0A; border:1.5px solid #0A0A0A" style-hover="background:#0A0A0A; color:#FFFFFF">Buscar en la comunidad</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ searching }}">
+            <div style="display:flex; align-items:center; gap:13px; background:#FDEFF4; border-radius:18px; padding:17px 18px; animation:gcRise .25s ease both" data-r="rose">
+              <span style="flex:none; width:20px; height:20px; border-radius:50%; border:2.5px solid rgba(236,75,127,.25); border-top-color:#EC4B7F; animation:gcSpin .8s linear infinite"></span>
+              <div style="display:flex; flex-direction:column; gap:2px">
+                <span style="font-size:14.5px; font-weight:700; color:#0A0A0A">Buscando a sofia.ramirez@gmail.com</span>
+                <span style="font-size:13px; font-weight:600; color:#A03260">Revisando cuentas de la comunidad…</span>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ found }}">
+            <div style="display:flex; flex-direction:column; gap:14px; animation:gcRise .3s ease both">
+              <div data-r="rose" style="display:flex; flex-direction:column; gap:13px; background:#FDEFF4; border-radius:22px; padding:20px; border:1.5px solid rgba(236,75,127,.2)">
+                <div style="display:flex; align-items:center; gap:13px">
+                  <span style="flex:none; display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:50%; background:#D0356B; color:#FFFFFF; animation:gcPop .45s cubic-bezier(.2,.9,.3,1.2) both">
+                    <svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.6l3.1 3.1L13 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </span>
+                  <div style="display:flex; flex-direction:column; gap:2px; min-width:0">
+                    <span style="font-size:17px; font-weight:800; letter-spacing:-.02em; color:#0A0A0A">Encontramos a Sofía</span>
+                    <span style="font-size:13.5px; font-weight:600; color:#A03260">Ya tiene cuenta. Quedaron vinculados.</span>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.75); border-radius:14px; padding:11px 13px">
+                  <span style="flex:none; display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; background:#0A0A0A; color:#FFFFFF; font-size:11.5px; font-weight:700">SR</span>
+                  <div style="display:flex; flex-direction:column">
+                    <span style="font-size:14px; font-weight:700; color:#0A0A0A">Sofía Ramírez</span>
+                    <span style="font-size:12.5px; font-weight:600; color:#6F6F73">sofia.ramirez@gmail.com</span>
+                  </div>
+                </div>
+              </div>
+              <label style="display:flex; flex-direction:column; gap:7px">
+                <span data-r="muted" style="font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6F6F73">Solo falta su teléfono</span>
+                <input placeholder="+54 9 11 …" data-r="input" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:16px; font-weight:600; color:#0A0A0A; background:#F4F4F5; border:1.5px solid transparent; border-radius:16px; padding:15px 16px; outline:none" style-focus="border-color:#EC4B7F; background:#FFFFFF" />
+              </label>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ manual }}">
+            <div style="display:flex; flex-direction:column; gap:14px; animation:gcRise .3s ease both">
+              <sc-if value="{{ notFound }}">
+                <div data-r="panel" style="display:flex; gap:11px; background:#F7F7F8; border-radius:16px; padding:14px 15px; align-items:flex-start">
+                  <span style="flex:none; margin-top:3px; width:7px; height:7px; border-radius:2px; background:#EC4B7F"></span>
+                  <span style="font-size:13.5px; font-weight:600; line-height:1.45">No hay cuenta con ese email. Cargá sus datos y le creamos una cuando apruebe el grupo.</span>
+                </div>
+              </sc-if>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:14px">
+                <label style="display:flex; flex-direction:column; gap:7px">
+                  <span data-r="muted" style="font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6F6F73">Nombre</span>
+                  <input placeholder="Sofía" data-r="input" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:16px; font-weight:600; color:#0A0A0A; background:#F4F4F5; border:1.5px solid transparent; border-radius:16px; padding:15px 16px; outline:none" style-focus="border-color:#EC4B7F; background:#FFFFFF" />
+                </label>
+                <label style="display:flex; flex-direction:column; gap:7px">
+                  <span data-r="muted" style="font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6F6F73">Apellido</span>
+                  <input placeholder="Ramírez" data-r="input" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:16px; font-weight:600; color:#0A0A0A; background:#F4F4F5; border:1.5px solid transparent; border-radius:16px; padding:15px 16px; outline:none" style-focus="border-color:#EC4B7F; background:#FFFFFF" />
+                </label>
+              </div>
+              <label style="display:flex; flex-direction:column; gap:7px">
+                <span data-r="muted" style="font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6F6F73">Teléfono</span>
+                <input placeholder="+54 9 11 …" data-r="input" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:16px; font-weight:600; color:#0A0A0A; background:#F4F4F5; border:1.5px solid transparent; border-radius:16px; padding:15px 16px; outline:none" style-focus="border-color:#EC4B7F; background:#FFFFFF" />
+              </label>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showStep3 }}">
+        <div style="display:flex; flex-direction:column; gap:16px; padding-top:18px">
+          <h3 style="margin:0; font-size:19px; font-weight:800; letter-spacing:-.02em">Revisá antes de enviar</h3>
+          <div data-r="panel" style="display:flex; flex-direction:column; background:#F7F7F8; border-radius:20px; overflow:hidden">
+            <div style="display:flex; align-items:center; gap:12px; padding:16px">
+              <span style="flex:none; display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:#0A0A0A; color:#FFFFFF; font-size:12px; font-weight:700">MF</span>
+              <div style="display:flex; flex-direction:column">
+                <span style="font-size:15px; font-weight:700">Martín Ferrari</span>
+                <span data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">martin.ferrari@gmail.com</span>
+              </div>
+            </div>
+            <div data-r="line" style="display:flex; align-items:center; gap:12px; padding:16px; border-top:1px solid #E6E6E7">
+              <span style="flex:none; display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:#D0356B; color:#FFFFFF; font-size:12px; font-weight:700">SR</span>
+              <div style="display:flex; flex-direction:column; min-width:0">
+                <span style="font-size:15px; font-weight:700">Sofía Ramírez</span>
+                <span style="font-size:13px; font-weight:600; color:#A03260">Vinculada a tu inscripción</span>
+              </div>
+            </div>
+          </div>
+          <p data-r="muted" style="margin:0; font-size:14px; font-weight:600; line-height:1.5; color:#6F6F73; text-wrap:pretty">Nico y Caro reciben la solicitud y confirman el lugar para los dos. Te avisamos por email y WhatsApp.</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ error }}">
+        <div style="display:flex; flex-direction:column; gap:10px; background:#FEF3F2; border:1.5px solid #FBD5D1; border-radius:18px; padding:16px; margin-top:16px; animation:gcRise .25s ease both">
+          <span style="font-size:15px; font-weight:800; color:#B42318">No pudimos enviar la solicitud</span>
+          <span style="font-size:13.5px; font-weight:600; color:#912018; line-height:1.45">Se cortó la conexión. Tus datos quedaron guardados acá: probá de nuevo.</span>
+        </div>
+      </sc-if>
+    </div>
+
+    <footer data-r="footerbar" style="display:flex; flex-direction:column; gap:12px; padding:16px 22px 20px; border-top:1px solid #F0F0F1; background:#FFFFFF; flex:none">
+      <sc-if value="{{ showApprovalNote }}" hint-placeholder-val="{{ true }}">
+        <div data-r="muted" style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:#6F6F73">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.6" stroke="currentColor" stroke-width="1.6"></circle><path d="M8 4.6V8l2.4 1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+          El anfitrión aprueba la solicitud. No es automático.
+        </div>
+      </sc-if>
+      <div style="display:flex; align-items:center; gap:10px">
+        <sc-if value="{{ showBack }}">
+          <button type="button" onClick="{{ onBack }}" data-r="btn2" style="appearance:none; border:0; cursor:pointer; flex:none; font-family:inherit; font-size:15.5px; font-weight:700; padding:16px 22px; border-radius:999px; background:#F4F4F5; color:#0A0A0A" style-hover="background:#EAEAEB">Atrás</button>
+        </sc-if>
+        <button type="button" onClick="{{ onPrimary }}" data-r="btn" style="appearance:none; border:0; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:10px; font-family:inherit; font-size:16.5px; font-weight:700; letter-spacing:-.01em; padding:17px 20px; border-radius:999px; background:#0A0A0A; color:#FFFFFF; opacity:{{ primaryOpacity }}" style-hover="opacity:.88">
+          <sc-if value="{{ saving }}">
+            <span style="flex:none; width:16px; height:16px; border-radius:50%; border:2.2px solid rgba(255,255,255,.3); border-top-color:#FFFFFF; animation:gcSpin .8s linear infinite"></span>
+          </sc-if>
+          {{ primaryLabel }}
+        </button>
+      </div>
+    </footer>
+  </sc-if>
+
+  <sc-if value="{{ done }}">
+    <div style="flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; justify-content:center; gap:24px; padding:34px 26px 26px; animation:gcRise .35s ease both">
+      <div style="display:flex; flex-direction:column; gap:16px">
+        <span data-r="donemark" style="display:flex; align-items:center; justify-content:center; width:58px; height:58px; border-radius:50%; background:#0A0A0A; color:#FFFFFF; animation:gcPop .5s cubic-bezier(.2,.9,.3,1.2) both">
+          <svg width="26" height="26" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.6l3.1 3.1L13 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </span>
+        <div style="display:flex; flex-direction:column; gap:9px">
+          <h2 style="margin:0; font-size:27px; font-weight:800; letter-spacing:-.035em; line-height:1.08; text-wrap:balance">Tu solicitud llegó a Nico y Caro</h2>
+          <p data-r="muted" style="margin:0; font-size:15px; font-weight:600; line-height:1.5; color:#6F6F73; text-wrap:pretty">Todavía no estás anotado: el grupo confirma el lugar. Suelen responder en 2 días.</p>
+        </div>
+      </div>
+
+      <div data-r="panel" style="display:flex; flex-direction:column; gap:0; background:#F7F7F8; border-radius:22px; padding:18px 20px">
+        <div style="display:flex; gap:14px">
+          <div style="display:flex; flex-direction:column; align-items:center; flex:none; padding-top:3px">
+            <span style="width:11px; height:11px; border-radius:50%; background:#0A0A0A"></span>
+            <span data-r="rail" style="width:2px; flex:1; background:#DCDCDE; min-height:26px"></span>
+          </div>
+          <div style="padding-bottom:18px">
+            <div style="font-size:14.5px; font-weight:700">Solicitud enviada</div>
+            <div data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">Hoy, 11:42</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:14px">
+          <div style="display:flex; flex-direction:column; align-items:center; flex:none; padding-top:3px">
+            <span data-r="pulse" style="width:11px; height:11px; border-radius:50%; background:#0A0A0A; animation:gcPulse 1.8s ease-in-out infinite"></span>
+            <span data-r="rail" style="width:2px; flex:1; background:#DCDCDE; min-height:26px"></span>
+          </div>
+          <div style="padding-bottom:18px">
+            <div style="font-size:14.5px; font-weight:700">El anfitrión la revisa</div>
+            <div data-r="muted" style="font-size:13px; font-weight:600; color:#6F6F73">En curso</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:14px">
+          <div style="display:flex; flex-direction:column; align-items:center; flex:none; padding-top:3px">
+            <span data-r="hollow" style="width:11px; height:11px; border-radius:50%; border:2px solid #C9C9CC"></span>
+          </div>
+          <div>
+            <div data-r="muted" style="font-size:14.5px; font-weight:700; color:#8A8A8F">Te avisamos y entrás al grupo</div>
+            <div data-r="muted" style="font-size:13px; font-weight:600; color:#8A8A8F">Por email y WhatsApp</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px">
+        <button type="button" onClick="{{ onClose }}" data-r="btn" style="appearance:none; border:0; cursor:pointer; width:100%; font-family:inherit; font-size:16.5px; font-weight:700; padding:17px 20px; border-radius:999px; background:#0A0A0A; color:#FFFFFF" style-hover="opacity:.88">Seguir mirando grupos</button>
+        <button type="button" onClick="{{ onClose }}" data-r="ghostbtn" style="appearance:none; background:transparent; border:0; cursor:pointer; font-family:inherit; font-size:14.5px; font-weight:700; color:#0A0A0A; padding:6px; text-decoration:underline; text-underline-offset:3px" style-hover="opacity:.6">Ver mi solicitud</button>
+      </div>
+    </div>
+  </sc-if>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:460,&quot;height&quot;:720},&quot;couples&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;sheet&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;step&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:1,&quot;min&quot;:1,&quot;max&quot;:3,&quot;tsType&quot;:&quot;number&quot;},&quot;partner&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;boolean | null&quot;},&quot;hasEmail&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;boolean | null&quot;},&quot;search&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;idle&quot;,&quot;searching&quot;,&quot;found&quot;,&quot;none&quot;],&quot;default&quot;:&quot;idle&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phase&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;form&quot;,&quot;saving&quot;,&quot;error&quot;,&quot;done&quot;],&quot;default&quot;:&quot;form&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;groupLine&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onClose&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const b = (v) => (v === true || v === "true" ? true : v === false || v === "false" ? false : null);
+    this.state = {
+      step: Number(props.step ?? 1) || 1,
+      partner: b(props.partner),
+      hasEmail: b(props.hasEmail),
+      search: props.search || "idle",
+      phase: props.phase || "form"
+    };
+  }
+  set(patch) { this.setState(patch); }
+  renderVals() {
+    const truthy = (v) => v === true || v === "true";
+    const couples = truthy(this.props.couples);
+    const sheet = truthy(this.props.sheet);
+    const s = this.state;
+    const ROSE = "#D0356B", INK = "#0A0A0A", PANEL = "#F4F4F5", MUT = "#6F6F73";
+    const pick = (on, rose) => on
+      ? { bg: rose ? ROSE : INK, ink: "#FFFFFF", border: rose ? ROSE : INK }
+      : { bg: "transparent", ink: INK, border: "#E0E0E2" };
+    const y = pick(s.partner === true, true), n = pick(s.partner === false, false);
+    const ey = pick(s.hasEmail === true, true), en = pick(s.hasEmail === false, false);
+    const searching = couples && s.search === "searching";
+    const found = couples && s.search === "found";
+    const notFound = couples && s.search === "none";
+    const manual = couples && ((s.partner === true && s.hasEmail === false) || notFound);
+    const step = couples ? s.step : 1;
+    const last = !couples || step === 3;
+    const seg = (i) => (step > i ? INK : step === i ? ROSE : "#E6E6E7");
+    const primaryLabel = s.phase === "saving"
+      ? "Enviando…"
+      : s.phase === "error"
+        ? "Reintentar"
+        : last ? (couples ? "Confirmar inscripción" : "Enviar solicitud") : "Continuar";
+    return {
+      radius: sheet ? "28px 28px 0 0" : "28px",
+      isSheet: sheet,
+      isCouples: couples,
+      title: couples ? "Inscripción al Grupo" : "Unirse al Grupo",
+      groupLine: this.props.groupLine || (couples ? "Parejas en camino · Martes 21:00" : "Cena de los jueves · Jueves 20:30"),
+      step, stepName: step === 1 ? "Tus datos" : step === 2 ? "Tu pareja" : "Confirmar",
+      seg1: seg(1), seg2: seg(2), seg3: seg(3),
+      showForm: s.phase !== "done",
+      done: s.phase === "done",
+      saving: s.phase === "saving",
+      error: s.phase === "error",
+      showStep1: step === 1,
+      showStep2: couples && step === 2,
+      showStep3: couples && step === 3,
+      showBack: couples && step > 1,
+      showApprovalNote: last && s.phase !== "saving",
+      primaryLabel,
+      primaryOpacity: s.phase === "saving" ? "0.55" : "1",
+      partnerYes: s.partner === true,
+      partnerNo: s.partner === false,
+      askEmail: s.partner === true && s.hasEmail === true && s.search === "idle",
+      searching, found, notFound, manual,
+      yesBg: y.bg, yesInk: y.ink, yesBorder: y.border,
+      noBg: n.bg, noInk: n.ink, noBorder: n.border,
+      eYesBg: ey.bg, eYesInk: ey.ink, eYesBorder: ey.border,
+      eNoBg: en.bg, eNoInk: en.ink, eNoBorder: en.border,
+      onPartnerYes: () => this.set({ partner: true }),
+      onPartnerNo: () => this.set({ partner: false, hasEmail: null, search: "idle" }),
+      onEmailYes: () => this.set({ hasEmail: true, search: "idle" }),
+      onEmailNo: () => this.set({ hasEmail: false, search: "idle" }),
+      onSearch: () => {
+        this.set({ search: "searching" });
+        clearTimeout(this._t);
+        this._t = setTimeout(() => this.set({ search: "found" }), 1400);
+      },
+      onBack: () => this.set({ step: Math.max(1, s.step - 1), phase: "form" }),
+      onPrimary: () => {
+        if (s.phase === "saving") return;
+        if (!last) return this.set({ step: s.step + 1 });
+        this.set({ phase: "saving" });
+        clearTimeout(this._s);
+        this._s = setTimeout(() => this.set({ phase: "done" }), 1200);
+      },
+      onClose: this.props.onClose || (() => {})
+    };
+  }
+  componentWillUnmount() { clearTimeout(this._t); clearTimeout(this._s); }
+}
+</script>
+</body>
+</html>

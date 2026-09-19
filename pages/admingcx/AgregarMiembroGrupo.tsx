@@ -1,392 +1,458 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Group, GroupCategory } from '../../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Group, GroupCategory, GroupTag } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
-import { UserPlus, Search, CheckCircle, AlertCircle, Loader2, Heart, X } from 'lucide-react';
+import PestanasGrupoAdmin from '../../components/GCX/PestanasGrupoAdmin';
+import ModalParejaInscripcion, { DatosPareja } from '../../components/GCX/ModalParejaInscripcion';
+import { Search, Loader2, Check } from 'lucide-react';
 
-const AgregarMiembroGrupoContent: React.FC = () => {
+/**
+ * Agregar a mano (design-claude/Admin GCX - Detalle e Inscriptos).
+ *
+ * Dos pasos a la vista: a qué grupo y quién. El bloque del acompañante está
+ * siempre presente —se habilita solo si el grupo elegido es de parejas— para
+ * que el formulario no cambie de forma según el grupo.
+ */
+
+const ROSA = '#9d1d5c';
+
+const AgregarMiembroGrupoContent: React.FC<{ onGrupo: (g: Group | null) => void }> = ({ onGrupo }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { showToast } = useAdminGCXToast();
 
     const [groups, setGroups] = useState<Group[]>([]);
     const [categories, setCategories] = useState<GroupCategory[]>([]);
+    const [tags, setTags] = useState<GroupTag[]>([]);
     const [loadingData, setLoadingData] = useState(true);
 
-    const [selectedGroupId, setSelectedGroupId] = useState('');
-    const [groupSearchTerm, setGroupSearchTerm] = useState('');
-    const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
-    const groupDropdownRef = useRef<HTMLDivElement>(null);
+    // Si se entró desde un grupo, ese grupo ya viene elegido.
+    const [selectedGroupId, setSelectedGroupId] = useState((location.state as { groupId?: string } | null)?.groupId || '');
+    const [gQuery, setGQuery] = useState('');
+
+    const [nombreCompleto, setNombreCompleto] = useState('');
+    const [telefono, setTelefono] = useState('');
     const [email, setEmail] = useState('');
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [phone, setPhone] = useState('');
+    const [buscandoCuenta, setBuscandoCuenta] = useState(false);
+    const [cuenta, setCuenta] = useState<'idle' | 'found' | 'not-found'>('idle');
     const [foundUserId, setFoundUserId] = useState<string | null>(null);
 
-    const [partnerEmail, setPartnerEmail] = useState('');
-    const [partnerFirstName, setPartnerFirstName] = useState('');
-    const [partnerLastName, setPartnerLastName] = useState('');
-    const [partnerPhone, setPartnerPhone] = useState('');
-    const [partnerFoundUserId, setPartnerFoundUserId] = useState<string | null>(null);
-    const [partnerUserFoundState, setPartnerUserFoundState] = useState<'idle' | 'found' | 'not-found'>('idle');
-    const [isPartnerSearching, setIsPartnerSearching] = useState(false);
+    const [pareja, setPareja] = useState<DatosPareja | null>(null);
+    const [parejaUserId, setParejaUserId] = useState<string | null>(null);
+    const [modalPareja, setModalPareja] = useState(false);
 
-    const [isSearching, setIsSearching] = useState(false);
-    const [userFoundState, setUserFoundState] = useState<'idle' | 'found' | 'not-found'>('idle');
+    const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         Promise.all([
             supabaseService.getGroupsForAdmin(),
             supabaseService.getGroupCategories(),
-        ]).then(([g, c]) => {
+            supabaseService.getGroupTags(),
+        ]).then(([g, c, t]) => {
             setGroups(g);
             setCategories(c);
+            setTags(t);
             setLoadingData(false);
         });
     }, []);
 
-    useEffect(() => {
-        const handleClick = (e: MouseEvent) => {
-            if (groupDropdownRef.current && !groupDropdownRef.current.contains(e.target as Node)) {
-                setIsGroupDropdownOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-    }, []);
-
-    const isGroupFinished = (group: Group) => {
+    const esGroupFinished = (group: Group) => {
         if (!group.endDate) return false;
-        const today = new Date().toISOString().split('T')[0];
-        return group.endDate < today;
+        return group.endDate < new Date().toISOString().split('T')[0];
     };
 
-    const activeGroups = groups.filter(g => g.status === 'approved' && !isGroupFinished(g));
-    const filteredGroups = activeGroups.filter(g => g.name.toLowerCase().includes(groupSearchTerm.toLowerCase().trim()));
-    const selectedGroup = groups.find(g => g.id === selectedGroupId);
+    const esDeParejas = useCallback((group: Group) => {
+        const cat = categories.find(c => c.id === group.categoryId);
+        const porCategoria = cat?.name?.toLowerCase() === 'parejas';
+        const porEtiqueta = group.tags?.some(id => tags.find(t => t.id === id)?.name?.toLowerCase() === 'parejas');
+        return (porCategoria || !!porEtiqueta) && group.targetGender === 'Mixto';
+    }, [categories, tags]);
 
-    const isCouplesGroup = (): boolean => {
-        if (!selectedGroup) return false;
-        const cat = categories.find(c => c.id === selectedGroup.categoryId);
-        const categoryName = cat?.name?.toLowerCase() || '';
-        return categoryName === 'parejas' && selectedGroup.targetGender === 'Mixto';
-    };
+    const activos = groups.filter(g => g.status === 'approved' && !esGroupFinished(g));
+    const gq = gQuery.trim().toLowerCase();
+    const listaGrupos = activos.filter(g => !gq
+        || g.name.toLowerCase().includes(gq)
+        || `${g.leaderName} ${g.leaderSurname}`.toLowerCase().includes(gq));
 
-    const couplesMode = isCouplesGroup();
+    const grupoElegido = groups.find(g => g.id === selectedGroupId) || null;
+    const couplesMode = !!grupoElegido && esDeParejas(grupoElegido);
 
-    const handleEmailBlur = async () => {
+    useEffect(() => { onGrupo(grupoElegido); }, [grupoElegido, onGrupo]);
+
+    // Si el grupo deja de ser de parejas, lo cargado del acompañante no
+    // aplica: se suelta para no mandarlo sin querer.
+    useEffect(() => {
+        if (!couplesMode && pareja) {
+            setPareja(null);
+            setParejaUserId(null);
+        }
+    }, [couplesMode, pareja]);
+
+    const buscarCuentaTitular = async () => {
         if (!email || !email.includes('@')) return;
-        setIsSearching(true);
-        setUserFoundState('idle');
-        const user = await supabaseService.getUserByEmail(email);
-        setIsSearching(false);
+        setBuscandoCuenta(true);
+        setCuenta('idle');
+        const user = await supabaseService.getUserByEmail(email.trim());
+        setBuscandoCuenta(false);
         if (user) {
-            setUserFoundState('found');
+            setCuenta('found');
             setFoundUserId(user.id);
-            const nameParts = user.name.split(' ');
-            if (nameParts.length > 0) setFirstName(nameParts[0]);
-            if (nameParts.length > 1) setLastName(nameParts.slice(1).join(' '));
-            if (user.phone) setPhone(user.phone);
+            if (!nombreCompleto.trim()) setNombreCompleto(user.name || '');
+            if (!telefono.trim() && user.phone) setTelefono(user.phone);
         } else {
-            setUserFoundState('not-found');
+            setCuenta('not-found');
             setFoundUserId(null);
         }
     };
 
-    const handlePartnerEmailBlur = async () => {
-        if (!partnerEmail || !partnerEmail.includes('@')) return;
-        setIsPartnerSearching(true);
-        setPartnerUserFoundState('idle');
-        const user = await supabaseService.getUserByEmail(partnerEmail);
-        setIsPartnerSearching(false);
-        if (user) {
-            setPartnerUserFoundState('found');
-            setPartnerFoundUserId(user.id);
-            const nameParts = user.name.split(' ');
-            if (nameParts.length > 0) setPartnerFirstName(nameParts[0]);
-            if (nameParts.length > 1) setPartnerLastName(nameParts.slice(1).join(' '));
-            if (user.phone) setPartnerPhone(user.phone);
-        } else {
-            setPartnerUserFoundState('not-found');
-            setPartnerFoundUserId(null);
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const guardar = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedGroupId) {
-            showToast('Por favor selecciona un grupo.', 'error');
+        setError(null);
+
+        if (!selectedGroupId) { setError('Elegí primero a qué grupo lo anotás.'); return; }
+        if (!nombreCompleto.trim()) { setError('Falta el nombre y apellido de la persona.'); return; }
+        if (!telefono.trim()) { setError('Falta el teléfono de la persona.'); return; }
+        if (couplesMode && !pareja) { setError('Este grupo es de parejas: cargá también al acompañante.'); return; }
+        if (couplesMode && pareja?.email && email.trim()
+            && pareja.email.toLowerCase().trim() === email.toLowerCase().trim()) {
+            setError('El email del acompañante tiene que ser distinto al de la persona titular.');
             return;
         }
 
-        if (couplesMode) {
-            if (!partnerFirstName || !partnerLastName || !partnerEmail || !partnerPhone) {
-                showToast('Por favor completa todos los datos de la pareja.', 'error');
-                return;
-            }
-            if (partnerEmail.toLowerCase().trim() === email.toLowerCase().trim()) {
-                showToast('El email de la pareja debe ser diferente al del participante principal.', 'error');
-                return;
-            }
-        }
+        // El apellido es todo lo que sigue al primer nombre, la misma regla
+        // que usa la app cuando parte el nombre de una cuenta.
+        const partes = nombreCompleto.trim().split(' ').filter(Boolean);
+        const firstName = partes[0] || '';
+        const lastName = partes.slice(1).join(' ');
 
         setIsSubmitting(true);
-        const success = await supabaseService.adminAddMemberToGroup({
+        const ok = await supabaseService.adminAddMemberToGroup({
             groupId: selectedGroupId,
             userId: foundUserId,
             firstName,
             lastName,
-            email,
-            phone,
-            partnerData: couplesMode ? {
-                firstName: partnerFirstName,
-                lastName: partnerLastName,
-                email: partnerEmail,
-                phone: partnerPhone
-            } : undefined,
-            partnerUserId: couplesMode ? partnerFoundUserId : undefined
+            email: email.trim(),
+            phone: telefono.trim(),
+            partnerData: couplesMode && pareja ? pareja : undefined,
+            partnerUserId: couplesMode ? parejaUserId : undefined,
         });
         setIsSubmitting(false);
 
-        if (success) {
-            showToast(couplesMode ? 'Pareja agregada exitosamente' : 'Miembro agregado exitosamente');
+        if (ok) {
+            showToast(couplesMode ? 'Pareja agregada al grupo' : 'Miembro agregado al grupo');
             navigate(`/admingcx/gestion-de-grupos/inscriptos/${selectedGroupId}`);
         } else {
-            showToast('Hubo un error al agregar el participante. Revisa la consola o intenta nuevamente.', 'error');
+            setError('Hubo un error al agregar. Intentá de nuevo.');
         }
     };
 
     if (loadingData) return (
-        <div className="flex justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+        <div className="flex justify-center rounded-[20px] bg-white py-20">
+            <Loader2 className="h-7 w-7 animate-spin text-black/20" />
         </div>
     );
 
+    const rotulo = 'text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.58]';
+    const campo = 'flex h-[58px] flex-col justify-center rounded-[18px] bg-[#f7f7f5] px-[17px]';
+    const entrada = 'campo-desnudo w-full bg-transparent text-[14.5px] font-medium text-[#0a0a0a]';
+    const numero = (activo: boolean) =>
+        `flex h-[26px] w-[26px] flex-none items-center justify-center rounded-full text-[12.5px] font-semibold ${activo ? 'bg-[#0a0a0a] text-white' : 'bg-[#eceae6] text-black/[.6]'}`;
+
     return (
-        <div className="max-w-2xl">
-            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">
-                {couplesMode ? 'Agregar Pareja' : 'Agregar Miembro'}
-            </h1>
+        <form onSubmit={guardar} className="grid gap-3.5 [grid-template-columns:minmax(0,1fr)] lg:[grid-template-columns:minmax(0,1fr)_minmax(0,1.3fr)]">
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {/* 1 — el grupo */}
+            <div className="min-w-0 rounded-[20px] bg-white px-[22px] py-5">
+                <div className="flex items-center gap-2.5">
+                    <span className={numero(true)}>1</span>
+                    <p className="text-[16px] font-semibold text-[#0a0a0a]">¿A qué grupo lo anotás?</p>
+                </div>
 
-                {/* GROUP SELECTOR — buscador en tiempo real, solo grupos activos */}
-                <div className="relative" ref={groupDropdownRef}>
-                    <label className="text-xs font-black uppercase tracking-widest block mb-1">Grupo de Conexión</label>
+                <div className="mt-3.5 flex h-[42px] items-center gap-2.5 rounded-full bg-[#f7f7f5] px-[17px]">
+                    <Search className="h-4 w-4 flex-none text-black/[.58]" />
+                    <input
+                        type="text"
+                        value={gQuery}
+                        onChange={e => setGQuery(e.target.value)}
+                        placeholder={`Buscar entre los ${activos.length} grupos`}
+                        aria-label="Buscar el grupo"
+                        className="campo-desnudo min-w-0 flex-1 bg-transparent text-[13.5px] font-medium text-[#0a0a0a]"
+                    />
+                </div>
 
-                    {selectedGroup ? (
-                        <div className="flex items-center justify-between p-4 border-2 border-green-600 bg-green-50 font-bold">
-                            <span className="flex items-center gap-3 min-w-0">
-                                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-                                <span className="min-w-0">
-                                    <span className="block text-sm font-black text-neutral-900 truncate">{selectedGroup.name}</span>
-                                    <span className="block text-[11px] font-bold uppercase tracking-wide text-green-700/80 truncate">
-                                        Anfitrión: {selectedGroup.leaderName} {selectedGroup.leaderSurname}
-                                    </span>
-                                </span>
-                            </span>
+                <div className="mt-3 flex max-h-[290px] flex-col gap-[7px] overflow-auto">
+                    {listaGrupos.length === 0 && (
+                        <p className="py-6 text-center text-[13px] font-medium text-black/[.55]">
+                            {gq ? `Ningún grupo activo coincide con "${gQuery}"` : 'No hay grupos activos'}
+                        </p>
+                    )}
+                    {listaGrupos.map(g => {
+                        const elegido = g.id === selectedGroupId;
+                        const cat = categories.find(c => c.id === g.categoryId);
+                        const ocupados = esDeParejas(g) ? (g.registrations?.length || 0) * 2 : (g.registrations?.length || 0);
+                        return (
                             <button
                                 type="button"
-                                onClick={() => { setSelectedGroupId(''); setGroupSearchTerm(''); setIsGroupDropdownOpen(true); }}
-                                className="text-neutral-400 hover:text-black transition-colors shrink-0"
+                                key={g.id}
+                                onClick={() => setSelectedGroupId(g.id)}
+                                aria-pressed={elegido}
+                                className={`flex min-h-[58px] w-full items-center gap-2.5 rounded-[18px] px-[15px] py-[11px] text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${elegido ? 'bg-[#f0efec] shadow-[inset_0_0_0_1.5px_#0a0a0a]' : 'bg-[#fcfcfb] hover:bg-[#f7f7f5]'}`}
                             >
-                                <X className="w-5 h-5" />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-[13.5px] font-semibold text-[#0a0a0a]">{g.name}</span>
+                                    <span className="mt-[3px] block truncate text-[11.5px] font-medium text-black/[.62]">
+                                        {[cat?.name, `${g.meetingDay?.toLowerCase()} ${g.meetingTime}`, `${ocupados}/${g.maxCapacity}`].filter(Boolean).join(' · ')}
+                                    </span>
+                                </span>
+                                {esDeParejas(g) && (
+                                    <span
+                                        className="flex h-6 flex-none items-center whitespace-nowrap rounded-full px-2.5 text-[11px] font-semibold"
+                                        style={{ background: '#fbeef4', color: ROSA }}
+                                    >
+                                        De parejas
+                                    </span>
+                                )}
                             </button>
-                        </div>
-                    ) : (
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* 2 — la persona */}
+            <div className="min-w-0 rounded-[20px] bg-white px-[22px] py-5">
+                <div className="flex flex-wrap items-center gap-2.5">
+                    <span className={numero(!!grupoElegido)}>2</span>
+                    <p
+                        className="min-w-[140px] flex-1 text-[16px] font-semibold"
+                        style={{ color: grupoElegido ? '#0a0a0a' : 'rgba(0,0,0,.6)' }}
+                    >
+                        Datos de la persona
+                    </p>
+                    {couplesMode && (
+                        <span
+                            className="flex h-[26px] flex-none items-center rounded-full px-[11px] text-[11.5px] font-semibold"
+                            style={{ background: '#fbeef4', color: ROSA }}
+                        >
+                            Grupo de parejas
+                        </span>
+                    )}
+                </div>
+
+                {!grupoElegido && (
+                    <p className="mt-3.5 text-[13px] font-medium leading-[1.6] text-black/[.62]">
+                        Elegí primero el grupo. Los campos son los mismos siempre; si el grupo es de parejas se habilita
+                        el segundo bloque que ya está acá abajo.
+                    </p>
+                )}
+
+                <div className="mt-4">
+                    <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">
+                        Titular de la inscripción
+                    </p>
+                    <div className="grid gap-[9px] [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
+                        <div className={campo}>
+                            <label htmlFor="nombre" className={rotulo}>Nombre y apellido</label>
                             <input
+                                id="nombre"
                                 type="text"
-                                value={groupSearchTerm}
-                                onFocus={() => setIsGroupDropdownOpen(true)}
-                                onChange={e => {
-                                    setGroupSearchTerm(e.target.value);
-                                    setIsGroupDropdownOpen(true);
-                                }}
-                                placeholder="Buscar grupo por nombre..."
-                                className="w-full pl-11 p-4 border-2 border-black bg-white font-bold outline-none"
+                                value={nombreCompleto}
+                                onChange={e => setNombreCompleto(e.target.value)}
+                                placeholder="Ej. Marcela Godoy"
+                                className={entrada}
                             />
                         </div>
-                    )}
-
-                    {!selectedGroup && isGroupDropdownOpen && (
-                        <div className="absolute top-full left-0 w-full bg-white border-2 border-black mt-1 max-h-64 overflow-y-auto z-50">
-                            {filteredGroups.length > 0 ? (
-                                filteredGroups.map(g => (
-                                    <div
-                                        key={g.id}
-                                        onClick={() => {
-                                            setSelectedGroupId(g.id);
-                                            setGroupSearchTerm('');
-                                            setIsGroupDropdownOpen(false);
-                                        }}
-                                        className="p-3 hover:bg-neutral-100 cursor-pointer border-b border-neutral-100 last:border-0"
-                                    >
-                                        <p className="font-bold text-sm text-neutral-900">{g.name}</p>
-                                        <p className="text-[11px] text-neutral-400 font-medium mt-0.5">
-                                            Anfitrión: {g.leaderName} {g.leaderSurname}
-                                        </p>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="p-3 text-center text-xs text-neutral-400 font-bold uppercase">
-                                    {groupSearchTerm.trim() ? `Sin resultados para "${groupSearchTerm}"` : 'No hay grupos activos'}
-                                </div>
-                            )}
+                        <div className={campo}>
+                            <label htmlFor="telefono" className={rotulo}>Teléfono</label>
+                            <input
+                                id="telefono"
+                                type="tel"
+                                value={telefono}
+                                onChange={e => setTelefono(e.target.value)}
+                                placeholder="11 5533 1200"
+                                className={entrada}
+                            />
                         </div>
-                    )}
-                    {couplesMode && (
-                        <p className="text-[10px] text-pink-600 font-bold mt-1 uppercase flex items-center gap-1 border border-pink-200 bg-pink-50 p-1 inline-block">
-                            <Heart className="w-3 h-3" /> Grupo de Parejas
+                        <div className={campo}>
+                            <label htmlFor="email" className={rotulo}>Email</label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    onChange={e => { setEmail(e.target.value); setCuenta('idle'); setFoundUserId(null); }}
+                                    onBlur={buscarCuentaTitular}
+                                    placeholder="Opcional"
+                                    className={entrada}
+                                />
+                                {buscandoCuenta && <Loader2 className="h-4 w-4 flex-none animate-spin text-black/30" />}
+                            </div>
+                        </div>
+                    </div>
+
+                    {cuenta !== 'idle' && (
+                        <p
+                            className="mt-2.5 flex items-center gap-2 rounded-[14px] px-3 py-2 text-[12.5px] font-semibold"
+                            style={cuenta === 'found'
+                                ? { background: '#e9f6ed', color: '#15803d' }
+                                : { background: '#fdf0dc', color: '#7a4f10' }}
+                        >
+                            {cuenta === 'found' && <Check className="h-3.5 w-3.5" strokeWidth={2.6} />}
+                            {cuenta === 'found'
+                                ? 'Ya tiene cuenta: la inscripción queda vinculada a ella.'
+                                : 'No hay cuenta con ese email. Se carga a mano y se vincula sola cuando se registre.'}
                         </p>
                     )}
                 </div>
 
-                {/* MAIN PARTICIPANT */}
-                <div className="space-y-4">
-                    {couplesMode && (
-                        <div className="text-xs font-black uppercase border-b-2 border-black pb-1">
-                            Participante 1 (Principal)
-                        </div>
-                    )}
-
-                    <div className="relative">
-                        <label className="text-xs font-black uppercase tracking-widest block mb-1">Email {couplesMode ? 'Participante 1' : ''}</label>
-                        <div className="relative">
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                onBlur={handleEmailBlur}
-                                placeholder="ejemplo@email.com"
-                                className={`w-full p-4 border-2 font-bold outline-none pr-10 transition-colors ${userFoundState === 'found' ? 'border-green-600 bg-green-50' : userFoundState === 'not-found' ? 'border-yellow-600 bg-yellow-50' : 'border-black bg-white'}`}
-                                required
-                            />
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                {isSearching ? <Loader2 className="w-5 h-5 animate-spin text-neutral-400" /> :
-                                    userFoundState === 'found' ? <CheckCircle className="w-5 h-5 text-green-600" /> :
-                                        userFoundState === 'not-found' ? <UserPlus className="w-5 h-5 text-yellow-600" /> :
-                                            <Search className="w-5 h-5 text-neutral-300" />
-                                }
-                            </div>
-                        </div>
-                        {userFoundState === 'found' && <p className="text-[10px] text-green-700 font-bold uppercase mt-1">Usuario encontrado.</p>}
-                        {userFoundState === 'not-found' && <p className="text-[10px] text-yellow-700 font-bold uppercase mt-1">Usuario nuevo.</p>}
+                {/* Acompañante — siempre a la vista */}
+                <div
+                    className="mt-[18px] rounded-[20px] px-[18px] py-4"
+                    style={couplesMode
+                        ? { background: '#fdf4f8', boxShadow: 'inset 0 0 0 1.5px #f3d3e2' }
+                        : { background: '#fbfbfa', boxShadow: 'inset 0 0 0 1.5px #f0efec' }}
+                >
+                    <div className="flex items-center gap-2.5">
+                        <p
+                            className="flex-1 text-[11px] font-semibold uppercase tracking-[0.07em]"
+                            style={{ color: couplesMode ? ROSA : 'rgba(0,0,0,.58)' }}
+                        >
+                            Acompañante
+                        </p>
+                        <span
+                            className="flex h-6 flex-none items-center rounded-full px-2.5 text-[11px] font-semibold"
+                            style={couplesMode
+                                ? { background: '#fff', color: ROSA }
+                                : { background: '#f2f2f0', color: 'rgba(0,0,0,.6)' }}
+                        >
+                            {couplesMode ? 'Obligatorio' : 'No se pide'}
+                        </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-[10px] font-bold uppercase block">Nombre</label>
-                            <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full p-2 border-2 border-black font-bold" placeholder="Ej. Juan" required />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold uppercase block">Apellido</label>
-                            <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full p-2 border-2 border-black font-bold" placeholder="Ej. Pérez" required />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                        <div>
-                            <label className="text-[10px] font-bold uppercase block">Teléfono</label>
-                            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-2 border-2 border-black font-bold" placeholder="+54 9 11 ..." required />
-                        </div>
-                        <div />
-                    </div>
-                </div>
-
-                {/* PARTNER SECTION */}
-                {couplesMode && (
-                    <div className="space-y-4 pt-4 border-t-2 border-pink-200">
-                        <div className="text-xs font-black uppercase text-pink-600 pb-1 flex items-center gap-1">
-                            <Heart className="w-4 h-4" /> Participante 2 (Pareja)
-                        </div>
-
-                        <div className="relative">
-                            <label className="text-[10px] font-bold uppercase text-pink-600 block mb-1">Email Pareja</label>
-                            <div className="relative">
-                                <input
-                                    type="email"
-                                    value={partnerEmail}
-                                    onChange={e => setPartnerEmail(e.target.value)}
-                                    onBlur={handlePartnerEmailBlur}
-                                    placeholder="pareja@email.com"
-                                    className={`w-full p-4 border-2 font-bold outline-none pr-10 transition-colors ${partnerUserFoundState === 'found' ? 'border-green-600 bg-green-50' : partnerUserFoundState === 'not-found' ? 'border-yellow-600 bg-yellow-50' : 'border-pink-200 bg-pink-50'}`}
-                                    required
-                                />
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                    {isPartnerSearching ? <Loader2 className="w-5 h-5 animate-spin text-neutral-400" /> :
-                                        partnerUserFoundState === 'found' ? <CheckCircle className="w-5 h-5 text-green-600" /> :
-                                            partnerUserFoundState === 'not-found' ? <UserPlus className="w-5 h-5 text-yellow-600" /> :
-                                                <Search className="w-5 h-5 text-pink-300" />
-                                    }
+                    {couplesMode ? (
+                        <>
+                            <div className="mt-3 grid gap-[9px] [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
+                                <div className="flex h-[58px] flex-col justify-center rounded-[18px] bg-white px-[17px]">
+                                    <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em]" style={{ color: ROSA }}>
+                                        Nombre del acompañante
+                                    </span>
+                                    <span className="truncate text-[14.5px] font-medium" style={{ color: pareja ? '#0a0a0a' : 'rgba(0,0,0,.45)' }}>
+                                        {pareja ? `${pareja.firstName} ${pareja.lastName}`.trim() : 'Todavía sin cargar'}
+                                    </span>
+                                </div>
+                                <div className="flex h-[58px] flex-col justify-center rounded-[18px] bg-white px-[17px]">
+                                    <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em]" style={{ color: ROSA }}>
+                                        Email y teléfono
+                                    </span>
+                                    <span className="truncate text-[14.5px] font-medium" style={{ color: pareja ? '#0a0a0a' : 'rgba(0,0,0,.45)' }}>
+                                        {pareja
+                                            ? [pareja.email || 'sin email', pareja.phone].filter(Boolean).join(' · ')
+                                            : 'Se completan en el paso siguiente'}
+                                    </span>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-[10px] font-bold uppercase text-pink-600 block">Nombre</label>
-                                <input type="text" value={partnerFirstName} onChange={e => setPartnerFirstName(e.target.value)} className="w-full p-2 border-2 border-pink-200 bg-pink-50 font-bold outline-pink-500" required />
+                            <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setModalPareja(true)}
+                                    className="h-[42px] rounded-full px-[18px] text-[13.5px] font-semibold transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                                    style={{ background: '#fbeef4', color: ROSA }}
+                                >
+                                    {pareja ? 'Editar el acompañante' : 'Buscar si ya tiene cuenta'}
+                                </button>
+                                {pareja && parejaUserId && (
+                                    <span className="flex h-6 items-center rounded-full bg-[#e9f6ed] px-2.5 text-[11px] font-semibold text-[#15803d]">
+                                        Vinculada a su cuenta
+                                    </span>
+                                )}
                             </div>
-                            <div>
-                                <label className="text-[10px] font-bold uppercase text-pink-600 block">Apellido</label>
-                                <input type="text" value={partnerLastName} onChange={e => setPartnerLastName(e.target.value)} className="w-full p-2 border-2 border-pink-200 bg-pink-50 font-bold outline-pink-500" required />
-                            </div>
-                        </div>
+                        </>
+                    ) : (
+                        <p className="mt-2.5 text-[12.5px] font-medium leading-[1.55] text-black/[.62]">
+                            {grupoElegido
+                                ? 'Este grupo no es de parejas, así que el bloque queda inactivo. Si después cambia, se habilita acá mismo.'
+                                : 'El bloque está siempre a la vista: se habilita si el grupo que elegís es de parejas, así el formulario no cambia de forma.'}
+                        </p>
+                    )}
+                </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                            <div>
-                                <label className="text-[10px] font-bold uppercase text-pink-600 block">Teléfono</label>
-                                <input type="tel" value={partnerPhone} onChange={e => setPartnerPhone(e.target.value)} className="w-full p-2 border-2 border-pink-200 bg-pink-50 font-bold outline-pink-500" required />
-                            </div>
-                            <div />
-                        </div>
+                {error && (
+                    <div className="mt-3.5 rounded-[14px] bg-[#fdecea] px-3 py-2.5 text-[12.5px] font-semibold text-[#a32218]">
+                        {error}
                     </div>
                 )}
 
-                {/* INFO BOX */}
-                <div className={`p-4 border-2 border-black flex gap-3 items-start ${couplesMode ? 'bg-pink-100' : 'bg-neutral-100'}`}>
-                    <AlertCircle className="w-5 h-5 shrink-0" />
-                    <p className="text-xs font-medium leading-tight">
-                        {couplesMode
-                            ? "Al agregar la pareja, ambos serán listados como MIEMBROS APROBADOS. Cuentan como 1 cupo (2 personas)."
-                            : "La persona será listada como MIEMBRO APROBADO inmediatamente."
-                        }
-                    </p>
-                </div>
+                <p className="mt-3.5 text-[12.5px] font-medium leading-[1.55] text-black/[.62]">
+                    {couplesMode
+                        ? 'Los dos quedan como miembros aprobados y ocupan un lugar de pareja, que son dos personas.'
+                        : 'La persona queda como miembro aprobado, sin pasar por la lista de solicitudes.'}
+                </p>
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="mt-[18px] flex flex-wrap gap-2.5">
+                    <button
+                        type="submit"
+                        disabled={!selectedGroupId || isSubmitting}
+                        className="h-12 min-w-[180px] flex-1 rounded-full text-[14.5px] font-semibold transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                        style={selectedGroupId
+                            ? { background: '#0a0a0a', color: '#fff' }
+                            : { background: '#eceae6', color: 'rgba(0,0,0,.5)' }}
+                    >
+                        {isSubmitting
+                            ? 'Guardando…'
+                            : !selectedGroupId
+                                ? 'Elegí un grupo primero'
+                                : couplesMode ? 'Agregar la pareja al grupo' : 'Agregar al grupo'}
+                    </button>
                     <button
                         type="button"
-                        onClick={() => navigate('/admingcx/gestion-de-grupos')}
-                        className="px-6 py-4 font-bold uppercase text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors"
+                        onClick={() => navigate(selectedGroupId
+                            ? `/admingcx/gestion-de-grupos/inscriptos/${selectedGroupId}`
+                            : '/admingcx/gestion-de-grupos')}
+                        className="h-12 rounded-full bg-[#f2f2f0] px-5 text-[14.5px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                     >
                         Cancelar
                     </button>
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className={`flex-1 md:flex-none md:px-10 py-4 text-white font-black uppercase tracking-widest border-2 border-black hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2 ${couplesMode ? 'bg-pink-600' : 'bg-black'}`}
-                    >
-                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                        {isSubmitting ? 'Guardando...' : couplesMode ? 'Agregar Pareja' : 'Agregar Miembro'}
-                    </button>
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <ModalParejaInscripcion
+                isOpen={modalPareja}
+                onClose={() => setModalPareja(false)}
+                titular={nombreCompleto.trim() || 'la persona titular'}
+                inicial={pareja ? { datos: pareja, userId: parejaUserId } : undefined}
+                onGuardar={(datos, userId) => {
+                    setPareja(datos);
+                    setParejaUserId(userId);
+                    setModalPareja(false);
+                }}
+            />
+        </form>
     );
 };
 
-const AgregarMiembroGrupo: React.FC = () => (
-    <AdminGCXLayout
-        title="Agregar Miembro"
-        backTo="/admingcx/gestion-de-grupos"
-        backLabel="Volver a Gestión de Grupos"
-    >
-        <AgregarMiembroGrupoContent />
-    </AdminGCXLayout>
-);
+const AgregarMiembroGrupo: React.FC = () => {
+    const [grupo, setGrupo] = useState<Group | null>(null);
+    const recibirGrupo = useCallback((g: Group | null) => setGrupo(g), []);
+
+    return (
+        <AdminGCXLayout
+            title={grupo ? grupo.name : 'Agregar a mano'}
+            backTo="/admingcx/gestion-de-grupos"
+            backLabel="Grupos"
+            subtitle=""
+            tabs={
+                <PestanasGrupoAdmin
+                    activa="agregar"
+                    groupId={grupo?.id}
+                    nInscriptos={grupo?.registrations?.length}
+                />
+            }
+        >
+            <AgregarMiembroGrupoContent onGrupo={recibirGrupo} />
+        </AdminGCXLayout>
+    );
+};
 
 export default AgregarMiembroGrupo;
