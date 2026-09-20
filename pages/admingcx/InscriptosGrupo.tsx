@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GroupRegistration, Group } from '../../types';
+import { GroupRegistration, Group, esGrupoPendiente } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 import PestanasGrupoAdmin from '../../components/GCX/PestanasGrupoAdmin';
@@ -289,7 +289,7 @@ const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
                     )}
                 </div>
                 <button
-                    onClick={() => navigate('/admingcx/gestion-de-grupos/agregar-grupo', { state: { groupId } })}
+                    onClick={() => navigate(`/admingcx/gestion-de-grupos/agregar-grupo?grupo=${encodeURIComponent(groupId!)}`)}
                     className="flex h-[42px] flex-none items-center gap-2 rounded-full bg-[#0a0a0a] px-5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                 >
                     <Plus className="h-[15px] w-[15px]" />
@@ -324,7 +324,7 @@ const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
                     </p>
                     <button
                         onClick={() => applicants.length === 0
-                            ? navigate('/admingcx/gestion-de-grupos/agregar-grupo', { state: { groupId } })
+                            ? navigate(`/admingcx/gestion-de-grupos/agregar-grupo?grupo=${encodeURIComponent(groupId!)}`)
                             : setQuery('')}
                         className="mt-5 h-[46px] rounded-full bg-[#0a0a0a] px-[22px] text-[14px] font-semibold text-white"
                     >
@@ -436,10 +436,12 @@ const InscriptosGrupo: React.FC = () => {
     const { groupId } = useParams<{ groupId: string }>();
     const [nombre, setNombre] = useState('Inscriptos del grupo');
     const [nInscriptos, setNInscriptos] = useState<number | undefined>(undefined);
+    const [pendiente, setPendiente] = useState(false);
 
     const recibirGrupo = useCallback((g: Group, inscriptos: number) => {
         setNombre(g.name);
         setNInscriptos(inscriptos);
+        setPendiente(esGrupoPendiente(g));
     }, []);
 
     return (
@@ -448,7 +450,7 @@ const InscriptosGrupo: React.FC = () => {
             backTo="/admingcx/gestion-de-grupos"
             backLabel="Grupos"
             subtitle=""
-            tabs={<PestanasGrupoAdmin activa="inscriptos" groupId={groupId} nInscriptos={nInscriptos} />}
+            tabs={<PestanasGrupoAdmin activa="inscriptos" groupId={groupId} nInscriptos={nInscriptos} pendiente={pendiente} />}
         >
             <InscriptosGrupoContent onGrupo={recibirGrupo} />
         </AdminGCXLayout>

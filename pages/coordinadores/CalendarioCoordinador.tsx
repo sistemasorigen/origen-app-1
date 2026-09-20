@@ -1,350 +1,291 @@
-import React, { useState } from 'react';
-import {
-    ChevronLeft,
-    ChevronRight,
-    Search,
-    Plus,
-    MoreHorizontal,
-    Clock,
-    MapPin,
-    User,
-    Calendar as CalendarIcon,
-    Video,
-    ArrowRight
-} from 'lucide-react';
-import { Group } from '../../types';
+import React, { useMemo, useState } from 'react';
+import { GrupoConDatos, nombreAnfitrion } from './comunes';
 
-interface CoordinatorCalendarProps {
-    groups: Group[];
-    categoryName: string;
-    onGroupSelect?: (groupId: string) => void;
+/**
+ * Calendario del mes con las reuniones de los grupos que coordina.
+ *
+ * Cada reunión se pinta de verde si esa fecha tiene la asistencia cargada y
+ * de ámbar si no: de un vistazo se ve qué semana se dejó de reportar, que es
+ * lo que el listado de asistencia tarda más en contar.
+ *
+ * La semana arranca en lunes, como en el diseño y como se piensan las
+ * reuniones acá. Al tocar un día, sus reuniones se abren debajo de la
+ * grilla, con el botón que lleva a la ficha del grupo.
+ */
+
+const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const NOMBRE_DIA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+interface Props {
+    datos: GrupoConDatos[];
+    onAbrirGrupo: (groupId: string) => void;
 }
 
-const DAYS_ES = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
-const MONTHS_ES = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-];
+/** Día de la semana del grupo, en índice lunes=0. */
+const indiceDia = (nombre?: string): number => {
+    if (!nombre) return -1;
+    const limpio = nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (limpio.includes('lun')) return 0;
+    if (limpio.includes('mar')) return 1;
+    if (limpio.includes('mier')) return 2;
+    if (limpio.includes('jue')) return 3;
+    if (limpio.includes('vie')) return 4;
+    if (limpio.includes('sab')) return 5;
+    if (limpio.includes('dom')) return 6;
+    return -1;
+};
 
-// Neo-Brutalism Palette
-const PALETTE = [
-    { bg: '#6ee7b7', text: '#000000', border: '#000000' }, // Emerald
-    { bg: '#fcd34d', text: '#000000', border: '#000000' }, // Amber
-    { bg: '#f9a8d4', text: '#000000', border: '#000000' }, // Pink
-    { bg: '#93c5fd', text: '#000000', border: '#000000' }, // Blue
-    { bg: '#c4b5fd', text: '#000000', border: '#000000' }, // Violet
-];
+const aISO = (anio: number, mes: number, dia: number) =>
+    `${anio}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
-const CoordinatorCalendar: React.FC<CoordinatorCalendarProps> = ({ groups, onGroupSelect }) => {
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDate, setSelectedDate] = useState(new Date());
+const CalendarioCoordinador: React.FC<Props> = ({ datos, onAbrirGrupo }) => {
+    const hoy = new Date();
+    const [mes, setMes] = useState(() => new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+    const [diaElegido, setDiaElegido] = useState<string | null>(null);
 
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+    const anio = mes.getFullYear();
+    const numeroMes = mes.getMonth();
+    const largo = new Date(anio, numeroMes + 1, 0).getDate();
+    // getDay() da domingo=0; acá la semana arranca en lunes.
+    const corrimiento = (new Date(anio, numeroMes, 1).getDay() + 6) % 7;
+    const hoyISO = aISO(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
 
-    const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 (Sun) - 6 (Sat)
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    // Days from previous month to fill grid
-    const prevMonthDays = new Date(year, month, 0).getDate();
+    // Reuniones del mes. Un grupo genera una reunión por cada día de la
+    // semana que le toca, mientras la fecha caiga dentro de su temporada.
+    const porFecha = useMemo(() => {
+        const mapa = new Map<string, {
+            grupoId: string;
+            grupo: string;
+            hora: string;
+            donde: string;
+            anfitrion: string;
+            reportada: boolean;
+        }[]>();
 
-    // Helper to map string day to index (0=Sun, 1=Mon, etc.)
-    const getDayIndex = (dayName: string) => {
-        if (!dayName) return -1;
-        const lower = dayName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Remove accents
-        if (lower.includes('dom')) return 0;
-        if (lower.includes('lun')) return 1;
-        if (lower.includes('mar')) return 2;
-        if (lower.includes('mier') || lower.includes('mié')) return 3;
-        if (lower.includes('jue')) return 4;
-        if (lower.includes('vie')) return 5;
-        if (lower.includes('sab')) return 6;
-        return -1;
+        datos.forEach(d => {
+            const dia = indiceDia(d.grupo.meetingDay);
+            if (dia < 0) return;
+
+            const fechasReportadas = new Set(d.reportes.map(r => r.fecha));
+            const desde = (d.grupo.startDate || '').split('T')[0];
+            const hasta = (d.grupo.endDate || '').split('T')[0];
+
+            for (let n = 1; n <= largo; n++) {
+                const fecha = aISO(anio, numeroMes, n);
+                if (((new Date(anio, numeroMes, n).getDay() + 6) % 7) !== dia) continue;
+                if (desde && fecha < desde) continue;
+                if (hasta && fecha > hasta) continue;
+
+                const lista = mapa.get(fecha) || [];
+                lista.push({
+                    grupoId: d.grupo.id,
+                    grupo: d.grupo.name || 'Sin nombre',
+                    hora: d.grupo.meetingTime || '',
+                    donde: d.grupo.isOnline || !d.grupo.location ? 'Online' : d.grupo.location,
+                    anfitrion: nombreAnfitrion(d.grupo),
+                    reportada: fechasReportadas.has(fecha),
+                });
+                mapa.set(fecha, lista);
+            }
+        });
+
+        mapa.forEach(lista => lista.sort((a, b) => a.hora.localeCompare(b.hora)));
+        return mapa;
+    }, [datos, anio, numeroMes, largo]);
+
+    const totalMes = useMemo(
+        () => Array.from(porFecha.values()).reduce((s, l) => s + l.length, 0),
+        [porFecha]
+    );
+    const sinReportarMes = useMemo(
+        () => Array.from(porFecha.entries())
+            .filter(([fecha]) => fecha <= hoyISO)
+            .reduce((s, [, l]) => s + l.filter(e => !e.reportada).length, 0),
+        [porFecha, hoyISO]
+    );
+
+    const delDia = diaElegido ? (porFecha.get(diaElegido) || []) : [];
+
+    const irAlMes = (delta: number) => {
+        setMes(new Date(anio, numeroMes + delta, 1));
+        setDiaElegido(null);
     };
 
-
-
-    // Helper to parse ISO date string to local Date object (ignoring time/timezone)
-    const parseLocalISO = (dateStr: string) => {
-        if (!dateStr) return null;
-        const [y, m, d] = dateStr.split('T')[0].split('-').map(Number);
-        return new Date(y, m - 1, d); // Month is 0-indexed
+    const volverAHoy = () => {
+        setMes(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+        setDiaElegido(hoyISO);
     };
 
-    // Generate events for the current month based on groups' meeting days
-    const events = React.useMemo(() => {
-        const monthEvents: any[] = [];
+    const celdas: React.ReactNode[] = [];
+    for (let i = 0; i < corrimiento; i++) {
+        celdas.push(<div key={`vacio-${i}`} className="min-h-[48px] md:min-h-[76px]" />);
+    }
+    for (let n = 1; n <= largo; n++) {
+        const fecha = aISO(anio, numeroMes, n);
+        const eventos = porFecha.get(fecha) || [];
+        const esHoy = fecha === hoyISO;
+        const elegido = fecha === diaElegido;
 
-        // Iterate through all days in the month
-        for (let d = 1; d <= daysInMonth; d++) {
-            const date = new Date(year, month, d);
-            const dayOfWeek = date.getDay();
+        celdas.push(
+            <button
+                key={fecha}
+                onClick={() => setDiaElegido(elegido ? null : fecha)}
+                aria-pressed={elegido}
+                aria-label={`${n} de ${MESES[numeroMes]}, ${eventos.length} ${eventos.length === 1 ? 'reunión' : 'reuniones'}`}
+                className={`flex min-h-[48px] flex-col items-center rounded-[10px] px-[3px] py-[5px] text-left md:min-h-[76px] md:items-stretch md:rounded-xl md:px-2 md:py-[7px] ${esHoy ? 'bg-[#0a0a0a]' : 'bg-[#fcfcfb]'} ${elegido && !esHoy ? 'shadow-[inset_0_0_0_1.5px_#0a0a0a]' : ''} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1`}
+            >
+                <span className={`text-[11.5px] font-semibold md:text-[12px] ${esHoy ? 'text-white' : 'text-black/[.66]'}`}>
+                    {n}
+                </span>
 
-            // Find groups that meet on this day of the week
-            groups.forEach((group, index) => {
-                if (group.status === 'finished') return;
+                {/* En el teléfono cada reunión es un punto: los nombres no
+                    entran en una columna de 48px y el color ya dice todo. */}
+                <span className="flex flex-wrap justify-center md:hidden">
+                    {eventos.slice(0, 4).map((e, i) => (
+                        <span
+                            key={i}
+                            className="mx-px mt-[3px] h-1.5 w-1.5 rounded-full"
+                            style={{ background: e.reportada ? '#0b7a53' : '#e8b96a' }}
+                        />
+                    ))}
+                </span>
 
-                const currentDayTime = date.getTime();
-
-                // 1. Check Start Date (Event must be on or after start date)
-                if (group.startDate) {
-                    const startDate = parseLocalISO(group.startDate);
-                    if (startDate && currentDayTime < startDate.getTime()) return;
-                }
-
-                // 2. Check End Date (Event must be on or before end date)
-                if (group.endDate) {
-                    const endDate = parseLocalISO(group.endDate);
-                    if (endDate && currentDayTime > endDate.getTime()) return;
-                }
-
-                const groupDayIndex = getDayIndex(group.meetingDay);
-                if (groupDayIndex === dayOfWeek) {
-                    const colorIndex = ((group.name || '').length + index) % PALETTE.length;
-                    monthEvents.push({
-                        id: `${group.id}-${d}`,
-                        date: date,
-                        day: d,
-                        title: group.name,
-                        time: group.meetingTime,
-                        location: group.location,
-                        leader: `${group.leaderName || ''} ${group.leaderSurname || ''}`.trim() || 'Sin asignar',
-                        category: group.categoryName || 'General',
-                        colorBg: PALETTE[colorIndex].bg,
-                        colorText: PALETTE[colorIndex].text,
-                        colorBorder: PALETTE[colorIndex].border,
-                        groupData: group
-                    });
-                }
-            });
-        }
-        return monthEvents.sort((a, b) => a.time.localeCompare(b.time));
-    }, [groups, year, month, daysInMonth]);
-
-    // Filter events for the selected date (Sidebar)
-    const selectedDateEvents = React.useMemo(() => {
-        return events.filter(e =>
-            e.date.getDate() === selectedDate.getDate() &&
-            e.date.getMonth() === selectedDate.getMonth() &&
-            e.date.getFullYear() === selectedDate.getFullYear()
-        );
-    }, [events, selectedDate]);
-
-    const handlePrevMonth = () => {
-        setCurrentDate(new Date(year, month - 1, 1));
-    };
-
-    const handleNextMonth = () => {
-        setCurrentDate(new Date(year, month + 1, 1));
-    };
-
-    const handleToday = () => {
-        const now = new Date();
-        setCurrentDate(now);
-        setSelectedDate(now);
-    };
-
-    const renderCalendarGrid = () => {
-        const cells = [];
-        // Empty/Prev month cells
-        for (let i = 0; i < firstDayOfMonth; i++) {
-            const dayNum = prevMonthDays - firstDayOfMonth + 1 + i;
-            cells.push(
-                <div key={`prev-${i}`} className="min-h-[80px] md:min-h-[120px] p-2 border-b border-r border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 opacity-50">
-                    <span className="text-slate-400 dark:text-zinc-600 font-semibold text-lg">{dayNum}</span>
-                </div>
-            );
-        }
-
-        // Current month cells
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dayEvents = events.filter(e => e.day === d);
-            const isSelected =
-                selectedDate.getDate() === d &&
-                selectedDate.getMonth() === month &&
-                selectedDate.getFullYear() === year;
-
-            const isToday =
-                new Date().getDate() === d &&
-                new Date().getMonth() === month &&
-                new Date().getFullYear() === year;
-
-            cells.push(
-                <div
-                    key={`curr-${d}`}
-                    onClick={() => setSelectedDate(new Date(year, month, d))}
-                    className={`min-h-[80px] md:min-h-[120px] p-2 border-b border-r border-slate-100 dark:border-zinc-800 transition-all cursor-pointer group relative hover:bg-amber-50/60 dark:hover:bg-zinc-800/50 ${isSelected ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'bg-white dark:bg-zinc-900'
-                        }`}
-                >
-                    <div className="flex justify-between items-start">
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${isToday
-                            ? 'bg-emerald-400 text-black'
-                            : isSelected
-                                ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white'
-                                : 'text-slate-700 dark:text-zinc-300 group-hover:bg-slate-900 dark:group-hover:bg-white group-hover:text-white dark:group-hover:text-slate-900'
-                            }`}>
-                            {d}
+                <span className="hidden w-full md:block">
+                    {eventos.slice(0, 3).map((e, i) => (
+                        <span
+                            key={i}
+                            className="mt-1 block truncate rounded-md px-[7px] py-[3px] text-[10.5px] font-semibold"
+                            style={{
+                                background: e.reportada ? '#e7f5ee' : '#fdf3e3',
+                                color: e.reportada ? '#0b7a53' : '#7a4f10',
+                            }}
+                        >
+                            {e.grupo}
                         </span>
-                    </div>
-
-                    <div className="mt-1 md:mt-2 flex flex-col gap-0.5 md:gap-1">
-                        {dayEvents.slice(0, 3).map((ev: any, idx: number) => (
-                            <div
-                                key={idx}
-                                className={`text-[8px] md:text-[10px] px-1.5 py-0.5 rounded font-semibold truncate ${isSelected ? 'bg-white text-black' : ''}`}
-                                style={{
-                                    backgroundColor: isSelected ? '#ffffff' : ev.colorBg,
-                                    color: isSelected ? '#000000' : ev.colorText
-                                }}
-                            >
-                                <span className="hidden lg:inline">{ev.time} - </span>
-                                {ev.title}
-                            </div>
-                        ))}
-                        {dayEvents.length > 3 && (
-                            <div className={`hidden md:block text-[9px] font-semibold pl-1 ${isSelected ? 'text-white/50 dark:text-slate-900/50' : 'text-slate-400 dark:text-zinc-500'}`}>
-                                +{dayEvents.length - 3} más
-                            </div>
-                        )}
-                        {dayEvents.length > 3 && (
-                            <div className={`md:hidden text-[8px] font-semibold pl-1 ${isSelected ? 'text-white/50 dark:text-slate-900/50' : 'text-slate-400 dark:text-zinc-500'}`}>
-                                +{dayEvents.length - 3}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        }
-
-        return cells;
-    };
+                    ))}
+                    {eventos.length > 3 && (
+                        <span className={`mt-1 block px-[7px] text-[10px] font-semibold ${esHoy ? 'text-white/60' : 'text-black/[.5]'}`}>
+                            +{eventos.length - 3}
+                        </span>
+                    )}
+                </span>
+            </button>
+        );
+    }
 
     return (
-        <div className="flex flex-col lg:flex-row h-full lg:h-[calc(100vh-64px)] overflow-y-auto lg:overflow-hidden bg-slate-50 dark:bg-zinc-950 font-sans">
-            {/* Main Calendar Section */}
-            <div className="flex-1 flex flex-col min-w-0 lg:h-full lg:overflow-hidden bg-slate-50 dark:bg-zinc-950">
-                <header className="flex flex-col sm:flex-row items-center justify-between px-6 py-6 md:px-10 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 gap-6">
-                    <div className="flex items-center gap-6 w-full sm:w-auto justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl">
-                                <CalendarIcon className="w-6 h-6" strokeWidth={2.5} />
-                            </div>
-                            <h1 className="text-3xl md:text-3xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
-                                {MONTHS_ES[month]} <span className="text-slate-400 dark:text-zinc-500">{year}</span>
-                            </h1>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={handlePrevMonth}
-                                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 transition-all text-slate-600 dark:text-zinc-300"
-                            >
-                                <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
-                            </button>
-                            <button
-                                onClick={handleToday}
-                                className="px-4 py-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-xs font-bold uppercase tracking-wide rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all text-slate-700 dark:text-zinc-200"
-                            >
-                                Hoy
-                            </button>
-                            <button
-                                onClick={handleNextMonth}
-                                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 transition-all text-slate-600 dark:text-zinc-300"
-                            >
-                                <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
-                            </button>
-                        </div>
-                    </div>
-                </header>
-
-                <div className="flex-1 overflow-auto p-4 md:p-8 bg-slate-50 dark:bg-zinc-950 min-h-[400px] mb-20 md:mb-0">
-                    <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm flex flex-col min-h-[400px] md:min-h-[600px] overflow-hidden">
-                        <div className="grid grid-cols-7 border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50">
-                            {DAYS_ES.map(day => (
-                                <div key={day} className="py-3 text-center text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">{day}</div>
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-white dark:bg-zinc-900">
-                            {renderCalendarGrid()}
-                        </div>
-                    </div>
+        <div className="rounded-[20px] bg-white px-3.5 py-4 md:px-[22px] md:py-5">
+            <div className="flex flex-wrap items-center gap-3">
+                <div className="min-w-[150px] flex-1">
+                    <p className="text-[18px] font-semibold tracking-[-0.015em] text-[#0a0a0a]">
+                        {MESES[numeroMes]} {anio}
+                    </p>
+                    <p className="mt-[5px] text-[12.5px] font-medium text-black/[.62]">
+                        {totalMes === 0
+                            ? 'Ninguno de tus grupos se reúne este mes.'
+                            : `${totalMes} reuniones de tus grupos${sinReportarMes > 0 ? ` · ${sinReportarMes} sin reportar` : ''}.`}
+                    </p>
+                </div>
+                <div className="flex flex-none gap-1.5">
+                    <button
+                        onClick={() => irAlMes(-1)}
+                        aria-label="Mes anterior"
+                        className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[#f2f2f0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                    >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 6l-6 6 6 6" />
+                        </svg>
+                    </button>
+                    <button
+                        onClick={volverAHoy}
+                        className="h-[38px] rounded-full bg-[#f2f2f0] px-4 text-[12.5px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                    >
+                        Hoy
+                    </button>
+                    <button
+                        onClick={() => irAlMes(1)}
+                        aria-label="Mes siguiente"
+                        className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[#f2f2f0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                    >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M10 6l6 6-6 6" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
-            {/* Right Sidebar - Upcoming Meetings */}
-            <aside className="w-full lg:w-96 bg-white dark:bg-zinc-900 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-zinc-800 flex-shrink-0 flex flex-col h-auto lg:h-full overflow-hidden z-10 order-last">
-                <div className="p-6 border-b border-black/10 bg-emerald-400">
-                    <h2 className="text-2xl font-bold text-black uppercase tracking-tight flex items-center gap-2">
-                        Agenda
-                        <span className="text-sm bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-3 py-1 rounded-full tracking-widest relative -top-1">HOY</span>
-                    </h2>
-                    <div className="flex items-center gap-2 mt-2 text-black font-semibold bg-white/70 rounded-xl p-2">
-                        <Clock className="w-5 h-5 text-black" strokeWidth={2.5} />
-                        <span className="text-sm uppercase tracking-wide">
-                            {selectedDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                        </span>
-                    </div>
-                </div>
+            <div className="mt-[18px] grid grid-cols-7 gap-1 md:gap-[7px]">
+                {DIAS.map((d, i) => (
+                    <span key={i} className="pb-1 text-center text-[11px] font-semibold tracking-[0.05em] text-black/[.58]">
+                        {d}
+                    </span>
+                ))}
+                {celdas}
+            </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50 dark:bg-zinc-950">
-                    {selectedDateEvents.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 border border-dashed border-slate-300 dark:border-zinc-700 rounded-2xl bg-slate-50 dark:bg-zinc-900">
-                            <CalendarIcon className="w-12 h-12 text-slate-300 dark:text-zinc-700 mb-3" />
-                            <p className="text-slate-500 dark:text-zinc-400 font-semibold text-center text-sm">Sin actividades<br />programadas</p>
-                        </div>
+            <div className="mt-[18px] flex flex-wrap gap-4 border-t border-[#f0efec] pt-4">
+                <span className="flex items-center gap-[7px]">
+                    <span className="h-[9px] w-[9px] rounded-[3px] bg-[#0b7a53]" />
+                    <span className="text-[12px] font-semibold text-black/[.64]">Reunión con asistencia cargada</span>
+                </span>
+                <span className="flex items-center gap-[7px]">
+                    <span className="h-[9px] w-[9px] rounded-[3px] bg-[#e8b96a]" />
+                    <span className="text-[12px] font-semibold text-black/[.64]">Reunión sin reportar</span>
+                </span>
+            </div>
+
+            {/* Reuniones del día elegido */}
+            {diaElegido && (
+                <div className="mt-4 border-t border-[#f0efec] pt-4">
+                    <p className="text-[15px] font-semibold text-[#0a0a0a]">
+                        {NOMBRE_DIA[(new Date(`${diaElegido}T12:00:00`).getDay() + 6) % 7]}{' '}
+                        {Number(diaElegido.split('-')[2])} de {MESES[numeroMes]}
+                    </p>
+
+                    {delDia.length === 0 ? (
+                        <p className="mt-2.5 text-[13px] font-medium text-black/[.62]">
+                            Ninguno de tus grupos se reúne este día.
+                        </p>
                     ) : (
-                        selectedDateEvents.map((ev: any) => (
-                            <div key={ev.id} className="relative bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 p-0 shadow-sm rounded-2xl overflow-hidden group w-full mb-4">
-                                <div className="p-4 flex justify-between items-start" style={{ backgroundColor: ev.colorBg }}>
-                                    <div>
-                                        <span className="text-[10px] font-bold uppercase tracking-widest bg-black/80 text-white px-2.5 py-1 rounded-full mb-2 inline-block">
-                                            {ev.category}
+                        <div className="mt-3 grid gap-2.5 [grid-template-columns:minmax(0,1fr)] md:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
+                            {delDia.map((e, i) => (
+                                <div key={`${e.grupoId}-${i}`} className="min-w-0 rounded-[16px] bg-[#f7f7f5] px-4 py-3.5">
+                                    <div className="flex items-start gap-2.5">
+                                        <span className="mt-1.5 h-2 w-2 flex-none rounded-full" style={{ background: e.reportada ? '#0b7a53' : '#e8b96a' }} />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate text-[13.5px] font-semibold text-[#0a0a0a]">{e.grupo}</p>
+                                            <p className="mt-[3px] truncate text-[12px] font-medium text-black/[.64]">
+                                                {e.hora ? `${e.hora} · ` : ''}{e.donde}
+                                            </p>
+                                            <p className="mt-[2px] truncate text-[12px] font-medium text-black/[.64]">{e.anfitrion}</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 flex items-center gap-2.5">
+                                        <span
+                                            className="flex h-[26px] items-center rounded-full px-[11px] text-[11.5px] font-semibold"
+                                            style={{
+                                                background: e.reportada ? '#e7f5ee' : '#fdf3e3',
+                                                color: e.reportada ? '#0b7a53' : '#7a4f10',
+                                            }}
+                                        >
+                                            {e.reportada ? 'Asistencia cargada' : diaElegido > hoyISO ? 'Todavía no pasó' : 'Sin reportar'}
                                         </span>
-                                        <h3 className="font-bold text-lg text-black uppercase tracking-tight leading-tight">{ev.title}</h3>
-                                    </div>
-                                    <div className="p-1.5 bg-white rounded-xl shadow-sm">
-                                        <Video className="w-4 h-4 text-black" strokeWidth={2.5} />
+                                        <button
+                                            onClick={() => onAbrirGrupo(e.grupoId)}
+                                            className="ml-auto h-[34px] flex-none rounded-full bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                                        >
+                                            Ver la ficha
+                                        </button>
                                     </div>
                                 </div>
-                                <div className="p-4 bg-white dark:bg-zinc-900">
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-bold text-xs">
-                                                <Clock className="w-4 h-4" />
-                                            </div>
-                                            <span className="font-semibold text-sm text-slate-700 dark:text-zinc-300 uppercase">{ev.time} HS</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-bold text-xs">
-                                                <MapPin className="w-4 h-4" />
-                                            </div>
-                                            <span className="font-semibold text-sm text-slate-700 dark:text-zinc-300 uppercase truncate">{ev.location || 'Virtual'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-bold text-xs">
-                                                <User className="w-4 h-4" />
-                                            </div>
-                                            <span className="font-semibold text-sm text-slate-700 dark:text-zinc-300 uppercase truncate">{ev.leader}</span>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            if (onGroupSelect && ev.groupData?.id) {
-                                                onGroupSelect(ev.groupData.id);
-                                            }
-                                        }}
-                                        className="w-full mt-5 py-3 px-4 min-h-[44px] rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold uppercase text-xs tracking-wide hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm"
-                                    >
-                                        Ver Detalles
-                                        <ArrowRight className="w-4 h-4 ml-1" />
-                                    </button>
-                                </div>
-                            </div>
-                        ))
+                            ))}
+                        </div>
                     )}
                 </div>
-            </aside>
+            )}
         </div>
     );
 };
 
-export default CoordinatorCalendar;
+export default CalendarioCoordinador;

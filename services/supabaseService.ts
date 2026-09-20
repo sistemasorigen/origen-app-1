@@ -5234,6 +5234,57 @@ export const supabaseService = {
   },
 
   /**
+   * Historial de asistencia de VARIOS grupos en una sola consulta.
+   *
+   * getGlobalAttendanceReport trae solo la última fecha de cada grupo, que
+   * alcanza para una tarjeta por grupo pero no para un promedio ni para
+   * saber qué reuniones del mes quedaron sin reportar. El panel de
+   * coordinación necesita las dos cosas, así que pide todas las filas de sus
+   * grupos y calcula del lado del cliente.
+   *
+   * Pagina con .range(): supabase-js corta en 1000 filas sin avisar (HTTP
+   * 206 y error null), y 26 grupos × una reunión por semana pasan ese techo
+   * en una temporada larga.
+   */
+  async getAttendanceHistoryForGroups(
+    groupIds: string[]
+  ): Promise<{ groupId: string; date: string; presentMembers: string[] }[]> {
+    if (!groupIds.length) return [];
+
+    const PAGE_SIZE = 1000;
+    const filas: { groupId: string; date: string; presentMembers: string[] }[] = [];
+
+    try {
+      for (let desde = 0; ; desde += PAGE_SIZE) {
+        const { data, error } = await supabase
+          .from('group_attendance')
+          .select('group_id, date, present_members')
+          .in('group_id', groupIds)
+          .order('date', { ascending: false })
+          .range(desde, desde + PAGE_SIZE - 1);
+
+        if (error) {
+          console.error('[Attendance] Error trayendo historial por grupos:', error);
+          return filas;
+        }
+
+        (data || []).forEach((row: any) => filas.push({
+          groupId: row.group_id,
+          date: row.date,
+          presentMembers: Array.isArray(row.present_members) ? row.present_members : []
+        }));
+
+        if (!data || data.length < PAGE_SIZE) break;
+      }
+
+      return filas;
+    } catch (error) {
+      console.error('[Attendance] Excepción trayendo historial por grupos:', error);
+      return filas;
+    }
+  },
+
+  /**
    * Resend group confirmation emails to selected registrations
    * Invokes the send-gcx-welcome Edge Function directly
    */

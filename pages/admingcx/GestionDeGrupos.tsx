@@ -281,7 +281,7 @@ const GestionDeGruposContent: React.FC = () => {
                 onReview={(group) => navigate(`/admingcx/gestion-de-grupos/detalles/${group.id}`)}
                 onReopen={handleReopenGroup}
                 onViewRegistrations={(group) => navigate(`/admingcx/gestion-de-grupos/inscriptos/${group.id}`)}
-                onAddMember={(group) => navigate('/admingcx/gestion-de-grupos/agregar-grupo', { state: { groupId: group.id } })}
+                onAddMember={(group) => navigate(`/admingcx/gestion-de-grupos/agregar-grupo?grupo=${encodeURIComponent(group.id)}`)}
                 onEdit={(group) => navigate(`/admingcx/gestion-de-grupos/editar-grupo/${group.id}`)}
                 onDelete={handleDeleteGroup}
                 onToggleCapacityLock={handleToggleCapacityLock}

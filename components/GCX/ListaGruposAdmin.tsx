@@ -1,5 +1,5 @@
 import React from 'react';
-import { Group, GroupCategory, GroupTag } from '../../types';
+import { Group, GroupCategory, GroupTag, esGrupoPendiente } from '../../types';
 
 /**
  * Lista de grupos del panel (design-claude/Admin GCX - Panel).
@@ -134,7 +134,7 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
 
     const accionesDe = (group: Group, movil: boolean) => {
         const finalizado = estaFinalizado(group);
-        const pendiente = group.status === 'pending' || !group.status;
+        const pendiente = esGrupoPendiente(group);
         const base = movil
             ? 'h-[42px] w-full rounded-full text-[13.5px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1'
             : 'h-9 rounded-full px-[15px] text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1';
@@ -151,24 +151,38 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
                         Re-abrir en otra temporada
                     </button>
                 )}
-                <button onClick={() => { onViewRegistrations(group); setOpenMenuGroupId(null); }} className={normal}>
-                    Ver inscriptos
-                </button>
-                <button onClick={() => { onAddMember(group); setOpenMenuGroupId(null); }} className={normal}>
-                    Agregar miembro
-                </button>
+                {/* Un grupo pendiente todavía no existe para nadie más que
+                    para quien lo tiene que aprobar: no tiene inscriptos, no
+                    ocupa cupo y no está en el catálogo. Ofrecer acciones sobre
+                    cosas que aún no pasaron invita a tocar lo que no se puede
+                    ver. Lo único que corresponde es resolver la solicitud —
+                    revisarla, mirar la ficha, o rechazarla borrándolo. */}
+                {!pendiente && (
+                    <>
+                        <button onClick={() => { onViewRegistrations(group); setOpenMenuGroupId(null); }} className={normal}>
+                            Ver inscriptos
+                        </button>
+                        <button onClick={() => { onAddMember(group); setOpenMenuGroupId(null); }} className={normal}>
+                            Agregar miembro
+                        </button>
+                    </>
+                )}
                 <button onClick={() => { onReview(group); setOpenMenuGroupId(null); }} className={normal}>
                     Ver detalle
                 </button>
-                <button onClick={() => { onEdit(group); setOpenMenuGroupId(null); }} className={normal}>
-                    Editar
-                </button>
-                <button onClick={() => { onToggleCapacityLock(group); setOpenMenuGroupId(null); }} className={normal}>
-                    {group.capacityLocked ? 'Desbloquear los cupos' : 'Bloquear los cupos'}
-                </button>
-                <button onClick={() => { onToggleVisibility(group); setOpenMenuGroupId(null); }} className={normal}>
-                    {group.isHidden ? 'Mostrar en el catálogo' : 'Ocultar del catálogo'}
-                </button>
+                {!pendiente && (
+                    <>
+                        <button onClick={() => { onEdit(group); setOpenMenuGroupId(null); }} className={normal}>
+                            Editar
+                        </button>
+                        <button onClick={() => { onToggleCapacityLock(group); setOpenMenuGroupId(null); }} className={normal}>
+                            {group.capacityLocked ? 'Desbloquear los cupos' : 'Bloquear los cupos'}
+                        </button>
+                        <button onClick={() => { onToggleVisibility(group); setOpenMenuGroupId(null); }} className={normal}>
+                            {group.isHidden ? 'Mostrar en el catálogo' : 'Ocultar del catálogo'}
+                        </button>
+                    </>
+                )}
                 {!movil && <div className="flex-1" />}
                 <button onClick={() => { onDelete(group.id); setOpenMenuGroupId(null); }} className={`${base} bg-[#fdecea] text-[#a32218]`}>
                     Eliminar grupo

@@ -8,8 +8,12 @@ import { useNavigate } from 'react-router-dom';
  * alta a mano— son un solo lugar con tres pestañas. Van en la banda blanca
  * del armazón, así que se pasan por la prop `tabs`.
  *
- * Sin grupo elegido —"Agregar a mano" abierto desde el panel— las dos
- * primeras quedan apagadas: no hay ficha que mirar todavía.
+ * Las tres SIEMPRE cuelgan de un grupo. "Agregar a mano" abierto desde el
+ * panel, sin grupo, es otra pantalla —el buscador de grupos— y esa no lleva
+ * pestañas: no hay una ficha ni unos inscriptos a los que saltar.
+ *
+ * El id viaja en la URL y no en `location.state` para que la pestaña
+ * sobreviva a un refresh y el link se pueda pasar por mensaje.
  */
 
 export type PestanaGrupo = 'detalle' | 'inscriptos' | 'agregar';
@@ -19,9 +23,17 @@ interface PestanasGrupoAdminProps {
     groupId?: string | null;
     /** Cuántas inscripciones tiene el grupo, para el globo de la pestaña. */
     nInscriptos?: number;
+    /**
+     * Mientras el grupo espera aprobación quedan SOLO la ficha: no tiene
+     * inscriptos que mirar ni se le puede anotar gente, así que las otras dos
+     * pestañas llevarían a pantallas vacías o a una acción que el guardado
+     * rechaza. Se ocultan en vez de apagarse: apagadas siguen diciendo que
+     * ahí hay algo, y todavía no lo hay.
+     */
+    pendiente?: boolean;
 }
 
-const PestanasGrupoAdmin: React.FC<PestanasGrupoAdminProps> = ({ activa, groupId, nInscriptos }) => {
+const PestanasGrupoAdmin: React.FC<PestanasGrupoAdminProps> = ({ activa, groupId, nInscriptos, pendiente }) => {
     const navigate = useNavigate();
 
     const pestana = (on: boolean, apagada = false) =>
@@ -46,23 +58,28 @@ const PestanasGrupoAdmin: React.FC<PestanasGrupoAdminProps> = ({ activa, groupId
                 Ficha del grupo
             </button>
 
-            <button
-                onClick={() => groupId && navigate(`/admingcx/gestion-de-grupos/inscriptos/${groupId}`)}
-                disabled={sinGrupo}
-                className={pestana(activa === 'inscriptos', sinGrupo)}
-            >
-                Inscriptos
-                {nInscriptos !== undefined && !sinGrupo && (
-                    <span className={globo(activa === 'inscriptos')}>{nInscriptos}</span>
-                )}
-            </button>
+            {!pendiente && (
+                <>
+                    <button
+                        onClick={() => groupId && navigate(`/admingcx/gestion-de-grupos/inscriptos/${groupId}`)}
+                        disabled={sinGrupo}
+                        className={pestana(activa === 'inscriptos', sinGrupo)}
+                    >
+                        Inscriptos
+                        {nInscriptos !== undefined && !sinGrupo && (
+                            <span className={globo(activa === 'inscriptos')}>{nInscriptos}</span>
+                        )}
+                    </button>
 
-            <button
-                onClick={() => navigate('/admingcx/gestion-de-grupos/agregar-grupo', { state: groupId ? { groupId } : undefined })}
-                className={pestana(activa === 'agregar')}
-            >
-                Agregar a mano
-            </button>
+                    <button
+                        onClick={() => groupId && navigate(`/admingcx/gestion-de-grupos/agregar-grupo?grupo=${encodeURIComponent(groupId)}`)}
+                        disabled={sinGrupo}
+                        className={pestana(activa === 'agregar', sinGrupo)}
+                    >
+                        Agregar a mano
+                    </button>
+                </>
+            )}
         </>
     );
 };

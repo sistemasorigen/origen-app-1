@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics=""><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}input,button{font-family:inherit}input:focus{outline:none}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:999px; padding:6px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ showDesktop }}" style="{{ deskBtn }}">Desktop</button>
+      <button onClick="{{ showMobile }}" style="{{ mobBtn }}">Mobile</button>
+    </div>
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">COORDINADOR</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ setNormal }}" style="{{ btnNormal }}">Con 2 categorías</button>
+      <button onClick="{{ setSinGrupos }}" style="{{ btnSinGrupos }}">Sin grupos</button>
+      <button onClick="{{ setSinCat }}" style="{{ btnSinCat }}">Sin categoría</button>
+      <button onClick="{{ setCargando }}" style="{{ btnCargando }}">Cargando</button>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; background:#f6f6f4; border-radius:22px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:hidden; display:flex; flex-direction:column; width:{{ frameW }}; height:{{ frameH }}">
+
+    <div style="flex:none; background:#fff; border-bottom:1px solid #ecebe8; padding:{{ headPad }}">
+      <div style="display:flex; align-items:flex-start; gap:14px">
+        <div style="min-width:0; flex:1">
+          <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:#0b7a53">PANEL DE COORDINACIÓN</p>
+          <h1 style="margin:5px 0 0; font:600 {{ h1Size }}; color:#0a0a0a; letter-spacing:-.018em">Panel de Coordinación</h1>
+        </div>
+        
+      </div>
+
+      <div style="display:flex; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap">
+        <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ alcanceTexto }}</span>
+        <sc-for list="{{ categorias }}" as="c" hint-placeholder-count="2">
+          <span style="height:28px; padding:0 12px; border-radius:999px; background:#e7f5ee; color:#0b7a53; font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:7px">{{ c.nombre }}<span style="font:600 11px Manrope,system-ui,sans-serif; color:rgba(11,122,83,.7)">{{ c.n }}</span></span>
+        </sc-for>
+        <sc-if value="{{ sinCategorias }}" hint-placeholder-val="{{ false }}">
+          <span style="height:28px; padding:0 12px; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center">ninguna todavía</span>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ tieneCategorias }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; gap:{{ navGap }}; margin-top:14px; {{ navWrap }}">
+          <button onClick="{{ goInicio }}" style="{{ navInicio }}">
+            <svg width="{{ navIcon }}" height="{{ navIcon }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6.5 8 6.5"></path><path d="M6.5 10v9h11v-9"></path></svg>
+            <span style="{{ navLabel }}">Inicio</span>
+          </button>
+          <button onClick="{{ goGrupos }}" style="{{ navGrupos }}">
+            <svg width="{{ navIcon }}" height="{{ navIcon }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="7" height="7" rx="2"></rect><rect x="13.5" y="4.5" width="7" height="7" rx="2"></rect><rect x="3.5" y="14" width="7" height="5.5" rx="2"></rect><rect x="13.5" y="14" width="7" height="5.5" rx="2"></rect></svg>
+            <span style="{{ navLabel }}">Grupos</span>
+          </button>
+          <button onClick="{{ goAsistencia }}" style="{{ navAsistencia }}">
+            <svg width="{{ navIcon }}" height="{{ navIcon }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg>
+            <span style="{{ navLabel }}">Asistencia</span>
+            <sc-if value="{{ hayAlerta }}" hint-placeholder-val="{{ true }}">
+              <span style="{{ navAlerta }}">{{ nSinReportar }}</span>
+            </sc-if>
+          </button>
+          <button onClick="{{ goCalendario }}" style="{{ navCalendario }}">
+            <svg width="{{ navIcon }}" height="{{ navIcon }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M8 3v3.5M16 3v3.5M3.5 10h17"></path></svg>
+            <span style="{{ navLabel }}">Calendario</span>
+          </button>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="flex:1; min-height:0; overflow:auto; padding:{{ bodyPad }}">
+
+      <sc-if value="{{ estadoSinCat }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff; border-radius:22px; padding:{{ vacioPad }}; display:flex; flex-direction:column; align-items:center; text-align:center">
+          <div style="width:96px; height:96px; border-radius:999px; background:#e7f5ee; display:flex; align-items:center; justify-content:center">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#0b7a53" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M4.5 20c0-4 3.4-7 7.5-7s7.5 3 7.5 7"></path></svg>
+          </div>
+          <p style="margin:24px 0 0; font:600 22px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.018em">Bienvenida, Mariela</p>
+          <p style="margin:12px 0 0; font:500 14.5px/1.7 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); max-width:420px">Un coordinador acompaña a los anfitriones de una o más categorías de grupos. Todavía no te asignaron ninguna, así que no hay grupos para mostrarte.</p>
+          <div style="background:#f7f7f5; border-radius:20px; padding:18px 20px; margin-top:24px; max-width:460px; width:100%; text-align:left">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.58)">CUANDO TE ASIGNEN UNA CATEGORÍA VAS A PODER</p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px">
+              <div style="display:flex; align-items:flex-start; gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b7a53" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:2px"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg><span style="font:500 13.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">Ver cómo viene cada grupo de tu categoría, sin mezclarte con los otros 80.</span></div>
+              <div style="display:flex; align-items:flex-start; gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b7a53" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:2px"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg><span style="font:500 13.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">Saber qué anfitrión dejó de reportar y necesita una llamada.</span></div>
+              <div style="display:flex; align-items:flex-start; gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b7a53" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:2px"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg><span style="font:500 13.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">Seguir la asistencia reunión a reunión y el calendario del mes.</span></div>
+            </div>
+          </div>
+          <button style="height:52px; padding:0 26px; margin-top:22px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Pedirle una categoría al administrador</button>
+          <p style="margin:14px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Le escribe a Pablo Arce, del equipo de grupos.</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ estadoCargando }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid; grid-template-columns:{{ kpiCols }}; gap:12px">
+          <div style="{{ skelCard }}"></div>
+          <div style="{{ skelCard }}"></div>
+          <div style="{{ skelCard }}"></div>
+          <div style="{{ skelCard }}"></div>
+        </div>
+        <div style="background:#fff; border-radius:20px; padding:20px 22px; margin-top:14px">
+          <div style="width:180px; height:14px; border-radius:999px; background:#f0efec"></div>
+          <div style="display:flex; align-items:flex-end; gap:10px; height:200px; margin-top:24px">
+            <div style="flex:1; height:56%; border-radius:6px 6px 0 0; background:#f2f2f0"></div>
+            <div style="flex:1; height:78%; border-radius:6px 6px 0 0; background:#f2f2f0"></div>
+            <div style="flex:1; height:44%; border-radius:6px 6px 0 0; background:#f2f2f0"></div>
+            <div style="flex:1; height:67%; border-radius:6px 6px 0 0; background:#f2f2f0"></div>
+            <div style="flex:1; height:88%; border-radius:6px 6px 0 0; background:#f2f2f0"></div>
+            <div style="flex:1; height:52%; border-radius:6px 6px 0 0; background:#f2f2f0"></div>
+          </div>
+          <p style="margin:20px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Cargando los grupos de tus categorías…</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ estadoSinGrupos }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff; border-radius:22px; padding:{{ vacioPad }}; display:flex; flex-direction:column; align-items:center; text-align:center">
+          <div style="width:88px; height:88px; border-radius:999px; background:repeating-linear-gradient(135deg,#eceae6 0 8px,#e3e1dc 8px 16px)"></div>
+          <p style="margin:22px 0 0; font:600 19px Manrope,system-ui,sans-serif; color:#0a0a0a">Matrimonios jóvenes todavía no tiene grupos esta temporada</p>
+          <p style="margin:11px 0 0; font:500 13.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64); max-width:400px">Los anfitriones crean sus grupos unas semanas antes de que arranque la temporada. La 1 abre el 3 de marzo.</p>
+          <div style="display:flex; gap:9px; margin-top:22px; flex-wrap:wrap; justify-content:center">
+            <button style="height:48px; padding:0 22px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Ver la temporada anterior</button>
+            <button style="height:48px; padding:0 22px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Escribirles a los anfitriones</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ estadoNormal }}" hint-placeholder-val="{{ true }}">
+
+        <sc-if value="{{ isInicio }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ hayAlerta }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#0a0a0a; border-radius:20px; padding:20px 22px; margin-bottom:14px">
+              <div style="display:flex; align-items:flex-start; gap:18px; flex-wrap:wrap">
+                <div style="min-width:220px; flex:1">
+                  <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(255,255,255,.55)">A QUIÉN LLAMAR ESTA SEMANA</p>
+                  <p style="margin:11px 0 0; font:600 21px/1.35 Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.018em">{{ alertaTitulo }}</p>
+                  <p style="margin:10px 0 0; font:500 13.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.7)">{{ alertaTexto }}</p>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px; min-width:230px; flex:1">
+                  <sc-for list="{{ alertas }}" as="a" hint-placeholder-count="3">
+                    <button onClick="{{ a.abrir }}" style="width:100%; background:rgba(255,255,255,.08); border:0; border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:11px; cursor:pointer; text-align:left">
+                      <span style="width:8px; height:8px; border-radius:999px; background:{{ a.color }}; flex:none"></span>
+                      <span style="min-width:0; flex:1">
+                        <span style="display:block; font:600 13.5px Manrope,system-ui,sans-serif; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ a.grupo }}</span>
+                        <span style="display:block; margin-top:3px; font:500 12px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.62)">{{ a.motivo }}</span>
+                      </span>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M9 6l6 6-6 6"></path></svg>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="display:grid; grid-template-columns:{{ kpiCols }}; gap:12px">
+            <div style="background:#fff; border-radius:18px; padding:16px 18px">
+              <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Grupos</p>
+              <p style="margin:12px 0 0; font:600 30px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.03em">{{ kGrupos }}</p>
+              <p style="margin:8px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ kGruposNota }}</p>
+            </div>
+            <div style="background:#fff; border-radius:18px; padding:16px 18px">
+              <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Inscriptos</p>
+              <p style="margin:12px 0 0; font:600 30px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.03em">{{ kInscriptos }}</p>
+              <p style="margin:8px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ kInscriptosNota }}</p>
+            </div>
+            <div style="background:#fff; border-radius:18px; padding:16px 18px">
+              <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Presentes por reunión</p>
+              <div style="display:flex; align-items:baseline; gap:8px; margin-top:12px">
+                <span style="font:600 30px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.03em">{{ kPromedio }}</span>
+                <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0b7a53">{{ kPromedioDelta }}</span>
+              </div>
+              <p style="margin:8px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Promedio de la iglesia: 5,0</p>
+            </div>
+            <div style="background:#fff; border-radius:18px; padding:16px 18px; box-shadow:0 0 0 1.5px #f0d9b4 inset">
+              <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Sin reportar</p>
+              <p style="margin:12px 0 0; font:600 30px Manrope,system-ui,sans-serif; color:#7a4f10; letter-spacing:-.03em">{{ nSinReportar }}</p>
+              <p style="margin:8px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">grupos sin asistencia cargada</p>
+            </div>
+          </div>
+
+          <div style="background:#fff; border-radius:20px; padding:20px 22px; margin-top:14px">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+              <p style="margin:0; flex:1; min-width:150px; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ graficoTitulo }}</p>
+              <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+                <button onClick="{{ setInscriptos }}" style="{{ segInscriptos }}">Inscriptos</button>
+                <button onClick="{{ setBajas }}" style="{{ segBajas }}">Bajas</button>
+              </div>
+              <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+                <button onClick="{{ setActivos }}" style="{{ segActivos }}">Activos</button>
+                <button onClick="{{ setFinalizados }}" style="{{ segFinalizados }}">Finalizados</button>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px">
+              <sc-for list="{{ barras }}" as="b" hint-placeholder-count="6">
+                <div style="display:flex; align-items:center; gap:12px">
+                  <span style="width:{{ barLabelW }}; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ b.nombre }}</span>
+                  <div style="flex:1; min-width:0; height:26px; border-radius:8px; background:#f7f7f5; overflow:hidden"><div style="width:{{ b.pct }}; height:100%; border-radius:8px; background:{{ b.color }}"></div></div>
+                  <span style="width:34px; flex:none; text-align:right; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ b.valor }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <p style="margin:18px 0 0; padding-top:14px; border-top:1px solid #f0efec; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ graficoNota }}</p>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isGrupos }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ sinDetalle }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+              <div style="flex:1; min-width:180px; height:42px; border-radius:999px; background:#fff; display:flex; align-items:center; gap:10px; padding:0 8px 0 17px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.58)" stroke-width="2.2" stroke-linecap="round" style="flex:none"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+                <input type="text" value="{{ query }}" onChange="{{ onQuery }}" placeholder="Buscar por grupo o anfitrión" style="flex:1; min-width:0; border:0; background:transparent; font:500 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">
+                <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ clearQuery }}" style="width:30px; height:30px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+                </sc-if>
+              </div>
+              <div style="display:flex; gap:3px; background:#eceae6; border-radius:999px; padding:3px; flex:none">
+                <button onClick="{{ setActivos }}" style="{{ segActivos }}">Activos</button>
+                <button onClick="{{ setFinalizados }}" style="{{ segFinalizados }}">Finalizados</button>
+              </div>
+            </div>
+            <p style="margin:14px 2px 0; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ resumenGrupos }}</p>
+
+            <sc-if value="{{ hayGrupos }}" hint-placeholder-val="{{ true }}">
+              <div style="display:grid; grid-template-columns:{{ gruposCols }}; gap:12px; margin-top:12px">
+                <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="6">
+                  <button onClick="{{ g.abrir }}" style="background:#fff; border:0; border-radius:20px; padding:16px 18px; cursor:pointer; text-align:left; display:block; width:100%">
+                    <div style="display:flex; align-items:flex-start; gap:12px">
+                      <div style="{{ g.thumb }}">{{ g.ini }}</div>
+                      <div style="min-width:0; flex:1">
+                        <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:{{ g.ink }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ g.nombre }}</p>
+                        <p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ g.categoria }}</p>
+                      </div>
+                      <span style="{{ g.pill }}"><span style="{{ g.dot }}"></span>{{ g.estadoLabel }}</span>
+                    </div>
+                    <p style="margin:12px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">{{ g.anfitrion }}</p>
+                    <p style="margin:4px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">{{ g.cuando }}</p>
+                    <div style="display:flex; align-items:center; gap:11px; margin-top:12px">
+                      <div style="flex:1; min-width:0; height:6px; border-radius:999px; background:#f0efec; overflow:hidden"><div style="width:{{ g.pct }}; height:100%; background:{{ g.barra }}"></div></div>
+                      <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); white-space:nowrap">{{ g.cupo }}</span>
+                    </div>
+                    <p style="margin:12px 0 0; padding-top:11px; border-top:1px solid #f4f3f1; font:600 12px Manrope,system-ui,sans-serif; color:{{ g.senalInk }}">{{ g.senal }}</p>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ gruposVacio }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff; border-radius:20px; margin-top:12px; padding:48px 30px; display:flex; flex-direction:column; align-items:center; text-align:center">
+                <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a">Ningún grupo coincide</p>
+                <p style="margin:9px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); max-width:330px">Recordá que solo ves los grupos de tus categorías: Jóvenes adultos y Matrimonios jóvenes.</p>
+                <button onClick="{{ clearQuery }}" style="height:46px; padding:0 22px; margin-top:18px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Limpiar la búsqueda</button>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <sc-if value="{{ hayDetalle }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ cerrarDetalle }}" style="height:36px; padding:0 14px 0 11px; border:0; border-radius:999px; background:#fff; display:flex; align-items:center; gap:7px; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64); cursor:pointer">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>Todos los grupos
+            </button>
+            <div style="display:grid; grid-template-columns:{{ detalleCols }}; gap:14px; margin-top:12px">
+              <div style="background:#fff; border-radius:20px; overflow:hidden">
+                <div style="height:{{ fotoH }}; background:{{ detalleFoto }}; display:flex; align-items:center; justify-content:center">
+                  <span style="font:500 10.5px ui-monospace,Menlo,monospace; letter-spacing:.06em; color:rgba(0,0,0,.5)">{{ detalleFotoTexto }}</span>
+                </div>
+                <div style="padding:20px 22px">
+                  <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+                    <h2 style="margin:0; font:600 20px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.018em">{{ detalleNombre }}</h2>
+                    <span style="{{ detallePill }}"><span style="{{ detalleDot }}"></span>{{ detalleEstado }}</span>
+                  </div>
+                  <div style="margin-top:16px">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid #f4f3f1"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Anfitrión</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">{{ detalleAnfitrion }}</span></div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid #f4f3f1"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Día y horario</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">{{ detalleCuando }}</span></div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid #f4f3f1"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Ubicación</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">{{ detalleUbicacion }}</span></div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid #f4f3f1"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Categoría</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">{{ detalleCategoria }}</span></div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 0"><span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Cupo</span><span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">{{ detalleCupo }}</span></div>
+                  </div>
+                  <p style="margin:16px 0 0; padding-top:14px; border-top:1px solid #f0efec; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Como coordinadora podés mirar y acompañar. Editar la ficha o aprobar inscripciones le corresponde al anfitrión.</p>
+                </div>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:14px">
+                <div style="{{ detalleSenalCard }}">
+                  <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:{{ detalleSenalInk }}">CÓMO VIENE</p>
+                  <p style="margin:11px 0 0; font:600 17px/1.4 Manrope,system-ui,sans-serif; color:#0a0a0a">{{ detalleSenalTitulo }}</p>
+                  <p style="margin:9px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">{{ detalleSenalTexto }}</p>
+                  <button style="height:44px; padding:0 18px; margin-top:16px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">{{ detalleSenalBoton }}</button>
+                </div>
+                <div style="background:#fff; border-radius:20px; padding:20px 22px">
+                  <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Miembros</p>
+                  <div style="display:flex; flex-direction:column; gap:11px; margin-top:16px">
+                    <sc-for list="{{ detalleMiembros }}" as="m" hint-placeholder-count="5">
+                      <div style="display:flex; align-items:center; gap:11px">
+                        <div style="width:34px; height:34px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; font:600 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); flex:none">{{ m.ini }}</div>
+                        <span style="flex:1; min-width:0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.nombre }}</span>
+                        <span style="font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); white-space:nowrap">{{ m.asistencia }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ isAsistencia }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#0a0a0a; border-radius:20px; padding:18px 20px">
+            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
+              <div style="min-width:200px; flex:1">
+                <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(255,255,255,.55)">COBERTURA DEL REPORTE</p>
+                <p style="margin:10px 0 0; font:600 19px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.015em">{{ coberturaTitulo }}</p>
+                <p style="margin:9px 0 0; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.7)">Lo que ves abajo se calcula solo con esos grupos. Los que no reportan no aparecen en ningún promedio: por eso están listados aparte.</p>
+              </div>
+              <button style="height:44px; padding:0 18px; border:0; border-radius:999px; background:rgba(255,255,255,.14); color:#fff; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer; flex:none">Exportar CSV</button>
+            </div>
+          </div>
+
+          <div style="background:#fff; border-radius:20px; margin-top:14px; overflow:hidden">
+            <div style="padding:16px 20px; border-bottom:1px solid #f0efec">
+              <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Últimos reportes</p>
+              <p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Tocá un reporte para ver quién vino y quién faltó.</p>
+            </div>
+            <sc-for list="{{ reportes }}" as="r" hint-placeholder-count="6">
+              <div style="border-bottom:1px solid #f4f3f1">
+                <button onClick="{{ r.toggle }}" style="width:100%; border:0; background:transparent; padding:14px 20px; cursor:pointer; text-align:left; display:block">
+                  <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap">
+                    <div style="min-width:140px; flex:1">
+                      <p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ r.grupo }}</p>
+                      <p style="margin:3px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ r.fecha }}</p>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:11px; min-width:150px; flex:1">
+                      <div style="flex:1; min-width:0; height:8px; border-radius:999px; background:#f0efec; overflow:hidden"><div style="width:{{ r.pct }}; height:100%; background:{{ r.color }}"></div></div>
+                      <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; white-space:nowrap">{{ r.pct }}</span>
+                    </div>
+                    <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); white-space:nowrap">{{ r.detalle }}</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; transform:{{ r.rot }}"><path d="M6 9l6 6 6-6"></path></svg>
+                  </div>
+                </button>
+                <sc-if value="{{ r.abierto }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:2px 20px 16px; background:#fcfcfb">
+                    <p style="margin:0 0 10px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.58)">QUIÉNES VINIERON</p>
+                    <div style="display:flex; flex-wrap:wrap; gap:7px">
+                      <sc-for list="{{ r.presentes }}" as="p" hint-placeholder-count="5">
+                        <span style="height:30px; padding:0 12px; border-radius:999px; background:#e7f5ee; color:#0b7a53; font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center">{{ p.nombre }}</span>
+                      </sc-for>
+                    </div>
+                    <p style="margin:16px 0 10px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.58)">QUIÉNES FALTARON</p>
+                    <div style="display:flex; flex-wrap:wrap; gap:7px">
+                      <sc-for list="{{ r.ausentes }}" as="p" hint-placeholder-count="3">
+                        <span style="height:30px; padding:0 12px; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center">{{ p.nombre }}</span>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#fff; border-radius:20px; margin-top:14px; padding:20px 22px; box-shadow:0 0 0 1.5px #f0d9b4 inset">
+            <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ nSinReportar }} grupos nunca cargaron una asistencia</p>
+            <p style="margin:7px 0 0; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">No es una sección vacía: es la lista de anfitriones a los que llamar. Ninguno de estos grupos entra en los promedios de arriba.</p>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:16px">
+              <sc-for list="{{ sinReportar }}" as="g" hint-placeholder-count="4">
+                <div style="background:#fdfaf4; border-radius:16px; padding:13px 15px; display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+                  <div style="min-width:150px; flex:1">
+                    <p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ g.grupo }}</p>
+                    <p style="margin:3px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">{{ g.nota }}</p>
+                  </div>
+                  <button style="height:38px; padding:0 16px; border:0; border-radius:999px; background:#fff; color:#0a0a0a; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; flex:none">Escribirle</button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isCalendario }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff; border-radius:20px; padding:{{ calPad }}">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+              <div style="min-width:150px; flex:1">
+                <p style="margin:0; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">{{ mesNombre }}</p>
+                <p style="margin:5px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ mesNota }}</p>
+              </div>
+              <div style="display:flex; gap:6px; flex:none">
+                <button onClick="{{ mesAnterior }}" style="width:38px; height:38px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg></button>
+                <button onClick="{{ hoy }}" style="height:38px; padding:0 16px; border:0; border-radius:999px; background:#f2f2f0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">Hoy</button>
+                <button onClick="{{ mesSiguiente }}" style="width:38px; height:38px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6l6 6-6 6"></path></svg></button>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:{{ calGap }}; margin-top:18px">
+              <span style="{{ diaHeader }}">L</span><span style="{{ diaHeader }}">M</span><span style="{{ diaHeader }}">M</span><span style="{{ diaHeader }}">J</span><span style="{{ diaHeader }}">V</span><span style="{{ diaHeader }}">S</span><span style="{{ diaHeader }}">D</span>
+              <sc-for list="{{ dias }}" as="d" hint-placeholder-count="35">
+                <div style="{{ d.style }}">
+                  <span style="{{ d.numStyle }}">{{ d.num }}</span>
+                  <sc-for list="{{ d.eventos }}" as="e" hint-placeholder-count="1">
+                    <span style="{{ e.style }}">{{ e.texto }}</span>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display:flex; gap:16px; margin-top:18px; padding-top:16px; border-top:1px solid #f0efec; flex-wrap:wrap">
+              <div style="display:flex; align-items:center; gap:7px"><span style="width:9px; height:9px; border-radius:3px; background:#0b7a53"></span><span style="font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">Reunión con asistencia cargada</span></div>
+              <div style="display:flex; align-items:center; gap:7px"><span style="width:9px; height:9px; border-radius:3px; background:#e8b96a"></span><span style="font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">Reunión sin reportar</span></div>
+            </div>
+          </div>
+        </sc-if>
+
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:940}}">
+class Component extends DCLogic {
+  state = {
+    device: 'desktop', perfil: 'normal', tab: 'inicio',
+    metrica: 'inscriptos', filtro: 'activos', query: '',
+    grupoAbierto: null, reporteAbierto: null, mes: 8
+  };
+
+  ini(n) { return n.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
+
+  gruposData() {
+    const g = (nombre, categoria, anfitrion, cuando, ubicacion, insc, cap, estado, foto, bajas, prom, reporta) =>
+      ({ nombre, categoria, anfitrion, cuando, ubicacion, insc, cap, estado, foto, bajas, prom, reporta });
+    return [
+      g('Almagro Norte', 'Jóvenes adultos', 'Martín Sosa', 'Jueves 20:00', 'Av. Rivadavia 4820', 12, 12, 'activo', true, 1, 6.8, true),
+      g('Caballito Sur', 'Matrimonios jóvenes', 'Paula Ferreyra', 'Martes 20:30', 'Rojas 1120', 8, 12, 'activo', true, 0, 5.4, true),
+      g('Devoto Matrimonios', 'Matrimonios jóvenes', 'Alejandro Rey', 'Sábados 20:00', 'Mercedes 3390', 12, 12, 'activo', false, 2, 7.1, true),
+      g('Parque Chas Jóvenes', 'Jóvenes adultos', 'Tobías Mendieta', 'Viernes 20:30', 'Online', 6, 12, 'activo', false, 3, 3.2, true),
+      g('Villa Crespo Matrimonios', 'Matrimonios jóvenes', 'Sergio Duarte', 'Jueves 21:00', 'Aguirre 890', 10, 10, 'activo', true, 0, 4.1, true),
+      g('Barracas Jóvenes', 'Jóvenes adultos', 'Iván Puglisi', 'Jueves 20:00', 'Brandsen 2210', 5, 12, 'activo', false, 4, 0, false),
+      g('Colegiales Matrimonios', 'Matrimonios jóvenes', 'Silvina Etchart', 'Miércoles 21:00', 'Conde 1140', 9, 14, 'activo', true, 1, 0, false),
+      g('Paternal Jóvenes', 'Jóvenes adultos', 'Ezequiel Barrios', 'Viernes 19:30', 'Online', 7, 12, 'activo', false, 0, 0, false),
+      g('Chacarita Matrimonios', 'Matrimonios jóvenes', 'Mirta Salazar', 'Lunes 20:00', 'Dorrego 1560', 4, 10, 'activo', false, 5, 0, false),
+      g('Almagro Verano', 'Jóvenes adultos', 'Martín Sosa', 'Jueves 20:00', 'Av. Rivadavia 4820', 8, 12, 'finalizado', true, 2, 5.9, true),
+      g('Flores Matrimonios', 'Matrimonios jóvenes', 'Graciela Ponce', 'Sábados 19:00', 'Bacacay 2240', 11, 12, 'finalizado', true, 1, 6.2, true),
+      g('Villa Urquiza Jóvenes', 'Jóvenes adultos', 'Rocío Ledesma', 'Sábados 18:00', 'Triunvirato 4180', 9, 15, 'finalizado', false, 3, 4.4, true)
+    ];
+  }
+
+  reportesData() {
+    const r = (grupo, fecha, pres, aus, presentes, ausentes) => ({ grupo, fecha, pres, aus, presentes, ausentes });
+    return [
+      r('Devoto Matrimonios', 'Sábado 13 de septiembre', 9, 3, ['Alejandro R.','Nora B.','Fabián K.','Luisa M.','Hugo A.','Paula T.','Marcos D.','Inés V.','Raúl S.'], ['Clara P.','Omar L.','Rita G.']),
+      r('Almagro Norte', 'Jueves 11 de septiembre', 8, 4, ['Julieta R.','Diego C.','Valeria A.','Carla M.','Federico N.','Nicolás G.','Ana B.','Rodrigo B.'], ['Tomás L.','Brenda O.','Iván S.','Malena R.']),
+      r('Caballito Sur', 'Martes 9 de septiembre', 5, 3, ['Paula F.','Ramiro C.','Sofía A.','Pedro L.','Mariana E.'], ['Lautaro Q.','Agustina P.','Facundo I.']),
+      r('Villa Crespo Matrimonios', 'Jueves 11 de septiembre', 4, 6, ['Sergio D.','Marta I.','Daniel F.','Elsa R.'], ['Juan P.','Silvia N.','Oscar T.','Beatriz C.','Néstor A.','Gladys M.']),
+      r('Parque Chas Jóvenes', 'Viernes 12 de septiembre', 3, 3, ['Tobías M.','Lucía H.','Franco B.'], ['Denise K.','Matías W.','Ariel Z.']),
+      r('Almagro Norte', 'Jueves 4 de septiembre', 7, 5, ['Julieta R.','Diego C.','Valeria A.','Carla M.','Federico N.','Ana B.','Rodrigo B.'], ['Nicolás G.','Tomás L.','Brenda O.','Iván S.','Malena R.'])
+    ];
+  }
+
+  renderVals() {
+    const s = this.state;
+    const desk = s.device === 'desktop';
+    const VERDE = '#0b7a53';
+    const AMBAR = '#b8873a';
+
+    const seg = (on) => 'height:32px; padding:0 14px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; white-space:nowrap';
+
+    const navBtn = (on) => desk
+      ? 'height:42px; padding:0 18px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : '#f2f2f0') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 13.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:9px; cursor:pointer; flex:none'
+      : 'flex:1; min-width:0; height:58px; padding:0; border:0; border-radius:16px; background:' + (on ? '#0a0a0a' : '#f2f2f0') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; position:relative';
+
+    const todos = this.gruposData();
+    const activos = todos.filter(g => g.estado === 'activo');
+    const delFiltro = todos.filter(g => g.estado === (s.filtro === 'activos' ? 'activo' : 'finalizado'));
+    const sinReportarList = activos.filter(g => !g.reporta);
+    const conReporte = activos.filter(g => g.reporta);
+
+    const q = s.query.trim().toLowerCase();
+    const listados = delFiltro.filter(g => !q || g.nombre.toLowerCase().includes(q) || g.anfitrion.toLowerCase().includes(q));
+
+    const totalInscriptos = activos.reduce((a, g) => a + g.insc, 0);
+    const promedio = conReporte.length ? (conReporte.reduce((a, g) => a + g.prom, 0) / conReporte.length) : 0;
+
+    const pillFor = (estado) => estado === 'activo'
+      ? { bg:'#e7f5ee', fg:VERDE, dot:'#16a34a', label:'Activo' }
+      : { bg:'#f0efec', fg:'rgba(0,0,0,.62)', dot:'#8f8f8a', label:'Finalizado' };
+
+    const señal = (g) => {
+      if (!g.reporta) return { texto: 'Nunca cargó asistencia', ink: '#7a4f10' };
+      if (g.prom < 5) return { texto: 'Promedio ' + g.prom.toFixed(1).replace('.', ',') + ' · por debajo de 5', ink: '#7a4f10' };
+      return { texto: 'Promedio ' + g.prom.toFixed(1).replace('.', ',') + ' · viene bien', ink: VERDE };
+    };
+
+    const grupos = listados.map(g => {
+      const p = pillFor(g.estado);
+      const sn = señal(g);
+      const fin = g.estado === 'finalizado';
+      return {
+        nombre: g.nombre, categoria: g.categoria, anfitrion: g.anfitrion,
+        cuando: g.cuando + ' · ' + g.ubicacion, cupo: g.insc + '/' + g.cap,
+        pct: Math.round((g.insc / g.cap) * 100) + '%',
+        ini: g.foto ? '' : this.ini(g.nombre),
+        thumb: 'width:44px; height:44px; border-radius:14px; flex:none; display:flex; align-items:center; justify-content:center; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.58); ' + (g.foto ? 'background:repeating-linear-gradient(135deg,#e6e4e0 0 7px,#dedbd6 7px 14px);' : 'background:#f2f2f0;') + (fin ? 'filter:grayscale(1);' : ''),
+        ink: fin ? 'rgba(0,0,0,.6)' : '#0a0a0a',
+        barra: fin ? '#c9c8c4' : '#0a0a0a',
+        pill: 'height:26px; padding:0 11px; border-radius:999px; background:' + p.bg + '; color:' + p.fg + '; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:6px; flex:none; white-space:nowrap',
+        dot: 'width:6px; height:6px; border-radius:999px; background:' + p.dot + '; flex:none',
+        estadoLabel: p.label,
+        senal: sn.texto, senalInk: sn.ink,
+        abrir: () => this.setState({ grupoAbierto: g.nombre })
+      };
+    });
+
+    const abierto = todos.find(g => g.nombre === s.grupoAbierto);
+    const abiertoSn = abierto ? señal(abierto) : null;
+    const abiertoPill = abierto ? pillFor(abierto.estado) : null;
+
+    const maxVal = Math.max(1, ...delFiltro.map(g => s.metrica === 'inscriptos' ? g.insc : g.bajas));
+    const barras = delFiltro.slice().sort((a, b) => {
+      const va = s.metrica === 'inscriptos' ? a.insc : a.bajas;
+      const vb = s.metrica === 'inscriptos' ? b.insc : b.bajas;
+      return vb - va;
+    }).map(g => {
+      const v = s.metrica === 'inscriptos' ? g.insc : g.bajas;
+      const alerta = s.metrica === 'bajas' ? v >= 3 : v <= 5;
+      return {
+        nombre: g.nombre, valor: v,
+        pct: Math.round((v / maxVal) * 100) + '%',
+        color: alerta ? '#e8b96a' : VERDE
+      };
+    });
+
+    const reportes = this.reportesData().map((r, i) => {
+      const total = r.pres + r.aus;
+      const pct = Math.round((r.pres / total) * 100);
+      return {
+        grupo: r.grupo, fecha: r.fecha,
+        pct: pct + '%',
+        color: pct >= 60 ? VERDE : '#e8b96a',
+        detalle: r.pres + ' presentes · ' + r.aus + ' ausentes',
+        abierto: s.reporteAbierto === i,
+        rot: s.reporteAbierto === i ? 'rotate(180deg)' : 'none',
+        toggle: () => this.setState({ reporteAbierto: s.reporteAbierto === i ? null : i }),
+        presentes: r.presentes.map(n => ({ nombre: n })),
+        ausentes: r.ausentes.map(n => ({ nombre: n }))
+      };
+    });
+
+    const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const offsets = { 7: 4, 8: 0, 9: 2 };
+    const largos = { 7: 31, 8: 30, 9: 31 };
+    const mi = Math.max(7, Math.min(9, s.mes));
+    const offset = offsets[mi], largo = largos[mi];
+    const esSept = mi === 8;
+    const dias = [];
+    for (let i = 0; i < offset; i++) dias.push({ num: '', vacio: true, eventos: [] });
+    for (let d = 1; d <= largo; d++) {
+      const dow = (offset + d - 1) % 7;
+      const eventos = [];
+      if (dow === 3) eventos.push({ texto: desk ? 'Almagro Norte' : '·', reportada: esSept && d <= 11 });
+      if (dow === 1) eventos.push({ texto: desk ? 'Caballito Sur' : '·', reportada: esSept && d <= 9 });
+      if (dow === 5) eventos.push({ texto: desk ? 'Devoto Matrim.' : '·', reportada: esSept && d <= 13 });
+      const hoy = esSept && d === 19;
+      dias.push({
+        num: d, vacio: false, hoy,
+        eventos: eventos.map(e => ({
+          texto: e.texto,
+          style: desk
+            ? 'display:block; margin-top:4px; padding:3px 7px; border-radius:6px; font:600 10.5px Manrope,system-ui,sans-serif; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; background:' + (e.reportada ? '#e7f5ee' : '#fdf3e3') + '; color:' + (e.reportada ? VERDE : '#7a4f10')
+            : 'display:inline-block; width:6px; height:6px; border-radius:999px; margin:3px 1px 0; background:' + (e.reportada ? VERDE : '#e8b96a')
+        }))
+      });
+    }
+    const diasOut = dias.map(d => ({
+      num: d.num,
+      eventos: d.eventos,
+      style: 'min-height:' + (desk ? '76px' : '48px') + '; border-radius:' + (desk ? '12px' : '10px') + '; padding:' + (desk ? '7px 8px' : '5px 3px') + '; background:' + (d.vacio ? 'transparent' : (d.hoy ? '#0a0a0a' : '#fcfcfb')) + '; display:flex; flex-direction:column; align-items:' + (desk ? 'stretch' : 'center'),
+      numStyle: 'font:600 ' + (desk ? '12px' : '11.5px') + ' Manrope,system-ui,sans-serif; color:' + (d.hoy ? '#fff' : 'rgba(0,0,0,.66)')
+    }));
+
+    const alertas = [
+      { grupo: 'Chacarita Matrimonios', motivo: '5 bajas y nunca reportó', color: '#e8b96a' },
+      { grupo: 'Parque Chas Jóvenes', motivo: 'Promedio 3,2 · viene bajando', color: '#e8b96a' },
+      { grupo: 'Barracas Jóvenes', motivo: 'Sin asistencia desde marzo', color: '#e8b96a' }
+    ].map(a => ({ ...a, abrir: () => this.setState({ tab: 'grupos', grupoAbierto: a.grupo }) }));
+
+    return {
+      isDesktop: desk, isMobile: !desk,
+      frameW: desk ? '1280px' : '390px',
+      frameH: '800px',
+      headPad: desk ? '18px 26px' : '16px 16px 14px',
+      bodyPad: desk ? '18px 26px 30px' : '14px 14px 26px',
+      h1Size: desk ? '21px Manrope,system-ui,sans-serif' : '19px Manrope,system-ui,sans-serif',
+      vacioPad: desk ? '56px 40px' : '38px 22px',
+      kpiCols: desk ? 'repeat(4,minmax(0,1fr))' : 'repeat(2,minmax(0,1fr))',
+      gruposCols: desk ? 'repeat(auto-fill,minmax(290px,1fr))' : 'minmax(0,1fr)',
+      detalleCols: desk ? 'minmax(0,1.4fr) minmax(0,1fr)' : 'minmax(0,1fr)',
+      fotoH: desk ? '170px' : '130px',
+      calPad: desk ? '20px 22px' : '16px 14px',
+      calGap: desk ? '7px' : '4px',
+      barLabelW: desk ? '180px' : '96px',
+      navGap: desk ? '8px' : '7px',
+      navWrap: desk ? 'flex-wrap:wrap' : '',
+      navIcon: desk ? '16' : '18',
+      navLabel: desk ? 'font:600 13.5px Manrope,system-ui,sans-serif' : 'font:600 11px Manrope,system-ui,sans-serif',
+      navAlerta: desk
+        ? 'min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#b45309; color:#fff; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center; justify-content:center'
+        : 'position:absolute; top:7px; right:calc(50% - 22px); min-width:17px; height:17px; padding:0 4px; border-radius:999px; background:#b45309; color:#fff; font:600 10px Manrope,system-ui,sans-serif; display:flex; align-items:center; justify-content:center',
+      diaHeader: 'text-align:center; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.05em; color:rgba(0,0,0,.58); padding-bottom:4px',
+      skelCard: 'background:#fff; border-radius:18px; padding:16px 18px; height:110px',
+
+      showDesktop: () => this.setState({ device: 'desktop' }),
+      showMobile: () => this.setState({ device: 'mobile' }),
+      deskBtn: seg(desk), mobBtn: seg(!desk),
+      setNormal: () => this.setState({ perfil: 'normal', tab: 'inicio', grupoAbierto: null }),
+      setSinGrupos: () => this.setState({ perfil: 'sinGrupos' }),
+      setSinCat: () => this.setState({ perfil: 'sinCat' }),
+      setCargando: () => this.setState({ perfil: 'cargando' }),
+      btnNormal: seg(s.perfil === 'normal'), btnSinGrupos: seg(s.perfil === 'sinGrupos'),
+      btnSinCat: seg(s.perfil === 'sinCat'), btnCargando: seg(s.perfil === 'cargando'),
+      estadoNormal: s.perfil === 'normal', estadoSinGrupos: s.perfil === 'sinGrupos',
+      estadoSinCat: s.perfil === 'sinCat', estadoCargando: s.perfil === 'cargando',
+
+      sinCategorias: s.perfil === 'sinCat',
+      tieneCategorias: s.perfil !== 'sinCat',
+      alcanceTexto: s.perfil === 'sinCat' ? 'Categorías asignadas:' : 'Coordinás ' + activos.length + ' grupos de',
+      categorias: s.perfil === 'sinCat' ? [] : (s.perfil === 'sinGrupos'
+        ? [{ nombre: 'Matrimonios jóvenes', n: '0' }]
+        : [{ nombre: 'Jóvenes adultos', n: '4' }, { nombre: 'Matrimonios jóvenes', n: '5' }]),
+
+      isInicio: s.tab === 'inicio', isGrupos: s.tab === 'grupos',
+      isAsistencia: s.tab === 'asistencia', isCalendario: s.tab === 'calendario',
+      goInicio: () => this.setState({ tab: 'inicio' }),
+      goGrupos: () => this.setState({ tab: 'grupos', grupoAbierto: null }),
+      goAsistencia: () => this.setState({ tab: 'asistencia' }),
+      goCalendario: () => this.setState({ tab: 'calendario' }),
+      navInicio: navBtn(s.tab === 'inicio'), navGrupos: navBtn(s.tab === 'grupos'),
+      navAsistencia: navBtn(s.tab === 'asistencia'), navCalendario: navBtn(s.tab === 'calendario'),
+
+      nSinReportar: sinReportarList.length,
+      hayAlerta: sinReportarList.length > 0 && s.perfil === 'normal',
+      alertaTitulo: sinReportarList.length + ' de tus ' + activos.length + ' grupos necesitan una llamada',
+      alertaTexto: 'Cuatro nunca cargaron asistencia y uno viene bajando de las 5 personas por reunión. El resto está funcionando bien.',
+      alertas,
+
+      kGrupos: activos.length,
+      kGruposNota: '9 activos · 3 finalizados',
+      kInscriptos: totalInscriptos,
+      kInscriptosNota: '16 bajas en la temporada',
+      kPromedio: promedio.toFixed(1).replace('.', ','),
+      kPromedioDelta: '+0,3',
+
+      metrica: s.metrica,
+      setInscriptos: () => this.setState({ metrica: 'inscriptos' }),
+      setBajas: () => this.setState({ metrica: 'bajas' }),
+      segInscriptos: seg(s.metrica === 'inscriptos'), segBajas: seg(s.metrica === 'bajas'),
+      setActivos: () => this.setState({ filtro: 'activos' }),
+      setFinalizados: () => this.setState({ filtro: 'finalizados' }),
+      segActivos: seg(s.filtro === 'activos'), segFinalizados: seg(s.filtro === 'finalizados'),
+      graficoTitulo: (s.metrica === 'inscriptos' ? 'Inscriptos' : 'Bajas') + ' por grupo · ' + (s.filtro === 'activos' ? 'activos' : 'finalizados'),
+      barras,
+      graficoNota: s.metrica === 'inscriptos'
+        ? 'En ámbar los grupos con 5 inscriptos o menos: son los que más riesgo tienen de apagarse.'
+        : 'En ámbar los grupos con 3 bajas o más en la temporada. Chacarita Matrimonios perdió la mitad de su gente.',
+
+      query: s.query, hasQuery: s.query.length > 0,
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      clearQuery: () => this.setState({ query: '' }),
+      grupos, hayGrupos: listados.length > 0, gruposVacio: listados.length === 0,
+      resumenGrupos: listados.length + ' de ' + delFiltro.length + ' grupos ' + (s.filtro === 'activos' ? 'activos' : 'finalizados') + ' de tus categorías',
+
+      sinDetalle: !abierto, hayDetalle: !!abierto,
+      cerrarDetalle: () => this.setState({ grupoAbierto: null }),
+      detalleNombre: abierto ? abierto.nombre : '',
+      detalleAnfitrion: abierto ? abierto.anfitrion : '',
+      detalleCuando: abierto ? abierto.cuando : '',
+      detalleUbicacion: abierto ? abierto.ubicacion : '',
+      detalleCategoria: abierto ? abierto.categoria : '',
+      detalleCupo: abierto ? abierto.insc + ' de ' + abierto.cap + ' lugares' : '',
+      detalleEstado: abiertoPill ? abiertoPill.label : '',
+      detallePill: abiertoPill ? 'height:26px; padding:0 11px; border-radius:999px; background:' + abiertoPill.bg + '; color:' + abiertoPill.fg + '; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:6px; flex:none' : '',
+      detalleDot: abiertoPill ? 'width:6px; height:6px; border-radius:999px; background:' + abiertoPill.dot : '',
+      detalleFoto: abierto && abierto.foto ? 'repeating-linear-gradient(135deg,#e6e4e0 0 10px,#dedbd6 10px 20px)' : '#f2f2f0',
+      detalleFotoTexto: abierto && abierto.foto ? 'foto del grupo' : 'sin foto cargada',
+      detalleSenalCard: 'background:#fff; border-radius:20px; padding:20px 22px; box-shadow:0 0 0 1.5px ' + (abiertoSn && abiertoSn.ink === VERDE ? '#cfe9dc' : '#f0d9b4') + ' inset',
+      detalleSenalInk: abiertoSn ? abiertoSn.ink : VERDE,
+      detalleSenalTitulo: abierto ? (abierto.reporta
+        ? (abierto.prom < 5 ? 'Viene bajando' : 'Funcionando bien')
+        : 'Nunca cargó asistencia') : '',
+      detalleSenalTexto: abierto ? (abierto.reporta
+        ? (abierto.prom < 5
+          ? 'Promedia ' + abierto.prom.toFixed(1).replace('.', ',') + ' presentes contra 5,0 de la iglesia, y tuvo ' + abierto.bajas + ' bajas. Vale una charla con ' + abierto.anfitrion.split(' ')[0] + '.'
+          : 'Promedia ' + abierto.prom.toFixed(1).replace('.', ',') + ' presentes contra 5,0 de la iglesia. Reporta todas las semanas.')
+        : 'No sabemos si se está reuniendo. ' + abierto.anfitrion.split(' ')[0] + ' no cargó ninguna asistencia en toda la temporada, así que el grupo no entra en ningún promedio.') : '',
+      detalleSenalBoton: abierto ? (abierto.reporta ? 'Escribirle a ' + abierto.anfitrion.split(' ')[0] : 'Pedirle que cargue la asistencia') : '',
+      detalleMiembros: [
+        { nombre: 'Julieta Ramos', asistencia: '14/14' },
+        { nombre: 'Diego Cabrera', asistencia: '13/14' },
+        { nombre: 'Carla Medina', asistencia: '12/14' },
+        { nombre: 'Federico Navarro', asistencia: '11/14' },
+        { nombre: 'Tomás Leiva', asistencia: '3/14' }
+      ].map(m => ({ ...m, ini: this.ini(m.nombre) })),
+
+      coberturaTitulo: conReporte.length + ' de tus ' + activos.length + ' grupos cargan asistencia',
+      reportes,
+      sinReportar: sinReportarList.map(g => ({
+        grupo: g.nombre,
+        nota: g.anfitrion + ' · ' + g.insc + ' inscriptos, ningún reporte'
+      })),
+
+      mesNombre: meses[mi] + ' 2026',
+      mesNota: esSept ? 'Hoy es sábado 19. Tus grupos se reúnen lunes, jueves y sábados.' : 'Reuniones de tus 9 grupos activos.',
+      mesAnterior: () => this.setState({ mes: Math.max(7, s.mes - 1) }),
+      mesSiguiente: () => this.setState({ mes: Math.min(9, s.mes + 1) }),
+      hoy: () => this.setState({ mes: 8 }),
+      dias: diasOut
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Group, GroupTag, GroupCategory } from '../../types';
+import { Group, GroupTag, GroupCategory, esGrupoPendiente } from '../../types';
 import { supabaseService, updateGroupDirect } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 import PestanasGrupoAdmin from '../../components/GCX/PestanasGrupoAdmin';
@@ -589,6 +589,7 @@ const DetalleGrupoAdmin: React.FC = () => {
     const { groupId } = useParams<{ groupId: string }>();
     const [nombre, setNombre] = useState('Ficha del grupo');
     const [nInscriptos, setNInscriptos] = useState<number | undefined>(undefined);
+    const [pendiente, setPendiente] = useState(false);
 
     // El nombre y el número salen de la misma consulta que arma la ficha: la
     // cabecera vive afuera del proveedor del toast, así que se los pasa para
@@ -596,6 +597,7 @@ const DetalleGrupoAdmin: React.FC = () => {
     const recibirGrupo = useCallback((g: Group) => {
         setNombre(g.name);
         setNInscriptos(g.registrations?.length || 0);
+        setPendiente(esGrupoPendiente(g));
     }, []);
 
     return (
@@ -604,7 +606,7 @@ const DetalleGrupoAdmin: React.FC = () => {
             backTo="/admingcx/gestion-de-grupos"
             backLabel="Grupos"
             subtitle=""
-            tabs={<PestanasGrupoAdmin activa="detalle" groupId={groupId} nInscriptos={nInscriptos} />}
+            tabs={<PestanasGrupoAdmin activa="detalle" groupId={groupId} nInscriptos={nInscriptos} pendiente={pendiente} />}
         >
             <DetalleGrupoAdminContent onGrupo={recibirGrupo} />
         </AdminGCXLayout>

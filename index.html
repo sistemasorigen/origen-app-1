@@ -553,14 +553,18 @@
        en los modales de inscripción: la base consume variables y cada estado
        solo las redefine, así el foco no tiene que ganarle en especificidad a
        una regla que repite la cadena de :not(). */
-    #gcx-panel {
+    #gcx-panel,
+    #gcx-coordinadores {
       --panel-campo-fondo: #f7f7f5;
       --panel-campo-borde: transparent;
     }
 
     #gcx-panel input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
     #gcx-panel textarea,
-    #gcx-panel select {
+    #gcx-panel select,
+    #gcx-coordinadores input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
+    #gcx-coordinadores textarea,
+    #gcx-coordinadores select {
       background-color: var(--panel-campo-fondo) !important;
       color: #0a0a0a !important;
       border: 1.5px solid var(--panel-campo-borde) !important;
@@ -573,7 +577,10 @@
 
     #gcx-panel input:focus,
     #gcx-panel textarea:focus,
-    #gcx-panel select:focus {
+    #gcx-panel select:focus,
+    #gcx-coordinadores input:focus,
+    #gcx-coordinadores textarea:focus,
+    #gcx-coordinadores select:focus {
       --panel-campo-fondo: #ffffff;
       --panel-campo-borde: #0a0a0a;
     }
@@ -588,7 +595,8 @@
       cursor: pointer;
     }
 
-    #gcx-panel ::placeholder {
+    #gcx-panel ::placeholder,
+    #gcx-coordinadores ::placeholder {
       color: rgba(0, 0, 0, .45) !important;
     }
 
@@ -664,6 +672,10 @@
     #gcx-panel textarea.campo-desnudo,
     #gcx-panel select.campo-desnudo,
     #gcx-panel .campo-desnudo:focus,
+    #gcx-coordinadores input.campo-desnudo:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    #gcx-coordinadores textarea.campo-desnudo,
+    #gcx-coordinadores select.campo-desnudo,
+    #gcx-coordinadores .campo-desnudo:focus,
     #gcx-accion input.campo-desnudo:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
     #gcx-accion textarea.campo-desnudo,
     #gcx-accion select.campo-desnudo,

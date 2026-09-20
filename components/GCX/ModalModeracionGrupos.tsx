@@ -49,14 +49,29 @@ const ModalModeracionGrupos: React.FC<ModalModeracionGruposProps> = ({
     );
 
     return (
-        <div className="fixed inset-0 z-[80]">
-            <div className="absolute inset-0 bg-[rgba(10,10,10,.42)]" onClick={onClose} />
-            <div
-                role="dialog"
-                aria-modal="true"
-                aria-label="Moderación"
-                className="absolute inset-x-3 top-12 max-h-[86vh] overflow-auto rounded-[26px] bg-white shadow-[0_20px_50px_rgba(0,0,0,.25)] md:inset-x-auto md:left-1/2 md:top-[60px] md:w-[620px] md:-translate-x-1/2"
-            >
+        // El contenedor scrollea, no el diálogo: si la pantalla es más baja
+        // que el modal (un teléfono apaisado), se puede llegar al borde de
+        // arriba en vez de quedar cortado.
+        <div className="fixed inset-0 z-[80] overflow-y-auto">
+            {/* Fijo, no absoluto: así el fondo no se despega al scrollear. */}
+            <div className="fixed inset-0 bg-[rgba(10,10,10,.42)]" onClick={onClose} />
+
+            {/*
+                Centrado real en los dos ejes, en vez del `top-12` / `md:top-[60px]`
+                que tenía antes: anclado al tope, el modal quedaba pegado arriba
+                con todo el aire sobrante abajo.
+
+                `min-h-full` + `items-center` centra cuando sobra lugar, y cuando
+                falta deja que el contenedor scrollee. El padding es el que
+                garantiza que el borde nunca toque el filo de la pantalla.
+            */}
+            <div className="relative flex min-h-full items-center justify-center p-4 sm:p-6">
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Moderación"
+                    className="w-full max-w-[620px] overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(0,0,0,.25)]"
+                >
                 <div className="flex items-start gap-3.5 px-[22px] pt-5">
                     <div className="min-w-0 flex-1">
                         <p className="text-[18px] font-semibold tracking-[-0.015em] text-[#0a0a0a]">Moderación</p>
@@ -113,6 +128,7 @@ const ModalModeracionGrupos: React.FC<ModalModeracionGruposProps> = ({
                     >
                         Cerrar
                     </button>
+                </div>
                 </div>
             </div>
         </div>

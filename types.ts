@@ -679,6 +679,19 @@ export interface CamposReapertura {
     targetGender?: 'Hombre' | 'Mujer' | 'Mixto';
 }
 
+/**
+ * Un grupo recién creado que todavía nadie aprobó.
+ *
+ * `!status` cuenta como pendiente a propósito: hay filas viejas con la columna
+ * en null y son, de hecho, solicitudes sin resolver.
+ *
+ * Vive acá porque de esta regla cuelga qué se puede hacer con el grupo —no
+ * tiene inscriptos, no ocupa cupo, no está en el catálogo— y estaba escrita
+ * suelta en cada pantalla que la necesitaba.
+ */
+export const esGrupoPendiente = (group: Pick<Group, 'status'> | null | undefined): boolean =>
+    !!group && (group.status === 'pending' || !group.status);
+
 export interface Group {
     id: string;
     name: string;
