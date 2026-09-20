@@ -39,8 +39,11 @@ const ModalModeracionGrupos: React.FC<ModalModeracionGruposProps> = ({
     const pendientes = seleccionados.filter(g => g.status === 'pending' || !g.status).length;
     const n = seleccionados.length;
 
+    // Sin `flex` a propósito: el display lo pone cada fila. Tres de ellas se
+    // esconden en el teléfono con `hidden md:flex`, y si el helper trajera
+    // `flex` las dos clases competirían por la misma propiedad.
     const fila = (habilitada: boolean, peligro = false) =>
-        `flex h-[52px] w-full items-center gap-2.5 rounded-[18px] px-[18px] text-left text-[14px] font-semibold transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${peligro ? 'bg-[#fdecea] text-[#a32218]' : 'bg-[#f7f7f5] text-[#0a0a0a]'} ${habilitada ? 'hover:opacity-90' : 'cursor-not-allowed opacity-40'}`;
+        `h-[52px] w-full items-center gap-2.5 rounded-[18px] px-[18px] text-left text-[14px] font-semibold transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${peligro ? 'bg-[#fdecea] text-[#a32218]' : 'bg-[#f7f7f5] text-[#0a0a0a]'} ${habilitada ? 'hover:opacity-90' : 'cursor-not-allowed opacity-40'}`;
 
     const globo = (
         <span className="flex h-[22px] items-center rounded-full bg-white px-2.5 text-[11.5px] font-semibold text-black/[.62]">
@@ -75,10 +78,16 @@ const ModalModeracionGrupos: React.FC<ModalModeracionGruposProps> = ({
                 <div className="flex items-start gap-3.5 px-[22px] pt-5">
                     <div className="min-w-0 flex-1">
                         <p className="text-[18px] font-semibold tracking-[-0.015em] text-[#0a0a0a]">Moderación</p>
+                        {/* En el teléfono no hay nada que tildar, así que pedirlo
+                            sería mandar a alguien a buscar una casilla que no
+                            existe. */}
                         <p className="mt-[5px] text-[12.5px] font-medium text-black/[.62]">
-                            {n > 0
-                                ? `${n} ${n === 1 ? 'grupo tildado' : 'grupos tildados'} en la lista.`
-                                : 'Tildá grupos en la lista para actuar sobre ellos.'}
+                            <span className="md:hidden">Las dos bandejas del panel, a mano.</span>
+                            <span className="hidden md:inline">
+                                {n > 0
+                                    ? `${n} ${n === 1 ? 'grupo tildado' : 'grupos tildados'} en la lista.`
+                                    : 'Tildá grupos en la lista para actuar sobre ellos.'}
+                            </span>
                         </p>
                     </div>
                     <button
@@ -91,30 +100,45 @@ const ModalModeracionGrupos: React.FC<ModalModeracionGruposProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-2 px-[22px] pt-[18px]">
-                    <button onClick={onSolicitudesDeBaja} className={fila(true)}>
+                    <button onClick={onSolicitudesDeBaja} className={`flex ${fila(true)}`}>
                         <span className="flex-1">Ver las solicitudes de baja</span>
                         {pendingDropoutCount > 0 && globo}
                     </button>
 
-                    <button onClick={onAgregarMiembro} className={fila(true)}>
+                    <button onClick={onAgregarMiembro} className={`flex ${fila(true)}`}>
                         Agregar un miembro a mano
                     </button>
 
+                    {/* Las tres acciones que operan sobre grupos tildados no se
+                        muestran en el teléfono: las casillas para tildar viven
+                        en la tabla, que es solo de escritorio, así que acá
+                        nunca se podían habilitar y ocupaban media pantalla en
+                        gris. Va escrito móvil primero —`hidden md:flex`— porque
+                        este proyecto carga Tailwind por CDN y las variantes
+                        max-* no existen ahí. */}
                     <button
                         onClick={onAprobarSeleccionados}
                         disabled={pendientes === 0}
-                        className={fila(pendientes > 0)}
+                        className={`hidden md:flex ${fila(pendientes > 0)}`}
                     >
                         {pendientes > 0
                             ? `Aprobar ${pendientes === 1 ? 'el pendiente tildado' : `los ${pendientes} pendientes tildados`}`
                             : 'Aprobar los pendientes tildados'}
                     </button>
 
-                    <button onClick={onExportarAnfitriones} disabled={n === 0} className={fila(n > 0)}>
+                    <button
+                        onClick={onExportarAnfitriones}
+                        disabled={n === 0}
+                        className={`hidden md:flex ${fila(n > 0)}`}
+                    >
                         Exportar los contactos de los anfitriones
                     </button>
 
-                    <button onClick={onEliminarSeleccionados} disabled={n === 0} className={fila(n > 0, true)}>
+                    <button
+                        onClick={onEliminarSeleccionados}
+                        disabled={n === 0}
+                        className={`hidden md:flex ${fila(n > 0, true)}`}
+                    >
                         {n > 0
                             ? `Eliminar ${n === 1 ? 'el grupo tildado' : `los ${n} grupos tildados`}`
                             : 'Eliminar los grupos tildados'}

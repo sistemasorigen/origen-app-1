@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Group, GroupTag, GroupCategory, esGrupoPendiente } from '../../types';
-import { supabaseService, updateGroupDirect } from '../../services/supabaseService';
+import { supabaseService } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 import PestanasGrupoAdmin from '../../components/GCX/PestanasGrupoAdmin';
 import { supabase } from '../../services/supabaseClient';
@@ -121,27 +121,6 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
         } catch (error) {
             console.error('[Detalle] Error al decidir:', error);
             showToast('Error al guardar la decisión', 'error');
-        } finally {
-            setIsActionLoading(false);
-        }
-    };
-
-    // Finalizar la temporada de un grupo activo: se le pone fecha de fin de
-    // ayer, que es lo que el panel lee para mostrarlo como finalizado. Es
-    // reversible desde la ficha, cambiando esa fecha.
-    const finalizarTemporada = async () => {
-        if (!group) return;
-        if (!window.confirm(`¿Finalizar la temporada de "${group.name}"? Deja de estar activo y pasa a la lista de finalizados. Se puede revertir cambiando la fecha de fin.`)) return;
-        setIsActionLoading(true);
-        try {
-            const ayer = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-            const guardado = await updateGroupDirect({ ...group, endDate: ayer });
-            if (guardado) {
-                showToast('Temporada finalizada');
-                await fetchGroup();
-            } else {
-                showToast('Error al finalizar la temporada', 'error');
-            }
         } finally {
             setIsActionLoading(false);
         }
@@ -316,11 +295,6 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
                         >
                             Editar ficha
                         </button>
-                        {!finalizado && (
-                            <button onClick={finalizarTemporada} disabled={isActionLoading} className={`${botonAccion} bg-[#fdecea] text-[#a32218]`}>
-                                Finalizar temporada
-                            </button>
-                        )}
                     </div>
                 </div>
             )}
