@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Check } from 'lucide-react';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 const LOGO_URL = '/origen-logo.png';
 
@@ -24,6 +25,7 @@ interface ModalCompartirQRProps {
 // Modal de compartir: muestra el QR + copiar link + WhatsApp.
 // Reutilizable — se usa en la cartelera pública y en el panel de anuncios.
 const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, title, link, qrUrl, subtitle }) => {
+    useBloqueoDeFondo(isOpen);
     const [isCopied, setIsCopied] = useState(false);
 
     // Bloquea el scroll de fondo mientras el modal está abierto — sin esto,

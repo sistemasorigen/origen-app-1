@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence, PanInfo, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
  * Contenedor de los modales de inscripción (design-claude/JoinFlow).
@@ -34,7 +35,6 @@ const HojaInscripcion: React.FC<HojaInscripcionProps> = ({ isOpen, onClose, chil
     const [isMobile, setIsMobile] = useState(
         () => typeof window !== 'undefined' && window.innerWidth < 768
     );
-    const [arrastrando, setArrastrando] = useState(false);
     const contenedorRef = useRef<HTMLDivElement>(null);
     const focoPrevioRef = useRef<HTMLElement | null>(null);
     const sinMovimiento = useReducedMotion();
@@ -60,27 +60,7 @@ const HojaInscripcion: React.FC<HojaInscripcionProps> = ({ isOpen, onClose, chil
 
     // Body scroll lock compatible con iOS Safari: se fija el body en su
     // posición actual y se restaura el scroll al cerrar.
-    useEffect(() => {
-        if (!isOpen) return;
-        const scrollY = window.scrollY;
-        document.body.style.position = 'fixed';
-        document.body.style.top = `-${scrollY}px`;
-        document.body.style.width = '100%';
-        document.body.style.overflowY = 'scroll';
-        document.body.setAttribute('data-modal-active', 'true');
-        return () => {
-            document.body.style.position = '';
-            document.body.style.top = '';
-            document.body.style.width = '';
-            document.body.style.overflowY = '';
-            document.body.removeAttribute('data-modal-active');
-            window.scrollTo({ top: scrollY, behavior: 'instant' as ScrollBehavior });
-        };
-    }, [isOpen]);
-
-    const onDragEnd = (_: unknown, info: PanInfo) => {
-        if (isMobile && info.offset.y > 100) onClose();
-    };
+    useBloqueoDeFondo(isOpen);
 
     if (typeof document === 'undefined') return null;
 
@@ -123,24 +103,7 @@ const HojaInscripcion: React.FC<HojaInscripcionProps> = ({ isOpen, onClose, chil
                         exit={isMobile ? { y: '100%', opacity: 1 } : { opacity: 0, scale: 0.97 }}
                         transition={transicion}
                         onClick={(e) => e.stopPropagation()}
-                        drag={isMobile && arrastrando ? 'y' : false}
-                        dragConstraints={{ top: 0, bottom: 0 }}
-                        dragElastic={0.25}
-                        dragMomentum={false}
-                        onDragEnd={onDragEnd}
                     >
-                        {/* Agarradera: solo desde acá se arrastra, para no
-                            secuestrar el scroll del contenido. */}
-                        {isMobile && (
-                            <div
-                                className="flex flex-none cursor-grab justify-center pb-0.5 pt-2.5 active:cursor-grabbing"
-                                onPointerDown={() => setArrastrando(true)}
-                                onPointerUp={() => setArrastrando(false)}
-                                onPointerCancel={() => setArrastrando(false)}
-                            >
-                                <span className="h-[5px] w-[42px] rounded-full bg-[#DCDCDE] dark:bg-[#3A3A3E]" />
-                            </div>
-                        )}
                         {children}
                     </motion.div>
                 </motion.div>

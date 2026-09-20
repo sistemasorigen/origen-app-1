@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabaseService } from '../../services/supabaseService';
 import { AuditLog, UserRole } from '../../types';
 import { nombreDeRol } from '../../pages/admin/catalogoRoles';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
  * Registro de cambios (design-claude/Admin General).
@@ -155,6 +156,8 @@ const AdminAuditLogs: React.FC = () => {
         window.addEventListener('keydown', alSalir);
         return () => window.removeEventListener('keydown', alSalir);
     }, [detalle]);
+
+    useBloqueoDeFondo(!!detalle);
 
     const filas = useMemo(
         () => logs.map(log => ({ log, ...leer(log) })).filter(f => !soloRoles || f.esRol),

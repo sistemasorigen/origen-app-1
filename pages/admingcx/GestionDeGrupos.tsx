@@ -303,15 +303,6 @@ const GestionDeGruposContent: React.FC = () => {
                 onVacioAccion={hayFiltros ? limpiarFiltros : () => navigate('/admingcx/gestion-de-grupos/crear-grupo')}
             />
 
-            {/* Crear grupo — mobile */}
-            <button
-                onClick={() => navigate('/admingcx/gestion-de-grupos/crear-grupo')}
-                className="mt-4 flex h-[54px] w-full items-center justify-center gap-2 rounded-full bg-[#0a0a0a] text-[16px] font-semibold text-white md:hidden"
-            >
-                <span className="text-[20px] leading-none">+</span>
-                Crear grupo
-            </button>
-
             <ModalModeracionGrupos
                 isOpen={moderacionAbierta}
                 onClose={() => setModeracionAbierta(false)}

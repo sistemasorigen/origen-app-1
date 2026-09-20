@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { X, ArrowRight } from 'lucide-react';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 
@@ -12,6 +13,7 @@ interface FullScreenMenuProps {
 }
 
 const FullScreenMenu: React.FC<FullScreenMenuProps> = ({ isOpen, onClose, currentUser, onLogout }) => {
+    useBloqueoDeFondo(isOpen);
     const location = useLocation();
 
     // Lock body scroll when menu is open
@@ -83,7 +85,7 @@ const FullScreenMenu: React.FC<FullScreenMenuProps> = ({ isOpen, onClose, curren
             </button>
 
             {/* Menu Links */}
-            <nav className="flex flex-col items-center justify-center gap-6 w-full max-w-4xl px-4 overflow-y-auto max-h-[80vh] py-8">
+            <nav className="contenido-del-overlay flex flex-col items-center justify-center gap-6 w-full max-w-4xl px-4 overflow-y-auto max-h-[80vh] py-8">
                 {menuItems.filter(item => item.visible).map((item, index) => {
                     const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
 

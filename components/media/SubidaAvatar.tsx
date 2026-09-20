@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import Cropper from 'react-easy-crop';
 import { createPortal } from 'react-dom';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import getCroppedImg from '../../src/utils/cropImage';
 import { supabaseService } from '../../services/supabaseService';
 import { Camera, Loader2, X } from 'lucide-react';
@@ -30,6 +31,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
     const [zoom, setZoom] = useState(1);
     const [croppedPixels, setCroppedPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    useBloqueoDeFondo(isModalOpen);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
 

@@ -31,6 +31,7 @@ import {
 import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import { supabaseService } from '../../services/supabaseService';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 interface DrawerMenuProps {
     isOpen: boolean;
@@ -175,25 +176,15 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         }
     }, [isOpen]);
 
-    // Prevent body scroll when menu is open (only for mobile drawer)
+    // El cajón del menú bloquea el fondo como cualquier modal. Antes usaba
+    // overflow:hidden, que en iOS Safari no alcanza: el fondo se seguía
+    // moviendo con el dedo. Ahora comparte el hook con el resto.
+    useBloqueoDeFondo(type === 'drawer' && isOpen);
+
     useEffect(() => {
-        if (type === 'drawer' && isOpen) {
-            document.body.style.overflow = 'hidden';
-            document.body.style.touchAction = 'none'; // Prevent touch gestures on background
-            document.documentElement.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-            document.body.style.touchAction = '';
-            document.documentElement.style.overflow = '';
-            // Collapse all items when closing
-            if (!shouldRender) setExpandedItems([]);
-        }
-        return () => {
-            document.body.style.overflow = '';
-            document.body.style.touchAction = '';
-            document.documentElement.style.overflow = '';
-        };
-    }, [isOpen, shouldRender]);
+        // Al cerrarse, las secciones desplegadas vuelven a su lugar.
+        if (!shouldRender) setExpandedItems([]);
+    }, [shouldRender]);
 
     // El desplegable de cuenta se cierra al tocar afuera o con Escape. Es un
     // menú flotante que se monta sobre la lista: sin esto queda abierto
@@ -871,7 +862,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 Dos bloques separados por aire, no por una línea: la distancia
                 ya dice que son cosas distintas y una regla más sumaría ruido
                 a una columna que ya tiene bordes, pastillas y hilos. */}
-            <nav ref={navRef} className={`flex-1 overflow-y-auto py-4 ${isCollapsed ? 'px-2' : 'px-3'}`}>
+            <nav ref={navRef} className={`flex-1 overflow-y-auto py-4 ${isCollapsed ? 'px-2' : 'px-3'} ${isSidebar ? '' : 'contenido-del-overlay'}`}>
                 {secciones.map((seccion, si) => (
                     <div key={seccion.titulo} className={si > 0 ? 'mt-7' : ''}>
                         {isCollapsed ? (

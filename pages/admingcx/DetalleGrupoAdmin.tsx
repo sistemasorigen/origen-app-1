@@ -6,6 +6,7 @@ import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminG
 import PestanasGrupoAdmin from '../../components/GCX/PestanasGrupoAdmin';
 import { supabase } from '../../services/supabaseClient';
 import { Check, Loader2 } from 'lucide-react';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
  * Ficha de un grupo (design-claude/Admin GCX - Detalle e Inscriptos).
@@ -66,6 +67,7 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
     const [coHostDetails, setCoHostDetails] = useState<{ name: string; email: string } | null>(null);
     const [descripcionExpandida, setDescripcionExpandida] = useState(false);
     const [modal, setModal] = useState<null | 'aprobar' | 'rechazar'>(null);
+    useBloqueoDeFondo(modal !== null);
 
     const fetchGroup = useCallback(async () => {
         if (!groupId) return;

@@ -1,7 +1,14 @@
-/* Focus Mode Styles */
-body[data-modal-active="true"] header,
-body[data-modal-active="true"] nav,
-body[data-modal-active="true"] .sticky-header {
+/* Modo foco: mientras hay un modal abierto se esconden el header y el nav de
+   la PÁGINA, para que no asomen por detrás.
+   La trampa: un overlay puede tener su propio <nav> o <header> adentro — el
+   menú lateral y el de pantalla completa son, literalmente, listas de
+   navegación — y esta regla los borraba junto con los de atrás. Se exceptúa
+   con .contenido-del-overlay, que los saca del selector en vez de pelearle el
+   `display`: así cada uno conserva el suyo (el del drawer es block, el del
+   menú completo es flex). */
+body[data-modal-active="true"] header:not(.contenido-del-overlay),
+body[data-modal-active="true"] nav:not(.contenido-del-overlay),
+body[data-modal-active="true"] .sticky-header:not(.contenido-del-overlay) {
     display: none !important;
 }
 

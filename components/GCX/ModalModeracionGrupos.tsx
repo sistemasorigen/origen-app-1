@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Group } from '../../types';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
  * Moderación (design-claude/Admin GCX - Panel).
@@ -34,6 +35,8 @@ const ModalModeracionGrupos: React.FC<ModalModeracionGruposProps> = ({
     onExportarAnfitriones,
     onEliminarSeleccionados,
 }) => {
+    useBloqueoDeFondo(isOpen);
+
     if (!isOpen) return null;
 
     const pendientes = seleccionados.filter(g => g.status === 'pending' || !g.status).length;

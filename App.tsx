@@ -98,6 +98,7 @@ import TriviaHistorial from './pages/trivia/TriviaHistorial';
 import TriviaPlanilla  from './pages/trivia/TriviaPlanilla';
 import SystemLoginModal from './components/modals/ModalLoginSistema';
 import CompleteProfileModal from './components/modals/ModalCompletarPerfil';
+import AvisoConexion from './components/ui/AvisoConexion';
 import { User, UserRole, AppConfig } from './types';
 import { db } from './services/dbService';
 import { supabaseService } from './services/supabaseService';
@@ -303,6 +304,11 @@ const AppContent: React.FC = () => {
     }
 
     return (
+        <>
+        {/* Banda de aviso cuando no se pudo hablar con la base. Va fuera de
+            las rutas para que acompañe a la persona esté donde esté, y se
+            saca sola cuando el reintento lo logra. */}
+        <AvisoConexion />
         <Routes>
             {/* ── RUTAS SIN LAYOUT ────────────────── */}
             <Route
@@ -1011,6 +1017,7 @@ const AppContent: React.FC = () => {
                     )
             } />
         </Routes>
+        </>
     );
 };
 

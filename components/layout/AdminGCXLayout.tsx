@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { hasRole } from '../../services/authUtils';
 import { UserRole, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { db } from '../../services/dbService';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
  * Armazón del Panel GCX (design-claude/Admin GCX - Panel).
@@ -97,9 +98,16 @@ interface AdminGCXLayoutProps {
      * diseño, y por eso las pone el armazón y no el cuerpo.
      */
     tabs?: React.ReactNode;
+    /**
+     * Sin cabecera: la pantalla trae la suya. La usan los formularios de
+     * grupo, que son los mismos que el panel de anfitrion y ya tienen
+     * encabezado propio con la vuelta atras y el boton de guardar.
+     * El armazon se sigue montando por el toast y el fondo.
+     */
+    soloContenido?: boolean;
 }
 
-const AdminGCXLayout: React.FC<AdminGCXLayoutProps> = ({ title, children, backTo = '/gcx', backLabel = 'Volver a GCX', subtitle, tabs: pestanas }) => {
+const AdminGCXLayout: React.FC<AdminGCXLayoutProps> = ({ title, children, backTo = '/gcx', backLabel = 'Volver a GCX', subtitle, tabs: pestanas, soloContenido = false }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuth();
@@ -112,6 +120,7 @@ const AdminGCXLayout: React.FC<AdminGCXLayoutProps> = ({ title, children, backTo
 
     const [ajustesAbierto, setAjustesAbierto] = useState(false);
     const [hojaAbierta, setHojaAbierta] = useState(false);
+    useBloqueoDeFondo(hojaAbierta);
     const [conteos, setConteos] = useState<Record<string, number>>(() => ({ ...conteosSesion }));
     const ajustesRef = useRef<HTMLDivElement>(null);
 
@@ -179,7 +188,7 @@ const AdminGCXLayout: React.FC<AdminGCXLayoutProps> = ({ title, children, backTo
                 <div id="gcx-panel" className="min-h-screen bg-[#f6f6f4]">
 
                     {/* Cabecera */}
-                    <header className="bg-white border-b border-[#ecebe8]">
+                    {!soloContenido && <header className="bg-white border-b border-[#ecebe8]">
                         <div className="mx-auto max-w-[1360px] px-4 pt-4 md:px-[26px] md:pt-[18px]">
 
                             {/* Con pestañas la cabecera se achica: la vuelta atrás y
@@ -317,10 +326,10 @@ const AdminGCXLayout: React.FC<AdminGCXLayoutProps> = ({ title, children, backTo
                             )}
                             {!actual && <div className="h-4 md:hidden" />}
                         </div>
-                    </header>
+                    </header>}
 
                     {/* Cuerpo de la sección */}
-                    <div className="mx-auto max-w-[1360px] px-4 pb-7 pt-4 md:px-[26px] md:pb-[30px] md:pt-5">
+                    <div className={soloContenido ? '' : 'mx-auto max-w-[1360px] px-4 pb-7 pt-4 md:px-[26px] md:pb-[30px] md:pt-5'}>
                         {children}
                     </div>
 
@@ -328,8 +337,7 @@ const AdminGCXLayout: React.FC<AdminGCXLayoutProps> = ({ title, children, backTo
                     {hojaAbierta && (
                         <div className="fixed inset-0 z-[60] md:hidden">
                             <div className="absolute inset-0 bg-[rgba(10,10,10,.4)]" onClick={() => setHojaAbierta(false)} />
-                            <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-auto rounded-t-[28px] bg-white px-4 pb-6 pt-3.5">
-                                <div className="mx-auto mb-[18px] h-1 w-[38px] rounded-full bg-[#e2e2de]" />
+                            <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-auto rounded-t-[28px] bg-white px-4 pb-6 pt-6">
                                 {(['principal', 'personas', 'ajustes'] as const).map(zona => {
                                     const deLaZona = visibles.filter(s => s.zona === zona);
                                     if (deLaZona.length === 0) return null;

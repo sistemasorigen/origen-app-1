@@ -692,6 +692,23 @@ export interface CamposReapertura {
 export const esGrupoPendiente = (group: Pick<Group, 'status'> | null | undefined): boolean =>
     !!group && (group.status === 'pending' || !group.status);
 
+/**
+ * Un grupo cuya temporada ya cerró.
+ *
+ * Dos formas de estarlo, y las dos cuentan: `status = 'finished'`, que es lo
+ * que deja la re-apertura en el grupo original, y una fecha de fin ya pasada,
+ * que es como terminan los que nadie reabrió.
+ *
+ * De esta regla cuelga que el grupo pase a solo lectura: no se edita, no se
+ * le anota gente y no se le toma asistencia. Lo único que queda es reabrirlo
+ * y mirar lo que ya pasó.
+ */
+export const esGrupoFinalizado = (group: Pick<Group, 'status' | 'endDate'> | null | undefined): boolean => {
+    if (!group) return false;
+    if (group.status === 'finished') return true;
+    return !!group.endDate && group.endDate < new Date().toISOString().split('T')[0];
+};
+
 export interface Group {
     id: string;
     name: string;

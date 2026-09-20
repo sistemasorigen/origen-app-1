@@ -89,7 +89,11 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     const [group, setGroup] = useState<{ id: string; name: string; registrations?: any[] } | null>(null);
     const [loadingGroup, setLoadingGroup] = useState(true);
 
-    const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+    // `?vista=historial` la abre en lo que ya pasó. Lo usa el detalle de un
+    // grupo terminado, donde la asistencia se consulta y no se carga.
+    const [activeTab, setActiveTab] = useState<'new' | 'history'>(
+        () => new URLSearchParams(window.location.search).get('vista') === 'historial' ? 'history' : 'new'
+    );
     const [selectedDate, setSelectedDate] = useState(hoyLocal);
 
     // Fecha del registro que se abrió con "Editar". Si al guardar la fecha

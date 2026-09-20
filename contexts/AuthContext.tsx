@@ -1,7 +1,25 @@
 ﻿import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { supabaseService } from '../services/supabaseService';
+import { supabaseService, probarConexionBase } from '../services/supabaseService';
 import { User, UserRole, CoordinatorVariant } from '../types';
+
+/**
+ * Qué sabemos del perfil del usuario.
+ *
+ * Antes esto era un booleano, `isProfileSynced`, y ahí estaba el problema:
+ * "no hay perfil" y "no pudimos averiguarlo" caían en el mismo valor. Con la
+ * base caída el sistema afirmaba que a todos les faltaban datos y les abría
+ * el modal de completar perfil.
+ */
+export type EstadoPerfil =
+    /** Todavía cargando. */
+    | 'pendiente'
+    /** La consulta anduvo y trajo el perfil. */
+    | 'ok'
+    /** La consulta anduvo y confirmó que no hay fila: usuario nuevo de verdad. */
+    | 'sin-perfil'
+    /** No se pudo averiguar. NUNCA habilita el onboarding. */
+    | 'error-db';
 
 interface AuthContextType {
     user: User | null;
@@ -10,6 +28,7 @@ interface AuthContextType {
     error: string | null;
     isRecoveryMode: boolean;
     isProfileSynced: boolean;
+    estadoPerfil: EstadoPerfil;
     needsProfileCompletion: boolean;
     signIn: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
     signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
@@ -17,14 +36,27 @@ interface AuthContextType {
     signUp: (firstName: string, lastName: string, phone: string, email: string, pass: string, age: number, gender: string) => Promise<{ success: boolean; error?: string }>;
     resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
     updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
-    completeProfile: (data: { phone: string; age: number; gender: string; birthDate: string }) => Promise<boolean>;
+    completeProfile: (data: { phone: string; age: number; gender: string; birthDate: string }) => Promise<ResultadoGuardadoPerfil>;
     refreshSession: () => Promise<void>;
     updateAvatar: (url: string) => void;
     retryAuth: () => void;
     clearRecoveryMode: () => void;
 }
 
+/**
+ * Resultado de guardar el perfil. Se distingue el fallo por conexión para que
+ * el modal pueda decir que el problema es del sistema y no de lo que cargó la
+ * persona — y sobre todo para que deje de reintentar contra una base caída.
+ */
+export interface ResultadoGuardadoPerfil {
+    ok: boolean;
+    conexion?: boolean;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/** Esperas del reintento en segundo plano, en milisegundos. */
+const ESPERAS_REINTENTO = [3000, 6000, 12000, 24000, 30000];
 
 // Helper: Promise with timeout
 const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage = 'Timeout'): Promise<T> => {
@@ -49,10 +81,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [error, setError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
 
-    // Flag to track if we have successfully synced with the DB
-    const [isProfileSynced, setIsProfileSynced] = useState(false);
+    // Qué sabemos del perfil. Reemplaza al booleano isProfileSynced.
+    const [estadoPerfil, setEstadoPerfil] = useState<EstadoPerfil>('pendiente');
 
-    // Computed: Needs onboarding?
+    // Se mantiene exportado como derivado: "terminamos de averiguar, con o sin
+    // fila". Un error de base ya no cuenta como sincronizado.
+    const isProfileSynced = estadoPerfil === 'ok' || estadoPerfil === 'sin-perfil';
+
+    // Se abre el onboarding cuando SABEMOS en qué estado está el perfil —haya
+    // fila o no— y le faltan datos. Con 'error-db' no sabemos nada, y afirmar
+    // que faltan es exactamente lo que causó el incidente.
+    //
+    // OJO con restringir esto a 'sin-perfil': el caso más común del modal es
+    // alguien que entró con Google, tiene fila creada por el trigger y no
+    // tiene teléfono ni edad. Ese usuario cae en 'ok', no en 'sin-perfil'.
+    // Pedir 'sin-perfil' deja a esa gente sin onboarding para siempre.
     const needsOnboarding = !!(user && isProfileSynced && (!user.phone || !user.age));
 
     // Detect recovery mode synchronously
@@ -65,9 +108,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Mounted ref for async safety
     const mounted = useRef(true);
+
+    // Reintento en segundo plano cuando la base no responde, para que la
+    // persona no tenga que recargar para salir del estado degradado.
+    const reintentoRef = useRef<number | null>(null);
+    const intentoRef = useRef(0);
+
+    // Generación de hidratación. Puede haber dos corriendo a la vez —un
+    // reintento lento y un SIGNED_IN nuevo, por ejemplo— y sin esto la que
+    // termina última pisa a la otra: una consulta vieja que falló podía
+    // devolver la app al estado degradado después de que ya se había
+    // recuperado.
+    const generacionRef = useRef(0);
+
+    const cancelarReintento = () => {
+        if (reintentoRef.current !== null) {
+            clearTimeout(reintentoRef.current);
+            reintentoRef.current = null;
+        }
+    };
+
     useEffect(() => {
         mounted.current = true;
-        return () => { mounted.current = false; };
+        return () => {
+            mounted.current = false;
+            // Se corta acá: sin esto, el timer sigue vivo después de
+            // desmontar y vuelve a pedir el perfil de una sesión que ya no
+            // está.
+            cancelarReintento();
+        };
     }, []);
 
     // Safety: Force loading to stop after 5s if it gets stuck
@@ -108,10 +177,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { return null; }
     };
 
-    // Helper to create a partial user from session immediately
-    const createPartialUser = (sessionUser: any): User => {
+    // Helper to create a partial user from session immediately.
+    //
+    // `usarCache` existe por una decisión explícita: con la base caída NO se
+    // usa el caché. Mostrar el problema es mejor que mostrar datos viejos que
+    // pueden estar mal — un rol que ya se revocó, por ejemplo.
+    const createPartialUser = (sessionUser: any, usarCache = true): User => {
         // 1. Try to recover from Cache first (optimistic)
-        const cached = getProfileFromCache();
+        const cached = usarCache ? getProfileFromCache() : null;
         if (cached && cached.id === sessionUser.id) {
 
             return cached;
@@ -132,6 +205,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     };
 
+    // Vuelve a intentar traer el perfil con espera creciente. Se corta solo
+    // al lograrlo, al cerrar sesión y al desmontar.
+    const programarReintento = (sessionUser: any) => {
+        if (!mounted.current) return;
+        const espera = ESPERAS_REINTENTO[Math.min(intentoRef.current, ESPERAS_REINTENTO.length - 1)];
+        intentoRef.current += 1;
+        cancelarReintento();
+        reintentoRef.current = window.setTimeout(() => {
+            reintentoRef.current = null;
+            if (!mounted.current) return;
+            hydrateUser(sessionUser);
+        }, espera);
+    };
+
     // Hydrate User Function (Hoisted)
     const hydrateUser = async (sessionUser: any) => {
 
@@ -139,11 +226,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             setUser(null);
             sessionStorage.removeItem(STORAGE_KEY); // Clear cache
-            setIsProfileSynced(false);
+            cancelarReintento();
+            intentoRef.current = 0;
+            setEstadoPerfil('pendiente');
             setIsLoadingSession(false);
             setIsLoadingProfile(false);
             return;
         }
+
+        const generacion = ++generacionRef.current;
+        const vigente = () => mounted.current && generacionRef.current === generacion;
 
         // CRITICAL: Unblock UI immediately with partial user (or cached user)
         // We SKIP the mounted check here to ensure we unblock even if strict mode is doing weird things
@@ -153,8 +245,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoadingProfile(true);  // Indicates background work
 
         try {
-            // Function to fetch profile with retry
-            const fetchProfile = async (retries = 3, delay = 500) => {
+            // Trae el perfil, reintentando unas pocas veces.
+            //
+            // Lo importante es qué devuelve cuando no hay fila: si el último
+            // intento no dio error, la consulta anduvo y la fila realmente no
+            // existe (usuario nuevo). Si dio error, no sabemos nada.
+            //
+            // Antes devolvía 'Max retries reached' en los dos casos, así que
+            // ni siquiera acá adentro se distinguían.
+            const fetchProfile = async (retries = 3, delay = 500): Promise<{ data: any; error: any }> => {
+                let ultimoError: any = null;
+
                 for (let i = 0; i < retries; i++) {
                     const { data, error } = await supabase
                         .from('users')
@@ -162,21 +263,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         .eq('id', sessionUser.id)
                         .maybeSingle();
 
-                    if (!error && data) {
-                        //
-                    }
-
                     if (data) return { data, error: null };
+
+                    ultimoError = error ?? null;
 
                     if (error) {
                         console.warn(`[Auth] Profile fetch attempt ${i + 1} failed:`, error.message);
                     }
 
-                    // If no data and no error involved (just null), it means not found.
-                    // We still retry a few times in case a DB trigger is creating the user.
+                    // Sin fila y sin error puede ser que el trigger todavía
+                    // no la haya creado, así que se reintenta igual.
                     if (i < retries - 1) await new Promise(r => setTimeout(r, delay));
                 }
-                return { data: null, error: 'Max retries reached' };
+
+                return { data: null, error: ultimoError };
             };
 
             // 1. Fetch Profile from DB with retry logic
@@ -185,11 +285,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // 2. Fetch Auth Metadata (for consistent phone fallback)
             const authUserPromise = supabase.auth.getUser();
 
-            const [{ data: profileData }, authResult] = await Promise.all([profilePromise, authUserPromise]);
+            // Se conserva el `error`: descartarlo acá era el bug original.
+            const [resultadoPerfil, authResult] = await Promise.all([profilePromise, authUserPromise]);
+            const profileData = resultadoPerfil.data;
+            const errorPerfil = resultadoPerfil.error;
             const authMetadata = authResult.data?.user || sessionUser;
             const phone = profileData?.phone || authMetadata?.user_metadata?.phone || authMetadata?.phone || '';
 
-            if (mounted.current) {
+            if (vigente()) {
                 if (profileData) {
 
 const fullUser: User = {
@@ -220,12 +323,15 @@ const fullUser: User = {
                     setUser(fullUser);
                     saveProfileToCache(fullUser);
 
-                    setIsProfileSynced(true);
-                } else {
-                    // Fallback Profile logic
-                    console.warn('[Auth] Profile missing in DB, using fallback.');
-                    // If we have a cached one that was good, maybe keep it? 
-                    // No, invalid DB means we should degrade.
+                    // Se recuperó: se corta el reintento y se saca el cartel.
+                    cancelarReintento();
+                    intentoRef.current = 0;
+                    setEstadoPerfil('ok');
+                } else if (!errorPerfil) {
+                    // La consulta anduvo y no hay fila: es un usuario nuevo
+                    // de verdad. Este es el único caso que debe abrir el
+                    // onboarding.
+                    console.warn('[Auth] Sin fila de perfil en la base: usuario nuevo.');
                     const fallbackUser = {
                         ...createPartialUser(sessionUser),
                         phone: phone, // Ensure verified phone is kept
@@ -238,18 +344,31 @@ const fullUser: User = {
                         const merged = { ...prev!, ...fallbackUser };
                         return merged;
                     });
-                    setIsProfileSynced(true);
+                    cancelarReintento();
+                    intentoRef.current = 0;
+                    setEstadoPerfil('sin-perfil');
+                } else {
+                    // No se pudo averiguar. No se afirma nada sobre el perfil:
+                    // ni que está, ni que falta.
+                    console.error('[Auth] No se pudo traer el perfil:', errorPerfil);
+                    sessionStorage.removeItem(STORAGE_KEY);
+                    setUser({ ...createPartialUser(sessionUser, false), phone });
+                    setEstadoPerfil('error-db');
+                    programarReintento(sessionUser);
                 }
             }
         } catch (err) {
             console.error('[Auth] Profile hydration error:', err);
-            // Keep partial user, maybe set error toast?
-            // Don't block the user, they can just use basic features
-            if (mounted.current) {
-                setIsProfileSynced(true); // Technically "synced" with failure, prevents infinite loading
+            // Se degrada sin habilitar el onboarding: una excepción acá no
+            // dice nada sobre si la persona tiene perfil o no.
+            if (vigente()) {
+                sessionStorage.removeItem(STORAGE_KEY);
+                setUser(prev => prev ? { ...createPartialUser(sessionUser, false) } : prev);
+                setEstadoPerfil('error-db');
+                programarReintento(sessionUser);
             }
         } finally {
-            if (mounted.current) {
+            if (vigente()) {
                 setIsLoadingProfile(false);
             }
         }
@@ -276,7 +395,11 @@ const fullUser: User = {
             } else if (event === 'SIGNED_OUT') {
                 if (mounted.current) {
                     setUser(null);
-                    setIsProfileSynced(false);
+                    // Se corta el reintento: si no, sigue pidiendo el perfil
+                    // de alguien que ya se fue.
+                    cancelarReintento();
+                    intentoRef.current = 0;
+                    setEstadoPerfil('pendiente');
                     setIsLoadingSession(false);
                     setIsLoadingProfile(false);
                 }
@@ -429,8 +552,10 @@ const fullUser: User = {
         });
     };
 
-    const completeProfile = async (data: { phone: string; age: number; gender: string; birthDate: string }): Promise<boolean> => {
-        if (!user) return false;
+    const completeProfile = async (
+        data: { phone: string; age: number; gender: string; birthDate: string }
+    ): Promise<ResultadoGuardadoPerfil> => {
+        if (!user) return { ok: false };
 
         try {
             const success = await supabaseService.updateUserProfile(user.id, data);
@@ -442,12 +567,21 @@ const fullUser: User = {
                     gender: data.gender,
                     birthDate: data.birthDate
                 });
-                return true;
+                // Guardar el perfil confirma que la base responde y que ahora
+                // sí hay fila.
+                cancelarReintento();
+                intentoRef.current = 0;
+                setEstadoPerfil('ok');
+                return { ok: true };
             }
-            return false;
+            // Falló: recién acá se averigua si fue la base, para poder decirle
+            // a la persona que el problema no son sus datos.
+            const hayBase = await probarConexionBase();
+            return { ok: false, conexion: !hayBase };
         } catch (e) {
             console.error('Error completing profile:', e);
-            return false;
+            const hayBase = await probarConexionBase();
+            return { ok: false, conexion: !hayBase };
         }
     };
 
@@ -459,6 +593,7 @@ const fullUser: User = {
             error,
             isRecoveryMode,
             isProfileSynced,
+            estadoPerfil,
             needsProfileCompletion: needsOnboarding,
             signIn,
             signInWithGoogle,

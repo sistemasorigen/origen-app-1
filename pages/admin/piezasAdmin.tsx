@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
  * Piezas compartidas del panel de administración
@@ -96,6 +97,8 @@ export const ModalConfirmacion: React.FC<{
     pedido: PedidoConfirmacion | null;
     onCancelar: () => void;
 }> = ({ pedido, onCancelar }) => {
+    useBloqueoDeFondo(!!pedido);
+
     useEffect(() => {
         if (!pedido) return;
         const alSalir = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancelar(); };

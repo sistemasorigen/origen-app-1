@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import { X } from 'lucide-react';
 
 /**
@@ -26,6 +27,8 @@ const ModalPanelGCX: React.FC<ModalPanelGCXProps> = ({ isOpen, onClose, titulo, 
         document.addEventListener('keydown', tecla);
         return () => document.removeEventListener('keydown', tecla);
     }, [isOpen, onClose]);
+
+    useBloqueoDeFondo(isOpen);
 
     if (!isOpen) return null;
 

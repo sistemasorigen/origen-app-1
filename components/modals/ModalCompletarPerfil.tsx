@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import NeoModal from '../ui/NeoModal';
-import { User, Phone, Calendar, Users, Loader2 } from 'lucide-react';
+import { User, Phone, Calendar, Users, Loader2, WifiOff } from 'lucide-react';
 import { validateProfileLocal } from '../../services/geminiService';
+import { probarConexionBase } from '../../services/supabaseService';
+import { ResultadoGuardadoPerfil } from '../../contexts/AuthContext';
 
 interface CompleteProfileModalProps {
     userName: string;
-    onComplete: (data: { phone: string; age: number; gender: string; birthDate: string }) => Promise<boolean>;
+    onComplete: (data: { phone: string; age: number; gender: string; birthDate: string }) => Promise<ResultadoGuardadoPerfil>;
 }
 
 const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, onComplete }) => {
@@ -14,6 +16,27 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
     const [gender, setGender] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Última línea de defensa del incidente: si el guardado falla porque la
+    // base no responde, se corta ahí. Reintentar contra una base caída solo
+    // encadena errores y asusta, y el problema no es lo que cargó la persona.
+    const [sinConexion, setSinConexion] = useState(false);
+    const montado = useRef(true);
+    useEffect(() => {
+        montado.current = true;
+        return () => { montado.current = false; };
+    }, []);
+
+    // Mientras está bloqueado, se sondea la base sola para poder desbloquear
+    // sin que la persona tenga que recargar.
+    useEffect(() => {
+        if (!sinConexion) return;
+        const id = setInterval(async () => {
+            const hayBase = await probarConexionBase();
+            if (hayBase && montado.current) setSinConexion(false);
+        }, 5000);
+        return () => clearInterval(id);
+    }, [sinConexion]);
 
     // Calculate age from birth date
     const calculateAge = (birthDateStr: string): number => {
@@ -75,20 +98,33 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
             const finalData = result.correctedData || validationData;
 
             // Submit to Supabase
-            const success = await onComplete({
+            const resultado = await onComplete({
                 phone: finalData.phone,
                 age: finalData.age,
                 gender: finalData.gender,
                 birthDate
             });
 
-            if (!success) {
-                setError('Error al guardar. Por favor intenta de nuevo.');
+            if (!resultado.ok) {
+                if (resultado.conexion) {
+                    setSinConexion(true);
+                    setError(null);
+                } else {
+                    setError('Error al guardar. Por favor intenta de nuevo.');
+                }
             }
         } catch (err) {
-            setError('Error al guardar. Por favor intenta de nuevo.');
+            // Una excepción acá puede ser de red: se averigua en vez de
+            // pedirle a la persona que reintente a ciegas.
+            const hayBase = await probarConexionBase();
+            if (!hayBase) {
+                setSinConexion(true);
+                setError(null);
+            } else {
+                setError('Error al guardar. Por favor intenta de nuevo.');
+            }
         } finally {
-            setIsSubmitting(false);
+            if (montado.current) setIsSubmitting(false);
         }
     };
 
@@ -167,17 +203,33 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
                     </div>
                 </div>
 
-                {/* Error */}
+                {/* Error de los datos cargados */}
                 {error && (
                     <div className="p-3 bg-red-50 border-2 border-red-500 text-red-700 text-sm font-black uppercase">
                         {error}
                     </div>
                 )}
 
+                {/* Problema del sistema, no de los datos */}
+                {sinConexion && (
+                    <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                        <WifiOff className="mt-[2px] h-4 w-4 flex-none text-amber-600" />
+                        <div>
+                            <p className="text-sm font-semibold text-amber-800">
+                                No podemos guardar en este momento
+                            </p>
+                            <p className="mt-1 text-xs font-medium leading-snug text-amber-700">
+                                Es un problema de conexión nuestro, no de los datos que cargaste. Están guardados en
+                                la pantalla: apenas se restablezca, vas a poder continuar sin volver a escribirlos.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Submit */}
                 <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || sinConexion}
                     className="w-full px-6 py-4 bg-black text-white text-sm font-black uppercase tracking-widest border-2 border-black shadow-[4px_4px_0px_0px_rgba(100,100,100,1)] hover:shadow-[6px_6px_0px_0px_rgba(100,100,100,1)] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                     {isSubmitting ? (
@@ -185,7 +237,7 @@ const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ userName, o
                             <Loader2 className="w-4 h-4 animate-spin" />
                             Guardando...
                         </>
-                    ) : 'Continuar'}
+                    ) : sinConexion ? 'Esperando conexión…' : 'Continuar'}
                 </button>
             </form>
 

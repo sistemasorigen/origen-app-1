@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import { X, Loader2 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 
@@ -86,6 +87,8 @@ const ModalParejaInscripcion: React.FC<ModalParejaInscripcionProps> = ({
         document.addEventListener('keydown', tecla);
         return () => document.removeEventListener('keydown', tecla);
     }, [isOpen, onClose]);
+
+    useBloqueoDeFondo(isOpen);
 
     if (!isOpen) return null;
 

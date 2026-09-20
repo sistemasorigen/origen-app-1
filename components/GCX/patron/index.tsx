@@ -13,6 +13,7 @@
 // ════════════════════════════════════════════════════════════════════════
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 
 // ── Tokens ──────────────────────────────────────────────────────────────
 // Se exportan como strings para que las pantallas no reinventen valores.
@@ -201,6 +202,8 @@ export const HojaConfirmacion: React.FC<{
     tono?: 'riesgo' | 'neutro';
     children?: React.ReactNode;   // tarjeta de contexto (persona, grupo…)
 }> = ({ abierta, titulo, antes, consecuencia, despues, textoConfirmar, onConfirmar, onCancelar, cargando, tono = 'riesgo', children }) => {
+    useBloqueoDeFondo(abierta);
+
     if (!abierta) return null;
     return (
         <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
@@ -210,7 +213,6 @@ export const HojaConfirmacion: React.FC<{
                 aria-modal="true"
                 className={`${T.fuente} relative w-full sm:max-w-[420px] bg-white dark:bg-[#1b1b1a] rounded-t-[30px] sm:rounded-[30px] px-[22px] pt-3.5 pb-[26px] animate-slideIn`}
             >
-                <div className="w-[38px] h-1 rounded-full bg-[#e2e2de] dark:bg-[#333331] mx-auto mb-5 sm:hidden" />
                 <p className="text-[21px] leading-[1.3] font-semibold tracking-[-.01em]">{titulo}</p>
                 <p className="mt-3 text-[14.5px] leading-[1.6] font-medium text-black/55 dark:text-white/55">
                     {antes}<span className={`font-semibold ${tono === 'riesgo' ? T.riesgo : 'text-[#0a0a0a] dark:text-white'}`}>{consecuencia}</span>{despues}

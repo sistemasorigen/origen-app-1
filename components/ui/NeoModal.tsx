@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 interface NeoModalProps {
     isOpen: boolean;
@@ -41,35 +42,7 @@ const NeoModal: React.FC<NeoModalProps> = ({ isOpen, onClose, title, children, p
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Body Scroll Lock — compatible con iOS Safari
-    // Técnica: guardar scrollY → fijar body con
-    // position:fixed → restaurar al cerrar.
-    // Esto evita el congelamiento de scroll interno
-    // que causa overflow:hidden en iOS.
-    useEffect(() => {
-        if (disableScrollLock) return;
-        if (!isOpen) return;
-
-        const scrollY = window.scrollY;
-
-        // Fijar el body en su posición actual
-        document.body.style.position = 'fixed';
-        document.body.style.top = `-${scrollY}px`;
-        document.body.style.width = '100%';
-        document.body.style.overflowY = 'scroll'; // evitar layout shift
-        document.body.setAttribute('data-modal-active', 'true');
-
-        return () => {
-            // Restaurar posición y scroll
-            document.body.style.position = '';
-            document.body.style.top = '';
-            document.body.style.width = '';
-            document.body.style.overflowY = '';
-            document.body.removeAttribute('data-modal-active');
-            // Volver al scroll original sin salto visual
-            window.scrollTo({ top: scrollY, behavior: 'instant' as ScrollBehavior });
-        };
-    }, [isOpen, disableScrollLock]);
+    useBloqueoDeFondo(isOpen && !disableScrollLock);
 
     // Animation Variants
     const backdropVariants = {

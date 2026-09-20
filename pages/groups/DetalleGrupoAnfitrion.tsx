@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { User, Group, GroupCategory, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
+import { User, Group, GroupCategory, SeasonSettings, DEFAULT_SEASON_SETTINGS, esGrupoFinalizado } from '../../types';
 import { supabaseService, toggleGroupCapacityLock, updateGroupDirect } from '../../services/supabaseService';
 import { ArrowLeft, ArrowRight, Camera, Check, Link, Loader2, Plus } from 'lucide-react';
 import NeoModal from '../../components/ui/NeoModal';
@@ -264,7 +264,10 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     if (!group) return null;
 
     // ── Datos derivados ──
-    const isFinished = !!(group.endDate && group.endDate < new Date().toISOString().split('T')[0]);
+    // Antes miraba sólo la fecha de fin. Un grupo reabierto deja al original
+    // en `status: 'finished'` sin tocarle la fecha, así que ése se colaba como
+    // activo y seguía ofreciendo editar y tomar asistencia.
+    const isFinished = esGrupoFinalizado(group);
     const isMainHost = (group as any).co_host_id !== currentUser?.id;
     const isApproved = group.status === 'approved';
     const isRejected = group.status === 'rejected';
@@ -291,7 +294,9 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
             : null,
     ].filter(Boolean).join(' · ');
 
-    const proxima = proximaReunion(group.meetingDay);
+    // Un grupo terminado no tiene próxima reunión: anunciar una sería avisar
+    // de algo que no va a pasar.
+    const proxima = isFinished ? null : proximaReunion(group.meetingDay);
     const visibles = verTodos ? roster : roster.slice(0, 8);
 
     // ── Piezas compartidas entre mobile y desktop ──
@@ -302,7 +307,9 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
         </span>
     );
 
-    const FilaSolicitudes = pendingCount > 0 ? (
+    // Terminada la temporada no se resuelven solicitudes: quedan para el
+    // grupo nuevo, si se reabre.
+    const FilaSolicitudes = pendingCount > 0 && !isFinished ? (
         <button
             type="button"
             onClick={ir('solicitudes')}
@@ -325,7 +332,10 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     ) : null;
 
     // MIEMBROS — las cuatro acciones ocasionales, agrupadas en una superficie.
-    const ListaMiembros = (
+    // Ninguna aplica con la temporada cerrada: no se anota, no se da de baja,
+    // no se deriva, y compartir el enlace llevaría a un grupo al que ya no se
+    // puede entrar.
+    const ListaMiembros = isFinished ? null : (
         <>
             <p className={`${rotulo} px-1`}>Miembros</p>
             <div className={`mt-3 ${T.interna} rounded-[24px] overflow-hidden`}>
@@ -347,22 +357,40 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
         <div className="px-1">
             <p className={`${rotulo} mt-6`}>Administración</p>
             <div className="flex flex-col mt-1">
-                <FilaAccion tenue texto="Editar los datos del grupo" onClick={ir('editar-grupo')} />
-                {isMainHost && <FilaAccion tenue texto="Transferir el grupo" onClick={ir('transferir')} />}
-                <FilaAccion tenue texto="Código QR y enlace" onClick={() => setIsQrModalOpen(true)} />
-                {isApproved && !isFinished && (
-                    <FilaAccion
-                        tenue
-                        texto={group.capacityLocked ? 'Reabrir el cupo' : 'Cerrar el cupo'}
-                        onClick={handleToggleCapacityLock}
-                    />
+                {/* Con la temporada cerrada queda una sola salida: reabrir. El
+                    resto edita un grupo que ya terminó, y el historial no se
+                    toca. Vuelven todas solas en el grupo nuevo. */}
+                {isFinished ? (
+                    <FilaAccion texto="Reabrir para otra temporada" onClick={ir('reabrir-grupo')} />
+                ) : (
+                    <>
+                        <FilaAccion tenue texto="Editar los datos del grupo" onClick={ir('editar-grupo')} />
+                        {isMainHost && <FilaAccion tenue texto="Transferir el grupo" onClick={ir('transferir')} />}
+                        <FilaAccion tenue texto="Código QR y enlace" onClick={() => setIsQrModalOpen(true)} />
+                        {isApproved && (
+                            <FilaAccion
+                                tenue
+                                texto={group.capacityLocked ? 'Reabrir el cupo' : 'Cerrar el cupo'}
+                                onClick={handleToggleCapacityLock}
+                            />
+                        )}
+                    </>
                 )}
-                {isFinished && <FilaAccion tenue texto="Reabrir para otra temporada" onClick={ir('reabrir-grupo')} />}
             </div>
         </div>
     );
 
-    const BotonAsistencia = (
+    // Terminada la temporada, el mismo lugar deja de ser una acción y pasa a
+    // ser la puerta al historial: la asistencia ya no se carga, se consulta.
+    const BotonAsistencia = isFinished ? (
+        <button
+            type="button"
+            onClick={() => navigate(`/mis-grupos/${group.id}/asistencia?vista=historial`)}
+            className={`${btnSecundario} h-[60px] text-[17px]`}
+        >
+            Ver el historial de asistencia
+        </button>
+    ) : (
         <button type="button" onClick={ir('asistencia')} className={`${btnPrimario} h-[60px] text-[17px]`}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
                 strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" /></svg>
@@ -376,9 +404,13 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     const Foto: React.FC<{ alto: string; radio: string }> = ({ alto, radio }) => (
         <button
             type="button"
-            onClick={() => !subiendoPortada && inputPortadaRef.current?.click()}
-            disabled={subiendoPortada}
-            aria-label={group.imageUrl ? 'Cambiar la foto de portada' : 'Poner una foto de portada'}
+            /* Cambiar la portada también es editar el grupo: con la
+                temporada cerrada la foto queda como quedó. */
+            onClick={() => !subiendoPortada && !isFinished && inputPortadaRef.current?.click()}
+            disabled={subiendoPortada || isFinished}
+            aria-label={isFinished
+                ? 'Foto de portada del grupo'
+                : group.imageUrl ? 'Cambiar la foto de portada' : 'Poner una foto de portada'}
             className={`group/foto relative block w-full ${alto} ${radio} overflow-hidden text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/15`}
             style={group.imageUrl ? undefined : { background: 'repeating-linear-gradient(135deg,#e6e4e0 0 10px,#dedbd6 10px 20px)' }}
         >
@@ -386,7 +418,7 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
 
             {/* Sin foto, la invitación ocupa el centro y no hay que adivinar
                 que el rectángulo rayado se toca. */}
-            {!group.imageUrl && !subiendoPortada && (
+            {!group.imageUrl && !subiendoPortada && !isFinished && (
                 <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-black/45">
                     <Camera className="w-6 h-6" strokeWidth={1.8} aria-hidden="true" />
                     <span className="text-[13.5px] font-semibold">Poner una foto</span>
@@ -394,7 +426,7 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
             )}
 
             {/* Con foto, una píldora discreta abajo a la derecha. */}
-            {group.imageUrl && !subiendoPortada && !errorPortada && (
+            {group.imageUrl && !subiendoPortada && !errorPortada && !isFinished && (
                 <span className="absolute bottom-3.5 right-3.5 h-9 px-3.5 rounded-full bg-white/[.94] flex items-center gap-2 text-[13px] font-semibold text-black transition-opacity opacity-90 group-hover/foto:opacity-100">
                     <Camera className="w-[15px] h-[15px]" strokeWidth={2} aria-hidden="true" />
                     Cambiar
@@ -435,15 +467,17 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                     <h2 className="text-[19px] font-semibold tracking-[-.01em]">Miembros</h2>
                     <span className="text-[15px] font-semibold text-black/40 dark:text-white/40">{approved}</span>
                 </div>
-                <button
-                    type="button"
-                    onClick={ir('inscribir')}
-                    className={`h-[42px] px-[18px] rounded-full ${T.chip} flex items-center gap-2 text-[14px] font-semibold transition-colors hover:opacity-80`}
-                >
-                    <Plus className="w-4 h-4" strokeWidth={2.2} />
-                    <span className="hidden sm:inline">Inscribir a alguien</span>
-                    <span className="sm:hidden">Inscribir</span>
-                </button>
+                {!isFinished && (
+                    <button
+                        type="button"
+                        onClick={ir('inscribir')}
+                        className={`h-[42px] px-[18px] rounded-full ${T.chip} flex items-center gap-2 text-[14px] font-semibold transition-colors hover:opacity-80`}
+                    >
+                        <Plus className="w-4 h-4" strokeWidth={2.2} />
+                        <span className="hidden sm:inline">Inscribir a alguien</span>
+                        <span className="sm:hidden">Inscribir</span>
+                    </button>
+                )}
             </div>
 
             {roster.length === 0 ? (
@@ -555,7 +589,7 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
 
                     {FilaSolicitudes && <div className="mt-6">{FilaSolicitudes}</div>}
 
-                    <div className="mt-6">{ListaMiembros}</div>
+                    {ListaMiembros && <div className="mt-6">{ListaMiembros}</div>}
                     {ListaAdmin}
 
                     <div className={`${T.tarjeta} rounded-[26px] p-5 mt-6`}>{Miembros}</div>

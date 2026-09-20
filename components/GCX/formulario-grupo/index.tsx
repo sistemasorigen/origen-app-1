@@ -22,6 +22,7 @@ import { ArrowLeft, Check, Loader2, Search, Wand2, X } from 'lucide-react';
 import ImageUpload from '../../media/SubidaImagen';
 import { useIsMobile } from '../../../src/hooks/useIsMobile';
 import { T, btnPrimarioBase, btnSecundarioBase, rotulo } from '../patron';
+import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 
 export const DIAS_DE_REUNION = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 export const GENEROS = ['Mixto', 'Hombre', 'Mujer'];
@@ -133,6 +134,126 @@ const Chevron: React.FC<{ abierto?: boolean; clase?: string }> = ({ abierto, cla
     </svg>
 );
 
+/**
+ * Elegir a una persona: buscándola entre las cuentas, o escribiendo su nombre
+ * a mano cuando todavía no tiene una.
+ *
+ * Lo comparten el anfitrión y el co-anfitrión, que son el mismo control con
+ * dos reglas distintas: uno es obligatorio y el otro no. Esa diferencia se
+ * dice con el rótulo, no con el color — el ámbar de este sistema significa
+ * que algo está pendiente, no que un campo sea de administración.
+ */
+const SelectorDePersona: React.FC<{
+    etiqueta: string;
+    opcional?: boolean;
+    persona: CoAnfitrion;
+    /** Campos del formulario donde va el nombre escrito a mano. */
+    campoNombre: string;
+    campoApellido: string;
+    form: any;
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
+    setForm: React.Dispatch<React.SetStateAction<any>>;
+}> = ({ etiqueta, opcional, persona, campoNombre, campoApellido, form, onChange, setForm }) => (
+    <div className="pt-1.5">
+        <div className="flex items-center justify-between gap-3 px-1 mb-2.5">
+            {/* En 375px el rótulo largo empujaba el conmutador y "A mano" se
+                partía en dos renglones. */}
+            <p className={`${rotulo} truncate`}>
+                {etiqueta}{opcional && <span className="hidden lg:inline"> · opcional</span>}
+            </p>
+            <div className={`flex shrink-0 ${T.interna} p-1 rounded-full`}>
+                {(['search', 'manual'] as const).map(m => (
+                    <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                            persona.setModo(m);
+                            if (m === 'manual') { persona.setId(null); persona.setTermino(''); }
+                            else setForm((prev: any) => ({ ...prev, [campoNombre]: '', [campoApellido]: '' }));
+                        }}
+                        className={`px-3.5 h-8 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-colors ${persona.modo === m
+                            ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
+                            : 'text-black/50 dark:text-white/50'}`}
+                    >
+                        {m === 'search' ? 'Buscar' : 'A mano'}
+                    </button>
+                ))}
+            </div>
+        </div>
+
+        {persona.modo === 'manual' ? (
+            <div className="grid grid-cols-2 gap-2.5">
+                <Caja etiqueta="Nombre">
+                    <input type="text" name={campoNombre} value={form[campoNombre] ?? ''} onChange={onChange} className={claseControl} placeholder="Nombre" />
+                </Caja>
+                <Caja etiqueta="Apellido">
+                    <input type="text" name={campoApellido} value={form[campoApellido] ?? ''} onChange={onChange} className={claseControl} placeholder="Apellido" />
+                </Caja>
+            </div>
+        ) : (
+            <div ref={persona.contenedor} className="relative">
+                {persona.id ? (
+                    <div className={`h-[60px] rounded-[20px] ${T.interna} px-[18px] flex items-center gap-3`}>
+                        <Check className="w-[18px] h-[18px] shrink-0" strokeWidth={2.6} />
+                        <span className="flex-1 text-[15.5px] font-semibold truncate">{persona.termino}</span>
+                        <button
+                            type="button"
+                            onClick={() => { persona.setId(null); persona.setTermino(''); }}
+                            aria-label={`Quitar ${etiqueta.toLowerCase()}`}
+                            className="shrink-0 text-black/40 dark:text-white/40 hover:opacity-70"
+                        >
+                            <X className="w-[18px] h-[18px]" />
+                        </button>
+                    </div>
+                ) : (
+                    <div className={`h-[60px] rounded-[20px] ${T.interna} px-[18px] flex items-center gap-2.5`}>
+                        <Search className="w-[17px] h-[17px] shrink-0 text-black/40 dark:text-white/40" />
+                        <input
+                            type="text"
+                            value={persona.termino}
+                            onChange={e => { persona.setTermino(e.target.value); persona.setId(null); }}
+                            onFocus={() => persona.resultados.length > 0 && persona.setDesplegado(true)}
+                            placeholder="Buscar por nombre o email"
+                            className={claseControl}
+                        />
+                        {persona.buscando && <Loader2 className="w-4 h-4 animate-spin shrink-0 text-black/30 dark:text-white/30" />}
+                    </div>
+                )}
+
+                {persona.desplegado && !persona.id && persona.termino.trim() && (
+                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-[#1b1b1a] rounded-[22px] shadow-[0_10px_40px_rgba(0,0,0,.16)] overflow-hidden z-[999] max-h-[264px] overflow-y-auto">
+                        {persona.resultados.length > 0 ? persona.resultados.map(u => (
+                            <button
+                                key={u.id}
+                                type="button"
+                                onMouseDown={e => {
+                                    e.preventDefault();
+                                    persona.setId(u.id);
+                                    persona.setTermino(u.name);
+                                    persona.setDesplegado(false);
+                                }}
+                                className="w-full flex items-center gap-3 h-[62px] px-4 text-left transition-colors hover:bg-black/[.03] dark:hover:bg-white/[.05]"
+                            >
+                                <div className={`w-9 h-9 shrink-0 rounded-full ${T.chip} flex items-center justify-center text-[12.5px] font-semibold text-black/60 dark:text-white/60`}>
+                                    {u.name.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[14.5px] font-semibold truncate">{u.name}</p>
+                                    <p className="text-[12.5px] font-medium text-black/40 dark:text-white/40 truncate">{u.email}</p>
+                                </div>
+                            </button>
+                        )) : !persona.buscando && (
+                            <p className="px-4 py-5 text-center text-[14px] font-medium text-black/40 dark:text-white/40">
+                                Sin resultados para "{persona.termino}"
+                            </p>
+                        )}
+                    </div>
+                )}
+            </div>
+        )}
+    </div>
+);
+
 // El tooltip del recorrido guiado. Se mantiene tal cual estaba en las dos
 // páginas: es la única ayuda que tiene un anfitrión nuevo.
 const Globo: React.FC<{
@@ -175,6 +296,8 @@ export interface PropsFormularioGrupo {
     /** Segunda línea del encabezado: el nombre del grupo, o el aviso de revisión. */
     subtitulo: string;
     onVolver: () => void;
+    /** Texto de la miga de pan. El panel GCX vuelve a "Grupos". */
+    volverTexto?: string;
     form: DatosGrupo;
     setForm: React.Dispatch<React.SetStateAction<any>>;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
@@ -182,6 +305,8 @@ export interface PropsFormularioGrupo {
     etiquetas: GroupTag[];
     onToggleEtiqueta: (id: string) => void;
     coAnfitrion: CoAnfitrion;
+    /** Sólo el panel GCX asigna anfitrión; un anfitrión creando el suyo ya lo es. */
+    anfitrion?: CoAnfitrion;
     ortografia: Ortografia;
     anio: number;
     temporadas: SeasonSettings['seasons'];
@@ -197,8 +322,8 @@ export interface PropsFormularioGrupo {
 }
 
 const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
-    modo, subtitulo, onVolver, form, setForm, onChange,
-    categorias, etiquetas, onToggleEtiqueta, coAnfitrion, ortografia,
+    modo, subtitulo, onVolver, volverTexto = 'Mis grupos', form, setForm, onChange,
+    categorias, etiquetas, onToggleEtiqueta, coAnfitrion, anfitrion, ortografia,
     anio, temporadas, onGuardar, guardando, cambios = 0, aviso, textoGuardar, tour,
 }) => {
     const esCrear = modo === 'crear';
@@ -543,104 +668,32 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
                             </Caja>
                         </div>
 
-                        <div className="pt-1.5">
-                            <div className="flex items-center justify-between gap-3 px-1 mb-2.5">
-                                {/* En 375px el rótulo largo empujaba el conmutador
-                                    y "A mano" se partía en dos renglones. */}
-                                <p className={`${rotulo} truncate`}>
-                                    Co-anfitrión<span className="hidden lg:inline"> · opcional</span>
-                                </p>
-                                <div className={`flex shrink-0 ${T.interna} p-1 rounded-full`}>
-                                    {(['search', 'manual'] as const).map(m => (
-                                        <button
-                                            key={m}
-                                            type="button"
-                                            onClick={() => {
-                                                coAnfitrion.setModo(m);
-                                                if (m === 'manual') { coAnfitrion.setId(null); coAnfitrion.setTermino(''); }
-                                                else setForm((prev: any) => ({ ...prev, coHostFirstName: '', coHostLastName: '' }));
-                                            }}
-                                            className={`px-3.5 h-8 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-colors ${coAnfitrion.modo === m
-                                                ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
-                                                : 'text-black/50 dark:text-white/50'}`}
-                                        >
-                                            {m === 'search' ? 'Buscar' : 'A mano'}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                        {/* El anfitrión sólo aparece cuando lo pide quien monta
+                            el formulario: un anfitrión creando su propio grupo
+                            ya es el anfitrión, no hay nada que elegir. Desde el
+                            panel GCX sí, y es obligatorio. */}
+                        {anfitrion && (
+                            <SelectorDePersona
+                                etiqueta="Anfitrión"
+                                persona={anfitrion}
+                                campoNombre="leaderName"
+                                campoApellido="leaderSurname"
+                                form={form}
+                                onChange={onChange}
+                                setForm={setForm}
+                            />
+                        )}
 
-                            {coAnfitrion.modo === 'manual' ? (
-                                <div className="grid grid-cols-2 gap-2.5">
-                                    <Caja etiqueta="Nombre">
-                                        <input type="text" name="coHostFirstName" value={form.coHostFirstName} onChange={onChange} className={claseControl} placeholder="Nombre" />
-                                    </Caja>
-                                    <Caja etiqueta="Apellido">
-                                        <input type="text" name="coHostLastName" value={form.coHostLastName} onChange={onChange} className={claseControl} placeholder="Apellido" />
-                                    </Caja>
-                                </div>
-                            ) : (
-                                <div ref={coAnfitrion.contenedor} className="relative">
-                                    {coAnfitrion.id ? (
-                                        <div className={`h-[60px] rounded-[20px] ${T.interna} px-[18px] flex items-center gap-3`}>
-                                            <Check className="w-[18px] h-[18px] shrink-0" strokeWidth={2.6} />
-                                            <span className="flex-1 text-[15.5px] font-semibold truncate">{coAnfitrion.termino}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => { coAnfitrion.setId(null); coAnfitrion.setTermino(''); }}
-                                                aria-label="Quitar co-anfitrión"
-                                                className="shrink-0 text-black/40 dark:text-white/40 hover:opacity-70"
-                                            >
-                                                <X className="w-[18px] h-[18px]" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className={`h-[60px] rounded-[20px] ${T.interna} px-[18px] flex items-center gap-2.5`}>
-                                            <Search className="w-[17px] h-[17px] shrink-0 text-black/40 dark:text-white/40" />
-                                            <input
-                                                type="text"
-                                                value={coAnfitrion.termino}
-                                                onChange={e => { coAnfitrion.setTermino(e.target.value); coAnfitrion.setId(null); }}
-                                                onFocus={() => coAnfitrion.resultados.length > 0 && coAnfitrion.setDesplegado(true)}
-                                                placeholder="Buscar por nombre o email"
-                                                className={claseControl}
-                                            />
-                                            {coAnfitrion.buscando && <Loader2 className="w-4 h-4 animate-spin shrink-0 text-black/30 dark:text-white/30" />}
-                                        </div>
-                                    )}
-
-                                    {coAnfitrion.desplegado && !coAnfitrion.id && coAnfitrion.termino.trim() && (
-                                        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-[#1b1b1a] rounded-[22px] shadow-[0_10px_40px_rgba(0,0,0,.16)] overflow-hidden z-[999] max-h-[264px] overflow-y-auto">
-                                            {coAnfitrion.resultados.length > 0 ? coAnfitrion.resultados.map(u => (
-                                                <button
-                                                    key={u.id}
-                                                    type="button"
-                                                    onMouseDown={e => {
-                                                        e.preventDefault();
-                                                        coAnfitrion.setId(u.id);
-                                                        coAnfitrion.setTermino(u.name);
-                                                        coAnfitrion.setDesplegado(false);
-                                                    }}
-                                                    className="w-full flex items-center gap-3 h-[62px] px-4 text-left transition-colors hover:bg-black/[.03] dark:hover:bg-white/[.05]"
-                                                >
-                                                    <div className={`w-9 h-9 shrink-0 rounded-full ${T.chip} flex items-center justify-center text-[12.5px] font-semibold text-black/60 dark:text-white/60`}>
-                                                        {u.name.substring(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-[14.5px] font-semibold truncate">{u.name}</p>
-                                                        <p className="text-[12.5px] font-medium text-black/40 dark:text-white/40 truncate">{u.email}</p>
-                                                    </div>
-                                                </button>
-                                            )) : !coAnfitrion.buscando && (
-                                                <p className="px-4 py-5 text-center text-[14px] font-medium text-black/40 dark:text-white/40">
-                                                    Sin resultados para "{coAnfitrion.termino}"
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                        <SelectorDePersona
+                            etiqueta="Co-anfitrión"
+                            opcional
+                            persona={coAnfitrion}
+                            campoNombre="coHostFirstName"
+                            campoApellido="coHostLastName"
+                            form={form}
+                            onChange={onChange}
+                            setForm={setForm}
+                        />
                     </div>
                 );
 
@@ -727,7 +780,7 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
                         >
                             <ArrowLeft className="w-[19px] h-[19px]" strokeWidth={2.2} />
                         </button>
-                        <span className="text-[14.5px] font-medium text-black/50 dark:text-white/50">Mis grupos</span>
+                        <span className="text-[14.5px] font-medium text-black/50 dark:text-white/50">{volverTexto}</span>
                         <span className="text-[14.5px] font-medium text-black/28 dark:text-white/28">/</span>
                         {/* Creando no hay grupo todavía: el subtítulo es una
                             frase, no un nombre, y en un breadcrumb no va. */}
@@ -804,6 +857,8 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
             .slice(0, 6);
     }, [form.description, ortografia.sugerencia]);
 
+    useBloqueoDeFondo(!!ortografia.hojaAbierta);
+
     const hoja = ortografia.hojaAbierta && typeof document !== 'undefined' && createPortal(
         <div className={`${T.fuente} ${T.tinta} fixed inset-0 z-[9999] flex items-end sm:items-center justify-center`}>
             <div className="absolute inset-0 bg-black/38" onClick={ortografia.onCerrarHoja} />
@@ -812,7 +867,6 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
                 aria-modal="true"
                 className="relative w-full sm:max-w-[420px] bg-white dark:bg-[#1b1b1a] rounded-t-[30px] sm:rounded-[30px] px-[22px] pt-3.5 pb-[26px] animate-slideIn"
             >
-                <div className="w-[38px] h-1 rounded-full bg-[#e2e2de] dark:bg-[#333331] mx-auto mb-5 sm:hidden" />
                 <p className="text-[21px] leading-[1.3] font-semibold tracking-[-.01em]">
                     {cambiosDeTexto.length > 0
                         ? `Hay ${cambiosDeTexto.length} ${cambiosDeTexto.length === 1 ? 'error' : 'errores'} de ortografía`

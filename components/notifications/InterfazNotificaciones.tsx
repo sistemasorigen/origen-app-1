@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import {
     Bell,
     X,
@@ -134,6 +135,7 @@ interface NotificationDrawerProps {
 }
 
 export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose }) => {
+    useBloqueoDeFondo(isOpen);
     const navigate = useNavigate();
     const { notifications, markAsRead, markAllAsRead, togglePin, deleteNotification, clearAllNotifications } = useNotifications();
     const [visible, setVisible] = useState(false);

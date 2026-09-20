@@ -1474,6 +1474,26 @@ function transformDbRowToGroup(data: any): Group {
 }
 
 
+/**
+ * ¿La base responde?
+ *
+ * Una consulta mínima que solo sirve para distinguir "falló porque los datos
+ * están mal" de "falló porque no hay base". Se usa en el camino de error, no
+ * en el feliz: no agrega una consulta a cada pantalla.
+ *
+ * Cuenta como caída cualquier error de la consulta y también que el
+ * navegador se declare sin red.
+ */
+export const probarConexionBase = async (): Promise<boolean> => {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
+  try {
+    const { error } = await supabase.from('users').select('id').limit(1);
+    return !error;
+  } catch {
+    return false;
+  }
+};
+
 export const supabaseService = {
   // --- NOTIFICATIONS ---
   async createAppNotification(userId: string, title: string, message: string, type: string, actionUrl: string | null = null): Promise<boolean> {

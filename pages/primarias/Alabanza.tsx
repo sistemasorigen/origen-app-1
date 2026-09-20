@@ -14,6 +14,7 @@ import SystemLoginModal from '../../components/modals/ModalLoginSistema';
 import { useAudio } from '../../contexts/AudioContext';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 // Helper to extract YouTube Video ID
 const getYoutubeId = (url: string) => {
@@ -65,6 +66,7 @@ const Alabanza: React.FC<AlabanzaProps> = ({ currentUser, onLoginRequest }) => {
 
     // Embed Player State
     const [playingYoutubeId, setPlayingYoutubeId] = useState<string | null>(null);
+    useBloqueoDeFondo(!!playingYoutubeId);
 
     const [imgError, setImgError] = useState<Record<string, boolean>>({});
     const [toast, setToast] = useState<{ show: boolean, msg: string, type: 'success' | 'error' }>({ show: false, msg: '', type: 'success' });

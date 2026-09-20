@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 interface ModalActualizacionProps {
     onConfirm: () => void;
 }
 
 const ModalActualizacion: React.FC<ModalActualizacionProps> = ({ onConfirm }) => {
+    // Siempre visible mientras está montado: bloquea desde que aparece.
+    useBloqueoDeFondo(true);
     const [reloading, setReloading] = useState(false);
 
     const handleConfirm = () => {

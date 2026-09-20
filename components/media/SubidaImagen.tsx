@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { supabaseService } from '../../services/supabaseService';
 import { Upload, Loader2, Trash2, ImageIcon, AlertCircle } from 'lucide-react';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../../src/utils/cropImage';
 import { createPortal } from 'react-dom';
@@ -45,6 +46,7 @@ const ImageUpload: React.FC<ImageUploadProps & { customUploadFn?: (file: File) =
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
     const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+    useBloqueoDeFondo(isCropModalOpen);
     const [imageToCropUrl, setImageToCropUrl] = useState<string | null>(null);
 
     const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, X, Plus, SlidersHorizontal, MoreHorizontal } from 'lucide-react';
 import { Group } from '../../types';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
  * Barra de la sección Grupos (design-claude/Admin GCX - Panel).
@@ -44,6 +45,7 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
     onResetFiltros,
 }) => {
     const [hojaFiltros, setHojaFiltros] = useState(false);
+    useBloqueoDeFondo(hojaFiltros);
 
     const cuenta = {
         ALL: gruposDeTemporada.length,
@@ -178,17 +180,30 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
             {/* Chips de estado — escritorio */}
             <div className="mt-3.5 hidden md:block">{chipsEstado()}</div>
 
-            {/* Resumen — mobile */}
-            <p className="mx-0.5 mt-3.5 text-[12px] font-semibold text-black/[.62] md:hidden">
-                {resultados} de {gruposDeTemporada.length} grupos
-            </p>
+            {/* Resumen y crear — mobile.
+                Crear comparte renglón con el resumen en vez de ocupar uno
+                propio: la línea ya estaba ahí con la mitad derecha vacía, así
+                que la acción no le saca altura a la lista. Y queda arriba,
+                donde se llega sin scrollear — antes vivía debajo de los cien
+                grupos, que es donde nadie la iba a encontrar. */}
+            <div className="mx-0.5 mt-3.5 flex items-center gap-3 md:hidden">
+                <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-black/[.62]">
+                    {resultados} de {gruposDeTemporada.length} grupos
+                </p>
+                <button
+                    onClick={onCreateGroup}
+                    className="flex h-[38px] flex-none items-center gap-1.5 rounded-full bg-[#0a0a0a] pl-3.5 pr-4 text-[13px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                >
+                    <Plus className="h-[15px] w-[15px]" />
+                    Crear grupo
+                </button>
+            </div>
 
             {/* Hoja de filtros — mobile */}
             {hojaFiltros && (
                 <div className="fixed inset-0 z-[60] md:hidden">
                     <div className="absolute inset-0 bg-[rgba(10,10,10,.4)]" onClick={() => setHojaFiltros(false)} />
-                    <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-auto rounded-t-[28px] bg-white px-[18px] pb-6 pt-3.5">
-                        <div className="mx-auto mb-[18px] h-1 w-[38px] rounded-full bg-[#e2e2de]" />
+                    <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-auto rounded-t-[28px] bg-white px-[18px] pb-6 pt-6">
                         <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">Estado</p>
                         {chipsEstado(true)}
                         <p className="mb-3 mt-[22px] text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">Temporada</p>
