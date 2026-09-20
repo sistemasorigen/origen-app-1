@@ -21,7 +21,19 @@ interface HojaInscripcionProps {
 }
 
 const HojaInscripcion: React.FC<HojaInscripcionProps> = ({ isOpen, onClose, children, labelledBy }) => {
-    const [isMobile, setIsMobile] = useState(false);
+    /**
+     * Se mide en el PRIMER render, no en un efecto.
+     *
+     * Arrancando en `false`, en un teléfono pasaba esto: el panel montaba con
+     * el `initial` de escritorio (`opacity: 0`) y empezaba a aparecer; el
+     * efecto corría enseguida, `isMobile` pasaba a true, y el `animate` se
+     * volvía `{ y: 0 }` — sin `opacity`. La opacidad quedaba varada a mitad de
+     * camino, casi en cero: una hoja invisible sobre el velo, que igual se
+     * comía los clicks y no dejaba inscribirse.
+     */
+    const [isMobile, setIsMobile] = useState(
+        () => typeof window !== 'undefined' && window.innerWidth < 768
+    );
     const [arrastrando, setArrastrando] = useState(false);
     const contenedorRef = useRef<HTMLDivElement>(null);
     const focoPrevioRef = useRef<HTMLElement | null>(null);
@@ -100,9 +112,15 @@ const HojaInscripcion: React.FC<HojaInscripcionProps> = ({ isOpen, onClose, chil
                             maxHeight: isMobile ? '92vh' : '90vh',
                             boxShadow: '0 18px 60px rgba(10,10,10,.28)',
                         }}
-                        initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.97 }}
-                        animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
-                        exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.97 }}
+                        /* La opacidad va explícita en los tres keyframes de
+                           mobile aunque ahí la hoja no se desvanezca: si el
+                           modo cambia a mitad de una animación —girar el
+                           teléfono, por ejemplo— el destino nuevo tiene que
+                           llevar la hoja a opacidad 1 igual. Sin esto queda
+                           donde la dejó la animación anterior. */
+                        initial={isMobile ? { y: '100%', opacity: 1 } : { opacity: 0, scale: 0.97 }}
+                        animate={isMobile ? { y: 0, opacity: 1 } : { opacity: 1, scale: 1 }}
+                        exit={isMobile ? { y: '100%', opacity: 1 } : { opacity: 0, scale: 0.97 }}
                         transition={transicion}
                         onClick={(e) => e.stopPropagation()}
                         drag={isMobile && arrastrando ? 'y' : false}
