@@ -537,6 +537,7 @@
        punteado y radio 12. Se reviste desde acá en vez de tocar ese
        componente, que lo usan muchas pantallas con otro aspecto. */
     #gcx-panel .caja-portada>div,
+    #admin-general .caja-portada>div,
     #gcx-formulario .caja-portada>div {
       border: 0 !important;
       border-radius: 20px !important;
@@ -554,7 +555,8 @@
        solo las redefine, así el foco no tiene que ganarle en especificidad a
        una regla que repite la cadena de :not(). */
     #gcx-panel,
-    #gcx-coordinadores {
+    #gcx-coordinadores,
+    #admin-general {
       --panel-campo-fondo: #f7f7f5;
       --panel-campo-borde: transparent;
     }
@@ -564,7 +566,10 @@
     #gcx-panel select,
     #gcx-coordinadores input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
     #gcx-coordinadores textarea,
-    #gcx-coordinadores select {
+    #gcx-coordinadores select,
+    #admin-general input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
+    #admin-general textarea,
+    #admin-general select {
       background-color: var(--panel-campo-fondo) !important;
       color: #0a0a0a !important;
       border: 1.5px solid var(--panel-campo-borde) !important;
@@ -580,14 +585,18 @@
     #gcx-panel select:focus,
     #gcx-coordinadores input:focus,
     #gcx-coordinadores textarea:focus,
-    #gcx-coordinadores select:focus {
+    #gcx-coordinadores select:focus,
+    #admin-general input:focus,
+    #admin-general textarea:focus,
+    #admin-general select:focus {
       --panel-campo-fondo: #ffffff;
       --panel-campo-borde: #0a0a0a;
     }
 
     /* El color de una categoría se elige con el selector nativo: sin fondo
        gris ni borde encima, que lo taparían. */
-    #gcx-panel input[type="color"] {
+    #gcx-panel input[type="color"],
+    #admin-general input[type="color"] {
       border: 0 !important;
       border-radius: 14px !important;
       background: transparent !important;
@@ -596,7 +605,8 @@
     }
 
     #gcx-panel ::placeholder,
-    #gcx-coordinadores ::placeholder {
+    #gcx-coordinadores ::placeholder,
+    #admin-general ::placeholder {
       color: rgba(0, 0, 0, .45) !important;
     }
 
@@ -676,6 +686,10 @@
     #gcx-coordinadores textarea.campo-desnudo,
     #gcx-coordinadores select.campo-desnudo,
     #gcx-coordinadores .campo-desnudo:focus,
+    #admin-general input.campo-desnudo:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    #admin-general textarea.campo-desnudo,
+    #admin-general select.campo-desnudo,
+    #admin-general .campo-desnudo:focus,
     #gcx-accion input.campo-desnudo:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
     #gcx-accion textarea.campo-desnudo,
     #gcx-accion select.campo-desnudo,

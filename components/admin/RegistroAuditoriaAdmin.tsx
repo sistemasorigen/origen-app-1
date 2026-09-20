@@ -1,298 +1,313 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabaseService } from '../../services/supabaseService';
-import { AuditLog } from '../../types';
-import { Clock, User, Activity, X, FileText, ArrowRight } from 'lucide-react';
-import NeoModal from '../ui/NeoModal';
+import { AuditLog, UserRole } from '../../types';
+import { nombreDeRol } from '../../pages/admin/catalogoRoles';
+
+/**
+ * Registro de cambios (design-claude/Admin General).
+ *
+ * Antes era una tabla de cinco columnas con la tabla y el id crudos; para
+ * saber qué había pasado había que abrir el detalle de cada fila. Ahora cada
+ * cambio se cuenta en una frase, y los que tocan permisos llevan un punto
+ * lleno: son los únicos que cambian a qué puede entrar alguien, y son los
+ * que uno viene a buscar acá.
+ *
+ * El diff completo sigue estando, a un toque de distancia.
+ */
+
+const NOMBRES_DE_CAMPO: Record<string, string> = {
+    id: 'ID',
+    created_at: 'Creado',
+    updated_at: 'Actualizado',
+    name: 'Nombre',
+    email: 'Email',
+    first_name: 'Nombre',
+    last_name: 'Apellido',
+    phone: 'Teléfono',
+    role: 'Rol (legacy)',
+    roles: 'Roles',
+    is_active: 'Activo',
+    leader_name: 'Nombre del anfitrión',
+    leader_surname: 'Apellido del anfitrión',
+    meeting_day: 'Día de reunión',
+    meeting_time: 'Hora de reunión',
+    location: 'Ubicación',
+    status: 'Estado',
+    group_id: 'Grupo',
+    user_id: 'Usuario',
+    linked_group_id: 'Grupo vinculado',
+    volunteer_roles: 'Roles de voluntario',
+    coordinator_variants: 'Categorías que coordina',
+    config: 'Configuración',
+};
+
+const TABLAS: Record<string, string> = {
+    users: 'un usuario',
+    app_config: 'la configuración de la app',
+    groups: 'un grupo',
+    group_registrations: 'una inscripción',
+    group_attendance: 'una asistencia',
+    home_musica_banner_slides: 'el banner de música',
+};
+
+const nombreCampo = (clave: string) => NOMBRES_DE_CAMPO[clave] || clave;
+
+const comoTexto = (valor: any): string => {
+    if (valor === null || valor === undefined) return '—';
+    if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+    if (Array.isArray(valor)) return valor.length ? valor.join(', ') : '—';
+    if (typeof valor === 'object') return JSON.stringify(valor);
+    if (typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(valor)) {
+        return new Date(valor).toLocaleString('es-AR');
+    }
+    return String(valor);
+};
+
+const listaRoles = (data: any): string[] => {
+    if (!data) return [];
+    if (Array.isArray(data.roles) && data.roles.length) return data.roles.map(String);
+    return data.role ? [String(data.role)] : [];
+};
+
+/** Los roles llegan crudos de la base: se muestran con el nombre de la app. */
+const enCastellano = (roles: string[]) => roles.map(r => nombreDeRol(r as UserRole));
+
+interface Leida {
+    frase: string;
+    esRol: boolean;
+}
+
+/** Traduce una fila del registro a algo que se pueda leer de corrido. */
+const leer = (log: AuditLog): Leida => {
+    const quien = log.new_data?.name || log.old_data?.name || 'alguien';
+
+    if (log.table_name === 'users') {
+        if (log.action === 'INSERT') return { frase: `Creó la cuenta de ${quien}`, esRol: false };
+        if (log.action === 'DELETE') return { frase: `Eliminó la cuenta de ${quien}`, esRol: false };
+
+        const antes = listaRoles(log.old_data);
+        const ahora = listaRoles(log.new_data);
+        const dados = ahora.filter(r => !antes.includes(r));
+        const quitados = antes.filter(r => !ahora.includes(r));
+
+        if (dados.length || quitados.length) {
+            const partes: string[] = [];
+            if (dados.length) partes.push(`le dio ${dados.length === 1 ? 'el rol' : 'los roles'} ${enCastellano(dados).join(', ')}`);
+            if (quitados.length) partes.push(`le quitó ${quitados.length === 1 ? 'el rol' : 'los roles'} ${enCastellano(quitados).join(', ')}`);
+            const frase = partes.join(' y ');
+            return { frase: `${frase.charAt(0).toUpperCase()}${frase.slice(1)} a ${quien}`, esRol: true };
+        }
+
+        if (log.old_data?.is_active !== log.new_data?.is_active) {
+            return {
+                frase: log.new_data?.is_active ? `Reactivó la cuenta de ${quien}` : `Desactivó la cuenta de ${quien}`,
+                esRol: true,
+            };
+        }
+
+        return { frase: `Actualizó los datos de ${quien}`, esRol: false };
+    }
+
+    if (log.table_name === 'app_config') {
+        return { frase: 'Cambió la configuración pública de la app', esRol: false };
+    }
+
+    const cosa = TABLAS[log.table_name] || `un registro de ${log.table_name}`;
+    const verbo = log.action === 'INSERT' ? 'Creó' : log.action === 'DELETE' ? 'Borró' : 'Actualizó';
+    return { frase: `${verbo} ${cosa}`, esRol: false };
+};
+
+const cuando = (iso: string) => {
+    const fecha = new Date(iso);
+    if (isNaN(fecha.getTime())) return '';
+    const ahora = new Date();
+    const mismoDia = fecha.toDateString() === ahora.toDateString();
+    const ayer = new Date(ahora);
+    ayer.setDate(ahora.getDate() - 1);
+    const hora = fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+
+    if (mismoDia) return `hoy ${hora}`;
+    if (fecha.toDateString() === ayer.toDateString()) return `ayer ${hora}`;
+    return `${fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} ${hora}`;
+};
 
 const AdminAuditLogs: React.FC = () => {
     const [logs, setLogs] = useState<AuditLog[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+    const [cargando, setCargando] = useState(true);
+    const [soloRoles, setSoloRoles] = useState(false);
+    const [detalle, setDetalle] = useState<AuditLog | null>(null);
 
-    useEffect(() => {
-        loadLogs();
-        // Optional: Auto-refresh every 30s
-        const interval = setInterval(loadLogs, 30000);
-        return () => clearInterval(interval);
+    const traer = useCallback(async () => {
+        setCargando(true);
+        setLogs(await supabaseService.getAuditLogs());
+        setCargando(false);
     }, []);
 
-    const loadLogs = async () => {
-        setIsLoading(true);
-        const data = await supabaseService.getAuditLogs();
-        setLogs(data);
-        setIsLoading(false);
-    };
+    useEffect(() => {
+        traer();
+        const cada30s = setInterval(traer, 30000);
+        return () => clearInterval(cada30s);
+    }, [traer]);
 
-    // Helper to format date
-    const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleString('es-AR', {
-            day: '2-digit', month: '2-digit', year: '2-digit',
-            hour: '2-digit', minute: '2-digit'
-        });
-    };
+    useEffect(() => {
+        if (!detalle) return;
+        const alSalir = (e: KeyboardEvent) => { if (e.key === 'Escape') setDetalle(null); };
+        window.addEventListener('keydown', alSalir);
+        return () => window.removeEventListener('keydown', alSalir);
+    }, [detalle]);
 
-    // Helper to format values
-    const formatValue = (val: any) => {
-        if (val === null || val === undefined) return <span className="text-neutral-400 italic">null</span>;
-        if (typeof val === 'boolean') return val ? 'SÍ' : 'NO';
-        if (Array.isArray(val)) return val.join(', ');
-        if (typeof val === 'object') return JSON.stringify(val);
-        // Dates
-        if (typeof val === 'string' && val.match(/^\d{4}-\d{2}-\d{2}T/)) {
-            return new Date(val).toLocaleString();
-        }
-        return String(val);
-    };
-
-    // Helper to translate keys
-    const translateKey = (key: string) => {
-        const map: Record<string, string> = {
-            id: 'ID',
-            created_at: 'Creado',
-            updated_at: 'Actualizado',
-            name: 'Nombre',
-            email: 'Email',
-            first_name: 'Nombre',
-            last_name: 'Apellido',
-            phone: 'Teléfono',
-            role: 'Rol (Legacy)',
-            roles: 'Roles',
-            is_active: 'Activo',
-            leader_name: 'Líder Nombre',
-            leader_surname: 'Líder Apellido',
-            meeting_day: 'Día Reunión',
-            meeting_time: 'Hora Reunión',
-            location: 'Ubicación',
-            status: 'Estado',
-            group_id: 'Grupo ID',
-            user_id: 'Usuario ID',
-            linked_group_id: 'Grupo Vinculado',
-            volunteer_roles: 'Roles Voluntario'
-        };
-        return map[key] || key;
-    };
-
-    // Helper to format JSON for display
-    const formatDiff = (log: AuditLog) => {
-        // --- INSERT VIEW ---
-        if (log.action === 'INSERT') {
-            return (
-                <div className="border-2 border-emerald-200 bg-emerald-50 p-4">
-                    <h4 className="font-black text-emerald-700 mb-4 uppercase text-sm border-b-2 border-emerald-200 pb-2">
-                        Nuevo Registro Creado
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                        {Object.entries(log.new_data || {}).map(([key, value]) => (
-                            <div key={key} className="flex flex-col border-b border-emerald-200/50 py-1">
-                                <span className="text-[10px] font-bold uppercase text-emerald-600 opacity-70">
-                                    {translateKey(key)}
-                                </span>
-                                <span className="font-mono text-sm font-medium text-emerald-900 break-words">
-                                    {formatValue(value)}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        }
-
-        // --- DELETE VIEW ---
-        if (log.action === 'DELETE') {
-            return (
-                <div className="border-2 border-red-200 bg-red-50 p-4">
-                    <h4 className="font-black text-red-700 mb-4 uppercase text-sm border-b-2 border-red-200 pb-2">
-                        Registro Eliminado
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                        {Object.entries(log.old_data || {}).map(([key, value]) => (
-                            <div key={key} className="flex flex-col border-b border-red-200/50 py-1">
-                                <span className="text-[10px] font-bold uppercase text-red-600 opacity-70">
-                                    {translateKey(key)}
-                                </span>
-                                <span className="font-mono text-sm font-medium text-red-900 break-words">
-                                    {formatValue(value)}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        }
-
-        // --- UPDATE VIEW ---
-        // Find changes
-        const oldData = log.old_data || {};
-        const newData = log.new_data || {};
-        const allKeys = Array.from(new Set([...Object.keys(oldData), ...Object.keys(newData)]));
-
-        const changes = allKeys.filter(key => {
-            // Ignore internal fields usually not relevant if unchanged
-            if (['updated_at', 'created_at'].includes(key)) return false;
-            return JSON.stringify(oldData[key]) !== JSON.stringify(newData[key]);
-        });
-
-        if (changes.length === 0) {
-            return <div className="p-4 text-center text-neutral-500 font-bold italic">No se detectaron cambios visibles.</div>;
-        }
-
-        return (
-            <div className="border-2 border-black bg-white">
-                <table className="w-full text-left">
-                    <thead className="bg-neutral-100 text-xs font-black uppercase tracking-wider border-b-2 border-black">
-                        <tr>
-                            <th className="p-3 w-1/4">Campo</th>
-                            <th className="p-3 w-1/3 text-red-600 border-l-2 border-neutral-200">Valor Anterior</th>
-                            <th className="p-3 w-1/3 text-emerald-600 border-l-2 border-neutral-200">Valor Nuevo</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200 text-sm">
-                        {changes.map(key => (
-                            <tr key={key} className="hover:bg-neutral-50 transition-colors">
-                                <td className="p-3 font-bold uppercase text-xs text-neutral-600 bg-neutral-50">
-                                    {translateKey(key)}
-                                </td>
-                                <td className="p-3 font-mono text-red-800 bg-red-50/30 border-l-2 border-neutral-200 break-words">
-                                    {formatValue(oldData[key])}
-                                </td>
-                                <td className="p-3 font-mono text-emerald-800 bg-emerald-50/30 border-l-2 border-neutral-200 break-words">
-                                    {formatValue(newData[key])}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        );
-    };
+    const filas = useMemo(
+        () => logs.map(log => ({ log, ...leer(log) })).filter(f => !soloRoles || f.esRol),
+        [logs, soloRoles]
+    );
 
     return (
-        <div className="space-y-6 animate-fadeIn">
-            {/* Header */}
-            <div className="flex justify-between items-center border-b-4 border-black pb-4">
-                <div>
-                    <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-3">
-                        <Activity className="w-8 h-8" />
-                        Registro de Auditoría
-                    </h2>
-                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mt-1">
-                        Historial de cambios en base de datos
-                    </p>
-                </div>
+        <>
+            <div className="mb-3 flex flex-wrap items-center gap-2.5">
+                <p className="mx-0.5 min-w-[240px] max-w-[640px] flex-1 text-[13px] font-medium leading-[1.6] text-black/[.62]">
+                    Todo cambio de permisos o de configuración pública queda registrado. Los cambios de rol se marcan
+                    aparte porque son los que afectan el acceso de alguien.
+                </p>
                 <button
-                    onClick={loadLogs}
-                    className="px-4 py-2 bg-white border-2 border-black font-black uppercase text-xs hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"
+                    onClick={() => setSoloRoles(v => !v)}
+                    aria-pressed={soloRoles}
+                    className={`h-[38px] flex-none rounded-full px-4 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${soloRoles ? 'bg-[#0a0a0a] text-white' : 'bg-[#f2f2f0] text-black/[.62]'}`}
                 >
-                    Refrescar
+                    Solo permisos
+                </button>
+                <button
+                    onClick={traer}
+                    className="h-[38px] flex-none rounded-full bg-[#f2f2f0] px-4 text-[12.5px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                >
+                    Actualizar
                 </button>
             </div>
 
-            {/* Table */}
-            <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-black text-white text-xs font-black uppercase tracking-widest">
-                            <tr>
-                                <th className="p-4 border-r-2 border-white/20">Fecha</th>
-                                <th className="p-4 border-r-2 border-white/20">Usuario</th>
-                                <th className="p-4 border-r-2 border-white/20">Acción</th>
-                                <th className="p-4 border-r-2 border-white/20">Tabla</th>
-                                <th className="p-4 text-center">Detalles</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y-2 divide-black">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={5} className="p-8 text-center font-bold uppercase animate-pulse">
-                                        Cargando registros...
-                                    </td>
-                                </tr>
-                            ) : logs.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="p-8 text-center text-neutral-400 font-bold uppercase">
-                                        No hay registros disponibles.
-                                    </td>
-                                </tr>
-                            ) : (
-                                logs.map((log) => (
-                                    <tr key={log.id} className="hover:bg-neutral-50 transition-colors group">
-                                        <td className="p-4 font-mono text-xs border-r-2 border-black/10">
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="w-3 h-3 text-neutral-400" />
-                                                {formatDate(log.created_at)}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 border-r-2 border-black/10">
-                                            <div className="flex items-center gap-2 font-bold text-xs uppercase">
-                                                <User className="w-3 h-3" />
-                                                {log.actor_name}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 border-r-2 border-black/10">
-                                            <span className={`inline-block px-2 py-0.5 border-2 text-[10px] font-black uppercase ${log.action === 'INSERT' ? 'bg-emerald-100 text-emerald-800 border-emerald-800' :
-                                                log.action === 'DELETE' ? 'bg-red-100 text-red-800 border-red-800' :
-                                                    'bg-blue-100 text-blue-800 border-blue-800'
-                                                }`}>
-                                                {log.action}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 border-r-2 border-black/10 font-mono text-xs font-bold uppercase">
-                                            {log.table_name}
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            <button
-                                                onClick={() => setSelectedLog(log)}
-                                                className="px-3 py-1 border-2 border-black text-[10px] font-black uppercase hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] active:shadow-none flex items-center gap-1 mx-auto"
-                                            >
-                                                <FileText className="w-3 h-3" /> Ver
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            <div className="overflow-hidden rounded-[20px] bg-white">
+                {cargando && logs.length === 0 ? (
+                    <p className="px-[18px] py-12 text-center text-[13px] font-medium text-black/[.6]">
+                        Cargando el registro…
+                    </p>
+                ) : filas.length === 0 ? (
+                    <p className="px-[18px] py-12 text-center text-[13px] font-medium text-black/[.6]">
+                        {soloRoles ? 'No hay cambios de permisos registrados.' : 'Todavía no hay cambios registrados.'}
+                    </p>
+                ) : (
+                    filas.map(({ log, frase, esRol }) => (
+                        <button
+                            key={log.id}
+                            onClick={() => setDetalle(log)}
+                            className="flex w-full items-start gap-3 border-b border-[#f4f3f1] px-[18px] py-3.5 text-left transition-colors last:border-b-0 hover:bg-[#fcfcfb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a]"
+                        >
+                            <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${esRol ? 'bg-[#0a0a0a]' : 'bg-black/[.18]'}`} />
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-[13.5px] font-semibold leading-[1.5] text-[#0a0a0a]">{frase}</span>
+                                <span className="mt-1 block text-[12px] font-medium text-black/[.6]">{log.actor_name}</span>
+                            </span>
+                            <span className="flex-none whitespace-nowrap text-[12px] font-medium text-black/[.55]">
+                                {cuando(log.created_at)}
+                            </span>
+                        </button>
+                    ))
+                )}
             </div>
 
-            {/* Diff Modal */}
-            <NeoModal
-                isOpen={!!selectedLog}
-                onClose={() => setSelectedLog(null)}
-                title="Detalle de Cambio"
-            >
-                {selectedLog && (
-                    <div className="flex flex-col h-full -mx-1 px-1">
-                        {/* Header Info Badges (Moved to body) */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                            <span className="bg-black text-white px-2 py-1 text-xs font-bold uppercase">
-                                ID: {selectedLog.record_id}
-                            </span>
-                            <span className="bg-white border-2 border-black px-2 py-1 text-xs font-bold uppercase">
-                                {selectedLog.table_name}
-                            </span>
-                            <span className="bg-white border-2 border-black px-2 py-1 text-xs font-bold uppercase">
-                                {formatDate(selectedLog.created_at)}
-                            </span>
+            {detalle && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Detalle del cambio"
+                    className="fixed inset-0 z-[120] flex items-end justify-center bg-[rgba(10,10,10,.42)] md:items-center md:p-10"
+                    onClick={() => setDetalle(null)}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        className="flex max-h-[86vh] w-full flex-col rounded-t-[24px] bg-white md:max-w-[620px] md:rounded-[24px]"
+                    >
+                        <div className="border-b border-[#f0efec] px-6 pb-4 pt-6">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.55]">
+                                Detalle del cambio
+                            </p>
+                            <p className="mt-2 text-[17px] font-semibold leading-[1.35] tracking-[-0.015em] text-[#0a0a0a]">
+                                {leer(detalle).frase}
+                            </p>
+                            <p className="mt-1.5 text-[12.5px] font-medium text-black/[.62]">
+                                {detalle.actor_name} · {cuando(detalle.created_at)} · {detalle.table_name}
+                            </p>
                         </div>
 
-                        {/* Modal Body */}
-                        <div className="overflow-y-auto flex-1 mb-4">
-                            {formatDiff(selectedLog)}
+                        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+                            <CambiosDelRegistro log={detalle} />
                         </div>
 
-                        {/* Modal Footer */}
-                        <div className="pt-4 border-t-4 border-black text-right shrink-0">
+                        <div className="border-t border-[#f0efec] px-6 pb-6 pt-4">
                             <button
-                                onClick={() => setSelectedLog(null)}
-                                className="px-6 py-3 bg-black text-white font-black uppercase text-sm border-2 border-black hover:bg-neutral-800 transition-all w-full md:w-auto"
+                                onClick={() => setDetalle(null)}
+                                className="h-12 w-full rounded-full bg-[#0a0a0a] text-[14px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                             >
                                 Cerrar
                             </button>
                         </div>
                     </div>
-                )}
-            </NeoModal>
+                </div>
+            )}
+        </>
+    );
+};
+
+/** Qué cambió, campo por campo. */
+const CambiosDelRegistro: React.FC<{ log: AuditLog }> = ({ log }) => {
+    if (log.action === 'INSERT' || log.action === 'DELETE') {
+        const datos = (log.action === 'INSERT' ? log.new_data : log.old_data) || {};
+        const entradas = Object.entries(datos).filter(([, v]) => v !== null && v !== undefined && v !== '');
+        return (
+            <>
+                <p className="mb-3 text-[12.5px] font-semibold text-[#0a0a0a]">
+                    {log.action === 'INSERT' ? 'Se creó con estos datos' : 'Tenía estos datos'}
+                </p>
+                <div className="flex flex-col gap-1.5">
+                    {entradas.map(([clave, valor]) => (
+                        <div key={clave} className="flex items-start justify-between gap-3 border-b border-[#f4f3f1] py-2 last:border-b-0">
+                            <span className="flex-none text-[12px] font-medium text-black/[.6]">{nombreCampo(clave)}</span>
+                            <span className="min-w-0 break-words text-right text-[12.5px] font-semibold text-[#0a0a0a]">
+                                {comoTexto(valor)}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </>
+        );
+    }
+
+    const antes = log.old_data || {};
+    const ahora = log.new_data || {};
+    const claves = Array.from(new Set([...Object.keys(antes), ...Object.keys(ahora)]))
+        .filter(k => JSON.stringify(antes[k]) !== JSON.stringify(ahora[k]));
+
+    if (claves.length === 0) {
+        return <p className="text-[13px] font-medium text-black/[.6]">No quedó registrado ningún campo distinto.</p>;
+    }
+
+    return (
+        <div className="flex flex-col gap-2.5">
+            {claves.map(clave => (
+                <div key={clave} className="rounded-[16px] bg-[#f7f7f5] px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.55]">
+                        {nombreCampo(clave)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="rounded-[10px] bg-white px-2.5 py-1.5 text-[12.5px] font-medium text-black/[.55] line-through">
+                            {comoTexto(antes[clave])}
+                        </span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.4)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 12h14M13 6l6 6-6 6" />
+                        </svg>
+                        <span className="rounded-[10px] bg-[#0a0a0a] px-2.5 py-1.5 text-[12.5px] font-semibold text-white">
+                            {comoTexto(ahora[clave])}
+                        </span>
+                    </div>
+                </div>
+            ))}
         </div>
     );
 };

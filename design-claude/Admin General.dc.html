@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics=""><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}input,button,textarea{font-family:inherit}input:focus,textarea:focus{outline:none}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:999px; padding:6px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07)">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ showDesktop }}" style="{{ deskBtn }}">Desktop</button>
+      <button onClick="{{ showMobile }}" style="{{ mobBtn }}">Mobile</button>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; background:#f6f6f4; border-radius:22px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:hidden; display:flex; flex-direction:column; width:{{ frameW }}; height:840px">
+
+    <div style="flex:none; background:#fff; border-bottom:1px solid #ecebe8; padding:{{ headPad }}">
+      <div style="display:flex; align-items:flex-start; gap:14px">
+        <div style="min-width:0; flex:1">
+          <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.52)">ADMINISTRACIÓN GENERAL</p>
+          <h1 style="margin:5px 0 0; font:600 {{ h1Size }}; color:#0a0a0a; letter-spacing:-.018em">{{ tituloSeccion }}</h1>
+        </div>
+        <div style="position:relative; flex:none">
+          <button onClick="{{ toggleMenu }}" style="{{ engranajeBtn }}">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.1"></circle><path d="M19.4 14.6l1.5 1.2-1.8 3.1-1.8-.7a7.6 7.6 0 01-2.6 1.5l-.3 2.3h-3.6l-.3-2.3a7.6 7.6 0 01-2.6-1.5l-1.8.7-1.8-3.1 1.5-1.2a7.6 7.6 0 010-3l-1.5-1.2 1.8-3.1 1.8.7a7.6 7.6 0 012.6-1.5l.3-2.3h3.6l.3 2.3a7.6 7.6 0 012.6 1.5l1.8-.7 1.8 3.1-1.5 1.2a7.6 7.6 0 010 3z"></path></svg>
+            <span style="{{ engranajeLabel }}">Sistema</span>
+            <sc-if value="{{ menuAbierto }}" hint-placeholder-val="{{ false }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"></path></svg>
+            </sc-if>
+            <sc-if value="{{ menuCerrado }}" hint-placeholder-val="{{ true }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+            </sc-if>
+          </button>
+          <sc-if value="{{ menuAbierto }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute; right:0; top:46px; z-index:20; width:{{ menuW }}; background:#0a0a0a; border-radius:20px; padding:14px; box-shadow:0 14px 40px rgba(0,0,0,.28)">
+              <p style="margin:0 4px 11px; font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.09em; color:rgba(255,255,255,.5)">ADMINISTRACIÓN DEL SISTEMA</p>
+              <button onClick="{{ goConfig }}" style="{{ menuItemConfig }}">
+                <span style="min-width:0; flex:1; text-align:left">
+                  <span style="display:block; font:600 14px Manrope,system-ui,sans-serif">Configuración de la app</span>
+                  <span style="display:block; margin-top:4px; font:500 12px/1.45 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.6)">Identidad, banners, música y pies. Lo ven las 412 personas.</span>
+                </span>
+              </button>
+              <button onClick="{{ goAuditoria }}" style="{{ menuItemAuditoria }}">
+                <span style="min-width:0; flex:1; text-align:left">
+                  <span style="display:block; font:600 14px Manrope,system-ui,sans-serif">Registro de cambios</span>
+                  <span style="display:block; margin-top:4px; font:500 12px/1.45 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.6)">Quién tocó qué permiso y cuándo.</span>
+                </span>
+              </button>
+              <p style="margin:12px 4px 2px; font:500 11.5px/1.5 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.45)">Dos ajustes que afectan a todo el sistema. Se entra poco y se sale.</p>
+            </div>
+          </sc-if>
+        </div>
+        
+      </div>
+
+      <sc-if value="{{ zonaPersonas }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; align-items:center; gap:{{ navGap }}; margin-top:14px">
+          <button onClick="{{ goUsuarios }}" style="{{ navUsuarios }}">Usuarios<span style="{{ navCount }}">412</span></button>
+          <button onClick="{{ goDirectorio }}" style="{{ navDirectorio }}">Directorio</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ zonaSistema }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; align-items:center; gap:{{ navGap }}; margin-top:14px">
+          <button onClick="{{ goUsuarios }}" style="{{ volverBtn }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>Personas
+          </button>
+          <span style="{{ divisor }}"></span>
+          <button onClick="{{ goConfig }}" style="{{ navConfig }}">Configuración</button>
+          <button onClick="{{ goAuditoria }}" style="{{ navAuditoria }}">Auditoría</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <div ref="{{ bodyRef }}" style="flex:1; min-height:0; overflow:auto; padding:{{ bodyPad }}">
+
+      <sc-if value="{{ isUsuariosLista }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <div style="flex:1; min-width:190px; height:44px; border-radius:999px; background:#fff; display:flex; align-items:center; gap:10px; padding:0 8px 0 17px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.58)" stroke-width="2.2" stroke-linecap="round" style="flex:none"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+            <input type="text" value="{{ query }}" onChange="{{ onQuery }}" placeholder="Buscar por nombre o email" style="flex:1; min-width:0; border:0; background:transparent; font:500 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">
+            <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ clearQuery }}" style="width:30px; height:30px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="position:relative; margin-top:12px; z-index:10">
+          <button onClick="{{ toggleFiltroMenu }}" style="{{ filtroBtn }}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 7h16M7 12h10M10 17h4"></path></svg>
+            <span style="font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:{{ filtroKickerInk }}">FILTRAR POR ROL</span>
+            <span style="min-width:0; flex:1; text-align:left; font:600 13.5px Manrope,system-ui,sans-serif; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ filtroActivoLabel }}</span>
+            <span style="{{ filtroActivoCount }}">{{ filtroActivoN }}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex:none; transform:{{ filtroRot }}"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
+          <sc-if value="{{ filtroMenuAbierto }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute; left:0; top:52px; width:{{ filtroMenuW }}; background:#fff; border-radius:20px; padding:8px; box-shadow:0 14px 40px rgba(0,0,0,.16)">
+              <sc-for list="{{ filtros }}" as="f" hint-placeholder-count="6">
+                <button onClick="{{ f.set }}" style="{{ f.style }}">
+                  <span style="{{ f.check }}">
+                    <sc-if value="{{ f.on }}" hint-placeholder-val="{{ false }}">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg>
+                    </sc-if>
+                  </span>
+                  <span style="min-width:0; flex:1; text-align:left">{{ f.label }}</span>
+                  <span style="{{ f.countStyle }}">{{ f.n }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <p style="margin:14px 2px 0; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ resumenUsuarios }}</p>
+
+        <sc-if value="{{ hayUsuarios }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid; grid-template-columns:{{ usuariosCols }}; gap:10px; margin-top:12px">
+            <sc-for list="{{ usuarios }}" as="u" hint-placeholder-count="8">
+              <button onClick="{{ u.abrir }}" style="background:#fff; border:0; border-radius:18px; padding:14px 16px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:13px; width:100%">
+                <div style="{{ u.avatar }}">{{ u.ini }}</div>
+                <div style="min-width:0; flex:1">
+                  <p style="margin:0; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ u.nombre }}</p>
+                  <p style="margin:3px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ u.email }}</p>
+                  <div style="display:flex; gap:5px; margin-top:8px; flex-wrap:wrap">
+                    <sc-for list="{{ u.chips }}" as="c" hint-placeholder-count="2">
+                      <span style="{{ c.style }}">{{ c.label }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M9 6l6 6-6 6"></path></svg>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ usuariosVacio }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff; border-radius:20px; margin-top:12px; padding:48px 30px; display:flex; flex-direction:column; align-items:center; text-align:center">
+            <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a">Ningún usuario coincide</p>
+            <p style="margin:9px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); max-width:320px">Probá con el nombre completo o el email, o sacá el filtro de tipo.</p>
+            <button onClick="{{ resetFiltros }}" style="height:46px; padding:0 22px; margin-top:18px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Limpiar búsqueda y filtros</button>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ isRoles }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ cerrarUsuario }}" style="height:36px; padding:0 14px 0 11px; border:0; border-radius:999px; background:#fff; display:flex; align-items:center; gap:7px; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64); cursor:pointer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>Todos los usuarios
+        </button>
+
+        <div style="{{ rolesViewport }}">
+          <div style="{{ rolesTrack }}">
+
+          <div style="{{ datosPane }}">
+            <div style="background:#fff; border-radius:20px; padding:18px 20px">
+              <div style="display:flex; align-items:center; gap:13px">
+                <div style="{{ perfilAvatar }}">{{ perfilIni }}</div>
+                <div style="min-width:0; flex:1">
+                  <p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ perfilNombre }}</p>
+                  <p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); overflow:hidden; text-overflow:ellipsis">{{ perfilEmail }}</p>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:16px; padding-top:14px; border-top:1px solid #f2f2f0">
+                <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Alta en la app</span>
+                <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ perfilAlta }}</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:10px">
+                <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Último ingreso</span>
+                <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ perfilIngreso }}</span>
+              </div>
+            </div>
+
+            <div style="background:#fff; border-radius:20px; padding:18px 20px">
+              <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">DATOS DE LA CUENTA</p>
+              <p style="margin:8px 0 0; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Se guardan aparte de los roles: cambiar el nombre no toca los permisos.</p>
+
+              <div style="display:grid; grid-template-columns:{{ datosCols }}; gap:10px; margin-top:16px">
+                <div>
+                  <p style="margin:0 0 6px; font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">NOMBRE</p>
+                  <input type="text" value="{{ dNombre }}" onChange="{{ onDNombre }}" style="{{ inputStyle }}" />
+                </div>
+                <div>
+                  <p style="margin:0 0 6px; font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">APELLIDO</p>
+                  <input type="text" value="{{ dApellido }}" onChange="{{ onDApellido }}" style="{{ inputStyle }}" />
+                </div>
+              </div>
+              <div style="margin-top:10px">
+                <p style="margin:0 0 6px; font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">EMAIL</p>
+                <input type="text" value="{{ dEmail }}" onChange="{{ onDEmail }}" style="{{ inputStyle }}" />
+                <p style="margin:7px 0 0; font:500 11.5px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Es el usuario con el que inicia sesión. Si lo cambiás, tiene que entrar con el nuevo.</p>
+              </div>
+
+              <div style="margin-top:16px; padding-top:14px; border-top:1px solid #f2f2f0">
+                <sc-if value="{{ passCerrado }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+                    <div style="min-width:130px; flex:1">
+                      <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Contraseña</p>
+                      <p style="margin:4px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Cambiada el 2 de agosto</p>
+                    </div>
+                    <button onClick="{{ abrirPass }}" style="height:40px; padding:0 16px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; flex:none">Cambiarla</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ passAbierto }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Nueva contraseña</p>
+                  <p style="margin:6px 0 0; font:500 11.5px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Le cierra la sesión en todos sus dispositivos. Avisale antes de guardar.</p>
+                  <input type="password" value="{{ dPass }}" onChange="{{ onDPass }}" placeholder="Al menos 8 caracteres" style="{{ inputStyle }} margin-top:10px" />
+                  <input type="password" value="{{ dPass2 }}" onChange="{{ onDPass2 }}" placeholder="Repetila" style="{{ inputStyle }} margin-top:8px" />
+                  <sc-if value="{{ passNoCoincide }}" hint-placeholder-val="{{ false }}">
+                    <p style="margin:8px 0 0; font:600 11.5px Manrope,system-ui,sans-serif; color:#a32218">Las dos contraseñas no coinciden.</p>
+                  </sc-if>
+                  <button onClick="{{ cancelarPass }}" style="height:40px; padding:0 16px; margin-top:10px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer">Dejarla como está</button>
+                </sc-if>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:10px; margin-top:18px; flex-wrap:wrap">
+                <button onClick="{{ guardarDatos }}" style="{{ guardarDatosBtn }}">Guardar los datos</button>
+                <sc-if value="{{ hayCambiosDatos }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ descartarDatos }}" style="height:48px; padding:0 18px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Descartar</button>
+                </sc-if>
+                <sc-if value="{{ datosGuardados }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0b7a53">Datos guardados</span>
+                </sc-if>
+              </div>
+            </div>
+
+            <div style="{{ resumenCard }}">
+              <div style="display:flex; align-items:baseline; gap:9px; flex-wrap:wrap">
+                <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">ACCESO ACTUAL</p>
+                <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ resumenTitulo }}</p>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:12px">
+                <sc-for list="{{ asignadosChips }}" as="c" hint-placeholder-count="2">
+                  <button onClick="{{ c.quitar }}" style="{{ c.style }}">{{ c.label }}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+                </sc-for>
+                <sc-if value="{{ sinRoles }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Sin ningún rol: no puede entrar a ninguna sección.</span>
+                </sc-if>
+              </div>
+              <sc-if value="{{ hayCambios }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; align-items:center; gap:8px; margin-top:14px; padding-top:13px; border-top:1px solid #f2f2f0; flex-wrap:wrap">
+                  <button onClick="{{ guardar }}" style="{{ guardarBtn }}">Guardar los cambios</button>
+                  <button onClick="{{ descartar }}" style="{{ descartarBtn }}">Descartar</button>
+                  <span style="font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ cambiosTexto }}</span>
+                </div>
+              </sc-if>
+            </div>
+
+            <button onClick="{{ toggleRoles }}" style="{{ administrarBtn }}">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 3.2l7.2 3.1v5c0 4.3-3 7.7-7.2 9.5-4.2-1.8-7.2-5.2-7.2-9.5v-5z"></path><path d="M9.2 12.2l2 2 3.6-4"></path></svg>
+              <span style="min-width:0; flex:1; text-align:left">{{ administrarLabel }}</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex:none; transform:{{ administrarRot }}"><path d="M9 6l6 6-6 6"></path></svg>
+            </button>
+          </div>
+
+          <div style="{{ rolesPane }}">
+            <div style="{{ rolesInner }}">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+              <button onClick="{{ cerrarRoles }}" style="{{ volverRolesBtn }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>{{ volverRolesLabel }}
+              </button>
+              <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">ASIGNACIÓN DE ROLES</p>
+            </div>
+            <sc-for list="{{ niveles }}" as="n" hint-placeholder-count="4">
+              <div style="{{ n.card }}">
+                <button onClick="{{ n.toggle }}" style="width:100%; border:0; background:transparent; padding:0; cursor:pointer; display:flex; align-items:flex-start; gap:12px; text-align:left">
+                  <div style="{{ n.marca }}"></div>
+                  <div style="min-width:0; flex:1">
+                    <p style="margin:0; font:600 {{ n.tituloSize }} Manrope,system-ui,sans-serif; color:{{ n.tituloInk }}; letter-spacing:-.01em">{{ n.titulo }}</p>
+                    <p style="margin:6px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:{{ n.subInk }}">{{ n.sub }}</p>
+                    <sc-if value="{{ n.cerrado }}" hint-placeholder-val="{{ false }}">
+                      <p style="margin:8px 0 0; font:600 12px Manrope,system-ui,sans-serif; color:{{ n.resumenInk }}">{{ n.resumen }}</p>
+                    </sc-if>
+                  </div>
+                  <span style="{{ n.contador }}">{{ n.activos }}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ n.chevronInk }}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:3px; transform:{{ n.rot }}"><path d="M6 9l6 6 6-6"></path></svg>
+                </button>
+                <sc-if value="{{ n.abierto }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex; flex-direction:column; gap:14px; margin-top:16px">
+                    <sc-for list="{{ n.areas }}" as="a" hint-placeholder-count="2">
+                      <div>
+                        <p style="margin:0 0 9px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:{{ n.areaInk }}">{{ a.nombre }}</p>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px">
+                          <sc-for list="{{ a.roles }}" as="r" hint-placeholder-count="3">
+                            <button onClick="{{ r.toggle }}" style="{{ r.style }}">
+                              <span style="{{ r.check }}">
+                                <sc-if value="{{ r.on }}" hint-placeholder-val="{{ false }}">
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg>
+                                </sc-if>
+                              </span>
+                              {{ r.nombre }}
+                            </button>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+            </div>
+          </div>
+
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isDirectorio }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:0 2px 12px; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); max-width:640px">Quién responde por cada área del sistema. Es la vista que se consulta cuando hay que saber a quién pedirle algo, no para editar permisos.</p>
+        <div style="display:grid; grid-template-columns:{{ dirCols }}; gap:12px">
+          <sc-for list="{{ directorio }}" as="d" hint-placeholder-count="5">
+            <div style="background:#fff; border-radius:20px; padding:18px 20px">
+              <div style="display:flex; align-items:center; gap:10px">
+                <span style="width:8px; height:8px; border-radius:999px; background:#0a0a0a; flex:none"></span>
+                <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">{{ d.area }}</p>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:11px; margin-top:16px">
+                <sc-for list="{{ d.personas }}" as="p" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:11px">
+                    <div style="{{ p.avatar }}">{{ p.ini }}</div>
+                    <div style="min-width:0; flex:1">
+                      <p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ p.nombre }}</p>
+                      <p style="margin:2px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ p.rol }}</p>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ d.vacante }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#fdf6ea; border-radius:14px; padding:11px 13px">
+                    <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:#7a4f10">Sin responsable asignado</p>
+                    <p style="margin:4px 0 0; font:500 12px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Nadie puede administrar esta área hasta que se asigne el rol.</p>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAuditoria }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:0 2px 12px; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); max-width:640px">Todo cambio de permisos o de configuración pública queda registrado. Los cambios de rol se marcan aparte porque son los que afectan el acceso de alguien.</p>
+        <div style="background:#fff; border-radius:20px; overflow:hidden">
+          <sc-for list="{{ auditoria }}" as="a" hint-placeholder-count="8">
+            <div style="padding:14px 18px; border-bottom:1px solid #f4f3f1; display:flex; align-items:flex-start; gap:13px">
+              <span style="{{ a.marca }}"></span>
+              <div style="min-width:0; flex:1">
+                <p style="margin:0; font:600 13.5px/1.5 Manrope,system-ui,sans-serif; color:#0a0a0a">{{ a.accion }}</p>
+                <p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ a.quien }}</p>
+              </div>
+              <span style="font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55); white-space:nowrap; flex:none">{{ a.cuando }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isConfig }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; gap:7px; overflow-x:auto; padding-bottom:2px">
+          <button onClick="{{ setIdentidad }}" style="{{ subIdentidad }}">Identidad</button>
+          <button onClick="{{ setBanners }}" style="{{ subBanners }}">Banners</button>
+          <button onClick="{{ setMusica }}" style="{{ subMusica }}">Música</button>
+          <button onClick="{{ setPies }}" style="{{ subPies }}">Pies</button>
+        </div>
+
+        <sc-if value="{{ isIdentidad }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid; grid-template-columns:{{ configCols }}; gap:14px; margin-top:14px">
+            <div style="background:#fff; border-radius:20px; padding:20px 22px">
+              <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Identidad de la app</p>
+              <p style="margin:6px 0 0; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Lo ven las 412 personas que usan la app, en todas las pantallas.</p>
+              <div style="margin-top:18px">
+                <p style="margin:0 0 7px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">NOMBRE DE LA APP</p>
+                <input type="text" value="{{ appNombre }}" onChange="{{ onAppNombre }}" style="width:100%; height:48px; border:0; border-radius:16px; background:#f7f7f5; padding:0 16px; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a">
+              </div>
+              <div style="margin-top:14px">
+                <p style="margin:0 0 7px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">SLOGAN</p>
+                <input type="text" value="{{ appSlogan }}" onChange="{{ onAppSlogan }}" style="width:100%; height:48px; border:0; border-radius:16px; background:#f7f7f5; padding:0 16px; font:500 14px Manrope,system-ui,sans-serif; color:#0a0a0a">
+              </div>
+              <div style="margin-top:14px">
+                <p style="margin:0 0 7px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">COLOR DE MARCA</p>
+                <div style="display:flex; gap:8px; flex-wrap:wrap">
+                  <sc-for list="{{ colores }}" as="c" hint-placeholder-count="5">
+                    <button onClick="{{ c.set }}" style="{{ c.style }}"></button>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="margin-top:16px">
+                <p style="margin:0 0 7px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">LOGO</p>
+                <div style="display:flex; align-items:center; gap:13px">
+                  <div style="width:64px; height:64px; border-radius:18px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; flex:none"><span style="font:500 9.5px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.5)">logo</span></div>
+                  <button style="height:44px; padding:0 18px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">Reemplazar</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="background:#fff; border-radius:20px; padding:20px 22px">
+              <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Cómo se ve</p>
+              <p style="margin:6px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Vista previa del encabezado en un celular.</p>
+              <div style="margin-top:18px; border-radius:22px; background:#f7f7f5; padding:18px 16px 26px">
+                <div style="display:flex; align-items:center; gap:11px">
+                  <div style="width:38px; height:38px; border-radius:12px; background:{{ appColor }}; flex:none"></div>
+                  <div style="min-width:0">
+                    <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ appNombre }}</p>
+                    <p style="margin:2px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ appSlogan }}</p>
+                  </div>
+                </div>
+                <button style="width:100%; height:48px; margin-top:20px; border:0; border-radius:999px; background:{{ appColor }}; color:#fff; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Unirme a un grupo</button>
+                <button style="width:100%; height:48px; margin-top:9px; border:0; border-radius:999px; background:#eceae6; color:#0a0a0a; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">Ver el calendario</button>
+              </div>
+              <p style="margin:16px 0 0; font:500 12px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">El color de marca se aplica al botón principal de cada pantalla. El negro del sistema no cambia.</p>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isBanners }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap">
+            <span style="font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">CARRUSEL</span>
+            <div style="display:flex; gap:3px; background:#eceae6; border-radius:999px; padding:3px">
+              <button onClick="{{ setCarHome }}" style="{{ carHome }}">Home</button>
+              <button onClick="{{ setCarPunto }}" style="{{ carPunto }}">Punto de Información</button>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:{{ bannerCols }}; gap:14px; margin-top:12px">
+            <div style="background:#fff; border-radius:20px; padding:18px 20px">
+              <div style="display:flex; align-items:center; gap:12px">
+                <p style="margin:0; flex:1; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ slidesTitulo }}</p>
+                <button style="height:38px; padding:0 15px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; flex:none">Nuevo slide</button>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:16px">
+                <sc-for list="{{ slides }}" as="sl" hint-placeholder-count="3">
+                  <button onClick="{{ sl.abrir }}" style="{{ sl.style }}">
+                    <span style="display:flex; flex-direction:column; gap:3px; flex:none">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.4" stroke-linecap="round"><path d="M6 9h12M6 15h12"></path></svg>
+                    </span>
+                    <span style="{{ sl.thumb }}"></span>
+                    <span style="min-width:0; flex:1; text-align:left">
+                      <span style="display:block; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ sl.titulo }}</span>
+                      <span style="display:block; margin-top:3px; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ sl.meta }}</span>
+                    </span>
+                    <span style="{{ sl.orden }}">{{ sl.pos }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:#fff; border-radius:20px; padding:18px 20px">
+              <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Editar el slide</p>
+              <p style="margin:6px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Movés el punto focal y el zoom sobre la imagen; la vista previa muestra el recorte real.</p>
+
+              <div style="position:relative; margin-top:16px; height:{{ recorteH }}; border-radius:18px; overflow:hidden; background:repeating-linear-gradient(135deg,#e6e4e0 0 14px,#dedbd6 14px 28px)">
+                <div style="position:absolute; inset:0; background:rgba(10,10,10,.42)"></div>
+                <div style="position:absolute; left:{{ focoX }}; top:{{ focoY }}; width:{{ recorteW }}; height:{{ recorteBoxH }}; transform:translate(-50%,-50%); border:2px solid #fff; border-radius:12px; box-shadow:0 0 0 9999px rgba(10,10,10,.28); background:repeating-linear-gradient(135deg,#e6e4e0 0 14px,#dedbd6 14px 28px)"></div>
+                <div style="position:absolute; left:{{ focoX }}; top:{{ focoY }}; width:16px; height:16px; transform:translate(-50%,-50%); border-radius:999px; border:2.5px solid #fff; background:rgba(10,10,10,.35)"></div>
+                <span style="position:absolute; left:14px; bottom:12px; height:26px; padding:0 11px; border-radius:999px; background:rgba(255,255,255,.92); font:600 11px Manrope,system-ui,sans-serif; color:#0a0a0a; display:flex; align-items:center">imagen original 2400 × 1600</span>
+              </div>
+
+              <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px">
+                <div>
+                  <p style="margin:0 0 7px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">PUNTO FOCAL HORIZONTAL</p>
+                  <input type="range" min="10" max="90" value="{{ fx }}" onChange="{{ onFx }}" style="width:100%; accent-color:#0a0a0a">
+                </div>
+                <div>
+                  <p style="margin:0 0 7px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">PUNTO FOCAL VERTICAL</p>
+                  <input type="range" min="10" max="90" value="{{ fy }}" onChange="{{ onFy }}" style="width:100%; accent-color:#0a0a0a">
+                </div>
+              </div>
+              <div style="margin-top:12px">
+                <div style="display:flex; align-items:center; justify-content:space-between"><p style="margin:0 0 7px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">ZOOM</p><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ zoomLabel }}</span></div>
+                <input type="range" min="100" max="220" value="{{ zoom }}" onChange="{{ onZoom }}" style="width:100%; accent-color:#0a0a0a">
+              </div>
+
+              <div style="margin-top:16px">
+                <p style="margin:0 0 7px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">TÍTULO</p>
+                <input type="text" value="{{ slideTitulo }}" onChange="{{ onSlideTitulo }}" style="width:100%; height:46px; border:0; border-radius:16px; background:#f7f7f5; padding:0 16px; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a">
+              </div>
+              <div style="margin-top:12px">
+                <p style="margin:0 0 7px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">SUBTÍTULO</p>
+                <input type="text" value="{{ slideSub }}" onChange="{{ onSlideSub }}" style="width:100%; height:46px; border:0; border-radius:16px; background:#f7f7f5; padding:0 16px; font:500 14px Manrope,system-ui,sans-serif; color:#0a0a0a">
+              </div>
+
+              <p style="margin:20px 0 9px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">ASÍ SE VA A VER EN LA APP</p>
+              <div style="border-radius:20px; overflow:hidden; background:#f7f7f5; padding:12px">
+                <div style="position:relative; height:{{ previewH }}; border-radius:16px; overflow:hidden; background:repeating-linear-gradient(135deg,#e6e4e0 0 14px,#dedbd6 14px 28px); background-position:{{ fx }}% {{ fy }}%; background-size:{{ zoom }}%">
+                  <div style="position:absolute; inset:0; background:linear-gradient(to top,rgba(10,10,10,.72),rgba(10,10,10,0) 62%)"></div>
+                  <div style="position:absolute; left:16px; right:16px; bottom:14px">
+                    <p style="margin:0; font:600 17px/1.3 Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.015em">{{ slideTitulo }}</p>
+                    <p style="margin:6px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.82)">{{ slideSub }}</p>
+                  </div>
+                  <div style="position:absolute; left:0; right:0; bottom:6px; display:flex; justify-content:center; gap:5px">
+                    <span style="width:16px; height:4px; border-radius:999px; background:#fff"></span>
+                    <span style="width:4px; height:4px; border-radius:999px; background:rgba(255,255,255,.55)"></span>
+                    <span style="width:4px; height:4px; border-radius:999px; background:rgba(255,255,255,.55)"></span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap">
+                <button style="{{ guardarBtn }}">Publicar el slide</button>
+                <button style="{{ borrarBtn }}">Borrar slide</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isMusica }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff; border-radius:20px; padding:20px 22px; margin-top:14px">
+            <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Banner de música</p>
+            <p style="margin:6px 0 0; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); max-width:520px">Los videos del ministerio de alabanza que aparecen en la home. Usa el mismo editor de recorte que los banners, con la portada del video como imagen.</p>
+            <div style="display:grid; grid-template-columns:{{ musicaCols }}; gap:10px; margin-top:18px">
+              <sc-for list="{{ videos }}" as="v" hint-placeholder-count="3">
+                <div style="border-radius:18px; overflow:hidden; background:#f7f7f5">
+                  <div style="height:110px; background:repeating-linear-gradient(135deg,#e6e4e0 0 12px,#dedbd6 12px 24px); display:flex; align-items:center; justify-content:center">
+                    <span style="width:38px; height:38px; border-radius:999px; background:rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="#0a0a0a"><path d="M8 5l11 7-11 7z"></path></svg></span>
+                  </div>
+                  <div style="padding:13px 15px">
+                    <p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ v.titulo }}</p>
+                    <p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ v.meta }}</p>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isPies }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff; border-radius:20px; padding:20px 22px; margin-top:14px; max-width:620px">
+            <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Redes sociales del pie</p>
+            <p style="margin:6px 0 0; font:500 12.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Los enlaces del pie de todas las pantallas públicas. Las que se dejan vacías no se muestran.</p>
+            <div style="display:flex; flex-direction:column; gap:12px; margin-top:18px">
+              <sc-for list="{{ redes }}" as="r" hint-placeholder-count="4">
+                <div>
+                  <p style="margin:0 0 7px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">{{ r.nombre }}</p>
+                  <input type="text" value="{{ r.url }}" onChange="{{ r.onChange }}" placeholder="{{ r.placeholder }}" style="width:100%; height:46px; border:0; border-radius:16px; background:#f7f7f5; padding:0 16px; font:500 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">
+                </div>
+              </sc-for>
+            </div>
+            <button style="{{ guardarBtn }} margin-top:18px">Guardar los enlaces</button>
+          </div>
+        </sc-if>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ confirmAbierto }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; background:rgba(10,10,10,.42); display:flex; align-items:flex-end; justify-content:center; padding:{{ modalPad }}">
+        <div style="background:#fff; border-radius:24px; padding:24px 24px 22px; width:100%; max-width:{{ modalMax }}">
+          <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:{{ confirmKicker }}">{{ confirmTipo }}</p>
+          <p style="margin:12px 0 0; font:600 20px/1.35 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.018em">{{ confirmTitulo }}</p>
+          <p style="margin:12px 0 0; font:500 13.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">{{ confirmTexto }}</p>
+          <div style="background:#f7f7f5; border-radius:16px; padding:14px 16px; margin-top:16px">
+            <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ confirmDetalleTitulo }}</p>
+            <p style="margin:6px 0 0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">{{ confirmDetalle }}</p>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:9px; margin-top:20px">
+            <button onClick="{{ confirmar }}" style="{{ confirmBtn }}">{{ confirmLabel }}</button>
+            <button onClick="{{ cancelar }}" style="width:100%; height:52px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:980}}">
+class Component extends DCLogic {
+  state = {
+    device: 'desktop', tab: 'usuarios', sub: 'identidad', menu: false,
+    query: '', filtro: 'todos', filtroMenu: false, usuarioAbierto: null,
+    roles: null, confirm: null, carrusel: 'home', slide: 0,
+    datos: null, pass: false, dPass: '', dPass2: '', datosOk: false, niveles: null, rolesOpen: false,
+    appNombre: 'Comunidad Origen', appSlogan: 'Un lugar para pertenecer', appColor: '#0a0a0a',
+    slideTitulo: 'Grupos de Conexión 2026', slideSub: 'Encontrá un grupo cerca de tu casa',
+    fx: 50, fy: 42, zoom: 130,
+    redes: { Instagram: 'instagram.com/comunidadorigen', YouTube: 'youtube.com/@comunidadorigen', Facebook: 'facebook.com/comunidadorigen', WhatsApp: '' }
+  };
+
+  ROLES = [
+    { id: 'super', nombre: 'Super Admin', nivel: 0, area: 'TODO EL SISTEMA' },
+    { id: 'pastor', nombre: 'Pastor', nivel: 3, area: 'PASTOR' },
+    { id: 'anfitrion', nombre: 'Anfitrión', nivel: 1, area: 'GRUPOS DE CONEXIÓN' },
+    { id: 'coanfitrion', nombre: 'Co-anfitrión', nivel: 1, area: 'GRUPOS DE CONEXIÓN' },
+    { id: 'coord_grupos', nombre: 'Coordinador de Grupos', nivel: 2, area: 'GRUPOS DE CONEXIÓN' },
+    { id: 'coord_matrimonios', nombre: 'Coordinador de Matrimonios', nivel: 2, area: 'MATRIMONIOS' },
+    { id: 'coord_jovenes', nombre: 'Coordinador de Jóvenes', nivel: 2, area: 'JÓVENES' },
+    { id: 'coord_adolescentes', nombre: 'Coordinador de Adolescentes', nivel: 2, area: 'ADOLESCENTES' },
+    { id: 'coord_ninez', nombre: 'Coordinador de Niñez', nivel: 2, area: 'NIÑEZ' },
+    { id: 'coord_alabanza', nombre: 'Coordinador de Alabanza', nivel: 2, area: 'ALABANZA' },
+    { id: 'coord_bienvenida', nombre: 'Coordinador de Bienvenida', nivel: 2, area: 'BIENVENIDA' },
+    { id: 'coord_cuidado', nombre: 'Coordinador de Cuidado Pastoral', nivel: 2, area: 'CUIDADO PASTORAL' },
+    { id: 'enc_grupos', nombre: 'Encargado de Grupos', nivel: 3, area: 'GRUPOS DE CONEXIÓN' },
+    { id: 'enc_eventos', nombre: 'Encargado de Eventos', nivel: 3, area: 'EVENTOS' },
+    { id: 'enc_ninez', nombre: 'Encargado de Niñez', nivel: 3, area: 'NIÑEZ' },
+    { id: 'enc_bienvenida', nombre: 'Encargado de Bienvenida', nivel: 3, area: 'BIENVENIDA' },
+    { id: 'enc_punto', nombre: 'Encargado de Punto', nivel: 3, area: 'PUNTO DE INFORMACIÓN' },
+    { id: 'vol_grupos', nombre: 'Voluntario de Grupos', nivel: 4, area: 'GRUPOS DE CONEXIÓN' },
+    { id: 'vol_bienvenida', nombre: 'Voluntario de Bienvenida', nivel: 4, area: 'BIENVENIDA' },
+    { id: 'acreditacion', nombre: 'Acreditación', nivel: 4, area: 'EVENTOS' },
+    { id: 'reportes', nombre: 'Reportes', nivel: 4, area: 'TRANSVERSAL' }
+  ];
+
+  NIVELES = [
+    { titulo: 'Control total', sub: 'Ve y edita todo el sistema, incluidos los permisos de los demás. Una persona debería tenerlo, no más.' },
+    { titulo: 'Anfitriones', sub: 'Lideran un grupo propio: su asistencia, sus solicitudes y sus miembros.' },
+    { titulo: 'Coordinadores', sub: 'Supervisan los grupos de una o más áreas y acompañan a sus anfitriones. Mirar y detectar, no editar.' },
+    { titulo: 'Encargados', sub: 'Gestionan el día a día de un área, sin tocar su configuración.' },
+    { titulo: 'Operativos', sub: 'Acceso al trabajo concreto: su turno, sus reportes.' }
+  ];
+
+  USUARIOS = [
+    ['Pablo Arce', 'pablo.arce@origen.org', ['super'], '12 mar 2024', 'hoy 08:40'],
+    ['Esteban Morales', 'esteban.morales@origen.org', ['pastor'], '12 mar 2024', 'ayer 21:05'],
+    ['Marcela Iriarte', 'marcela.iriarte@origen.org', ['coord_grupos', 'reportes'], '4 abr 2024', 'hoy 09:12'],
+    ['Federico Blanco', 'federico.blanco@origen.org', ['enc_punto'], '4 abr 2024', '18 sep'],
+    ['Lucía Sanguinetti', 'lucia.sanguinetti@origen.org', ['coord_matrimonios'], '20 may 2024', '15 sep'],
+    ['Nahuel Correa', 'nahuel.correa@origen.org', ['coord_alabanza'], '20 may 2024', '19 sep'],
+    ['Mariela Ancarani', 'mariela.ancarani@origen.org', ['coord_jovenes', 'coord_matrimonios', 'reportes'], '2 jun 2024', 'hoy 07:55'],
+    ['Martín Sosa', 'martin.sosa@gmail.com', ['anfitrion'], '18 feb 2026', 'hoy 10:02'],
+    ['Paula Ferreyra', 'paula.ferreyra@gmail.com', ['anfitrion'], '18 feb 2026', '19 sep'],
+    ['Alejandro Rey', 'alejandro.rey@gmail.com', ['anfitrion', 'vol_grupos'], '20 feb 2026', '18 sep'],
+    ['Tobías Mendieta', 'tobias.mendieta@gmail.com', ['anfitrion'], '20 feb 2026', '17 sep'],
+    ['Silvina Etchart', 'silvina.etchart@gmail.com', ['anfitrion'], '21 feb 2026', '12 sep'],
+    ['Rocío Ledesma', 'rocio.ledesma@gmail.com', ['anfitrion'], '21 feb 2026', '14 abr'],
+    ['Sergio Duarte', 'sergio.duarte@gmail.com', ['anfitrion'], '22 feb 2026', '19 sep'],
+    ['Graciela Ponce', 'graciela.ponce@gmail.com', ['anfitrion'], '22 feb 2026', '8 sep'],
+    ['Iván Puglisi', 'ivan.puglisi@gmail.com', ['anfitrion'], '23 feb 2026', '2 sep'],
+    ['Ezequiel Barrios', 'ezequiel.barrios@gmail.com', ['anfitrion'], '23 feb 2026', '16 sep'],
+    ['Mirta Salazar', 'mirta.salazar@gmail.com', ['anfitrion'], '24 feb 2026', '11 sep'],
+    ['Valeria Aguirre', 'valeria.aguirre@gmail.com', ['coanfitrion'], '1 mar 2026', '19 sep'],
+    ['Bruno Tello', 'bruno.tello@gmail.com', ['coanfitrion'], '1 mar 2026', '13 sep'],
+    ['Nora Bianchi', 'nora.bianchi@gmail.com', ['enc_bienvenida', 'vol_bienvenida'], '9 jul 2024', '19 sep'],
+    ['Hugo Maidana', 'hugo.maidana@gmail.com', ['vol_bienvenida'], '9 jul 2024', '14 sep'],
+    ['Inés Vallejos', 'ines.vallejos@gmail.com', ['vol_bienvenida'], '11 jul 2024', '19 sep'],
+    ['Raúl Speranza', 'raul.speranza@gmail.com', ['acreditacion'], '11 jul 2024', '6 sep'],
+    ['Clara Pinto', 'clara.pinto@gmail.com', ['coord_ninez', 'enc_ninez'], '3 ago 2024', '18 sep'],
+    ['Omar Leiva', 'omar.leiva@gmail.com', ['enc_eventos', 'acreditacion'], '3 ago 2024', '19 sep'],
+    ['Rita Gauna', 'rita.gauna@gmail.com', ['vol_grupos'], '15 ago 2024', '10 sep'],
+    ['Fabián Kunz', 'fabian.kunz@gmail.com', ['vol_grupos'], '15 ago 2024', '19 sep'],
+    ['Luisa Morán', 'luisa.moran@gmail.com', ['enc_punto'], '2 sep 2024', '19 sep'],
+    ['Daniel Frías', 'daniel.frias@gmail.com', [], '19 sep 2026', 'nunca']
+  ].map(([nombre, email, roles, alta, ingreso], i) => ({ nombre, email, roles, alta, ingreso, foto: i % 3 !== 1 }));
+
+  bodyRef = React.createRef();
+
+  alTope() {
+    const el = this.bodyRef.current;
+    if (el) el.scrollTop = 0;
+  }
+
+  ini(n) { return n.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
+
+  rolPorId(id) { return this.ROLES.find(r => r.id === id); }
+
+  nivelDe(roles) { return roles.length ? Math.min(...roles.map(id => this.rolPorId(id).nivel)) : 4; }
+
+  renderVals() {
+    const s = this.state;
+    const desk = s.device === 'desktop';
+    const AMBAR_BG = '#fdf6ea', AMBAR_INK = '#7a4f10';
+
+    const seg = (on) => 'height:32px; padding:0 14px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; white-space:nowrap';
+    const navBtn = (on) => 'height:' + (desk ? '40px' : '38px') + '; padding:0 ' + (desk ? '16px' : '14px') + '; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : '#f2f2f0') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 ' + (desk ? '13.5px' : '12.5px') + ' Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:7px; cursor:pointer; flex:none';
+    const subBtn = (on) => 'height:38px; padding:0 16px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : '#eceae6') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; flex:none; white-space:nowrap';
+
+    const abierto = s.usuarioAbierto != null ? this.USUARIOS[s.usuarioAbierto] : null;
+    const rolesActuales = s.roles || (abierto ? abierto.roles : []);
+    const originales = abierto ? abierto.roles : [];
+    const cambios = rolesActuales.filter(r => !originales.includes(r)).length + originales.filter(r => !rolesActuales.includes(r)).length;
+
+    const rolesOpen = !!s.rolesOpen;
+    const partes = abierto ? abierto.nombre.split(' ') : ['', ''];
+    const datos = s.datos || { nombre: partes[0] || '', apellido: partes.slice(1).join(' '), email: abierto ? abierto.email : '' };
+    const cambiosDatos = !!abierto && (
+      datos.nombre !== (partes[0] || '') ||
+      datos.apellido !== partes.slice(1).join(' ') ||
+      datos.email !== abierto.email ||
+      (s.dPass.length > 0 && s.dPass === s.dPass2)
+    );
+
+    const q = s.query.trim().toLowerCase();
+    const grupoDe = (u) => {
+      const n = this.nivelDe(u.roles);
+      if (n === 0) return 'super';
+      if (n === 1) return 'anfitriones';
+      if (n === 2) return 'coordinadores';
+      if (n === 3) return 'encargados';
+      if (n === 4) return 'voluntarios';
+      return 'sinrol';
+    };
+    const cuenta = (k) => this.USUARIOS.filter(u => grupoDe(u) === k).length;
+    const filtrados = this.USUARIOS
+      .filter(u => s.filtro === 'todos' || grupoDe(u) === s.filtro)
+      .filter(u => !q || u.nombre.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+
+    const filtroDefs = [
+      ['todos', 'Todos', this.USUARIOS.length],
+      ['super', 'Control total', cuenta('super')],
+      ['anfitriones', 'Anfitriones', cuenta('anfitriones')],
+      ['coordinadores', 'Coordinadores', cuenta('coordinadores')],
+      ['encargados', 'Encargados', cuenta('encargados')],
+      ['voluntarios', 'Voluntarios', cuenta('voluntarios')],
+      ['sinrol', 'Sin rol', cuenta('sinrol')]
+    ];
+
+    const chipDe = (id, tono) => {
+      const r = this.rolPorId(id);
+      const fuerte = r.nivel <= 1;
+      const bg = tono === 'oscuro' ? (fuerte ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.10)') : (fuerte ? '#0a0a0a' : '#f2f2f0');
+      const fg = tono === 'oscuro' ? '#fff' : (fuerte ? '#fff' : 'rgba(0,0,0,.66)');
+      return { label: r.nombre, bg, fg };
+    };
+
+    const nivelesAbiertos = s.niveles || (abierto
+      ? { 0: originales.some(id => this.rolPorId(id).nivel === 0), 1: originales.some(id => this.rolPorId(id).nivel === 1), 2: originales.some(id => this.rolPorId(id).nivel === 2), 3: originales.some(id => this.rolPorId(id).nivel === 3), 4: originales.some(id => this.rolPorId(id).nivel === 4) }
+      : {});
+
+    const nivelesOut = this.NIVELES.map((n, idx) => {
+      const rolesNivel = this.ROLES.filter(r => r.nivel === idx);
+      const areas = [];
+      rolesNivel.forEach(r => {
+        let a = areas.find(x => x.nombre === r.area);
+        if (!a) { a = { nombre: r.area, roles: [] }; areas.push(a); }
+        a.roles.push(r);
+      });
+      const oscuro = idx === 0;
+      const alto = idx <= 1;
+      const asignadosNivel = rolesNivel.filter(r => rolesActuales.includes(r.id));
+      const activos = asignadosNivel.length;
+      const abierto = !!nivelesAbiertos[idx];
+      return {
+        titulo: n.titulo, sub: n.sub,
+        abierto, cerrado: !abierto,
+        rot: abierto ? 'rotate(180deg)' : 'none',
+        chevronInk: oscuro ? 'rgba(255,255,255,.6)' : 'rgba(0,0,0,.45)',
+        resumen: activos ? asignadosNivel.map(r => r.nombre).join(' · ') : 'Ningún rol de este nivel · ' + rolesNivel.length + ' disponibles',
+        resumenInk: oscuro ? 'rgba(255,255,255,.72)' : (activos ? '#0a0a0a' : 'rgba(0,0,0,.55)'),
+        toggle: () => this.setState({ niveles: Object.assign({}, nivelesAbiertos, { [idx]: !nivelesAbiertos[idx] }) }),
+        tituloSize: idx === 0 ? '17px' : (idx === 1 ? '16px' : '15px'),
+        card: oscuro
+          ? 'background:#0a0a0a; border-radius:20px; padding:18px 20px'
+          : 'background:#fff; border-radius:20px; padding:18px 20px' + (idx === 1 ? '; box-shadow:0 0 0 1.5px #e4e2dd inset' : ''),
+        marca: 'width:4px; align-self:stretch; min-height:' + (idx === 0 ? '44px' : '38px') + '; border-radius:999px; flex:none; background:' + (oscuro ? '#fff' : (idx === 1 ? '#0a0a0a' : (idx === 2 ? 'rgba(0,0,0,.35)' : 'rgba(0,0,0,.16)'))),
+        tituloInk: oscuro ? '#fff' : '#0a0a0a',
+        subInk: oscuro ? 'rgba(255,255,255,.66)' : 'rgba(0,0,0,.6)',
+        areaInk: oscuro ? 'rgba(255,255,255,.52)' : 'rgba(0,0,0,.5)',
+        contador: 'min-width:24px; height:24px; padding:0 8px; border-radius:999px; display:flex; align-items:center; justify-content:center; font:600 11.5px Manrope,system-ui,sans-serif; flex:none; background:' + (oscuro ? (activos ? '#fff' : 'rgba(255,255,255,.14)') : (activos ? '#0a0a0a' : '#f2f2f0')) + '; color:' + (oscuro ? (activos ? '#0a0a0a' : 'rgba(255,255,255,.6)') : (activos ? '#fff' : 'rgba(0,0,0,.5)')),
+        activos,
+        areas: areas.map(a => ({
+          nombre: a.nombre,
+          roles: a.roles.map(r => {
+            const on = rolesActuales.includes(r.id);
+            const h = alto ? 48 : 42;
+            const bg = on ? (oscuro ? '#fff' : '#0a0a0a') : (oscuro ? 'rgba(255,255,255,.10)' : '#f7f7f5');
+            const fg = on ? (oscuro ? '#0a0a0a' : '#fff') : (oscuro ? '#fff' : 'rgba(0,0,0,.7)');
+            return {
+              nombre: r.nombre, on,
+              style: 'height:' + h + 'px; padding:0 ' + (alto ? '18px' : '15px') + '; border:0; border-radius:999px; background:' + bg + '; color:' + fg + '; font:600 ' + (alto ? '14px' : '13px') + ' Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:9px; cursor:pointer',
+              check: 'width:18px; height:18px; border-radius:999px; flex:none; display:flex; align-items:center; justify-content:center; background:' + (on ? (oscuro ? 'rgba(10,10,10,.12)' : 'rgba(255,255,255,.22)') : (oscuro ? 'rgba(255,255,255,.14)' : '#e9e7e3')) + '; color:' + (on ? fg : 'transparent'),
+              toggle: () => {
+                const tiene = rolesActuales.includes(r.id);
+                if (tiene) {
+                  this.setState({ confirm: { tipo: 'quitar', rol: r } });
+                } else if (r.nivel === 0) {
+                  this.setState({ confirm: { tipo: 'dar', rol: r } });
+                } else {
+                  this.setState({ roles: rolesActuales.concat([r.id]) });
+                }
+              }
+            };
+          })
+        }))
+      };
+    });
+
+    const nivelUsuario = this.nivelDe(rolesActuales);
+    const resumenAlto = nivelUsuario <= 1;
+    const sinRoles = rolesActuales.length === 0;
+
+    const directorio = [
+      { area: 'GRUPOS DE CONEXIÓN', personas: [['Marcela Iriarte', 'Coordinadora de Grupos'], ['Mariela Ancarani', 'Coordinadora de Jóvenes']] },
+      { area: 'PUNTO DE INFORMACIÓN', personas: [['Federico Blanco', 'Encargado de Punto'], ['Luisa Morán', 'Encargada de Punto']] },
+      { area: 'ALABANZA', personas: [['Nahuel Correa', 'Coordinador de Alabanza']] },
+      { area: 'MATRIMONIOS', personas: [['Lucía Sanguinetti', 'Coordinadora de Matrimonios']] },
+      { area: 'BIENVENIDA', personas: [['Nora Bianchi', 'Encargada de Bienvenida']] },
+      { area: 'CUIDADO PASTORAL', personas: [], vacante: true }
+    ].map(d => ({
+      area: d.area, vacante: !!d.vacante,
+      personas: d.personas.map(([nombre, rol], i) => ({
+        nombre, rol, ini: this.ini(nombre),
+        avatar: 'width:34px; height:34px; border-radius:999px; flex:none; display:flex; align-items:center; justify-content:center; font:600 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); background:' + (i % 2 === 0 ? 'repeating-linear-gradient(135deg,#e6e4e0 0 6px,#dedbd6 6px 12px)' : '#f2f2f0')
+      }))
+    }));
+
+    const auditoria = [
+      ['Le dio el rol Coordinador de Grupos a Marcela Iriarte', 'Pablo Arce', 'hoy 09:04', true],
+      ['Le quitó el rol Encargado de Grupos a Javier Peña', 'Pablo Arce', 'hoy 08:52', true],
+      ['Cambió el slogan de la app', 'Pablo Arce', 'ayer 19:30', false],
+      ['Publicó el slide “Grupos de Conexión 2026”', 'Federico Blanco', 'ayer 17:12', false],
+      ['Le dio el rol Coordinador de Jóvenes a Mariela Ancarani', 'Esteban Morales', '18 sep 14:20', true],
+      ['Reordenó el carrusel de la home', 'Federico Blanco', '18 sep 11:48', false],
+      ['Le quitó el rol Acreditación a Rubén Lazo', 'Omar Leiva', '17 sep 20:05', true],
+      ['Actualizó el enlace de Instagram', 'Pablo Arce', '16 sep 09:31', false],
+      ['Le dio el rol Voluntario de Bienvenida a Inés Vallejos', 'Nora Bianchi', '15 sep 18:22', true]
+    ].map(([accion, quien, cuando, esRol]) => ({
+      accion, quien, cuando,
+      marca: 'width:8px; height:8px; border-radius:999px; margin-top:6px; flex:none; background:' + (esRol ? '#0a0a0a' : 'rgba(0,0,0,.18)')
+    }));
+
+    const slidesHome = [
+      ['Grupos de Conexión 2026', 'Imagen · 2400 × 1600'],
+      ['Bautismos de octubre', 'Imagen · 1920 × 1280'],
+      ['Conferencia de matrimonios', 'Video · 12 s']
+    ];
+    const slidesPunto = [
+      ['Bienvenido a Origen', 'Imagen · 2400 × 1600'],
+      ['Dónde dejar a los chicos', 'Imagen · 1800 × 1200']
+    ];
+    const listaSlides = s.carrusel === 'home' ? slidesHome : slidesPunto;
+    const idxSlide = Math.min(s.slide, listaSlides.length - 1);
+
+    const colores = ['#0a0a0a', '#1d4ed8', '#0b7a53', '#7a3ba8', '#b0431f'].map(c => ({
+      set: () => this.setState({ appColor: c }),
+      style: 'width:42px; height:42px; border:0; border-radius:14px; background:' + c + '; cursor:pointer; box-shadow:' + (s.appColor === c ? '0 0 0 2.5px #fff inset, 0 0 0 2px #0a0a0a' : 'none')
+    }));
+
+    const cf = s.confirm;
+    const esDar = cf && cf.tipo === 'dar';
+
+    return {
+      frameW: desk ? '1280px' : '390px',
+      headPad: desk ? '18px 26px' : '16px 16px 14px',
+      bodyPad: desk ? '18px 26px 30px' : '14px 14px 26px',
+      h1Size: desk ? '21px Manrope,system-ui,sans-serif' : '19px Manrope,system-ui,sans-serif',
+      navGap: desk ? '8px' : '6px',
+      zonaLabel: 'font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.09em; color:rgba(0,0,0,.42); white-space:nowrap',
+      divisor: 'width:1px; height:22px; background:#e4e2dd; flex:none; margin:0 ' + (desk ? '4px' : '2px'),
+      navCount: 'min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:rgba(255,255,255,.2); font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center; justify-content:center',
+      usuariosCols: desk ? 'repeat(auto-fill,minmax(310px,1fr))' : 'minmax(0,1fr)',
+      rolesViewport: 'overflow:hidden; margin-top:12px' + (desk ? '' : '; margin-right:-14px; margin-left:-14px; padding:0 14px'),
+      rolesTrack: desk
+        ? 'display:flex; gap:14px; justify-content:center; align-items:flex-start'
+        : 'display:flex; align-items:flex-start; width:200%; transform:translateX(' + (rolesOpen ? '-50%' : '0') + '); transition:transform .38s cubic-bezier(.2,.8,.2,1)',
+      datosPane: desk
+        ? 'width:430px; flex:none; display:flex; flex-direction:column; gap:12px'
+        : 'width:50%; flex:none; display:flex; flex-direction:column; gap:12px; padding-right:14px; overflow:hidden; max-height:' + (rolesOpen ? '0' : '4000px') + '; transition:max-height 0s linear ' + (rolesOpen ? '.38s' : '0s'),
+      rolesPane: desk
+        ? 'flex:none; overflow:hidden; width:' + (rolesOpen ? '700px' : '0px') + '; opacity:' + (rolesOpen ? '1' : '0') + '; transform:translateX(' + (rolesOpen ? '0' : '-10px') + '); transition:width .42s cubic-bezier(.2,.8,.2,1), opacity .3s ease ' + (rolesOpen ? '.12s' : '0s') + ', transform .42s cubic-bezier(.2,.8,.2,1)'
+        : 'width:50%; flex:none; padding-left:14px; overflow:hidden; max-height:' + (rolesOpen ? '4000px' : '0') + '; transition:max-height 0s linear ' + (rolesOpen ? '0s' : '.38s'),
+      rolesInner: (desk ? 'width:700px; ' : '') + 'display:flex; flex-direction:column; gap:12px',
+      bodyRef: this.bodyRef,
+      toggleRoles: () => { this.setState({ rolesOpen: !rolesOpen }); this.alTope(); },
+      cerrarRoles: () => { this.setState({ rolesOpen: false }); this.alTope(); },
+      administrarLabel: rolesOpen ? 'Ocultar la asignación de roles' : 'Administrar roles',
+      administrarRot: rolesOpen && desk ? 'rotate(180deg)' : 'none',
+      administrarBtn: 'width:100%; height:52px; padding:0 18px; border:0; border-radius:999px; background:' + (rolesOpen ? '#f2f2f0' : '#0a0a0a') + '; color:' + (rolesOpen ? '#0a0a0a' : '#fff') + '; font:600 14px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:10px; cursor:pointer',
+      volverRolesLabel: desk ? 'Volver a los datos' : 'Datos de la cuenta',
+      volverRolesBtn: 'height:38px; padding:0 15px 0 11px; border:0; border-radius:999px; background:#fff; color:rgba(0,0,0,.64); font:600 12.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:6px; cursor:pointer; flex:none',
+      dirCols: desk ? 'repeat(auto-fill,minmax(290px,1fr))' : 'minmax(0,1fr)',
+      configCols: desk ? 'minmax(0,1.1fr) minmax(0,1fr)' : 'minmax(0,1fr)',
+      bannerCols: desk ? 'minmax(0,1fr) minmax(0,1.3fr)' : 'minmax(0,1fr)',
+      musicaCols: desk ? 'repeat(auto-fill,minmax(210px,1fr))' : 'minmax(0,1fr)',
+      recorteH: desk ? '230px' : '180px',
+      previewH: desk ? '190px' : '165px',
+      modalPad: desk ? '40px' : '0',
+      modalMax: desk ? '520px' : '100%',
+
+      showDesktop: () => this.setState({ device: 'desktop' }),
+      showMobile: () => this.setState({ device: 'mobile' }),
+      deskBtn: seg(desk), mobBtn: seg(!desk),
+
+      tituloSeccion: s.tab === 'usuarios' ? (abierto ? 'Roles de ' + abierto.nombre.split(' ')[0] : 'Usuarios y permisos')
+        : s.tab === 'directorio' ? 'Directorio de líderes'
+        : s.tab === 'auditoria' ? 'Registro de cambios' : 'Configuración de la app',
+      goUsuarios: () => this.setState({ tab: 'usuarios', usuarioAbierto: null, roles: null, menu: false }),
+      goDirectorio: () => this.setState({ tab: 'directorio', menu: false }),
+      goAuditoria: () => this.setState({ tab: 'auditoria', menu: false }),
+      goConfig: () => this.setState({ tab: 'config', menu: false }),
+      zonaPersonas: s.tab === 'usuarios' || s.tab === 'directorio',
+      zonaSistema: s.tab === 'auditoria' || s.tab === 'config',
+      menuAbierto: s.menu, menuCerrado: !s.menu,
+      menuW: desk ? '320px' : '286px',
+      toggleMenu: () => this.setState({ menu: !s.menu }),
+      engranajeBtn: 'height:38px; padding:0 ' + (desk ? '14px' : '11px') + '; border:0; border-radius:999px; background:' + (s.menu || s.tab === 'auditoria' || s.tab === 'config' ? '#0a0a0a' : '#f2f2f0') + '; color:' + (s.menu || s.tab === 'auditoria' || s.tab === 'config' ? '#fff' : 'rgba(0,0,0,.66)') + '; display:flex; align-items:center; gap:7px; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer',
+      engranajeLabel: desk ? 'font:600 12.5px Manrope,system-ui,sans-serif' : 'display:none',
+      menuSubInk: 'rgba(255,255,255,.6)',
+      menuItemConfig: 'width:100%; border:0; border-radius:16px; padding:13px 14px; margin-bottom:7px; background:' + (s.tab === 'config' ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.07)') + '; color:#fff; display:flex; align-items:center; gap:11px; cursor:pointer',
+      menuItemAuditoria: 'width:100%; border:0; border-radius:16px; padding:13px 14px; background:' + (s.tab === 'auditoria' ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.07)') + '; color:#fff; display:flex; align-items:center; gap:11px; cursor:pointer',
+      volverBtn: 'height:' + (desk ? '40px' : '38px') + '; padding:0 15px 0 11px; border:0; border-radius:999px; background:#fff; color:rgba(0,0,0,.64); font:600 ' + (desk ? '13.5px' : '12.5px') + ' Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:6px; cursor:pointer; flex:none',
+      navUsuarios: navBtn(s.tab === 'usuarios'), navDirectorio: navBtn(s.tab === 'directorio'),
+      navAuditoria: navBtn(s.tab === 'auditoria'), navConfig: navBtn(s.tab === 'config'),
+
+      isUsuariosLista: s.tab === 'usuarios' && !abierto,
+      isRoles: s.tab === 'usuarios' && !!abierto,
+      isDirectorio: s.tab === 'directorio',
+      isAuditoria: s.tab === 'auditoria',
+      isConfig: s.tab === 'config',
+
+      query: s.query, hasQuery: s.query.length > 0,
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      clearQuery: () => this.setState({ query: '' }),
+      resetFiltros: () => this.setState({ query: '', filtro: 'todos', filtroMenu: false }),
+      filtros: filtroDefs.map(([id, label, n]) => {
+        const on = s.filtro === id;
+        return {
+          label, n, on,
+          set: () => this.setState({ filtro: id, filtroMenu: false }),
+          style: 'width:100%; height:44px; padding:0 12px; border:0; border-radius:14px; background:' + (on ? '#f2f2f0' : 'transparent') + '; color:#0a0a0a; font:600 13.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:10px; cursor:pointer',
+          check: 'width:18px; height:18px; border-radius:999px; flex:none; display:flex; align-items:center; justify-content:center; background:' + (on ? '#0a0a0a' : '#f2f2f0') + '; color:' + (on ? '#fff' : 'transparent'),
+          countStyle: 'min-width:22px; height:22px; padding:0 7px; border-radius:999px; background:#f7f7f5; font:600 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; flex:none'
+        };
+      }),
+      filtroMenuAbierto: s.filtroMenu,
+      filtroMenuW: desk ? '300px' : '100%',
+      filtroRot: s.filtroMenu ? 'rotate(180deg)' : 'none',
+      toggleFiltroMenu: () => this.setState({ filtroMenu: !s.filtroMenu }),
+      filtroActivoLabel: filtroDefs.find(f => f[0] === s.filtro)[1],
+      filtroActivoN: filtroDefs.find(f => f[0] === s.filtro)[2],
+      filtroBtn: 'height:46px; padding:0 14px; border:0; border-radius:999px; background:' + (s.filtro === 'todos' ? '#fff' : '#0a0a0a') + '; color:' + (s.filtro === 'todos' ? '#0a0a0a' : '#fff') + '; display:flex; align-items:center; gap:10px; cursor:pointer; ' + (desk ? 'min-width:340px' : 'width:100%'),
+      filtroKickerInk: s.filtro === 'todos' ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.5)',
+      filtroActivoCount: 'min-width:22px; height:22px; padding:0 7px; border-radius:999px; display:flex; align-items:center; justify-content:center; font:600 11.5px Manrope,system-ui,sans-serif; flex:none; background:' + (s.filtro === 'todos' ? '#f2f2f0' : 'rgba(255,255,255,.2)') + '; color:' + (s.filtro === 'todos' ? 'rgba(0,0,0,.55)' : '#fff'),
+      resumenUsuarios: filtrados.length + ' de 412 usuarios' + (s.filtro === 'todos' ? '' : ' · ' + filtroDefs.find(f => f[0] === s.filtro)[1]),
+      hayUsuarios: filtrados.length > 0, usuariosVacio: filtrados.length === 0,
+      usuarios: filtrados.map(u => {
+        const i = this.USUARIOS.indexOf(u);
+        return {
+          nombre: u.nombre, email: u.email, ini: u.foto ? '' : this.ini(u.nombre),
+          avatar: 'width:44px; height:44px; border-radius:999px; flex:none; display:flex; align-items:center; justify-content:center; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.58); background:' + (u.foto ? 'repeating-linear-gradient(135deg,#e6e4e0 0 7px,#dedbd6 7px 14px)' : '#f2f2f0'),
+          chips: u.roles.length
+            ? u.roles.map(id => { const c = chipDe(id); return { label: c.label, style: 'height:23px; padding:0 10px; border-radius:999px; background:' + c.bg + '; color:' + c.fg + '; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center' }; })
+            : [{ label: 'Sin rol', style: 'height:23px; padding:0 10px; border-radius:999px; background:' + AMBAR_BG + '; color:' + AMBAR_INK + '; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center' }],
+          abrir: () => { this.alTope(); this.setState({
+            usuarioAbierto: i, roles: null, datos: null, pass: false, dPass: '', dPass2: '', datosOk: false, rolesOpen: false,
+            niveles: { 0: u.roles.some(id => this.rolPorId(id).nivel === 0), 1: u.roles.some(id => this.rolPorId(id).nivel === 1), 2: u.roles.some(id => this.rolPorId(id).nivel === 2), 3: u.roles.some(id => this.rolPorId(id).nivel === 3), 4: u.roles.some(id => this.rolPorId(id).nivel === 4) }
+          }); }
+        };
+      }),
+
+      cerrarUsuario: () => this.setState({ usuarioAbierto: null, roles: null, datos: null, pass: false, dPass: '', dPass2: '', datosOk: false, rolesOpen: false }),
+      datosCols: desk ? 'minmax(0,1fr)' : 'repeat(2,minmax(0,1fr))',
+      inputStyle: 'width:100%; height:46px; border:0; border-radius:14px; background:#f7f7f5; padding:0 14px; font:500 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a;',
+      dNombre: datos.nombre, dApellido: datos.apellido, dEmail: datos.email,
+      onDNombre: (e) => this.setState({ datos: Object.assign({}, datos, { nombre: e.target.value }), datosOk: false }),
+      onDApellido: (e) => this.setState({ datos: Object.assign({}, datos, { apellido: e.target.value }), datosOk: false }),
+      onDEmail: (e) => this.setState({ datos: Object.assign({}, datos, { email: e.target.value }), datosOk: false }),
+      passAbierto: s.pass, passCerrado: !s.pass,
+      abrirPass: () => this.setState({ pass: true }),
+      cancelarPass: () => this.setState({ pass: false, dPass: '', dPass2: '' }),
+      dPass: s.dPass, dPass2: s.dPass2,
+      onDPass: (e) => this.setState({ dPass: e.target.value, datosOk: false }),
+      onDPass2: (e) => this.setState({ dPass2: e.target.value, datosOk: false }),
+      passNoCoincide: s.dPass.length > 0 && s.dPass2.length > 0 && s.dPass !== s.dPass2,
+      hayCambiosDatos: cambiosDatos,
+      datosGuardados: s.datosOk && !cambiosDatos,
+      guardarDatosBtn: 'height:48px; padding:0 20px; border:0; border-radius:999px; background:' + (cambiosDatos ? '#0a0a0a' : '#f2f2f0') + '; color:' + (cambiosDatos ? '#fff' : 'rgba(0,0,0,.45)') + '; font:600 14px Manrope,system-ui,sans-serif; cursor:' + (cambiosDatos ? 'pointer' : 'default'),
+      guardarDatos: () => {
+        if (!cambiosDatos || !abierto) return;
+        abierto.nombre = (datos.nombre + ' ' + datos.apellido).trim();
+        abierto.email = datos.email;
+        this.setState({ datos: null, pass: false, dPass: '', dPass2: '', datosOk: true });
+      },
+      descartarDatos: () => this.setState({ datos: null, pass: false, dPass: '', dPass2: '', datosOk: false }),
+      perfilNombre: abierto ? abierto.nombre : '',
+      perfilEmail: abierto ? abierto.email : '',
+      perfilIni: abierto && !abierto.foto ? this.ini(abierto.nombre) : '',
+      perfilAlta: abierto ? abierto.alta : '',
+      perfilIngreso: abierto ? abierto.ingreso : '',
+      perfilAvatar: 'width:48px; height:48px; border-radius:999px; flex:none; display:flex; align-items:center; justify-content:center; font:600 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.58); background:' + (abierto && abierto.foto ? 'repeating-linear-gradient(135deg,#e6e4e0 0 7px,#dedbd6 7px 14px)' : '#f2f2f0'),
+
+      resumenCard: 'background:#fff; border-radius:20px; padding:16px 18px' + (sinRoles ? '; box-shadow:0 0 0 1.5px #f0d9b4 inset' : ''),
+      resumenTitulo: sinRoles ? 'Sin acceso'
+        : nivelUsuario === 0 ? 'Control total del sistema'
+        : nivelUsuario === 1 ? 'Anfitrión de un grupo'
+        : nivelUsuario === 2 ? 'Coordinación de un área'
+        : nivelUsuario === 3 ? 'Gestión del día a día' : 'Acceso operativo',
+      resumenTexto: sinRoles ? 'Puede iniciar sesión pero no ve ninguna sección. Asignale al menos un rol operativo.'
+        : nivelUsuario === 0 ? 'Puede cambiar permisos de cualquier persona, incluidos los tuyos, y editar toda la configuración pública.'
+        : nivelUsuario === 1 ? 'Administra su módulo completo: configuración, gente y reportes. No toca el resto del sistema.'
+        : nivelUsuario === 2 ? 'Trabaja sobre la gente y los datos de su área, sin acceso a su configuración.'
+        : 'Ve solamente lo suyo: su grupo, su turno o sus reportes.',
+      sinRoles,
+      asignadosChips: rolesActuales.map(id => {
+        const c = chipDe(id, 'claro');
+        const r = this.rolPorId(id);
+        return {
+          label: c.label,
+          style: 'height:30px; padding:0 8px 0 12px; border:0; border-radius:999px; background:' + c.bg + '; color:' + c.fg + '; font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:7px; cursor:pointer',
+          quitar: () => this.setState({ confirm: { tipo: 'quitar', rol: r } })
+        };
+      }),
+      hayCambios: cambios > 0,
+      cambiosTexto: cambios === 1 ? '1 cambio sin guardar' : cambios + ' cambios sin guardar',
+      guardar: () => { if (abierto) { abierto.roles = rolesActuales.slice(); } this.setState({ roles: null }); },
+      descartar: () => this.setState({ roles: null }),
+      guardarBtn: 'height:42px; padding:0 18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 13px Manrope,system-ui,sans-serif; cursor:pointer',
+      descartarBtn: 'height:42px; padding:0 16px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 13px Manrope,system-ui,sans-serif; cursor:pointer',
+      borrarBtn: 'height:48px; padding:0 20px; border:0; border-radius:999px; background:#fdecea; color:#a32218; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer',
+      niveles: nivelesOut,
+
+      directorio,
+      auditoria,
+
+      isIdentidad: s.sub === 'identidad', isBanners: s.sub === 'banners',
+      isMusica: s.sub === 'musica', isPies: s.sub === 'pies',
+      setIdentidad: () => this.setState({ sub: 'identidad' }),
+      setBanners: () => this.setState({ sub: 'banners' }),
+      setMusica: () => this.setState({ sub: 'musica' }),
+      setPies: () => this.setState({ sub: 'pies' }),
+      subIdentidad: subBtn(s.sub === 'identidad'), subBanners: subBtn(s.sub === 'banners'),
+      subMusica: subBtn(s.sub === 'musica'), subPies: subBtn(s.sub === 'pies'),
+
+      appNombre: s.appNombre, appSlogan: s.appSlogan, appColor: s.appColor,
+      onAppNombre: (e) => this.setState({ appNombre: e.target.value }),
+      onAppSlogan: (e) => this.setState({ appSlogan: e.target.value }),
+      colores,
+
+      setCarHome: () => this.setState({ carrusel: 'home', slide: 0 }),
+      setCarPunto: () => this.setState({ carrusel: 'punto', slide: 0 }),
+      carHome: seg(s.carrusel === 'home'), carPunto: seg(s.carrusel === 'punto'),
+      slidesTitulo: (s.carrusel === 'home' ? 'Slides de la home' : 'Slides de Punto') + ' · ' + listaSlides.length,
+      slides: listaSlides.map(([titulo, meta], i) => ({
+        titulo, meta, pos: i + 1,
+        style: 'width:100%; border:0; border-radius:16px; padding:11px 13px; display:flex; align-items:center; gap:11px; cursor:pointer; background:' + (i === idxSlide ? '#0a0a0a1a' : '#f7f7f5'),
+        thumb: 'width:52px; height:36px; border-radius:9px; flex:none; background:repeating-linear-gradient(135deg,#e6e4e0 0 7px,#dedbd6 7px 14px)',
+        orden: 'min-width:22px; height:22px; border-radius:999px; background:#fff; font:600 11px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; flex:none',
+        abrir: () => this.setState({ slide: i, slideTitulo: titulo, slideSub: s.slideSub })
+      })),
+      slideTitulo: s.slideTitulo, slideSub: s.slideSub,
+      onSlideTitulo: (e) => this.setState({ slideTitulo: e.target.value }),
+      onSlideSub: (e) => this.setState({ slideSub: e.target.value }),
+      fx: s.fx, fy: s.fy, zoom: s.zoom,
+      focoX: s.fx + '%', focoY: s.fy + '%',
+      recorteW: Math.round(9000 / s.zoom) + '%',
+      recorteBoxH: Math.round(5200 / s.zoom) + '%',
+      zoomLabel: (s.zoom / 100).toFixed(2).replace('.', ',') + '×',
+      onFx: (e) => this.setState({ fx: Number(e.target.value) }),
+      onFy: (e) => this.setState({ fy: Number(e.target.value) }),
+      onZoom: (e) => this.setState({ zoom: Number(e.target.value) }),
+
+      videos: [
+        { titulo: 'Tu presencia · en vivo', meta: 'Publicado · 4:12' },
+        { titulo: 'Noche de adoración', meta: 'Publicado · 6:40' },
+        { titulo: 'Ensayo abierto', meta: 'Borrador · 3:05' }
+      ],
+
+      redes: ['Instagram', 'YouTube', 'Facebook', 'WhatsApp'].map(n => ({
+        nombre: n.toUpperCase(), url: s.redes[n],
+        placeholder: n === 'WhatsApp' ? 'sin configurar · no se muestra' : '',
+        onChange: (e) => this.setState({ redes: Object.assign({}, s.redes, { [n]: e.target.value }) })
+      })),
+
+      confirmAbierto: !!cf,
+      confirmTipo: esDar ? 'CONTROL TOTAL' : 'ACCIÓN DESTRUCTIVA',
+      confirmKicker: esDar ? 'rgba(0,0,0,.52)' : '#a32218',
+      confirmTitulo: cf ? (esDar
+        ? '¿Darle control total del sistema a ' + (abierto ? abierto.nombre : '') + '?'
+        : '¿Quitarle ' + cf.rol.nombre + ' a ' + (abierto ? abierto.nombre.split(' ')[0] : '') + '?') : '',
+      confirmTexto: cf ? (esDar
+        ? 'El rol ' + cf.rol.nombre + ' permite cambiar los permisos de cualquier persona, incluidos los tuyos, y editar toda la configuración pública de la app.'
+        : 'Pierde el acceso en cuanto guardes. Si estaba trabajando con ese rol, deja de poder entrar a esa sección.') : '',
+      confirmDetalleTitulo: cf ? (esDar ? 'Hoy tienen control total' : 'Qué deja de poder hacer') : '',
+      confirmDetalle: cf ? (esDar
+        ? 'Solo Pablo Arce. Sumando a esta persona serían dos.'
+        : cf.rol.nivel === 0 ? 'Deja de administrar el sistema y de poder cambiar permisos.'
+        : cf.rol.nivel === 1 ? 'Deja de liderar su grupo: asistencia, solicitudes y miembros.'
+        : cf.rol.nivel === 2 ? 'Deja de ver y acompañar los grupos de esa área.'
+        : cf.rol.nivel === 3 ? 'Deja de gestionar el día a día de su área.'
+        : 'Deja de ver la sección donde trabajaba con ese rol.') : '',
+      confirmLabel: cf ? (esDar ? 'Sí, darle control total' : 'Sí, quitarle el rol') : '',
+      confirmBtn: 'width:100%; height:52px; border:0; border-radius:999px; background:' + (esDar ? '#0a0a0a' : '#a32218') + '; color:#fff; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer',
+      confirmar: () => {
+        if (!cf) return;
+        const next = cf.tipo === 'dar'
+          ? rolesActuales.concat([cf.rol.id])
+          : rolesActuales.filter(x => x !== cf.rol.id);
+        this.setState({ roles: next, confirm: null });
+      },
+      cancelar: () => this.setState({ confirm: null })
+    };
+  }
+}
+</script>
+</body>
+</html>
