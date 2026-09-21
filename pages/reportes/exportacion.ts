@@ -99,7 +99,7 @@ const hojaAsistencia = (d: ReportesGCXTemporada): HojaExcel[] => {
         filas: [
             { Situación: 'Asistió al menos una vez', Personas: a.asistieron, 'Porcentaje sobre la base': `${porcentaje(a.asistieron, base)}%` },
             { Situación: 'Nunca asistió', Personas: a.nuncaAsistieron, 'Porcentaje sobre la base': `${porcentaje(a.nuncaAsistieron, base)}%` },
-            { Situación: 'Fuera del cálculo (su grupo no reporta)', Personas: a.sinDatos, 'Porcentaje sobre la base': 'No aplica' },
+            { Situación: 'Fuera del cálculo (ninguno de sus grupos reporta)', Personas: a.sinDatos, 'Porcentaje sobre la base': 'No aplica' },
             { Situación: 'Total de personas inscriptas', Personas: a.total, 'Porcentaje sobre la base': 'No aplica' },
         ],
     }];
@@ -108,7 +108,7 @@ const hojaAsistencia = (d: ReportesGCXTemporada): HojaExcel[] => {
 const hojaReportan = (d: ReportesGCXTemporada): HojaExcel[] => {
     const r = d.gruposQueReportan;
     return [{
-        nombre: 'Grupos que reportan',
+        nombre: 'Reporte de asistencia',
         filas: [
             { Situación: 'Cargó al menos una reunión', Grupos: r.reportan, Porcentaje: `${porcentaje(r.reportan, r.total)}%` },
             { Situación: 'Nunca cargó una reunión', Grupos: r.noReportan, Porcentaje: `${porcentaje(r.noReportan, r.total)}%` },
@@ -117,10 +117,11 @@ const hojaReportan = (d: ReportesGCXTemporada): HojaExcel[] => {
     }];
 };
 
+// Personas únicas, igual que la pantalla: el total de género sale de
+// d.demografia y no de sumar las filas por categoría, que contaría dos veces
+// a quien está en grupos de dos categorías.
 const hojaCobertura = (d: ReportesGCXTemporada): HojaExcel[] => {
-    const genero = d.generoPorCategoria;
-    const totalGenero = genero.reduce((a, f) => a + f.masculino + f.femenino + f.noEspecifica + f.sinDato, 0);
-    const sinDatoGenero = genero.reduce((a, f) => a + f.sinDato, 0);
+    const g = d.demografia;
     const a = d.asistenciaPersonas;
     const baseAsistencia = a.asistieron + a.nuncaAsistieron;
     return [{
@@ -128,17 +129,17 @@ const hojaCobertura = (d: ReportesGCXTemporada): HojaExcel[] => {
         filas: [
             {
                 'Qué alimenta': 'Género y edades',
-                'Inscripciones con el dato': totalGenero - sinDatoGenero,
-                'Inscripciones totales': totalGenero,
-                Cobertura: `${porcentaje(totalGenero - sinDatoGenero, totalGenero)}%`,
+                'Personas con el dato': g.conDato,
+                'Personas únicas': g.personas,
+                Cobertura: `${porcentaje(g.conDato, g.personas)}%`,
                 'Por qué faltan': 'Cargadas a mano por su anfitrión, sin cuenta detrás',
             },
             {
                 'Qué alimenta': 'Asistencia',
-                'Inscripciones con el dato': baseAsistencia,
-                'Inscripciones totales': a.total,
+                'Personas con el dato': baseAsistencia,
+                'Personas únicas': a.total,
                 Cobertura: `${porcentaje(baseAsistencia, a.total)}%`,
-                'Por qué faltan': 'Su grupo todavía no cargó ninguna reunión',
+                'Por qué faltan': 'Ninguno de sus grupos cargó una reunión todavía',
             },
         ],
     }];
@@ -152,7 +153,7 @@ const hojaGenero = (d: ReportesGCXTemporada): HojaExcel[] => [{
         Femenino: f.femenino,
         'No especificar': f.noEspecifica,
         'Sin dato (carga manual)': f.sinDato,
-        'Total de inscripciones': f.masculino + f.femenino + f.noEspecifica + f.sinDato,
+        'Total de personas': f.masculino + f.femenino + f.noEspecifica + f.sinDato,
     })),
 }];
 
@@ -260,7 +261,7 @@ const hojaTabla = (d: ReportesGCXTemporada): HojaExcel[] => [{
 export const TITULO_GRAFICO: Record<ClaveGrafico, string> = {
     indicadores: 'Panorama de la temporada',
     asistencia: 'Asistencia de personas',
-    reportan: 'Grupos que reportan',
+    reportan: 'Reporte de asistencia',
     cobertura: 'Cobertura de los datos',
     genero: 'Género por categoría',
     edades: 'Edades por categoría',

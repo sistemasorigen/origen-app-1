@@ -1672,4 +1672,20 @@ export interface ReportesGCXTemporada {
     cargaPorGrupo: CargaPorGrupoFila[];
     tablaGrupos: TablaGrupoReporteFila[];
     porModalidad: Record<ModalidadGrupo, ReporteModalidadGCX>;
+    /** Totales de género sobre personas únicas, para las notas y la cobertura. */
+    demografia: ResumenDemograficoReporte;
+}
+
+/**
+ * Totales de las notas de género y edades, sobre personas ÚNICAS. No sale de
+ * sumar las filas por categoría: quien está en dos categorías figura en las
+ * dos barras, pero es una sola persona.
+ */
+export interface ResumenDemograficoReporte {
+    personas: number;
+    /** Tienen el dato (para edades: género y edad dentro del rango elegido). */
+    conDato: number;
+    /** De las que tienen el dato, cuántas eligieron "No especificar". */
+    noEspecifica: number;
+    sinDato: number;
 }

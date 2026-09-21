@@ -22,7 +22,7 @@ import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import { ChevronLeft, ChevronRight, Search, ArrowLeftRight, ArrowRight, FileSpreadsheet, Printer } from 'lucide-react';
-import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte } from '../../types';
+import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte, ResumenDemograficoReporte } from '../../types';
 import { MODALIDADES, NOMBRE_MODALIDAD } from '../../src/utils/modalidad';
 import { supabaseService } from '../../services/supabaseService';
 import {
@@ -572,10 +572,15 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
     // ya está cacheada en el servicio, así que esto es una segunda pasada
     // sobre los mismos datos, no otra consulta.
     const [edades, setEdades] = useState<ReportesGCXTemporada['edadesPorCategoria']>([]);
+    // El total de la nota va aparte de las filas: sumarlas contaría dos veces
+    // a quien está en grupos de dos categorías.
+    const [resumenEdad, setResumenEdad] = useState<ResumenDemograficoReporte | null>(null);
     useEffect(() => {
         let vigente = true;
         supabaseService.getEdadesPorCategoria(temporada, anio, edadMin, edadMax)
             .then(r => { if (vigente && r) setEdades(r); });
+        supabaseService.getResumenDemografico(temporada, anio, 'edad', edadMin, edadMax)
+            .then(r => { if (vigente) setResumenEdad(r); });
         return () => { vigente = false; };
     }, [temporada, anio, edadMin, edadMax]);
 
@@ -612,11 +617,12 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
             nN: f.noEspecifica.length,
         })), [edades]);
 
-    const sinDatoGenero = (datos?.generoPorCategoria || []).reduce((a, f) => a + f.sinDato, 0);
-    const totalGenero = (datos?.generoPorCategoria || []).reduce((a, f) => a + f.masculino + f.femenino + f.noEspecifica + f.sinDato, 0);
-    const noEspecificaGenero = (datos?.generoPorCategoria || []).reduce((a, f) => a + f.noEspecifica, 0);
-    const sinDatoEdad = edades.reduce((a, f) => a + f.sinDato, 0);
-    const totalEdad = edades.reduce((a, f) => a + f.masculino.length + f.femenino.length + f.noEspecifica.length + f.sinDato, 0);
+    // Personas únicas, no la suma de las barras (ver resumenDemografico).
+    const sinDatoGenero = datos?.demografia.sinDato ?? 0;
+    const totalGenero = datos?.demografia.personas ?? 0;
+    const noEspecificaGenero = datos?.demografia.noEspecifica ?? 0;
+    const sinDatoEdad = resumenEdad?.sinDato ?? 0;
+    const totalEdad = resumenEdad?.personas ?? 0;
 
     // ── Descargas ───────────────────────────────────────────────────────
     // Qué gráfico se está imprimiendo. null = el tablero completo.
@@ -956,7 +962,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     detalle="Líderes de apoyo únicos."
                                     valor={datos!.kpis.coAnfitriones}
                                     destacada
-                                    nota={`${datos!.kpis.totalGrupos - datos!.kpis.coAnfitriones} grupos dependen de una sola persona: si el anfitrión falta, no hay quien conduzca ni quien reporte.`}
+                                    nota={`${datos!.kpis.totalGrupos - datos!.kpis.coAnfitriones} ${datos!.kpis.totalGrupos - datos!.kpis.coAnfitriones === 1 ? 'grupo depende' : 'grupos dependen'} de una sola persona`}
                                 />
                                 <Kpi
                                     titulo="Personas únicas"
@@ -1042,8 +1048,8 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                         <NotaCobertura>
                                             Se calcula solo con los {reportan?.reportan ?? 0} grupos que cargaron asistencia:{' '}
                                             {baseAsistencia} de las {asistencia!.total} personas inscriptas. Las otras{' '}
-                                            {asistencia!.sinDatos} están en los {reportan?.noReportan ?? 0} grupos que no reportan
-                                            y quedan fuera.
+                                            {asistencia!.sinDatos} están sólo en grupos que no reportan y quedan fuera. Cada
+                                            persona cuenta una vez aunque esté en más de un grupo: basta con que haya ido a uno.
                                         </NotaCobertura>
                                     </>
                                 )}
@@ -1051,8 +1057,8 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
 
                             <Tarjeta data-grafico="reportan" className={`px-[22px] py-5 flex flex-col ${claseImpresion('reportan')}`}>
                                 <TituloTarjeta
-                                    titulo="Grupos que reportan"
-                                    detalle="Disciplina de carga, no participación."
+                                    titulo="Reporte de asistencia"
+                                    detalle="Cantidad de Grupos que reportan asistencias."
                                     descargas={descargas('reportan')}
                                 />
                                 {cargando ? (
@@ -1106,8 +1112,8 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                                 </span>
                                             </div>
                                             <p className="mt-1.5 text-[12px] leading-[1.5] font-medium" style={{ color: C.apagado }}>
-                                                {sinDatoGenero} inscripciones fueron cargadas a mano por su anfitrión y no
-                                                tienen datos demográficos.
+                                                {sinDatoGenero} {sinDatoGenero === 1 ? 'persona fue cargada' : 'personas fueron cargadas'} a mano por su anfitrión y no
+                                                {sinDatoGenero === 1 ? ' tiene' : ' tienen'} datos demográficos.
                                             </p>
                                         </div>
                                         <div className="h-px" style={{ background: C.bordeSuave }} />
@@ -1149,11 +1155,12 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                             <BarrasPorCategoria datos={datosGenero} />
                                         </div>
                                         <NotaCobertura>
-                                            Sobre {totalGenero - sinDatoGenero} de {totalGenero} inscripciones, de las cuales{' '}
+                                            Sobre {totalGenero - sinDatoGenero} de {totalGenero} personas, de las cuales{' '}
                                             {noEspecificaGenero} eligieron "No especificar". Las {sinDatoGenero} restantes fueron
                                             cargadas a mano por su anfitrión, no tienen cuenta detrás y por eso no entran en el
                                             gráfico: es una diferencia entre no decirlo y no habérselo preguntado nunca. Cada
-                                            inscripción de pareja cuenta como dos personas.
+                                            persona cuenta una vez por categoría: quien está en grupos de dos categorías aparece
+                                            en las dos barras.
                                         </NotaCobertura>
                                     </>
                                 )}
@@ -1211,9 +1218,9 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                             />
                                         </div>
                                         <NotaCobertura>
-                                            Sobre {totalEdad - sinDatoEdad} de {totalEdad} inscripciones. Las {sinDatoEdad} restantes no
+                                            Sobre {totalEdad - sinDatoEdad} de {totalEdad} personas. Las {sinDatoEdad} restantes no
                                             tienen fecha de nacimiento registrada o quedan fuera del rango elegido. Cada
-                                            inscripción de pareja cuenta como dos personas.
+                                            persona cuenta una vez por categoría.
                                         </NotaCobertura>
                                     </>
                                 )}

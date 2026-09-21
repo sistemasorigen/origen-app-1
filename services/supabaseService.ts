@@ -1,7 +1,7 @@
 
 import { supabase } from './supabaseClient';
 import { db } from './dbService';
-import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion } from '../types';
+import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
 const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
@@ -100,9 +100,47 @@ const generoNormalizado = (u?: UsuarioReporte): 'masculino' | 'femenino' | 'noEs
 };
 
 /**
+ * Las personas de una inscripción: el titular y, si la hay, la pareja.
+ *
+ * `clave` es la identidad de la persona en todo el tablero: user_id, y si no
+ * tiene cuenta, el email; para la pareja, partner_user_id, su email o su
+ * nombre. Es la misma que usa el indicador "Personas únicas": todos los
+ * gráficos cuentan con ella, así que una persona en dos grupos es una sola
+ * persona en todos lados y los totales cierran con ese indicador.
+ *
+ * `idAsistencia` es cómo figura en present_members: el id de la inscripción,
+ * y la pareja con el sufijo "-partner".
+ */
+const personasDeInscripcion = (r: any): Array<{ clave: string; idAsistencia: string; userId: string | null }> => {
+    const personas = [{
+        clave: r.user_id || r.email || `reg-${r.id}`,
+        idAsistencia: String(r.id),
+        userId: r.user_id || null,
+    }];
+    if (r.partner_data) {
+        const pd = r.partner_data as any;
+        personas.push({
+            clave: r.partner_user_id
+                || pd?.email
+                || `${pd?.firstName || ''}${pd?.lastName || ''}`
+                || `pareja-${r.id}`,
+            idAsistencia: `${r.id}-partner`,
+            userId: r.partner_user_id || null,
+        });
+    }
+    return personas;
+};
+
+/**
  * Recorre las inscripciones agrupando por categoría del grupo. Sirve para
  * los gráficos 3 y 4, que solo difieren en qué guardan por persona: un
  * conteo o la edad.
+ *
+ * Cuenta PERSONAS, no inscripciones: quien está en dos grupos de la misma
+ * categoría suma una vez en esa categoría. Quien está en grupos de dos
+ * categorías distintas aparece en las dos, porque es parte de las dos; por
+ * eso la suma de las barras puede pasar las personas únicas, y los totales
+ * de las notas salen de resumenDemografico y no de sumar filas.
  *
  * Cada inscripción son una o dos personas (titular y pareja). La pareja
  * solo tiene datos demográficos si está enlazada por partner_user_id;
@@ -141,14 +179,17 @@ const agruparPorCategoria = (
         return fila;
     };
 
+    const vistasPorCategoria = new Map<string, Set<string>>();
+
     base.inscripciones.forEach((r: any) => {
         const categoriaId = categoriaDeGrupo.get(r.group_id) ?? '';
         const fila = filaDe(categoriaId);
+        let vistas = vistasPorCategoria.get(categoriaId);
+        if (!vistas) { vistas = new Set(); vistasPorCategoria.set(categoriaId, vistas); }
 
-        const personas: Array<string | null> = [r.user_id || null];
-        if (r.partner_data) personas.push(r.partner_user_id || null);
-
-        personas.forEach(userId => {
+        personasDeInscripcion(r).forEach(({ clave, userId }) => {
+            if (vistas!.has(clave)) return;
+            vistas!.add(clave);
             const u = userId ? base.usuarios.get(userId) : undefined;
             const genero = generoNormalizado(u);
 
@@ -177,6 +218,46 @@ const agruparPorCategoria = (
         : f.masculino + f.femenino + f.noEspecifica;
 
     return Array.from(filas.values()).sort((a, b) => peso(b) - peso(a));
+};
+
+/**
+ * Los totales de las notas de género y edades, sobre las personas únicas de
+ * la temporada. Sumar las filas de agruparPorCategoria contaría dos veces a
+ * quien está en dos categorías.
+ *
+ * Si una persona figura en varias inscripciones, alcanza con que una tenga
+ * el dato: la que sí tiene cuenta le da el género y la edad.
+ */
+const resumenDemografico = (
+    base: BaseReportesGCX,
+    modo: 'genero' | 'edad',
+    edadMin = 10,
+    edadMax = 100
+): ResumenDemograficoReporte => {
+    const porPersona = new Map<string, 'dato' | 'noEspecifica' | null>();
+    base.inscripciones.forEach((r: any) => {
+        personasDeInscripcion(r).forEach(({ clave, userId }) => {
+            const u = userId ? base.usuarios.get(userId) : undefined;
+            const genero = generoNormalizado(u);
+            let valor: 'dato' | 'noEspecifica' | null = null;
+            if (modo === 'genero') {
+                valor = genero === 'noEspecifica' ? 'noEspecifica' : genero ? 'dato' : null;
+            } else {
+                const edad = edadDeUsuario(u);
+                const entra = !!genero && edad !== null && edad >= edadMin && edad <= edadMax;
+                valor = entra ? (genero === 'noEspecifica' ? 'noEspecifica' : 'dato') : null;
+            }
+            const previo = porPersona.get(clave);
+            if (previo === undefined || (previo === null && valor !== null)) porPersona.set(clave, valor);
+        });
+    });
+
+    let conDato = 0, noEspecifica = 0, sinDato = 0;
+    porPersona.forEach(v => {
+        if (v === null) sinDato += 1;
+        else { conDato += 1; if (v === 'noEspecifica') noEspecifica += 1; }
+    });
+    return { personas: porPersona.size, conDato, noEspecifica, sinDato };
 };
 
 // Nombre del día → índice de Date.getDay() (0 = domingo). Mismo vocabulario
@@ -6333,26 +6414,36 @@ export const supabaseService = {
     // "sin datos" no cambia: es de los grupos que no cargaron nada.
     const presentes = filtros?.modoReunion ? base.presentesPorModo[filtros.modoReunion] : base.idsPresentes;
 
-    let asistieron = 0;
-    let nuncaAsistieron = 0;
-    let sinDatos = 0;
+    // Por persona, no por inscripción: quien está en dos grupos cuenta una
+    // vez. Asistió si fue a alguna reunión de cualquiera de sus grupos, y
+    // queda "sin datos" sólo si NINGUNO de sus grupos cargó asistencia — con
+    // que uno reporte ya se sabe algo de ella.
+    const porPersona = new Map<string, { reporta: boolean; asistio: boolean }>();
 
     base.inscripciones.forEach((r: any) => {
       if (idsGrupos && !idsGrupos.has(r.group_id)) return;
       const grupoReporta = base.gruposQueReportan.has(r.group_id);
-      // Titular y pareja son dos personas y se cuentan por separado, igual
-      // que en getGroupRegistrationAnalytics.
-      const personas: string[] = [String(r.id)];
-      if (r.partner_data) personas.push(`${r.id}-partner`);
 
-      personas.forEach(idPersona => {
-        if (!grupoReporta) { sinDatos += 1; return; }
-        if (presentes.has(idPersona)) asistieron += 1;
-        else nuncaAsistieron += 1;
+      personasDeInscripcion(r).forEach(({ clave, idAsistencia }) => {
+        const persona = porPersona.get(clave) || { reporta: false, asistio: false };
+        if (grupoReporta) {
+          persona.reporta = true;
+          if (presentes.has(idAsistencia)) persona.asistio = true;
+        }
+        porPersona.set(clave, persona);
       });
     });
 
-    return { asistieron, nuncaAsistieron, sinDatos, total: asistieron + nuncaAsistieron + sinDatos };
+    let asistieron = 0;
+    let nuncaAsistieron = 0;
+    let sinDatos = 0;
+    porPersona.forEach(persona => {
+      if (!persona.reporta) sinDatos += 1;
+      else if (persona.asistio) asistieron += 1;
+      else nuncaAsistieron += 1;
+    });
+
+    return { asistieron, nuncaAsistieron, sinDatos, total: porPersona.size };
   },
 
   /**
@@ -6385,24 +6476,16 @@ export const supabaseService = {
     });
 
     // Misma clave de identidad que la función vieja: user_id, y si no hay
-    // cuenta, el email. Una persona en dos grupos es una sola persona.
+    // cuenta, el email. Una persona en dos grupos es una sola persona. Sale
+    // de personasDeInscripcion, la misma que usan todos los gráficos.
     const vecesPorPersona = new Map<string, number>();
-    const sumar = (clave: string) => vecesPorPersona.set(clave, (vecesPorPersona.get(clave) || 0) + 1);
 
     let inscripcionesTotales = 0;
     base.inscripciones.forEach((r: any) => {
-      inscripcionesTotales += 1;
-      sumar(r.user_id || r.email || `reg-${r.id}`);
-
-      if (r.partner_data) {
+      personasDeInscripcion(r).forEach(({ clave }) => {
         inscripcionesTotales += 1;
-        const pd = r.partner_data as any;
-        const clave = r.partner_user_id
-          || pd?.email
-          || `${pd?.firstName || ''}${pd?.lastName || ''}`
-          || `pareja-${r.id}`;
-        sumar(clave);
-      }
+        vecesPorPersona.set(clave, (vecesPorPersona.get(clave) || 0) + 1);
+      });
     });
 
     const distribucion = { unGrupo: 0, dosGrupos: 0, tresOMas: 0 };
@@ -6483,6 +6566,22 @@ export const supabaseService = {
     const base = await supabaseService._cargarBaseReportesGCX(season, year);
     if (!base) return null;
     return agruparPorCategoria(base, 'edad', edadMin, edadMax) as EdadesPorCategoriaFila[];
+  },
+
+  /**
+   * Totales de las notas de género y de edades, sobre personas únicas. Sale
+   * de la misma base cacheada: no es otra consulta.
+   */
+  async getResumenDemografico(
+    season: TemporadaGCX,
+    year: number,
+    modo: 'genero' | 'edad',
+    edadMin: number = 10,
+    edadMax: number = 100
+  ): Promise<ResumenDemograficoReporte | null> {
+    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    if (!base) return null;
+    return resumenDemografico(base, modo, edadMin, edadMax);
   },
 
   /**
@@ -6752,7 +6851,11 @@ export const supabaseService = {
     const [presencial, online, hibrido] = await Promise.all([reporteDe('presencial'), reporteDe('online'), reporteDe('hibrido')]);
     if (!presencial || !online || !hibrido) return null;
 
-    return { kpis, asistenciaPersonas, gruposQueReportan, generoPorCategoria, edadesPorCategoria, asistenciaPorFecha, cargaPorGrupo, tablaGrupos, porModalidad: { presencial, online, hibrido } };
+    return {
+      kpis, asistenciaPersonas, gruposQueReportan, generoPorCategoria, edadesPorCategoria, asistenciaPorFecha, cargaPorGrupo, tablaGrupos,
+      porModalidad: { presencial, online, hibrido },
+      demografia: resumenDemografico(base, 'genero'),
+    };
   },
 
   /**

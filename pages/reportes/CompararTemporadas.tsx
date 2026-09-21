@@ -528,8 +528,8 @@ const CompararTemporadas: React.FC<{ currentUser: User }> = () => {
                         {/* ── Torta 2 · Grupos que reportan ── */}
                         <Tarjeta className="px-[22px] py-5 mt-4">
                             <TituloTarjeta
-                                titulo="Grupos que reportan"
-                                detalle="Disciplina de carga, no participación."
+                                titulo="Reporte de asistencia"
+                                detalle="Cantidad de Grupos que reportan asistencias."
                             />
                             {cargando ? (
                                 <div className="grid grid-cols-3 gap-6 mt-[22px]">
@@ -601,14 +601,15 @@ const CompararTemporadas: React.FC<{ currentUser: User }> = () => {
                                                 anio={anio}
                                                 datos={genero.datos[t]}
                                                 max={genero.max}
-                                                detalle={`${porTemporada[t].datos?.kpis.inscripcionesTotales ?? 0} inscripciones · ${porTemporada[t].datos?.kpis.totalGrupos ?? 0} grupos`}
+                                                detalle={`${porTemporada[t].datos?.kpis.personasUnicas ?? 0} personas · ${porTemporada[t].datos?.kpis.totalGrupos ?? 0} grupos`}
                                             />
                                         ))}
                                     </div>
                                     <NotaCobertura>
                                         Las categorías van en el mismo orden en los tres gráficos, con las que no
-                                        existen en una temporada dibujadas en cero. Las inscripciones cargadas a mano
-                                        por su anfitrión no tienen género registrado y no entran en el gráfico.
+                                        existen en una temporada dibujadas en cero. Cada persona cuenta una vez por
+                                        categoría. Las personas cargadas a mano por su anfitrión no tienen género
+                                        registrado y no entran en el gráfico.
                                     </NotaCobertura>
                                 </>
                             )}
