@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { dondeSeReune } from '../../src/utils/modalidad';
 import { GroupRegistration } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import {
@@ -181,7 +182,7 @@ const TarjetaGrupo: React.FC<{
     const senal = leerSenal(dato, promedioIglesia);
     const anfitrion = nombreAnfitrion(grupo);
     const pct = dato.capacidad > 0 ? Math.min(100, Math.round((dato.ocupados / dato.capacidad) * 100)) : 0;
-    const donde = grupo.isOnline || !grupo.location ? 'Online' : grupo.location;
+    const donde = dondeSeReune(grupo, 'Online');
 
     return (
         <button
@@ -256,7 +257,7 @@ const FichaGrupo: React.FC<{
 
     const senal = leerSenal(dato, promedioIglesia);
     const anfitrion = nombreAnfitrion(grupo);
-    const donde = grupo.isOnline || !grupo.location ? 'Online' : grupo.location;
+    const donde = dondeSeReune(grupo, 'Online');
 
     // Cada inscripción aprobada son una o dos personas. La asistencia se
     // cuenta por persona, con el mismo id que guarda group_attendance.

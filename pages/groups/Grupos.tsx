@@ -1,5 +1,6 @@
 // ... imports
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { dondeSeReune } from '../../src/utils/modalidad';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
@@ -1189,7 +1190,7 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
             [x.coHostFirstName, x.coHostLastName].filter(Boolean).join(' '),
             x.meetingDay,
             x.meetingTime,
-            x.isOnline ? 'Online' : x.location,
+            dondeSeReune(x),
             isGroupFinished(x) ? 'Finalizado' : (x.status || 'pending'),
             x.registrations?.length || 0,
             x.maxCapacity,

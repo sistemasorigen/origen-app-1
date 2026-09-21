@@ -1,7 +1,7 @@
 
 import { supabase } from './supabaseClient';
 import { db } from './dbService';
-import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila } from '../types';
+import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
 const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
@@ -37,6 +37,9 @@ interface BaseReportesGCX {
     inscripciones: any[];        // filas de group_registrations con status APPROVED
     gruposQueReportan: Set<string>;
     idsPresentes: Set<string>;   // ids de inscripción que aparecen en alguna asistencia
+    // Lo mismo, separado por cómo fue la reunión. Sólo las reuniones de los
+    // grupos híbridos tienen modo: las demás no entran en ninguno de los dos.
+    presentesPorModo: Record<ModoReunion, Set<string>>;
     usuarios: Map<string, UsuarioReporte>;
     categorias: GroupCategory[];
     // Cuántas personas hubo presentes en CADA reunión cargada de la
@@ -234,6 +237,10 @@ export async function insertGroupDirect(group: Group): Promise<Group | null> {
     end_date: group.endDate || null,
     location: group.location || '',
     is_online: group.isOnline || false,
+    // is_hybrid sólo se nombra si es true (el default de la columna es
+    // false): así un grupo presencial u online se sigue pudiendo crear aunque
+    // sql/add_modalidad_hibrida.sql todavía no se haya corrido.
+    ...(group.isHybrid ? { is_hybrid: true } : {}),
     members_count: group.membersCount || 0,
     max_capacity: group.maxCapacity || 12,
     description: group.description || '',
@@ -312,6 +319,9 @@ export async function updateGroupDirect(group: Group): Promise<Group | null> {
     end_date: group.endDate || null,
     location: group.location || '',
     is_online: group.isOnline || false,
+    // Va siempre: la función admin_update_group_v2 ignora las claves que no
+    // conoce, así que antes de correr el SQL esto no rompe nada.
+    is_hybrid: group.isHybrid || false,
     members_count: group.membersCount || 0,
     max_capacity: group.maxCapacity || 12,
     description: group.description || '',
@@ -1454,6 +1464,7 @@ function transformDbRowToGroup(data: any): Group {
     endDate: data.end_date || '',
     location: data.location || '',
     isOnline: data.is_online || false,
+    isHybrid: data.is_hybrid || false,
     membersCount: data.members_count || 0,
     maxCapacity: data.max_capacity || 12,
     capacityLocked: data.capacity_locked || false,
@@ -2753,6 +2764,7 @@ export const supabaseService = {
       endDate: row.end_date || '',
       location: row.location || '',
       isOnline: row.is_online || false,
+      isHybrid: row.is_hybrid || false,
       membersCount: row.members_count || 0,
       maxCapacity: row.max_capacity || 12,
       capacityLocked: row.capacity_locked || false,
@@ -2806,6 +2818,7 @@ export const supabaseService = {
       end_date: group.endDate || null,
       location: group.location || '',
       is_online: group.isOnline || false,
+      ...(group.isHybrid ? { is_hybrid: true } : {}),
       members_count: group.membersCount || 0,
       max_capacity: group.maxCapacity || 12,
       description: group.description || '',
@@ -3072,6 +3085,9 @@ export const supabaseService = {
         meeting_time:       originalData.meeting_time,
         location:           originalData.location,
         is_online:          originalData.is_online,
+        // Sólo si el original es híbrido: nombrar la columna en false haría
+        // fallar el insert mientras el SQL no se haya corrido.
+        ...(originalData.is_hybrid ? { is_hybrid: true } : {}),
         max_capacity:       originalData.max_capacity,
         description:        originalData.description,
         image_url:          originalData.image_url,
@@ -3105,6 +3121,11 @@ export const supabaseService = {
         pisar('meeting_time',       cambios.meetingTime);
         pisar('location',           cambios.location);
         pisar('is_online',          cambios.isOnline);
+        // Mismo criterio que arriba: la columna viaja sólo si alguno de los
+        // dos (el original o lo elegido) la tiene en true.
+        if (cambios.isHybrid !== undefined && (cambios.isHybrid || newGroupData.is_hybrid)) {
+          newGroupData.is_hybrid = cambios.isHybrid;
+        }
         pisar('max_capacity',       cambios.maxCapacity);
         pisar('description',        cambios.description);
         pisar('image_url',          cambios.imageUrl);
@@ -3166,6 +3187,7 @@ export const supabaseService = {
         start_date: groupWithoutRegs.startDate || null,
         location: groupWithoutRegs.location || '',
         is_online: groupWithoutRegs.isOnline || false,
+        ...(groupWithoutRegs.isHybrid ? { is_hybrid: true } : {}),
         members_count: groupWithoutRegs.membersCount || 0,
         max_capacity: groupWithoutRegs.maxCapacity || 12,
         description: groupWithoutRegs.description || '',
@@ -3249,6 +3271,7 @@ export const supabaseService = {
       startDate: data.start_date || '',
       location: data.location || '',
       isOnline: data.is_online || false,
+      isHybrid: data.is_hybrid || false,
       membersCount: data.members_count || 0,
       maxCapacity: data.max_capacity || 12,
       description: data.description || '',
@@ -3841,12 +3864,15 @@ export const supabaseService = {
     endDate?: string;
     meetingDay?: string;
     isOnline?: boolean;
+    isHybrid?: boolean;
     location?: string;
     esPareja: boolean;
   }>> {
     const { data, error } = await supabase
       .from('group_registrations')
-      .select('id, group_id, user_id, partner_user_id, timestamp, groups(name, start_date, end_date, meeting_day, is_online, location)')
+      // groups(*) y no la lista de columnas: nombrar is_hybrid haría fallar
+      // la consulta entera mientras el SQL de la modalidad híbrida no se corra.
+      .select('id, group_id, user_id, partner_user_id, timestamp, groups(*)')
       .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`)
       .eq('status', 'APPROVED');
 
@@ -3864,6 +3890,7 @@ export const supabaseService = {
         endDate: row.groups?.end_date || undefined,
         meetingDay: row.groups?.meeting_day || undefined,
         isOnline: row.groups?.is_online || false,
+        isHybrid: row.groups?.is_hybrid || false,
         location: row.groups?.location || undefined,
         // Distingue "me anoté yo" de "me anotó mi pareja".
         esPareja: row.user_id !== userId && row.partner_user_id === userId,
@@ -5185,15 +5212,21 @@ export const supabaseService = {
    * vez de dejar dos filas: el upsert resuelve por (group_id, date), así que
    * sin esto una edición que corrige la fecha creaba un registro nuevo y
    * dejaba huérfano al viejo — que es como se reportó el bug del "duplicado".
+   *
+   * `modoReunion` sólo lo mandan los grupos híbridos: cómo fue esa reunión.
+   * Si no viene, la columna ni se nombra, así que la asistencia de los
+   * presenciales y online se sigue guardando aunque el SQL de la modalidad
+   * híbrida todavía no se haya corrido.
    */
-  async saveAttendance(groupId: string, date: string, presentIds: string[], originalDate?: string): Promise<boolean> {
+  async saveAttendance(groupId: string, date: string, presentIds: string[], originalDate?: string, modoReunion?: ModoReunion): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('group_attendance')
         .upsert({
           group_id: groupId,
           date: date,
-          present_members: presentIds
+          present_members: presentIds,
+          ...(modoReunion ? { meeting_mode: modoReunion } : {}),
         }, {
           onConflict: 'group_id,date'
         });
@@ -5228,11 +5261,13 @@ export const supabaseService = {
   /**
    * Get attendance history for a group
    */
-  async getAttendanceHistory(groupId: string): Promise<{ id: string; date: string; count: number; presentMembers: string[] }[]> {
+  async getAttendanceHistory(groupId: string): Promise<{ id: string; date: string; count: number; presentMembers: string[]; modoReunion: ModoReunion | null }[]> {
     try {
+      // '*' y no la lista: nombrar meeting_mode haría fallar el historial
+      // entero mientras el SQL de la modalidad híbrida no se haya corrido.
       const { data, error } = await supabase
         .from('group_attendance')
-        .select('id, date, present_members')
+        .select('*')
         .eq('group_id', groupId)
         .order('date', { ascending: false });
 
@@ -5245,7 +5280,8 @@ export const supabaseService = {
         id: row.id,
         date: row.date,
         count: Array.isArray(row.present_members) ? row.present_members.length : 0,
-        presentMembers: row.present_members || []
+        presentMembers: row.present_members || [],
+        modoReunion: row.meeting_mode === 'presencial' || row.meeting_mode === 'online' ? row.meeting_mode : null,
       }));
     } catch (error) {
       console.error('[Attendance] Exception getting history:', error);
@@ -6111,7 +6147,10 @@ export const supabaseService = {
       try {
         const { data: gruposRaw, error: errGrupos } = await supabase
           .from('groups')
-          .select('id, name, status, start_date, host_id, co_host_id, co_host_first_name, co_host_last_name, leader_name, leader_surname, category_id, max_capacity, meeting_day, meeting_time, is_online');
+          // '*' y no la lista de columnas: nombrar is_hybrid haría fallar el
+          // tablero entero mientras sql/add_modalidad_hibrida.sql no se corra.
+          // Son ~100 filas y ~130 KB, y la base se cachea.
+          .select('*');
 
         if (errGrupos) {
           console.error('[ReportesGCX] Error trayendo grupos:', errGrupos);
@@ -6130,7 +6169,7 @@ export const supabaseService = {
         });
 
         if (grupos.length === 0) {
-          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [] };
+          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), presentesPorModo: { presencial: new Set(), online: new Set() }, usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [] };
         }
 
         const idsGrupos = grupos.map((g: any) => g.id);
@@ -6140,9 +6179,10 @@ export const supabaseService = {
             .from('group_registrations')
             .select('id, group_id, user_id, status, partner_data, partner_user_id, email, first_name, last_name')
             .in('group_id', idsGrupos),
+          // '*' por lo mismo que arriba: meeting_mode todavía puede no existir.
           supabase
             .from('group_attendance')
-            .select('group_id, present_members, date')
+            .select('*')
             .in('group_id', idsGrupos),
           supabaseService.getGroupCategories(),
         ]);
@@ -6167,12 +6207,15 @@ export const supabaseService = {
         // ids cargados hoy son de ese tipo: sin contemplarlo, toda pareja
         // figuraría como que nunca asistió.
         const idsPresentes = new Set<string>();
+        const presentesPorModo: Record<ModoReunion, Set<string>> = { presencial: new Set(), online: new Set() };
         const presentesPorReunion: number[] = [];
         const reuniones: Array<{ groupId: string; fecha: string; presentes: number }> = [];
         (resAsistencias.data || []).forEach((a: any) => {
           gruposQueReportan.add(a.group_id);
           const presentes = Array.isArray(a.present_members) ? a.present_members : [];
           presentes.forEach((id: unknown) => idsPresentes.add(String(id)));
+          const modo: ModoReunion | null = a.meeting_mode === 'presencial' || a.meeting_mode === 'online' ? a.meeting_mode : null;
+          if (modo) presentes.forEach((id: unknown) => presentesPorModo[modo].add(String(id)));
           presentesPorReunion.push(presentes.length);
           // `date` es DATE en Postgres y llega como 'YYYY-MM-DD'. Una fila sin
           // fecha no puede ubicarse en el calendario y se descarta acá en vez
@@ -6220,7 +6263,7 @@ export const supabaseService = {
           });
         }
 
-        return { grupos, inscripciones, gruposQueReportan, idsPresentes, usuarios, categorias, presentesPorReunion, reuniones };
+        return { grupos, inscripciones, gruposQueReportan, idsPresentes, presentesPorModo, usuarios, categorias, presentesPorReunion, reuniones };
       } catch (err) {
         console.error('[ReportesGCX] Excepción cargando la base:', err);
         return null;
@@ -6229,6 +6272,33 @@ export const supabaseService = {
 
     baseReportesCache.set(clave, { momento: Date.now(), promesa });
     return promesa;
+  },
+
+  /**
+   * Los grupos de la base que pasan los filtros. Sin filtros devuelve la
+   * misma lista, así el tablero general no cambia en nada.
+   *
+   * Se filtra DESPUÉS de la caché: es otra pasada sobre lo que ya está en
+   * memoria, no otra consulta.
+   *
+   * `is_online` e `is_hybrid` nulos cuentan como false: un grupo que nadie
+   * marcó como online ni híbrido se reúne en persona.
+   */
+  _filtrarGruposReporte(base: BaseReportesGCX, filtros?: FiltrosReporteGCX): any[] {
+    if (!filtros?.modalidad && !filtros?.groupId) return base.grupos;
+    return base.grupos.filter((g: any) => {
+      if (filtros.groupId && g.id !== filtros.groupId) return false;
+      if (filtros.modalidad) return supabaseService._modalidadDeFila(g) === filtros.modalidad;
+      return true;
+    });
+  },
+
+  /** Un CHECK impide que las dos columnas estén en true; igual se mira
+   *  is_hybrid primero, para que un dato mal cargado no caiga en dos lados. */
+  _modalidadDeFila(g: any): ModalidadGrupo {
+    if (g.is_hybrid === true) return 'hibrido';
+    if (g.is_online === true) return 'online';
+    return 'presencial';
   },
 
   /**
@@ -6249,16 +6319,26 @@ export const supabaseService = {
    */
   async getAsistenciaPersonas(
     season: TemporadaGCX,
-    year: number
+    year: number,
+    filtros?: FiltrosReporteGCX
   ): Promise<AsistenciaPersonasReporte | null> {
     const base = await supabaseService._cargarBaseReportesGCX(season, year);
     if (!base) return null;
+
+    // null = sin filtro: se recorren todas las inscripciones, como siempre.
+    const idsGrupos = filtros?.modalidad || filtros?.groupId
+      ? new Set(supabaseService._filtrarGruposReporte(base, filtros).map((g: any) => g.id))
+      : null;
+    // Con modoReunion, presente es haber ido a alguna reunión de ese modo. El
+    // "sin datos" no cambia: es de los grupos que no cargaron nada.
+    const presentes = filtros?.modoReunion ? base.presentesPorModo[filtros.modoReunion] : base.idsPresentes;
 
     let asistieron = 0;
     let nuncaAsistieron = 0;
     let sinDatos = 0;
 
     base.inscripciones.forEach((r: any) => {
+      if (idsGrupos && !idsGrupos.has(r.group_id)) return;
       const grupoReporta = base.gruposQueReportan.has(r.group_id);
       // Titular y pareja son dos personas y se cuentan por separado, igual
       // que en getGroupRegistrationAnalytics.
@@ -6267,7 +6347,7 @@ export const supabaseService = {
 
       personas.forEach(idPersona => {
         if (!grupoReporta) { sinDatos += 1; return; }
-        if (base.idsPresentes.has(idPersona)) asistieron += 1;
+        if (presentes.has(idPersona)) asistieron += 1;
         else nuncaAsistieron += 1;
       });
     });
@@ -6348,16 +6428,18 @@ export const supabaseService = {
    */
   async getGruposQueReportan(
     season: TemporadaGCX,
-    year: number
+    year: number,
+    filtros?: FiltrosReporteGCX
   ): Promise<GruposQueReportanReporte | null> {
     const base = await supabaseService._cargarBaseReportesGCX(season, year);
     if (!base) return null;
 
-    const idsQueNoReportan = base.grupos
+    const grupos = supabaseService._filtrarGruposReporte(base, filtros);
+    const idsQueNoReportan = grupos
       .filter((g: any) => !base.gruposQueReportan.has(g.id))
       .map((g: any) => g.id);
 
-    const total = base.grupos.length;
+    const total = grupos.length;
     const noReportan = idsQueNoReportan.length;
     return { reportan: total - noReportan, noReportan, total, idsQueNoReportan };
   },
@@ -6596,7 +6678,7 @@ export const supabaseService = {
         categoriaNombre: nombreCategoria.get(g.category_id) || 'Sin categoría',
         diaReunion: g.meeting_day || '',
         horaReunion: g.meeting_time || '',
-        esOnline: !!g.is_online,
+        modalidad: supabaseService._modalidadDeFila(g),
       };
     });
   },
@@ -6627,7 +6709,50 @@ export const supabaseService = {
     if (!kpis || !asistenciaPersonas || !gruposQueReportan || !generoPorCategoria || !edadesPorCategoria || !asistenciaPorFecha || !cargaPorGrupo || !tablaGrupos) {
       return null;
     }
-    return { kpis, asistenciaPersonas, gruposQueReportan, generoPorCategoria, edadesPorCategoria, asistenciaPorFecha, cargaPorGrupo, tablaGrupos };
+
+    // Las secciones Presencial y Online. La asistencia de cada grupo se
+    // calcula acá, para todos de una vez (~26 por temporada): así el
+    // selector del gráfico 3 cambia al instante y no depende de que la caché
+    // siga viva cuando alguien lo toque.
+    const reporteDe = async (modalidad: ModalidadGrupo): Promise<ReporteModalidadGCX | null> => {
+      const grupos = supabaseService._filtrarGruposReporte(base, { modalidad });
+      const [reportanM, asistenciaM, ...porGrupo] = await Promise.all([
+        supabaseService.getGruposQueReportan(season, year, { modalidad }),
+        supabaseService.getAsistenciaPersonas(season, year, { modalidad }),
+        ...grupos.map((g: any) => supabaseService.getAsistenciaPersonas(season, year, { groupId: g.id })),
+      ]);
+      if (!reportanM || !asistenciaM) return null;
+
+      const asistenciaPorGrupo: Record<string, AsistenciaPersonasReporte> = {};
+      grupos.forEach((g: any, i: number) => {
+        const a = porGrupo[i] as AsistenciaPersonasReporte | null;
+        if (a) asistenciaPorGrupo[g.id] = a;
+      });
+
+      // Los híbridos miden además a qué reuniones fue la gente: las que
+      // fueron en persona y las que fueron online, por separado.
+      let porModoReunion: ReporteModalidadGCX['porModoReunion'];
+      if (modalidad === 'hibrido') {
+        const [enPersona, enLinea] = await Promise.all([
+          supabaseService.getAsistenciaPersonas(season, year, { modalidad, modoReunion: 'presencial' }),
+          supabaseService.getAsistenciaPersonas(season, year, { modalidad, modoReunion: 'online' }),
+        ]);
+        if (!enPersona || !enLinea) return null;
+        porModoReunion = { presencial: enPersona, online: enLinea };
+      }
+
+      return {
+        gruposQueReportan: reportanM as GruposQueReportanReporte,
+        asistenciaPersonas: asistenciaM as AsistenciaPersonasReporte,
+        asistenciaPorGrupo,
+        porModoReunion,
+      };
+    };
+
+    const [presencial, online, hibrido] = await Promise.all([reporteDe('presencial'), reporteDe('online'), reporteDe('hibrido')]);
+    if (!presencial || !online || !hibrido) return null;
+
+    return { kpis, asistenciaPersonas, gruposQueReportan, generoPorCategoria, edadesPorCategoria, asistenciaPorFecha, cargaPorGrupo, tablaGrupos, porModalidad: { presencial, online, hibrido } };
   },
 
   /**

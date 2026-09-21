@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { dondeSeReune } from '../../src/utils/modalidad';
 import { Clock, MapPin, Video, Users, ArrowRight, CheckCircle2, Lock, ChevronDown, ChevronUp, Link, Check, EyeOff, CalendarPlus } from 'lucide-react';
 import { Group, GroupTag, GroupCategory, User as AppUser, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
@@ -263,7 +264,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                         </div>
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
                             {group.isOnline ? <Video className="w-4 h-4 text-[#28a946]" /> : <MapPin className="w-4 h-4 text-[#28a946]" />}
-                            <span className="text-sm font-medium truncate max-w-[160px]">{group.isOnline ? 'Online' : group.location}</span>
+                            <span className="text-sm font-medium truncate max-w-[160px]">{dondeSeReune(group)}</span>
                         </div>
                     </div>
 
@@ -422,6 +423,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                                 endDate: group.endDate,
                                 location: group.location,
                                 isOnline: group.isOnline,
+                                isHybrid: group.isHybrid,
                                 descripcion: group.description,
                             });
                             if (!ok) alert('No pudimos generar el archivo — falta el día o el horario del grupo.');

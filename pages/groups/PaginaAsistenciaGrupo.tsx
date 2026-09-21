@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { User } from '../../types';
+import { User, ModoReunion } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { Calendar, History, Save, Check, Loader2 } from 'lucide-react';
 import { T, btnPrimario, btnSecundario, rotulo, Encabezado, Vacio } from '../../components/GCX/patron';
+import { NOMBRE_MODO_REUNION } from '../../src/utils/modalidad';
 
 interface Member {
     id: string;
@@ -17,7 +18,10 @@ interface AttendanceRecord {
     date: string;
     count: number;
     presentMembers: string[];
+    modoReunion: ModoReunion | null;
 }
+
+const MODOS_REUNION: ModoReunion[] = ['presencial', 'online'];
 
 // Fecha de HOY en hora local, no en UTC.
 //
@@ -86,7 +90,7 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const [group, setGroup] = useState<{ id: string; name: string; registrations?: any[] } | null>(null);
+    const [group, setGroup] = useState<{ id: string; name: string; isHybrid?: boolean; registrations?: any[] } | null>(null);
     const [loadingGroup, setLoadingGroup] = useState(true);
 
     // `?vista=historial` la abre en lo que ya pasó. Lo usa el detalle de un
@@ -101,6 +105,11 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     const [editingDate, setEditingDate] = useState<string | null>(null);
 
     const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+    // Sólo en los grupos híbridos: cómo fue ESTA reunión. Arranca sin elegir
+    // en cada fecha nueva, a propósito: un valor por defecto se guardaría sin
+    // que nadie lo mire y el reporte de presencial/online mentiría.
+    const [modoReunion, setModoReunion] = useState<ModoReunion | null>(null);
+    const esHibrido = !!group?.isHybrid;
     const [history, setHistory] = useState<AttendanceRecord[]>([]);
     const [saving, setSaving] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
@@ -198,11 +207,13 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
             }
             if (record) {
                 setSelectedMembers(new Set(record.presentMembers));
+                setModoReunion(record.modoReunion);
             } else if (!editingDate) {
                 // En modo edición la lista viaja con el registro que se está
                 // moviendo: limpiarla acá haría que mover la asistencia del 19
                 // al 18 guarde 0 presentes y borre los que tenía el 19.
                 setSelectedMembers(new Set());
+                setModoReunion(null);
             }
         };
         if (group && activeTab === 'new') {
@@ -226,15 +237,19 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     const selectAll = () => setSelectedMembers(new Set(members.map(m => m.id)));
     const deselectAll = () => setSelectedMembers(new Set());
 
+    // Un híbrido no guarda sin saber cómo fue la reunión: el botón lo dice.
+    const faltaModo = esHibrido && !modoReunion;
+
     const handleSave = async () => {
-        if (!group) return;
+        if (!group || faltaModo) return;
         setSaving(true);
         setSaveSuccess(false);
         const success = await supabaseService.saveAttendance(
             group.id,
             selectedDate,
             Array.from(selectedMembers),
-            editingDate ?? undefined
+            editingDate ?? undefined,
+            esHibrido ? modoReunion ?? undefined : undefined
         );
         setSaving(false);
         if (success) {
@@ -337,6 +352,31 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                         <p className="mt-2.5 px-1 text-[12.5px] font-medium text-black/55 dark:text-white/55">
                             Al guardar, la asistencia del {formatDate(editingDate)} se mueve al {formatDate(selectedDate)}.
                         </p>
+                    )}
+
+                    {/* Híbrido: antes de tildar, cómo fue esta reunión. Va en
+                        el encabezado, junto a la fecha, porque las dos cosas
+                        describen la reunión y no a las personas. */}
+                    {esHibrido && activeTab === 'new' && (
+                        <div className="mt-4">
+                            <p className="px-1 mb-2 text-[13px] font-semibold">¿Cómo fue esta reunión?</p>
+                            <div className="flex gap-2" role="radiogroup" aria-label="Cómo fue esta reunión">
+                                {MODOS_REUNION.map(m => (
+                                    <button
+                                        key={m}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={modoReunion === m}
+                                        onClick={() => setModoReunion(m)}
+                                        className={`flex-1 h-[48px] rounded-full font-semibold text-[15px] transition-colors ${modoReunion === m
+                                            ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
+                                            : `${T.interna} text-black/55 dark:text-white/55`}`}
+                                    >
+                                        {NOMBRE_MODO_REUNION[m]}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
@@ -510,11 +550,13 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                 <button
                                     type="button"
                                     onClick={handleSave}
-                                    disabled={saving}
+                                    disabled={saving || faltaModo}
                                     className={`${btnPrimario} h-[60px] text-[17px] shadow-[0_6px_22px_rgba(0,0,0,.18)]`}
                                 >
                                     {saving ? (
                                         <><Loader2 className="w-5 h-5 animate-spin" /> Guardando…</>
+                                    ) : faltaModo ? (
+                                        'Elegí cómo fue la reunión'
                                     ) : saveSuccess ? (
                                         <><Check className="w-5 h-5" /> Guardado</>
                                     ) : (
@@ -550,6 +592,7 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                             <p className="text-[15.5px] font-semibold truncate first-letter:uppercase">{fechaLarga(record.date)}</p>
                                             <p className="mt-0.5 text-[12.5px] font-medium text-black/45 dark:text-white/45">
                                                 {record.count} {record.count === 1 ? 'presente' : 'presentes'}
+                                                {record.modoReunion && ` · ${NOMBRE_MODO_REUNION[record.modoReunion]}`}
                                             </p>
                                         </div>
                                         <button

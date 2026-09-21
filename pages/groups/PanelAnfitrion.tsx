@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { dondeSeReune } from '../../src/utils/modalidad';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { User, UserRole, Group, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { hasRole } from '../../services/authUtils';
@@ -206,13 +207,15 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
         });
     }, []);
 
-    // Check for modal query param (e.g. from Tutorials page)
+    // ?modal=createGroup lo manda la página de tutoriales. Antes abría el
+    // modal viejo, que no tiene modalidad (presencial/online/híbrido): ahora
+    // lleva al mismo formulario que el botón "Crear grupo".
     useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
         if (searchParams.get('modal') === 'createGroup') {
-            setIsCreateModalOpen(true);
+            navigate('/mis-grupos/crear-grupo', { replace: true });
         }
-    }, [location]);
+    }, [location, navigate]);
 
     const handleCreateGroup = () => {
         navigate('/mis-grupos/crear-grupo');
@@ -300,7 +303,7 @@ const HostDashboard: React.FC<HostDashboardProps> = ({ currentUser }) => {
 
         const cuando = [
             `${group.meetingDay || ''} ${group.meetingTime || ''}`.trim(),
-            group.isOnline ? 'Online' : group.location,
+            dondeSeReune(group),
         ].filter(Boolean).join(' · ');
 
         const cuerpo = (

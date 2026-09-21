@@ -1,6 +1,7 @@
 // Genera un archivo .ics (estándar iCalendar) para la
 // reunión semanal recurrente de un grupo. Sin
 // dependencias: un .ics es texto plano.
+import { dondeSeReune } from './modalidad';
 
 const DIA_A_ICS: Record<string, string> = {
     'Domingo': 'SU', 'Lunes': 'MO', 'Martes': 'TU', 'Miércoles': 'WE',
@@ -56,6 +57,7 @@ export interface DatosCalendario {
     endDate?: string;
     location?: string;
     isOnline?: boolean;
+    isHybrid?: boolean;
     descripcion?: string;
 }
 
@@ -81,7 +83,7 @@ export const generarICS = (datos: DatosCalendario): string | null => {
         }
     }
 
-    const ubicacion = datos.isOnline ? 'Online' : (datos.location || '');
+    const ubicacion = dondeSeReune(datos);
 
     return [
         'BEGIN:VCALENDAR',

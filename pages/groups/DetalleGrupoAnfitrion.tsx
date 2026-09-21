@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { NOMBRE_MODALIDAD, modalidadDe, dondeSeReune } from '../../src/utils/modalidad';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Group, GroupCategory, SeasonSettings, DEFAULT_SEASON_SETTINGS, esGrupoFinalizado } from '../../types';
 import { supabaseService, toggleGroupCapacityLock, updateGroupDirect } from '../../services/supabaseService';
@@ -579,7 +580,7 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
 
                     <div className="flex flex-wrap gap-2 mt-3.5">
                         <Chip>{group.meetingDay} {group.meetingTime}</Chip>
-                        <Chip>{group.isOnline ? 'Online' : (group.location || 'Sin ubicación')}</Chip>
+                        <Chip>{dondeSeReune(group, 'Sin ubicación')}</Chip>
                         <Chip>{approved} de {maxCap}{libres === 0 ? ' · Completo' : ''}</Chip>
                     </div>
 
@@ -649,9 +650,9 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                                 <path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z" /><circle cx="12" cy="10" r="2.4" />
                                             </svg>
-                                            {group.isOnline ? 'Online' : (group.location || 'Sin ubicación')}
+                                            {dondeSeReune(group, 'Sin ubicación')}
                                         </Chip>
-                                        <Chip>{group.isOnline ? 'Virtual' : 'Presencial'}</Chip>
+                                        <Chip>{NOMBRE_MODALIDAD[modalidadDe(group)]}</Chip>
                                     </div>
                                     {Descripcion}
                                 </div>

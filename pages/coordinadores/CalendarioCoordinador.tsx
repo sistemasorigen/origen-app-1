@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { dondeSeReune } from '../../src/utils/modalidad';
 import { GrupoConDatos, nombreAnfitrion } from './comunes';
 
 /**
@@ -82,7 +83,7 @@ const CalendarioCoordinador: React.FC<Props> = ({ datos, onAbrirGrupo }) => {
                     grupoId: d.grupo.id,
                     grupo: d.grupo.name || 'Sin nombre',
                     hora: d.grupo.meetingTime || '',
-                    donde: d.grupo.isOnline || !d.grupo.location ? 'Online' : d.grupo.location,
+                    donde: dondeSeReune(d.grupo, 'Online'),
                     anfitrion: nombreAnfitrion(d.grupo),
                     reportada: fechasReportadas.has(fecha),
                 });

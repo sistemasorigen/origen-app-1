@@ -5,7 +5,7 @@ import { supabaseService, insertGroupDirect } from '../../services/supabaseServi
 import { supabase } from '../../services/supabaseClient';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 import FormularioGrupo, { DatosGrupo } from '../../components/GCX/formulario-grupo';
-import { useSpellingAI } from '../../hooks/useSpellingAI';
+import { banderasDe, llevaDireccion } from '../../src/utils/modalidad';
 
 interface GroupCategory {
     id: string;
@@ -66,42 +66,18 @@ const CrearGrupoAdminContent: React.FC = () => {
 
     const [form, setForm] = useState<DatosGrupoAdmin>({
         name: '', categoryId: '', meetingDay: 'Lunes', meetingTime: '20:00',
-        location: '', isOnline: false, description: '', maxCapacity: 12 as number | string,
+        location: '', modalidad: 'presencial', description: '', maxCapacity: 12 as number | string,
         imageUrl: '', coHostFirstName: '', coHostLastName: '',
         minAge: 0 as number | string, maxAge: 100 as number | string,
         targetGender: 'Mixto', tags: [] as string[], startDate: '', endDate: '',
         leaderName: '', leaderSurname: '',
     });
 
-    const [showSpellingWarning, setShowSpellingWarning] = useState(false);
-    const {
-        isChecking: isCheckingSpelling, isCorrecting, hasErrors: spellingErrors,
-        suggestedCorrection, correctionStatus, checkSpelling, fixText, resetState: resetSpelling,
-    } = useSpellingAI();
+    // Abierta cuando el formulario pasó las validaciones: pregunta si
+    // cargar el grupo o volver a revisar los datos.
+    const [confirmando, setConfirmando] = useState(false);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (form.description && form.description.length > 0) checkSpelling(form.description);
-            else resetSpelling();
-        }, 800);
-        return () => clearTimeout(timer);
-    }, [form.description, checkSpelling, resetSpelling]);
 
-    const handleFixSpelling = async () => {
-        const corrected = await fixText(form.description);
-        setForm(prev => ({ ...prev, description: corrected }));
-        setShowSpellingWarning(false);
-    };
-
-    // "Corregir y guardar" de la hoja: una sola acción. El texto corregido se
-    // le pasa a confirmSubmit a mano porque setForm no es sincrónico y el
-    // guardado leería la descripción vieja.
-    const handleFixAndSave = async () => {
-        const corrected = await fixText(form.description);
-        setForm(prev => ({ ...prev, description: corrected }));
-        setShowSpellingWarning(false);
-        await confirmSubmit(corrected);
-    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -217,7 +193,7 @@ const CrearGrupoAdminContent: React.FC = () => {
         e.preventDefault();
         if (!form.name.trim()) return showToast('El nombre del grupo es obligatorio.', 'error');
         if (!form.categoryId) return showToast('Elegí una categoría.', 'error');
-        if (!form.isOnline && !form.location.trim()) return showToast('Falta el barrio o la dirección.', 'error');
+        if (llevaDireccion(form.modalidad) && !form.location.trim()) return showToast('Falta el barrio o la dirección.', 'error');
         if (!form.description.trim()) return showToast('Falta la descripción.', 'error');
         if (!form.startDate) return showToast('Falta la fecha de arranque.', 'error');
         if (!form.endDate) return showToast('Falta la fecha de fin.', 'error');
@@ -249,16 +225,12 @@ const CrearGrupoAdminContent: React.FC = () => {
             return showToast('La fecha de fin tiene que ser posterior a la de arranque.', 'error');
         }
 
-        if (spellingErrors && !showSpellingWarning) {
-            setShowSpellingWarning(true);
-            return;
-        }
-        await confirmSubmit();
+        setConfirmando(true);
     };
 
-    const confirmSubmit = async (descripcionCorregida?: string) => {
+    const confirmSubmit = async () => {
         setLoading(true);
-        setShowSpellingWarning(false);
+        setConfirmando(false);
         try {
             let finalImageUrl = form.imageUrl;
 
@@ -309,9 +281,9 @@ const CrearGrupoAdminContent: React.FC = () => {
                 leaderPhone: anfitrionElegido?.phone || '',
                 meetingDay: form.meetingDay,
                 meetingTime: form.meetingTime,
-                location: form.isOnline ? '' : form.location,
-                isOnline: form.isOnline,
-                description: descripcionCorregida ?? form.description,
+                location: llevaDireccion(form.modalidad) ? form.location : '',
+                ...banderasDe(form.modalidad),
+                description: form.description,
                 maxCapacity: Number(form.maxCapacity),
                 imageUrl: finalImageUrl,
                 categoryId: form.categoryId,
@@ -396,17 +368,10 @@ const CrearGrupoAdminContent: React.FC = () => {
                 setDesplegado: setIsCoHostDropdownOpen,
                 contenedor: coHostDropdownRef,
             }}
-            ortografia={{
-                revisando: isCheckingSpelling,
-                corrigiendo: isCorrecting,
-                hayErrores: spellingErrors,
-                estado: correctionStatus,
-                sugerencia: suggestedCorrection,
-                onCorregir: handleFixSpelling,
-                hojaAbierta: showSpellingWarning,
-                onCorregirYGuardar: handleFixAndSave,
-                onGuardarIgual: () => confirmSubmit(),
-                onCerrarHoja: () => setShowSpellingWarning(false),
+            confirmacion={{
+                abierta: confirmando,
+                onConfirmar: () => confirmSubmit(),
+                onRevisar: () => setConfirmando(false),
             }}
             anio={currentYear}
             temporadas={resolvedSeasons}

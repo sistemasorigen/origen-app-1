@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { dondeSeReune } from '../../src/utils/modalidad';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Group, GroupRegistration } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
@@ -218,7 +219,7 @@ const PaginaDerivarMiembro: React.FC<{ currentUser: User }> = ({ currentUser }) 
                         <p className={`mt-2 text-[13.5px] leading-[1.6] font-medium ${lleno ? 'text-black/45 dark:text-white/45' : 'text-black/55 dark:text-white/55'}`}>
                             {g.leaderName} {g.leaderSurname} · {g.meetingDay} {g.meetingTime}
                             <br />
-                            {g.isOnline ? 'Online' : (g.location || 'Sin ubicación')}
+                            {dondeSeReune(g, 'Sin ubicación')}
                         </p>
                         {lleno && (
                             <p className="mt-2.5 text-[12.5px] font-medium text-black/45 dark:text-white/45">

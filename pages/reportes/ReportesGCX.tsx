@@ -22,7 +22,8 @@ import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import { ChevronLeft, ChevronRight, Search, ArrowLeftRight, ArrowRight, FileSpreadsheet, Printer } from 'lucide-react';
-import { User, TemporadaGCX, ReportesGCXTemporada } from '../../types';
+import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte } from '../../types';
+import { MODALIDADES, NOMBRE_MODALIDAD } from '../../src/utils/modalidad';
 import { supabaseService } from '../../services/supabaseService';
 import {
     C, FUENTE, NOMBRE_TEMPORADA, TEMPORADAS, EjeCategoria, RAMPA_AZUL, COLOR_RESTO,
@@ -201,6 +202,343 @@ const paginasVisibles = (actual: number, total: number): Array<number | '…'> =
     if (cerca[cerca.length - 1] < total - 1) salida.push('…');
     salida.push(total);
     return salida;
+};
+
+// ── Por modalidad ───────────────────────────────────────────────────────
+
+const TEXTO_MODALIDAD: Record<ModalidadGrupo, { titulo: string; singular: string; plural: string }> = {
+    presencial: { titulo: 'Presencial', singular: 'presencial', plural: 'presenciales' },
+    online: { titulo: 'Online', singular: 'online', plural: 'online' },
+    hibrido: { titulo: 'Híbrido', singular: 'híbrido', plural: 'híbridos' },
+};
+
+interface PropsModalidad {
+    datos: ReportesGCXTemporada | null;
+    cargando: boolean;
+    temporada: TemporadaGCX;
+    anio: number;
+    onVerGrupo: (groupId: string) => void;
+}
+
+const TAMANO_TORTA = 148;
+
+/**
+ * Torta de dos porciones con su leyenda y la base del cálculo. La usan todas
+ * las tarjetas de esta sección: cambia qué se cuenta, no cómo se dibuja.
+ */
+const TortaAsistencia: React.FC<{
+    a: AsistenciaPersonasReporte;
+    si: string;
+    no: string;
+    etiqueta: string;
+    rotuloBase: string;
+    valorBase: number;
+    arriba?: string;
+}> = ({ a, si, no, etiqueta, rotuloBase, valorBase, arriba = 'mt-[22px]' }) => {
+    const base = a.asistieron + a.nuncaAsistieron;
+    const pct = base > 0 ? Math.round((a.asistieron / base) * 100) : 0;
+    return (
+        <div className={`flex items-center gap-[22px] ${arriba} flex-1`}>
+            <Torta
+                tamano={TAMANO_TORTA}
+                datos={[
+                    { nombre: si, valor: a.asistieron, color: C.azul },
+                    { nombre: no, valor: a.nuncaAsistieron, color: C.azulClaro },
+                ]}
+                porcentaje={pct}
+                etiqueta={etiqueta}
+            />
+            <div className="min-w-0 flex-1">
+                <FilaLeyenda primera color={C.azul} nombre={si} valor={a.asistieron} />
+                <FilaLeyenda color={C.azulClaro} nombre={no} valor={a.nuncaAsistieron} />
+                <div className="h-px my-3.5" style={{ background: C.bordeSuave }} />
+                <div className="flex items-center gap-2.5">
+                    <span className="flex-1 text-[12.5px] font-medium" style={{ color: C.apagado }}>{rotuloBase}</span>
+                    <span className="text-[12.5px] font-semibold" style={{ color: C.medio }}>{valorBase}</span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/** "los 3 grupos que cargaron" / "el único grupo que cargó". */
+const gruposQue = (n: number, singular: string, plural: string) => n === 1 ? `el único grupo ${singular}` : `los ${n} grupos ${plural}`;
+
+/** Una modalidad: sus gráficos, filtrados. */
+const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> = ({ modalidad, datos, cargando, temporada, anio, onVerGrupo }) => {
+    const [elegido, setElegido] = useState('');
+
+    const reporte = datos?.porModalidad[modalidad];
+    const nombre = TEXTO_MODALIDAD[modalidad];
+
+    // La lista sale de los ids que ya filtró el servicio: una sola definición
+    // de qué grupo es de cada modalidad, la de ahí.
+    const grupos = useMemo(() => (datos?.tablaGrupos || [])
+        .filter(f => !!reporte?.asistenciaPorGrupo[f.groupId])
+        .sort((a, b) => a.nombre.localeCompare(b.nombre)), [datos, reporte]);
+
+    // Derivado, igual que en "Un grupo en detalle": al cambiar de temporada el
+    // id guardado ya no existe y cae al primero.
+    const grupoActual = grupos.find(g => g.groupId === elegido) ?? grupos[0];
+    const deGrupo = grupoActual ? reporte?.asistenciaPorGrupo[grupoActual.groupId] : undefined;
+
+    const reportan = reporte?.gruposQueReportan;
+    const pctReporta = reportan && reportan.total > 0 ? Math.round((reportan.reportan / reportan.total) * 100) : 0;
+    const asistencia = reporte?.asistenciaPersonas;
+
+    // Tarjeta 3, igual en las tres modalidades: un grupo a la vez. En los
+    // híbridos suma sus reuniones en persona y las online.
+    const tarjetaGrupo = () => {
+        const baseGrupo = deGrupo ? deGrupo.asistieron + deGrupo.nuncaAsistieron : 0;
+        return (
+            <Tarjeta className="px-[22px] py-5 flex flex-col">
+                <TituloTarjeta
+                    titulo="Asistencia de un grupo"
+                    detalle={modalidad === 'hibrido'
+                        ? 'Elegí un grupo híbrido: suma sus reuniones en persona y las online.'
+                        : `Elegí un grupo ${nombre.singular} para ver a su gente.`}
+                />
+                <select
+                    value={grupoActual?.groupId ?? ''}
+                    onChange={e => setElegido(e.target.value)}
+                    aria-label={`Grupo ${nombre.singular} a mirar`}
+                    className="no-print mt-4 h-9 px-3 w-full text-[12.5px] font-semibold outline-none cursor-pointer"
+                >
+                    {grupos.map(g => (
+                        <option key={g.groupId} value={g.groupId}>{g.nombre}</option>
+                    ))}
+                </select>
+                {/* El selector no va al papel, así que sin esto la hoja no
+                    diría de qué grupo es la torta. */}
+                <p className="solo-impresion mt-3 text-[12.5px] font-semibold" style={{ color: C.medio }}>
+                    {grupoActual?.nombre}
+                </p>
+
+                {!deGrupo || deGrupo.total === 0 ? (
+                    <SinDatos titulo="Sin inscriptos" detalle="Nadie se anotó en este grupo todavía." />
+                ) : baseGrupo === 0 ? (
+                    // El vacío es el dato: no es que nadie vaya, es que
+                    // nadie lo está registrando.
+                    <SinDatos
+                        titulo="Este grupo nunca cargó asistencia"
+                        detalle={`Tiene ${deGrupo.total} ${deGrupo.total === 1 ? 'persona inscripta' : 'personas inscriptas'} y ninguna reunión cargada: no hay forma de saber quién asiste.`}
+                        accion={{ texto: 'Ver el grupo', onClick: () => onVerGrupo(grupoActual!.groupId) }}
+                    />
+                ) : (
+                    <>
+                        <TortaAsistencia a={deGrupo} si="Asiste" no="No asiste" etiqueta="asiste" rotuloBase="Inscriptos" valorBase={deGrupo.total} arriba="mt-[18px]" />
+                        <NotaCobertura>
+                            Basta con figurar presente en una reunión para contar como que asiste. Cada pareja
+                            cuenta como dos personas.
+                        </NotaCobertura>
+                    </>
+                )}
+            </Tarjeta>
+        );
+    };
+
+    // Tarjetas 1 y 2 de los híbridos: a qué reuniones fue la gente.
+    const tarjetaModo = (modo: ModoReunion) => {
+        const a = reporte?.porModoReunion?.[modo];
+        const texto = modo === 'online' ? 'online' : 'en persona';
+        if (!a || !reportan) return null;
+        const base = a.asistieron + a.nuncaAsistieron;
+        return (
+            <Tarjeta className="px-[22px] py-5 flex flex-col">
+                <TituloTarjeta
+                    titulo={modo === 'online' ? 'Asistencia online' : 'Asistencia presencial'}
+                    detalle={`Quiénes fueron a alguna reunión ${texto}, en todos los grupos híbridos.`}
+                />
+                {a.total === 0 ? (
+                    <SinDatos titulo="Todavía no hay inscriptos" detalle="Nadie se anotó en los grupos híbridos de esta temporada." />
+                ) : base === 0 ? (
+                    <SinDatos
+                        titulo="Ningún grupo híbrido cargó asistencia"
+                        detalle={`${a.total === 1 ? 'Su única persona inscripta queda' : `Sus ${a.total} inscriptos quedan`} sin datos hasta la primera carga.`}
+                    />
+                ) : (
+                    <>
+                        <TortaAsistencia
+                            a={a}
+                            si={modo === 'online' ? 'Fue online' : 'Fue en persona'}
+                            no={modo === 'online' ? 'Nunca online' : 'Nunca en persona'}
+                            etiqueta={modo === 'online' ? 'fue online' : 'en persona'}
+                            rotuloBase="Base del cálculo"
+                            valorBase={base}
+                        />
+                        <NotaCobertura>
+                            Cuenta sólo las reuniones que el anfitrión marcó como {modo === 'online' ? 'online' : 'presenciales'}
+                            {' '}al tomar asistencia. Se calcula con {gruposQue(reportan.reportan, 'que cargó', 'que cargaron')} asistencia
+                            {a.sinDatos > 0
+                                ? `: ${base} de las ${a.total} personas inscriptas. ${a.sinDatos === 1 ? 'La restante está' : `Las otras ${a.sinDatos} están`} en grupos que no cargaron nada y ${a.sinDatos === 1 ? 'queda fuera' : 'quedan fuera'}.`
+                                : `: entran las ${a.total} personas inscriptas.`}
+                        </NotaCobertura>
+                    </>
+                )}
+            </Tarjeta>
+        );
+    };
+
+    return (
+        <div>
+            <div className="flex items-baseline gap-2.5 mb-3">
+                <h3 className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>{nombre.titulo}</h3>
+                {!cargando && reportan && (
+                    <span className="text-[12.5px] font-medium" style={{ color: C.apagado }}>
+                        {reportan.total} {reportan.total === 1 ? 'grupo' : 'grupos'}
+                    </span>
+                )}
+            </div>
+
+            {cargando ? (
+                <div className="grid gap-4 grid-cols-1 xl:grid-cols-3">
+                    {[0, 1, 2].map(i => (
+                        <Tarjeta key={i} className="px-[22px] py-5 flex flex-col">
+                            <Esqueleto alto={14} ancho="52%" />
+                            <div className="mt-2"><Esqueleto alto={11} ancho="70%" /></div>
+                            <div className="flex items-center gap-6 mt-[22px] flex-1">
+                                <Esqueleto alto={TAMANO_TORTA} ancho={`${TAMANO_TORTA}px`} className="!rounded-full shrink-0" />
+                                <div className="flex-1"><Esqueleto alto={13} /><div className="mt-3"><Esqueleto alto={13} /></div></div>
+                            </div>
+                        </Tarjeta>
+                    ))}
+                </div>
+            ) : !reporte || !reportan || !asistencia || reportan.total === 0 ? (
+                // Borde punteado, como la temporada que no arrancó: se lee como
+                // algo que todavía no existe, no como una carga que falló. Y
+                // chico: tres tortas vacías ocuparían una fila para decir nada.
+                <div className="bg-white rounded-[14px] px-6 py-7 text-center" style={{ border: `1px dashed ${C.gris}` }}>
+                    <p className="m-0 text-[14.5px] font-semibold" style={{ color: C.medio }}>
+                        Todavía no hay grupos {nombre.plural} en la temporada {NOMBRE_TEMPORADA[temporada]} de {anio}
+                    </p>
+                    <p className="mt-2 mx-auto max-w-[560px] text-[12.5px] leading-[1.6] font-medium" style={{ color: C.apagado }}>
+                        Un grupo aparece acá cuando se lo marca como {nombre.singular} al crearlo o editarlo, y con el
+                        primero se llenan sus gráficos.
+                    </p>
+                </div>
+            ) : modalidad === 'hibrido' ? (
+                <div className="fila-graficos grid gap-4 grid-cols-1 xl:grid-cols-3">
+                    {tarjetaModo('online')}
+                    {tarjetaModo('presencial')}
+                    {tarjetaGrupo()}
+                </div>
+            ) : (
+                <div className="fila-graficos grid gap-4 grid-cols-1 xl:grid-cols-3">
+
+                    <Tarjeta className="px-[22px] py-5 flex flex-col">
+                        <TituloTarjeta
+                            titulo="Grupos que reportan"
+                            detalle={`Cuántos de los grupos ${nombre.plural} cargan asistencia.`}
+                        />
+                        <div className="flex items-center gap-[22px] mt-[22px] flex-1">
+                            <Torta
+                                tamano={TAMANO_TORTA}
+                                datos={[
+                                    { nombre: 'Reporta', valor: reportan.reportan, color: C.azul },
+                                    { nombre: 'No reporta', valor: reportan.noReportan, color: C.azulClaro },
+                                ]}
+                                porcentaje={pctReporta}
+                                etiqueta="reporta"
+                            />
+                            <div className="min-w-0 flex-1">
+                                <FilaLeyenda primera color={C.azul} nombre="Reporta" valor={reportan.reportan} />
+                                <FilaLeyenda color={C.azulClaro} nombre="No reporta" valor={reportan.noReportan} />
+                            </div>
+                        </div>
+                        <NotaCobertura>
+                            {reportan.total === 1
+                                ? `Sobre el único grupo ${nombre.singular} activo de la temporada.`
+                                : `Sobre los ${reportan.total} grupos ${nombre.plural} activos de la temporada.`}{' '}
+                            Un grupo cuenta como que reporta si cargó al menos una reunión.
+                        </NotaCobertura>
+                    </Tarjeta>
+
+                    <Tarjeta className="px-[22px] py-5 flex flex-col">
+                        <TituloTarjeta
+                            titulo="Asistencia de personas"
+                            detalle={`La gente de todos los grupos ${nombre.plural}, sumada.`}
+                        />
+                        {asistencia.total === 0 ? (
+                            <SinDatos
+                                titulo="Todavía no hay inscriptos"
+                                detalle={`Nadie se anotó en los grupos ${nombre.plural} de esta temporada.`}
+                            />
+                        ) : asistencia.asistieron + asistencia.nuncaAsistieron === 0 ? (
+                            <SinDatos
+                                titulo={`Ningún grupo ${nombre.singular} cargó asistencia`}
+                                detalle={`${asistencia.total === 1 ? 'Su única persona inscripta queda' : `Sus ${asistencia.total} inscriptos quedan`} sin datos hasta la primera carga.`}
+                            />
+                        ) : (
+                            <>
+                                <TortaAsistencia
+                                    a={asistencia}
+                                    si="Asiste"
+                                    no="No asiste"
+                                    etiqueta="asiste"
+                                    rotuloBase="Base del cálculo"
+                                    valorBase={asistencia.asistieron + asistencia.nuncaAsistieron}
+                                />
+                                {/* El sinDatos se muestra, igual que en la torta general. */}
+                                <NotaCobertura>
+                                    {asistencia.sinDatos > 0
+                                        ? `Se calcula con ${gruposQue(reportan.reportan, 'que cargó', 'que cargaron')} asistencia: ${asistencia.asistieron + asistencia.nuncaAsistieron} de las ${asistencia.total} personas inscriptas. ${asistencia.sinDatos === 1 ? 'La restante está' : `Las otras ${asistencia.sinDatos} están`} en ${reportan.noReportan === 1 ? 'el que no reporta' : `los ${reportan.noReportan} que no reportan`} y ${asistencia.sinDatos === 1 ? 'queda fuera' : 'quedan fuera'}.`
+                                        : `Todos los grupos ${nombre.plural} cargaron asistencia: entran las ${asistencia.total} personas inscriptas.`}
+                                </NotaCobertura>
+                            </>
+                        )}
+                    </Tarjeta>
+
+                    {tarjetaGrupo()}
+                </div>
+            )}
+        </div>
+    );
+};
+
+/**
+ * Presencial, Online e Híbrido, una debajo de la otra.
+ *
+ * Apiladas y no en pestañas: en la temporada 3 de 2026 ya había 10 grupos
+ * online de 28, y la pregunta de esta sección es si la gente responde
+ * distinto según el formato. Así cada torta queda alineada con su par de la
+ * otra modalidad y se compara de un vistazo, y el PDF lleva todas. Una
+ * modalidad sin grupos ocupa un recuadro chico, no tres tortas.
+ *
+ * Híbrido no repite los mismos tres gráficos: lo que interesa de esos grupos
+ * es cuánta gente va en persona y cuánta online.
+ */
+const SeccionModalidad: React.FC<PropsModalidad> = (props) => {
+    const { datos, cargando, temporada, anio } = props;
+    const temporadaSinGrupos = !cargando && !!datos && datos.kpis.totalGrupos === 0;
+
+    return (
+        <div data-grafico="modalidad" className="mt-8">
+            <div className="mb-3.5">
+                <p className="m-0 text-[11.5px] font-semibold tracking-[.06em]" style={{ color: C.apagado }}>
+                    POR MODALIDAD
+                </p>
+                <p className="mt-1.5 text-[12.5px] font-medium" style={{ color: C.apagado }}>
+                    Los mismos indicadores, separados según dónde se reúne cada grupo.
+                </p>
+            </div>
+
+            {temporadaSinGrupos ? (
+                // Un solo aviso: tres recuadros vacíos dirían lo mismo tres veces.
+                <div className="bg-white rounded-[14px] px-6 py-7 text-center" style={{ border: `1px dashed ${C.gris}` }}>
+                    <p className="m-0 text-[14.5px] font-semibold" style={{ color: C.medio }}>
+                        La temporada {NOMBRE_TEMPORADA[temporada]} de {anio} todavía no tiene grupos
+                    </p>
+                    <p className="mt-2 text-[12.5px] font-medium" style={{ color: C.apagado }}>
+                        Los gráficos por modalidad aparecen con el primer grupo.
+                    </p>
+                </div>
+            ) : (
+                <div className="flex flex-col gap-7">
+                    {MODALIDADES.map(m => <BloqueModalidad key={m} modalidad={m} {...props} />)}
+                </div>
+            )}
+        </div>
+    );
 };
 
 // ── Pantalla ────────────────────────────────────────────────────────────
@@ -1181,6 +1519,15 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                             )}
                         </Tarjeta>
 
+                        {/* ── Por modalidad ── */}
+                        <SeccionModalidad
+                            datos={datos}
+                            cargando={cargando}
+                            temporada={temporada}
+                            anio={anio}
+                            onVerGrupo={id => navigate(`/reportes/gcx/${id}`)}
+                        />
+
                         {/* ── Tabla ── */}
                         <Tarjeta data-grafico="tabla" className={`mt-4 overflow-hidden ${claseImpresion('tabla')}`}>
                             <div className="px-[22px] py-5 flex items-start justify-between gap-5">
@@ -1255,7 +1602,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                             <div className="min-w-0">
                                                 <p className="m-0 text-[13.5px] font-semibold truncate" style={{ color: C.tinta }}>{f.nombre}</p>
                                                 <p className="mt-[3px] text-[12px] font-medium truncate" style={{ color: C.tenue }}>
-                                                    {[f.categoriaNombre, `${f.diaReunion} ${f.horaReunion}`.trim(), f.esOnline ? 'Online' : null]
+                                                    {[f.categoriaNombre, `${f.diaReunion} ${f.horaReunion}`.trim(), f.modalidad !== 'presencial' ? NOMBRE_MODALIDAD[f.modalidad] : null]
                                                         .filter(Boolean).join(' · ')}
                                                 </p>
                                             </div>

@@ -666,6 +666,7 @@ export interface CamposReapertura {
     meetingTime?: string;
     location?: string;
     isOnline?: boolean;
+    isHybrid?: boolean;
     maxCapacity?: number;
     description?: string;
     imageUrl?: string;
@@ -722,6 +723,10 @@ export interface Group {
     endDate?: string; // ISO Date string (optional)
     location: string;
     isOnline?: boolean; // true = grupo online (location vacío). false/undefined = presencial.
+    // true = híbrido: se reúne en persona (location tiene la dirección) y a
+    // veces online. Nunca junto con isOnline. Al tomar asistencia, el
+    // anfitrión elige cómo fue cada reunión (group_attendance.meeting_mode).
+    isHybrid?: boolean;
     membersCount: number;
     maxCapacity: number;
     capacityLocked?: boolean; // Bloqueo manual: fuerza estado "LLENO" sin importar el cupo numérico
@@ -1450,6 +1455,37 @@ export interface GruposQueReportanReporte {
 }
 
 /**
+ * Modalidad de un grupo, derivada de `is_online` e `is_hybrid` (nunca los
+ * dos en true). Nulo cuenta como false: un grupo que nadie marcó como online
+ * ni híbrido se reúne en persona.
+ */
+export type ModalidadGrupo = 'presencial' | 'online' | 'hibrido';
+
+/** Cómo fue UNA reunión de un grupo híbrido (group_attendance.meeting_mode). */
+export type ModoReunion = 'presencial' | 'online';
+
+/** Filtros opcionales de getAsistenciaPersonas y getGruposQueReportan. */
+export interface FiltrosReporteGCX {
+    modalidad?: ModalidadGrupo;
+    groupId?: string;
+    /** Sólo getAsistenciaPersonas: cuenta como presente a quien figura en
+     *  alguna reunión de ESE modo. Tiene sentido para grupos híbridos. */
+    modoReunion?: ModoReunion;
+}
+
+/** Los gráficos de una modalidad en /reportes/gcx. */
+export interface ReporteModalidadGCX {
+    gruposQueReportan: GruposQueReportanReporte;
+    asistenciaPersonas: AsistenciaPersonasReporte;
+    /** Un renglón por grupo de la modalidad, por id: el selector del
+     *  gráfico 3 cambia sin volver a pedir nada. */
+    asistenciaPorGrupo: Record<string, AsistenciaPersonasReporte>;
+    /** Sólo en los híbridos: asistencia a sus reuniones en persona y a las
+     *  online, por separado. */
+    porModoReunion?: Record<ModoReunion, AsistenciaPersonasReporte>;
+}
+
+/**
  * Gráfico 5 — un día en el que al menos un grupo cargó asistencia.
  *
  * Sólo aparecen los días con carga: un grupo que se reúne los jueves no
@@ -1546,7 +1582,7 @@ export interface TablaGrupoReporteFila {
     categoriaNombre: string;
     diaReunion: string;
     horaReunion: string;
-    esOnline: boolean;
+    modalidad: ModalidadGrupo;
 }
 
 
@@ -1635,4 +1671,5 @@ export interface ReportesGCXTemporada {
     asistenciaPorFecha: AsistenciaPorFechaDia[];
     cargaPorGrupo: CargaPorGrupoFila[];
     tablaGrupos: TablaGrupoReporteFila[];
+    porModalidad: Record<ModalidadGrupo, ReporteModalidadGCX>;
 }

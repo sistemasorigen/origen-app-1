@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { NOMBRE_MODALIDAD, modalidadDe, llevaDireccion } from '../../src/utils/modalidad';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Group, GroupTag, GroupCategory, esGrupoPendiente } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
@@ -395,7 +396,7 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
 
                         <div className="mt-5">
                             {filaDato('Día y horario', `${group.meetingDay || 'Sin día'} ${group.meetingTime || ''}`.trim())}
-                            {filaDato('Modalidad', group.isOnline ? 'Online' : `Presencial${group.location ? ` · ${group.location}` : ''}`)}
+                            {filaDato('Modalidad', `${NOMBRE_MODALIDAD[modalidadDe(group)]}${llevaDireccion(modalidadDe(group)) && group.location ? ` · ${group.location}` : ''}`)}
                             {filaDato('Temporada', temporada)}
                             {filaDato('Apunta a', `${group.targetGender || 'Mixto'} · ${(group.minAge && group.minAge > 0) ? group.minAge : 0} a ${(group.maxAge && group.maxAge < 100) ? group.maxAge : 'sin límite de'} años`)}
                             {filaDato('Creado', fechaLarga(group.createdAt) || 'Sin fecha')}

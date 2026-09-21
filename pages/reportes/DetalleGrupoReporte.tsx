@@ -12,6 +12,7 @@
 // del tablero se sientan como una sola herramienta.
 // ════════════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { NOMBRE_MODALIDAD, modalidadDe, dondeSeReune } from '../../src/utils/modalidad';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
@@ -316,7 +317,7 @@ const DetalleGrupoReporte: React.FC = () => {
     const meta = [
         categoriaNombre,
         [grupo.meetingDay, grupo.meetingTime].filter(Boolean).join(' '),
-        grupo.isOnline ? 'Online' : grupo.location,
+        dondeSeReune(grupo),
         (grupo.startDate && grupo.endDate) ? `${fechaCorta(grupo.startDate)} – ${fechaCorta(grupo.endDate)}` : null,
     ].filter(Boolean).join(' · ');
 
@@ -662,7 +663,7 @@ const DetalleGrupoReporte: React.FC = () => {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-3.5 mt-[18px]">
                             {[
                                 ['Categoría', categoriaNombre || 'Sin categoría'],
-                                ['Modalidad', grupo.isOnline ? 'Online' : 'Presencial'],
+                                ['Modalidad', NOMBRE_MODALIDAD[modalidadDe(grupo)]],
                                 ['Día y horario', [grupo.meetingDay, grupo.meetingTime].filter(Boolean).join(' ') || '—'],
                                 ['Apunta a', `${grupo.targetGender || 'Mixto'} · ${grupo.minAge ?? 0} a ${grupo.maxAge ?? 100} años`],
                                 ['Temporada', grupo.startDate && grupo.endDate ? `${fechaCorta(grupo.startDate)} – ${fechaCorta(grupo.endDate)}` : '—'],

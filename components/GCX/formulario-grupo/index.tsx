@@ -17,12 +17,13 @@
 // ════════════════════════════════════════════════════════════════════════
 import React, { useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { User, GroupTag, SeasonSettings } from '../../../types';
-import { ArrowLeft, Check, Loader2, Search, Wand2, X } from 'lucide-react';
+import { User, GroupTag, SeasonSettings, ModalidadGrupo } from '../../../types';
+import { ArrowLeft, Check, Loader2, Search, X } from 'lucide-react';
 import ImageUpload from '../../media/SubidaImagen';
 import { useIsMobile } from '../../../src/hooks/useIsMobile';
 import { T, btnPrimarioBase, btnSecundarioBase, rotulo } from '../patron';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
+import { MODALIDADES, NOMBRE_MODALIDAD, llevaDireccion } from '../../../src/utils/modalidad';
 
 export const DIAS_DE_REUNION = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 export const GENEROS = ['Mixto', 'Hombre', 'Mujer'];
@@ -33,7 +34,7 @@ export interface DatosGrupo {
     meetingDay: string;
     meetingTime: string;
     location: string;
-    isOnline: boolean;
+    modalidad: ModalidadGrupo;
     description: string;
     maxCapacity: number | string;
     imageUrl: string;
@@ -61,20 +62,13 @@ export interface CoAnfitrion {
     contenedor: React.RefObject<HTMLDivElement>;
 }
 
-export interface Ortografia {
-    revisando: boolean;
-    corrigiendo: boolean;
-    hayErrores: boolean;
-    estado: 'idle' | 'correcting' | 'success' | 'error';
-    sugerencia: string | null;
-    /** Botón chico del propio campo: corrige y no guarda. */
-    onCorregir: () => void;
-    /** Abierta cuando se intentó guardar con errores sin corregir. */
-    hojaAbierta: boolean;
-    /** Botón principal de la hoja: corrige y guarda, en una sola acción. */
-    onCorregirYGuardar: () => void;
-    onGuardarIgual: () => void;
-    onCerrarHoja: () => void;
+export interface Confirmacion {
+    /** Abierta cuando el formulario pasó las validaciones y falta decidir. */
+    abierta: boolean;
+    /** Guarda el grupo. */
+    onConfirmar: () => void;
+    /** Cierra la hoja y deja el formulario como estaba, para revisarlo. */
+    onRevisar: () => void;
 }
 
 export interface Tour {
@@ -307,7 +301,7 @@ export interface PropsFormularioGrupo {
     coAnfitrion: CoAnfitrion;
     /** Sólo el panel GCX asigna anfitrión; un anfitrión creando el suyo ya lo es. */
     anfitrion?: CoAnfitrion;
-    ortografia: Ortografia;
+    confirmacion: Confirmacion;
     anio: number;
     temporadas: SeasonSettings['seasons'];
     onGuardar: (e: React.FormEvent) => void;
@@ -323,7 +317,7 @@ export interface PropsFormularioGrupo {
 
 const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
     modo, subtitulo, onVolver, volverTexto = 'Mis grupos', form, setForm, onChange,
-    categorias, etiquetas, onToggleEtiqueta, coAnfitrion, anfitrion, ortografia,
+    categorias, etiquetas, onToggleEtiqueta, coAnfitrion, anfitrion, confirmacion,
     anio, temporadas, onGuardar, guardando, cambios = 0, aviso, textoGuardar, tour,
 }) => {
     const esCrear = modo === 'crear';
@@ -350,7 +344,7 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
         identidad: [lleno(form.imageUrl), lleno(form.name), lleno(form.description)],
         donde: [
             lleno(form.categoryId),
-            ...(form.isOnline ? [] : [lleno(form.location)]),
+            ...(llevaDireccion(form.modalidad) ? [lleno(form.location)] : []),
             lleno(form.meetingDay), lleno(form.meetingTime),
             lleno(form.startDate), lleno(form.endDate),
         ],
@@ -389,9 +383,9 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
             case 'donde': {
                 if (faltantes(s) === requeridos[s].length) return sinCompletar(faltantes(s));
                 return {
-                    titulo: `${form.meetingDay} ${form.meetingTime} · ${form.isOnline ? 'Online' : 'Presencial'}`,
+                    titulo: `${form.meetingDay} ${form.meetingTime} · ${NOMBRE_MODALIDAD[form.modalidad]}`,
                     detalle: [
-                        form.isOnline ? nombreCategoria : (form.location || nombreCategoria),
+                        llevaDireccion(form.modalidad) ? (form.location || nombreCategoria) : nombreCategoria,
                         claveTemporada ? temporadas[claveTemporada].label : (form.startDate ? 'Fechas propias' : null),
                     ].filter(Boolean).join(' · ') || undefined,
                     vacio: false,
@@ -530,7 +524,7 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
                         )}
 
                         {envoltorioTour(3, 'De qué se trata',
-                            'Explicá qué van a hacer y a quién va dirigido. La ortografía la revisamos nosotros.',
+                            'Explicá qué van a hacer y a quién va dirigido.',
                             <div className={`rounded-[20px] ${T.interna} px-[18px] pt-3.5 pb-4`}>
                                 <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-black/40 dark:text-white/40">
                                     Descripción
@@ -540,27 +534,6 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
                                     className={`${claseControl} mt-1.5 resize-none leading-[1.6] text-[14.5px]`}
                                     placeholder="Un grupo para…"
                                 />
-                                {(ortografia.revisando || ortografia.hayErrores || ortografia.estado === 'correcting' || ortografia.estado === 'success') && (
-                                    <div className="flex items-center gap-3 mt-3.5 pt-3.5 border-t border-black/[.07] dark:border-white/10">
-                                        <span className="flex-1 text-[13px] leading-[1.45] font-medium text-black/50 dark:text-white/50">
-                                            {ortografia.revisando
-                                                ? 'Revisando la ortografía…'
-                                                : ortografia.estado === 'success'
-                                                    ? 'Descripción corregida'
-                                                    : 'Hay errores de ortografía'}
-                                        </span>
-                                        {ortografia.hayErrores && (
-                                            <button
-                                                type="button" onClick={ortografia.onCorregir} disabled={ortografia.corrigiendo}
-                                                className={`${btnPrimarioBase} h-10 px-3.5 text-[13.5px] shrink-0`}
-                                            >
-                                                {ortografia.corrigiendo
-                                                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Corrigiendo…</>
-                                                    : <><Wand2 className="w-3.5 h-3.5" /> Corregir</>}
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         )}
                         </div>
@@ -584,29 +557,34 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
                         )}
 
                         {envoltorioTour(5, 'Dónde se juntan',
-                            'Si el grupo es online no hace falta dirección: el campo desaparece.',
+                            'Presencial, online o híbrido. Si es online no hace falta dirección: el campo desaparece.',
                             <>
-                                {/* Un par de píldoras del ancho completo. Al elegir
-                                    Online la dirección desaparece en vez de quedar
+                                <Caja etiqueta="Modalidad">
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            name="modalidad"
+                                            value={form.modalidad}
+                                            onChange={onChange}
+                                            aria-label="Modalidad del grupo"
+                                            className={`${claseControl} appearance-none`}
+                                        >
+                                            {MODALIDADES.map(m => <option key={m} value={m}>{NOMBRE_MODALIDAD[m]}</option>)}
+                                        </select>
+                                        <Chevron clase="text-black/40 dark:text-white/40" />
+                                    </div>
+                                </Caja>
+                                {/* El híbrido es el único que cambia algo después:
+                                    se dice acá, cuando se elige, y no recién
+                                    cuando el anfitrión va a tomar asistencia. */}
+                                {form.modalidad === 'hibrido' && (
+                                    <p className="mt-2 px-1 text-[13px] leading-[1.55] font-medium text-black/45 dark:text-white/45">
+                                        Se juntan en persona y a veces online. Al tomar asistencia se elige cómo fue cada reunión.
+                                    </p>
+                                )}
+                                {/* Online, la dirección desaparece en vez de quedar
                                     deshabilitada: un campo gris que no se puede
                                     tocar sigue pareciendo un campo pendiente. */}
-                                <div className="flex gap-2.5" role="radiogroup" aria-label="Modalidad del grupo">
-                                    {[false, true].map(online => (
-                                        <button
-                                            key={String(online)}
-                                            type="button"
-                                            role="radio"
-                                            aria-checked={form.isOnline === online}
-                                            onClick={() => setForm((prev: any) => ({ ...prev, isOnline: online }))}
-                                            className={`flex-1 h-[56px] rounded-full font-semibold text-[15.5px] transition-colors ${form.isOnline === online
-                                                ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
-                                                : `${T.interna} text-black/55 dark:text-white/55`}`}
-                                        >
-                                            {online ? 'Online' : 'Presencial'}
-                                        </button>
-                                    ))}
-                                </div>
-                                {!form.isOnline && (
+                                {llevaDireccion(form.modalidad) && (
                                     <Caja etiqueta="Dirección" className="mt-2.5">
                                         <input
                                             type="text" name="location" value={form.location} onChange={onChange}
@@ -744,7 +722,7 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
             )}
             <button
                 type="submit"
-                disabled={!puedeGuardar || guardando || ortografia.revisando}
+                disabled={!puedeGuardar || guardando}
                 className={`${btnPrimarioBase} w-full h-[60px] text-[17px] shadow-[0_6px_22px_rgba(0,0,0,.18)]`}
             >
                 {guardando && <Loader2 className="w-5 h-5 animate-spin" />}
@@ -807,7 +785,7 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
                             )}
                             <button
                                 type="submit"
-                                disabled={!puedeGuardar || guardando || ortografia.revisando}
+                                disabled={!puedeGuardar || guardando}
                                 className={`${btnPrimarioBase} h-12 px-[26px] text-[15.5px]`}
                             >
                                 {guardando && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -836,79 +814,74 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
         </div>
     );
 
-    // ── Hoja del corrector ──────────────────────────────────────────────
-    // No abre un diálogo propio: usa la misma hoja inferior que el resto del
-    // sistema, con las palabras marcadas y "Guardar como está" siempre a mano.
-    const cambiosDeTexto = useMemo(() => {
-        if (!ortografia.sugerencia) return [];
-        const antes = form.description.split(/\s+/).filter(Boolean);
-        const despues = ortografia.sugerencia.split(/\s+/).filter(Boolean);
-        // Sin la misma cantidad de palabras no se pueden aparear una a una;
-        // en ese caso la hoja muestra el aviso general y nada más.
-        if (antes.length !== despues.length) return [];
-        // Un punto final o una mayúscula de arranque no son una palabra mal
-        // escrita: listarlas como "bienvenidos → bienvenidos." no enseña nada.
-        const nucleo = (p: string) => p
-            .replace(/^[¿¡"'(]+|[.,;:!?"')]+$/g, '')
-            .toLocaleLowerCase('es');
-        return antes
-            .map((p, i) => ({ antes: p, despues: despues[i] }))
-            .filter(p => nucleo(p.antes) !== nucleo(p.despues))
-            .slice(0, 6);
-    }, [form.description, ortografia.sugerencia]);
+    // ── Confirmación antes de guardar ───────────────────────────────────
+    // Reemplaza a la hoja del corrector de ortografía (Gemini ya no está).
+    // Aparece sólo después de que la página validó todo: preguntar si cargar
+    // un formulario que igual va a rebotar sería una pregunta de más. Muestra
+    // el mismo resumen de las secciones cerradas, que es lo que hay que mirar
+    // para decidir, y el botón principal dice lo mismo que el de guardar.
+    useBloqueoDeFondo(confirmacion.abierta);
 
-    useBloqueoDeFondo(!!ortografia.hojaAbierta);
-
-    const hoja = ortografia.hojaAbierta && typeof document !== 'undefined' && createPortal(
+    const hoja = confirmacion.abierta && typeof document !== 'undefined' && createPortal(
         <div className={`${T.fuente} ${T.tinta} fixed inset-0 z-[9999] flex items-end sm:items-center justify-center`}>
-            <div className="absolute inset-0 bg-black/38" onClick={ortografia.onCerrarHoja} />
+            <div className="absolute inset-0 bg-black/40" onClick={confirmacion.onRevisar} />
             <div
                 role="dialog"
                 aria-modal="true"
-                className="relative w-full sm:max-w-[420px] bg-white dark:bg-[#1b1b1a] rounded-t-[30px] sm:rounded-[30px] px-[22px] pt-3.5 pb-[26px] animate-slideIn"
+                aria-labelledby="confirmar-grupo-titulo"
+                className="relative w-full sm:max-w-[440px] max-h-[92vh] overflow-y-auto bg-white dark:bg-[#1b1b1a] rounded-t-[30px] sm:rounded-[30px] px-[22px] pt-5 pb-[26px] animate-slideIn"
             >
-                <p className="text-[21px] leading-[1.3] font-semibold tracking-[-.01em]">
-                    {cambiosDeTexto.length > 0
-                        ? `Hay ${cambiosDeTexto.length} ${cambiosDeTexto.length === 1 ? 'error' : 'errores'} de ortografía`
-                        : 'Hay errores de ortografía'}
+                <p id="confirmar-grupo-titulo" className="text-[21px] leading-[1.3] font-semibold tracking-[-.01em]">
+                    ¿Está todo listo?
                 </p>
-                <p className="mt-3 text-[14.5px] leading-[1.6] font-medium text-black/55 dark:text-white/55">
-                    Los encontramos en la descripción. Podés corregirlos ahora o guardar el grupo como está.
+                <p className="mt-2 text-[14.5px] leading-[1.6] font-medium text-black/55 dark:text-white/55">
+                    {esCrear
+                        ? 'Así va a quedar el grupo. Si algo no está bien, revisalo antes de crearlo.'
+                        : esReabrir
+                            ? 'Se crea un grupo nuevo con estos datos. Si algo no está bien, revisalo antes.'
+                            : 'Estos son los datos que se van a guardar.'}
                 </p>
 
-                {cambiosDeTexto.length > 0 && (
-                    <div className={`${T.interna} rounded-[20px] px-[18px] mt-[18px]`}>
-                        {cambiosDeTexto.map((p, i) => (
-                            <React.Fragment key={`${p.antes}-${i}`}>
+                <div className={`${T.interna} rounded-[20px] px-[18px] mt-[18px]`}>
+                    {ORDEN.map((sec, i) => {
+                        const r = resumen(sec);
+                        return (
+                            <React.Fragment key={sec}>
                                 {i > 0 && <div className="h-px bg-black/[.06] dark:bg-white/[.08]" />}
-                                <div className="flex items-center gap-3 h-[52px]">
-                                    <span className="flex-1 text-[14.5px] font-medium text-black/50 dark:text-white/50 line-through truncate">{p.antes}</span>
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-                                        strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-black/30 dark:text-white/30" aria-hidden="true">
-                                        <path d="M5 12h13M13 7l5 5-5 5" />
-                                    </svg>
-                                    <span className="flex-1 text-right text-[14.5px] font-semibold truncate">{p.despues}</span>
+                                <div className="py-3">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[.06em] text-black/40 dark:text-white/40">
+                                        {NOMBRE_SECCION[sec]}
+                                    </p>
+                                    <p className={`mt-1 text-[14.5px] font-semibold leading-[1.4] ${r.vacio ? 'text-black/40 dark:text-white/40' : ''}`}>
+                                        {sec === 'etiquetas' && r.vacio ? 'Sin etiquetas' : r.titulo}
+                                    </p>
+                                    {r.detalle && (
+                                        <p className="mt-0.5 text-[13px] leading-[1.45] font-medium text-black/45 dark:text-white/45">
+                                            {r.detalle}
+                                        </p>
+                                    )}
                                 </div>
                             </React.Fragment>
-                        ))}
-                    </div>
-                )}
+                        );
+                    })}
+                </div>
 
                 <button
                     type="button"
-                    onClick={ortografia.onCorregirYGuardar}
-                    disabled={ortografia.corrigiendo}
+                    onClick={confirmacion.onConfirmar}
+                    disabled={guardando}
                     className={`${btnPrimarioBase} w-full h-[58px] text-[16.5px] mt-5`}
                 >
-                    {ortografia.corrigiendo ? <><Loader2 className="w-5 h-5 animate-spin" /> Corrigiendo…</> : 'Corregir y guardar'}
+                    {guardando && <Loader2 className="w-5 h-5 animate-spin" />}
+                    {rotuloGuardar}
                 </button>
                 <button
                     type="button"
-                    onClick={ortografia.onGuardarIgual}
-                    disabled={ortografia.corrigiendo}
+                    onClick={confirmacion.onRevisar}
+                    disabled={guardando}
                     className={`${btnSecundarioBase} w-full h-[56px] px-6 text-[16px] mt-2.5`}
                 >
-                    Guardar como está
+                    Revisar los datos
                 </button>
             </div>
         </div>,
@@ -998,7 +971,11 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
                 </div>
             ) : (
                 <div className="max-w-[1160px] mx-auto px-8 pt-7 pb-10 grid grid-cols-[minmax(0,300px)_minmax(0,1fr)] gap-7 items-start">
-                    <nav className="bg-white dark:bg-[#1b1b1a] rounded-[28px] p-4 sticky top-7 flex flex-col gap-1">
+                    {/* div con role y no <nav>: el "modo foco" de index.css esconde
+                        todo <nav> mientras hay un modal abierto, y con la hoja de
+                        confirmación arriba esta columna desaparecía y el panel
+                        saltaba a su lugar, detrás de la hoja. */}
+                    <div role="navigation" aria-label="Secciones del grupo" className="bg-white dark:bg-[#1b1b1a] rounded-[28px] p-4 sticky top-7 flex flex-col gap-1">
                         {ORDEN.map(s => {
                             const r = resumen(s);
                             const activa = seccionVisible === s;
@@ -1017,7 +994,7 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
                                 </button>
                             );
                         })}
-                    </nav>
+                    </div>
 
                     <div className="min-w-0 flex flex-col gap-4">
                         {aviso}

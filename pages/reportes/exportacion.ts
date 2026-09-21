@@ -17,6 +17,7 @@
 // ════════════════════════════════════════════════════════════════════════
 import * as XLSX from 'xlsx';
 import { ReportesGCXTemporada, TemporadaGCX, EdadesPorCategoriaFila } from '../../types';
+import { NOMBRE_MODALIDAD } from '../../src/utils/modalidad';
 
 // ── Fechas ──────────────────────────────────────────────────────────────
 // Viven acá y no en la pantalla porque las usan las dos: el eje del
@@ -245,7 +246,7 @@ const hojaTabla = (d: ReportesGCXTemporada): HojaExcel[] => [{
         'Co-anfitrión': f.coAnfitrion || 'No tiene',
         'Día de encuentro': f.diaReunion || 'Sin definir',
         Horario: f.horaReunion || 'Sin definir',
-        Modalidad: f.esOnline ? 'Online' : 'Presencial',
+        Modalidad: NOMBRE_MODALIDAD[f.modalidad],
         Inscriptos: f.inscriptos,
         Cupo: f.capacidad,
         Ocupación: f.capacidad > 0 ? `${porcentaje(f.inscriptos, f.capacidad)}%` : 'Sin cupo cargado',

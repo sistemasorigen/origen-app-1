@@ -5,7 +5,7 @@ import { supabaseService, updateGroupDirect } from '../../services/supabaseServi
 import { supabase } from '../../services/supabaseClient';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 import FormularioGrupo, { DatosGrupo } from '../../components/GCX/formulario-grupo';
-import { useSpellingAI } from '../../hooks/useSpellingAI';
+import { modalidadDe, banderasDe, llevaDireccion } from '../../src/utils/modalidad';
 
 interface GroupCategory {
     id: string;
@@ -18,7 +18,7 @@ type DatosGrupoAdmin = DatosGrupo & { leaderName: string; leaderSurname: string 
 
 const VACIO: DatosGrupoAdmin = {
     name: '', categoryId: '', meetingDay: 'Lunes', meetingTime: '20:00',
-    location: '', isOnline: false, description: '', maxCapacity: 12,
+    location: '', modalidad: 'presencial', description: '', maxCapacity: 12,
     imageUrl: '', coHostFirstName: '', coHostLastName: '',
     minAge: 0, maxAge: 100, targetGender: 'Mixto', tags: [],
     startDate: '', endDate: '', leaderName: '', leaderSurname: '',
@@ -68,11 +68,9 @@ const EditarGrupoAdminContent: React.FC = () => {
     const [form, setForm] = useState<DatosGrupoAdmin>(VACIO);
     const [formInicial, setFormInicial] = useState<DatosGrupoAdmin | null>(null);
 
-    const [showSpellingWarning, setShowSpellingWarning] = useState(false);
-    const {
-        isChecking: isCheckingSpelling, isCorrecting, hasErrors: spellingErrors,
-        suggestedCorrection, correctionStatus, checkSpelling, fixText, resetState: resetSpelling,
-    } = useSpellingAI();
+    // Abierta cuando el formulario pasó las validaciones: pregunta si
+    // cargar el grupo o volver a revisar los datos.
+    const [confirmando, setConfirmando] = useState(false);
 
     // ── Traer el grupo (cualquiera, no sólo los propios) ──
     const fetchGroup = useCallback(async () => {
@@ -93,9 +91,7 @@ const EditarGrupoAdminContent: React.FC = () => {
                 meetingDay: found.meetingDay || 'Lunes',
                 meetingTime: found.meetingTime || '20:00',
                 location: found.location || '',
-                // Un grupo viejo sin el campo se deduce por la ubicación
-                // vacía, que es como quedaron guardados los online de antes.
-                isOnline: found.isOnline ?? !found.location,
+                modalidad: modalidadDe(found),
                 description: found.description || '',
                 maxCapacity: found.maxCapacity || 12,
                 imageUrl: found.imageUrl || '',
@@ -151,26 +147,7 @@ const EditarGrupoAdminContent: React.FC = () => {
         });
     }, []);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (form.description && form.description.length > 0) checkSpelling(form.description);
-            else resetSpelling();
-        }, 800);
-        return () => clearTimeout(timer);
-    }, [form.description, checkSpelling, resetSpelling]);
 
-    const handleFixSpelling = async () => {
-        const corrected = await fixText(form.description);
-        setForm(prev => ({ ...prev, description: corrected }));
-        setShowSpellingWarning(false);
-    };
-
-    const handleFixAndSave = async () => {
-        const corrected = await fixText(form.description);
-        setForm(prev => ({ ...prev, description: corrected }));
-        setShowSpellingWarning(false);
-        await confirmSubmit(corrected);
-    };
 
     useEffect(() => {
         if (hostMode !== 'search' || !hostSearchTerm.trim()) {
@@ -270,7 +247,7 @@ const EditarGrupoAdminContent: React.FC = () => {
         e.preventDefault();
         if (!form.name.trim()) return showToast('El nombre del grupo es obligatorio.', 'error');
         if (!form.categoryId) return showToast('Elegí una categoría.', 'error');
-        if (!form.isOnline && !form.location.trim()) return showToast('Falta el barrio o la dirección.', 'error');
+        if (llevaDireccion(form.modalidad) && !form.location.trim()) return showToast('Falta el barrio o la dirección.', 'error');
         if (!form.description.trim()) return showToast('Falta la descripción.', 'error');
         if (!form.startDate) return showToast('Falta la fecha de arranque.', 'error');
         if (!form.endDate) return showToast('Falta la fecha de fin.', 'error');
@@ -291,17 +268,13 @@ const EditarGrupoAdminContent: React.FC = () => {
             return showToast('La fecha de fin tiene que ser posterior a la de arranque.', 'error');
         }
 
-        if (spellingErrors && !showSpellingWarning) {
-            setShowSpellingWarning(true);
-            return;
-        }
-        await confirmSubmit();
+        setConfirmando(true);
     };
 
-    const confirmSubmit = async (descripcionCorregida?: string) => {
+    const confirmSubmit = async () => {
         if (!group) return;
         setLoading(true);
-        setShowSpellingWarning(false);
+        setConfirmando(false);
         try {
             let finalImageUrl = form.imageUrl;
 
@@ -341,9 +314,9 @@ const EditarGrupoAdminContent: React.FC = () => {
                 leaderPhone: finalLeaderPhone,
                 meetingDay: form.meetingDay,
                 meetingTime: form.meetingTime,
-                location: form.isOnline ? '' : form.location,
-                isOnline: form.isOnline,
-                description: descripcionCorregida ?? form.description,
+                location: llevaDireccion(form.modalidad) ? form.location : '',
+                ...banderasDe(form.modalidad),
+                description: form.description,
                 maxCapacity: Number(form.maxCapacity),
                 imageUrl: finalImageUrl,
                 categoryId: form.categoryId,
@@ -437,17 +410,10 @@ const EditarGrupoAdminContent: React.FC = () => {
                 setDesplegado: setIsCoHostDropdownOpen,
                 contenedor: coHostDropdownRef,
             }}
-            ortografia={{
-                revisando: isCheckingSpelling,
-                corrigiendo: isCorrecting,
-                hayErrores: spellingErrors,
-                estado: correctionStatus,
-                sugerencia: suggestedCorrection,
-                onCorregir: handleFixSpelling,
-                hojaAbierta: showSpellingWarning,
-                onCorregirYGuardar: handleFixAndSave,
-                onGuardarIgual: () => confirmSubmit(),
-                onCerrarHoja: () => setShowSpellingWarning(false),
+            confirmacion={{
+                abierta: confirmando,
+                onConfirmar: () => confirmSubmit(),
+                onRevisar: () => setConfirmando(false),
             }}
             anio={currentYear}
             temporadas={resolvedSeasons}

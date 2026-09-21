@@ -5,7 +5,7 @@ import { User, GroupTag, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../t
 import { supabaseService, insertGroupDirect } from '../../services/supabaseService';
 import { supabase } from '../../services/supabaseClient';
 import FormularioGrupo, { DatosGrupo } from '../../components/GCX/formulario-grupo';
-import { useSpellingAI } from '../../hooks/useSpellingAI';
+import { banderasDe, llevaDireccion } from '../../src/utils/modalidad';
 import { useTutorial } from '../../src/hooks/useTutorial';
 import TutorialInvitation from '../../components/onboarding/InvitacionTutorial';
 
@@ -44,14 +44,15 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
 
     const [form, setForm] = useState<DatosGrupo>({
         name: '', categoryId: '', meetingDay: 'Lunes', meetingTime: '20:00',
-        location: '', isOnline: false, description: '', maxCapacity: 12 as number | string,
+        location: '', modalidad: 'presencial', description: '', maxCapacity: 12 as number | string,
         imageUrl: '', coHostFirstName: '', coHostLastName: '',
         minAge: 0 as number | string, maxAge: 100 as number | string,
         targetGender: 'Mixto', tags: [] as string[], startDate: '', endDate: ''
     });
 
-    const [showSpellingWarning, setShowSpellingWarning] = useState(false);
-    const { isChecking: isCheckingSpelling, isCorrecting, hasErrors: spellingErrors, suggestedCorrection, correctionStatus, checkSpelling, fixText, resetState: resetSpelling } = useSpellingAI();
+    // Abierta cuando el formulario pasó las validaciones: pregunta si
+    // cargar el grupo o volver a revisar los datos.
+    const [confirmando, setConfirmando] = useState(false);
 
     const { isActive, showInvitation, startTutorial, completeTutorial, dismissTutorial, declineTemporary, tourSessionId } = useTutorial('createGroup');
 
@@ -70,29 +71,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const handleTourFinish = () => { setLocalTourStep(0); completeTutorial(); };
     const handleTourSkip = () => { setLocalTourStep(0); dismissTutorial(); };
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (form.description && form.description.length > 0) checkSpelling(form.description);
-            else resetSpelling();
-        }, 800);
-        return () => clearTimeout(timer);
-    }, [form.description, checkSpelling, resetSpelling]);
 
-    const handleFixSpelling = async () => {
-        const corrected = await fixText(form.description);
-        setForm(prev => ({ ...prev, description: corrected }));
-        setShowSpellingWarning(false);
-    };
-
-    // "Corregir y guardar" de la hoja: una sola acción. El texto corregido se
-    // le pasa a confirmSubmit a mano porque setForm no es sincrónico y el
-    // guardado leería la descripción vieja.
-    const handleFixAndSave = async () => {
-        const corrected = await fixText(form.description);
-        setForm(prev => ({ ...prev, description: corrected }));
-        setShowSpellingWarning(false);
-        await confirmSubmit(corrected);
-    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -187,7 +166,7 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         e.preventDefault();
         if (!form.name.trim()) return alert('El nombre del grupo es obligatorio');
         if (!form.categoryId) return alert('Debes seleccionar una categoría.');
-        if (!form.isOnline && !form.location.trim()) return alert('El barrio/ubicación es obligatorio.');
+        if (llevaDireccion(form.modalidad) && !form.location.trim()) return alert('El barrio/ubicación es obligatorio.');
         if (!form.description.trim()) return alert('La descripción es obligatoria.');
         if (!form.startDate) return alert('La fecha de arranque es obligatoria.');
         if (!form.endDate) return alert('La fecha de fin es obligatoria.');
@@ -214,16 +193,12 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
             return alert('La fecha de fin debe ser posterior a la fecha de arranque.');
         }
 
-        if (spellingErrors && !showSpellingWarning) {
-            setShowSpellingWarning(true);
-            return;
-        }
-        await confirmSubmit();
+        setConfirmando(true);
     };
 
-    const confirmSubmit = async (descripcionCorregida?: string) => {
+    const confirmSubmit = async () => {
         setLoading(true);
-        setShowSpellingWarning(false);
+        setConfirmando(false);
         try {
             let finalImageUrl = form.imageUrl;
 
@@ -268,9 +243,9 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                 leaderPhone: '',
                 meetingDay: form.meetingDay,
                 meetingTime: form.meetingTime,
-                location: form.isOnline ? '' : form.location,
-                isOnline: form.isOnline,
-                description: descripcionCorregida ?? form.description,
+                location: llevaDireccion(form.modalidad) ? form.location : '',
+                ...banderasDe(form.modalidad),
+                description: form.description,
                 maxCapacity: Number(form.maxCapacity),
                 imageUrl: finalImageUrl,
                 categoryId: form.categoryId,
@@ -340,17 +315,10 @@ const PaginaCrearGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                     setDesplegado: setIsCoHostDropdownOpen,
                     contenedor: coHostDropdownRef,
                 }}
-                ortografia={{
-                    revisando: isCheckingSpelling,
-                    corrigiendo: isCorrecting,
-                    hayErrores: spellingErrors,
-                    estado: correctionStatus,
-                    sugerencia: suggestedCorrection,
-                    onCorregir: handleFixSpelling,
-                    hojaAbierta: showSpellingWarning,
-                    onCorregirYGuardar: handleFixAndSave,
-                    onGuardarIgual: () => confirmSubmit(),
-                    onCerrarHoja: () => setShowSpellingWarning(false),
+                confirmacion={{
+                    abierta: confirmando,
+                    onConfirmar: () => confirmSubmit(),
+                    onRevisar: () => setConfirmando(false),
                 }}
                 anio={currentYear}
                 temporadas={resolvedSeasons}

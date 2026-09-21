@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { dondeSeReune } from '../../src/utils/modalidad';
 import { useNavigate } from 'react-router-dom';
 import { Group, GroupCategory, GroupTag } from '../../types';
 import { supabaseService, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
@@ -225,7 +226,7 @@ const GestionDeGruposContent: React.FC = () => {
             [g.coHostFirstName, g.coHostLastName].filter(Boolean).join(' '),
             g.meetingDay,
             g.meetingTime,
-            g.isOnline ? 'Online' : g.location,
+            dondeSeReune(g),
             isGroupFinished(g) ? 'Finalizado' : (g.status || 'pending'),
             g.registrations?.length || 0,
             g.maxCapacity,
