@@ -7,7 +7,6 @@ import AdminGCXLayout, { useAdminGCXToast, usePanelGCXConteos } from '../../comp
 import GroupsAdminToolbar, { EstadoGrupo, TemporadaFiltro } from '../../components/GCX/BarraHerramientasGruposAdmin';
 import GroupsAdminList from '../../components/GCX/ListaGruposAdmin';
 import ModalModeracionGrupos from '../../components/GCX/ModalModeracionGrupos';
-import CreateGroupModal from '../../components/GCX/ModalCrearGrupo';
 
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -59,8 +58,6 @@ const GestionDeGruposContent: React.FC = () => {
     const [moderacionAbierta, setModeracionAbierta] = useState(false);
 
     // Modales
-    const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
-    const [groupToReopen, setGroupToReopen] = useState<Group | null>(null);
     const [openMenuGroupId, setOpenMenuGroupId] = useState<string | null>(null);
 
     const isGroupFinished = (group: Group) => {
@@ -135,11 +132,11 @@ const GestionDeGruposContent: React.FC = () => {
     }, [filteredAdminGroups]);
 
     // ── Acciones ──────────────────────────────
+    // Re-abrir es una pantalla, no un modal: es el mismo formulario que crear
+    // y editar, y meterlo en una ventanita lo dejaba sin lugar para las
+    // cuatro secciones.
     const handleReopenGroup = (groupId: string) => {
-        const group = adminGroups.find(g => g.id === groupId);
-        if (!group) return;
-        setGroupToReopen(group);
-        setIsReopenModalOpen(true);
+        navigate(`/admingcx/gestion-de-grupos/reabrir-grupo/${groupId}`);
     };
 
     const handleDeleteGroup = async (id: string) => {
@@ -315,29 +312,6 @@ const GestionDeGruposContent: React.FC = () => {
                 onEliminarSeleccionados={handleEliminarSeleccionados}
             />
 
-            {/* Modal de re-apertura — Admin */}
-            {isReopenModalOpen && groupToReopen && (
-                <CreateGroupModal
-                    isOpen={isReopenModalOpen}
-                    onClose={() => {
-                        setIsReopenModalOpen(false);
-                        setGroupToReopen(null);
-                    }}
-                    onSave={() => {
-                        setIsReopenModalOpen(false);
-                        setGroupToReopen(null);
-                        fetchAdminGroups();
-                        showToast(
-                            'Grupo re-abierto. El nuevo grupo está activo para esta temporada.',
-                            'success'
-                        );
-                    }}
-                    editingGroup={groupToReopen}
-                    currentUser={currentUser}
-                    isAdminView={true}
-                    isReopenRequest={true}
-                />
-            )}
         </>
     );
 };

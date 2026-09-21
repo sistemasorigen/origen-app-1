@@ -81,6 +81,7 @@ import InscriptosGrupo from './pages/admingcx/InscriptosGrupo';
 import AgregarMiembroGrupo from './pages/admingcx/AgregarMiembroGrupo';
 import CrearGrupoAdmin from './pages/admingcx/CrearGrupoAdmin';
 import EditarGrupoAdmin from './pages/admingcx/EditarGrupoAdmin';
+import ReabrirGrupoAdmin from './pages/admingcx/ReabrirGrupoAdmin';
 import GestionDeAnfitriones from './pages/admingcx/GestionDeAnfitriones';
 import GestionDeCoordinadores from './pages/admingcx/GestionDeCoordinadores';
 import Categorias from './pages/admingcx/Categorias';
@@ -718,6 +719,15 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <EditarGrupoAdmin />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/admingcx/gestion-de-grupos/reabrir-grupo/:groupId" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.ENCARGADO_GRUPOS,
+                                    ]))
+                                        ? <ReabrirGrupoAdmin />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/admingcx/gestion-de-grupos/inscriptos/:groupId" element={
