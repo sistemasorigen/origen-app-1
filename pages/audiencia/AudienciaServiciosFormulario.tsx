@@ -68,6 +68,22 @@ const STEPS = [
     { title: 'Seguimiento', subtitle: 'Métricas generales', icon: Calendar },
 ];
 
+// "Martes" no mide voluntarios, niñez ni las métricas generales: sólo
+// Podcast, Oración y Observaciones. Es un solo paso, no tres con dos vacíos.
+const STEPS_MARTES = [
+    { title: 'Martes', subtitle: 'Podcast y oración', icon: Calendar },
+];
+
+// Lo que "Martes" no muestra. Se limpia al ELEGIR Martes a mano, por la
+// misma regla que al salir de Martes: nada queda guardado sin que nadie lo
+// vea. Un registro viejo de Martes que se abre para editar conserva lo que
+// tenía, porque ahí nadie cambió la categoría.
+const CAMPOS_QUE_MARTES_NO_MIDE: (keyof FormData)[] = [
+    ...STEP1_METRICS.map(f => f.key),
+    ...STEP2_FIELDS.map(f => f.key),
+    ...STEP3_FIELDS.map(f => f.key),
+];
+
 const CATEGORIES = ['Servicio de Domingo', 'CXV', 'Evento', 'Conferencia', 'Martes'];
 
 const SUNDAY_SERVICE_TYPES = [
@@ -184,16 +200,27 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
         if (key === 'service_date') setDateError('');
     };
 
-    // Salir de "Martes" limpia sus dos métricas: si no, quedan guardadas sin
-    // que nadie las vea en pantalla. Se limpian solo cuando la persona cambia
-    // la categoría a mano, para no pisar lo que ya tenía un registro viejo.
+    // Salir de "Martes" limpia sus dos métricas, y entrar a "Martes" limpia
+    // todas las que Martes no muestra: si no, quedan guardadas sin que nadie
+    // las vea en pantalla. Se limpian solo cuando la persona cambia la
+    // categoría a mano, para no pisar lo que ya tenía un registro viejo.
     const setCategoria = (value: string) => {
+        const entraAMartes = value === 'Martes' && form.category !== 'Martes';
         setForm(prev => ({
             ...prev,
             category: value,
             ...(prev.category === 'Martes' && value !== 'Martes' ? { podcast: 0, oracion: 0 } : {}),
+            ...(entraAMartes ? Object.fromEntries(CAMPOS_QUE_MARTES_NO_MIDE.map(k => [k, 0])) : {}),
         }));
+        if (entraAMartes) {
+            setTotalAuditorioInput(0);
+            setStep(0);
+        }
     };
+
+    const esMartes = form.category === 'Martes';
+    const pasos = esMartes ? STEPS_MARTES : STEPS;
+    const ultimoPaso = pasos.length - 1;
 
     // Limpiar error de fecha cuando se completa el campo
     useEffect(() => {
@@ -209,7 +236,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
         return true;
     };
 
-    const nextStep = () => { if (!validateStep()) return; setStep(s => Math.min(s + 1, 2)); };
+    const nextStep = () => { if (!validateStep()) return; setStep(s => Math.min(s + 1, ultimoPaso)); };
     const prevStep = () => setStep(s => Math.max(s - 1, 0));
 
     const handleSubmit = async () => {
@@ -271,7 +298,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
         );
     }
 
-    const StepIcon = STEPS[step].icon;
+    const StepIcon = pasos[step].icon;
 
     return (
         <div className="min-h-screen bg-slate-50 pb-28 animate-fadeIn">
@@ -297,7 +324,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                 {/* Step indicators */}
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-4">
                     <div className="flex items-center gap-2">
-                        {STEPS.map((s, idx) => (
+                        {pasos.map((s, idx) => (
                             <React.Fragment key={s.title}>
                                 <div className={`flex items-center gap-2 transition-all ${idx === step ? 'opacity-100' : 'opacity-50'}`}>
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors
@@ -308,7 +335,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                         {s.title}
                                     </span>
                                 </div>
-                                {idx < STEPS.length - 1 && (
+                                {idx < pasos.length - 1 && (
                                     <div className={`flex-1 h-0.5 rounded-full transition-colors ${idx < step ? 'bg-black' : 'bg-slate-200'}`} />
                                 )}
                             </React.Fragment>
@@ -327,9 +354,9 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                     </div>
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            Paso {step + 1} de {STEPS.length}
+                            Paso {step + 1} de {pasos.length}
                         </p>
-                        <h2 className="text-lg font-bold uppercase tracking-tight text-black">{STEPS[step].title}</h2>
+                        <h2 className="text-lg font-bold uppercase tracking-tight text-black">{pasos[step].title}</h2>
                     </div>
                 </div>
 
@@ -446,7 +473,41 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                             )}
                         </div>
 
+                        {/* Martes: sólo Podcast, Oración y Observaciones, en este mismo paso */}
+                        {esMartes && (
+                            <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                                <h3 className="font-bold text-sm uppercase tracking-tight border-b border-slate-200 pb-2 mb-4 text-black">
+                                    Métricas del martes
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {MARTES_FIELDS.map((f) => (
+                                        <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
+                                    ))}
+                                </div>
+
+                                <div className="mt-8">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                        Observaciones
+                                    </label>
+                                    <textarea
+                                        value={form.observations ?? ''}
+                                        onChange={(e) => setField('observations', e.target.value)}
+                                        placeholder="Anotá cualquier detalle relevante del servicio..."
+                                        rows={4}
+                                        className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none font-bold placeholder-slate-400 focus:border-black transition-all text-black text-base resize-none"
+                                    />
+                                </div>
+
+                                {saveError && (
+                                    <div className="mt-4 p-3 border border-red-300 bg-red-50 text-red-700 text-xs font-bold rounded-lg">
+                                        {saveError}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Voluntarios */}
+                        {!esMartes && (
                         <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
                             <h3 className="font-bold text-sm uppercase tracking-tight border-b border-slate-200 pb-2 mb-4 text-black">
                                 Áreas de Voluntarios
@@ -467,6 +528,7 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                                 })}
                             </div>
                         </div>
+                        )}
                     </>
                 )}
 
@@ -492,9 +554,6 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {STEP3_FIELDS.map((f) => (
-                                <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
-                            ))}
-                            {form.category === 'Martes' && MARTES_FIELDS.map((f) => (
                                 <NumericInput key={f.key} label={f.label} value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
                             ))}
                         </div>
@@ -546,12 +605,12 @@ const PastoralCareForm: React.FC<PastoralCareFormProps> = ({ currentUser }) => {
                     </button>
 
                     <div className="flex gap-1.5 flex-1 justify-center">
-                        {STEPS.map((_, idx) => (
+                        {pasos.map((_, idx) => (
                             <div key={idx} className={`h-1.5 sm:h-2 transition-all rounded-full ${idx === step ? 'bg-black w-5 sm:w-6' : 'bg-slate-200 w-1.5 sm:w-2'}`} />
                         ))}
                     </div>
 
-                    {step < 2 ? (
+                    {step < ultimoPaso ? (
                         <button
                             onClick={nextStep}
                             className="flex items-center justify-center gap-1.5 flex-1 py-2.5 sm:py-3.5 bg-black text-white font-bold text-xs sm:text-sm uppercase tracking-wider rounded-lg hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
