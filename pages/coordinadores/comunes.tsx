@@ -1,5 +1,6 @@
 import React from 'react';
-import { Group, GroupCategory, GroupTag } from '../../types';
+import { Group, GroupCategory, GroupTag, TemporadaGCX } from '../../types';
+import { getSeasonFromDate } from '../../services/supabaseService';
 
 /**
  * Piezas compartidas del panel de coordinación
@@ -14,6 +15,53 @@ export const VERDE = '#0b7a53';
 export const VERDE_PUNTO = '#16a34a';
 export const AMBAR = '#7a4f10';
 export const AMBAR_BARRA = '#e8b96a';
+
+// ── Temporadas ────────────────────────
+
+export interface Recorte {
+    anio: number;
+    temporada: TemporadaGCX;
+}
+
+export const TEMPORADAS: TemporadaGCX[] = ['S1', 'S2', 'S3'];
+export const NUMERO_TEMPORADA: Record<TemporadaGCX, string> = { S1: '1', S2: '2', S3: '3' };
+
+/** "2026-S3". Sirve de clave para comparar recortes sin armar objetos. */
+export const claveRecorte = (r: Recorte) => `${r.anio}-${r.temporada}`;
+
+/**
+ * Año y temporada de un grupo, por su fecha de arranque. Es la misma regla
+ * que usa /reportes/gcx (getSeasonFromDate), así un grupo cae en la misma
+ * temporada en los dos lados. null: arranca fuera de las tres ventanas,
+ * como los encuentros de un día del verano.
+ */
+export const recorteDeGrupo = (g: Group): Recorte | null => {
+    const temporada = getSeasonFromDate(g.startDate);
+    if (!temporada || !g.startDate) return null;
+    const anio = new Date(g.startDate + 'T12:00:00').getFullYear();
+    return Number.isNaN(anio) ? null : { anio, temporada };
+};
+
+/**
+ * La temporada en curso, o la próxima del año si hoy cae entre dos. Después
+ * del cierre de la tercera, la tercera: es la más reciente con datos.
+ */
+export const recorteDeHoy = (): Recorte => {
+    const hoy = new Date();
+    const md = (hoy.getMonth() + 1) * 100 + hoy.getDate();
+    return {
+        anio: hoy.getFullYear(),
+        temporada: md <= 531 ? 'S1' : md <= 823 ? 'S2' : 'S3',
+    };
+};
+
+/**
+ * Si el grupo ya arrancó (fecha local, no UTC). Un grupo que todavía no
+ * empezó no "nunca cargó asistencia": no tuvo ninguna reunión que cargar, y
+ * contarlo en las alertas llenaba de falsos llamados la temporada próxima.
+ */
+export const yaArranco = (g: Group): boolean =>
+    !g.startDate || g.startDate <= new Date().toLocaleDateString('en-CA');
 
 // ── Estado de un grupo ────────────────
 export const esGrupoFinalizado = (g: Group): boolean => {

@@ -31,15 +31,13 @@ const DE_A_20 = 20;
 const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbrirGrupo }) => {
     const [busqueda, setBusqueda] = useState('');
     const [nivel, setNivel] = useState<'todos' | 'alta' | 'baja'>('todos');
-    const [filtro, setFiltro] = useState<'activos' | 'finalizados'>('activos');
     const [abierto, setAbierto] = useState<string | null>(null);
     const [cuantos, setCuantos] = useState(DE_A_20);
     const [aviso, setAviso] = useState('');
 
-    const delFiltro = useMemo(
-        () => datos.filter(d => (filtro === 'activos' ? !d.finalizado : d.finalizado)),
-        [datos, filtro]
-    );
+    // `datos` ya viene recortado al año y la temporada elegidos arriba: el
+    // viejo "Activos / Finalizados" quedó dentro de ese filtro.
+    const delFiltro = datos;
 
     const conReporte = delFiltro.filter(d => d.reporta);
     const sinReportar = delFiltro.filter(d => !d.reporta);
@@ -148,7 +146,7 @@ const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbri
                             Cobertura del reporte
                         </p>
                         <p className="mt-2.5 text-[19px] font-semibold tracking-[-0.015em] text-white">
-                            {conReporte.length} de tus {delFiltro.length} grupos {filtro} cargan asistencia
+                            {conReporte.length} de tus {delFiltro.length} grupos de la temporada cargan asistencia
                         </p>
                         <p className="mt-2.5 text-[13px] font-medium leading-[1.6] text-white/70">
                             Lo que ves abajo se calcula solo con esos grupos. Los que no reportan no aparecen en ningún
@@ -212,22 +210,13 @@ const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbri
                                 { valor: 'baja', label: 'Vino poca' },
                             ]}
                         />
-                        <Segmentado
-                            valor={filtro}
-                            onChange={v => { setFiltro(v as 'activos' | 'finalizados'); setCuantos(DE_A_20); }}
-                            fondo="bg-[#f2f2f0]"
-                            opciones={[
-                                { valor: 'activos', label: 'Activos' },
-                                { valor: 'finalizados', label: 'Finalizados' },
-                            ]}
-                        />
                     </div>
                 </div>
 
                 {visibles.length === 0 ? (
                     <p className="px-5 py-12 text-center text-[13.5px] font-medium text-black/[.62]">
                         {reuniones.length === 0
-                            ? `Ningún grupo ${filtro === 'activos' ? 'activo' : 'finalizado'} de tus categorías cargó una asistencia todavía.`
+                            ? 'Ningún grupo de tus categorías cargó una asistencia en esta temporada.'
                             : 'Ninguna reunión coincide con esos filtros.'}
                     </p>
                 ) : (

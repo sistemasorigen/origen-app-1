@@ -6,8 +6,10 @@ import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPoin
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
 const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
 
-// Helper de temporadas — replicado de Grupos.tsx
-const getSeasonFromDate = (
+// Helper de temporadas — replicado de Grupos.tsx. Exportado: el panel de
+// coordinación filtra por temporada con esta misma regla, así un grupo cae
+// en la misma temporada ahí y en /reportes/gcx.
+export const getSeasonFromDate = (
     dateStr?: string | null
 ): 'S1' | 'S2' | 'S3' | null => {
     if (!dateStr) return null;
@@ -40,6 +42,13 @@ interface BaseReportesGCX {
     // Lo mismo, separado por cómo fue la reunión. Sólo las reuniones de los
     // grupos híbridos tienen modo: las demás no entran en ninguno de los dos.
     presentesPorModo: Record<ModoReunion, Set<string>>;
+    // Cuántas reuniones cargó cada grupo y a cuántas fue cada persona (por
+    // idAsistencia), en total y por modo. Alimentan los tramos de
+    // frecuencia de "Asistencia de personas".
+    reunionesPorGrupo: Map<string, number>;
+    vecesPresente: Map<string, number>;
+    reunionesPorGrupoPorModo: Record<ModoReunion, Map<string, number>>;
+    vecesPorModo: Record<ModoReunion, Map<string, number>>;
     usuarios: Map<string, UsuarioReporte>;
     categorias: GroupCategory[];
     // Cuántas personas hubo presentes en CADA reunión cargada de la
@@ -276,31 +285,39 @@ const DIA_A_INDICE_JS: Record<string, number> = {
  * da sentido a "14 reuniones cargadas": sin esto, 14 es un número sin piso
  * ni techo.
  */
-const contarReunionesEsperadas = (startDate: string, endDate: string | null | undefined, meetingDay: string): number => {
+/**
+ * Las fechas en las que cayó el día de encuentro del grupo, de su inicio
+ * hasta hoy (o hasta el fin de temporada, si ya cerró).
+ *
+ * El tope en hoy no es un detalle: sin él, un grupo en curso aparecería
+ * debiendo todas las reuniones que todavía no pasaron.
+ */
+const fechasDeReunion = (startDate: string, endDate: string | null | undefined, meetingDay: string): string[] => {
     const indiceDia = DIA_A_INDICE_JS[meetingDay];
-    if (!startDate || indiceDia === undefined) return 0;
+    if (!startDate || indiceDia === undefined) return [];
 
     const inicio = new Date(startDate + 'T12:00:00');
-    if (Number.isNaN(inicio.getTime())) return 0;
+    if (Number.isNaN(inicio.getTime())) return [];
 
     const hoyStr = new Date().toLocaleDateString('en-CA');
-    // Si la temporada ya terminó, el límite es su fin — no tiene sentido
-    // contar reuniones "esperadas" en semanas que todavía no llegaron para
-    // un grupo que sigue activo, pero tampoco después de que cerró.
     const limiteStr = endDate && endDate < hoyStr ? endDate : hoyStr;
     const limite = new Date(limiteStr + 'T12:00:00');
-    if (limite < inicio) return 0;
+    if (limite < inicio) return [];
 
     const cursor = new Date(inicio);
     while (cursor.getDay() !== indiceDia) cursor.setDate(cursor.getDate() + 1);
 
-    let cuenta = 0;
+    const fechas: string[] = [];
     while (cursor <= limite) {
-        cuenta += 1;
+        fechas.push(cursor.toLocaleDateString('en-CA'));
         cursor.setDate(cursor.getDate() + 7);
     }
-    return cuenta;
+    return fechas;
 };
+
+/** El conteo sale de la misma lista, para que no puedan divergir. */
+const contarReunionesEsperadas = (startDate: string, endDate: string | null | undefined, meetingDay: string): number =>
+    fechasDeReunion(startDate, endDate, meetingDay).length;
 
 // EXPORTED standalone function for direct use
 export async function insertGroupDirect(group: Group): Promise<Group | null> {
@@ -6250,7 +6267,7 @@ export const supabaseService = {
         });
 
         if (grupos.length === 0) {
-          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), presentesPorModo: { presencial: new Set(), online: new Set() }, usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [] };
+          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), presentesPorModo: { presencial: new Set(), online: new Set() }, reunionesPorGrupo: new Map(), vecesPresente: new Map(), reunionesPorGrupoPorModo: { presencial: new Map(), online: new Map() }, vecesPorModo: { presencial: new Map(), online: new Map() }, usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [] };
         }
 
         const idsGrupos = grupos.map((g: any) => g.id);
@@ -6289,14 +6306,25 @@ export const supabaseService = {
         // figuraría como que nunca asistió.
         const idsPresentes = new Set<string>();
         const presentesPorModo: Record<ModoReunion, Set<string>> = { presencial: new Set(), online: new Set() };
+        const reunionesPorGrupo = new Map<string, number>();
+        const vecesPresente = new Map<string, number>();
+        const reunionesPorGrupoPorModo: Record<ModoReunion, Map<string, number>> = { presencial: new Map(), online: new Map() };
+        const vecesPorModo: Record<ModoReunion, Map<string, number>> = { presencial: new Map(), online: new Map() };
+        const sumarUno = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) || 0) + 1);
         const presentesPorReunion: number[] = [];
         const reuniones: Array<{ groupId: string; fecha: string; presentes: number }> = [];
         (resAsistencias.data || []).forEach((a: any) => {
           gruposQueReportan.add(a.group_id);
           const presentes = Array.isArray(a.present_members) ? a.present_members : [];
-          presentes.forEach((id: unknown) => idsPresentes.add(String(id)));
+          // Set: un id repetido en la misma reunión no la cuenta dos veces.
+          const idsDeLaReunion = new Set<string>(presentes.map((id: unknown) => String(id)));
+          idsDeLaReunion.forEach(id => { idsPresentes.add(id); sumarUno(vecesPresente, id); });
+          sumarUno(reunionesPorGrupo, a.group_id);
           const modo: ModoReunion | null = a.meeting_mode === 'presencial' || a.meeting_mode === 'online' ? a.meeting_mode : null;
-          if (modo) presentes.forEach((id: unknown) => presentesPorModo[modo].add(String(id)));
+          if (modo) {
+            idsDeLaReunion.forEach(id => { presentesPorModo[modo].add(id); sumarUno(vecesPorModo[modo], id); });
+            sumarUno(reunionesPorGrupoPorModo[modo], a.group_id);
+          }
           presentesPorReunion.push(presentes.length);
           // `date` es DATE en Postgres y llega como 'YYYY-MM-DD'. Una fila sin
           // fecha no puede ubicarse en el calendario y se descarta acá en vez
@@ -6344,7 +6372,7 @@ export const supabaseService = {
           });
         }
 
-        return { grupos, inscripciones, gruposQueReportan, idsPresentes, presentesPorModo, usuarios, categorias, presentesPorReunion, reuniones };
+        return { grupos, inscripciones, gruposQueReportan, idsPresentes, presentesPorModo, reunionesPorGrupo, vecesPresente, reunionesPorGrupoPorModo, vecesPorModo, usuarios, categorias, presentesPorReunion, reuniones };
       } catch (err) {
         console.error('[ReportesGCX] Excepción cargando la base:', err);
         return null;
@@ -6394,9 +6422,10 @@ export const supabaseService = {
    * promedio necesita recorrer cada fila de group_attendance, no el
    * conjunto de ids presentes.
    *
-   * OJO: solo cuenta sobre los grupos que efectivamente cargaron
-   * asistencia. Hoy 11 de 26 no cargan ninguna, así que `sinDatos` es parte
-   * del resultado y la UI tiene que mostrarlo — si no, el porcentaje miente.
+   * Cuenta sobre TODAS las personas, carguen o no asistencia sus grupos:
+   * quien está sólo en grupos que nunca cargaron una reunión cuenta como que
+   * no asiste (decisión del 2026-09-21). Se devuelve aparte cuántas son
+   * (`sinCarga`) para que la UI lo diga en vez de esconderlo.
    */
   async getAsistenciaPersonas(
     season: TemporadaGCX,
@@ -6413,22 +6442,30 @@ export const supabaseService = {
     // Con modoReunion, presente es haber ido a alguna reunión de ese modo. El
     // "sin datos" no cambia: es de los grupos que no cargaron nada.
     const presentes = filtros?.modoReunion ? base.presentesPorModo[filtros.modoReunion] : base.idsPresentes;
+    const veces = filtros?.modoReunion ? base.vecesPorModo[filtros.modoReunion] : base.vecesPresente;
+    const reunionesDe = filtros?.modoReunion ? base.reunionesPorGrupoPorModo[filtros.modoReunion] : base.reunionesPorGrupo;
 
     // Por persona, no por inscripción: quien está en dos grupos cuenta una
-    // vez. Asistió si fue a alguna reunión de cualquiera de sus grupos, y
-    // queda "sin datos" sólo si NINGUNO de sus grupos cargó asistencia — con
-    // que uno reporte ya se sabe algo de ella.
-    const porPersona = new Map<string, { reporta: boolean; asistio: boolean }>();
+    // vez. Asistió si fue a alguna reunión de cualquiera de sus grupos; si
+    // no, no asiste — también si ninguno de sus grupos cargó asistencia.
+    // veces: reuniones a las que fue, sumando sus grupos. posibles: las que
+    // cargaron sus grupos. sinCargaAlguno: algún grupo suyo nunca cargó —
+    // con eso no puede haber ido "a todas", porque ese grupo cuenta como ausente.
+    const porPersona = new Map<string, { reporta: boolean; asistio: boolean; veces: number; posibles: number; sinCargaAlguno: boolean }>();
 
     base.inscripciones.forEach((r: any) => {
       if (idsGrupos && !idsGrupos.has(r.group_id)) return;
       const grupoReporta = base.gruposQueReportan.has(r.group_id);
 
       personasDeInscripcion(r).forEach(({ clave, idAsistencia }) => {
-        const persona = porPersona.get(clave) || { reporta: false, asistio: false };
+        const persona = porPersona.get(clave) || { reporta: false, asistio: false, veces: 0, posibles: 0, sinCargaAlguno: false };
         if (grupoReporta) {
           persona.reporta = true;
           if (presentes.has(idAsistencia)) persona.asistio = true;
+          persona.veces += veces.get(idAsistencia) || 0;
+          persona.posibles += reunionesDe.get(r.group_id) || 0;
+        } else {
+          persona.sinCargaAlguno = true;
         }
         porPersona.set(clave, persona);
       });
@@ -6436,14 +6473,23 @@ export const supabaseService = {
 
     let asistieron = 0;
     let nuncaAsistieron = 0;
-    let sinDatos = 0;
+    let sinCarga = 0;
+    const frecuencia = { todas: 0, seisOMas: 0, cuatroACinco: 0, unaATres: 0, ninguna: 0 };
     porPersona.forEach(persona => {
-      if (!persona.reporta) sinDatos += 1;
-      else if (persona.asistio) asistieron += 1;
-      else nuncaAsistieron += 1;
+      if (!persona.asistio || persona.veces === 0) {
+        nuncaAsistieron += 1;
+        frecuencia.ninguna += 1;
+        if (!persona.reporta) sinCarga += 1;
+        return;
+      }
+      asistieron += 1;
+      if (!persona.sinCargaAlguno && persona.veces >= persona.posibles) frecuencia.todas += 1;
+      else if (persona.veces >= 6) frecuencia.seisOMas += 1;
+      else if (persona.veces >= 4) frecuencia.cuatroACinco += 1;
+      else frecuencia.unaATres += 1;
     });
 
-    return { asistieron, nuncaAsistieron, sinDatos, total: porPersona.size };
+    return { asistieron, nuncaAsistieron, sinCarga, total: porPersona.size, frecuencia };
   },
 
   /**
@@ -6524,7 +6570,34 @@ export const supabaseService = {
 
     const total = grupos.length;
     const noReportan = idsQueNoReportan.length;
-    return { reportan: total - noReportan, noReportan, total, idsQueNoReportan };
+
+    // Tramos por cuántas reuniones cargó cada grupo. Misma cuenta que
+    // getCargaPorGrupo: días distintos con asistencia contra las veces que
+    // cayó su día de encuentro hasta hoy (o el fin de temporada). "Todas" es
+    // que no le falta ninguna — lo mismo que un 0 en "Quiénes no reportan".
+    const diasPorGrupo = new Map<string, Set<string>>();
+    base.reuniones.forEach(r => {
+      if (!diasPorGrupo.has(r.groupId)) diasPorGrupo.set(r.groupId, new Set());
+      diasPorGrupo.get(r.groupId)!.add(r.fecha);
+    });
+    const frecuencia = { todas: 0, seisOMas: 0, cuatroACinco: 0, unaATres: 0, ninguna: 0 };
+    grupos.forEach((g: any) => {
+      // "Ninguna" sale del mismo criterio que noReportan, así los tramos
+      // suman exacto el total de la torta de siempre.
+      if (!base.gruposQueReportan.has(g.id)) { frecuencia.ninguna += 1; return; }
+      const cargadas = diasPorGrupo.get(g.id)?.size ?? 0;
+      const esperadas = contarReunionesEsperadas(
+        g.start_date ? String(g.start_date).split('T')[0] : '',
+        g.end_date ? String(g.end_date).split('T')[0] : null,
+        g.meeting_day
+      );
+      if (esperadas > 0 && cargadas >= esperadas) frecuencia.todas += 1;
+      else if (cargadas >= 6) frecuencia.seisOMas += 1;
+      else if (cargadas >= 4) frecuencia.cuatroACinco += 1;
+      else frecuencia.unaATres += 1;
+    });
+
+    return { reportan: total - noReportan, noReportan, total, idsQueNoReportan, frecuencia };
   },
 
   /**
@@ -6687,10 +6760,13 @@ export const supabaseService = {
     const base = await supabaseService._cargarBaseReportesGCX(season, year);
     if (!base) return null;
 
-    const diasPorGrupo = new Map<string, Set<string>>();
+    // Fecha -> presentes, por grupo. Antes era un Set de fechas: ahora hace
+    // falta también cuánta gente hubo, para el detalle de un grupo.
+    const diasPorGrupo = new Map<string, Map<string, number>>();
     base.reuniones.forEach(r => {
-      if (!diasPorGrupo.has(r.groupId)) diasPorGrupo.set(r.groupId, new Set());
-      diasPorGrupo.get(r.groupId)!.add(r.fecha);
+      if (!diasPorGrupo.has(r.groupId)) diasPorGrupo.set(r.groupId, new Map());
+      const delGrupo = diasPorGrupo.get(r.groupId)!;
+      delGrupo.set(r.fecha, (delGrupo.get(r.fecha) || 0) + r.presentes);
     });
 
     // Personas y asistentes por grupo. Misma convención de ids que
@@ -6710,13 +6786,15 @@ export const supabaseService = {
     });
 
     return base.grupos.map((g: any) => {
-      const cargadas = diasPorGrupo.get(g.id)?.size ?? 0;
+      const cargadosDelGrupo = diasPorGrupo.get(g.id) ?? new Map<string, number>();
+      const cargadas = cargadosDelGrupo.size;
       const gente = gentePorGrupo.get(g.id) || { personas: 0, asistieron: 0 };
-      const esperadas = contarReunionesEsperadas(
+      const fechas = fechasDeReunion(
         g.start_date ? String(g.start_date).split('T')[0] : '',
         g.end_date ? String(g.end_date).split('T')[0] : null,
         g.meeting_day
       );
+      const esperadas = fechas.length;
       return {
         groupId: g.id,
         nombre: g.name || 'Sin nombre',
@@ -6725,6 +6803,11 @@ export const supabaseService = {
         sinCargar: Math.max(0, esperadas - cargadas),
         personas: gente.personas,
         asistieron: gente.asistieron,
+        dias: fechas.map(fecha => ({
+          fecha,
+          cargada: cargadosDelGrupo.has(fecha),
+          presentes: cargadosDelGrupo.get(fecha) ?? 0,
+        })),
       };
     });
   },

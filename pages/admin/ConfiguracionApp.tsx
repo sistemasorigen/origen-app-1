@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AppConfig, BannerSlide, FooterLinks, MusicaBannerSlide } from '../../types';
+import { AppConfig, BannerSlide, FooterLinks, MusicaBannerSlide, YouversBannerSlide } from '../../types';
 import { MusicaBannerSlideInput } from '../../services/supabaseService';
 import ImageUpload from '../../components/media/SubidaImagen';
 import VideoUpload from '../../components/media/SubidaVideo';
 import EncuadreMedia from '../../components/media/EncuadreMedia';
+import { getMediaFrameStyle } from '../../components/ui/CarruselHero';
 import { PedidoConfirmacion, Rotulo } from './piezasAdmin';
 
 /**
@@ -237,7 +238,46 @@ const Identidad: React.FC<{
 
 // ── Banners ───────────────────────────
 
-type Carrusel = 'home' | 'punto';
+type Carrusel = 'home' | 'punto' | 'youvers';
+
+const OPCIONES_CARRUSEL: [Carrusel, string][] = [
+    ['home', 'Home'],
+    ['punto', 'Punto de Información'],
+    ['youvers', 'Youvers'],
+];
+
+/**
+ * Elige qué carrusel se está editando.
+ *
+ * Vive aparte porque los tres destinos ya no comparten editor: Youvers es de
+ * una sola pieza (imagen + link) y no entra en el de slides completos, así
+ * que el selector lo dibujan dos ramas distintas.
+ *
+ * La fila desborda en horizontal en vez de envolver: con tres píldoras —una
+ * de ellas "Punto de Información"— en un teléfono angosto no entran, y
+ * envolver deja la etiqueta "Carrusel" sola en su propio renglón. Es el mismo
+ * recurso que usa la fila de subsecciones de arriba.
+ */
+const SelectorCarrusel: React.FC<{
+    valor: Carrusel;
+    onValor: (c: Carrusel) => void;
+}> = ({ valor, onValor }) => (
+    <div className="-mx-3.5 mt-3.5 flex items-center gap-2.5 overflow-x-auto px-3.5 pb-0.5 md:mx-0 md:px-0">
+        <Rotulo className="flex-none text-black/[.55]">Carrusel</Rotulo>
+        <div className="flex flex-none gap-[3px] rounded-full bg-[#eceae6] p-[3px]">
+            {OPCIONES_CARRUSEL.map(([opcion, label]) => (
+                <button
+                    key={opcion}
+                    onClick={() => onValor(opcion)}
+                    aria-pressed={valor === opcion}
+                    className={`h-8 whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] ${valor === opcion ? 'bg-[#0a0a0a] text-white' : 'text-black/[.62] hover:text-[#0a0a0a]'}`}
+                >
+                    {label}
+                </button>
+            ))}
+        </div>
+    </div>
+);
 
 const Banners: React.FC<{
     config: AppConfig;
@@ -321,23 +361,23 @@ const Banners: React.FC<{
     const anchoMarco = config.banner?.frameWidth || 1920;
     const altoMarco = config.banner?.frameHeight || 720;
 
+    if (carrusel === 'youvers') {
+        return (
+            <>
+                <SelectorCarrusel valor={carrusel} onValor={setCarrusel} />
+                <Youvers
+                    config={config}
+                    onConfig={onConfig}
+                    onGuardar={onGuardar}
+                    pedirConfirmacion={pedirConfirmacion}
+                />
+            </>
+        );
+    }
+
     return (
         <>
-            <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
-                <Rotulo className="text-black/[.55]">Carrusel</Rotulo>
-                <div className="flex flex-none gap-[3px] rounded-full bg-[#eceae6] p-[3px]">
-                    {([['home', 'Home'], ['punto', 'Punto de Información']] as const).map(([valor, label]) => (
-                        <button
-                            key={valor}
-                            onClick={() => setCarrusel(valor)}
-                            aria-pressed={carrusel === valor}
-                            className={`h-8 whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] ${carrusel === valor ? 'bg-[#0a0a0a] text-white' : 'text-black/[.62] hover:text-[#0a0a0a]'}`}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
-            </div>
+            <SelectorCarrusel valor={carrusel} onValor={setCarrusel} />
 
             <div className="mt-3 grid gap-3.5 [grid-template-columns:minmax(0,1fr)] lg:[grid-template-columns:minmax(0,1fr)_minmax(0,1.3fr)]">
 
@@ -667,6 +707,260 @@ const Banners: React.FC<{
                 </div>
             </div>
         </>
+    );
+};
+
+// ── Youvers ───────────────────────────
+
+/**
+ * Editor del banner "Origen en Youvers" de la home.
+ *
+ * Es el editor de música sin la mitad de video: acá un slide es una imagen y
+ * un link, nada más. Comparte el marco 1920×600 y el encuadre, así que se ve
+ * y se edita igual; lo que cambia es dónde se guarda. Estos slides viven en
+ * la config (mismo guardado que los banners de arriba, sin tabla propia ni
+ * migración), y por eso este bloque recibe config/onGuardar en vez de las
+ * cuatro funciones de servicio que usa Música.
+ */
+const Youvers: React.FC<{
+    config: AppConfig;
+    onConfig: (c: AppConfig) => void;
+    onGuardar: (c: AppConfig) => Promise<void>;
+    pedirConfirmacion: (p: PedidoConfirmacion) => void;
+}> = ({ config, onConfig, onGuardar, pedirConfirmacion }) => {
+    const [editando, setEditando] = useState<Partial<YouversBannerSlide> | null>(null);
+    const [guardando, setGuardando] = useState(false);
+
+    const slides = config.youversBanner?.slides || [];
+    const listo = !!editando?.imageUrl && !!editando?.targetUrl;
+
+    const escribirSlides = async (lista: YouversBannerSlide[]) => {
+        const nuevo: AppConfig = { ...config, youversBanner: { ...config.youversBanner, slides: lista } };
+        onConfig(nuevo);
+        await onGuardar(nuevo);
+    };
+
+    const publicar = async () => {
+        if (!editando || !listo) return;
+        setGuardando(true);
+
+        const slide: YouversBannerSlide = {
+            id: editando.id || safeUUID(),
+            imageUrl: editando.imageUrl as string,
+            focalX: editando.focalX ?? 50,
+            focalY: editando.focalY ?? 50,
+            zoom: editando.zoom ?? 1,
+            title: editando.title,
+            targetUrl: editando.targetUrl as string,
+        };
+
+        await escribirSlides(
+            editando.id ? slides.map(s => (s.id === editando.id ? slide : s)) : [...slides, slide]
+        );
+        setGuardando(false);
+        setEditando(slide);
+    };
+
+    const borrar = (slide: YouversBannerSlide) => {
+        pedirConfirmacion({
+            tipo: 'destructivo',
+            titulo: '¿Borrar este slide de Youvers?',
+            texto: 'Desaparece del banner de la home en cuanto confirmes. No se puede deshacer desde acá.',
+            detalleTitulo: 'Qué se borra',
+            detalle: slide.title || 'Slide sin título',
+            etiquetaBoton: 'Sí, borrar el slide',
+            onConfirmar: async () => {
+                await escribirSlides(slides.filter(s => s.id !== slide.id));
+                setEditando(null);
+            },
+        });
+    };
+
+    return (
+        <div className="mt-3 grid gap-3.5 [grid-template-columns:minmax(0,1fr)] lg:[grid-template-columns:minmax(0,1fr)_minmax(0,1.3fr)]">
+            <div className="min-w-0 rounded-[20px] bg-white px-5 py-[18px]">
+                <div className="flex items-center gap-3">
+                    <p className="min-w-0 flex-1 text-[15px] font-semibold text-[#0a0a0a]">
+                        Origen en Youvers · {slides.length}
+                    </p>
+                    <button
+                        onClick={() => setEditando({ imageUrl: '', targetUrl: '' })}
+                        className="h-[38px] flex-none rounded-full bg-[#0a0a0a] px-[15px] text-[12.5px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                    >
+                        Nuevo slide
+                    </button>
+                </div>
+                <p className="mt-2 text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
+                    El banner que va debajo del de música en la home. Mide 1920×600, es solo de imágenes y el link
+                    nunca se muestra: se abre al tocarlo.
+                </p>
+
+                <div className="mt-4 flex flex-col gap-2">
+                    {slides.length === 0 ? (
+                        <p className="py-8 text-center text-[13px] font-medium text-black/[.6]">
+                            Todavía no hay slides de Youvers.
+                        </p>
+                    ) : slides.map((s, i) => {
+                        const elegido = editando?.id === s.id;
+                        return (
+                            <button
+                                key={s.id}
+                                onClick={() => setEditando(s)}
+                                className={`flex w-full items-center gap-[11px] rounded-[16px] px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${elegido ? 'bg-[#0a0a0a]/10' : 'bg-[#f7f7f5]'}`}
+                            >
+                                <span className="h-9 w-[52px] flex-none overflow-hidden rounded-[9px] bg-[#e6e4e0]">
+                                    {s.imageUrl && <img src={s.imageUrl} alt="" className="h-full w-full object-cover" />}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-[13.5px] font-semibold text-[#0a0a0a]">
+                                        {s.title || 'Slide sin título'}
+                                    </span>
+                                    <span className="mt-[3px] block truncate text-[11.5px] font-medium text-black/[.6]">
+                                        {s.targetUrl}
+                                    </span>
+                                </span>
+                                <span className="flex h-[22px] min-w-[22px] flex-none items-center justify-center rounded-full bg-white text-[11px] font-semibold text-black/[.6]">
+                                    {i + 1}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div className="min-w-0 rounded-[20px] bg-white px-5 py-[18px]">
+                {!editando ? (
+                    <div className="flex flex-col items-center py-14 text-center">
+                        <p className="text-[15px] font-semibold text-[#0a0a0a]">Elegí un slide para editarlo</p>
+                        <p className="mt-2 max-w-[320px] text-[13px] font-medium leading-[1.6] text-black/[.62]">
+                            O creá uno nuevo. Vas a poder mover el punto focal y el zoom, y ver el recorte real antes
+                            de publicarlo.
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        <p className="text-[15px] font-semibold text-[#0a0a0a]">
+                            {editando.id ? 'Editar el slide' : 'Nuevo slide de Youvers'}
+                        </p>
+                        <p className="mt-1.5 text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
+                            Movés el punto focal y el zoom sobre la imagen; la vista previa muestra el recorte real.
+                        </p>
+
+                        <div className="mt-4">
+                            <Rotulo className="mb-2 text-black/[.55]">Imagen</Rotulo>
+                            <ImageUpload
+                                currentImage={editando.imageUrl || ''}
+                                folder="youvers-banner"
+                                onImageUpload={url => setEditando({ ...editando, imageUrl: url })}
+                                aspectRatio="wide"
+                                className="caja-portada"
+                            />
+                        </div>
+
+                        {/* 1920×600 fijo, igual que el de música: los dos banners
+                            se apilan en la home y con proporciones distintas la
+                            página saltaría entre uno y otro. */}
+                        <div className="mt-4">
+                            <Rotulo className="mb-2 text-black/[.55]">Encuadre</Rotulo>
+                            <EncuadreMedia
+                                mediaType="image"
+                                imageUrl={editando.imageUrl}
+                                frameWidth={1920}
+                                frameHeight={600}
+                                value={{
+                                    focalX: editando.focalX ?? 50,
+                                    focalY: editando.focalY ?? 50,
+                                    zoom: editando.zoom ?? 1,
+                                }}
+                                onChange={frame => setEditando({ ...editando, ...frame })}
+                            />
+                        </div>
+
+                        <div className="mt-4">
+                            <Rotulo className="mb-1.5 text-black/[.55]">Título (opcional)</Rotulo>
+                            <input
+                                type="text" value={editando.title || ''}
+                                onChange={e => setEditando({ ...editando, title: e.target.value })}
+                                placeholder="Devocional — Título"
+                                className="h-[46px] w-full rounded-[16px] px-4 text-[13.5px] font-semibold text-[#0a0a0a]"
+                            />
+                            <p className="mt-1.5 text-[11.5px] font-medium leading-[1.5] text-black/[.6]">
+                                Se dibuja sobre la imagen, abajo. Sin título, se ve la imagen sola.
+                            </p>
+                        </div>
+
+                        <div className="mt-3">
+                            <Rotulo className="mb-1.5 text-black/[.55]">Link de destino</Rotulo>
+                            <input
+                                type="text" value={editando.targetUrl || ''}
+                                onChange={e => setEditando({ ...editando, targetUrl: e.target.value })}
+                                placeholder="https://bible.com/…"
+                                className="h-[46px] w-full rounded-[16px] px-4 text-[13.5px] font-medium text-[#0a0a0a]"
+                            />
+                            <p className="mt-1.5 text-[11.5px] font-medium leading-[1.5] text-black/[.6]">
+                                Nunca se muestra: se abre en una pestaña nueva al tocar el slide.
+                            </p>
+                        </div>
+
+                        {/* Cómo va a quedar — mismo recorte, mismo degradado y mismo
+                            título que dibuja la home, con getMediaFrameStyle de por
+                            medio para que las dos cuentas den igual. */}
+                        <Rotulo className="mb-2 mt-5 text-black/[.55]">Así se va a ver en la app</Rotulo>
+                        <div className="rounded-[20px] bg-[#f7f7f5] p-3">
+                            <div
+                                className="relative overflow-hidden rounded-[16px] bg-black"
+                                style={{ aspectRatio: '1920 / 600' }}
+                            >
+                                {editando.imageUrl && (
+                                    <img
+                                        src={editando.imageUrl}
+                                        alt=""
+                                        className="absolute inset-0 h-full w-full object-cover"
+                                        style={getMediaFrameStyle(editando)}
+                                    />
+                                )}
+                                {editando.title && (
+                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-3.5 pt-10">
+                                        <p className="text-[17px] font-bold leading-snug tracking-tight text-white">
+                                            {editando.title}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            <button
+                                onClick={publicar}
+                                disabled={!listo || guardando}
+                                className={`h-12 rounded-full px-5 text-[14px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${listo ? 'bg-[#0a0a0a] text-white' : 'cursor-default bg-[#f2f2f0] text-black/[.45]'}`}
+                            >
+                                {guardando ? 'Publicando…' : 'Publicar el slide'}
+                            </button>
+                            <button
+                                onClick={() => setEditando(null)}
+                                className="h-12 rounded-full bg-[#f2f2f0] px-5 text-[14px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                            >
+                                Cerrar el editor
+                            </button>
+                            {editando.id && (
+                                <button
+                                    onClick={() => borrar(editando as YouversBannerSlide)}
+                                    className="h-12 rounded-full bg-[#fdecea] px-5 text-[14px] font-semibold text-[#a32218] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a32218] focus-visible:ring-offset-2"
+                                >
+                                    Borrar slide
+                                </button>
+                            )}
+                        </div>
+                        {!listo && (
+                            <p className="mt-2.5 text-[11.5px] font-medium text-black/[.6]">
+                                Falta {!editando.imageUrl && !editando.targetUrl ? 'la imagen y el link de destino' : !editando.imageUrl ? 'la imagen' : 'el link de destino'}.
+                            </p>
+                        )}
+                    </>
+                )}
+            </div>
+        </div>
     );
 };
 

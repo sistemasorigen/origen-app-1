@@ -20,6 +20,14 @@ import {
     lugaresOcupados,
     categoriaDe,
     nombreAnfitrion,
+    Recorte,
+    TEMPORADAS,
+    NUMERO_TEMPORADA,
+    claveRecorte,
+    recorteDeGrupo,
+    recorteDeHoy,
+    yaArranco,
+    Segmentado,
 } from './comunes';
 
 import InicioCoordinador from './PanelCoordinador';
@@ -101,8 +109,35 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     const [tags, setTags] = useState<GroupTag[]>([]);
     const [dropouts, setDropouts] = useState<DropoutRequest[]>([]);
     const [asistencias, setAsistencias] = useState<{ groupId: string; date: string; presentMembers: string[] }[]>([]);
-    const [promedioIglesia, setPromedioIglesia] = useState(0);
+    // La asistencia de TODOS los grupos aprobados y la temporada de cada uno:
+    // con eso se saca el promedio de la iglesia de la temporada elegida.
+    const [asistenciaIglesia, setAsistenciaIglesia] = useState<{ groupId: string; presentMembers: string[] }[]>([]);
+    const [temporadaPorGrupo, setTemporadaPorGrupo] = useState<Map<string, string>>(new Map());
     const [cargando, setCargando] = useState(true);
+
+    // Año y temporada que se miran. Todo el panel —inicio, grupos,
+    // asistencia y calendario— responde a este recorte, igual que el tablero
+    // de /reportes/gcx. Viaja en la URL (?anio=2026&temporada=S2) para que un
+    // enlace o una recarga caigan en la misma temporada.
+    const [recorte, setRecorte] = useState<Recorte>(() => {
+        const anio = Number(searchParams.get('anio'));
+        const temporada = searchParams.get('temporada');
+        const base = recorteDeHoy();
+        return {
+            anio: anio >= 2000 && anio <= 2100 ? anio : base.anio,
+            temporada: temporada === 'S1' || temporada === 'S2' || temporada === 'S3' ? temporada : base.temporada,
+        };
+    });
+    const clave = claveRecorte(recorte);
+
+    const cambiarRecorte = useCallback((nuevo: Recorte) => {
+        setRecorte(nuevo);
+        setGrupoPreseleccionado(null);
+        const params = new URLSearchParams(searchParams);
+        params.set('anio', String(nuevo.anio));
+        params.set('temporada', nuevo.temporada);
+        setSearchParams(params, { replace: true });
+    }, [searchParams, setSearchParams]);
 
     // Categorías que coordina. Se mantiene el respaldo al campo singular
     // viejo para los usuarios que todavía no migraron a coordinatorVariants.
@@ -189,10 +224,13 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
             const historial = await supabaseService.getAttendanceHistoryForGroups(idsAprobados);
 
             setAsistencias(historial.filter(a => idsMios.has(a.groupId)));
-
-            const reuniones = historial.length;
-            const presentes = historial.reduce((suma, a) => suma + a.presentMembers.length, 0);
-            setPromedioIglesia(reuniones > 0 ? presentes / reuniones : 0);
+            setAsistenciaIglesia(historial);
+            const temporadas = new Map<string, string>();
+            todosLosGrupos.forEach(g => {
+                const r = recorteDeGrupo(g);
+                if (r) temporadas.set(g.id, claveRecorte(r));
+            });
+            setTemporadaPorGrupo(temporadas);
         } catch (error) {
             console.error('[Coordinadores] Error cargando datos:', error);
         } finally {
@@ -219,6 +257,7 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
 
         return grupos
             .filter(g => g.status === 'approved' || (g.status as string) === 'finished')
+            .filter(g => temporadaPorGrupo.get(g.id) === clave)
             .map(grupo => {
                 const reportes = (porGrupo.get(grupo.id) || []).sort((a, b) => b.fecha.localeCompare(a.fecha));
                 const presentes = reportes.reduce((s, r) => s + r.presentes, 0);
@@ -235,9 +274,26 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                 };
             })
             .sort((a, b) => (a.grupo.name || '').localeCompare(b.grupo.name || '', 'es'));
-    }, [grupos, asistencias, dropouts, categories, tags]);
+    }, [grupos, asistencias, dropouts, categories, tags, temporadaPorGrupo, clave]);
 
-    const activos = useMemo(() => datos.filter(d => !d.finalizado), [datos]);
+    // El promedio de la iglesia sale de la MISMA temporada: comparar un grupo
+    // contra el promedio de todos los años mezclaría temporadas que se
+    // llenan distinto.
+    const promedioIglesia = useMemo(() => {
+        const filas = asistenciaIglesia.filter(a => temporadaPorGrupo.get(a.groupId) === clave);
+        const presentes = filas.reduce((suma, a) => suma + a.presentMembers.length, 0);
+        return filas.length > 0 ? presentes / filas.length : 0;
+    }, [asistenciaIglesia, temporadaPorGrupo, clave]);
+
+    // Las bajas de los grupos de la temporada, para Inicio.
+    const bajasDelRecorte = useMemo(() => {
+        const ids = new Set(datos.map(d => d.grupo.id));
+        return dropouts.filter(d => ids.has(d.groupId));
+    }, [datos, dropouts]);
+
+    // "Activos" = en curso (ya arrancó y no terminó): la insignia de
+    // Asistencia cuenta sólo lo que todavía se puede resolver con una llamada.
+    const activos = useMemo(() => datos.filter(d => !d.finalizado && yaArranco(d.grupo)), [datos]);
     const sinReportar = useMemo(() => activos.filter(d => !d.reporta), [activos]);
 
     // Pastillas de alcance: cuántos grupos activos tiene cada categoría. Un
@@ -248,11 +304,11 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
 
     const categoriasConGrupos = useMemo(() => {
         const conteo = new Map<string, number>();
-        activos.forEach(d => conteo.set(d.categoria, (conteo.get(d.categoria) || 0) + 1));
+        datos.forEach(d => conteo.set(d.categoria, (conteo.get(d.categoria) || 0) + 1));
         return Array.from(conteo.entries())
             .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es'))
             .map(([nombre, n]) => ({ nombre, n }));
-    }, [activos]);
+    }, [datos]);
 
     const pastillasCategoria = verTodasLasCategorias
         ? categoriasConGrupos
@@ -270,6 +326,19 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
         const numero = clave === 'S1' ? '1' : clave === 'S2' ? '2' : '3';
         return `La temporada ${numero} arranca el ${dia} de ${MESES[mes - 1]}.`;
     }, [temporadas]);
+
+    // El calendario abre en el mes de hoy si la temporada está en curso, y
+    // si no, en el mes en que arrancó su primer grupo: abrir en septiembre
+    // una temporada de marzo mostraría un mes vacío.
+    const mesInicialDelRecorte = useMemo(() => {
+        const hoy = new Date();
+        const hoyISO = hoy.toLocaleDateString('en-CA');
+        const enCurso = datos.some(d => (d.grupo.startDate || '') <= hoyISO && (!d.grupo.endDate || d.grupo.endDate >= hoyISO));
+        if (enCurso || datos.length === 0) return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const primero = datos.map(d => d.grupo.startDate || '').filter(Boolean).sort()[0];
+        const [a, m] = primero.split('-').map(Number);
+        return new Date(a, m - 1, 1);
+    }, [datos]);
 
     const abrirGrupo = useCallback((groupId: string) => {
         setGrupoPreseleccionado(groupId);
@@ -328,6 +397,12 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
         if (cargando) return <Cargando />;
 
         if (datos.length === 0) {
+            // Una temporada que ya pasó sin grupos no "todavía" va a tenerlos:
+            // se dice distinto que una que está por arrancar.
+            const hoy = recorteDeHoy();
+            const yaPaso = recorte.anio < hoy.anio
+                || (recorte.anio === hoy.anio && TEMPORADAS.indexOf(recorte.temporada) < TEMPORADAS.indexOf(hoy.temporada));
+            const nombreTemporada = `la temporada ${NUMERO_TEMPORADA[recorte.temporada]} de ${recorte.anio}`;
             return (
                 <div className="flex flex-col items-center rounded-[22px] bg-white px-[22px] py-[38px] text-center md:px-10 md:py-14">
                     <div
@@ -335,10 +410,14 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                         style={{ background: 'repeating-linear-gradient(135deg,#eceae6 0 8px,#e3e1dc 8px 16px)' }}
                     />
                     <p className="mt-[22px] text-[19px] font-semibold text-[#0a0a0a]">
-                        {nombreCategorias || 'Tu categoría'} todavía no tiene grupos esta temporada
+                        {yaPaso
+                            ? `${nombreCategorias || 'Tu categoría'} no tuvo grupos en ${nombreTemporada}`
+                            : `${nombreCategorias || 'Tu categoría'} todavía no tiene grupos en ${nombreTemporada}`}
                     </p>
                     <p className="mt-[11px] max-w-[400px] text-[13.5px] font-medium leading-[1.65] text-black/[.64]">
-                        Los anfitriones crean sus grupos unas semanas antes de que arranque la temporada. {proxima}
+                        {yaPaso
+                            ? 'Elegí otro año o temporada arriba para ver los grupos que sí hubo.'
+                            : `Los anfitriones crean sus grupos unas semanas antes de que arranque la temporada. ${proxima}`}
                     </p>
                     <button
                         onClick={cargar}
@@ -355,7 +434,7 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                 return (
                     <InicioCoordinador
                         datos={datos}
-                        dropouts={dropouts}
+                        dropouts={bajasDelRecorte}
                         promedioIglesia={promedioIglesia}
                         onAbrirGrupo={abrirGrupo}
                         onVerAsistencia={() => irA('asistencia')}
@@ -381,7 +460,9 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                     />
                 );
             case 'calendario':
-                return <CalendarioCoordinador datos={datos} onAbrirGrupo={abrirGrupo} />;
+                // key: al cambiar de temporada el calendario vuelve a su mes
+                // inicial en vez de quedarse parado en uno de la anterior.
+                return <CalendarioCoordinador key={clave} datos={datos} mesInicial={mesInicialDelRecorte} onAbrirGrupo={abrirGrupo} />;
             default:
                 return null;
         }
@@ -392,9 +473,12 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
 
             <header className="border-b border-[#ecebe8] bg-white">
                 <div className="mx-auto max-w-[1360px] px-4 pt-4 md:px-[26px] md:pt-[18px]">
-                    <h1 className="text-[19px] font-semibold tracking-[-0.018em] text-[#0a0a0a] md:text-[21px]">
-                        Panel de coordinación
-                    </h1>
+                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                        <h1 className="text-[19px] font-semibold tracking-[-0.018em] text-[#0a0a0a] md:text-[21px]">
+                            Panel de coordinación
+                        </h1>
+                        {!sinCategoria && <SelectorTemporada recorte={recorte} onCambiar={cambiarRecorte} />}
+                    </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                         <span className="text-[12.5px] font-medium text-black/[.62]">
@@ -402,7 +486,7 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                                 ? 'Categorías asignadas:'
                                 : cargando
                                     ? 'Buscando tus grupos…'
-                                    : `Coordinás ${activos.length} ${activos.length === 1 ? 'grupo' : 'grupos'} de`}
+                                    : `Temporada ${NUMERO_TEMPORADA[recorte.temporada]} de ${recorte.anio} · ${datos.length} ${datos.length === 1 ? 'grupo' : 'grupos'} de`}
                         </span>
                         {sinCategoria ? (
                             <span className="flex h-7 items-center rounded-full bg-[#f2f2f0] px-3 text-[12px] font-semibold text-black/[.62]">
@@ -447,6 +531,47 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
 
             <div className="mx-auto max-w-[1360px] px-3.5 pb-[26px] pt-3.5 md:px-[26px] md:pb-[30px] md:pt-[18px]">
                 {cuerpo()}
+            </div>
+        </div>
+    );
+};
+
+// ── Año y temporada ───────────────────
+
+/**
+ * Mismo control que el tablero de /reportes/gcx —año con flechas, y las
+ * tres temporadas—, con la estética de las pestañas de este panel.
+ */
+const SelectorTemporada: React.FC<{ recorte: Recorte; onCambiar: (r: Recorte) => void }> = ({ recorte, onCambiar }) => {
+    const flecha = (direccion: -1 | 1) => (
+        <button
+            type="button"
+            onClick={() => onCambiar({ ...recorte, anio: recorte.anio + direccion })}
+            aria-label={direccion < 0 ? 'Año anterior' : 'Año siguiente'}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-black/[.62] transition-colors hover:bg-white hover:text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a]"
+        >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                <path d={direccion < 0 ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'} />
+            </svg>
+        </button>
+    );
+
+    return (
+        <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-none items-center gap-[3px] rounded-full bg-[#f2f2f0] p-[3px]">
+                {flecha(-1)}
+                <span className="min-w-[46px] text-center text-[13.5px] font-semibold tabular-nums text-[#0a0a0a]" aria-live="polite">
+                    {recorte.anio}
+                </span>
+                {flecha(1)}
+            </div>
+            <div className="flex flex-none items-center gap-2">
+                <span className="text-[12.5px] font-medium text-black/[.62]">Temporada</span>
+                <Segmentado
+                    valor={recorte.temporada}
+                    onChange={v => onCambiar({ ...recorte, temporada: v as Recorte['temporada'] })}
+                    opciones={TEMPORADAS.map(t => ({ valor: t, label: NUMERO_TEMPORADA[t] }))}
+                />
             </div>
         </div>
     );

@@ -164,7 +164,10 @@ export const Torta: React.FC<{
     /** Pisa el "NN%" del centro. Para tortas cuyo centro no es un porcentaje
      *  sino un total — 147 reuniones no es el 147% de nada. */
     centro?: React.ReactNode;
-}> = ({ datos, porcentaje, etiqueta, tamano = 168, centro }) => {
+    /** Borde blanco de 2px entre porciones. Para tortas de muchos tramos,
+     *  donde dos claros vecinos se funden sin él. */
+    separador?: boolean;
+}> = ({ datos, porcentaje, etiqueta, tamano = 168, centro, separador }) => {
     const escala = tamano / 168;
     return (
         <div className="relative shrink-0" style={{ width: tamano, height: tamano }}>
@@ -179,7 +182,8 @@ export const Torta: React.FC<{
                         startAngle={90}
                         endAngle={-270}
                         paddingAngle={0}
-                        stroke="none"
+                        stroke={separador ? '#ffffff' : 'none'}
+                        strokeWidth={separador ? 2 : 0}
                         isAnimationActive={false}
                     >
                         {datos.map(d => <Cell key={d.nombre} fill={d.color} />)}

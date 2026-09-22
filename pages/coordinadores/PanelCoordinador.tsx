@@ -6,6 +6,7 @@ import {
     Rotulo,
     conComa,
     iniciales,
+    yaArranco,
 } from './comunes';
 
 /**
@@ -32,16 +33,22 @@ const POR_PAGINA = 20;
 
 const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, onAbrirGrupo, onVerAsistencia }) => {
     const [metrica, setMetrica] = useState<'inscriptos' | 'bajas'>('inscriptos');
-    const [filtro, setFiltro] = useState<'activos' | 'finalizados'>('activos');
     const [busqueda, setBusqueda] = useState('');
     const [pagina, setPagina] = useState(1);
 
-    const activos = useMemo(() => datos.filter(d => !d.finalizado), [datos]);
+    // `datos` ya viene recortado al año y la temporada elegidos arriba: los
+    // indicadores y el gráfico hablan de todos esos grupos. "En curso" son
+    // los que ya arrancaron y todavía no terminaron, y sólo con ellos tiene
+    // sentido decidir a quién llamar: en una temporada pasada o por arrancar
+    // esa tarjeta no aparece.
+    const enCurso = useMemo(() => datos.filter(d => !d.finalizado && yaArranco(d.grupo)), [datos]);
+    const porArrancar = useMemo(() => datos.filter(d => !yaArranco(d.grupo)), [datos]);
     const finalizados = useMemo(() => datos.filter(d => d.finalizado), [datos]);
-    const sinReportar = useMemo(() => activos.filter(d => !d.reporta), [activos]);
-    const conReporte = useMemo(() => activos.filter(d => d.reporta), [activos]);
+    // Un grupo que no arrancó no "falta reportar": no tuvo reuniones.
+    const sinReportar = useMemo(() => datos.filter(d => !d.reporta && yaArranco(d.grupo)), [datos]);
+    const conReporte = useMemo(() => datos.filter(d => d.reporta), [datos]);
 
-    const inscriptos = activos.reduce((s, d) => s + d.ocupados, 0);
+    const inscriptos = datos.reduce((s, d) => s + d.ocupados, 0);
     const promedio = conReporte.length
         ? conReporte.reduce((s, d) => s + d.promedio, 0) / conReporte.length
         : 0;
@@ -59,7 +66,7 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
             return 0;
         };
 
-        const marcados = activos
+        const marcados = enCurso
             .map(d => ({ d, p: puntaje(d) }))
             .filter(x => x.p > 0)
             .sort((a, b) => (b.p - a.p) || (b.d.ocupados - a.d.ocupados));
@@ -80,29 +87,28 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
                         : `${d.bajas} bajas en la temporada`,
             })),
         };
-    }, [activos, promedioIglesia]);
+    }, [enCurso, promedioIglesia]);
 
     const resumenAlerta = useMemo(() => {
         const partes: string[] = [];
-        if (sinReportar.length > 0) {
-            partes.push(`${sinReportar.length === 1 ? 'Uno nunca cargó' : `${sinReportar.length} nunca cargaron`} asistencia`);
+        const sinReportarEnCurso = enCurso.filter(d => !d.reporta).length;
+        if (sinReportarEnCurso > 0) {
+            partes.push(`${sinReportarEnCurso === 1 ? 'Uno nunca cargó' : `${sinReportarEnCurso} nunca cargaron`} asistencia`);
         }
-        const bajos = conReporte.filter(d => promedioIglesia > 0 && d.promedio < promedioIglesia).length;
+        const bajos = enCurso.filter(d => d.reporta && promedioIglesia > 0 && d.promedio < promedioIglesia).length;
         if (bajos > 0) {
             partes.push(`${bajos === 1 ? 'uno viene' : `${bajos} vienen`} por debajo de ${conComa(promedioIglesia)} personas por reunión`);
         }
-        const sanos = activos.length - sinReportar.length - bajos;
+        const sanos = enCurso.length - sinReportarEnCurso - bajos;
         const cola = sanos > 0 ? ` El resto está funcionando bien.` : '';
         return partes.length ? `${partes.join(' y ')}.${cola}` : '';
-    }, [sinReportar, conReporte, activos, promedioIglesia]);
+    }, [enCurso, promedioIglesia]);
 
     // ── Gráfico ───────────────────────
-    const delFiltro = filtro === 'activos' ? activos : finalizados;
-
     const barras = useMemo(() => {
         const valor = (d: GrupoConDatos) => metrica === 'inscriptos' ? d.ocupados : d.bajas;
-        const maximo = Math.max(1, ...delFiltro.map(valor));
-        return [...delFiltro]
+        const maximo = Math.max(1, ...datos.map(valor));
+        return [...datos]
             .sort((a, b) => valor(b) - valor(a))
             .map(d => {
                 const v = valor(d);
@@ -115,7 +121,7 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
                     color: alerta ? '#e8b96a' : '#0b7a53',
                 };
             });
-    }, [delFiltro, metrica]);
+    }, [datos, metrica]);
 
     // ── Últimos movimientos ───────────
     const movimientos = useMemo(() => {
@@ -189,7 +195,7 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
                             <p className="mt-[11px] text-[19px] font-semibold leading-[1.35] tracking-[-0.018em] text-white md:text-[21px]">
                                 {necesitanLlamada === 1
                                     ? 'Uno de tus grupos necesita una llamada'
-                                    : `${necesitanLlamada} de tus ${activos.length} grupos necesitan una llamada`}
+                                    : `${necesitanLlamada} de tus ${enCurso.length} grupos en curso necesitan una llamada`}
                             </p>
                             {resumenAlerta && (
                                 <p className="mt-2.5 text-[13.5px] font-medium leading-[1.65] text-white/70">{resumenAlerta}</p>
@@ -229,9 +235,13 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <div className="min-w-0 rounded-[18px] bg-white px-[18px] py-4">
                     <p className="text-[12.5px] font-semibold text-black/[.62]">Grupos</p>
-                    <p className="mt-3 text-[30px] font-semibold tracking-[-0.03em] text-[#0a0a0a]">{activos.length}</p>
+                    <p className="mt-3 text-[30px] font-semibold tracking-[-0.03em] text-[#0a0a0a]">{datos.length}</p>
                     <p className="mt-2 text-[12px] font-medium text-black/[.62]">
-                        {activos.length} {activos.length === 1 ? 'activo' : 'activos'} · {finalizados.length} {finalizados.length === 1 ? 'finalizado' : 'finalizados'}
+                        {[
+                            enCurso.length > 0 && `${enCurso.length} ${enCurso.length === 1 ? 'activo' : 'activos'}`,
+                            porArrancar.length > 0 && `${porArrancar.length} por arrancar`,
+                            finalizados.length > 0 && `${finalizados.length} ${finalizados.length === 1 ? 'finalizado' : 'finalizados'}`,
+                        ].filter(Boolean).join(' · ') || 'Sin grupos'}
                     </p>
                 </div>
 
@@ -276,7 +286,7 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
             <div className="mt-3.5 rounded-[20px] bg-white px-[22px] py-5">
                 <div className="flex flex-wrap items-center gap-3">
                     <p className="min-w-[150px] flex-1 text-[15px] font-semibold text-[#0a0a0a]">
-                        {metrica === 'inscriptos' ? 'Inscriptos' : 'Bajas'} por grupo · {filtro}
+                        {metrica === 'inscriptos' ? 'Inscriptos' : 'Bajas'} por grupo
                     </p>
                     <Segmentado
                         valor={metrica}
@@ -286,19 +296,11 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
                             { valor: 'bajas', label: 'Bajas' },
                         ]}
                     />
-                    <Segmentado
-                        valor={filtro}
-                        onChange={v => setFiltro(v as 'activos' | 'finalizados')}
-                        opciones={[
-                            { valor: 'activos', label: 'Activos' },
-                            { valor: 'finalizados', label: 'Finalizados' },
-                        ]}
-                    />
                 </div>
 
                 {barras.length === 0 ? (
                     <p className="mt-5 text-[13.5px] font-medium text-black/[.62]">
-                        No hay grupos {filtro} en tus categorías.
+                        No hay grupos de tus categorías en esta temporada.
                     </p>
                 ) : (
                     <>

@@ -939,6 +939,33 @@ export interface MusicaBannerSlide {
     createdAt: string;
 }
 
+// ── Home: banner "Origen en Youvers" ────────────
+
+/**
+ * Slide del banner de Youvers de la home. Formato 1920×600, igual que el de
+ * música, pero exclusivamente de imagen: acá no hay video.
+ *
+ * A diferencia de los de música, estos NO tienen tabla propia: viven dentro
+ * de `app_config.config`, que ya es un JSONB de lectura pública. Un banner de
+ * dos campos no justifica una tabla, una política de RLS y cuatro funciones
+ * de servicio; y de paso se publica sin depender de ninguna migración.
+ */
+export interface YouversBannerSlide {
+    id: string;
+    imageUrl: string;
+    focalX?: number;   // 0-100, default 50
+    focalY?: number;   // 0-100, default 50
+    zoom?: number;     // 1-3, default 1
+    /** Opcional. Se dibuja encima de la imagen, abajo. */
+    title?: string;
+    /** Destino del click. Nunca se muestra: el slide entero es el link. */
+    targetUrl: string;
+}
+
+export interface YouversBannerConfig {
+    slides: YouversBannerSlide[];
+}
+
 // ── Banner de Punto de Información ──────────────
 
 export interface PuntoInfoBannerSlide {
@@ -1060,6 +1087,8 @@ export interface AppConfig {
     logoUrl?: string;
     themeMode: 'light' | 'dark';
     banner: BannerConfig; // New Banner Config
+    /** Banner "Origen en Youvers" de la home — solo imágenes, 1920×600. */
+    youversBanner?: YouversBannerConfig;
     groupsConfig: GroupsConfig; // New Groups Visual Config
     infoPointConfig?: InfoPointConfig; // New Info Point Config
     alabanzaConfig?: AlabanzaConfig; // New Alabanza Config
@@ -1434,15 +1463,40 @@ export type TemporadaGCX = 'S1' | 'S2' | 'S3';
 /**
  * Gráfico 1 — participación real de las personas inscriptas.
  *
- * `sinDatos` NO es un caso de borde: hoy 11 de 26 grupos de S1 2026 no
- * cargan ninguna asistencia. Si la UI muestra el porcentaje sobre `total`
- * en vez de sobre `asistieron + nuncaAsistieron`, miente.
+ * Se calcula sobre TODAS las personas de los grupos del recorte (personas
+ * únicas), carguen o no asistencia sus grupos. Quien está sólo en grupos que
+ * nunca cargaron una reunión cuenta como que no asiste (decisión del
+ * 2026-09-21). `sinCarga` dice cuántas de las ausentes lo son por eso, para
+ * que la UI pueda decirlo y no parezca que nadie va.
  */
 export interface AsistenciaPersonasReporte {
     asistieron: number;
-    nuncaAsistieron: number;
-    sinDatos: number;   // personas inscriptas en grupos que no reportan
-    total: number;
+    nuncaAsistieron: number;  // incluye a las de sinCarga
+    sinCarga: number;         // ausentes porque ninguno de sus grupos cargó asistencia
+    total: number;            // asistieron + nuncaAsistieron
+    frecuencia: TramosDeFrecuencia;
+}
+
+/**
+ * Cuántas veces, en tramos que no se pisan: suman el total de su reporte.
+ *
+ * Lo usan dos tortas:
+ *  · Asistencia de personas — veces que fue cada persona (reuniones cargadas
+ *    en las que figura presente, sumando sus grupos). `ninguna` = nuncaAsistieron.
+ *  · Reporte de asistencia — veces que cargó cada grupo (días con asistencia
+ *    cargada). `ninguna` = noReportan.
+ *
+ * `todas` va primero: la persona que fue a todas las reuniones de sus grupos,
+ * o el grupo que cargó todas las que le tocaban hasta hoy, cuenta ahí aunque
+ * hayan sido pocas, y no en su tramo por cantidad. Por eso `seisOMas` es
+ * "6 o más, sin llegar a todas".
+ */
+export interface TramosDeFrecuencia {
+    todas: number;
+    seisOMas: number;
+    cuatroACinco: number;
+    unaATres: number;
+    ninguna: number;
 }
 
 /** Gráfico 2 — disciplina de carga, no participación. */
@@ -1452,6 +1506,8 @@ export interface GruposQueReportanReporte {
     total: number;
     /** Para el "Ver los N grupos" del diseño. */
     idsQueNoReportan: string[];
+    /** Cuántas reuniones cargó cada grupo, en tramos (ver TramosDeFrecuencia). */
+    frecuencia: TramosDeFrecuencia;
 }
 
 /**
@@ -1567,6 +1623,14 @@ export interface CargaPorGrupoFila {
     personas: number;
     /** De esas personas, cuántas figuran presentes en alguna reunión. */
     asistieron: number;
+    /**
+     * Una entrada por cada día en que cayó su encuentro, en orden.
+     *
+     * Incluye los días SIN cargar, que son justamente los que no aparecen en
+     * `asistenciaPorFecha` cuando ningún grupo cargó nada esa fecha. Es lo
+     * que permite dibujar la línea de tiempo de un grupo sin huecos falsos.
+     */
+    dias: Array<{ fecha: string; cargada: boolean; presentes: number }>;
 }
 
 /** Un renglón de la planilla de grupos del dashboard. */

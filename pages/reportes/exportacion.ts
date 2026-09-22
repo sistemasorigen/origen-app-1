@@ -97,10 +97,14 @@ const hojaAsistencia = (d: ReportesGCXTemporada): HojaExcel[] => {
     return [{
         nombre: 'Asistencia de personas',
         filas: [
-            { Situación: 'Asistió al menos una vez', Personas: a.asistieron, 'Porcentaje sobre la base': `${porcentaje(a.asistieron, base)}%` },
-            { Situación: 'Nunca asistió', Personas: a.nuncaAsistieron, 'Porcentaje sobre la base': `${porcentaje(a.nuncaAsistieron, base)}%` },
-            { Situación: 'Fuera del cálculo (ninguno de sus grupos reporta)', Personas: a.sinDatos, 'Porcentaje sobre la base': 'No aplica' },
-            { Situación: 'Total de personas inscriptas', Personas: a.total, 'Porcentaje sobre la base': 'No aplica' },
+            { Situación: 'Fue a todas las reuniones de sus grupos', Personas: a.frecuencia.todas, 'Porcentaje sobre la base': `${porcentaje(a.frecuencia.todas, base)}%` },
+            { Situación: 'Fue 6 o más veces (sin llegar a todas)', Personas: a.frecuencia.seisOMas, 'Porcentaje sobre la base': `${porcentaje(a.frecuencia.seisOMas, base)}%` },
+            { Situación: 'Fue 4 a 5 veces', Personas: a.frecuencia.cuatroACinco, 'Porcentaje sobre la base': `${porcentaje(a.frecuencia.cuatroACinco, base)}%` },
+            { Situación: 'Fue 1 a 3 veces', Personas: a.frecuencia.unaATres, 'Porcentaje sobre la base': `${porcentaje(a.frecuencia.unaATres, base)}%` },
+            { Situación: 'Asistió al menos una vez (suma de las cuatro de arriba)', Personas: a.asistieron, 'Porcentaje sobre la base': `${porcentaje(a.asistieron, base)}%` },
+            { Situación: 'No fue a ninguna', Personas: a.nuncaAsistieron, 'Porcentaje sobre la base': `${porcentaje(a.nuncaAsistieron, base)}%` },
+            { Situación: 'De las que no asistieron: su grupo nunca cargó asistencia', Personas: a.sinCarga, 'Porcentaje sobre la base': `${porcentaje(a.sinCarga, base)}%` },
+            { Situación: 'Total de personas inscriptas', Personas: a.total, 'Porcentaje sobre la base': '100%' },
         ],
     }];
 };
@@ -110,7 +114,11 @@ const hojaReportan = (d: ReportesGCXTemporada): HojaExcel[] => {
     return [{
         nombre: 'Reporte de asistencia',
         filas: [
-            { Situación: 'Cargó al menos una reunión', Grupos: r.reportan, Porcentaje: `${porcentaje(r.reportan, r.total)}%` },
+            { Situación: 'Cargó todas las reuniones que le tocaban', Grupos: r.frecuencia.todas, Porcentaje: `${porcentaje(r.frecuencia.todas, r.total)}%` },
+            { Situación: 'Cargó 6 o más (sin llegar a todas)', Grupos: r.frecuencia.seisOMas, Porcentaje: `${porcentaje(r.frecuencia.seisOMas, r.total)}%` },
+            { Situación: 'Cargó 4 a 5', Grupos: r.frecuencia.cuatroACinco, Porcentaje: `${porcentaje(r.frecuencia.cuatroACinco, r.total)}%` },
+            { Situación: 'Cargó 1 a 3', Grupos: r.frecuencia.unaATres, Porcentaje: `${porcentaje(r.frecuencia.unaATres, r.total)}%` },
+            { Situación: 'Cargó al menos una reunión (suma de las cuatro de arriba)', Grupos: r.reportan, Porcentaje: `${porcentaje(r.reportan, r.total)}%` },
             { Situación: 'Nunca cargó una reunión', Grupos: r.noReportan, Porcentaje: `${porcentaje(r.noReportan, r.total)}%` },
             { Situación: 'Total de grupos activos', Grupos: r.total, Porcentaje: '100%' },
         ],
@@ -136,10 +144,10 @@ const hojaCobertura = (d: ReportesGCXTemporada): HojaExcel[] => {
             },
             {
                 'Qué alimenta': 'Asistencia',
-                'Personas con el dato': baseAsistencia,
+                'Personas con el dato': a.total - a.sinCarga,
                 'Personas únicas': a.total,
-                Cobertura: `${porcentaje(baseAsistencia, a.total)}%`,
-                'Por qué faltan': 'Ninguno de sus grupos cargó una reunión todavía',
+                Cobertura: `${porcentaje(a.total - a.sinCarga, a.total)}%`,
+                'Por qué faltan': 'Ninguno de sus grupos cargó una reunión: cuentan como ausentes',
             },
         ],
     }];

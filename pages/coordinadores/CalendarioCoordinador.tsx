@@ -21,6 +21,8 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 interface Props {
     datos: GrupoConDatos[];
     onAbrirGrupo: (groupId: string) => void;
+    /** Mes con el que abre. Por defecto, el de hoy. */
+    mesInicial?: Date;
 }
 
 /** Día de la semana del grupo, en índice lunes=0. */
@@ -40,9 +42,9 @@ const indiceDia = (nombre?: string): number => {
 const aISO = (anio: number, mes: number, dia: number) =>
     `${anio}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
-const CalendarioCoordinador: React.FC<Props> = ({ datos, onAbrirGrupo }) => {
+const CalendarioCoordinador: React.FC<Props> = ({ datos, onAbrirGrupo, mesInicial }) => {
     const hoy = new Date();
-    const [mes, setMes] = useState(() => new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+    const [mes, setMes] = useState(() => mesInicial ?? new Date(hoy.getFullYear(), hoy.getMonth(), 1));
     const [diaElegido, setDiaElegido] = useState<string | null>(null);
 
     const anio = mes.getFullYear();

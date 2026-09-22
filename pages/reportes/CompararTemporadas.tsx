@@ -495,17 +495,19 @@ const CompararTemporadas: React.FC<{ currentUser: User }> = () => {
                                                     estado={porTemporada[t].estado}
                                                     hayGrupos={tieneGrupos(t)}
                                                     parte={a?.asistieron ?? 0}
-                                                    resto={a?.nuncaAsistieron ?? 0}
+                                                    // Sin ninguna carga en la temporada, torta vacía
+                                                    // y no un 0 % que se lea como que no va nadie.
+                                                    resto={r?.reportan ? (a?.nuncaAsistieron ?? 0) : 0}
                                                     etiqueta="asiste"
                                                     nombreParte="Asiste"
                                                     nombreResto="No asiste"
                                                     pie={
                                                         <div className="flex items-center gap-2.5">
                                                             <span className="flex-1 text-[12px] font-medium" style={{ color: C.apagado }}>
-                                                                Fuera del cálculo
+                                                                Ausentes por grupos sin carga
                                                             </span>
                                                             <span className="text-[12px] font-semibold" style={{ color: C.medio }}>
-                                                                {a?.sinDatos ?? 0} en {r?.noReportan ?? 0} grupos
+                                                                {a?.sinCarga ?? 0} en {r?.noReportan ?? 0} grupos
                                                             </span>
                                                         </div>
                                                     }
@@ -513,13 +515,13 @@ const CompararTemporadas: React.FC<{ currentUser: User }> = () => {
                                             );
                                         })}
                                     </div>
-                                    {/* El sinDatos se muestra, no se esconde: es casi la mitad
-                                        del padrón y sin él los tres porcentajes se leerían como
-                                        si cubrieran a todos los inscriptos. */}
+                                    {/* Los ausentes por falta de carga se dicen debajo de
+                                        cada torta: sin eso, un porcentaje bajo se leería sólo
+                                        como gente que no va. */}
                                     <NotaCobertura>
-                                        Cada porcentaje se calcula solo sobre las personas de los grupos que cargaron
-                                        asistencia. Las que están en grupos que no reportan quedan fuera del cálculo y
-                                        se cuentan aparte, debajo de cada torta.
+                                        Cada porcentaje se calcula sobre todas las personas inscriptas de la temporada.
+                                        Las que están sólo en grupos que nunca cargaron asistencia cuentan como ausentes, y
+                                        cuántas son se dice debajo de cada torta.
                                     </NotaCobertura>
                                 </>
                             )}

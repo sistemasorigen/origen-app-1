@@ -22,7 +22,7 @@ import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import { ChevronLeft, ChevronRight, Search, ArrowLeftRight, ArrowRight, FileSpreadsheet, Printer } from 'lucide-react';
-import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte, ResumenDemograficoReporte } from '../../types';
+import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte, ResumenDemograficoReporte, TramosDeFrecuencia } from '../../types';
 import { MODALIDADES, NOMBRE_MODALIDAD } from '../../src/utils/modalidad';
 import { supabaseService } from '../../services/supabaseService';
 import {
@@ -183,6 +183,46 @@ const BotonesDescarga: React.FC<{
     );
 };
 
+interface DiaDelGrupo {
+    fecha: string;
+    etiqueta: string;
+    /** 0 o 1. Dos series para que Recharts pinte cada día de un color. */
+    Cargó: number;
+    'No cargó': number;
+    presentes: number;
+    personas: number;
+}
+
+/**
+ * Tooltip de la línea de tiempo de un grupo.
+ *
+ * La barra sólo dice si cargó o no; el dato de cuánta gente fue vive acá,
+ * porque poner la altura en personas mezclaría dos unidades en un mismo eje.
+ */
+const TooltipDiaGrupo: React.FC<{ active?: boolean; payload?: Array<{ payload: DiaDelGrupo }> }> = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0].payload;
+    const cargo = d['Cargó'] === 1;
+
+    return (
+        <div
+            className="px-3 py-2.5"
+            style={{ background: '#fff', border: `1px solid ${C.borde}`, borderRadius: 10, fontFamily: FUENTE }}
+        >
+            <p className="m-0 text-[12.5px] font-semibold" style={{ color: C.tinta }}>{fechaLarga(d.fecha)}</p>
+            <p className="mt-0.5 m-0 text-[12px] font-semibold" style={{ color: cargo ? C.azul : C.apagado }}>
+                {cargo ? 'Cargó la asistencia' : 'No cargó la asistencia'}
+            </p>
+            {cargo && (
+                <p className="mt-1.5 m-0 text-[12px] font-medium" style={{ color: C.medio }}>
+                    {d.presentes} {d.presentes === 1 ? 'presente' : 'presentes'}
+                    {d.personas > 0 && ` de ${d.personas} inscriptos`}
+                </p>
+            )}
+        </div>
+    );
+};
+
 const GRUPOS_POR_PAGINA = 7;
 
 /**
@@ -261,8 +301,77 @@ const TortaAsistencia: React.FC<{
     );
 };
 
-/** "los 3 grupos que cargaron" / "el único grupo que cargó". */
-const gruposQue = (n: number, singular: string, plural: string) => n === 1 ? `el único grupo ${singular}` : `los ${n} grupos ${plural}`;
+/**
+ * Los tramos de frecuencia, del más constante al que nunca fue (o nunca
+ * cargó). Los usan "Asistencia de personas" y "Reporte de asistencia".
+ *
+ * Escala secuencial de un solo tono (son tramos ordenados, no categorías
+ * sueltas), validada con el script de dataviz: los vecinos se distinguen con
+ * visión normal y con daltonismo. "Ninguna" es gris y no azul: es ausencia.
+ * Los dos pasos claros tienen poco contraste contra el blanco, por eso la
+ * leyenda lleva siempre cantidad y porcentaje escritos.
+ */
+const TRAMOS_FRECUENCIA: Array<{ clave: keyof TramosDeFrecuencia; nombre: string; color: string }> = [
+    { clave: 'todas', nombre: 'A todas', color: '#172554' },
+    { clave: 'seisOMas', nombre: '6 o más veces', color: '#1e40af' },
+    { clave: 'cuatroACinco', nombre: '4 a 5 veces', color: '#3b82f6' },
+    { clave: 'unaATres', nombre: '1 a 3 veces', color: '#8ab4f8' },
+    { clave: 'ninguna', nombre: 'Ninguna', color: '#e5e7eb' },
+];
+
+/**
+ * Torta de frecuencia. El centro sigue diciendo lo de siempre: qué parte fue
+ * (o cargó) al menos una vez, que es todo menos "Ninguna".
+ */
+const TortaFrecuencia: React.FC<{
+    frecuencia: TramosDeFrecuencia;
+    total: number;
+    /** "asiste" o "reporta": el rótulo bajo el porcentaje del centro. */
+    etiqueta: string;
+    /** "Personas" o "Grupos": el renglón del total. */
+    rotuloTotal: string;
+    tamano?: number;
+    arriba?: string;
+    /** Leyenda siempre debajo de la torta, aunque al lado entre. Las dos
+     *  tortas de la primera fila la usan para leerse igual, una al lado de
+     *  la otra. */
+    apilada?: boolean;
+}> = ({ frecuencia, total, etiqueta, rotuloTotal, tamano = 168, arriba = 'mt-[22px]', apilada }) => {
+    const pct = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0;
+    return (
+        // flex-wrap: si al lado de la torta no entra la leyenda sin partir
+        // renglones (tarjetas angostas, como la de Reporte de asistencia), la
+        // leyenda baja y ocupa todo el ancho en vez de apretarse en 120px.
+        // Apilada, el contenido va arriba (content-start) y no centrado: si no,
+        // una nota más larga en una tarjeta que en la de al lado corre la torta
+        // y las dos de la misma fila quedan a distinta altura.
+        <div className={`flex flex-wrap items-center justify-center gap-x-6 gap-y-5 ${apilada ? 'content-start' : ''} ${arriba} flex-1`}>
+            <Torta
+                tamano={tamano}
+                separador
+                datos={TRAMOS_FRECUENCIA.map(t => ({ nombre: t.nombre, valor: frecuencia[t.clave], color: t.color }))}
+                porcentaje={pct(total - frecuencia.ninguna)}
+                etiqueta={etiqueta}
+            />
+            <div className={`min-w-[172px] flex-1 [&_span]:whitespace-nowrap ${apilada ? 'basis-full' : ''}`}>
+                {TRAMOS_FRECUENCIA.map((t, i) => (
+                    <FilaLeyenda
+                        key={t.clave}
+                        primera={i === 0}
+                        color={t.color}
+                        nombre={t.nombre}
+                        valor={<>{frecuencia[t.clave]}<span className="font-medium" style={{ color: C.tenue }}> · {pct(frecuencia[t.clave])}%</span></>}
+                    />
+                ))}
+                <div className="h-px my-3.5" style={{ background: C.bordeSuave }} />
+                <div className="flex items-center gap-2.5">
+                    <span className="flex-1 text-[12.5px] font-medium" style={{ color: C.apagado }}>{rotuloTotal}</span>
+                    <span className="text-[12.5px] font-semibold" style={{ color: C.medio }}>{total}</span>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 /** Una modalidad: sus gráficos, filtrados. */
 const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> = ({ modalidad, datos, cargando, temporada, anio, onVerGrupo }) => {
@@ -289,7 +398,7 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
     // Tarjeta 3, igual en las tres modalidades: un grupo a la vez. En los
     // híbridos suma sus reuniones en persona y las online.
     const tarjetaGrupo = () => {
-        const baseGrupo = deGrupo ? deGrupo.asistieron + deGrupo.nuncaAsistieron : 0;
+        const nuncaCargo = !!deGrupo && deGrupo.total > 0 && deGrupo.sinCarga === deGrupo.total;
         return (
             <Tarjeta className="px-[22px] py-5 flex flex-col">
                 <TituloTarjeta
@@ -316,20 +425,24 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
 
                 {!deGrupo || deGrupo.total === 0 ? (
                     <SinDatos titulo="Sin inscriptos" detalle="Nadie se anotó en este grupo todavía." />
-                ) : baseGrupo === 0 ? (
-                    // El vacío es el dato: no es que nadie vaya, es que
-                    // nadie lo está registrando.
-                    <SinDatos
-                        titulo="Este grupo nunca cargó asistencia"
-                        detalle={`Tiene ${deGrupo.total} ${deGrupo.total === 1 ? 'persona inscripta' : 'personas inscriptas'} y ninguna reunión cargada: no hay forma de saber quién asiste.`}
-                        accion={{ texto: 'Ver el grupo', onClick: () => onVerGrupo(grupoActual!.groupId) }}
-                    />
                 ) : (
                     <>
                         <TortaAsistencia a={deGrupo} si="Asiste" no="No asiste" etiqueta="asiste" rotuloBase="Inscriptos" valorBase={deGrupo.total} arriba="mt-[18px]" />
                         <NotaCobertura>
-                            Basta con figurar presente en una reunión para contar como que asiste. Cada pareja
-                            cuenta como dos personas.
+                            {nuncaCargo
+                                ? <>
+                                    Este grupo nunca cargó asistencia, así que sus {deGrupo.total}{' '}
+                                    {deGrupo.total === 1 ? 'persona cuenta' : 'personas cuentan'} como que no asisten.{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => onVerGrupo(grupoActual!.groupId)}
+                                        className="no-print font-semibold hover:underline"
+                                        style={{ color: C.azul }}
+                                    >
+                                        Ver el grupo
+                                    </button>
+                                </>
+                                : 'Basta con figurar presente en una reunión para contar como que asiste. Cada pareja cuenta como dos personas.'}
                         </NotaCobertura>
                     </>
                 )}
@@ -342,7 +455,6 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
         const a = reporte?.porModoReunion?.[modo];
         const texto = modo === 'online' ? 'online' : 'en persona';
         if (!a || !reportan) return null;
-        const base = a.asistieron + a.nuncaAsistieron;
         return (
             <Tarjeta className="px-[22px] py-5 flex flex-col">
                 <TituloTarjeta
@@ -351,10 +463,12 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
                 />
                 {a.total === 0 ? (
                     <SinDatos titulo="Todavía no hay inscriptos" detalle="Nadie se anotó en los grupos híbridos de esta temporada." />
-                ) : base === 0 ? (
+                ) : reportan.reportan === 0 ? (
+                    // Nadie cargó nada todavía: un 0 % se leería como que no
+                    // va nadie, cuando lo que pasa es que no arrancó la carga.
                     <SinDatos
                         titulo="Ningún grupo híbrido cargó asistencia"
-                        detalle={`${a.total === 1 ? 'Su única persona inscripta queda' : `Sus ${a.total} inscriptos quedan`} sin datos hasta la primera carga.`}
+                        detalle="El gráfico aparece con la primera carga. Desde ahí, los grupos que no carguen cuentan a su gente como ausente."
                     />
                 ) : (
                     <>
@@ -363,15 +477,13 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
                             si={modo === 'online' ? 'Fue online' : 'Fue en persona'}
                             no={modo === 'online' ? 'Nunca online' : 'Nunca en persona'}
                             etiqueta={modo === 'online' ? 'fue online' : 'en persona'}
-                            rotuloBase="Base del cálculo"
-                            valorBase={base}
+                            rotuloBase="Personas"
+                            valorBase={a.total}
                         />
                         <NotaCobertura>
                             Cuenta sólo las reuniones que el anfitrión marcó como {modo === 'online' ? 'online' : 'presenciales'}
-                            {' '}al tomar asistencia. Se calcula con {gruposQue(reportan.reportan, 'que cargó', 'que cargaron')} asistencia
-                            {a.sinDatos > 0
-                                ? `: ${base} de las ${a.total} personas inscriptas. ${a.sinDatos === 1 ? 'La restante está' : `Las otras ${a.sinDatos} están`} en grupos que no cargaron nada y ${a.sinDatos === 1 ? 'queda fuera' : 'quedan fuera'}.`
-                                : `: entran las ${a.total} personas inscriptas.`}
+                            {' '}al tomar asistencia, sobre las {a.total} personas de los grupos híbridos.
+                            {a.sinCarga > 0 && ` ${a.sinCarga === 1 ? 'Una está' : `${a.sinCarga} están`} en grupos que nunca cargaron y ${a.sinCarga === 1 ? 'cuenta' : 'cuentan'} como que no fue${a.sinCarga === 1 ? '' : 'ron'}.`}
                         </NotaCobertura>
                     </>
                 )}
@@ -430,21 +542,7 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
                             titulo="Grupos que reportan"
                             detalle={`Cuántos de los grupos ${nombre.plural} cargan asistencia.`}
                         />
-                        <div className="flex items-center gap-[22px] mt-[22px] flex-1">
-                            <Torta
-                                tamano={TAMANO_TORTA}
-                                datos={[
-                                    { nombre: 'Reporta', valor: reportan.reportan, color: C.azul },
-                                    { nombre: 'No reporta', valor: reportan.noReportan, color: C.azulClaro },
-                                ]}
-                                porcentaje={pctReporta}
-                                etiqueta="reporta"
-                            />
-                            <div className="min-w-0 flex-1">
-                                <FilaLeyenda primera color={C.azul} nombre="Reporta" valor={reportan.reportan} />
-                                <FilaLeyenda color={C.azulClaro} nombre="No reporta" valor={reportan.noReportan} />
-                            </div>
-                        </div>
+                        <TortaFrecuencia frecuencia={reportan.frecuencia} total={reportan.total} etiqueta="reporta" rotuloTotal="Grupos" tamano={TAMANO_TORTA} />
                         <NotaCobertura>
                             {reportan.total === 1
                                 ? `Sobre el único grupo ${nombre.singular} activo de la temporada.`
@@ -463,26 +561,20 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
                                 titulo="Todavía no hay inscriptos"
                                 detalle={`Nadie se anotó en los grupos ${nombre.plural} de esta temporada.`}
                             />
-                        ) : asistencia.asistieron + asistencia.nuncaAsistieron === 0 ? (
+                        ) : reportan.reportan === 0 ? (
                             <SinDatos
                                 titulo={`Ningún grupo ${nombre.singular} cargó asistencia`}
-                                detalle={`${asistencia.total === 1 ? 'Su única persona inscripta queda' : `Sus ${asistencia.total} inscriptos quedan`} sin datos hasta la primera carga.`}
+                                detalle="El gráfico aparece con la primera carga. Desde ahí, los grupos que no carguen cuentan a su gente como ausente."
                             />
                         ) : (
                             <>
-                                <TortaAsistencia
-                                    a={asistencia}
-                                    si="Asiste"
-                                    no="No asiste"
-                                    etiqueta="asiste"
-                                    rotuloBase="Base del cálculo"
-                                    valorBase={asistencia.asistieron + asistencia.nuncaAsistieron}
-                                />
-                                {/* El sinDatos se muestra, igual que en la torta general. */}
+                                <TortaFrecuencia frecuencia={asistencia.frecuencia} total={asistencia.total} etiqueta="asiste" rotuloTotal="Personas" tamano={TAMANO_TORTA} />
+                                {/* Los que cuentan como ausentes por falta de carga se
+                                    dicen, igual que en la torta general. */}
                                 <NotaCobertura>
-                                    {asistencia.sinDatos > 0
-                                        ? `Se calcula con ${gruposQue(reportan.reportan, 'que cargó', 'que cargaron')} asistencia: ${asistencia.asistieron + asistencia.nuncaAsistieron} de las ${asistencia.total} personas inscriptas. ${asistencia.sinDatos === 1 ? 'La restante está' : `Las otras ${asistencia.sinDatos} están`} en ${reportan.noReportan === 1 ? 'el que no reporta' : `los ${reportan.noReportan} que no reportan`} y ${asistencia.sinDatos === 1 ? 'queda fuera' : 'quedan fuera'}.`
-                                        : `Todos los grupos ${nombre.plural} cargaron asistencia: entran las ${asistencia.total} personas inscriptas.`}
+                                    {asistencia.sinCarga > 0
+                                        ? `Sobre las ${asistencia.total} personas de los grupos ${nombre.plural}. ${asistencia.sinCarga === 1 ? 'Una está' : `${asistencia.sinCarga} están`} sólo en ${reportan.noReportan === 1 ? 'el grupo que nunca cargó' : `los ${reportan.noReportan} grupos que nunca cargaron`} asistencia y ${asistencia.sinCarga === 1 ? 'cuenta' : 'cuentan'} como que no ${asistencia.sinCarga === 1 ? 'asiste' : 'asisten'}.`
+                                        : `Sobre las ${asistencia.total} personas de los grupos ${nombre.plural}. Todos cargaron asistencia.`}
                                 </NotaCobertura>
                             </>
                         )}
@@ -709,6 +801,18 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
     const pctCargadas = grupoActual && grupoActual.esperadas > 0
         ? Math.round((grupoActual.cargadas / grupoActual.esperadas) * 100)
         : 0;
+
+    // Una entrada por día de encuentro del grupo elegido, cargado o no.
+    const diasDelGrupo = useMemo<DiaDelGrupo[]>(() => (grupoActual?.dias || []).map(d => ({
+        fecha: d.fecha,
+        etiqueta: fechaCorta(d.fecha),
+        'Cargó': d.cargada ? 1 : 0,
+        'No cargó': d.cargada ? 0 : 1,
+        presentes: d.presentes,
+        personas: grupoActual?.personas ?? 0,
+    })), [grupoActual]);
+
+    const intervaloGrupo = Math.max(0, Math.ceil(diasDelGrupo.length / 10) - 1);
 
     // ── Calendario de carga de asistencia ───────────────────────────────
     const diasDeCarga = useMemo<DiaDeCarga[]>(() => (datos?.asistenciaPorFecha || []).map(d => ({
@@ -1017,39 +1121,22 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                         <Esqueleto alto={168} ancho="168px" className="!rounded-full shrink-0" />
                                         <div className="flex-1"><Esqueleto alto={13} /><div className="mt-3"><Esqueleto alto={13} /></div></div>
                                     </div>
-                                ) : baseAsistencia === 0 ? (
+                                ) : baseAsistencia === 0 || (reportan?.reportan ?? 0) === 0 ? (
                                     <SinDatos
                                         titulo="Todavía no hay asistencia cargada"
                                         detalle={`Ningún grupo reportó reuniones en la temporada ${NOMBRE_TEMPORADA[temporada]} de ${anio}. El gráfico aparece con la primera carga.`}
                                     />
                                 ) : (
                                     <>
-                                        <div className="flex items-center gap-6 mt-[22px] flex-1">
-                                            <Torta
-                                                datos={[
-                                                    { nombre: 'Asiste', valor: asistencia!.asistieron, color: C.azul },
-                                                    { nombre: 'No asiste', valor: asistencia!.nuncaAsistieron, color: C.azulClaro },
-                                                ]}
-                                                porcentaje={pctAsiste}
-                                                etiqueta="asiste"
-                                            />
-                                            <div className="min-w-0 flex-1">
-                                                <FilaLeyenda primera color={C.azul} nombre="Asiste" valor={asistencia!.asistieron} />
-                                                <FilaLeyenda color={C.azulClaro} nombre="No asiste" valor={asistencia!.nuncaAsistieron} />
-                                                <div className="h-px my-4" style={{ background: C.bordeSuave }} />
-                                                <div className="flex items-center gap-2.5">
-                                                    <span className="flex-1 text-[12.5px] font-medium" style={{ color: C.apagado }}>Base del cálculo</span>
-                                                    <span className="text-[12.5px] font-semibold" style={{ color: C.medio }}>{baseAsistencia}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {/* El sinDatos no se esconde en el redondeo: es casi
-                                            la mitad del padrón. */}
+                                        <TortaFrecuencia frecuencia={asistencia!.frecuencia} total={asistencia!.total} etiqueta="asiste" rotuloTotal="Personas" apilada />
+                                        {/* Los ausentes por falta de carga no se esconden en el
+                                            número: son casi un tercio del padrón. */}
                                         <NotaCobertura>
-                                            Se calcula solo con los {reportan?.reportan ?? 0} grupos que cargaron asistencia:{' '}
-                                            {baseAsistencia} de las {asistencia!.total} personas inscriptas. Las otras{' '}
-                                            {asistencia!.sinDatos} están sólo en grupos que no reportan y quedan fuera. Cada
-                                            persona cuenta una vez aunque esté en más de un grupo: basta con que haya ido a uno.
+                                            Sobre las {asistencia!.total} personas inscriptas en los {reportan?.total ?? 0} grupos de la
+                                            temporada. Cada persona cuenta una vez aunque esté en más de un grupo, y sus veces son las
+                                            reuniones cargadas a las que fue, sumando todos sus grupos. Quien fue a todas las reuniones
+                                            de sus grupos cuenta en "A todas" aunque hayan sido pocas.
+                                            {asistencia!.sinCarga > 0 && ` De las que no asisten, ${asistencia!.sinCarga} están sólo en los ${reportan?.noReportan ?? 0} grupos que nunca cargaron asistencia y cuentan como ausentes.`}
                                         </NotaCobertura>
                                     </>
                                 )}
@@ -1070,23 +1157,11 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     <SinDatos titulo="Sin grupos en la temporada" detalle="No hay nada que reportar todavía." />
                                 ) : (
                                     <>
-                                        <div className="flex items-center gap-[22px] mt-[22px] flex-1">
-                                            <Torta
-                                                datos={[
-                                                    { nombre: 'Reporta', valor: reportan!.reportan, color: C.azul },
-                                                    { nombre: 'No reporta', valor: reportan!.noReportan, color: C.azulClaro },
-                                                ]}
-                                                porcentaje={pctReporta}
-                                                etiqueta="reporta"
-                                            />
-                                            <div className="min-w-0 flex-1">
-                                                <FilaLeyenda primera color={C.azul} nombre="Reporta" valor={reportan!.reportan} />
-                                                <FilaLeyenda color={C.azulClaro} nombre="No reporta" valor={reportan!.noReportan} />
-                                            </div>
-                                        </div>
+                                        <TortaFrecuencia frecuencia={reportan!.frecuencia} total={reportan!.total} etiqueta="reporta" rotuloTotal="Grupos" apilada />
                                         <NotaCobertura>
-                                            Sobre los {reportan!.total} grupos activos de la temporada. Un grupo cuenta como
-                                            que reporta si cargó al menos una reunión.
+                                            Sobre los {reportan!.total} grupos activos de la temporada. Las veces son los días con
+                                            asistencia cargada. "A todas" es el grupo que cargó todas las reuniones que le tocaban
+                                            hasta hoy según su día de encuentro, aunque hayan sido pocas.
                                         </NotaCobertura>
                                     </>
                                 )}
@@ -1114,18 +1189,6 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                             <p className="mt-1.5 text-[12px] leading-[1.5] font-medium" style={{ color: C.apagado }}>
                                                 {sinDatoGenero} {sinDatoGenero === 1 ? 'persona fue cargada' : 'personas fueron cargadas'} a mano por su anfitrión y no
                                                 {sinDatoGenero === 1 ? ' tiene' : ' tienen'} datos demográficos.
-                                            </p>
-                                        </div>
-                                        <div className="h-px" style={{ background: C.bordeSuave }} />
-                                        <div>
-                                            <div className="flex items-baseline justify-between gap-3">
-                                                <span className="text-[13px] font-semibold" style={{ color: C.medio }}>Asistencia</span>
-                                                <span className="text-[13px] font-semibold" style={{ color: C.tinta }}>
-                                                    {baseAsistencia} de {asistencia?.total ?? 0}
-                                                </span>
-                                            </div>
-                                            <p className="mt-1.5 text-[12px] leading-[1.5] font-medium" style={{ color: C.apagado }}>
-                                                Depende de que el anfitrión cargue la reunión. Es el número que más conviene subir.
                                             </p>
                                         </div>
                                     </div>
@@ -1438,14 +1501,65 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                         </div>
                                     </div>
 
+                                    {/* Misma familia que "Días con asistencia cargada": mismo
+                                        par de azules, mismo eje de fechas, mismo tooltip. Lo
+                                        que cambia es el eje Y, que acá se oculta: para UN
+                                        grupo el valor de cada día es sí o no, y un eje que
+                                        sólo dice 0 y 1 es ruido. Queda una línea de tiempo de
+                                        cumplimiento, que es lo que el dato es. */}
+                                    {diasDelGrupo.length > 0 && (
+                                        <div className="mt-6 pt-5" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="min-w-0">
+                                                    <p className="m-0 text-[13px] font-semibold" style={{ color: C.tinta }}>
+                                                        Sus días de encuentro, uno por uno
+                                                    </p>
+                                                    <p className="mt-[5px] text-[12.5px] font-medium" style={{ color: C.tenue }}>
+                                                        Cada barra es una fecha en la que le tocaba reunirse. Pasá el mouse para ver
+                                                        cuánta gente fue.
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-4 shrink-0">
+                                                    {([['Cargó', C.azul], ['No cargó', C.azulClaro]] as const).map(([t, c]) => (
+                                                        <div key={t} className="flex items-center gap-[7px]">
+                                                            <span className="w-[9px] h-[9px] rounded-sm" style={{ background: c }} />
+                                                            <span className="text-[12px] font-semibold" style={{ color: '#4b5563' }}>{t}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4" style={{ height: 190 }}>
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={diasDelGrupo} margin={{ left: 0, right: 8, top: 4, bottom: 4 }} barGap={2}>
+                                                        <CartesianGrid vertical={false} stroke={C.bordeSuave} />
+                                                        <XAxis
+                                                            dataKey="etiqueta"
+                                                            interval={intervaloGrupo}
+                                                            tick={{ ...EjeCategoria, fontSize: 11.5, fill: C.apagado }}
+                                                            axisLine={false}
+                                                            tickLine={false}
+                                                        />
+                                                        {/* Oculto: su único valor posible es 0 o 1. */}
+                                                        <YAxis hide domain={[0, 1]} />
+                                                        <Tooltip cursor={{ fill: 'rgba(37,99,235,.05)' }} content={<TooltipDiaGrupo />} />
+                                                        <Bar dataKey="Cargó" fill={C.azul} radius={[3, 3, 0, 0]} maxBarSize={11} />
+                                                        <Bar dataKey="No cargó" fill={C.azulClaro} radius={[3, 3, 0, 0]} maxBarSize={11} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <NotaCobertura>
                                         Los dos porcentajes miden cosas distintas y no se comparan entre sí. El de la izquierda
                                         es sobre las {grupoActual.personas} personas inscriptas del grupo — cada pareja cuenta
                                         como dos — y basta con figurar presente en una reunión para contar como que asistió.
                                         El de la derecha es sobre las {grupoActual.esperadas} veces que cayó su día de encuentro
                                         desde que arrancó hasta hoy: 100% es que cargó todas, 0% que no cargó ninguna. Si el
-                                        grupo nunca cargó asistencia, la izquierda va a dar 0% porque no hay con qué saber
-                                        quién fue, no porque nadie haya ido.
+                                        grupo nunca cargó asistencia, todas sus personas cuentan como que no asistieron.
+                                        La línea de tiempo llega hasta hoy, no hasta el fin de temporada: los encuentros
+                                        que todavía no pasaron no son reuniones sin cargar.
                                     </NotaCobertura>
                                 </>
                             )}

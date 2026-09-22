@@ -16,7 +16,7 @@ import {
     ExternalLink,
     Quote
 } from 'lucide-react';
-import HeroCarousel from '../../components/ui/CarruselHero';
+import HeroCarousel, { getMediaFrameStyle } from '../../components/ui/CarruselHero';
 
 // --- TUTORIAL INTEGRATION ---
 import { useTutorial } from '../../src/hooks/useTutorial';
@@ -519,14 +519,30 @@ const GruposCarousel: React.FC<{ groups: Group[]; categories: GroupCategory[]; c
     );
 };
 
-// Carrusel "Origen Música" — misma técnica de transición que
+// Un slide de banner clickeable, en el mínimo común denominador de los dos
+// banners de la home: el de "Origen Música" (tabla propia, imagen o video) y
+// el de "Origen en Youvers" (config, solo imágenes). MusicaBannerSlide entra
+// acá tal cual; los de Youvers se normalizan en el Dashboard.
+export interface BannerLinkSlide {
+    id: string;
+    mediaUrl?: string;
+    mediaType?: 'image' | 'video';
+    videoUrl?: string;
+    focalX?: number;
+    focalY?: number;
+    zoom?: number;
+    title?: string;
+    targetUrl: string;
+}
+
+// Carrusel de banner clickeable — misma técnica de transición que
 // CarruselHero.tsx (translateX + transition cubic-bezier), pero
 // simplificado: acá no hay overlay de texto de CTA, cada slide entero ES
 // el link (se abre en pestaña nueva al clickear). Se arrastra con el dedo
 // o el mouse vía Pointer Events —mismo enfoque que EncuadreMedia.tsx—: la
 // pista sigue al puntero en vivo y al soltar decide si cambia de slide o
 // vuelve a su lugar.
-const MusicaCarousel: React.FC<{ slides: MusicaBannerSlide[] }> = ({ slides }) => {
+const BannerLinkCarousel: React.FC<{ slides: BannerLinkSlide[] }> = ({ slides }) => {
     const [index, setIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
@@ -671,23 +687,32 @@ const MusicaCarousel: React.FC<{ slides: MusicaBannerSlide[] }> = ({ slides }) =
                         style={{ minWidth: '100%' }}
                         aria-label={slide.title || 'Ver más'}
                     >
-                        {slide.mediaType === 'video' && slide.videoUrl ? (
-                            <video
-                                src={slide.videoUrl}
-                                poster={slide.mediaUrl}
-                                className="w-full h-full object-cover pointer-events-none transition-transform duration-300 group-hover:scale-[1.02]"
-                                style={{ objectPosition: `${slide.focalX ?? 50}% ${slide.focalY ?? 50}%` }}
-                                autoPlay muted loop playsInline
-                            />
-                        ) : slide.mediaUrl ? (
-                            <img
-                                src={slide.mediaUrl}
-                                alt={slide.title || ''}
-                                draggable={false}
-                                className="w-full h-full object-cover pointer-events-none transition-transform duration-300 group-hover:scale-[1.02]"
-                                style={{ objectPosition: `${slide.focalX ?? 50}% ${slide.focalY ?? 50}%` }}
-                            />
-                        ) : null /* sin imagen ni video: queda el fondo negro del contenedor */}
+                        {/* El zoom del hover vive en el envoltorio, no en el medio:
+                            el encuadre ya ocupa el `transform` del <img> con su propio
+                            scale, y un style inline le gana siempre a la clase. Además
+                            el recorte pasa a salir de getMediaFrameStyle, la misma
+                            función que dibuja el preview del editor — antes acá se
+                            aplicaba el punto focal pero se ignoraba el zoom, así que un
+                            slide acercado en el admin se publicaba sin acercar. */}
+                        <div className="absolute inset-0 overflow-hidden transition-transform duration-300 group-hover:scale-[1.02]">
+                            {slide.mediaType === 'video' && slide.videoUrl ? (
+                                <video
+                                    src={slide.videoUrl}
+                                    poster={slide.mediaUrl}
+                                    className="w-full h-full object-cover pointer-events-none"
+                                    style={getMediaFrameStyle(slide)}
+                                    autoPlay muted loop playsInline
+                                />
+                            ) : slide.mediaUrl ? (
+                                <img
+                                    src={slide.mediaUrl}
+                                    alt={slide.title || ''}
+                                    draggable={false}
+                                    className="w-full h-full object-cover pointer-events-none"
+                                    style={getMediaFrameStyle(slide)}
+                                />
+                            ) : null /* sin imagen ni video: queda el fondo negro del contenedor */}
+                        </div>
                         {slide.title && (
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 sm:p-5 pt-10 sm:pt-14">
                                 <p className="text-white font-bold text-lg sm:text-xl md:text-2xl leading-snug tracking-tight drop-shadow-md">{slide.title}</p>
@@ -783,6 +808,20 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
     }, []);
 
     // --- Derivados de datos reales para las secciones nuevas ---
+
+    // Los slides de Youvers viven en la config (app_config.config, un JSONB de
+    // lectura pública), no en una tabla propia como los de música: son sólo
+    // imagen + link, y así se publican sin depender de ninguna migración.
+    const youversSlides: BannerLinkSlide[] = (config.youversBanner?.slides || []).map(s => ({
+        id: s.id,
+        mediaUrl: s.imageUrl,
+        mediaType: 'image' as const,
+        focalX: s.focalX,
+        focalY: s.focalY,
+        zoom: s.zoom,
+        title: s.title,
+        targetUrl: s.targetUrl
+    }));
 
     const upcomingEventos = eventos
         .filter(e => new Date(`${e.startDate}T${e.startTime || '00:00'}`).getTime() > now)
@@ -981,7 +1020,21 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                 <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 mb-4">
                                     ¡Acá encontrarás nuestras canciones más recientes de Origen Música! Clickeá la canción para conocer más.
                                 </p>
-                                <MusicaCarousel slides={musicaSlides} />
+                                <BannerLinkCarousel slides={musicaSlides} />
+                            </div>
+                        )}
+
+                        {/* === ORIGEN EN YOUVERS — banner de imágenes clickeables ===
+                            Mismo formato y mismo carrusel que el de música; lo que
+                            cambia es de dónde salen los slides (la config, no una
+                            tabla) y que acá no hay video. */}
+                        {youversSlides.length > 0 && (
+                            <div className="lg:col-span-3">
+                                <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white">Origen en Youvers</h2>
+                                <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 mb-4">
+                                    ¡Acá podrás encontrar todos los devocionales de Origen Iglesia!
+                                </p>
+                                <BannerLinkCarousel slides={youversSlides} />
                             </div>
                         )}
 

@@ -5,7 +5,6 @@ import { supabaseService } from '../../services/supabaseService';
 import {
     GrupoConDatos,
     PastillaEstado,
-    Segmentado,
     Rotulo,
     TarjetaVacia,
     conComa,
@@ -48,27 +47,22 @@ const GruposCoordinador: React.FC<Props> = ({
     onRefrescar,
 }) => {
     const [busqueda, setBusqueda] = useState('');
-    const [filtro, setFiltro] = useState<'activos' | 'finalizados'>('activos');
     const [abiertoId, setAbiertoId] = useState<string | null>(null);
     const [aviso, setAviso] = useState('');
 
     // Llegar desde una alerta de Inicio o desde el calendario abre la ficha
-    // directamente, y el filtro se acomoda para que el grupo exista en la
-    // lista a la que se vuelve.
+    // directamente.
     useEffect(() => {
         if (!preseleccionado) return;
         const encontrado = datos.find(d => d.grupo.id === preseleccionado);
-        if (encontrado) {
-            setAbiertoId(encontrado.grupo.id);
-            setFiltro(encontrado.finalizado ? 'finalizados' : 'activos');
-        }
+        if (encontrado) setAbiertoId(encontrado.grupo.id);
         onLimpiarPreseleccion();
     }, [preseleccionado, datos, onLimpiarPreseleccion]);
 
-    const delFiltro = useMemo(
-        () => datos.filter(d => (filtro === 'activos' ? !d.finalizado : d.finalizado)),
-        [datos, filtro]
-    );
+    // `datos` ya viene recortado al año y la temporada elegidos arriba: el
+    // viejo "Activos / Finalizados" quedó dentro de ese filtro. Cada grupo
+    // sigue diciendo en su pastilla si está activo o finalizado.
+    const delFiltro = datos;
 
     const listados = useMemo(() => {
         const q = busqueda.trim().toLowerCase();
@@ -121,27 +115,18 @@ const GruposCoordinador: React.FC<Props> = ({
                         </button>
                     )}
                 </div>
-                <Segmentado
-                    valor={filtro}
-                    onChange={v => setFiltro(v as 'activos' | 'finalizados')}
-                    fondo="bg-[#eceae6]"
-                    opciones={[
-                        { valor: 'activos', label: 'Activos' },
-                        { valor: 'finalizados', label: 'Finalizados' },
-                    ]}
-                />
             </div>
 
             <p className="mx-0.5 mt-3.5 text-[12px] font-semibold text-black/[.62]">
-                {listados.length} de {delFiltro.length} grupos {filtro} de tus categorías
+                {listados.length} de {delFiltro.length} grupos de tus categorías en esta temporada
             </p>
 
             {listados.length === 0 ? (
                 <div className="mt-3">
                     <TarjetaVacia
-                        titulo={delFiltro.length === 0 ? `No hay grupos ${filtro}` : 'Ningún grupo coincide'}
+                        titulo={delFiltro.length === 0 ? 'No hay grupos en esta temporada' : 'Ningún grupo coincide'}
                         texto={delFiltro.length === 0
-                            ? `Cuando un grupo de ${nombreCategorias || 'tus categorías'} pase a ${filtro === 'activos' ? 'activo' : 'finalizado'} va a aparecer acá.`
+                            ? `Probá con otro año o temporada arriba para ver los grupos de ${nombreCategorias || 'tus categorías'}.`
                             : `Recordá que solo ves los grupos de tus categorías: ${nombreCategorias}.`}
                     >
                         {busqueda && (
