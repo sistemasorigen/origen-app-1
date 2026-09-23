@@ -17,7 +17,9 @@ import { hasRole } from '../../services/authUtils';
 import {
     GrupoConDatos,
     esGrupoFinalizado,
+    estaAprobado,
     lugaresOcupados,
+    personasDeGrupo,
     categoriaDe,
     nombreAnfitrion,
     Recorte,
@@ -109,8 +111,8 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
     const [tags, setTags] = useState<GroupTag[]>([]);
     const [dropouts, setDropouts] = useState<DropoutRequest[]>([]);
     const [asistencias, setAsistencias] = useState<{ groupId: string; date: string; presentMembers: string[] }[]>([]);
-    // La asistencia de TODOS los grupos aprobados y la temporada de cada uno:
-    // con eso se saca el promedio de la iglesia de la temporada elegida.
+    // La asistencia de TODOS los grupos y la temporada de cada uno: con eso
+    // se saca el promedio de la iglesia de la temporada elegida.
     const [asistenciaIglesia, setAsistenciaIglesia] = useState<{ groupId: string; presentMembers: string[] }[]>([]);
     const [temporadaPorGrupo, setTemporadaPorGrupo] = useState<Map<string, string>>(new Map());
     const [cargando, setCargando] = useState(true);
@@ -214,14 +216,12 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
             const idsMios = new Set(mios.map(g => g.id));
             setDropouts(bajas.filter(d => idsMios.has(d.groupId)));
 
-            // La asistencia se pide de TODOS los grupos aprobados, no solo de
-            // los del coordinador: con eso se calcula el promedio de la
-            // iglesia, que es la vara contra la que se lee cada grupo. Es una
-            // sola consulta y sirve para las dos cosas.
-            const idsAprobados = todosLosGrupos
-                .filter(g => g.status === 'approved' || (g.status as string) === 'finished')
-                .map(g => g.id);
-            const historial = await supabaseService.getAttendanceHistoryForGroups(idsAprobados);
+            // La asistencia se pide de TODOS los grupos, no solo de los del
+            // coordinador: con eso se calcula el promedio de la iglesia, que
+            // es la vara contra la que se lee cada grupo. Es una sola
+            // consulta y sirve para las dos cosas. Tampoco se filtra por
+            // estado: si un grupo cargó asistencia, esa asistencia existe.
+            const historial = await supabaseService.getAttendanceHistoryForGroups(todosLosGrupos.map(g => g.id));
 
             setAsistencias(historial.filter(a => idsMios.has(a.groupId)));
             setAsistenciaIglesia(historial);
@@ -255,8 +255,13 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
         const bajasPorGrupo = new Map<string, number>();
         dropouts.forEach(d => bajasPorGrupo.set(d.groupId, (bajasPorGrupo.get(d.groupId) || 0) + 1));
 
+        // El único recorte es la temporada y el año que se están mirando: un
+        // grupo entra por su fecha de arranque, no por su estado. Antes se
+        // pedía además que estuviera aprobado o finalizado, y eso escondía
+        // del panel a los que están esperando aprobación — justo los que un
+        // coordinador querría ver venir. Cada tarjeta dice en qué estado
+        // está, así que el dato no se pierde.
         return grupos
-            .filter(g => g.status === 'approved' || (g.status as string) === 'finished')
             .filter(g => temporadaPorGrupo.get(g.id) === clave)
             .map(grupo => {
                 const reportes = (porGrupo.get(grupo.id) || []).sort((a, b) => b.fecha.localeCompare(a.fecha));
@@ -264,6 +269,7 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
                 return {
                     grupo,
                     ocupados: lugaresOcupados(grupo, categories, tags),
+                    personas: personasDeGrupo(grupo),
                     capacidad: grupo.maxCapacity || grupo.maxMembers || 0,
                     reportes,
                     promedio: reportes.length > 0 ? presentes / reportes.length : 0,
@@ -293,7 +299,7 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
 
     // "Activos" = en curso (ya arrancó y no terminó): la insignia de
     // Asistencia cuenta sólo lo que todavía se puede resolver con una llamada.
-    const activos = useMemo(() => datos.filter(d => !d.finalizado && yaArranco(d.grupo)), [datos]);
+    const activos = useMemo(() => datos.filter(d => !d.finalizado && yaArranco(d.grupo) && estaAprobado(d.grupo)), [datos]);
     const sinReportar = useMemo(() => activos.filter(d => !d.reporta), [activos]);
 
     // Pastillas de alcance: cuántos grupos activos tiene cada categoría. Un

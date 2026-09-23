@@ -9,8 +9,10 @@ import {
     TortaTramos,
     armarTorta,
     conComa,
+    estaAprobado,
     fechasDeEncuentro,
     iniciales,
+    personasDeInscripcion,
     yaArranco,
 } from './comunes';
 
@@ -68,23 +70,12 @@ const tortaDePersonas = (grupos: GrupoConDatos[]): TortaDeTramos => {
         }));
 
         (d.grupo.registrations || []).forEach(r => {
-            if (r.status === 'REJECTED') return;
+            // Sólo aprobadas, la misma base que el indicador "Inscriptos" y
+            // que el tablero de reportes: así el total de esta torta y el de
+            // la tarjeta hablan de la misma gente.
+            if (r.status !== 'APPROVED') return;
 
-            // Misma convención de ids que group_attendance: el titular es el
-            // id de la inscripción y la pareja lleva el sufijo '-partner'.
-            const gente = [{ clave: r.userId || r.email || `reg-${r.id}`, id: String(r.id) }];
-            if (r.partnerData) {
-                const pd = r.partnerData;
-                gente.push({
-                    clave: r.partnerUserId
-                        || pd.email
-                        || `${pd.firstName || ''}${pd.lastName || ''}`
-                        || `pareja-${r.id}`,
-                    id: `${r.id}-partner`,
-                });
-            }
-
-            gente.forEach(({ clave, id }) => {
+            personasDeInscripcion(r).forEach(({ clave, id }) => {
                 const acc = porPersona.get(clave) || { veces: 0, posibles: 0, sinCarga: false };
                 if (cargadas > 0) {
                     acc.veces += vecesPorId.get(id) || 0;
@@ -127,14 +118,31 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
     // los que ya arrancaron y todavía no terminaron, y sólo con ellos tiene
     // sentido decidir a quién llamar: en una temporada pasada o por arrancar
     // esa tarjeta no aparece.
-    const enCurso = useMemo(() => datos.filter(d => !d.finalizado && yaArranco(d.grupo)), [datos]);
-    const porArrancar = useMemo(() => datos.filter(d => !yaArranco(d.grupo)), [datos]);
-    const finalizados = useMemo(() => datos.filter(d => d.finalizado), [datos]);
-    // Un grupo que no arrancó no "falta reportar": no tuvo reuniones.
-    const sinReportar = useMemo(() => datos.filter(d => !d.reporta && yaArranco(d.grupo)), [datos]);
+    const enCurso = useMemo(() => datos.filter(d => !d.finalizado && yaArranco(d.grupo) && estaAprobado(d.grupo)), [datos]);
+    // Los cuatro grupos de la tarjeta "Grupos" no se pisan entre sí, así la
+    // línea de abajo da siempre el total: sin aprobar primero, y el resto
+    // repartido entre por arrancar, en curso y finalizados.
+    const sinAprobar = useMemo(() => datos.filter(d => !estaAprobado(d.grupo)), [datos]);
+    const porArrancar = useMemo(() => datos.filter(d => estaAprobado(d.grupo) && !yaArranco(d.grupo)), [datos]);
+    const finalizados = useMemo(() => datos.filter(d => estaAprobado(d.grupo) && d.finalizado), [datos]);
+    // Un grupo que no arrancó no "falta reportar": no tuvo reuniones. Uno sin
+    // aprobar tampoco: no puede cargarlas aunque quiera.
+    const sinReportar = useMemo(() => datos.filter(d => !d.reporta && yaArranco(d.grupo) && estaAprobado(d.grupo)), [datos]);
     const conReporte = useMemo(() => datos.filter(d => d.reporta), [datos]);
 
-    const inscriptos = datos.reduce((s, d) => s + d.ocupados, 0);
+    // "Inscriptos" cuenta PERSONAS, con la misma identidad que "Personas
+    // únicas" de /reportes/gcx: quien está en dos de sus grupos es una sola
+    // persona. Por eso no es la suma de las barras de abajo — cada barra
+    // cuenta a esa persona en su grupo — y `repetidos` lo dice en la tarjeta
+    // en vez de dejar la diferencia sin explicar.
+    const { inscriptos, repetidos } = useMemo(() => {
+        const veces = new Map<string, number>();
+        datos.forEach(d => d.personas.forEach(clave => veces.set(clave, (veces.get(clave) || 0) + 1)));
+        let enVarios = 0;
+        veces.forEach(v => { if (v > 1) enVarios += 1; });
+        return { inscriptos: veces.size, repetidos: enVarios };
+    }, [datos]);
+
     const promedio = conReporte.length
         ? conReporte.reduce((s, d) => s + d.promedio, 0) / conReporte.length
         : 0;
@@ -155,7 +163,7 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
         const marcados = enCurso
             .map(d => ({ d, p: puntaje(d) }))
             .filter(x => x.p > 0)
-            .sort((a, b) => (b.p - a.p) || (b.d.ocupados - a.d.ocupados));
+            .sort((a, b) => (b.p - a.p) || (b.d.personas.length - a.d.personas.length));
 
         // Se nombran tres: una lista de veinte no es una lista de llamados,
         // es otra tabla. El total va en el título y el resto, en Asistencia.
@@ -192,7 +200,7 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
 
     // ── Gráfico ───────────────────────
     const barras = useMemo(() => {
-        const valor = (d: GrupoConDatos) => metrica === 'inscriptos' ? d.ocupados : d.bajas;
+        const valor = (d: GrupoConDatos) => metrica === 'inscriptos' ? d.personas.length : d.bajas;
         const maximo = Math.max(1, ...datos.map(valor));
         return [...datos]
             .sort((a, b) => valor(b) - valor(a))
@@ -213,7 +221,9 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
     // Miran los grupos que YA ARRANCARON, finalizados incluidos. Los que
     // todavía no tuvieron su primer encuentro no tienen asistencia que medir:
     // contarlos hundiría las tres tortas al abrir una temporada por empezar.
-    const conArranque = useMemo(() => datos.filter(d => yaArranco(d.grupo)), [datos]);
+    // Los que esperan aprobación tampoco: no pueden cargar una reunión, así
+    // que figurarían como grupos que nunca reportaron.
+    const conArranque = useMemo(() => datos.filter(d => yaArranco(d.grupo) && estaAprobado(d.grupo)), [datos]);
 
     const personasTemporada = useMemo(() => tortaDePersonas(conArranque), [conArranque]);
     const gruposTemporada = useMemo(() => tortaDeGrupos(conArranque), [conArranque]);
@@ -346,6 +356,7 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
                             enCurso.length > 0 && `${enCurso.length} ${enCurso.length === 1 ? 'activo' : 'activos'}`,
                             porArrancar.length > 0 && `${porArrancar.length} por arrancar`,
                             finalizados.length > 0 && `${finalizados.length} ${finalizados.length === 1 ? 'finalizado' : 'finalizados'}`,
+                            sinAprobar.length > 0 && `${sinAprobar.length} sin aprobar`,
                         ].filter(Boolean).join(' · ') || 'Sin grupos'}
                     </p>
                 </div>
@@ -356,6 +367,11 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
                     <p className="mt-2 text-[12px] font-medium text-black/[.62]">
                         {dropouts.length} {dropouts.length === 1 ? 'baja' : 'bajas'} en la temporada
                     </p>
+                    {repetidos > 0 && (
+                        <p className="mt-1 text-[12px] font-medium text-black/[.5]">
+                            {repetidos === 1 ? 'Una persona está' : `${repetidos} personas están`} en más de un grupo y {repetidos === 1 ? 'cuenta' : 'cuentan'} una vez
+                        </p>
+                    )}
                 </div>
 
                 <div className="min-w-0 rounded-[18px] bg-white px-[18px] py-4">

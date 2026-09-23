@@ -9,6 +9,7 @@ import {
     nombreAnfitrion,
     primeraReunion,
     primerNombre,
+    estaAprobado,
     yaArranco,
 } from './comunes';
 
@@ -53,7 +54,10 @@ const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbri
     // cuarenta y pico de golpe, todos en falta por existir. Quedan fuera de
     // la cobertura y de los llamados, y tienen su propio bloque con la fecha
     // en la que van a entrar.
-    const enCurso = delFiltro.filter(d => yaArranco(d.grupo));
+    // Tampoco entran los que todavía esperan la aprobación de un admin: sin
+    // aprobar no reciben inscripciones ni pueden cargar reuniones, así que no
+    // están en falta. Siguen listados en Grupos, con su pastilla.
+    const enCurso = delFiltro.filter(d => yaArranco(d.grupo) && estaAprobado(d.grupo));
 
     const conReporte = enCurso.filter(d => d.reporta);
     const sinReportar = enCurso.filter(d => !d.reporta);
@@ -366,7 +370,7 @@ const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbri
                                 >
                                     <p className="truncate text-[13.5px] font-semibold text-[#0a0a0a]">{d.grupo.name}</p>
                                     <p className="mt-[3px] truncate text-[12px] font-medium text-black/[.64]">
-                                        {nombreAnfitrion(d.grupo)} · {d.ocupados} {d.ocupados === 1 ? 'inscripto' : 'inscriptos'}, ningún reporte
+                                        {nombreAnfitrion(d.grupo)} · {d.personas.length} {d.personas.length === 1 ? 'inscripto' : 'inscriptos'}, ningún reporte
                                     </p>
                                 </button>
                                 <button
@@ -404,7 +408,7 @@ const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbri
                                 >
                                     <p className="truncate text-[13.5px] font-semibold text-[#0a0a0a]">{d.grupo.name}</p>
                                     <p className="mt-[3px] truncate text-[12px] font-medium text-black/[.64]">
-                                        {nombreAnfitrion(d.grupo)} · {d.ocupados} {d.ocupados === 1 ? 'inscripto' : 'inscriptos'}
+                                        {nombreAnfitrion(d.grupo)} · {d.personas.length} {d.personas.length === 1 ? 'inscripto' : 'inscriptos'}
                                     </p>
                                 </button>
                                 <span className="flex h-[38px] flex-none items-center rounded-full bg-white px-4 text-[12.5px] font-semibold text-black/[.62]">

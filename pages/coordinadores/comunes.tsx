@@ -1,5 +1,5 @@
 import React from 'react';
-import { Group, GroupCategory, GroupTag, TemporadaGCX } from '../../types';
+import { Group, GroupCategory, GroupRegistration, GroupTag, TemporadaGCX } from '../../types';
 import { getSeasonFromDate } from '../../services/supabaseService';
 
 /**
@@ -168,6 +168,50 @@ export const lugaresOcupados = (
     return esParejas ? inscriptos * 2 : inscriptos;
 };
 
+/**
+ * Las personas de una inscripción: el titular y, si la hay, la pareja.
+ *
+ * Es la misma identidad que "Personas únicas" de /reportes/gcx
+ * (`personasDeInscripcion` en supabaseService): la cuenta de la persona y,
+ * si no tiene, su mail; para la pareja, su cuenta, su mail o su nombre. Así
+ * quien está en dos grupos es UNA persona en los dos tableros.
+ *
+ * `id` es cómo figura en group_attendance: el id de la inscripción, y la
+ * pareja con el sufijo "-partner".
+ */
+export const personasDeInscripcion = (r: GroupRegistration): Array<{ clave: string; id: string }> => {
+    const gente = [{ clave: r.userId || r.email || `reg-${r.id}`, id: String(r.id) }];
+    if (r.partnerData) {
+        const pd = r.partnerData;
+        gente.push({
+            clave: r.partnerUserId
+                || pd.email
+                || `${pd.firstName || ''}${pd.lastName || ''}`
+                || `pareja-${r.id}`,
+            id: `${r.id}-partner`,
+        });
+    }
+    return gente;
+};
+
+/**
+ * Quiénes están inscriptos en un grupo, sin repetir.
+ *
+ * Sólo las inscripciones aprobadas, igual que el tablero de reportes: una
+ * pendiente todavía no es un lugar ocupado por nadie. Es lo que mide el
+ * indicador "Inscriptos" del panel, y por eso puede no coincidir con el
+ * cupo: el cupo cuenta lugares (una inscripción de parejas ocupa dos
+ * aunque venga sola) y esto cuenta personas.
+ */
+export const personasDeGrupo = (g: Group): string[] => {
+    const claves = new Set<string>();
+    (g.registrations || []).forEach(r => {
+        if (r.status !== 'APPROVED') return;
+        personasDeInscripcion(r).forEach(({ clave }) => claves.add(clave));
+    });
+    return [...claves];
+};
+
 export const nombreAnfitrion = (g: Group): string =>
     `${g.leaderName || ''} ${g.leaderSurname || ''}`.trim() || 'Sin anfitrión';
 
@@ -226,7 +270,15 @@ export interface Senal {
 
 export interface GrupoConDatos {
     grupo: Group;
+    /** Lugares ocupados del cupo: en parejas, una inscripción ocupa dos. */
     ocupados: number;
+    /**
+     * La identidad de cada persona inscripta, sin repetir. Es la misma que
+     * "Personas únicas" de /reportes/gcx, así el panel y el tablero dan el
+     * mismo número. Se guardan las claves y no un total para poder unirlas
+     * entre grupos: quien está en dos es una sola persona.
+     */
+    personas: string[];
     capacidad: number;
     /** Reuniones con asistencia cargada, de la más nueva a la más vieja. */
     reportes: { fecha: string; presentes: number; ids: string[] }[];
@@ -238,8 +290,32 @@ export interface GrupoConDatos {
     categoria: string;
 }
 
+/**
+ * Un grupo que ya pasó por la aprobación de un admin.
+ *
+ * El panel los muestra a todos —el recorte es la temporada, no el estado—,
+ * pero a un grupo sin aprobar no se le puede reclamar la asistencia: no
+ * recibe inscripciones ni puede cargar reuniones. Por eso no cuenta como
+ * "sin reportar" ni entra en la lista de llamados.
+ */
+export const estaAprobado = (g: Group): boolean =>
+    g.status === 'approved' || g.status === 'finished';
+
 export const leerSenal = (g: GrupoConDatos, promedioIglesia: number): Senal => {
     const nombre = primerNombre(nombreAnfitrion(g.grupo));
+
+    if (!estaAprobado(g.grupo)) {
+        const rechazado = g.grupo.status === 'rejected';
+        return {
+            tono: 'ambar',
+            texto: rechazado ? 'Rechazado' : 'Esperando aprobación',
+            titulo: rechazado ? 'Rechazado' : 'Esperando aprobación',
+            detalle: rechazado
+                ? 'Un admin rechazó este grupo, así que no recibe inscripciones ni carga asistencia. Aparece acá porque su fecha de arranque cae en esta temporada.'
+                : `Todavía no lo aprobó un admin de grupos. Hasta que eso pase no recibe inscripciones ni puede cargar asistencia, así que no hay nada que reclamarle a ${nombre}.`,
+            accion: rechazado ? 'No hay nada que hacer' : 'Avisarle a un admin de grupos',
+        };
+    }
 
     if (!g.reporta) {
         return {
@@ -277,15 +353,28 @@ export const leerSenal = (g: GrupoConDatos, promedioIglesia: number): Senal => {
 
 // ── Piezas visuales ───────────────────
 
-/** Pastilla de estado: activo o finalizado. */
-export const PastillaEstado: React.FC<{ finalizado: boolean }> = ({ finalizado }) => (
-    <span
-        className={`flex h-[26px] flex-none items-center gap-1.5 whitespace-nowrap rounded-full px-[11px] text-[11.5px] font-semibold ${finalizado ? 'bg-[#f0efec] text-black/[.62]' : 'bg-[#e7f5ee] text-[#0b7a53]'}`}
-    >
-        <span className={`h-1.5 w-1.5 flex-none rounded-full ${finalizado ? 'bg-[#8f8f8a]' : 'bg-[#16a34a]'}`} />
-        {finalizado ? 'Finalizado' : 'Activo'}
-    </span>
-);
+/**
+ * Pastilla de estado: activo, finalizado, o el estado de aprobación.
+ *
+ * El panel muestra todos los grupos de la temporada, también los que
+ * todavía esperan la aprobación de un admin y los que fueron rechazados.
+ * Uno de esos no es un grupo "activo" aunque su fecha de arranque ya haya
+ * pasado, así que dice lo que es. Va en gris a propósito: en este panel el
+ * ámbar significa "llamá a alguien", y aprobar un grupo no le toca al
+ * coordinador.
+ */
+export const PastillaEstado: React.FC<{ finalizado: boolean; estado?: Group['status'] }> = ({ finalizado, estado }) => {
+    const sinAprobar = estado === 'pending' || estado === 'rejected';
+    const apagada = finalizado || sinAprobar;
+    return (
+        <span
+            className={`flex h-[26px] flex-none items-center gap-1.5 whitespace-nowrap rounded-full px-[11px] text-[11.5px] font-semibold ${apagada ? 'bg-[#f0efec] text-black/[.62]' : 'bg-[#e7f5ee] text-[#0b7a53]'}`}
+        >
+            <span className={`h-1.5 w-1.5 flex-none rounded-full ${apagada ? 'bg-[#8f8f8a]' : 'bg-[#16a34a]'}`} />
+            {estado === 'pending' ? 'Sin aprobar' : estado === 'rejected' ? 'Rechazado' : finalizado ? 'Finalizado' : 'Activo'}
+        </span>
+    );
+};
 
 /** Botón segmentado de los pares Inscriptos/Bajas y Activos/Finalizados. */
 export const Segmentado: React.FC<{

@@ -420,7 +420,7 @@ const TarjetaGrupo: React.FC<{
                     </p>
                     <p className="mt-[3px] truncate text-[12.5px] font-medium text-black/[.62]">{dato.categoria}</p>
                 </div>
-                <PastillaEstado finalizado={finalizado} />
+                <PastillaEstado finalizado={finalizado} estado={grupo.status} />
             </div>
 
             <p className="mt-3 truncate text-[13px] font-medium text-black/[.66]">{anfitrion}</p>
@@ -592,7 +592,7 @@ const FichaGrupo: React.FC<{
                             <h2 className="text-[20px] font-semibold tracking-[-0.018em] text-[#0a0a0a]">
                                 {grupo.name || 'Sin nombre'}
                             </h2>
-                            <PastillaEstado finalizado={finalizado} />
+                            <PastillaEstado finalizado={finalizado} estado={grupo.status} />
                         </div>
 
                         <button
