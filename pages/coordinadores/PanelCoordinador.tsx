@@ -234,7 +234,6 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
             modalidad: m,
             cantidad: suyos.length,
             personas: tortaDePersonas(suyos),
-            grupos: tortaDeGrupos(suyos),
         };
     }), [conArranque]);
 
@@ -459,9 +458,12 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
             </div>
 
             {/* ── Por modalidad ───────────────────────────────────────────
-                Las mismas dos tortas, partidas en presencial, online e
-                híbrido. Una modalidad sin grupos ocupa un renglón, no dos
-                anillos vacíos — mismo criterio que /reportes/gcx. */}
+                Quién está asistiendo, partido en presencial, online e
+                híbrido. El "Reporte de asistencia" no se repite acá: es el
+                mismo de la tarjeta de arriba y bajaba tres veces seguidas
+                diciendo casi lo mismo. Una modalidad sin grupos ocupa un
+                renglón, no un anillo vacío — mismo criterio que
+                /reportes/gcx. */}
             <div className="mt-6">
                 <Rotulo className="mx-0.5 text-black/[.5]">Por modalidad</Rotulo>
                 <div className="mt-2.5 flex flex-col gap-3.5">
@@ -479,15 +481,9 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
                             </div>
 
                             {m.cantidad > 0 && (
-                                <div className="mt-5 flex flex-col gap-5">
-                                    <div>
-                                        <Rotulo className="mb-3 text-black/[.5]">Asistencia de personas</Rotulo>
-                                        <TortaTramos {...m.personas} etiqueta="asiste" rotuloBase="Personas" lado />
-                                    </div>
-                                    <div className="border-t border-[#f0efec] pt-5">
-                                        <Rotulo className="mb-3 text-black/[.5]">Reporte de asistencia</Rotulo>
-                                        <TortaTramos {...m.grupos} etiqueta="reporta" rotuloBase="Grupos" lado />
-                                    </div>
+                                <div className="mt-5">
+                                    <Rotulo className="mb-3 text-black/[.5]">Asistencia de personas</Rotulo>
+                                    <TortaTramos {...m.personas} etiqueta="asiste" rotuloBase="Personas" lado />
                                 </div>
                             )}
                         </div>
