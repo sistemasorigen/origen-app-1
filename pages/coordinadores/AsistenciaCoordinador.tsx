@@ -3,9 +3,13 @@ import {
     GrupoConDatos,
     Segmentado,
     conComa,
+    cuantoFalta,
     escribirlePorWhatsApp,
+    fechaLarga,
     nombreAnfitrion,
+    primeraReunion,
     primerNombre,
+    yaArranco,
 } from './comunes';
 
 /**
@@ -28,19 +32,41 @@ interface Props {
 
 const DE_A_20 = 20;
 
+/** Cuántos avisos de grupos por arrancar se muestran antes de plegar el resto. */
+const AVISOS_A_LA_VISTA = 8;
+
 const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbrirGrupo }) => {
     const [busqueda, setBusqueda] = useState('');
     const [nivel, setNivel] = useState<'todos' | 'alta' | 'baja'>('todos');
     const [abierto, setAbierto] = useState<string | null>(null);
     const [cuantos, setCuantos] = useState(DE_A_20);
     const [aviso, setAviso] = useState('');
+    const [todosLosAvisos, setTodosLosAvisos] = useState(false);
 
     // `datos` ya viene recortado al año y la temporada elegidos arriba: el
     // viejo "Activos / Finalizados" quedó dentro de ese filtro.
     const delFiltro = datos;
 
-    const conReporte = delFiltro.filter(d => d.reporta);
-    const sinReportar = delFiltro.filter(d => !d.reporta);
+    // Un grupo que todavía no tuvo su primer encuentro no "nunca cargó
+    // asistencia": no hubo nada que cargar. Antes entraban igual en la lista
+    // de llamados, y al abrir una temporada que no arrancó aparecían los
+    // cuarenta y pico de golpe, todos en falta por existir. Quedan fuera de
+    // la cobertura y de los llamados, y tienen su propio bloque con la fecha
+    // en la que van a entrar.
+    const enCurso = delFiltro.filter(d => yaArranco(d.grupo));
+
+    const conReporte = enCurso.filter(d => d.reporta);
+    const sinReportar = enCurso.filter(d => !d.reporta);
+
+    // Los que faltan arrancar, del más próximo al más lejano. La fecha que
+    // importa es la del primer encuentro, no la de arranque: es el día en que
+    // realmente se les puede pedir una asistencia.
+    const porArrancar = useMemo(() => delFiltro
+        .filter(d => !yaArranco(d.grupo))
+        .map(d => ({ d, fecha: primeraReunion(d.grupo) || d.grupo.startDate }))
+        .sort((a, b) => a.fecha.localeCompare(b.fecha)), [delFiltro]);
+
+    const avisosVisibles = todosLosAvisos ? porArrancar : porArrancar.slice(0, AVISOS_A_LA_VISTA);
 
     // Una fila por reunión reportada, de la más nueva a la más vieja.
     const reuniones = useMemo(() => {
@@ -146,11 +172,22 @@ const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbri
                             Cobertura del reporte
                         </p>
                         <p className="mt-2.5 text-[19px] font-semibold tracking-[-0.015em] text-white">
-                            {conReporte.length} de tus {delFiltro.length} grupos de la temporada cargan asistencia
+                            {enCurso.length === 0
+                                ? (porArrancar.length > 0
+                                    ? `Ninguno de tus ${delFiltro.length} grupos arrancó todavía`
+                                    : 'No tenés grupos en esta temporada')
+                                : `${conReporte.length} de tus ${enCurso.length} grupos en curso cargan asistencia`}
                         </p>
                         <p className="mt-2.5 text-[13px] font-medium leading-[1.6] text-white/70">
-                            Lo que ves abajo se calcula solo con esos grupos. Los que no reportan no aparecen en ningún
-                            promedio: por eso están listados aparte.
+                            {enCurso.length === 0
+                                ? (porArrancar[0]
+                                    ? `El primero es ${porArrancar[0].d.grupo.name || 'un grupo'}, que se reúne por primera vez el ${fechaLarga(porArrancar[0].fecha)}. Hasta entonces no hay asistencia que cargar.`
+                                    : 'Cuando haya grupos en curso vas a ver acá sus reportes.')
+                                : <>
+                                    Lo que ves abajo se calcula solo con esos grupos. Los que no reportan no aparecen
+                                    en ningún promedio: por eso están listados aparte.
+                                    {porArrancar.length > 0 && ` Otros ${porArrancar.length} todavía no arrancaron y no cuentan.`}
+                                </>}
                         </p>
                     </div>
                     <button
@@ -318,6 +355,7 @@ const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbri
                     <p className="mt-[7px] text-[12.5px] font-medium leading-[1.6] text-black/[.64]">
                         No es una sección vacía: es la lista de anfitriones a los que llamar. Ninguno de estos grupos
                         entra en los promedios de arriba{promedioIglesia > 0 ? `, que hoy dan ${conComa(promedioIglesia)} en toda la iglesia` : ''}.
+                        {porArrancar.length > 0 && ' Los que todavía no arrancaron están más abajo, no acá.'}
                     </p>
                     <div className="mt-4 flex flex-col gap-2">
                         {sinReportar.map(d => (
@@ -340,6 +378,52 @@ const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbri
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {/* Los que todavía no arrancaron — avisos, no llamados.
+                Neutro a propósito: en este panel el ámbar significa "hay que
+                llamar a alguien", y acá no hay nada que reclamar. */}
+            {porArrancar.length > 0 && (
+                <div className="mt-3.5 rounded-[20px] bg-white px-[22px] py-5">
+                    <p className="text-[15px] font-semibold text-[#0a0a0a]">
+                        {porArrancar.length === 1
+                            ? 'Un grupo todavía no arrancó'
+                            : `${porArrancar.length} grupos todavía no arrancaron`}
+                    </p>
+                    <p className="mt-[7px] text-[12.5px] font-medium leading-[1.6] text-black/[.64]">
+                        No están en falta: no tuvieron su primer encuentro. Cada uno pasa a la lista de arriba el día
+                        que le toca reunirse por primera vez.
+                    </p>
+                    <div className="mt-4 flex flex-col gap-2">
+                        {avisosVisibles.map(({ d, fecha }) => (
+                            <div key={d.grupo.id} className="flex flex-wrap items-center gap-3 rounded-[16px] bg-[#f7f7f5] px-[15px] py-3">
+                                <button
+                                    onClick={() => onAbrirGrupo(d.grupo.id)}
+                                    className="min-w-[150px] flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a]"
+                                >
+                                    <p className="truncate text-[13.5px] font-semibold text-[#0a0a0a]">{d.grupo.name}</p>
+                                    <p className="mt-[3px] truncate text-[12px] font-medium text-black/[.64]">
+                                        {nombreAnfitrion(d.grupo)} · {d.ocupados} {d.ocupados === 1 ? 'inscripto' : 'inscriptos'}
+                                    </p>
+                                </button>
+                                <span className="flex h-[38px] flex-none items-center rounded-full bg-white px-4 text-[12.5px] font-semibold text-black/[.62]">
+                                    <span className="first-letter:uppercase">{fechaLarga(fecha)}</span>
+                                    <span className="ml-1.5 font-medium text-black/[.45]">· {cuantoFalta(fecha)}</span>
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                    {porArrancar.length > AVISOS_A_LA_VISTA && (
+                        <button
+                            onClick={() => setTodosLosAvisos(v => !v)}
+                            className="mt-3 h-[38px] rounded-full bg-[#f2f2f0] px-4 text-[12.5px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                        >
+                            {todosLosAvisos
+                                ? 'Ver solo los próximos'
+                                : `Ver los ${porArrancar.length - AVISOS_A_LA_VISTA} restantes`}
+                        </button>
+                    )}
                 </div>
             )}
         </>

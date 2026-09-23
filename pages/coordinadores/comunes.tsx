@@ -63,6 +63,86 @@ export const recorteDeHoy = (): Recorte => {
 export const yaArranco = (g: Group): boolean =>
     !g.startDate || g.startDate <= new Date().toLocaleDateString('en-CA');
 
+const DIA_A_INDICE: Record<string, number> = {
+    'Domingo': 0, 'Lunes': 1, 'Martes': 2,
+    'Miércoles': 3, 'Miercoles': 3,
+    'Jueves': 4, 'Viernes': 5,
+    'Sábado': 6, 'Sabado': 6,
+};
+
+/**
+ * El día en que al grupo le toca su primer encuentro: el primer `meetingDay`
+ * que cae en o después de su fecha de arranque.
+ *
+ * No es lo mismo que `startDate`. Un grupo que arranca un lunes y se reúne
+ * los jueves recién debe su primera asistencia tres días después, y avisar
+ * el lunes sería avisar de algo que todavía no pasó.
+ *
+ * null si el grupo no tiene fecha o su día de encuentro no se entiende; el
+ * que llama decide con qué respaldarlo.
+ */
+export const primeraReunion = (g: Group): string | null => {
+    const indice = DIA_A_INDICE[g.meetingDay];
+    if (!g.startDate || indice === undefined) return null;
+
+    const cursor = new Date(g.startDate + 'T12:00:00');
+    if (Number.isNaN(cursor.getTime())) return null;
+
+    while (cursor.getDay() !== indice) cursor.setDate(cursor.getDate() + 1);
+    return cursor.toLocaleDateString('en-CA');
+};
+
+/**
+ * Todas las fechas en que al grupo le tocó reunirse, de la primera a la
+ * última, hasta hoy — o hasta su fecha de fin, si ya terminó.
+ *
+ * No deriva de `primeraReunion` ni al revés, aunque compartan el cálculo del
+ * primer día: ésta devuelve vacío para un grupo que todavía no arrancó (no
+ * tuvo ningún encuentro), y aquélla tiene que seguir respondiendo justamente
+ * en ese caso, que es para lo que existe.
+ */
+export const fechasDeEncuentro = (g: Group): string[] => {
+    const indice = DIA_A_INDICE[g.meetingDay];
+    if (!g.startDate || indice === undefined) return [];
+
+    const inicio = new Date(g.startDate + 'T12:00:00');
+    if (Number.isNaN(inicio.getTime())) return [];
+
+    const hoy = new Date().toLocaleDateString('en-CA');
+    const limite = new Date((g.endDate && g.endDate < hoy ? g.endDate : hoy) + 'T12:00:00');
+    if (Number.isNaN(limite.getTime()) || limite < inicio) return [];
+
+    const cursor = new Date(inicio);
+    while (cursor.getDay() !== indice) cursor.setDate(cursor.getDate() + 1);
+
+    const fechas: string[] = [];
+    while (cursor <= limite) {
+        fechas.push(cursor.toLocaleDateString('en-CA'));
+        cursor.setDate(cursor.getDate() + 7);
+    }
+    return fechas;
+};
+
+/** "jueves 1 de octubre". Mismo formato que las fechas de los reportes. */
+export const fechaLarga = (fecha: string): string =>
+    new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', {
+        weekday: 'long', day: 'numeric', month: 'long',
+    });
+
+/**
+ * Cuánto falta para una fecha, en palabras. Se compara a mediodía de los dos
+ * lados para que el cambio de horario de verano no corra un día el resultado.
+ */
+export const cuantoFalta = (fecha: string): string => {
+    const hoy = new Date(new Date().toLocaleDateString('en-CA') + 'T12:00:00');
+    const dias = Math.round((new Date(fecha + 'T12:00:00').getTime() - hoy.getTime()) / 86400000);
+    if (dias <= 0) return 'hoy';
+    if (dias === 1) return 'mañana';
+    if (dias < 7) return `en ${dias} días`;
+    const semanas = Math.round(dias / 7);
+    return semanas === 1 ? 'en una semana' : `en ${semanas} semanas`;
+};
+
 // ── Estado de un grupo ────────────────
 export const esGrupoFinalizado = (g: Group): boolean => {
     if ((g.status as string) === 'finished') return true;
@@ -233,6 +313,140 @@ export const Segmentado: React.FC<{
 export const Rotulo: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
     <p className={`text-[11px] font-semibold uppercase tracking-[0.07em] ${className}`}>{children}</p>
 );
+
+// ── Tramos de asistencia ──────────────
+
+/**
+ * Los cinco tramos de "cuántas veces", en el mismo orden que /reportes/gcx.
+ *
+ * La rampa sí cambia. Allá son azules porque el azul es el color del tablero
+ * y no quiere decir nada; acá el color quiere decir algo — verde es "esto
+ * viene bien", ámbar es "hay que llamar a alguien". Así que va del verde de
+ * "estuvo en todas" al ámbar de "no estuvo en ninguna", con el mismo verde
+ * cada vez más lavado en el medio.
+ */
+export const TRAMOS_ASISTENCIA = [
+    { clave: 'todas', nombre: 'A todas', color: VERDE },
+    { clave: 'seisOMas', nombre: '6 o más veces', color: '#3f9b78' },
+    { clave: 'cuatroACinco', nombre: '4 a 5 veces', color: '#79bc9f' },
+    { clave: 'unaATres', nombre: '1 a 3 veces', color: '#b6dbc8' },
+    { clave: 'ninguna', nombre: 'Ninguna', color: AMBAR_BARRA },
+] as const;
+
+export type ClaveTramo = typeof TRAMOS_ASISTENCIA[number]['clave'];
+export type TramosContados = Record<ClaveTramo, number>;
+
+/** Lo que necesita una torta para dibujarse: los cinco tramos y su base. */
+export interface TortaDeTramos {
+    conteo: TramosContados;
+    total: number;
+    pct: number;
+}
+
+/**
+ * Reparte cosas contables —personas o grupos— en los cinco tramos.
+ *
+ * `completo` lo decide quien llama y no sale de `veces >= posibles`. Para un
+ * grupo, "a todas" es no haberse salteado ninguna de las reuniones que le
+ * tocaban, y una reunión corrida de día suma en `veces` sin tapar el hueco
+ * que dejó la que faltó. Es justamente la cuenta que /reportes/gcx hace mal.
+ */
+export const clasificarTramos = (items: Array<{ veces: number; completo: boolean }>): TramosContados => {
+    const acc: TramosContados = { todas: 0, seisOMas: 0, cuatroACinco: 0, unaATres: 0, ninguna: 0 };
+    items.forEach(({ veces, completo }) => {
+        if (veces === 0) acc.ninguna += 1;
+        else if (completo) acc.todas += 1;
+        else if (veces >= 6) acc.seisOMas += 1;
+        else if (veces >= 4) acc.cuatroACinco += 1;
+        else acc.unaATres += 1;
+    });
+    return acc;
+};
+
+/** Cierra el trío que pide una torta: los tramos, la base y el % del centro. */
+export const armarTorta = (items: Array<{ veces: number; completo: boolean }>): TortaDeTramos => {
+    const conteo = clasificarTramos(items);
+    const total = items.length;
+    return { conteo, total, pct: total > 0 ? Math.round(((total - conteo.ninguna) / total) * 100) : 0 };
+};
+
+const R_TORTA = 48;
+const GROSOR_TORTA = 18;
+const VUELTA = 2 * Math.PI * R_TORTA;
+
+/**
+ * El anillo de tramos con su leyenda.
+ *
+ * Es SVG a mano y no Recharts: el panel de coordinación no lo importa en
+ * ningún lado, y un anillo de cinco arcos no justifica traer la librería.
+ *
+ * `lado` pone el anillo al costado de la leyenda de 640px para arriba. Lo
+ * usan las tarjetas a lo ancho del panel; en la columna angosta de una ficha
+ * las dos cosas no entran, así que ahí se apila siempre.
+ */
+export const TortaTramos: React.FC<TortaDeTramos & {
+    etiqueta: string;
+    rotuloBase: string;
+    lado?: boolean;
+}> = ({ conteo, total, pct, etiqueta, rotuloBase, lado = false }) => {
+    // El largo de cada arco se mide sobre la posición acumulada y no de a uno:
+    // así los arcos cierran la vuelta exacta en vez de dejar una hendija de
+    // medio píxel entre tramo y tramo.
+    let recorrido = 0;
+    const arcos = TRAMOS_ASISTENCIA.map(t => {
+        const valor = conteo[t.clave];
+        const desde = (recorrido / Math.max(1, total)) * VUELTA;
+        recorrido += valor;
+        const hasta = (recorrido / Math.max(1, total)) * VUELTA;
+        return { ...t, valor, desde, largo: hasta - desde };
+    });
+
+    return (
+        <div className={lado ? 'flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-7' : ''}>
+            <div className={`relative mx-auto h-[168px] w-[168px] flex-none ${lado ? 'sm:mx-0 sm:h-[152px] sm:w-[152px]' : 'sm:h-[186px] sm:w-[186px]'}`}>
+                <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
+                    <circle cx="60" cy="60" r={R_TORTA} fill="none" stroke="#eceae6" strokeWidth={GROSOR_TORTA} />
+                    {arcos.filter(a => a.valor > 0).map(a => (
+                        <circle
+                            key={a.clave}
+                            cx="60" cy="60" r={R_TORTA}
+                            fill="none"
+                            stroke={a.color}
+                            strokeWidth={GROSOR_TORTA}
+                            strokeDasharray={`${a.largo} ${VUELTA - a.largo}`}
+                            strokeDashoffset={-a.desde}
+                        />
+                    ))}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[32px] font-semibold tracking-[-0.035em] text-[#0a0a0a]">{pct}%</span>
+                    <span className="mt-[3px] text-[11.5px] font-medium text-black/[.5]">{etiqueta}</span>
+                </div>
+            </div>
+
+            <div className="min-w-0 flex-1">
+                {arcos.map(a => (
+                    <div key={a.clave} className="flex items-center gap-2.5 border-b border-[#f4f3f1] py-[9px]">
+                        <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: a.color }} />
+                        <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-black/[.72]">
+                            {a.nombre}
+                        </span>
+                        <span className="flex-none text-[12.5px] font-semibold tabular-nums text-[#0a0a0a]">
+                            {a.valor}
+                        </span>
+                        <span className="w-[38px] flex-none text-right text-[12px] font-medium tabular-nums text-black/[.45]">
+                            {total > 0 ? Math.round((a.valor / total) * 100) : 0}%
+                        </span>
+                    </div>
+                ))}
+                <div className="flex items-center justify-between gap-3 pt-[11px]">
+                    <span className="text-[12.5px] font-medium text-black/[.62]">{rotuloBase}</span>
+                    <span className="text-[12.5px] font-semibold tabular-nums text-[#0a0a0a]">{total}</span>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 /** Tarjeta blanca de estado vacío. */
 export const TarjetaVacia: React.FC<{

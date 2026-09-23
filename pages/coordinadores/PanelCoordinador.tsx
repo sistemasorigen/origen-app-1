@@ -1,10 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { DropoutRequest } from '../../types';
+import { DropoutRequest, ModalidadGrupo } from '../../types';
+import { MODALIDADES, NOMBRE_MODALIDAD, modalidadDe } from '../../src/utils/modalidad';
 import {
     GrupoConDatos,
     Segmentado,
     Rotulo,
+    TortaDeTramos,
+    TortaTramos,
+    armarTorta,
     conComa,
+    fechasDeEncuentro,
     iniciales,
     yaArranco,
 } from './comunes';
@@ -30,6 +35,87 @@ interface Props {
 }
 
 const POR_PAGINA = 20;
+
+const PLURAL_MODALIDAD: Record<ModalidadGrupo, string> = {
+    presencial: 'presenciales',
+    online: 'online',
+    hibrido: 'híbridos',
+};
+
+/**
+ * Cuántas veces vino cada persona de estos grupos.
+ *
+ * Es la torta "Asistencia de personas" de /reportes/gcx recortada a las
+ * categorías del coordinador. Una persona cuenta UNA vez aunque esté en dos
+ * de sus grupos: se la identifica por su cuenta, o por su mail si no tiene,
+ * y sus veces se suman entre todos sus grupos. Sin ese cuidado, quien está en
+ * dos grupos pesaría el doble en la torta.
+ *
+ * Un grupo que nunca cargó nada no le suma "posibles" a su gente, pero sí les
+ * marca `sinCarga`: son personas de las que no sabemos nada, y no pueden caer
+ * en "A todas" por no tener ninguna reunión en contra.
+ */
+const tortaDePersonas = (grupos: GrupoConDatos[]): TortaDeTramos => {
+    const porPersona = new Map<string, { veces: number; posibles: number; sinCarga: boolean }>();
+
+    grupos.forEach(d => {
+        const cargadas = d.reportes.length;
+
+        const vecesPorId = new Map<string, number>();
+        d.reportes.forEach(r => r.ids.forEach(id => {
+            const clave = String(id);
+            vecesPorId.set(clave, (vecesPorId.get(clave) || 0) + 1);
+        }));
+
+        (d.grupo.registrations || []).forEach(r => {
+            if (r.status === 'REJECTED') return;
+
+            // Misma convención de ids que group_attendance: el titular es el
+            // id de la inscripción y la pareja lleva el sufijo '-partner'.
+            const gente = [{ clave: r.userId || r.email || `reg-${r.id}`, id: String(r.id) }];
+            if (r.partnerData) {
+                const pd = r.partnerData;
+                gente.push({
+                    clave: r.partnerUserId
+                        || pd.email
+                        || `${pd.firstName || ''}${pd.lastName || ''}`
+                        || `pareja-${r.id}`,
+                    id: `${r.id}-partner`,
+                });
+            }
+
+            gente.forEach(({ clave, id }) => {
+                const acc = porPersona.get(clave) || { veces: 0, posibles: 0, sinCarga: false };
+                if (cargadas > 0) {
+                    acc.veces += vecesPorId.get(id) || 0;
+                    acc.posibles += cargadas;
+                } else {
+                    acc.sinCarga = true;
+                }
+                porPersona.set(clave, acc);
+            });
+        });
+    });
+
+    return armarTorta([...porPersona.values()].map(p => ({
+        veces: p.veces,
+        completo: !p.sinCarga && p.posibles > 0 && p.veces >= p.posibles,
+    })));
+};
+
+/**
+ * Cuántas de sus reuniones cargó cada grupo.
+ *
+ * "A todas" es no haberse salteado ninguna de las fechas que le tocaban según
+ * su día de encuentro. Se mira el hueco, no el total: un grupo que corrió una
+ * reunión de día tiene la misma cantidad de cargas que fechas, y comparando
+ * totales figuraría al día con una fecha sin cargar a la vista.
+ */
+const tortaDeGrupos = (grupos: GrupoConDatos[]): TortaDeTramos => armarTorta(grupos.map(d => {
+    const cargadas = new Set(d.reportes.map(r => r.fecha));
+    const faltan = fechasDeEncuentro(d.grupo).filter(f => !cargadas.has(f)).length;
+    return { veces: cargadas.size, completo: cargadas.size > 0 && faltan === 0 };
+}));
 
 const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, onAbrirGrupo, onVerAsistencia }) => {
     const [metrica, setMetrica] = useState<'inscriptos' | 'bajas'>('inscriptos');
@@ -122,6 +208,25 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
                 };
             });
     }, [datos, metrica]);
+
+    // ── Las tortas de la temporada ────
+    // Miran los grupos que YA ARRANCARON, finalizados incluidos. Los que
+    // todavía no tuvieron su primer encuentro no tienen asistencia que medir:
+    // contarlos hundiría las tres tortas al abrir una temporada por empezar.
+    const conArranque = useMemo(() => datos.filter(d => yaArranco(d.grupo)), [datos]);
+
+    const personasTemporada = useMemo(() => tortaDePersonas(conArranque), [conArranque]);
+    const gruposTemporada = useMemo(() => tortaDeGrupos(conArranque), [conArranque]);
+
+    const porModalidad = useMemo(() => MODALIDADES.map(m => {
+        const suyos = conArranque.filter(d => modalidadDe(d.grupo) === m);
+        return {
+            modalidad: m,
+            cantidad: suyos.length,
+            personas: tortaDePersonas(suyos),
+            grupos: tortaDeGrupos(suyos),
+        };
+    }), [conArranque]);
 
     // ── Últimos movimientos ───────────
     const movimientos = useMemo(() => {
@@ -280,6 +385,98 @@ const InicioCoordinador: React.FC<Props> = ({ datos, dropouts, promedioIglesia, 
                     <p className="mt-3 text-[30px] font-semibold tracking-[-0.03em] text-[#7a4f10]">{sinReportar.length}</p>
                     <p className="mt-2 text-[12px] font-medium text-black/[.62]">grupos sin asistencia cargada</p>
                 </button>
+            </div>
+
+            {/* ── La temporada en tortas ──────────────────────────────────
+                Las mismas dos de /reportes/gcx, recortadas a sus categorías.
+                A lo ancho hasta xl: cada una necesita el anillo y cinco
+                renglones de leyenda al lado, y partirlas antes las apreta. */}
+            <div className="mt-3.5 grid gap-3.5 [grid-template-columns:minmax(0,1fr)] xl:[grid-template-columns:repeat(2,minmax(0,1fr))]">
+                <div className="min-w-0 rounded-[20px] bg-white px-[22px] py-5">
+                    <p className="text-[15px] font-semibold text-[#0a0a0a]">Asistencia de personas</p>
+                    <p className="mt-[5px] text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
+                        Qué parte de tus inscriptos está asistiendo.
+                    </p>
+                    {personasTemporada.total === 0 ? (
+                        <p className="mt-5 text-[13px] font-medium leading-[1.6] text-black/[.62]">
+                            Todavía no hay gente inscripta en grupos que hayan arrancado.
+                        </p>
+                    ) : (
+                        <>
+                            <div className="mt-5">
+                                <TortaTramos {...personasTemporada} etiqueta="asiste" rotuloBase="Personas" lado />
+                            </div>
+                            <p className="mt-[18px] border-t border-[#f0efec] pt-3.5 text-[12px] font-medium leading-[1.55] text-black/[.62]">
+                                Sobre las {personasTemporada.total} personas inscriptas en{' '}
+                                {conArranque.length === 1 ? 'tu grupo ya arrancado' : `tus ${conArranque.length} grupos ya arrancados`}.
+                                Cada persona cuenta una vez aunque esté en más de uno, y sus veces son las reuniones
+                                cargadas a las que fue, sumando todos sus grupos. Quien fue a todas las de sus grupos
+                                cuenta en “A todas” aunque hayan sido pocas.
+                                {porArrancar.length > 0 && ` Los ${porArrancar.length} que todavía no arrancaron no entran: no hay asistencia que medir.`}
+                            </p>
+                        </>
+                    )}
+                </div>
+
+                <div className="min-w-0 rounded-[20px] bg-white px-[22px] py-5">
+                    <p className="text-[15px] font-semibold text-[#0a0a0a]">Reporte de asistencia</p>
+                    <p className="mt-[5px] text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
+                        Cuántos de tus grupos reportan asistencias.
+                    </p>
+                    {gruposTemporada.total === 0 ? (
+                        <p className="mt-5 text-[13px] font-medium leading-[1.6] text-black/[.62]">
+                            Ninguno de tus grupos arrancó todavía en esta temporada.
+                        </p>
+                    ) : (
+                        <>
+                            <div className="mt-5">
+                                <TortaTramos {...gruposTemporada} etiqueta="reporta" rotuloBase="Grupos" lado />
+                            </div>
+                            <p className="mt-[18px] border-t border-[#f0efec] pt-3.5 text-[12px] font-medium leading-[1.55] text-black/[.62]">
+                                Sobre {gruposTemporada.total === 1 ? 'tu grupo ya arrancado' : `tus ${gruposTemporada.total} grupos ya arrancados`}.
+                                Las veces son los días con asistencia cargada. “A todas” es el grupo que no se salteó
+                                ninguna de las fechas que le tocaban según su día de encuentro, aunque hayan sido pocas.
+                            </p>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* ── Por modalidad ───────────────────────────────────────────
+                Las mismas dos tortas, partidas en presencial, online e
+                híbrido. Una modalidad sin grupos ocupa un renglón, no dos
+                anillos vacíos — mismo criterio que /reportes/gcx. */}
+            <div className="mt-6">
+                <Rotulo className="mx-0.5 text-black/[.5]">Por modalidad</Rotulo>
+                <div className="mt-2.5 flex flex-col gap-3.5">
+                    {porModalidad.map(m => (
+                        <div key={m.modalidad} className="rounded-[20px] bg-white px-[22px] py-5">
+                            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                                <p className="text-[15px] font-semibold text-[#0a0a0a]">
+                                    {NOMBRE_MODALIDAD[m.modalidad]}
+                                </p>
+                                <p className="text-[12.5px] font-medium text-black/[.62]">
+                                    {m.cantidad === 0
+                                        ? `Sin grupos ${PLURAL_MODALIDAD[m.modalidad]} en esta temporada`
+                                        : `${m.cantidad} ${m.cantidad === 1 ? 'grupo' : 'grupos'} · ${m.personas.total} ${m.personas.total === 1 ? 'persona' : 'personas'}`}
+                                </p>
+                            </div>
+
+                            {m.cantidad > 0 && (
+                                <div className="mt-5 flex flex-col gap-5">
+                                    <div>
+                                        <Rotulo className="mb-3 text-black/[.5]">Asistencia de personas</Rotulo>
+                                        <TortaTramos {...m.personas} etiqueta="asiste" rotuloBase="Personas" lado />
+                                    </div>
+                                    <div className="border-t border-[#f0efec] pt-5">
+                                        <Rotulo className="mb-3 text-black/[.5]">Reporte de asistencia</Rotulo>
+                                        <TortaTramos {...m.grupos} etiqueta="reporta" rotuloBase="Grupos" lado />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* Gráfico por grupo */}

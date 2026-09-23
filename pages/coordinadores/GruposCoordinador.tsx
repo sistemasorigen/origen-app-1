@@ -3,16 +3,20 @@ import { dondeSeReune } from '../../src/utils/modalidad';
 import { GroupRegistration } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import {
+    AMBAR_BARRA,
     GrupoConDatos,
     PastillaEstado,
-    Rotulo,
     TarjetaVacia,
+    TortaTramos,
+    VERDE,
+    armarTorta,
     conComa,
-    escribirlePorWhatsApp,
+    fechaLarga,
+    fechasDeEncuentro,
     iniciales,
     leerSenal,
     nombreAnfitrion,
-    primerNombre,
+    primeraReunion,
 } from './comunes';
 
 /**
@@ -22,6 +26,11 @@ import {
  * salvo por una cosa: sacar a alguien del grupo, que el panel anterior ya
  * permitía y sigue estando acá, ahora con una confirmación en la misma fila
  * en vez de borrar al primer toque.
+ *
+ * La ficha ya no lleva la tarjeta "Cómo viene" ni su botón de WhatsApp. El
+ * diagnóstico de cada grupo sigue estando en el listado (la pastilla sale del
+ * mismo `leerSenal`) y los llamados viven en la pestaña de Asistencia, que es
+ * donde se decide a quién escribirle.
  *
  * La asistencia de cada miembro se cuenta de verdad, reunión por reunión:
  * un inscripto figura presente si su id está en la fila de esa fecha. Las
@@ -37,6 +46,224 @@ interface Props {
     onLimpiarPreseleccion: () => void;
     onRefrescar: () => void;
 }
+
+/** Alto del área de barras. Fijo, así el eje de fechas queda siempre alineado. */
+const ALTO_PISTA = 118;
+
+interface DiaDeEncuentro {
+    fecha: string;
+    cargada: boolean;
+    presentes: number;
+    /** Cayó fuera de la grilla semanal: una reunión corrida de día. */
+    fueraDeGrilla: boolean;
+}
+
+/**
+ * La temporada de un grupo, encuentro por encuentro.
+ *
+ * Equivale a "Un grupo en detalle" de /reportes/gcx, pero acá la altura de
+ * cada barra sí significa algo. Allá el gráfico es de UN grupo dentro de un
+ * tablero que cuenta grupos, así que cada día vale 0 o 1 y el eje se oculta;
+ * en esta ficha tenemos los presentes de cada reunión, y desperdiciar la
+ * altura en un sí/no sería tirar el único dato que el coordinador vino a ver.
+ *
+ * Los colores son los del panel, no los del tablero de reportes: verde es
+ * "esto viene bien" y ámbar es "acá hay que llamar a alguien". Un día sin
+ * cargar es exactamente lo segundo.
+ *
+ * Un día sin cargar no se dibuja como barra baja: sería indistinguible de una
+ * reunión a la que fue una sola persona. Se dibuja como la columna entera
+ * teñida de ámbar — un hueco, no un valor.
+ *
+ * Reemplaza a "Últimas reuniones", que mostraba lo mismo pero sólo de los seis
+ * últimos reportes y sin los días que el grupo dejó pasar — que son justamente
+ * los que hay que mirar. El promedio que vivía en aquella tarjeta quedó en el
+ * copete de ésta, y los presentes de cada fecha, en el detalle de abajo.
+ *
+ * Vive en la columna angosta de la ficha, así que la tira de columnas se
+ * desliza también en escritorio cuando la temporada es larga. Es el mismo
+ * comportamiento que ya tenía en el teléfono.
+ */
+const LineaDeAsistencia: React.FC<{ dato: GrupoConDatos; inscriptos: number }> = ({ dato, inscriptos }) => {
+    const { grupo } = dato;
+
+    const dias = useMemo<DiaDeEncuentro[]>(() => {
+        const presentesPorFecha = new Map(dato.reportes.map(r => [r.fecha, r.presentes]));
+        const deLaGrilla = fechasDeEncuentro(grupo);
+        const enGrilla = new Set(deLaGrilla);
+
+        // Se suman las reuniones cargadas en fechas que no son su día de
+        // encuentro: una reunión corrida pasó igual, y esconderla haría que
+        // este gráfico contradiga a la lista de reportes de la ficha.
+        const corridas = dato.reportes.map(r => r.fecha).filter(f => !enGrilla.has(f));
+
+        return [...deLaGrilla, ...corridas]
+            .sort((a, b) => a.localeCompare(b))
+            .map(fecha => ({
+                fecha,
+                cargada: presentesPorFecha.has(fecha),
+                presentes: presentesPorFecha.get(fecha) ?? 0,
+                fueraDeGrilla: !enGrilla.has(fecha),
+            }));
+    }, [grupo, dato.reportes]);
+
+    const cargadas = dias.filter(d => d.cargada).length;
+    const sinCargar = dias.length - cargadas;
+
+    // Arranca en el último encuentro: es el que al coordinador le importa hoy.
+    const [elegida, setElegida] = useState<string | null>(null);
+    const activa = dias.find(d => d.fecha === elegida) || dias[dias.length - 1] || null;
+
+    if (dias.length === 0) {
+        const primera = primeraReunion(grupo);
+        return (
+            <div className="rounded-[20px] bg-white px-[22px] py-5">
+                <p className="text-[15px] font-semibold text-[#0a0a0a]">Asistencia, reunión por reunión</p>
+                <p className="mt-[7px] text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
+                    {primera
+                        ? <>Todavía no tuvo su primer encuentro: se reúne por primera vez el <span className="font-semibold text-[#0a0a0a]">{fechaLarga(primera)}</span>. Desde ese día va a poder cargar asistencia.</>
+                        : 'Este grupo no tiene fecha de arranque o día de encuentro cargados, así que no se puede saber qué reuniones le tocaban.'}
+                </p>
+            </div>
+        );
+    }
+
+    // La escala es la cantidad de inscriptos: lo mismo contra lo que se mide
+    // la asistencia en el resto de la ficha. El máximo real la respalda por si
+    // en alguna reunión entró gente que después se dio de baja.
+    const tope = Math.max(1, inscriptos, ...dias.map(d => d.presentes));
+
+    return (
+        <div className="rounded-[20px] bg-white px-[22px] py-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-2">
+                <p className="text-[15px] font-semibold text-[#0a0a0a]">Asistencia, reunión por reunión</p>
+                <div className="flex items-center gap-3.5">
+                    {([['Presentes', VERDE], ['Sin cargar', AMBAR_BARRA]] as const).map(([texto, color]) => (
+                        <span key={texto} className="flex items-center gap-[7px]">
+                            <span className="h-[9px] w-[9px] flex-none rounded-[2px]" style={{ background: color }} />
+                            <span className="text-[12px] font-semibold text-black/[.62]">{texto}</span>
+                        </span>
+                    ))}
+                </div>
+            </div>
+
+            <p className="mt-[5px] text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
+                Cada columna es un día en el que le tocaba reunirse; la altura es cuánta gente fue, sobre{' '}
+                {inscriptos} {inscriptos === 1 ? 'inscripto' : 'inscriptos'}.{' '}
+                {cargadas === 0
+                    ? 'Nunca cargó una asistencia.'
+                    : <>Cargó {cargadas} {cargadas === 1 ? 'reunión' : 'reuniones'}{sinCargar > 0 ? ` y le ${sinCargar === 1 ? 'falta' : 'faltan'} ${sinCargar}` : ', sin dejar ninguna afuera'}. Promedia {conComa(dato.promedio)} presentes.</>}
+            </p>
+
+            {/* En el teléfono la temporada entera no entra: se desliza en vez
+                de apretar veinte columnas en trescientos píxeles. */}
+            <div className="mt-5 -mx-1 overflow-x-auto px-1 pb-1">
+                <div className="flex min-w-full items-stretch gap-1">
+                    {dias.map(d => {
+                        const esActiva = activa?.fecha === d.fecha;
+                        const alto = d.cargada ? Math.max(3, Math.round((d.presentes / tope) * ALTO_PISTA)) : 0;
+                        return (
+                            <button
+                                key={d.fecha}
+                                onClick={() => setElegida(d.fecha)}
+                                aria-pressed={esActiva}
+                                aria-label={`${fechaLarga(d.fecha)}: ${d.cargada ? `${d.presentes} de ${inscriptos} presentes` : 'sin cargar'}`}
+                                className="group flex min-w-[30px] flex-1 flex-col items-center gap-[7px] rounded-[7px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                            >
+                                <span
+                                    className="flex w-full items-end overflow-hidden rounded-[5px] transition-colors"
+                                    style={{
+                                        height: ALTO_PISTA,
+                                        background: d.cargada ? '#f4f3f1' : '#fbf0dd',
+                                        boxShadow: esActiva ? 'inset 0 0 0 1.5px rgba(10,10,10,.34)' : undefined,
+                                    }}
+                                >
+                                    {d.cargada && (
+                                        <span
+                                            className="block w-full rounded-[5px]"
+                                            style={{ height: alto, background: VERDE, opacity: esActiva ? 1 : 0.88 }}
+                                        />
+                                    )}
+                                </span>
+                                <span className={`text-[10px] font-semibold tabular-nums ${esActiva ? 'text-[#0a0a0a]' : 'text-black/[.45]'}`}>
+                                    {new Date(`${d.fecha}T12:00:00`).toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' })}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Alto fijo: el detalle cambia al tocar una columna y no tiene que
+                mover el resto de la ficha cada vez. */}
+            {activa && (
+                <div className="mt-4 flex min-h-[54px] flex-wrap items-center gap-x-3.5 gap-y-1 rounded-[16px] bg-[#f7f7f5] px-4 py-3">
+                    <span className="text-[13px] font-semibold capitalize text-[#0a0a0a]">{fechaLarga(activa.fecha)}</span>
+                    <span className="text-[12.5px] font-medium text-black/[.66]">
+                        {activa.cargada
+                            ? `${activa.presentes} ${activa.presentes === 1 ? 'presente' : 'presentes'} de ${inscriptos}`
+                            : 'Sin cargar — no sabemos si se reunieron'}
+                    </span>
+                    {activa.fueraDeGrilla && (
+                        <span className="text-[12px] font-semibold text-black/[.5]">
+                            · Reunión corrida de día
+                        </span>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+/**
+ * Cuántas veces vino cada inscripto a ESTE grupo.
+ *
+ * Es la torta "Asistencia de personas" de /reportes/gcx, que mira a toda la
+ * iglesia, recortada a un solo grupo. Los tramos son los mismos y en el mismo
+ * orden, así un coordinador que mira los dos tableros lee lo mismo: "a todas"
+ * es haber estado en todas las reuniones que el grupo cargó, no en todas las
+ * que le tocaban — a las que no cargó nadie les falta el dato, no la gente.
+ *
+ * Sin ninguna reunión cargada no se dibuja la torta. Saldría 0% con todo el
+ * anillo en "Ninguna", que se lee como "no viene nadie" cuando lo que pasa es
+ * que no sabemos: es la diferencia entre un cero y un dato que falta.
+ */
+const AsistenciaDePersonas: React.FC<{
+    personas: { presentes: number }[];
+    reuniones: number;
+}> = ({ personas, reuniones }) => {
+    const torta = useMemo(() => armarTorta(personas.map(p => ({
+        veces: p.presentes,
+        completo: reuniones > 0 && p.presentes >= reuniones,
+    }))), [personas, reuniones]);
+
+    if (torta.total === 0) return null;
+
+    if (reuniones === 0) {
+        return (
+            <div className="rounded-[20px] bg-white px-[22px] py-5">
+                <p className="text-[15px] font-semibold text-[#0a0a0a]">Asistencia de personas</p>
+                <p className="mt-[7px] text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
+                    Todavía no cargó ninguna reunión, así que no se sabe quién está viniendo. No es que no venga
+                    nadie: falta el dato.
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="rounded-[20px] bg-white px-[22px] py-5">
+            <p className="text-[15px] font-semibold text-[#0a0a0a]">Asistencia de personas</p>
+            <p className="mt-[5px] text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
+                Cuántas veces vino cada inscripto, sobre las {reuniones}{' '}
+                {reuniones === 1 ? 'reunión cargada' : 'reuniones cargadas'}.
+            </p>
+            <div className="mt-5">
+                <TortaTramos {...torta} etiqueta="asiste" rotuloBase="Personas" />
+            </div>
+        </div>
+    );
+};
 
 const GruposCoordinador: React.FC<Props> = ({
     datos,
@@ -79,7 +306,6 @@ const GruposCoordinador: React.FC<Props> = ({
         return (
             <FichaGrupo
                 dato={abierto}
-                promedioIglesia={promedioIglesia}
                 onVolver={() => setAbiertoId(null)}
                 onRefrescar={onRefrescar}
                 aviso={aviso}
@@ -228,19 +454,22 @@ const TarjetaGrupo: React.FC<{
 
 const FichaGrupo: React.FC<{
     dato: GrupoConDatos;
-    promedioIglesia: number;
     onVolver: () => void;
     onRefrescar: () => void;
     aviso: string;
     setAviso: (v: string) => void;
-}> = ({ dato, promedioIglesia, onVolver, onRefrescar, aviso, setAviso }) => {
+}> = ({ dato, onVolver, onRefrescar, aviso, setAviso }) => {
     const { grupo, finalizado } = dato;
     const [busquedaMiembro, setBusquedaMiembro] = useState('');
     const [porQuitar, setPorQuitar] = useState<string | null>(null);
     const [quitando, setQuitando] = useState<string | null>(null);
     const [fotoRota, setFotoRota] = useState(false);
+    // En el teléfono la ficha entera empuja la asistencia fuera de la pantalla,
+    // y la asistencia es a lo que el coordinador viene. Los datos del grupo se
+    // guardan detrás de "Más información"; en escritorio siguen siempre a la
+    // vista, que ahí van en su propia columna y no estorban.
+    const [verFicha, setVerFicha] = useState(false);
 
-    const senal = leerSenal(dato, promedioIglesia);
     const anfitrion = nombreAnfitrion(grupo);
     const donde = dondeSeReune(grupo, 'Online');
 
@@ -319,14 +548,6 @@ const FichaGrupo: React.FC<{
         }
     };
 
-    const contactar = () => {
-        const mensaje = dato.reporta
-            ? `Hola ${primerNombre(anfitrion)}, ¿cómo viene ${grupo.name}?`
-            : `Hola ${primerNombre(anfitrion)}, ¿podés cargar la asistencia de ${grupo.name}?`;
-        const abrio = escribirlePorWhatsApp(grupo.leaderPhone, mensaje);
-        if (!abrio) setAviso(`${anfitrion} no tiene teléfono cargado en su ficha.`);
-    };
-
     const fila = (etiqueta: string, valor: string) => (
         <div className="flex items-center justify-between gap-3.5 border-b border-[#f4f3f1] py-[11px] last:border-b-0">
             <span className="flex-none text-[12.5px] font-medium text-black/[.62]">{etiqueta}</span>
@@ -374,47 +595,56 @@ const FichaGrupo: React.FC<{
                             <PastillaEstado finalizado={finalizado} />
                         </div>
 
-                        <div className="mt-4">
-                            {fila('Anfitrión', anfitrion)}
-                            {fila('Día y horario', `${grupo.meetingDay || '—'} ${grupo.meetingTime || ''}`.trim())}
-                            {fila('Ubicación', donde)}
-                            {fila('Categoría', dato.categoria)}
-                            {fila('Cupo', dato.capacidad ? `${dato.ocupados} de ${dato.capacidad} lugares` : `${dato.ocupados} inscriptos`)}
-                            {fila('Bajas', dato.bajas === 0 ? 'Ninguna' : `${dato.bajas} en la temporada`)}
-                            {fila('Reuniones reportadas', dato.reportes.length === 0 ? 'Ninguna' : String(dato.reportes.length))}
-                        </div>
+                        <button
+                            onClick={() => setVerFicha(v => !v)}
+                            aria-expanded={verFicha}
+                            aria-controls="ficha-del-grupo"
+                            className="mt-4 flex h-[42px] w-full items-center justify-between gap-3 rounded-full bg-[#f7f7f5] pl-[18px] pr-[15px] text-[13px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 md:hidden"
+                        >
+                            {verFicha ? 'Menos información' : 'Más información'}
+                            <svg
+                                width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
+                                className={`flex-none transition-transform ${verFicha ? '-rotate-180' : ''}`}
+                                aria-hidden="true"
+                            >
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
 
-                        {grupo.description && (
+                        <div id="ficha-del-grupo" className={`${verFicha ? '' : 'hidden'} md:block`}>
+                            <div className="mt-4">
+                                {fila('Anfitrión', anfitrion)}
+                                {fila('Día y horario', `${grupo.meetingDay || '—'} ${grupo.meetingTime || ''}`.trim())}
+                                {fila('Ubicación', donde)}
+                                {fila('Categoría', dato.categoria)}
+                                {fila('Cupo', dato.capacidad ? `${dato.ocupados} de ${dato.capacidad} lugares` : `${dato.ocupados} inscriptos`)}
+                                {fila('Bajas', dato.bajas === 0 ? 'Ninguna' : `${dato.bajas} en la temporada`)}
+                                {fila('Reuniones reportadas', dato.reportes.length === 0 ? 'Ninguna' : String(dato.reportes.length))}
+                            </div>
+
+                            {grupo.description && (
+                                <p className="mt-4 border-t border-[#f0efec] pt-3.5 text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
+                                    {grupo.description}
+                                </p>
+                            )}
+
                             <p className="mt-4 border-t border-[#f0efec] pt-3.5 text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
-                                {grupo.description}
+                                Como coordinador podés mirar y acompañar. Editar la ficha o aprobar inscripciones le
+                                corresponde al anfitrión.
                             </p>
-                        )}
-
-                        <p className="mt-4 border-t border-[#f0efec] pt-3.5 text-[12.5px] font-medium leading-[1.6] text-black/[.62]">
-                            Como coordinador podés mirar y acompañar. Editar la ficha o aprobar inscripciones le
-                            corresponde al anfitrión.
-                        </p>
+                        </div>
                     </div>
                 </div>
 
-                {/* Cómo viene + miembros */}
+                {/* Asistencia + miembros */}
                 <div className="flex min-w-0 flex-col gap-3.5">
-                    <div
-                        className="rounded-[20px] bg-white px-[22px] py-5"
-                        style={{ boxShadow: `inset 0 0 0 1.5px ${senal.tono === 'verde' ? '#cfe9dc' : '#f0d9b4'}` }}
-                    >
-                        <Rotulo className={senal.tono === 'verde' ? 'text-[#0b7a53]' : 'text-[#7a4f10]'}>
-                            Cómo viene
-                        </Rotulo>
-                        <p className="mt-[11px] text-[17px] font-semibold leading-[1.4] text-[#0a0a0a]">{senal.titulo}</p>
-                        <p className="mt-2.5 text-[13px] font-medium leading-[1.6] text-black/[.66]">{senal.detalle}</p>
-                        <button
-                            onClick={contactar}
-                            className="mt-4 h-11 rounded-full bg-[#0a0a0a] px-[18px] text-[13.5px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
-                        >
-                            {senal.accion}
-                        </button>
-                    </div>
+                    <LineaDeAsistencia dato={dato} inscriptos={personas.length} />
+
+                    {/* Las dos caras de la misma asistencia: arriba, reunión
+                        por reunión; acá, persona por persona. Va justo antes
+                        de la lista porque es el resumen de esa lista. */}
+                    <AsistenciaDePersonas personas={personas} reuniones={dato.reportes.length} />
 
                     <div className="rounded-[20px] bg-white px-[22px] py-5">
                         <div className="flex flex-wrap items-center gap-2.5">
@@ -510,35 +740,6 @@ const FichaGrupo: React.FC<{
                         )}
                     </div>
 
-                    {dato.reportes.length > 0 && (
-                        <div className="rounded-[20px] bg-white px-[22px] py-5">
-                            <p className="text-[15px] font-semibold text-[#0a0a0a]">Últimas reuniones</p>
-                            <p className="mt-[5px] text-[12.5px] font-medium text-black/[.62]">
-                                Promedia {conComa(dato.promedio)} presentes por reunión.
-                            </p>
-                            <div className="mt-4 flex flex-col gap-2.5">
-                                {dato.reportes.slice(0, 6).map(r => (
-                                    <div key={r.fecha} className="flex items-center gap-3">
-                                        <span className="w-[86px] flex-none text-[12.5px] font-medium text-black/[.66]">
-                                            {new Date(`${r.fecha}T12:00:00`).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-                                        </span>
-                                        <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[#f0efec]">
-                                            <span
-                                                className="block h-full rounded-full"
-                                                style={{
-                                                    width: `${personas.length ? Math.min(100, Math.round((r.presentes / personas.length) * 100)) : 0}%`,
-                                                    background: personas.length && r.presentes / personas.length >= 0.6 ? '#0b7a53' : '#e8b96a',
-                                                }}
-                                            />
-                                        </span>
-                                        <span className="w-[74px] flex-none text-right text-[12px] font-semibold text-[#0a0a0a]">
-                                            {r.presentes} {r.presentes === 1 ? 'presente' : 'presentes'}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         </>
