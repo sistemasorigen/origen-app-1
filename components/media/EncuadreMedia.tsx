@@ -92,7 +92,7 @@ const EncuadreMedia: React.FC<EncuadreMediaProps> = ({
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
                 style={{ aspectRatio: `${frameWidth} / ${frameHeight}` }}
-                className={`relative w-full overflow-hidden border-2 border-black bg-neutral-900 select-none touch-none ${hasMedia ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
+                className={`relative w-full select-none touch-none overflow-hidden rounded-[16px] bg-[#eceae6] dark:bg-[#232322] ${hasMedia ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
                     }`}
             >
                 {isVideo ? (
@@ -115,8 +115,8 @@ const EncuadreMedia: React.FC<EncuadreMediaProps> = ({
                         draggable={false}
                     />
                 ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-neutral-500 text-xs font-bold uppercase tracking-widest">
-                        Cargá un medio para encuadrarlo
+                    <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-[12.5px] font-medium text-black/[.5] dark:text-white/[.5]">
+                        Cargá una imagen o un video para encuadrarlo
                     </div>
                 )}
 
@@ -132,7 +132,7 @@ const EncuadreMedia: React.FC<EncuadreMediaProps> = ({
                 )}
 
                 {hasMedia && (
-                    <span className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-[10px] font-bold uppercase tracking-wider rounded pointer-events-none">
+                    <span className="pointer-events-none absolute bottom-2.5 right-2.5 flex h-[22px] items-center rounded-full bg-[rgba(10,10,10,.55)] px-2.5 text-[11px] font-semibold tabular-nums text-white">
                         {frameWidth} × {frameHeight}
                     </span>
                 )}
@@ -140,33 +140,35 @@ const EncuadreMedia: React.FC<EncuadreMediaProps> = ({
 
             {hasMedia && (
                 <>
-                    <p className="text-[11px] text-neutral-500 mt-2">
-                        Arrastrá sobre el preview para elegir qué parte se ve.
+                    <p className="mt-2 text-[12px] font-medium leading-[1.5] text-black/[.6] dark:text-white/[.6]">
+                        Arrastrá sobre la vista previa para elegir qué parte se ve.
                     </p>
 
-                    <div className="mt-3 flex items-center gap-3">
-                        <ZoomIn className="w-4 h-4 text-neutral-500 shrink-0" />
-                        <input
-                            type="range"
-                            min={1}
-                            max={3}
-                            step={0.05}
-                            value={value.zoom}
-                            onChange={e => onChange({ ...value, zoom: Number(e.target.value) })}
-                            className="flex-1 h-1.5 cursor-pointer"
-                            style={{ accentColor: '#000' }}
-                            aria-label="Zoom del encuadre"
-                        />
-                        <span className="text-[11px] font-bold text-neutral-500 tabular-nums w-10 text-right">
-                            {value.zoom.toFixed(2)}×
-                        </span>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2.5">
+                        <div className="flex min-w-[180px] flex-1 items-center gap-2.5">
+                            <ZoomIn className="h-4 w-4 flex-none text-black/[.45] dark:text-white/[.45]" />
+                            <input
+                                type="range"
+                                min={1}
+                                max={3}
+                                step={0.05}
+                                value={value.zoom}
+                                onChange={e => onChange({ ...value, zoom: Number(e.target.value) })}
+                                className="h-1.5 min-w-0 flex-1 cursor-pointer"
+                                style={{ accentColor: '#0a0a0a' }}
+                                aria-label="Zoom del encuadre"
+                            />
+                            <span className="w-[42px] flex-none text-right text-[12px] font-semibold tabular-nums text-black/[.55] dark:text-white/[.55]">
+                                {value.zoom.toFixed(2)}×
+                            </span>
+                        </div>
                         <button
                             type="button"
                             onClick={reset}
-                            title="Centrar y quitar zoom"
-                            className="flex items-center gap-1 px-2.5 py-1.5 border-2 border-slate-200 text-[10px] font-bold uppercase text-neutral-600 hover:border-black hover:text-black transition-colors"
+                            title="Centrar y quitar el zoom"
+                            className="flex h-9 flex-none items-center gap-1.5 rounded-full bg-[#f2f2f0] px-3.5 text-[12px] font-semibold text-black/[.66] transition-colors hover:text-[#0a0a0a] dark:bg-white/10 dark:text-white/[.75] dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                         >
-                            <Crosshair className="w-3 h-3" /> Centrar
+                            <Crosshair className="h-[13px] w-[13px]" /> Centrar
                         </button>
                     </div>
                 </>

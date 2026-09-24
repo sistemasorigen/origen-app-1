@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { supabaseService } from '../../services/supabaseService';
 import { Upload, Loader2, Trash2, ImageIcon, AlertCircle } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
@@ -30,7 +30,7 @@ const ImageUpload: React.FC<ImageUploadProps & { customUploadFn?: (file: File) =
     currentImage,
     folder = '',
     className = '',
-    placeholder = 'Click o arrastrá tu imagen',
+    placeholder = 'Subí una imagen',
     aspectRatio = 'auto',
     variant = 'brutal',
     customUploadFn
@@ -48,6 +48,19 @@ const ImageUpload: React.FC<ImageUploadProps & { customUploadFn?: (file: File) =
     const [isCropModalOpen, setIsCropModalOpen] = useState(false);
     useBloqueoDeFondo(isCropModalOpen);
     const [imageToCropUrl, setImageToCropUrl] = useState<string | null>(null);
+
+    // Escape cierra el recorte, igual que las confirmaciones del panel.
+    useEffect(() => {
+        if (!isCropModalOpen) return;
+        const alSalir = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsCropModalOpen(false);
+                setImageToCropUrl(null);
+            }
+        };
+        window.addEventListener('keydown', alSalir);
+        return () => window.removeEventListener('keydown', alSalir);
+    }, [isCropModalOpen]);
 
     const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
         setCroppedAreaPixels(croppedAreaPixels);
@@ -107,20 +120,26 @@ const ImageUpload: React.FC<ImageUploadProps & { customUploadFn?: (file: File) =
         auto: 'min-h-[200px]'
     };
 
-    const containerStyles = {
-        brutal: {
-            idle: 'border-black border-dashed bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-neutral-50 hover:translate-y-px hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]',
-            active: 'border-black bg-neutral-100 scale-[1.02]',
-            error: 'border-red-500 border-dashed bg-red-50',
-            success: 'border-black bg-black'
-        },
-        minimal: {
-            idle: 'border-gray-300 border-dashed bg-white hover:bg-gray-50',
-            active: 'border-blue-500 bg-blue-50 ring-2 ring-blue-200',
-            error: 'border-red-300 bg-red-50',
-            success: 'border-gray-300 bg-gray-50'
-        }
+    /**
+     * La caja, en los cuatro estados. Es el mismo lenguaje del panel de
+     * administración: relleno gris claro, esquinas de 20, tipografía sobria.
+     * Antes tenía borde negro punteado, sombra dura y versalitas, un estilo
+     * que la app ya no usa en ninguna otra pantalla.
+     *
+     * `variant` quedó sin efecto a propósito: las dos variantes de antes
+     * (brutal y minimal) se ven igual ahora, y sacar la prop obligaría a
+     * tocar las pantallas que todavía la pasan.
+     */
+    const cajaSegunEstado = {
+        idle: 'bg-[#f7f7f5] hover:bg-[#f2f2f0] dark:bg-[#232322] dark:hover:bg-[#2b2b2a]',
+        active: 'bg-[#eceae6] ring-2 ring-[#0a0a0a] dark:bg-[#2b2b2a] dark:ring-white',
+        error: 'bg-[#fdecea] dark:bg-[#3a201e]',
+        success: 'bg-[#eceae6] dark:bg-[#232322]'
     };
+
+    const proporcionDelRecorte = aspectRatio === 'square'
+        ? '1 : 1'
+        : aspectRatio === 'wide' ? '16 : 9' : '4 : 3';
 
     // ... handleUpload callbacks ...
     const handleUpload = useCallback(async (file: File) => {
@@ -220,120 +239,135 @@ const ImageUpload: React.FC<ImageUploadProps & { customUploadFn?: (file: File) =
                 className="hidden"
             />
 
-            {/* Main Container */}
+            {/* La caja */}
             <div
+                role="button"
+                tabIndex={state === 'loading' ? -1 : 0}
+                aria-label={preview ? 'Cambiar la imagen' : placeholder}
                 onClick={handleClick}
+                onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleClick();
+                    }
+                }}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={`
-                    relative overflow-hidden cursor-pointer transition-all duration-200
-                    border-2 rounded-xl flex flex-col items-center justify-center
+                    relative flex cursor-pointer flex-col items-center justify-center overflow-hidden
+                    rounded-[20px] transition-colors
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2
                     ${aspectClasses[aspectRatio]}
                     ${isDragging
-                        ? containerStyles[variant].active
+                        ? cajaSegunEstado.active
                         : state === 'error'
-                            ? containerStyles[variant].error
+                            ? cajaSegunEstado.error
                             : state === 'success' && preview
-                                ? containerStyles[variant].success
-                                : containerStyles[variant].idle
+                                ? cajaSegunEstado.success
+                                : cajaSegunEstado.idle
                     }
                 `}
             >
-                {/* State: Loading */}
+                {/* Subiendo */}
                 {state === 'loading' && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-10">
-                        <Loader2 className="w-10 h-10 text-black animate-spin mb-3" />
-                        <span className="text-sm font-black uppercase tracking-widest text-black">Subiendo...</span>
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/85 dark:bg-[#1b1b1a]/85">
+                        <Loader2 className="mb-2.5 h-7 w-7 animate-spin text-black/25" />
+                        <span className="text-[12.5px] font-semibold text-[#0a0a0a] dark:text-white">Subiendo…</span>
                     </div>
                 )}
 
-                {/* State: Preview/Success */}
+                {/* Con imagen */}
                 {state === 'success' && preview && (
-                    <div className="relative w-full h-full min-h-[200px]">
+                    <div className="relative h-full min-h-[200px] w-full">
                         <img
                             src={preview}
-                            alt="Preview"
-                            className="w-full h-full object-cover"
+                            alt=""
+                            className="h-full w-full object-cover"
                         />
-                        {/* Remove Button */}
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleRemove();
                             }}
-                            className="absolute z-20 top-3 right-3 p-2 bg-white border-2 border-red-600 text-red-600 shadow-[2px_2px_0px_0px_rgba(220,38,38,1)] hover:bg-red-600 hover:text-white hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] active:translate-y-0 active:shadow-none transition-all"
-                            title="Eliminar imagen"
+                            aria-label="Quitar la imagen"
+                            title="Quitar la imagen"
+                            className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-[#a32218] shadow-[0_1px_6px_rgba(10,10,10,.18)] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a32218] focus-visible:ring-offset-2"
                         >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="h-[15px] w-[15px]" />
                         </button>
-                        {/* Change overlay on hover */}
-                        <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-                            <span className="px-4 py-2 bg-white border-2 border-black text-black font-black text-xs uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                                Cambiar Imagen
+                        {/* Al pasar el mouse se ofrece el cambio; en el teléfono
+                            alcanza con tocar la imagen. */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity hover:bg-[rgba(10,10,10,.42)] hover:opacity-100">
+                            <span className="flex h-9 items-center rounded-full bg-white px-4 text-[12.5px] font-semibold text-[#0a0a0a]">
+                                Cambiar la imagen
                             </span>
                         </div>
                     </div>
                 )}
 
-                {/* State: Idle or Error */}
+                {/* Vacía o con error */}
                 {(state === 'idle' || state === 'error') && !preview && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
                         {state === 'error' ? (
                             <>
-                                <div className="w-16 h-16 border-2 border-red-500 flex items-center justify-center mb-4">
-                                    <AlertCircle className="w-8 h-8 text-red-500" />
+                                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-[14px] bg-white text-[#a32218] dark:bg-white/10 dark:text-[#f0a49c]">
+                                    <AlertCircle className="h-[19px] w-[19px]" />
                                 </div>
-                                <p className="text-sm font-black uppercase text-red-600 mb-2">{error}</p>
-                                <p className="text-xs text-neutral-500">Click para reintentar</p>
+                                <p className="text-[13px] font-semibold text-[#a32218] dark:text-[#f0a49c]">{error}</p>
+                                <p className="mt-1.5 text-[11.5px] font-medium text-black/[.55] dark:text-white/[.55]">Tocá para probar de nuevo</p>
                             </>
                         ) : (
                             <>
-                                {variant === 'brutal' ? (
-                                    <div className="w-16 h-16 border-2 border-black flex items-center justify-center mb-4 group-hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-shadow">
-                                        {isDragging ? (
-                                            <ImageIcon className="w-8 h-8 text-black" />
-                                        ) : (
-                                            <Upload className="w-8 h-8 text-black" />
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="mb-4">
-                                        <Upload className="w-8 h-8 text-gray-400" />
-                                    </div>
-                                )}
-
-                                <p className={`text-sm font-black uppercase tracking-wide ${variant === 'minimal' ? 'text-gray-500 font-normal normal-case' : 'text-black'}`}>
-                                    {placeholder}
+                                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-[14px] bg-white text-black/[.6] dark:bg-white/10 dark:text-white/70">
+                                    {isDragging
+                                        ? <ImageIcon className="h-[19px] w-[19px]" />
+                                        : <Upload className="h-[19px] w-[19px]" />}
+                                </div>
+                                <p className="text-[13.5px] font-semibold text-[#0a0a0a] dark:text-white">{placeholder}</p>
+                                <p className="mt-1.5 text-[11.5px] font-medium leading-[1.5] text-black/[.55] dark:text-white/[.55]">
+                                    Tocá acá o arrastrá el archivo · PNG, JPG o WEBP, hasta 5 MB
                                 </p>
-                                <p className="text-xs text-neutral-500 mt-2">PNG, JPG, WEBP • Máx 5MB</p>
                             </>
                         )}
                     </div>
                 )}
             </div>
 
+            {/* Recorte. Misma hoja que las confirmaciones del panel: sube
+                desde abajo en el teléfono y se centra en escritorio. */}
             {isCropModalOpen && imageToCropUrl && createPortal(
-                <div className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
-
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 flex-shrink-0">
-                            <div>
-                                <h2 className="text-base font-black uppercase tracking-widest text-black">Ajustar Imagen</h2>
-                                <p className="text-xs text-neutral-500 mt-0.5">Mueve y reencuadra para obtener la portada perfecta</p>
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Ajustar la imagen"
+                    onClick={handleCancelCrop}
+                    className="fixed inset-0 z-[99999] flex items-end justify-center bg-[rgba(10,10,10,.42)] p-0 md:items-center md:p-10"
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[24px] bg-white md:max-w-[560px] md:rounded-[24px]"
+                    >
+                        <div className="flex flex-none items-start gap-3 px-6 pb-4 pt-6">
+                            <div className="min-w-0 flex-1">
+                                <h2 className="text-[20px] font-semibold leading-[1.35] tracking-[-0.018em] text-[#0a0a0a]">
+                                    Ajustar la imagen
+                                </h2>
+                                <p className="mt-1.5 text-[13px] font-medium leading-[1.55] text-black/[.62]">
+                                    Arrastrá para elegir qué parte se ve y usá el zoom para acercarla.
+                                </p>
                             </div>
                             <button
                                 type="button"
                                 onClick={handleCancelCrop}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-neutral-200 transition-colors text-neutral-600 hover:text-black"
+                                aria-label="Cerrar sin recortar"
+                                className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#f2f2f0] text-black/[.6] transition-colors hover:text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                                <svg className="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                             </button>
                         </div>
 
-                        {/* Crop Area */}
-                        <div className="relative bg-neutral-900 flex-1" style={{ minHeight: '320px' }}>
+                        <div className="relative min-h-[280px] flex-1 bg-[#0a0a0a]">
                             <Cropper
                                 image={imageToCropUrl}
                                 crop={crop}
@@ -344,55 +378,49 @@ const ImageUpload: React.FC<ImageUploadProps & { customUploadFn?: (file: File) =
                                 onZoomChange={setZoom}
                                 style={{
                                     containerStyle: { borderRadius: 0 },
-                                    cropAreaStyle: { border: '2px solid white', boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)' }
+                                    cropAreaStyle: { border: '1.5px solid rgba(255,255,255,.92)', boxShadow: '0 0 0 9999px rgba(10,10,10,.55)' }
                                 }}
                             />
-                            {/* Aspect ratio badge */}
-                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full pointer-events-none">
-                                16 : 9
-                            </div>
+                            <span className="pointer-events-none absolute left-3 top-3 flex h-[22px] items-center rounded-full bg-[rgba(10,10,10,.55)] px-2.5 text-[11px] font-semibold tabular-nums text-white">
+                                {proporcionDelRecorte}
+                            </span>
                         </div>
 
-                        {/* Controls */}
-                        <div className="px-6 py-5 flex-shrink-0 space-y-5 bg-white">
-                            {/* Zoom slider */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[11px] font-black uppercase tracking-widest text-neutral-500">Zoom</span>
-                                    <span className="text-[11px] font-bold text-neutral-400 tabular-nums">{zoom.toFixed(1)}×</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-neutral-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-                                    <input
-                                        type="range"
-                                        value={zoom}
-                                        min={1}
-                                        max={3}
-                                        step={0.05}
-                                        onChange={(e) => setZoom(Number(e.target.value))}
-                                        className="flex-1 h-1.5 accent-black cursor-pointer"
-                                        style={{ accentColor: '#000' }}
-                                    />
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-neutral-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /><path d="M11 8v6M8 11h6" /></svg>
-                                </div>
+                        <div className="flex-none px-6 pb-[22px] pt-4">
+                            <div className="flex items-center gap-2.5">
+                                <span className="flex-none text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.55]">
+                                    Zoom
+                                </span>
+                                <input
+                                    type="range"
+                                    value={zoom}
+                                    min={1}
+                                    max={3}
+                                    step={0.05}
+                                    onChange={(e) => setZoom(Number(e.target.value))}
+                                    aria-label="Zoom del recorte"
+                                    className="h-1.5 min-w-0 flex-1 cursor-pointer"
+                                    style={{ accentColor: '#0a0a0a' }}
+                                />
+                                <span className="w-[42px] flex-none text-right text-[12px] font-semibold tabular-nums text-black/[.55]">
+                                    {zoom.toFixed(1)}×
+                                </span>
                             </div>
 
-                            {/* Action buttons */}
-                            <div className="flex gap-3 pt-1">
-                                <button
-                                    type="button"
-                                    onClick={handleCancelCrop}
-                                    className="flex-1 py-3 text-sm font-black uppercase tracking-wider text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors"
-                                >
-                                    Cancelar
-                                </button>
+                            <div className="mt-5 flex flex-col gap-2.5">
                                 <button
                                     type="button"
                                     onClick={handleConfirmCrop}
-                                    className="flex-[2] py-3 text-sm font-black uppercase tracking-wider text-white bg-black rounded-xl hover:bg-neutral-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                    className="h-[52px] w-full rounded-full bg-[#0a0a0a] text-[14.5px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                                    Confirmar y Subir
+                                    Confirmar y subir
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleCancelCrop}
+                                    className="h-[52px] w-full rounded-full bg-[#f2f2f0] text-[14.5px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                                >
+                                    Cancelar
                                 </button>
                             </div>
                         </div>

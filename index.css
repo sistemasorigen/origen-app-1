@@ -36,3 +36,12 @@ body[data-modal-active="true"] .sticky-header:not(.contenido-del-overlay) {
 .animate-slideUp {
     animation: slideUp 0.4s ease-out;
 }
+
+/* Quien pidió menos movimiento en su sistema ve el mismo contenido, pero
+   apareciendo de una vez. */
+@media (prefers-reduced-motion: reduce) {
+    .animate-fadeIn,
+    .animate-slideUp {
+        animation: none;
+    }
+}

@@ -905,8 +905,6 @@ export interface BannerSlide {
     focalX?: number;   // 0-100, default 50
     focalY?: number;   // 0-100, default 50
     zoom?: number;     // 1-3, default 1
-    /** Píldora chica arriba del titular. Vacío = "¡Qué bueno que estés en casa!" */
-    eyebrow?: string;
     title?: string;           // New: Main headline
     subtitle?: string;        // New: Sub-headline
     titlePrefix?: string;     // Legacy

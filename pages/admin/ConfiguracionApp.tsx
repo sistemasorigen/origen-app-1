@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AppConfig, BannerSlide, FooterLinks, MusicaBannerSlide, YouversBannerSlide } from '../../types';
 import { MusicaBannerSlideInput } from '../../services/supabaseService';
 import ImageUpload from '../../components/media/SubidaImagen';
@@ -288,6 +288,34 @@ const Banners: React.FC<{
     const [carrusel, setCarrusel] = useState<Carrusel>('home');
     const [editando, setEditando] = useState<Partial<BannerSlide> | null>(null);
     const [guardando, setGuardando] = useState(false);
+    const editor = useRef<HTMLDivElement>(null);
+
+    /**
+     * Abrir un slide.
+     *
+     * En pantalla ancha la lista y el editor conviven, así que alcanza con
+     * cambiar el estado. En el teléfono el editor vive debajo de la lista y
+     * de las medidas del marco: tocar "Nuevo slide" no parecía hacer nada
+     * porque lo que cambiaba estaba fuera de la pantalla. Ahora la lista se
+     * aparta, el editor ocupa el lugar entero y la vista se desliza hasta
+     * él, como el segundo paso de un formulario largo.
+     */
+    const [porDesplazar, setPorDesplazar] = useState(false);
+
+    const abrirEditor = (slide: Partial<BannerSlide>) => {
+        setEditando(slide);
+        // En escritorio no hay a dónde ir: el editor ya está al lado.
+        setPorDesplazar(typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches);
+    };
+
+    // El desplazamiento va acá y no en el click: recién después de pintar el
+    // editor tiene sentido llevar la vista hasta él.
+    useEffect(() => {
+        if (!porDesplazar) return;
+        setPorDesplazar(false);
+        const sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        editor.current?.scrollIntoView({ behavior: sinMovimiento ? 'auto' : 'smooth', block: 'start' });
+    }, [porDesplazar]);
 
     const slides = useMemo(
         () => (carrusel === 'home' ? (config.banner?.slides || []) : (config.infoPointConfig?.banners || [])),
@@ -321,7 +349,6 @@ const Banners: React.FC<{
             focalX: editando.focalX ?? 50,
             focalY: editando.focalY ?? 50,
             zoom: editando.zoom ?? 1,
-            eyebrow: editando.eyebrow,
             titlePrefix: editando.titlePrefix,
             titleHighlight: editando.titleHighlight,
             description: editando.description,
@@ -381,15 +408,17 @@ const Banners: React.FC<{
 
             <div className="mt-3 grid gap-3.5 [grid-template-columns:minmax(0,1fr)] lg:[grid-template-columns:minmax(0,1fr)_minmax(0,1.3fr)]">
 
-                {/* Lista + medidas del marco */}
-                <div className="flex min-w-0 flex-col gap-3.5">
+                {/* Lista + medidas del marco. En el teléfono se aparta
+                    mientras hay un slide abierto: son dos pasos, no dos
+                    columnas apiladas. */}
+                <div className={`min-w-0 flex-col gap-3.5 ${editando ? 'hidden lg:flex' : 'flex'}`}>
                     <div className="rounded-[20px] bg-white px-5 py-[18px]">
                         <div className="flex items-center gap-3">
                             <p className="min-w-0 flex-1 text-[15px] font-semibold text-[#0a0a0a]">
                                 {carrusel === 'home' ? 'Slides de la home' : 'Slides del Punto'} · {slides.length}
                             </p>
                             <button
-                                onClick={() => setEditando({ mediaType: 'image', imageUrl: '', titlePrefix: '', titleHighlight: '', description: '' })}
+                                onClick={() => abrirEditor({ mediaType: 'image', imageUrl: '', titlePrefix: '', titleHighlight: '', description: '' })}
                                 className="h-[38px] flex-none rounded-full bg-[#0a0a0a] px-[15px] text-[12.5px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                             >
                                 Nuevo slide
@@ -406,7 +435,7 @@ const Banners: React.FC<{
                                 return (
                                     <button
                                         key={s.id}
-                                        onClick={() => setEditando(s)}
+                                        onClick={() => abrirEditor(s)}
                                         className={`flex w-full items-center gap-[11px] rounded-[16px] px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${elegido ? 'bg-[#0a0a0a]/10' : 'bg-[#f7f7f5]'}`}
                                     >
                                         <span className="h-9 w-[52px] flex-none overflow-hidden rounded-[9px] bg-[#e6e4e0]">
@@ -414,7 +443,7 @@ const Banners: React.FC<{
                                         </span>
                                         <span className="min-w-0 flex-1">
                                             <span className="block truncate text-[13.5px] font-semibold text-[#0a0a0a]">
-                                                {s.title || s.titlePrefix || s.eyebrow || 'Slide sin título'}
+                                                {s.title || s.titlePrefix || 'Slide sin título'}
                                             </span>
                                             <span className="mt-[3px] block truncate text-[11.5px] font-medium text-black/[.6]">
                                                 {s.mediaType === 'video' ? 'Video' : 'Imagen'}
@@ -483,8 +512,13 @@ const Banners: React.FC<{
                     </div>
                 </div>
 
-                {/* Editor */}
-                <div className="min-w-0 rounded-[20px] bg-white px-5 py-[18px]">
+                {/* Editor. En el teléfono aparece solo cuando hay un slide
+                    abierto —y entonces es toda la pantalla—; en escritorio
+                    acompaña a la lista, con su cartel de "elegí uno". */}
+                <div
+                    ref={editor}
+                    className={`min-w-0 scroll-mt-4 rounded-[20px] bg-white px-5 py-[18px] ${editando ? 'animate-slideUp lg:animate-none' : 'hidden lg:block'}`}
+                >
                     {!editando ? (
                         <div className="flex flex-col items-center py-14 text-center">
                             <p className="text-[15px] font-semibold text-[#0a0a0a]">Elegí un slide para editarlo</p>
@@ -495,6 +529,15 @@ const Banners: React.FC<{
                         </div>
                     ) : (
                         <>
+                            <button
+                                onClick={() => setEditando(null)}
+                                className="mb-3 flex h-9 items-center gap-1.5 rounded-full bg-[#f7f7f5] pl-2.5 pr-4 text-[12.5px] font-semibold text-black/[.66] transition-colors hover:text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 lg:hidden"
+                            >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d="M14 6l-6 6 6 6" />
+                                </svg>
+                                {carrusel === 'home' ? 'Slides de la home' : 'Slides del Punto'}
+                            </button>
                             <p className="text-[15px] font-semibold text-[#0a0a0a]">
                                 {editando.id ? 'Editar el slide' : 'Nuevo slide'}
                             </p>
@@ -572,17 +615,7 @@ const Banners: React.FC<{
                                 />
                             </div>
 
-                            <div className="mt-4">
-                                <Rotulo className="mb-1.5 text-black/[.55]">Etiqueta superior</Rotulo>
-                                <input
-                                    type="text" value={editando.eyebrow || ''}
-                                    onChange={e => setEditando({ ...editando, eyebrow: e.target.value })}
-                                    placeholder="¡Qué bueno que estés en casa!"
-                                    className="h-[46px] w-full rounded-[16px] px-4 text-[13.5px] font-medium text-[#0a0a0a]"
-                                />
-                            </div>
-
-                            <div className="mt-3 grid gap-2.5 [grid-template-columns:minmax(0,1fr)] sm:[grid-template-columns:repeat(2,minmax(0,1fr))]">
+                            <div className="mt-4 grid gap-2.5 [grid-template-columns:minmax(0,1fr)] sm:[grid-template-columns:repeat(2,minmax(0,1fr))]">
                                 <div>
                                     <Rotulo className="mb-1.5 text-black/[.55]">Texto principal</Rotulo>
                                     <input
@@ -659,12 +692,7 @@ const Banners: React.FC<{
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,10,10,.72)] via-transparent to-transparent" />
                                     <div className="absolute inset-x-4 bottom-3.5">
-                                        {editando.eyebrow && (
-                                            <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-white/75">
-                                                {editando.eyebrow}
-                                            </p>
-                                        )}
-                                        <p className="mt-1 text-[17px] font-semibold leading-[1.3] tracking-[-0.015em] text-white">
+                                        <p className="text-[17px] font-semibold leading-[1.3] tracking-[-0.015em] text-white">
                                             {editando.titlePrefix || 'Título del slide'}{' '}
                                             {editando.titleHighlight && (
                                                 <span className="text-white/70">{editando.titleHighlight}</span>
@@ -680,18 +708,23 @@ const Banners: React.FC<{
                             </div>
 
                             <div className="mt-4 flex flex-wrap gap-2">
+                                {/* Un slide que ya existe no se publica de nuevo:
+                                    se guardan los cambios. */}
                                 <button
                                     onClick={publicar}
                                     disabled={guardando}
                                     className="h-12 rounded-full bg-[#0a0a0a] px-5 text-[14px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                                 >
-                                    {guardando ? 'Publicando…' : 'Publicar el slide'}
+                                    {editando.id
+                                        ? (guardando ? 'Guardando…' : 'Guardar cambios')
+                                        : (guardando ? 'Publicando…' : 'Publicar el slide')}
                                 </button>
                                 <button
                                     onClick={() => setEditando(null)}
                                     className="h-12 rounded-full bg-[#f2f2f0] px-5 text-[14px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                                 >
-                                    Cerrar el editor
+                                    <span className="lg:hidden">Volver a los slides</span>
+                                    <span className="hidden lg:inline">Cerrar el editor</span>
                                 </button>
                                 {editando.id && (
                                     <button

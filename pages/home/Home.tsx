@@ -929,7 +929,6 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                 focalX: s.focalX,
                                 focalY: s.focalY,
                                 zoom: s.zoom,
-                                eyebrow: s.eyebrow,
                                 title: s.title,
                                 titlePrefix: s.titlePrefix,
                                 titleHighlight: s.titleHighlight,
