@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GroupRegistration, Group, esGrupoPendiente } from '../../types';
+import { GroupRegistration, Group, GroupCategory, GroupTag, esGrupoPendiente } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 import PestanasGrupoAdmin from '../../components/GCX/PestanasGrupoAdmin';
@@ -49,6 +49,12 @@ const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
     const [editandoPareja, setEditandoPareja] = useState<GroupRegistration | null>(null);
     const [guardandoPareja, setGuardandoPareja] = useState(false);
 
+    // Categorías y etiquetas: hacen falta para saber si el grupo es de
+    // parejas, que es lo único que habilita sumarle un acompañante a una
+    // inscripción.
+    const [categories, setCategories] = useState<GroupCategory[]>([]);
+    const [tags, setTags] = useState<GroupTag[]>([]);
+
     const fetchGroup = useCallback(async () => {
         if (!groupId) return;
         setLoadingGroup(true);
@@ -66,6 +72,12 @@ const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
     }, [groupId, navigate]);
 
     useEffect(() => { fetchGroup(); }, [fetchGroup]);
+
+    useEffect(() => {
+        Promise.all([supabaseService.getGroupCategories(), supabaseService.getGroupTags()])
+            .then(([cats, etiquetas]) => { setCategories(cats); setTags(etiquetas); })
+            .catch(error => console.error('[Inscriptos] Error trayendo categorías y etiquetas:', error));
+    }, []);
 
     const fetchApplicants = useCallback(async () => {
         if (!groupId) return;
@@ -154,6 +166,22 @@ const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
     const nParejas = applicants.filter(r => !!r.partnerData).length;
     const nPendientes = applicants.filter(r => r.status === 'PENDING').length;
 
+    // Un grupo es de parejas por su categoría o por su etiqueta, y solo si es
+    // mixto: la misma regla que usan el catálogo, la inscripción pública y
+    // "Agregar a mano". Sin esto, cualquier inscripción aprobada ofrecía
+    // "Sumar una pareja" aunque el grupo fuera, por ejemplo, de hombres.
+    const nombreCategoria = (
+        categories.find(c => c.id === group?.categoryId)?.name
+        || group?.categoryName
+        || group?.categoryId
+        || ''
+    ).toLowerCase();
+    const tieneEtiquetaParejas = !!group?.tags?.some(
+        id => tags.find(t => t.id === id)?.name?.toLowerCase() === 'parejas'
+    );
+    const esGrupoDeParejas = (nombreCategoria === 'parejas' || tieneEtiquetaParejas)
+        && group?.targetGender === 'Mixto';
+
     const datosDe = (r: GroupRegistration) => {
         const esPareja = !!r.partnerData;
         const nombrePareja = esPareja ? `${r.partnerData!.firstName} ${r.partnerData!.lastName}`.trim() : '';
@@ -210,27 +238,41 @@ const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
             );
         }
 
+        // Sumar un acompañante solo tiene sentido en un grupo de parejas. Si
+        // la inscripción ya tiene pareja cargada, el botón se muestra igual
+        // aunque el grupo haya dejado de ser de parejas: esos datos existen y
+        // hay que poder verlos y corregirlos.
+        const mostrarPareja = esGrupoDeParejas || esPareja;
+
         return (
             <>
-                <button
-                    onClick={() => setEditandoPareja(r)}
-                    disabled={ocupado}
-                    className={`${botonChico} ${movil ? 'h-[42px] flex-1 text-[13.5px]' : ''} whitespace-nowrap`}
-                    style={esPareja
-                        ? { background: '#fbeef4', color: ROSA }
-                        : { background: '#f2f2f0', color: 'rgba(0,0,0,.66)' }}
-                >
-                    {esPareja ? (movil ? 'Ver o editar la pareja' : 'Ver pareja') : (movil ? 'Sumar una pareja' : 'Sumar pareja')}
-                </button>
+                {mostrarPareja && (
+                    <button
+                        onClick={() => setEditandoPareja(r)}
+                        disabled={ocupado}
+                        className={`${botonChico} ${movil ? 'h-[42px] flex-1 text-[13.5px]' : ''} whitespace-nowrap`}
+                        style={esPareja
+                            ? { background: '#fbeef4', color: ROSA }
+                            : { background: '#f2f2f0', color: 'rgba(0,0,0,.66)' }}
+                    >
+                        {esPareja ? (movil ? 'Ver o editar la pareja' : 'Ver pareja') : (movil ? 'Sumar una pareja' : 'Sumar pareja')}
+                    </button>
+                )}
                 {!!r.email && (
                     <button
                         onClick={() => reenviar(r)}
                         disabled={ocupado}
                         title="Reenviar el mail de confirmación"
                         aria-label={`Reenviar el mail de confirmación a ${r.firstName}`}
-                        className={`${iconoChico} ${movil ? 'h-[42px] w-[46px]' : ''} bg-[#f2f2f0] text-black/[.6]`}
+                        /* En el teléfono, sin el botón de pareja la fila quedaría
+                           con dos íconos sueltos: el mail pasa a ser la acción
+                           ancha y dice lo que hace. */
+                        className={movil && !mostrarPareja
+                            ? `${botonChico} flex h-[42px] flex-1 items-center justify-center gap-2 text-[13.5px] bg-[#f2f2f0] text-black/[.66]`
+                            : `${iconoChico} ${movil ? 'h-[42px] w-[46px]' : ''} bg-[#f2f2f0] text-black/[.6]`}
                     >
                         {ocupado ? <Loader2 className="h-[14px] w-[14px] animate-spin" /> : <Mail className="h-[14px] w-[14px]" />}
+                        {movil && !mostrarPareja && 'Reenviar el mail'}
                     </button>
                 )}
                 <button
