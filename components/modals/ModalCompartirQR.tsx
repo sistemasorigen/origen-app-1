@@ -40,6 +40,14 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
         };
     }, [isOpen]);
 
+    // Escape cierra, como en el resto de las hojas.
+    useEffect(() => {
+        if (!isOpen) return;
+        const alSalir = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', alSalir);
+        return () => window.removeEventListener('keydown', alSalir);
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     const markCopied = () => {
@@ -74,44 +82,56 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
     };
 
     return (
+        /* Hoja que sube desde abajo en el teléfono y se centra en escritorio,
+           igual que el recorte de imagen y las confirmaciones del panel. */
         <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            className="fixed inset-0 z-[100] flex items-end justify-center bg-[rgba(10,10,10,.42)] p-0 md:items-center md:p-10"
             onClick={onClose}
         >
             <div
-                className="relative bg-white border border-slate-200 rounded-lg w-full max-w-sm overflow-hidden shadow-xl"
+                /* El pie lleva aire de más y suma el resguardo del sistema: en
+                   el teléfono la barra del navegador y la franja del gesto se
+                   comen los últimos píxeles, y ahí abajo están los botones. */
+                className="relative flex max-h-[92vh] w-full flex-col overflow-y-auto rounded-t-[24px] bg-white pb-[calc(28px+env(safe-area-inset-bottom))] md:max-w-[420px] md:rounded-[24px] md:pb-7"
                 onClick={e => e.stopPropagation()}
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-2 right-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-colors z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+                    className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-[#f2f2f0] text-black/[.6] transition-colors hover:text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                     aria-label="Cerrar"
                 >
-                    <X className="w-5 h-5" />
+                    <X className="h-[15px] w-[15px]" />
                 </button>
-                <div className="px-8 pb-8 pt-6 flex flex-col items-center text-center">
-                    <img src={LOGO_URL} alt="Logo" className="h-14 w-auto object-contain mb-4" />
-                    <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 mb-1 break-words max-w-full">{title}</h3>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">
-                        {subtitle || 'Escaneá o compartí'}
+                <div className="flex flex-col items-center px-6 pt-7 text-center">
+                    <img src={LOGO_URL} alt="" className="mb-4 h-12 w-auto object-contain" />
+                    <h3 className="max-w-full break-words text-[20px] font-semibold leading-[1.35] tracking-[-0.018em] text-[#0a0a0a]">
+                        {title}
+                    </h3>
+                    <p className="mt-1.5 text-[13px] font-medium leading-[1.55] text-black/[.62]">
+                        {subtitle || 'Escaneá el código o compartí el link'}
                     </p>
-                    <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6 shadow-sm">
-                        <img src={qrUrl} alt={`QR ${title}`} className="w-44 h-44 object-contain" />
+                    <div className="mt-5 rounded-[16px] bg-[#f7f7f5] p-4">
+                        <img src={qrUrl} alt={`Código QR de ${title}`} className="h-44 w-44 object-contain" />
                     </div>
-                    <div className="w-full space-y-3">
-                        <button
-                            onClick={copyLink}
-                            className="w-full py-3 px-6 border border-slate-200 rounded-lg font-bold uppercase text-xs tracking-widest text-slate-700 hover:bg-slate-100 transition-colors flex items-center justify-center gap-3"
-                        >
-                            {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
-                            {isCopied ? '¡Copiado!' : 'Copiar link'}
-                        </button>
+                    <div className="mt-5 flex w-full flex-col gap-2.5">
                         <button
                             onClick={shareWhatsApp}
-                            className="w-full py-3 px-6 bg-[#25D366] text-white rounded-lg font-bold uppercase text-xs tracking-widest hover:bg-[#1eb958] transition-colors flex items-center justify-center gap-3"
+                            className="inline-flex h-[52px] w-full items-center justify-center gap-2.5 rounded-full bg-[#25D366] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#1eb958] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                         >
-                            <WhatsAppIcon className="w-4 h-4" />
-                            Compartir vía WhatsApp
+                            <WhatsAppIcon className="h-[17px] w-[17px]" />
+                            Compartir por WhatsApp
+                        </button>
+                        <button
+                            onClick={copyLink}
+                            className="inline-flex h-[52px] w-full items-center justify-center gap-2.5 rounded-full bg-[#f2f2f0] text-[14.5px] font-semibold text-[#0a0a0a] transition-colors hover:bg-[#eceae6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                        >
+                            {isCopied
+                                ? <Check className="h-[17px] w-[17px] text-emerald-600" />
+                                : <Copy className="h-[17px] w-[17px] text-black/[.55]" />}
+                            {isCopied ? 'Link copiado' : 'Copiar el link'}
                         </button>
                     </div>
                 </div>

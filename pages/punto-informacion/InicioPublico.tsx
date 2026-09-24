@@ -71,15 +71,15 @@ const EYEBROW = 'text-[11px] font-semibold uppercase tracking-[0.12em] text-slat
 const H2 = 'text-lg sm:text-xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white';
 const META = 'text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-zinc-500 tabular-nums';
 const BODY = 'text-sm font-normal text-slate-500 dark:text-zinc-400 leading-relaxed';
-const BTN_PRIMARY = 'inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
-const BTN_SOFT = 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 text-sm font-semibold hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
+const BTN_PRIMARY = 'inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
+const BTN_SOFT = 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white text-sm font-semibold hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
 // Píldora de estado: mismo molde que los badges de cupo del Home.
 const PILL = 'inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full';
 // El mismo botón negro del Home, pero a lo ancho y en tamaño táctil (48px de
 // alto). En el teléfono la acción de una tarjeta no debería ser una fichita
 // apretada contra el borde: ocupa el pie entero, que además es donde el pulgar
 // llega sin reacomodar la mano.
-const BTN_PRIMARY_BLOCK = 'w-full inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] touch-manipulation transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
+const BTN_PRIMARY_BLOCK = 'w-full inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] touch-manipulation transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
 
 // Alto mínimo de la tarjeta de anuncio: entradilla + dos líneas de título +
 // cuatro de descripción + el pie. Iguala las tarjetas entre filas para que un
@@ -154,7 +154,7 @@ const AnuncioDescripcion: React.FC<{ text: string }> = ({ text }) => {
                     aria-expanded={expanded}
                     /* El `py-1.5` no es aire: es área táctil. Sin él el enlace
                        mide 20px de alto y en el teléfono se falla el toque. */
-                    className="py-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 touch-manipulation rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 transition-colors"
+                    className="py-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 touch-manipulation rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 transition-colors"
                 >
                     {expanded ? 'Ver menos' : 'Ver más'}
                 </button>
@@ -378,7 +378,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                     <Megaphone className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-2xl font-black tabular-nums tracking-[-0.03em] leading-none text-slate-900 dark:text-white">
+                                    <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] leading-none text-slate-900 dark:text-white">
                                         {activeAnnouncements.length}
                                     </p>
                                     <p className={`${EYEBROW} mt-1.5`}>
@@ -402,7 +402,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                     <Calendar className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-2xl font-black tabular-nums tracking-[-0.03em] leading-none text-slate-900 dark:text-white">
+                                    <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] leading-none text-slate-900 dark:text-white">
                                         {upcomingEvents.length}
                                     </p>
                                     <p className={`${EYEBROW} mt-1.5`}>
@@ -432,7 +432,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                             <button
                                                 key={key}
                                                 onClick={() => setSocialShare({ label, url, Icon })}
-                                                className="flex-1 basis-0 min-w-[44px] max-w-[68px] aspect-square rounded-2xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center touch-manipulation hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-md active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20"
+                                                className="flex-1 basis-0 min-w-[44px] max-w-[68px] aspect-square rounded-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center touch-manipulation hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-md active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20"
                                                 title={label}
                                                 aria-label={`Ver el QR de ${label}`}
                                             >
@@ -575,7 +575,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                                                 <div className="flex items-start gap-4 mb-4">
                                                     <div className="flex-none text-center rounded-xl px-3 py-2.5 min-w-[60px] bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
                                                         <p className={EYEBROW}>{dayName.slice(0, 3)}</p>
-                                                        <p className="text-2xl font-black tabular-nums tracking-[-0.03em] leading-none text-slate-900 dark:text-white my-1">{dayNum}</p>
+                                                        <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] leading-none text-slate-900 dark:text-white my-1">{dayNum}</p>
                                                         <p className={EYEBROW}>{monthName.slice(0, 3)}</p>
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -660,7 +660,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                             {footerLinks?.instagram && (
                                 <button
                                     onClick={() => window.open(footerLinks.instagram, '_blank')}
-                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200"
+                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-full flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-colors duration-200"
                                     title="Instagram"
                                     aria-label="Abrir Instagram de Origen (nueva pestaña)"
                                 >
@@ -670,7 +670,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                             {footerLinks?.facebook && (
                                 <button
                                     onClick={() => window.open(footerLinks.facebook, '_blank')}
-                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200"
+                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-full flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-colors duration-200"
                                     title="Facebook"
                                     aria-label="Abrir Facebook de Origen (nueva pestaña)"
                                 >
@@ -680,7 +680,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                             {footerLinks?.youtube && (
                                 <button
                                     onClick={() => window.open(footerLinks.youtube, '_blank')}
-                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200"
+                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-full flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-colors duration-200"
                                     title="YouTube"
                                     aria-label="Abrir YouTube de Origen (nueva pestaña)"
                                 >
@@ -690,7 +690,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ viewMode, onGoInternal, onGoPub
                             {footerLinks?.spotify && (
                                 <button
                                     onClick={() => window.open(footerLinks.spotify, '_blank')}
-                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-all duration-200"
+                                    className="w-12 h-12 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-full flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 dark:hover:bg-white dark:hover:text-slate-900 transition-colors duration-200"
                                     title="Spotify"
                                     aria-label="Abrir Spotify de Origen (nueva pestaña)"
                                 >
