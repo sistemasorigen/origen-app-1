@@ -22,13 +22,13 @@ import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import { ChevronLeft, ChevronRight, Search, ArrowLeftRight, ArrowRight, FileSpreadsheet, Printer } from 'lucide-react';
-import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte, ResumenDemograficoReporte, TramosDeFrecuencia } from '../../types';
+import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte, ResumenDemograficoReporte, TramosDeFrecuencia, ProgresoReportesGCX } from '../../types';
 import { MODALIDADES, NOMBRE_MODALIDAD } from '../../src/utils/modalidad';
 import { supabaseService } from '../../services/supabaseService';
 import {
     C, FUENTE, NOMBRE_TEMPORADA, TEMPORADAS, EjeCategoria, RAMPA_AZUL, COLOR_RESTO,
     Tarjeta, TituloTarjeta, NotaCobertura, Esqueleto, Kpi, Torta, FilaLeyenda,
-    SinDatos, LeyendaGenero, BarrasPorCategoria,
+    SinDatos, LeyendaGenero, BarrasPorCategoria, PantallaCarga,
 } from '../../components/Reportes/PiezasTablero';
 import {
     ClaveGrafico, TITULO_GRAFICO, ORDEN_GRAFICOS, ContextoExport,
@@ -649,16 +649,52 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
     const [edadMax, setEdadMax] = useState(100);
     const [busqueda, setBusqueda] = useState('');
 
+    // ── Carga del tablero ───────────────────────────────────────────────
+    // Tres fases: la barra sube, la barra se va, y recién entonces entra el
+    // tablero. Separarlas es lo que hace que el tablero no aparezca a medias
+    // debajo de una barra que todavía se está yendo.
+    const [progreso, setProgreso] = useState<ProgresoReportesGCX>({ pct: 0, etapa: '' });
+    const [fase, setFase] = useState<'cargando' | 'saliendo' | 'listo'>('cargando');
+    const [barraVisible, setBarraVisible] = useState(false);
+
+    // A quien pidió menos movimiento en su sistema no se le hace esperar la
+    // animación de salida: el tablero entra apenas están los datos.
+    const sinMovimiento = useMemo(
+        () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+        []
+    );
+
     const cargar = useCallback(async () => {
         setCargando(true);
         setFallo(false);
-        const res = await supabaseService.getReportesGCX(temporada, anio);
+        setProgreso({ pct: 0, etapa: '' });
+        setFase('cargando');
+        setBarraVisible(false);
+        const res = await supabaseService.getReportesGCX(temporada, anio, setProgreso);
         if (!res) { setFallo(true); setDatos(null); }
         else setDatos(res);
+        setProgreso({ pct: 100, etapa: 'Listo' });
         setCargando(false);
     }, [temporada, anio]);
 
     useEffect(() => { cargar(); }, [cargar]);
+
+    // La barra no aparece de inmediato: con la base cacheada el tablero
+    // vuelve en decenas de milisegundos y sería un parpadeo. Si llega antes
+    // de este cuarto de segundo, nunca se la ve.
+    useEffect(() => {
+        if (fase !== 'cargando') return;
+        const id = window.setTimeout(() => setBarraVisible(true), 220);
+        return () => window.clearTimeout(id);
+    }, [fase]);
+
+    // Datos listos: se deja ver el 100% un instante y ahí arranca la salida.
+    useEffect(() => {
+        if (cargando || fase !== 'cargando') return;
+        if (fallo || sinMovimiento || !barraVisible) { setFase('listo'); return; }
+        const id = window.setTimeout(() => setFase('saliendo'), 280);
+        return () => window.clearTimeout(id);
+    }, [cargando, fallo, fase, barraVisible, sinMovimiento]);
 
     // El rango etario filtra sin volver a pedir el resto del tablero: la base
     // ya está cacheada en el servicio, así que esto es una segunda pasada
@@ -967,6 +1003,26 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
             </div>
 
             <div className="max-w-[1440px] mx-auto px-7 py-6">
+
+                {/* Mientras carga, en el lugar del tablero va la barra. No
+                    conviven: el tablero entra cuando la barra terminó de
+                    irse, así no se lo ve armarse a pedazos por debajo. */}
+                {fase !== 'listo' ? (
+                    barraVisible ? (
+                        <PantallaCarga
+                            objetivo={progreso.pct}
+                            etapa={progreso.etapa}
+                            detalle={`Temporada ${NOMBRE_TEMPORADA[temporada]} · ${anio}`}
+                            saliendo={fase === 'saliendo'}
+                            onSalida={() => setFase('listo')}
+                        />
+                    ) : (
+                        /* El cuarto de segundo antes de mostrar la barra: se
+                           reserva el alto para que nada salte después. */
+                        <div style={{ minHeight: '58vh' }} aria-hidden="true" />
+                    )
+                ) : (
+                <div className="animate-fadeIn">
 
                 {fallo && (
                     <Tarjeta className="px-6 py-8 text-center">
@@ -1821,6 +1877,9 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                             )}
                         </Tarjeta>
                     </>
+                )}
+
+                </div>
                 )}
             </div>
         </div>

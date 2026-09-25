@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Layout from './components/layout/Estructura';
 import ErrorBoundary from './components/ui/LimiteError';
@@ -100,6 +100,7 @@ import TriviaPlanilla  from './pages/trivia/TriviaPlanilla';
 import SystemLoginModal from './components/modals/ModalLoginSistema';
 import CompleteProfileModal from './components/modals/ModalCompletarPerfil';
 import AvisoConexion from './components/ui/AvisoConexion';
+import PantallaCargaApp from './components/ui/PantallaCargaApp';
 import { User, UserRole, AppConfig } from './types';
 import { db } from './services/dbService';
 import { supabaseService } from './services/supabaseService';
@@ -163,6 +164,7 @@ const AppContent: React.FC = () => {
     const {
         user,
         isLoadingSession, // Only block if we don't know the session yet
+        isLoadingProfile, // Sigue en true hasta que llegan los roles
         error: authError,
         signIn,
         signOut,
@@ -270,25 +272,77 @@ const AppContent: React.FC = () => {
         setConfig(db.getAppConfig());
     };
 
-    // Show loading screen ONLY if session is unknown
-    // This allows the app to render much faster (Non-Blocking)
-    if (isLoadingSession) {
+    // ── Entrada a la app ────────────────────────────────────────────────
+    // Después de iniciar sesión hay dos esperas encadenadas: saber que hay
+    // sesión y traer el perfil, que es lo que trae los roles. Hasta que los
+    // roles no están, el menú deslizable y las rutas no saben qué mostrar, y
+    // la pantalla se armaba a la vista: menú corto que después crecía,
+    // tarjetas entrando de a una.
+    //
+    // Cuatro fases: se espera con el velo puesto, el árbol se monta DETRÁS
+    // mientras la barra se completa, el velo se va y recién ahí se ve la app,
+    // ya dibujada entera.
+    const [faseEntrada, setFaseEntrada] = useState<'hidratando' | 'accesos' | 'saliendo' | 'lista'>('hidratando');
+    const [veloVisible, setVeloVisible] = useState(false);
+    const sinMovimiento = useMemo(
+        () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+        []
+    );
+
+    // El velo no aparece de inmediato: con la sesión en caché la app está
+    // lista en decenas de milisegundos y sería un parpadeo.
+    useEffect(() => {
+        if (faseEntrada !== 'hidratando') return;
+        const id = window.setTimeout(() => setVeloVisible(true), 220);
+        return () => window.clearTimeout(id);
+    }, [faseEntrada]);
+
+    // Recién iniciada la sesión el velo vuelve a ponerse: es el caso que más
+    // importa: se viene de /auth, donde no había usuario ni velo, y detrás
+    // faltan justo los roles con los que el menú se arma.
+    const usuarioPrevio = useRef<string | null>(null);
+    useEffect(() => {
+        const id = user?.id ?? null;
+        if (id && !usuarioPrevio.current) {
+            setFaseEntrada('hidratando');
+            setVeloVisible(false);
+        }
+        usuarioPrevio.current = id;
+    }, [user?.id]);
+
+    useEffect(() => {
+        if (faseEntrada === 'saliendo' || faseEntrada === 'lista') return;
+        // Sin sesión no hay accesos que preparar: las pantallas públicas
+        // entran derecho, sin velo ni barra.
+        if (!isLoadingSession && !user) { setFaseEntrada('lista'); return; }
+        if (isLoadingSession || isLoadingProfile) { setFaseEntrada('hidratando'); return; }
+        setFaseEntrada('accesos');
+    }, [isLoadingSession, isLoadingProfile, user, faseEntrada]);
+
+    // Con los roles ya en la mano se monta el árbol detrás del velo y se le
+    // da un respiro para que el menú y la ruta se dibujen antes de destapar.
+    useEffect(() => {
+        if (faseEntrada !== 'accesos') return;
+        if (!veloVisible || sinMovimiento) { setFaseEntrada('lista'); return; }
+        const id = window.setTimeout(() => setFaseEntrada('saliendo'), 320);
+        return () => window.clearTimeout(id);
+    }, [faseEntrada, veloVisible, sinMovimiento]);
+
+    const entrada = isLoadingSession
+        ? { objetivo: 38, etapa: 'Verificando tu sesión…' }
+        : isLoadingProfile
+            ? { objetivo: 76, etapa: 'Trayendo tu perfil y tus permisos…' }
+            : { objetivo: 100, etapa: 'Preparando tus accesos…' };
+
+    // La pantalla con el botón de reintentar se reserva para lo que de
+    // verdad necesita una decisión: un error, o una espera que ya es
+    // demasiada. La espera normal la cuenta la barra.
+    if ((isLoadingSession && showLoadingTimeout) || (authError && !user)) {
         return (
             <LoadingScreen
                 onRetry={retryAuth}
                 error={authError}
                 showTimeout={showLoadingTimeout}
-            />
-        );
-    }
-
-    // Show error state if auth failed but not loading
-    if (authError && !user) {
-        return (
-            <LoadingScreen
-                onRetry={retryAuth}
-                error={authError}
-                showTimeout={false}
             />
         );
     }
@@ -310,6 +364,19 @@ const AppContent: React.FC = () => {
             las rutas para que acompañe a la persona esté donde esté, y se
             saca sola cuando el reintento lo logra. */}
         <AvisoConexion />
+
+        {/* El velo de entrada, encima de todo. Mientras está en
+            'hidratando' el árbol ni se monta: no tiene con qué decidir. */}
+        {faseEntrada !== 'lista' && veloVisible && (
+            <PantallaCargaApp
+                objetivo={entrada.objetivo}
+                etapa={entrada.etapa}
+                saliendo={faseEntrada === 'saliendo'}
+                onSalida={() => setFaseEntrada('lista')}
+            />
+        )}
+
+        {faseEntrada !== 'hidratando' && (
         <Routes>
             {/* ── RUTAS SIN LAYOUT ────────────────── */}
             <Route
@@ -1027,6 +1094,7 @@ const AppContent: React.FC = () => {
                     )
             } />
         </Routes>
+        )}
         </>
     );
 };

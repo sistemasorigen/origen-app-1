@@ -1,7 +1,7 @@
 
 import { supabase } from './supabaseClient';
 import { db } from './dbService';
-import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte } from '../types';
+import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
 const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
@@ -6234,7 +6234,19 @@ export const supabaseService = {
    * veces, así que el resultado se cachea unos segundos: cuando el tablero
    * monta y dispara los cinco gráficos juntos, se hace una sola pasada.
    */
-  async _cargarBaseReportesGCX(season: TemporadaGCX, year: number): Promise<BaseReportesGCX | null> {
+  async _cargarBaseReportesGCX(
+    season: TemporadaGCX,
+    year: number,
+    /**
+     * Avisa cuál de las tres consultas está corriendo. Acá adentro está casi
+     * todo el tiempo de espera del tablero, así que es el único lugar donde
+     * una barra de carga tiene algo que contar.
+     *
+     * Con la base cacheada no se llama nunca: se devuelve la promesa de
+     * antes y no hay etapas que informar, pero tampoco hay espera.
+     */
+    onProgreso?: (p: ProgresoReportesGCX) => void
+  ): Promise<BaseReportesGCX | null> {
     const clave = `${season}-${year}`;
     const enCache = baseReportesCache.get(clave);
     if (enCache && Date.now() - enCache.momento < BASE_REPORTES_TTL_MS) {
@@ -6243,6 +6255,7 @@ export const supabaseService = {
 
     const promesa = (async (): Promise<BaseReportesGCX | null> => {
       try {
+        onProgreso?.({ pct: 26, etapa: 'Buscando los grupos de la temporada' });
         const { data: gruposRaw, error: errGrupos } = await supabase
           .from('groups')
           // '*' y no la lista de columnas: nombrar is_hybrid haría fallar el
@@ -6272,6 +6285,7 @@ export const supabaseService = {
 
         const idsGrupos = grupos.map((g: any) => g.id);
 
+        onProgreso?.({ pct: 58, etapa: 'Trayendo inscripciones y asistencias' });
         const [resInscripciones, resAsistencias, categorias] = await Promise.all([
           supabase
             .from('group_registrations')
@@ -6352,6 +6366,7 @@ export const supabaseService = {
 
         const usuarios = new Map<string, UsuarioReporte>();
         if (idsUsuarios.size > 0) {
+          onProgreso?.({ pct: 74, etapa: 'Buscando los datos de cada persona' });
           const { data: usuariosRaw, error: errUsuarios } = await supabase
             .from('users')
             .select('id, name, gender, age, birth_date')
@@ -6871,11 +6886,29 @@ export const supabaseService = {
    */
   async getReportesGCX(
     season: TemporadaGCX,
-    year: number
+    year: number,
+    /**
+     * Se llama al empezar cada etapa, para la barra de carga del tablero.
+     *
+     * El número que se manda es HASTA DÓNDE puede llegar la barra mientras
+     * dura esa etapa, no lo que ya se hizo: la barra se desliza hacia ese
+     * techo y frena ahí hasta que la etapa termina de verdad. Sin eso se
+     * quedaría clavada en 4% durante los segundos que tarda la consulta.
+     *
+     * Los cortes son las tres esperas reales de esta función y los pesos
+     * salen de cuánto tarda cada una: traer la base es la única que va a la
+     * red —y se lleva más de la mitad del tiempo—; lo que sigue son cuentas
+     * sobre esos mismos datos, ya cacheados.
+     */
+    onProgreso?: (p: ProgresoReportesGCX) => void
   ): Promise<ReportesGCXTemporada | null> {
-    const base = await supabaseService._cargarBaseReportesGCX(season, year);
+    const avisar = (pct: number, etapa: string) => onProgreso?.({ pct, etapa });
+
+    avisar(26, 'Buscando los grupos de la temporada');
+    const base = await supabaseService._cargarBaseReportesGCX(season, year, onProgreso);
     if (!base) return null;
 
+    avisar(92, 'Cruzando personas, grupos y reuniones');
     const [kpis, asistenciaPersonas, gruposQueReportan, generoPorCategoria, edadesPorCategoria, asistenciaPorFecha, cargaPorGrupo, tablaGrupos] =
       await Promise.all([
         supabaseService.getKPIsReportesGCX(season, year),
@@ -6931,9 +6964,11 @@ export const supabaseService = {
       };
     };
 
+    avisar(97, 'Separando presencial, online e híbrido');
     const [presencial, online, hibrido] = await Promise.all([reporteDe('presencial'), reporteDe('online'), reporteDe('hibrido')]);
     if (!presencial || !online || !hibrido) return null;
 
+    avisar(99, 'Armando los gráficos');
     return {
       kpis, asistenciaPersonas, gruposQueReportan, generoPorCategoria, edadesPorCategoria, asistenciaPorFecha, cargaPorGrupo, tablaGrupos,
       porModalidad: { presencial, online, hibrido },

@@ -1724,6 +1724,20 @@ export interface DetalleGrupoReporte {
     solicitudesPendientes: number;
 }
 
+/**
+ * Avance de la carga del tablero de GCX.
+ *
+ * Los porcentajes no son decorativos: cada uno marca una etapa que terminó
+ * de verdad (traer la base, cruzarla, separarla por modalidad). La barra los
+ * usa de anclas y se desliza entre uno y otro.
+ */
+export interface ProgresoReportesGCX {
+    /** 0 a 100. */
+    pct: number;
+    /** Qué se está haciendo ahora, en una línea. */
+    etapa: string;
+}
+
 export interface ReportesGCXTemporada {
     kpis: KPIsReportesGCX;
     asistenciaPersonas: AsistenciaPersonasReporte;

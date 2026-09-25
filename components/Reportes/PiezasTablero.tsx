@@ -11,12 +11,13 @@
 // tablero de analítica claro que define design-claude/Reportes GCX.dc.html
 // — blanco sobre #f7f8fa, borde de un pixel, azul #2563eb.
 // ════════════════════════════════════════════════════════════════════════
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
     ResponsiveContainer, PieChart, Pie, Cell,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import { TemporadaGCX } from '../../types';
+import { useBarraDeProgreso } from '../../hooks/useBarraDeProgreso';
 
 // ── Tokens del diseño ───────────────────────────────────────────────────
 export const C = {
@@ -313,3 +314,108 @@ export const BarrasPorCategoria: React.FC<{
         </ResponsiveContainer>
     </div>
 );
+
+// ── Pantalla de carga ───────────────────────────────────────────────────
+
+/**
+ * Barra de carga del tablero.
+ *
+ * El tablero tarda unos segundos: trae la temporada entera —grupos,
+ * inscripciones, asistencias y usuarios— y recién después puede dibujar
+ * algo. Antes ese rato eran doce esqueletos grises latiendo, que no dicen
+ * cuánto falta ni si la cosa se colgó. Acá un número avanza y una línea
+ * cuenta en qué anda.
+ *
+ * El porcentaje es honesto: cada etapa trae su techo y la barra se desliza
+ * hacia él sin pasarlo nunca. Que el número se mueva quiere decir que la
+ * etapa sigue corriendo; que salte a otro tramo, que terminó de verdad.
+ */
+export const PantallaCarga: React.FC<{
+    /** Techo de la etapa que está corriendo (0-100). */
+    objetivo: number;
+    /** Qué se está haciendo, para la línea de abajo. */
+    etapa: string;
+    /** Contexto chico: "Temporada 2 · 2026". */
+    detalle?: string;
+    /** Con `true` se desvanece; el tablero entra recién cuando terminó. */
+    saliendo: boolean;
+    /** Se llama al final de la salida. */
+    onSalida: () => void;
+}> = ({ objetivo, etapa, detalle, saliendo, onSalida }) => {
+    const { barra, pct, escala } = useBarraDeProgreso(objetivo);
+
+    // El temporizador respalda a la transición: si la pestaña está en segundo
+    // plano el navegador no dispara transitionend y el tablero no entraría.
+    useEffect(() => {
+        if (!saliendo) return;
+        const id = window.setTimeout(onSalida, 420);
+        return () => window.clearTimeout(id);
+    }, [saliendo, onSalida]);
+
+    const completo = objetivo >= 100;
+
+    return (
+        <div
+            className="flex items-center justify-center px-6"
+            style={{
+                minHeight: '58vh',
+                fontFamily: FUENTE,
+                opacity: saliendo ? 0 : 1,
+                transform: saliendo ? 'translateY(-10px) scale(.985)' : 'none',
+                transition: 'opacity .38s ease, transform .38s cubic-bezier(.4,0,.2,1)',
+            }}
+        >
+            <div className="w-full max-w-[460px]">
+                <div className="flex items-baseline justify-between gap-4">
+                    <p className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>
+                        Armando el tablero
+                    </p>
+                    <span className="text-[26px] font-semibold tabular-nums leading-none" style={{ color: C.azul }}>
+                        {pct}%
+                    </span>
+                </div>
+
+                <div
+                    className="mt-3 overflow-hidden rounded-full"
+                    style={{ height: 8, background: '#e8eaee' }}
+                    role="progressbar"
+                    aria-valuenow={pct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label="Carga del tablero"
+                >
+                    <div
+                        ref={barra}
+                        className="h-full w-full rounded-full"
+                        style={{
+                            transformOrigin: 'left center',
+                            transform: `scaleX(${escala})`,
+                            // Cada etapa se desliza hacia su techo en un par
+                            // de segundos y frena ahí; el cierre, con los
+                            // datos ya en la mano, es de golpe.
+                            transition: `transform ${completo ? '.32s' : '2.4s'} cubic-bezier(.22,.85,.32,1)`,
+                            background: `linear-gradient(90deg, ${C.azul}, #5b8def)`,
+                        }}
+                    />
+                </div>
+
+                {/* La `key` reinicia el fundido en cada frase nueva: el cambio
+                    se nota sin que haga falta leerla entera. */}
+                <p
+                    key={etapa}
+                    className="mt-3 m-0 text-[13px] font-medium animate-fadeIn"
+                    style={{ color: C.apagado }}
+                    aria-live="polite"
+                >
+                    {etapa ? `${etapa}…` : 'Abriendo la temporada…'}
+                </p>
+
+                {detalle && (
+                    <p className="mt-1 m-0 text-[12px] font-medium" style={{ color: C.tenue }}>
+                        {detalle}
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+};
