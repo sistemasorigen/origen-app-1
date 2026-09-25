@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Copy, Check } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
@@ -81,7 +82,17 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
     };
 
-    return (
+    /**
+     * Va por un portal al <body>, y no donde se lo invoque.
+     *
+     * Una hoja `position: fixed` deja de estar anclada a la pantalla si
+     * algún ancestro tiene transform, filter o —en iOS Safari— overflow
+     * oculto con esquinas redondeadas: pasa a medirse contra esa caja. Eso
+     * es exactamente la tarjeta de un grupo, así que la hoja aparecía
+     * encajada adentro de la tarjeta, cortada y sin el velo de fondo. Desde
+     * el body no hay ancestro que la recorte, la invoque quien la invoque.
+     */
+    return createPortal(
         /* Hoja que sube desde abajo en el teléfono y se centra en escritorio,
            igual que el recorte de imagen y las confirmaciones del panel. */
         <div
@@ -95,7 +106,7 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
                 /* El pie lleva aire de más y suma el resguardo del sistema: en
                    el teléfono la barra del navegador y la franja del gesto se
                    comen los últimos píxeles, y ahí abajo están los botones. */
-                className="relative flex max-h-[92vh] w-full flex-col overflow-y-auto rounded-t-[24px] bg-white pb-[calc(28px+env(safe-area-inset-bottom))] md:max-w-[420px] md:rounded-[24px] md:pb-7"
+                className="relative flex max-h-[92vh] w-full flex-col overflow-y-auto rounded-t-[24px] bg-white supports-[height:100dvh]:max-h-[92dvh] pb-[calc(28px+env(safe-area-inset-bottom))] md:max-w-[420px] md:rounded-[24px] md:pb-7"
                 onClick={e => e.stopPropagation()}
             >
                 <button
@@ -147,7 +158,8 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
