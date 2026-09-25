@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { dondeSeReune } from '../../src/utils/modalidad';
-import { Clock, MapPin, Video, Users, ArrowRight, CheckCircle2, Lock, ChevronDown, ChevronUp, Link, Check, EyeOff, CalendarPlus } from 'lucide-react';
+import { Clock, MapPin, Video, Users, ArrowRight, CheckCircle2, Lock, ChevronDown, ChevronUp, Link, Check, EyeOff, CalendarPlus, Share2 } from 'lucide-react';
 import { Group, GroupTag, GroupCategory, User as AppUser, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import { descargarICS } from '../../src/utils/calendario';
+import ModalCompartirQR from '../modals/ModalCompartirQR';
 
 
 interface GroupCardProps {
@@ -21,6 +22,18 @@ interface GroupCardProps {
 const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, onInquiry, userStatus, currentUser, id }) => {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [isTagsExpanded, setIsTagsExpanded] = useState(false);
+    const [compartiendo, setCompartiendo] = useState(false);
+
+    // Link para compartir el grupo.
+    //
+    // Va con `#` porque la app monta un HashRouter: toda la ruta vive en el
+    // fragmento. Y apunta a /gcx?groupId=... porque esa pantalla ya sabe
+    // recibir ese parametro — busca la tarjeta, la centra y la resalta—, asi
+    // que quien abra el link cae directo en este grupo y no en la grilla.
+    const enlaceDelGrupo = typeof window !== 'undefined'
+        ? `${window.location.origin}/#/gcx?groupId=${group.id}`
+        : '';
+    const qrDelGrupo = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(enlaceDelGrupo)}`;
 
     // --- BUSINESS LOGIC (unchanged) ---
 
@@ -126,7 +139,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
             }
             return {
                 text: 'UNIRME',
-                baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white shadow-lg shadow-[#28a946]/20 active:scale-95',
+                baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white active:scale-[0.97]',
                 icon: <ArrowRight className="w-3.5 h-3.5" />,
                 disabled: false
             };
@@ -144,12 +157,12 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
             return { text: 'MIEMBRO', baseClass: 'bg-[#28a946] text-white cursor-default', icon: <CheckCircle2 className="w-3.5 h-3.5" />, disabled: true };
         }
         if (status === 'AVAILABLE') {
-            return { text: 'UNIRME', baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white shadow-lg shadow-[#28a946]/20 active:scale-95', icon: <ArrowRight className="w-3.5 h-3.5" />, disabled: false };
+            return { text: 'UNIRME', baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white active:scale-[0.97]', icon: <ArrowRight className="w-3.5 h-3.5" />, disabled: false };
         }
         // Mismo look que "UNIRME" (cosmético): esta rama sigue
         // ejecutando onInquiry en handleAction, no onJoin — no se
         // tocó la lógica de negocio, solo texto/color del botón.
-        return { text: 'UNIRME', baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white shadow-lg shadow-[#28a946]/20 active:scale-95', icon: <ArrowRight className="w-3.5 h-3.5" />, disabled: false };
+        return { text: 'UNIRME', baseClass: 'bg-[#28a946] hover:bg-[#1f8a39] text-white active:scale-[0.97]', icon: <ArrowRight className="w-3.5 h-3.5" />, disabled: false };
     };
 
     const btnState = getButtonState();
@@ -394,12 +407,30 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                     </div>
                 </div>
 
-                {/* Acciones: botón CTA */}
+                {/* Acciones: compartir + CTA */}
                 <div className="flex items-center gap-2 shrink-0">
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setCompartiendo(true);
+                        }}
+                        aria-label={`Compartir ${group.name}`}
+                        title="Compartir este grupo"
+                        /* Solo el ícono: en el teléfono la tarjeta mide 343 px
+                           y en el escritorio, dentro de la grilla, 238 — con la
+                           palabra al lado, los dos botones se comían el pie y el
+                           nombre del anfitrión quedaba cortado a la mitad. El
+                           glifo de compartir se entiende solo, y el único texto
+                           del pie sigue siendo la acción principal. */
+                        className="shrink-0 flex h-[38px] w-[38px] items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 hover:text-neutral-800 dark:hover:text-white transition-colors active:scale-[0.97]"
+                    >
+                        <Share2 className="w-4 h-4" />
+                    </button>
                     <button
                         onClick={handleAction}
                         disabled={btnState.disabled}
-                        className={`shrink-0 px-5 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed ${btnState.baseClass}`}
+                        className={`shrink-0 h-[38px] px-5 rounded-full font-bold text-xs tracking-wider flex items-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed ${btnState.baseClass}`}
                     >
                         {btnState.text}
                         {btnState.icon}
@@ -435,6 +466,16 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                     </button>
                 </div>
             )}
+
+            {/* La hoja que sube desde abajo, la misma del resto de la app. */}
+            <ModalCompartirQR
+                isOpen={compartiendo}
+                onClose={() => setCompartiendo(false)}
+                title={group.name}
+                subtitle={dondeSeReune(group) || undefined}
+                qrUrl={qrDelGrupo}
+                link={enlaceDelGrupo}
+            />
         </div>
     );
 };

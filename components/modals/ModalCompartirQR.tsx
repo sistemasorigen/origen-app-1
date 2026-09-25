@@ -116,14 +116,18 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
                     <div className="mt-5 rounded-[16px] bg-[#f7f7f5] p-4">
                         <img src={qrUrl} alt={`Código QR de ${title}`} className="h-44 w-44 object-contain" />
                     </div>
-                    <div className="mt-5 flex w-full flex-col gap-2.5">
-                        <button
-                            onClick={shareWhatsApp}
-                            className="inline-flex h-[52px] w-full items-center justify-center gap-2.5 rounded-full bg-[#25D366] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#1eb958] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
-                        >
-                            <WhatsAppIcon className="h-[17px] w-[17px]" />
-                            Compartir por WhatsApp
-                        </button>
+
+                    {/* El link a la vista, antes de los botones: es lo que se
+                        va a compartir, y verlo evita tener que copiarlo para
+                        saber a dónde lleva. Con `select-all`, un toque largo
+                        lo selecciona entero. */}
+                    {link && (
+                        <p className="mt-4 w-full select-all break-all rounded-[14px] bg-[#f7f7f5] px-4 py-3 text-left text-[12.5px] font-medium leading-[1.5] text-black/[.66]">
+                            {link}
+                        </p>
+                    )}
+
+                    <div className="mt-4 flex w-full flex-col gap-2.5">
                         <button
                             onClick={copyLink}
                             className="inline-flex h-[52px] w-full items-center justify-center gap-2.5 rounded-full bg-[#f2f2f0] text-[14.5px] font-semibold text-[#0a0a0a] transition-colors hover:bg-[#eceae6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
@@ -132,6 +136,13 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
                                 ? <Check className="h-[17px] w-[17px] text-emerald-600" />
                                 : <Copy className="h-[17px] w-[17px] text-black/[.55]" />}
                             {isCopied ? 'Link copiado' : 'Copiar el link'}
+                        </button>
+                        <button
+                            onClick={shareWhatsApp}
+                            className="inline-flex h-[52px] w-full items-center justify-center gap-2.5 rounded-full bg-[#25D366] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#1eb958] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                        >
+                            <WhatsAppIcon className="h-[17px] w-[17px]" />
+                            Compartir por WhatsApp
                         </button>
                     </div>
                 </div>
