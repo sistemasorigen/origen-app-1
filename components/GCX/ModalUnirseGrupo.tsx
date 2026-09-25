@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HojaInscripcion from './HojaInscripcion';
-import { X, Check, Clock } from 'lucide-react';
+import { X, Check, Clock, Users } from 'lucide-react';
 import { Group, User, GroupRegistration, GroupCategory, GroupTag } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 
@@ -127,9 +127,6 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
     }, [isOpen, currentUser]);
 
     // ── Datos del grupo para la cabecera y el cierre ────────────────────────
-    const horario = [group.meetingDay, group.meetingTime].filter(Boolean).join(' ');
-    const lineaGrupo = [group.name, horario].filter(Boolean).join(' · ');
-
     const anfitriones = (() => {
         const titular = [group.leaderName, group.leaderSurname].filter(Boolean).join(' ').trim();
         const coAnfitrion = [group.coHostFirstName, group.coHostLastName].filter(Boolean).join(' ').trim();
@@ -137,6 +134,18 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
         if (titular) return titular.split(' ')[0];
         return 'El anfitrión';
     })();
+
+    // Nombres completos para la ficha de arriba: ahí hay lugar y es lo que
+    // quien se inscribe quiere reconocer. El de arriba, con los nombres de
+    // pila, se sigue usando en las frases del cuerpo ("Johanna aprueba la
+    // solicitud"), donde el apellido sonaría a formulario.
+    const anfitrionCompleto = [group.leaderName, group.leaderSurname].filter(Boolean).join(' ').trim();
+    const coAnfitrionCompleto = [group.coHostFirstName, group.coHostLastName].filter(Boolean).join(' ').trim();
+
+    // Cuando hay co-anfitrión, el sujeto de las frases del cuerpo es plural:
+    // "Johanna y Lucía aprueban", no "aprueba".
+    const dosAnfitriones = !!(anfitrionCompleto && coAnfitrionCompleto);
+    const verbo = (singular: string, plural: string) => (dosAnfitriones ? plural : singular);
 
     // ── Estado del recorrido ────────────────────────────────────────────────
     // Estado de los campos de pareja: todos completos o no.
@@ -411,7 +420,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                                 <span className="min-h-[26px] w-0.5 flex-1 bg-[#DCDCDE] dark:bg-[#3A3A3E]" />
                             </div>
                             <div className="pb-[18px]">
-                                <div className="text-[14.5px] font-bold text-[#0A0A0A] dark:text-[#F7F7F8]">{anfitriones} la revisa</div>
+                                <div className="text-[14.5px] font-bold text-[#0A0A0A] dark:text-[#F7F7F8]">{anfitriones} {verbo('la revisa', 'la revisan')}</div>
                                 <div className="text-[13px] font-semibold text-[#6F6F73] dark:text-[#9C9CA1]">En curso</div>
                             </div>
                         </div>
@@ -443,11 +452,13 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
             {/* Cabecera */}
             <header className="flex flex-none flex-col gap-3.5 px-[22px] pb-4 pt-[18px]">
                 <div className="flex items-start justify-between gap-3.5">
+                    {/* Sin el renglón del grupo: abajo está su ficha, con
+                        portada y anfitriones, que lo dice mucho mejor que una
+                        línea recortada con puntos suspensivos. */}
                     <div className="flex min-w-0 flex-col gap-1">
                         <h2 id="insc-titulo" className="m-0 text-[24px] font-extrabold leading-[1.1] tracking-[-.03em] text-[#0A0A0A] dark:text-[#F7F7F8]">
-                            {isCouplesGroup ? 'Inscripción al grupo' : 'Unirse al grupo'}
+                            Inscripción
                         </h2>
-                        <p className="m-0 truncate text-[14.5px] font-semibold text-[#6F6F73] dark:text-[#9C9CA1]">{lineaGrupo}</p>
                     </div>
                     <button
                         type="button"
@@ -486,6 +497,38 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
 
                 {paso === 1 && (
                     <div className="flex flex-col gap-4 pt-4">
+                        {/* A qué grupo se está anotando: portada, nombre y
+                            quién lo anfitriona. Va antes que cualquier campo
+                            porque es lo que confirma que este es el grupo. */}
+                        <div className="overflow-hidden rounded-[16px] bg-[#F7F7F8] dark:bg-[#212124]">
+                            {group.imageUrl ? (
+                                <img
+                                    src={group.imageUrl}
+                                    alt=""
+                                    className="h-[118px] w-full object-cover"
+                                />
+                            ) : (
+                                <div className="flex h-[76px] w-full items-center justify-center bg-[#EFEFF0] dark:bg-[#26262A]">
+                                    <Users className="h-6 w-6 text-[#9C9CA1]" />
+                                </div>
+                            )}
+                            <div className="flex flex-col gap-2 px-4 py-3.5">
+                                <p className="m-0 text-[15.5px] font-extrabold leading-[1.25] tracking-[-.01em] text-[#0A0A0A] dark:text-[#F7F7F8]">
+                                    {group.name}
+                                </p>
+                                {(anfitrionCompleto || coAnfitrionCompleto) && (
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-[11px] font-bold uppercase tracking-[.07em] text-[#9C9CA1]">
+                                            {dosAnfitriones ? 'Anfitriones' : 'Anfitrión'}
+                                        </span>
+                                        <span className="text-[13.5px] font-semibold text-[#0A0A0A] dark:text-[#F7F7F8]">
+                                            {[anfitrionCompleto, coAnfitrionCompleto].filter(Boolean).join(' y ')}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         {datosPrecargados && (
                             <div className="flex items-center gap-2.5 rounded-[14px] bg-[#F7F7F8] px-3.5 py-3 dark:bg-[#212124]">
                                 <span className="h-[7px] w-[7px] flex-none rounded-full bg-[#0A0A0A] dark:bg-[#F7F7F8]" />
@@ -630,7 +673,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                                     <div className="flex items-start gap-3 rounded-[16px] bg-[#F7F7F8] px-[15px] py-3.5 dark:bg-[#212124]">
                                         <span className="mt-[5px] h-[7px] w-[7px] flex-none rounded-sm bg-[#EC4B7F]" />
                                         <span className="text-[13.5px] font-semibold leading-[1.45] text-[#0A0A0A] dark:text-[#F7F7F8]">
-                                            No hay cuenta con ese email. Cargá sus datos y le creamos una cuando {anfitriones} apruebe la solicitud.
+                                            No hay cuenta con ese email. Cargá sus datos y le creamos una cuando {anfitriones} {verbo('apruebe', 'aprueben')} la solicitud.
                                         </span>
                                     </div>
                                 )}
@@ -683,7 +726,9 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                             )}
                         </div>
                         <p className="m-0 text-sm font-semibold leading-[1.5] text-[#6F6F73] text-pretty dark:text-[#9C9CA1]">
-                            {anfitriones} {hasPartnerData ? 'recibe la solicitud y confirma el lugar para los dos.' : 'recibe la solicitud y confirma tu lugar.'} Te avisamos por email y por una notificación en la app.
+                            {anfitriones} {hasPartnerData
+                                ? verbo('recibe la solicitud y confirma el lugar para los dos.', 'reciben la solicitud y confirman el lugar para los dos.')
+                                : verbo('recibe la solicitud y confirma tu lugar.', 'reciben la solicitud y confirman tu lugar.')} Te avisamos por email y por una notificación en la app.
                         </p>
                     </div>
                 )}
@@ -701,7 +746,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                 {esUltimoPaso && !isSubmitting && (
                     <div className="flex items-center gap-2 text-[13px] font-semibold text-[#6F6F73] dark:text-[#9C9CA1]">
                         <Clock className="h-3.5 w-3.5 flex-none" />
-                        {anfitriones} aprueba la solicitud. No es automático.
+                        {anfitriones} {verbo('aprueba', 'aprueban')} la solicitud. No es automático.
                     </div>
                 )}
                 <div className="flex items-center gap-2.5">

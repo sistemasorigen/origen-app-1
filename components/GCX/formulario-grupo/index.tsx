@@ -57,6 +57,12 @@ export interface CoAnfitrion {
     setId: (id: string | null) => void;
     resultados: User[];
     buscando: boolean;
+    /** Por qué falló la búsqueda, si falló. Distinto de "no hay nadie". */
+    errorBusqueda?: string | null;
+    /** En modo a mano: la cuenta que coincide con lo escrito, si hay una sola. */
+    cuentaManual?: { id: string; name: string; email: string } | null;
+    /** Deshace el vínculo cuando la cuenta encontrada no es esa persona. */
+    onDesvincularManual?: () => void;
     desplegado: boolean;
     setDesplegado: (b: boolean) => void;
     contenedor: React.RefObject<HTMLDivElement>;
@@ -176,13 +182,39 @@ const SelectorDePersona: React.FC<{
         </div>
 
         {persona.modo === 'manual' ? (
-            <div className="grid grid-cols-2 gap-2.5">
-                <Caja etiqueta="Nombre">
-                    <input type="text" name={campoNombre} value={form[campoNombre] ?? ''} onChange={onChange} className={claseControl} placeholder="Nombre" />
-                </Caja>
-                <Caja etiqueta="Apellido">
-                    <input type="text" name={campoApellido} value={form[campoApellido] ?? ''} onChange={onChange} className={claseControl} placeholder="Apellido" />
-                </Caja>
+            <div className="flex flex-col gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5">
+                    <Caja etiqueta="Nombre">
+                        <input type="text" name={campoNombre} value={form[campoNombre] ?? ''} onChange={onChange} className={claseControl} placeholder="Nombre" />
+                    </Caja>
+                    <Caja etiqueta="Apellido">
+                        <input type="text" name={campoApellido} value={form[campoApellido] ?? ''} onChange={onChange} className={claseControl} placeholder="Apellido" />
+                    </Caja>
+                </div>
+                {/* Escrito a mano, pero la persona tiene cuenta: se vincula
+                    igual que desde el buscador, si no el grupo le queda sólo
+                    de nombre y no le llega nada. Se dice en voz alta y con
+                    salida, porque lo decidió el sistema y no quien carga. */}
+                {persona.cuentaManual && (
+                    <div className={`flex items-center gap-2.5 rounded-[16px] ${T.interna} px-3.5 py-2.5`}>
+                        <Check className="w-4 h-4 shrink-0" strokeWidth={2.6} />
+                        <p className="min-w-0 flex-1 text-[13px] font-semibold leading-[1.35]">
+                            Se vincula con la cuenta de {persona.cuentaManual.name}
+                            <span className="block truncate font-medium text-black/40 dark:text-white/40">
+                                {persona.cuentaManual.email}
+                            </span>
+                        </p>
+                        {persona.onDesvincularManual && (
+                            <button
+                                type="button"
+                                onClick={persona.onDesvincularManual}
+                                className="shrink-0 text-[12.5px] font-semibold text-black/45 underline decoration-black/25 underline-offset-2 hover:opacity-70 dark:text-white/45 dark:decoration-white/25"
+                            >
+                                No es
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         ) : (
             <div ref={persona.contenedor} className="relative">
@@ -237,8 +269,14 @@ const SelectorDePersona: React.FC<{
                                 </div>
                             </button>
                         )) : !persona.buscando && (
-                            <p className="px-4 py-5 text-center text-[14px] font-medium text-black/40 dark:text-white/40">
-                                Sin resultados para "{persona.termino}"
+                            // Que la búsqueda se caiga no es lo mismo que que
+                            // no haya nadie: decir "sin resultados" cuando en
+                            // realidad falló manda a buscar a la persona por
+                            // otro lado en vez de avisar que hay un problema.
+                            <p className={`px-4 py-5 text-center text-[14px] font-medium ${persona.errorBusqueda
+                                ? 'text-[#b4530a] dark:text-[#f0a868]'
+                                : 'text-black/40 dark:text-white/40'}`}>
+                                {persona.errorBusqueda || `Sin resultados para "${persona.termino}"`}
                             </p>
                         )}
                     </div>

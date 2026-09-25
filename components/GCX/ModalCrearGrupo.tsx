@@ -11,6 +11,8 @@ import { useTutorial } from '../../src/hooks/useTutorial';
 import TutorialController from '../onboarding/ControladorTutorial';
 import TutorialInvitation from '../onboarding/InvitacionTutorial';
 import { tours } from '../../src/config/tours';
+import { camposDelCoAnfitrion } from './coAnfitrionElegido';
+import { useVinculoManual } from './useVinculoManual';
 
 interface CreateGroupModalProps {
     isOpen: boolean;
@@ -142,6 +144,10 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     // Co-Host Mode State
     const [coHostMode, setCoHostMode] = useState<'manual' | 'search'>('manual');
     const [coHostSearchTerm, setCoHostSearchTerm] = useState('');
+    const [coHostSearchError, setCoHostSearchError] = useState<string | null>(null);
+    // Cuál cuenta descartó quien carga, no un sí/no: si después
+    // escribe otro nombre, esa otra cuenta sí se vincula.
+    const [coCuentaDescartada, setCoCuentaDescartada] = useState<string | null>(null);
     const [coHostId, setCoHostId] = useState<string | null>(null);
     const [coHostResults, setCoHostResults] = useState<User[]>([]);
     const [isSearchingCoHost, setIsSearchingCoHost] = useState(false);
@@ -167,6 +173,12 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         startDate: '',
         endDate: ''
     });
+
+    // El modo a mano también busca la cuenta: escribir el nombre y que
+    // la persona quede sin vincular la dejaba fuera del grupo.
+    const { cuenta: cuentaCoManual } = useVinculoManual(
+        form.coHostFirstName, form.coHostLastName, coHostMode === 'manual');
+    const coManualVinculado = cuentaCoManual && cuentaCoManual.id !== coCuentaDescartada ? cuentaCoManual : null;
 
     const [showSpellingWarning, setShowSpellingWarning] = useState(false);
 
@@ -255,6 +267,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         if (coHostMode !== 'search' || !coHostSearchTerm.trim()) {
             setCoHostResults([]);
             setIsCoHostDropdownOpen(false);
+            setCoHostSearchError(null);
             return;
         }
         const timer = setTimeout(async () => {
@@ -264,19 +277,31 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 // pasa por el servidor, que solo la permite a anfitriones y
                 // staff. Además tolera comas y comodines en lo tipeado, que
                 // rompían el filtro .or() armado a mano.
-                const { data } = await supabase.rpc('buscar_personas', {
+                const { data, error } = await supabase.rpc('buscar_personas', {
                     p_termino: coHostSearchTerm,
                     p_por_email: true,
                     p_solo_activos: true,
                     p_limite: 8
                 });
-                setCoHostResults((data as any[]) || []);
+                // La RPC no tira: cuando rebota —sin permiso, o menos de dos
+                // letras— vuelve con error y data en null. Tragarlo mostraba
+                // "sin resultados", que manda a buscar a la persona por otro
+                // lado en vez de avisar que la búsqueda es la que falló.
+                if (error) throw error;
+                // Nadie es su propio co-anfitrión.
+                setCoHostResults(((data as any[]) || []).filter(u => u.id !== (selectedHostId || (editingGroup as any)?.host_id || currentUser?.id)));
                 setIsCoHostDropdownOpen(true);
-            } catch { setCoHostResults([]); }
+                setCoHostSearchError(null);
+            } catch (e: any) {
+                console.error('[Co-anfitrión] la búsqueda falló:', e);
+                setCoHostResults([]);
+                setCoHostSearchError('No pudimos buscar. Probá de nuevo.');
+                setIsCoHostDropdownOpen(true);
+            }
             finally { setIsSearchingCoHost(false); }
         }, 350);
         return () => clearTimeout(timer);
-    }, [coHostSearchTerm, coHostMode]);
+    }, [coHostSearchTerm, coHostMode, selectedHostId, editingGroup, currentUser?.id]);
 
     // Close co-host dropdown on outside click
     useEffect(() => {
@@ -326,6 +351,23 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             });
             if (isAdminView && (editingGroup as any).host_id) {
                 setSelectedHostId((editingGroup as any).host_id);
+            }
+            // El co-anfitrión también se rearma al editar. Sin esto el modal
+            // abría en modo "a mano" y en blanco, y guardar borraba en
+            // silencio al co-anfitrión que el grupo ya tenía.
+            const coId = (editingGroup as any).co_host_id as string | undefined;
+            if (coId) {
+                setCoHostMode('search');
+                setCoHostId(coId);
+                const nombreCo = `${editingGroup.coHostFirstName || ''} ${editingGroup.coHostLastName || ''}`.trim();
+                if (nombreCo) setCoHostSearchTerm(nombreCo);
+                // Los grupos guardados desde el buscador dejaron esas dos
+                // columnas vacías: el nombre se resuelve por id.
+                else supabaseService.nombreDeUsuario(coId).then(setCoHostSearchTerm);
+            } else {
+                setCoHostMode('manual');
+                setCoHostId(null);
+                setCoHostSearchTerm('');
             }
         } else {
             setForm({
@@ -559,9 +601,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 membersCount: editingGroup?.membersCount || 0,
                 tags: form.tags,
                 host_id: finalHostId,
-                co_host_id: coHostMode === 'search' ? coHostId : null,
-                coHostFirstName: coHostMode === 'manual' ? form.coHostFirstName : '',
-                coHostLastName: coHostMode === 'manual' ? form.coHostLastName : '',
+                ...camposDelCoAnfitrion(coHostMode, coHostId, coHostSearchTerm, form, coManualVinculado?.id),
                 minAge: Number(form.minAge),
                 maxAge: Number(form.maxAge),
                 targetGender: form.targetGender as any,
@@ -1084,17 +1124,36 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                     </div>
 
                     {coHostMode === 'manual' ? (
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold uppercase block">Nombre</label>
-                                <input type="text" name="coHostFirstName" value={form.coHostFirstName} onChange={handleChange}
-                                    className="w-full h-10 px-3 border-2 border-black rounded-none outline-none font-bold" placeholder="Nombre" />
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold uppercase block">Nombre</label>
+                                    <input type="text" name="coHostFirstName" value={form.coHostFirstName} onChange={handleChange}
+                                        className="w-full h-10 px-3 border-2 border-black rounded-none outline-none font-bold" placeholder="Nombre" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold uppercase block">Apellido</label>
+                                    <input type="text" name="coHostLastName" value={form.coHostLastName} onChange={handleChange}
+                                        className="w-full h-10 px-3 border-2 border-black rounded-none outline-none font-bold" placeholder="Apellido" />
+                                </div>
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold uppercase block">Apellido</label>
-                                <input type="text" name="coHostLastName" value={form.coHostLastName} onChange={handleChange}
-                                    className="w-full h-10 px-3 border-2 border-black rounded-none outline-none font-bold" placeholder="Apellido" />
-                            </div>
+                            {/* Escrito a mano, pero la persona tiene cuenta: se vincula igual
+                                que desde el buscador, si no el grupo le queda sólo de nombre
+                                y no le llega nada. Con salida, porque lo decidió el sistema. */}
+                            {coManualVinculado && (
+                                <div className="flex items-center gap-2 border-2 border-[#118f46] bg-[#118f46]/5 px-3 py-2">
+                                    <Check className="w-4 h-4 shrink-0 text-[#118f46]" />
+                                    <p className="min-w-0 flex-1 text-[11px] font-bold leading-tight text-[#118f46]">
+                                        Se vincula con la cuenta de {coManualVinculado.name}
+                                        <span className="block truncate font-semibold text-[#118f46]/60">{coManualVinculado.email}</span>
+                                    </p>
+                                    <button type="button"
+                                        onClick={() => setCoCuentaDescartada(cuentaCoManual?.id ?? null)}
+                                        className="shrink-0 text-[10px] font-black uppercase underline">
+                                        No es
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div ref={coHostDropdownRef} className="relative">
@@ -1156,7 +1215,12 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
                             {isCoHostDropdownOpen && !coHostId && coHostResults.length === 0 && !isSearchingCoHost && coHostSearchTerm.trim() && (
                                 <div className="absolute top-full left-0 right-0 bg-white border-2 border-black mt-1 p-4 text-center z-[99999] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <p className="text-sm font-bold text-neutral-400">Sin resultados para "{coHostSearchTerm}"</p>
+                                    {/* Que la búsqueda se caiga no es lo mismo que que no haya
+                                        nadie: decirlo igual manda a buscar a la persona por otro
+                                        lado en vez de avisar que falló la búsqueda. */}
+                                    <p className={`text-sm font-bold ${coHostSearchError ? 'text-[#b4530a]' : 'text-neutral-400'}`}>
+                                        {coHostSearchError || `Sin resultados para "${coHostSearchTerm}"`}
+                                    </p>
                                 </div>
                             )}
                         </div>

@@ -4935,6 +4935,25 @@ export const supabaseService = {
   /**
    * Search ANY user in the system (for Host/Co-host assignment)
    */
+  /**
+   * El nombre de una persona por su id.
+   *
+   * Lo necesitan los formularios de grupo para el chip del co-anfitrión: el
+   * chip se arma con `co_host_first_name` / `co_host_last_name`, y los grupos
+   * guardados desde el buscador dejaron esas columnas vacías con el
+   * `co_host_id` puesto, así que el chip volvía en blanco.
+   */
+  async nombreDeUsuario(id: string): Promise<string> {
+    try {
+      const { data, error } = await supabase.rpc('nombres_de_usuarios', { p_ids: [id] });
+      if (error) throw error;
+      return ((data as any[]) || [])[0]?.name || '';
+    } catch (e) {
+      console.error('[nombreDeUsuario] no se pudo resolver', id, e);
+      return '';
+    }
+  },
+
   async searchUsersGlobal(term: string): Promise<User[]> {
     try {
       // Por nombre, hasta 20. El servidor escapa los comodines y solo

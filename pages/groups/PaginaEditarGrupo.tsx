@@ -10,6 +10,8 @@ import { modalidadDe, banderasDe, llevaDireccion } from '../../src/utils/modalid
 import { T, rotulo } from '../../components/GCX/patron';
 import { useTutorial } from '../../src/hooks/useTutorial';
 import TutorialInvitation from '../../components/onboarding/InvitacionTutorial';
+import { camposDelCoAnfitrion } from '../../components/GCX/coAnfitrionElegido';
+import { useVinculoManual } from '../../components/GCX/useVinculoManual';
 
 interface GroupCategory {
     id: string;
@@ -33,6 +35,10 @@ const PaginaEditarGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => 
 
     const [coHostMode, setCoHostMode] = useState<'manual' | 'search'>('manual');
     const [coHostSearchTerm, setCoHostSearchTerm] = useState('');
+    const [coHostSearchError, setCoHostSearchError] = useState<string | null>(null);
+    // Cuál cuenta descartó quien carga, no un sí/no: si después
+    // escribe otro nombre, esa otra cuenta sí se vincula.
+    const [coCuentaDescartada, setCoCuentaDescartada] = useState<string | null>(null);
     const [coHostId, setCoHostId] = useState<string | null>(null);
     const [coHostResults, setCoHostResults] = useState<User[]>([]);
     const [isSearchingCoHost, setIsSearchingCoHost] = useState(false);
@@ -46,6 +52,12 @@ const PaginaEditarGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => 
         minAge: 0 as number | string, maxAge: 100 as number | string,
         targetGender: 'Mixto', tags: [] as string[], startDate: '', endDate: ''
     });
+
+    // El modo a mano también busca la cuenta: escribir el nombre y que
+    // la persona quede sin vincular la dejaba fuera del grupo.
+    const { cuenta: cuentaCoManual } = useVinculoManual(
+        form.coHostFirstName, form.coHostLastName, coHostMode === 'manual');
+    const coManualVinculado = cuentaCoManual && cuentaCoManual.id !== coCuentaDescartada ? cuentaCoManual : null;
 
     // Foto del formulario tal como salió de la base. Es lo que permite decir
     // "Guardar 2 cambios" en vez de un "Guardar" que no dice nada.
@@ -95,7 +107,12 @@ const PaginaEditarGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => 
                 setCoHostMode('search');
                 setCoHostId((found as any).co_host_id);
                 setCoHostIdInicial((found as any).co_host_id);
-                setCoHostSearchTerm(`${found.coHostFirstName || ''} ${found.coHostLastName || ''}`.trim());
+                // Los grupos anotados desde el buscador quedaron con el
+                // co_host_id puesto y estas dos columnas vacías, y el chip se
+                // arma con ellas: sin esto vuelve en blanco. Se resuelve por
+                // id, que es el dato que sí está.
+                const nombreCo = `${found.coHostFirstName || ''} ${found.coHostLastName || ''}`.trim();
+                setCoHostSearchTerm(nombreCo || await supabaseService.nombreDeUsuario((found as any).co_host_id));
             }
         } finally {
             setLoadingGroup(false);
@@ -143,6 +160,7 @@ const PaginaEditarGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => 
         if (coHostMode !== 'search' || !coHostSearchTerm.trim()) {
             setCoHostResults([]);
             setIsCoHostDropdownOpen(false);
+            setCoHostSearchError(null);
             return;
         }
         const timer = setTimeout(async () => {
@@ -152,19 +170,31 @@ const PaginaEditarGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => 
                 // pasa por el servidor, que solo la permite a anfitriones y
                 // staff. Además tolera comas y comodines en lo tipeado, que
                 // rompían el filtro .or() armado a mano.
-                const { data } = await supabase.rpc('buscar_personas', {
+                const { data, error } = await supabase.rpc('buscar_personas', {
                     p_termino: coHostSearchTerm,
                     p_por_email: true,
                     p_solo_activos: true,
                     p_limite: 8
                 });
-                setCoHostResults((data as any[]) || []);
+                // La RPC no tira: cuando rebota —sin permiso, o menos de dos
+                // letras— vuelve con error y data en null. Tragarlo mostraba
+                // "sin resultados", que manda a buscar a la persona por otro
+                // lado en vez de avisar que la búsqueda es la que falló.
+                if (error) throw error;
+                // Nadie es su propio co-anfitrión.
+                setCoHostResults(((data as any[]) || []).filter(u => u.id !== currentUser?.id));
                 setIsCoHostDropdownOpen(true);
-            } catch { setCoHostResults([]); }
+                setCoHostSearchError(null);
+            } catch (e: any) {
+                console.error('[Co-anfitrión] la búsqueda falló:', e);
+                setCoHostResults([]);
+                setCoHostSearchError('No pudimos buscar. Probá de nuevo.');
+                setIsCoHostDropdownOpen(true);
+            }
             finally { setIsSearchingCoHost(false); }
         }, 350);
         return () => clearTimeout(timer);
-    }, [coHostSearchTerm, coHostMode]);
+    }, [coHostSearchTerm, coHostMode, currentUser?.id]);
 
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
@@ -303,9 +333,7 @@ const PaginaEditarGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => 
                 imageUrl: finalImageUrl,
                 categoryId: form.categoryId,
                 tags: form.tags,
-                co_host_id: coHostMode === 'search' ? coHostId : null,
-                coHostFirstName: coHostMode === 'manual' ? form.coHostFirstName : '',
-                coHostLastName: coHostMode === 'manual' ? form.coHostLastName : '',
+                ...camposDelCoAnfitrion(coHostMode, coHostId, coHostSearchTerm, form, coManualVinculado?.id),
                 minAge: Number(form.minAge),
                 maxAge: Number(form.maxAge),
                 targetGender: form.targetGender,
@@ -371,6 +399,9 @@ const PaginaEditarGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => 
                     setId: setCoHostId,
                     resultados: coHostResults,
                     buscando: isSearchingCoHost,
+                    errorBusqueda: coHostSearchError,
+                    cuentaManual: coManualVinculado,
+                    onDesvincularManual: () => setCoCuentaDescartada(cuentaCoManual?.id ?? null),
                     desplegado: isCoHostDropdownOpen,
                     setDesplegado: setIsCoHostDropdownOpen,
                     contenedor: coHostDropdownRef,

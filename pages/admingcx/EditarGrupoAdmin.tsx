@@ -6,6 +6,8 @@ import { supabase } from '../../services/supabaseClient';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 import FormularioGrupo, { DatosGrupo } from '../../components/GCX/formulario-grupo';
 import { modalidadDe, banderasDe, llevaDireccion } from '../../src/utils/modalidad';
+import { camposDelCoAnfitrion } from '../../components/GCX/coAnfitrionElegido';
+import { useVinculoManual } from '../../components/GCX/useVinculoManual';
 
 interface GroupCategory {
     id: string;
@@ -58,6 +60,10 @@ const EditarGrupoAdminContent: React.FC = () => {
     // Co-anfitrión — opcional.
     const [coHostMode, setCoHostMode] = useState<'manual' | 'search'>('search');
     const [coHostSearchTerm, setCoHostSearchTerm] = useState('');
+    const [coHostSearchError, setCoHostSearchError] = useState<string | null>(null);
+    // Cuál cuenta descartó quien carga, no un sí/no: si después
+    // escribe otro nombre, esa otra cuenta sí se vincula.
+    const [coCuentaDescartada, setCoCuentaDescartada] = useState<string | null>(null);
     const [coHostId, setCoHostId] = useState<string | null>(null);
     const [coHostIdInicial, setCoHostIdInicial] = useState<string | null>(null);
     const [coHostResults, setCoHostResults] = useState<User[]>([]);
@@ -66,6 +72,12 @@ const EditarGrupoAdminContent: React.FC = () => {
     const coHostDropdownRef = useRef<HTMLDivElement>(null);
 
     const [form, setForm] = useState<DatosGrupoAdmin>(VACIO);
+
+    // El modo a mano también busca la cuenta: escribir el nombre y que
+    // la persona quede sin vincular la dejaba fuera del grupo.
+    const { cuenta: cuentaCoManual } = useVinculoManual(
+        form.coHostFirstName, form.coHostLastName, coHostMode === 'manual');
+    const coManualVinculado = cuentaCoManual && cuentaCoManual.id !== coCuentaDescartada ? cuentaCoManual : null;
     const [formInicial, setFormInicial] = useState<DatosGrupoAdmin | null>(null);
 
     // Abierta cuando el formulario pasó las validaciones: pregunta si
@@ -121,7 +133,12 @@ const EditarGrupoAdminContent: React.FC = () => {
             if (idCo) {
                 setCoHostMode('search');
                 setCoHostId(idCo);
-                setCoHostSearchTerm(`${found.coHostFirstName || ''} ${found.coHostLastName || ''}`.trim());
+                // Los grupos anotados desde el buscador quedaron con el
+                // co_host_id puesto y estas dos columnas vacías, y el chip se
+                // arma con ellas: sin esto vuelve en blanco. Se resuelve por
+                // id, que es el dato que sí está.
+                const nombreCo = `${found.coHostFirstName || ''} ${found.coHostLastName || ''}`.trim();
+                setCoHostSearchTerm(nombreCo || await supabaseService.nombreDeUsuario((found as any).co_host_id));
             } else if (found.coHostFirstName) {
                 setCoHostMode('manual');
             }
@@ -171,20 +188,33 @@ const EditarGrupoAdminContent: React.FC = () => {
         if (coHostMode !== 'search' || !coHostSearchTerm.trim()) {
             setCoHostResults([]);
             setIsCoHostDropdownOpen(false);
+            setCoHostSearchError(null);
             return;
         }
         const timer = setTimeout(async () => {
             setIsSearchingCoHost(true);
             try {
-                const { data } = await supabase.rpc('buscar_personas', {
+                const { data, error } = await supabase.rpc('buscar_personas', {
                     p_termino: coHostSearchTerm,
                     p_por_email: true,
                     p_solo_activos: true,
                     p_limite: 8,
                 });
+                // La RPC no tira: cuando rebota —sin permiso, o menos de dos
+                // letras— vuelve con error y data en null. Tragarlo mostraba
+                // "sin resultados", que manda a buscar a la persona por otro
+                // lado en vez de avisar que la búsqueda es la que falló.
+                if (error) throw error;
+                // Nadie es su propio co-anfitrión.
                 setCoHostResults(((data as any[]) || []).filter(u => u.id !== hostId));
                 setIsCoHostDropdownOpen(true);
-            } catch { setCoHostResults([]); }
+                setCoHostSearchError(null);
+            } catch (e: any) {
+                console.error('[Co-anfitrión] la búsqueda falló:', e);
+                setCoHostResults([]);
+                setCoHostSearchError('No pudimos buscar. Probá de nuevo.');
+                setIsCoHostDropdownOpen(true);
+            }
             finally { setIsSearchingCoHost(false); }
         }, 350);
         return () => clearTimeout(timer);
@@ -322,9 +352,7 @@ const EditarGrupoAdminContent: React.FC = () => {
                 categoryId: form.categoryId,
                 tags: form.tags,
                 host_id: hostMode === 'search' ? (hostId || undefined) : undefined,
-                co_host_id: coHostMode === 'search' ? coHostId : null,
-                coHostFirstName: coHostMode === 'manual' ? form.coHostFirstName : '',
-                coHostLastName: coHostMode === 'manual' ? form.coHostLastName : '',
+                ...camposDelCoAnfitrion(coHostMode, coHostId, coHostSearchTerm, form, coManualVinculado?.id),
                 minAge: Number(form.minAge),
                 maxAge: Number(form.maxAge),
                 targetGender: form.targetGender,
@@ -406,6 +434,9 @@ const EditarGrupoAdminContent: React.FC = () => {
                 setId: setCoHostId,
                 resultados: coHostResults,
                 buscando: isSearchingCoHost,
+                errorBusqueda: coHostSearchError,
+                cuentaManual: coManualVinculado,
+                onDesvincularManual: () => setCoCuentaDescartada(cuentaCoManual?.id ?? null),
                 desplegado: isCoHostDropdownOpen,
                 setDesplegado: setIsCoHostDropdownOpen,
                 contenedor: coHostDropdownRef,
