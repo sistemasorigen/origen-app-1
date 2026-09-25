@@ -15,6 +15,7 @@ dist-ssr
 # Archivo de trabajo intermedio de scripts/generate-build-version.js —
 # se regenera en cada build, no debe versionarse.
 .build-version
+.build-time
 
 # Editor directories and files
 .vscode/*

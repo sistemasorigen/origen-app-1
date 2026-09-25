@@ -21,6 +21,18 @@ const readBuildVersion = (): string => {
   }
 };
 
+// Cuándo se compiló este bundle. Lo escribe el mismo script, y sirve para
+// comparar contra el `updated_at` de app_version: dos hashes de commit no se
+// pueden ordenar entre sí, dos fechas sí. Sin archivo —build local suelto—
+// vale el momento de arranque, que para dev es lo mismo.
+const readBuildTime = (): string => {
+  try {
+    return readFileSync(path.join(__dirname, '.build-time'), 'utf-8').trim();
+  } catch {
+    return new Date().toISOString();
+  }
+};
+
 export default defineConfig(({ mode }) => {
   // NOTE: VITE_ prefixed variables are automatically exposed via import.meta.env.
   // Do NOT use the `define` block to inline API keys — it embeds them as
@@ -35,6 +47,7 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __BUILD_VERSION__: JSON.stringify(readBuildVersion()),
+      __BUILD_TIME__: JSON.stringify(readBuildTime()),
     },
     server: {
       // El harness asigna el puerto por PORT cuando 5173 ya está tomado por

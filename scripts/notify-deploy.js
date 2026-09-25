@@ -63,8 +63,10 @@ console.log(`[notify-deploy] app_version actualizada a ${newVersion} — los cli
 // Archivo de trabajo intermedio: no debe quedar colgado entre deploys (el
 // próximo build lo regenera desde cero de todos modos, pero dejarlo viejo
 // tirado en el repo confundiría a cualquiera que lo mire).
-try {
-    unlinkSync(buildVersionPath);
-} catch (err) {
-    console.warn('[notify-deploy] No se pudo borrar .build-version:', err instanceof Error ? err.message : err);
+for (const archivo of [buildVersionPath, join(__dirname, '..', '.build-time')]) {
+    try {
+        if (existsSync(archivo)) unlinkSync(archivo);
+    } catch (err) {
+        console.warn(`[notify-deploy] No se pudo borrar ${archivo}:`, err instanceof Error ? err.message : err);
+    }
 }

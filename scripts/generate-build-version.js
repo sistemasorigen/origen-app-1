@@ -41,4 +41,21 @@ writeFileSync(
     buildVersion
 );
 
-console.log(`[generate-build-version] Build version: ${buildVersion}`);
+// La hora del build, que vite embebe junto al identificador.
+//
+// El identificador solo dice SI la versión publicada es otra; no dice cuál
+// es más nueva —son hashes de commit, no se ordenan—. Con la hora sí:
+// app_version guarda cuándo se publicó, y el cliente puede preguntarse "¿lo
+// que hay publicado salió después de que me compilaron a mí?".
+//
+// Hace falta por una ventana real: el deploy sube los archivos y recién 20
+// segundos después toca la base. Quien entra en ese hueco ya tiene el bundle
+// nuevo mientras la base todavía anuncia el anterior, y sin la hora se le
+// ofrecería "actualizar" a una versión más vieja que la suya.
+const buildTime = new Date().toISOString();
+writeFileSync(
+    join(__dirname, '..', '.build-time'),
+    buildTime
+);
+
+console.log(`[generate-build-version] Build version: ${buildVersion} (${buildTime})`);

@@ -5,6 +5,20 @@ import { supabase } from '../services/supabaseClient';
 // scripts/generate-build-version.js. Ver el comentario de reloadWithCacheBust
 // y el efecto de auto-verificación más abajo para cómo se usa.
 declare const __BUILD_VERSION__: string;
+// Cuándo se compiló este bundle (ISO). Misma vía que el identificador.
+declare const __BUILD_TIME__: string;
+
+/** Momento de compilación de este bundle, en milisegundos. */
+const MOMENTO_DEL_BUILD = Date.parse(__BUILD_TIME__) || 0;
+
+/**
+ * Cada cuánto, como mucho, se le vuelve a preguntar a la base.
+ *
+ * Volver a la app es un gesto que se repite mucho —se mira algo, se sale, se
+ * vuelve— y cada vuelta dispara hasta tres eventos del navegador. Sin este
+ * freno, pasear entre apps sería una consulta por segundo.
+ */
+const ESPERA_ENTRE_CONSULTAS_MS = 20_000;
 
 // El reload destruye todo el estado de React, así que lo único que
 // sobrevive de un intento a otro es lo que quedó en sessionStorage antes
@@ -42,48 +56,119 @@ const reloadWithCacheBust = () => {
 
 export function useVersionCheck() {
     const [updateAvailable, setUpdateAvailable] = useState(false);
-    const baselineVersionRef = useRef<string | null>(null);
     const pendingVersionRef = useRef<string | null>(null);
+    const ultimaConsultaRef = useRef(0);
+    const avisadoRef = useRef(false);
 
     useEffect(() => {
-        let cancelled = false;
+        let cancelado = false;
 
-        const init = async () => {
+        /**
+         * ¿Lo que está publicado es más nuevo que lo que estoy corriendo?
+         *
+         * Dos condiciones, y las dos hacen falta:
+         *
+         * - Que el identificador sea OTRO. Si es el mismo, ya estoy en esa
+         *   versión por más que la base la haya anunciado recién.
+         * - Que se haya publicado DESPUÉS de que me compilaron a mí. Es el
+         *   resguardo de la ventana de propagación: el deploy sube los
+         *   archivos y recién veinte segundos más tarde toca la base, así
+         *   que quien entra en ese hueco ya tiene el bundle nuevo mientras
+         *   la base todavía anuncia el anterior. Sin esta segunda condición
+         *   se le ofrecería "actualizar" hacia atrás, y el reload le traería
+         *   una y otra vez el mismo bundle que ya tiene.
+         */
+        const esOtraVersion = (version?: string | null): boolean => {
+            // 'dev' es lo que embebe vite cuando no hubo un build de verdad
+            // (servidor de desarrollo). Contra eso todo lo publicado parece
+            // nuevo, y saldría el cartel de actualizar cada vez que alguien
+            // despliega mientras se está programando.
+            if (__BUILD_VERSION__ === 'dev') return false;
+            return !!version && version !== __BUILD_VERSION__;
+        };
+
+        const esMasNueva = (fila: { version?: string | null; updated_at?: string | null }): boolean => {
+            if (!esOtraVersion(fila?.version)) return false;
+            const publicada = fila.updated_at ? Date.parse(fila.updated_at) : NaN;
+            // Sin fecha no hay forma de saber cuál es más nueva: mejor no
+            // avisar que mandar a alguien a una versión anterior.
+            if (!publicada) return false;
+            return publicada > MOMENTO_DEL_BUILD;
+        };
+
+        const avisar = (version: string) => {
+            if (avisadoRef.current) return;
+            avisadoRef.current = true;
+            // Se guarda para que forceHardReset sepa, sin volver a
+            // preguntarle a la base, qué build está esperando.
+            pendingVersionRef.current = version;
+            setUpdateAvailable(true);
+        };
+
+        /**
+         * Le pregunta a la base qué versión hay publicada.
+         *
+         * Se llama al abrir y CADA VEZ QUE LA APP VUELVE AL FRENTE. Esto
+         * último es el punto: en el teléfono la app casi nunca queda
+         * abierta, se la minimiza. Ahí el navegador congela los
+         * temporizadores y el canal de Realtime se cae, así que el aviso del
+         * deploy que ocurrió mientras tanto no llega nunca, y al volver la
+         * app seguía sin enterarse de que había una versión nueva.
+         */
+        const revisar = async () => {
+            if (cancelado || avisadoRef.current) return;
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+
+            const ahora = Date.now();
+            if (ahora - ultimaConsultaRef.current < ESPERA_ENTRE_CONSULTAS_MS) return;
+            ultimaConsultaRef.current = ahora;
+
             const { data, error } = await supabase
                 .from('app_version')
-                .select('version')
+                .select('version, updated_at')
                 .eq('id', 1)
                 .single();
 
-            if (!cancelled && !error && data) {
-                baselineVersionRef.current = data.version;
-            }
+            if (cancelado || error || !data) return;
+            if (esMasNueva(data)) avisar(data.version);
         };
-        init();
 
+        revisar();
+
+        // Los tres eventos de "volví": en iOS el que manda suele ser
+        // pageshow (la página vuelve de la caché de atrás/adelante, y ahí no
+        // hay visibilitychange), en Android visibilitychange, y focus cubre
+        // el escritorio cuando se cambia de ventana sin ocultar la pestaña.
+        // Disparan juntos muchas veces; para eso está el freno de arriba.
+        const alVolver = () => { revisar(); };
+        document.addEventListener('visibilitychange', alVolver);
+        window.addEventListener('pageshow', alVolver);
+        window.addEventListener('focus', alVolver);
+
+        // Realtime sigue siendo el camino rápido para quien SÍ tiene la app
+        // abierta en ese momento: el aviso le llega en el acto, sin esperar
+        // a que vuelva del fondo.
         const channel = supabase
             .channel('app-version-check')
             .on(
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'app_version' },
                 (payload) => {
-                    const newVersion = (payload.new as any)?.version;
-                    if (
-                        newVersion &&
-                        baselineVersionRef.current &&
-                        newVersion !== baselineVersionRef.current
-                    ) {
-                        // Se guarda para que forceHardReset sepa, sin volver a
-                        // preguntarle a la base, qué build está esperando.
-                        pendingVersionRef.current = newVersion;
-                        setUpdateAvailable(true);
-                    }
+                    // Acá no hace falta mirar la fecha: si el aviso llega
+                    // mientras la app está corriendo, esa publicación pasó
+                    // después de que este bundle se cargó. Alcanza con que
+                    // sea otra versión que la que estoy sirviendo.
+                    const fila = payload.new as { version?: string };
+                    if (esOtraVersion(fila?.version)) avisar(fila.version as string);
                 }
             )
             .subscribe();
 
         return () => {
-            cancelled = true;
+            cancelado = true;
+            document.removeEventListener('visibilitychange', alVolver);
+            window.removeEventListener('pageshow', alVolver);
+            window.removeEventListener('focus', alVolver);
             supabase.removeChannel(channel);
         };
     }, []);
