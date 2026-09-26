@@ -26,6 +26,7 @@ import PaginaAsistenciaGrupo from './pages/groups/PaginaAsistenciaGrupo';
 import PaginaBajaGrupo from './pages/groups/PaginaBajaGrupo';
 import PaginaDerivarMiembro from './pages/groups/PaginaDerivarMiembro';
 import PaginaSolicitudesGrupo from './pages/groups/PaginaSolicitudesGrupo';
+import PaginaInscriptosGrupo from './pages/groups/PaginaInscriptosGrupo';
 import PaginaTransferirGrupo from './pages/groups/PaginaTransferirGrupo';
 import PaginaCrearGrupo from './pages/groups/PaginaCrearGrupo';
 import PaginaEditarGrupo from './pages/groups/PaginaEditarGrupo';
@@ -688,6 +689,16 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaDerivarMiembro currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/mis-grupos/:groupId/inscriptos" element={
+                                    (user && hasRole(user, [
+                                        UserRole.ANFITRION,
+                                        UserRole.CO_ANFITRION,
+                                        UserRole.ADMIN_GROUPS,
+                                        UserRole.SUPER_ADMIN
+                                    ]))
+                                        ? <PaginaInscriptosGrupo currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/mis-grupos/:groupId/solicitudes" element={

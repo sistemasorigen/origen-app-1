@@ -3,7 +3,7 @@ import { NOMBRE_MODALIDAD, modalidadDe, dondeSeReune } from '../../src/utils/mod
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Group, GroupCategory, SeasonSettings, DEFAULT_SEASON_SETTINGS, esGrupoFinalizado } from '../../types';
 import { supabaseService, toggleGroupCapacityLock, updateGroupDirect } from '../../services/supabaseService';
-import { ArrowLeft, ArrowRight, Camera, Check, Link, Loader2, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Camera, Check, Link, Loader2 } from 'lucide-react';
 import NeoModal from '../../components/ui/NeoModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,62 +27,6 @@ function countApprovedPeople(registrations?: any[]): number {
             const esPareja = !!(r.partnerData || r.partner_data);
             return total + (esPareja ? 2 : 1);
         }, 0);
-}
-
-interface Member {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string;
-    isPartner?: boolean;
-    desde?: string;
-}
-
-// Expande cada registro aprobado a 1 o 2 personas
-// (mismo criterio que ModalAsistencia.tsx)
-function buildRoster(registrations?: any[]): Member[] {
-    if (!registrations) return [];
-    return registrations
-        .filter((r: any) => r.status === 'APPROVED')
-        .flatMap((r: any) => {
-            const desde = r.timestamp || r.created_at || undefined;
-            const titular: Member = {
-                id: r.id,
-                name: `${r.first_name || r.firstName || ''} ${r.last_name || r.lastName || ''}`.trim() || 'Sin nombre',
-                email: r.email || '',
-                phone: r.phone || '',
-                desde,
-            };
-            const partner = r.partnerData || r.partner_data;
-            if (!partner) return [titular];
-            const parejaMember: Member = {
-                id: `${r.id}-partner`,
-                name: `${partner.firstName || partner.first_name || ''} ${partner.lastName || partner.last_name || ''}`.trim() || 'Sin nombre',
-                email: partner.email || '',
-                phone: partner.phone || '',
-                isPartner: true,
-                desde,
-            };
-            return [titular, parejaMember];
-        });
-}
-
-// Iniciales para el avatar del roster
-function getInitials(name: string): string {
-    const parts = name.split(' ').filter(Boolean);
-    if (parts.length === 0) return '?';
-    return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
-}
-
-// "Miembro desde marzo". Parseo manual: new Date('YYYY-MM-DD') interpreta en
-// UTC y en Argentina retrocede un día, corriendo el mes cuando cae el día 1.
-function miembroDesde(iso?: string): string {
-    if (!iso) return 'Miembro del grupo';
-    const soloFecha = iso.slice(0, 10);
-    const [y, m, d] = soloFecha.split('-').map(Number);
-    if (!y || !m || !d) return 'Miembro del grupo';
-    const mes = new Date(y, m - 1, d).toLocaleDateString('es-AR', { month: 'long' });
-    return `Miembro desde ${mes}`;
 }
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -112,7 +56,6 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalMessage, setSuccessModalMessage] = useState('');
     const [descripcionExpandida, setDescripcionExpandida] = useState(false);
-    const [verTodos, setVerTodos] = useState(false);
 
     // Categorías — usadas para tintar el QR con el color de la categoría del grupo
     const [categories, setCategories] = useState<GroupCategory[]>([]);
@@ -272,7 +215,6 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     const isMainHost = (group as any).co_host_id !== currentUser?.id;
     const isApproved = group.status === 'approved';
     const isRejected = group.status === 'rejected';
-    const roster = buildRoster(group.registrations);
     const approved = countApprovedPeople(group.registrations);
     const maxCap = group.maxCapacity || 12;
     const libres = Math.max(0, maxCap - approved);
@@ -298,7 +240,6 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     // Un grupo terminado no tiene próxima reunión: anunciar una sería avisar
     // de algo que no va a pasar.
     const proxima = isFinished ? null : proximaReunion(group.meetingDay);
-    const visibles = verTodos ? roster : roster.slice(0, 8);
 
     // ── Piezas compartidas entre mobile y desktop ──
 
@@ -336,17 +277,23 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     // Ninguna aplica con la temporada cerrada: no se anota, no se da de baja,
     // no se deriva, y compartir el enlace llevaría a un grupo al que ya no se
     // puede entrar.
-    const ListaMiembros = isFinished ? null : (
+    // Con la temporada cerrada no se inscribe, ni se da de baja, ni se deriva:
+    // esas tres acciones no tienen sentido sobre un grupo que terminó. Ver
+    // quiénes estuvieron, sí — el historial se sigue consultando, así que la
+    // botonera queda con esa sola fila en vez de desaparecer entera.
+    const ListaMiembros = (
         <>
             <p className={`${rotulo} px-1`}>Miembros</p>
             <div className={`mt-3 ${T.interna} rounded-[24px] overflow-hidden`}>
-                <FilaAccion texto="Inscribir a alguien" onClick={ir('inscribir')} />
-                <Separador />
-                <FilaAccion texto="Dar de baja un miembro" onClick={ir('bajas')} />
-                <Separador />
-                <FilaAccion texto="Derivar a otro grupo" onClick={ir('derivar')} />
-                <Separador />
-                <FilaAccion texto="Compartir por WhatsApp" onClick={handleShareWhatsapp} />
+                <FilaAccion texto="Ver inscriptos" onClick={ir('inscriptos')} />
+                {!isFinished && <Separador />}
+                {!isFinished && <FilaAccion texto="Inscribir a alguien" onClick={ir('inscribir')} />}
+                {!isFinished && <Separador />}
+                {!isFinished && <FilaAccion texto="Dar de baja un miembro" onClick={ir('bajas')} />}
+                {!isFinished && <Separador />}
+                {!isFinished && <FilaAccion texto="Derivar a otro grupo" onClick={ir('derivar')} />}
+                {!isFinished && <Separador />}
+                {!isFinished && <FilaAccion texto="Compartir por WhatsApp" onClick={handleShareWhatsapp} />}
             </div>
         </>
     );
@@ -461,63 +408,6 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
         </div>
     );
 
-    const Miembros = (
-        <>
-            <div className="flex items-center justify-between gap-4 mb-[18px]">
-                <div className="flex items-baseline gap-2.5">
-                    <h2 className="text-[19px] font-semibold tracking-[-.01em]">Miembros</h2>
-                    <span className="text-[15px] font-semibold text-black/40 dark:text-white/40">{approved}</span>
-                </div>
-                {!isFinished && (
-                    <button
-                        type="button"
-                        onClick={ir('inscribir')}
-                        className={`h-[42px] px-[18px] rounded-full ${T.chip} flex items-center gap-2 text-[14px] font-semibold transition-colors hover:opacity-80`}
-                    >
-                        <Plus className="w-4 h-4" strokeWidth={2.2} />
-                        <span className="hidden sm:inline">Inscribir a alguien</span>
-                        <span className="sm:hidden">Inscribir</span>
-                    </button>
-                )}
-            </div>
-
-            {roster.length === 0 ? (
-                <p className="text-[14.5px] font-medium text-black/50 dark:text-white/50 py-6 text-center">
-                    Todavía no hay miembros aprobados en el grupo.
-                </p>
-            ) : (
-                <>
-                    <div className="grid gap-x-5 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
-                        {visibles.map((m, i) => (
-                            <div key={m.id} className="flex items-center gap-3.5 py-[11px] px-1">
-                                <div className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center text-[14.5px] font-semibold ${i === 0
-                                    ? 'bg-[#0a0a0a] dark:bg-white text-white dark:text-black'
-                                    : `${T.chip} text-black/60 dark:text-white/60`}`}>
-                                    {getInitials(m.name)}
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[15px] font-semibold truncate">{m.name}</p>
-                                    <p className="text-[13px] font-medium text-black/45 dark:text-white/45 truncate">
-                                        {m.isPartner ? 'Inscripción compartida' : miembroDesde(m.desde)}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    {roster.length > 8 && (
-                        <button
-                            type="button"
-                            onClick={() => setVerTodos(v => !v)}
-                            className="w-full h-[52px] mt-2 text-[14.5px] font-semibold text-black/45 dark:text-white/45 transition-colors hover:text-black dark:hover:text-white"
-                        >
-                            {verTodos ? 'Ver menos' : `Ver los ${roster.length} miembros`}
-                        </button>
-                    )}
-                </>
-            )}
-        </>
-    );
-
     const Descripcion = group.description ? (
         <div className="mt-5 px-1">
             <p className={`text-[14.5px] leading-[1.6] font-medium text-black/55 dark:text-white/55 ${descripcionExpandida ? '' : 'line-clamp-3'}`}>
@@ -593,7 +483,6 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                     {ListaMiembros && <div className="mt-6">{ListaMiembros}</div>}
                     {ListaAdmin}
 
-                    <div className={`${T.tarjeta} rounded-[26px] p-5 mt-6`}>{Miembros}</div>
                 </div>
 
                 {/* La asistencia se saca del flujo: siempre alcanzable con el
@@ -660,7 +549,6 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
 
                             {AvisoRechazo}
 
-                            <div className={`${T.tarjeta} rounded-[30px] px-7 pt-[26px] pb-5`}>{Miembros}</div>
                         </div>
 
                         <div className="sticky top-7 flex flex-col gap-4 min-w-0">

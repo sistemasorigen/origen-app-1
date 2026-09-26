@@ -380,7 +380,31 @@ export async function insertGroupDirect(group: Group): Promise<Group | null> {
     return null;
   }
 
+  if (data?.id) await asegurarRolCoAnfitrion(data.id);
+
   return transformDbRowToGroup(data);
+}
+
+/**
+ * Le da el rol CO_ANFITRION a quien quedó vinculado como co-anfitrión.
+ *
+ * Estar en `co_host_id` no alcanza para entrar al panel: las rutas
+ * /mis-grupos/* chequean el rol, así que sin esto la persona ve el grupo en
+ * la base y la app la manda a "/". Hasta ahora el rol se daba a mano y había
+ * que acordarse.
+ *
+ * La RPC saca de `p_group_id` a quién dárselo, así que esto no puede usarse
+ * para repartir el rol a cualquiera. Nunca tira: dar el rol es un paso
+ * posterior al guardado y no tiene por qué voltearlo. Antes de correr el SQL
+ * la función no existe todavía y esto sólo deja el aviso en consola.
+ */
+async function asegurarRolCoAnfitrion(groupId: string): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('asegurar_rol_co_anfitrion', { p_group_id: groupId });
+    if (error) throw error;
+  } catch (e) {
+    console.error('[asegurarRolCoAnfitrion] no se pudo dar el rol en', groupId, e);
+  }
 }
 
 // Update group
@@ -453,6 +477,7 @@ export async function updateGroupDirect(group: Group): Promise<Group | null> {
 
 
   if (updatedData) {
+    await asegurarRolCoAnfitrion(group.id);
     return transformDbRowToGroup(updatedData);
   }
 
@@ -3249,6 +3274,10 @@ export const supabaseService = {
       }
 
       console.log('[Groups] New season group created:', newGroup.id);
+
+      // La temporada nueva puede estrenar co-anfitrión, o traerlo del grupo
+      // viejo: en los dos casos tiene que poder abrirlo.
+      await asegurarRolCoAnfitrion(newGroup.id);
 
       const { error: finishError } = await supabase
         .from('groups')
