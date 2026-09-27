@@ -6,7 +6,7 @@ import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
-import { Search, Calendar, CalendarClock, MapPin, Users, X, ArrowRight, ArrowUp, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, UserPlus, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock, Instagram, Facebook, Youtube, Music } from 'lucide-react';
+import { Search, Calendar, CalendarClock, MapPin, Users, X, ArrowRight, Clock, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock, Instagram, Facebook, Youtube, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
@@ -1482,59 +1482,58 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         }))
         : defaultSlides;
 
-    // Alterna el FAB entre "bajar a postularme" y "volver arriba"
-    // cada vez que se lo toca.
-    const [isHostCtaAtBottom, setIsHostCtaAtBottom] = useState(false);
+    /**
+     * El botón de la franja de postulación — design-claude/GCX Franja Anfitrion.
+     *
+     * Cuatro estados con la misma forma de píldora. Los avisos al tocar son
+     * los de siempre; lo que cambia es que el estado ahora se ve sin tocar:
+     * quien ya mandó su postulación no tiene por qué apretar un botón que
+     * dice "Postularme" para enterarse de que está en revisión.
+     *
+     * El texto del estado en revisión se acorta en el teléfono ("En
+     * revisión"), donde comparte renglón con el título.
+     */
+    const pildora = 'inline-flex h-10 md:h-11 flex-none items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap rounded-full px-3.5 md:px-5 text-[13px] md:text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#118f46] focus-visible:ring-offset-2';
 
-    // Scroll animado y controlado (no el "smooth" nativo del navegador,
-    // que en distancias largas puede sentirse instantáneo) — así se ve
-    // pasar por las tarjetas de grupos en el camino hacia la postulación
-    // (o de vuelta hacia arriba).
-    //
-    // CRÍTICO: se desactiva el "scroll anchoring" del navegador mientras
-    // dura la animación. Sin esto, a medida que las imágenes de las
-    // tarjetas terminan de cargar (cambiando su altura) por encima del
-    // viewport, el navegador "corrige" la posición de scroll para
-    // compensar — y esa corrección pelea contra nuestros scrollTo(),
-    // dando exactamente el efecto de teletransporte/salto que se ve acá.
-    const animateScrollTo = (targetY: number, duration = 900) => {
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (prefersReducedMotion) {
-            window.scrollTo({ top: targetY, behavior: 'auto' });
-            return;
-        }
-
-        const htmlEl = document.documentElement;
-        const previousOverflowAnchor = htmlEl.style.overflowAnchor;
-        htmlEl.style.overflowAnchor = 'none';
-
-        const startY = window.scrollY;
-        const distance = targetY - startY;
-        const startTime = performance.now();
-
-        const easeInOutQuad = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-
-        const step = (now: number) => {
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            window.scrollTo(0, Math.round(startY + distance * easeInOutQuad(progress)));
-            if (progress < 1) {
-                requestAnimationFrame(step);
-            } else {
-                htmlEl.style.overflowAnchor = previousOverflowAnchor;
-            }
-        };
-        requestAnimationFrame(step);
-    };
-
-    const scrollToWithFlythrough = (elementId: string, duration = 900) => {
-        const target = document.getElementById(elementId);
-        if (!target) return;
-        const targetY = target.getBoundingClientRect().top + window.scrollY;
-        animateScrollTo(targetY, duration);
-    };
-
-    const scrollToTopWithFlythrough = (duration = 900) => animateScrollTo(0, duration);
+    const botonPostulacion = isAnfitrion ? (
+        <button
+            type="button"
+            onClick={() => showToast("Ya eres anfitrión", 'info')}
+            className={`${pildora} border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white`}
+        >
+            <Check className="w-4 h-4 flex-none text-[#118f46]" strokeWidth={2.6} />
+            Ya sos anfitrión
+        </button>
+    ) : userApplicationStatus === 'PENDING' ? (
+        <button
+            type="button"
+            onClick={() => showToast("Ya tienes una postulación en revisión", 'info')}
+            className={`${pildora} border border-amber-200 bg-[#FDF6E7] text-[#8A5B12] hover:bg-[#FBF0D9] dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200`}
+        >
+            <Clock className="w-4 h-4 flex-none" strokeWidth={2.4} />
+            <span className="md:hidden">En revisión</span>
+            <span className="hidden md:inline">Postulación en revisión</span>
+        </button>
+    ) : userApplicationStatus === 'APPROVED' ? (
+        <button
+            type="button"
+            onClick={() => showToast("Tu postulación ya fue aprobada", 'success')}
+            className={`${pildora} border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white`}
+        >
+            <Check className="w-4 h-4 flex-none text-[#118f46]" strokeWidth={2.6} />
+            <span className="md:hidden">Aprobada</span>
+            <span className="hidden md:inline">Postulación aprobada</span>
+        </button>
+    ) : (
+        <button
+            type="button"
+            onClick={() => setIsPostulationModalOpen(true)}
+            className={`${pildora} bg-[#118f46] text-white hover:bg-[#0e7538] active:scale-[0.98]`}
+        >
+            Postularme
+            <ArrowRight className="w-4 h-4 flex-none" strokeWidth={2.4} />
+        </button>
+    );
 
     return (
         <div className="min-h-screen bg-white font-sans pb-20 groups-original-fonts">
@@ -1573,23 +1572,6 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
             {view === 'public' ? (
                 <>
-                    {/* FAB — alterna entre bajar a la postulación de anfitrión y volver arriba */}
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (isHostCtaAtBottom) {
-                                scrollToTopWithFlythrough();
-                            } else {
-                                scrollToWithFlythrough('leader-postulation-card');
-                            }
-                            setIsHostCtaAtBottom(prev => !prev);
-                        }}
-                        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-[#28a946] text-white rounded-full font-semibold text-xs uppercase tracking-wide shadow-lg hover:bg-[#1f8a39] hover:shadow-xl active:scale-[0.98] transition-all"
-                    >
-                        {isHostCtaAtBottom ? <ArrowUp className="w-4 h-4 shrink-0" /> : <UserPlus className="w-4 h-4 shrink-0" />}
-                        {isHostCtaAtBottom ? 'Volver arriba del todo' : '¿Querés ser anfitrión?'}
-                    </button>
-
                     {/* HERO CAROUSEL - Grupos de Conexión */}
                     {/* Sólo se redondea abajo: arriba el hero va al ras del tope
                         de la página, montado bajo la navbar transparente. Mismo
@@ -1615,6 +1597,51 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             autoPlayInterval={6000}
                         />
                     </section>
+
+                    {/* CTA: Leader Postulation — design-claude/GCX Franja Anfitrion.
+                        Vive entre el hero y el buscador, y ya no al final de la
+                        página: antes había que llegar hasta abajo —o usar un
+                        botón flotante que hacía ese viaje— para enterarse de
+                        que las postulaciones estaban abiertas.
+
+                        El botón dice en qué estado está la persona en vez de
+                        decir siempre "Postularme": el aviso al tocarlo sigue
+                        estando, pero ahora no hace falta tocar para saber que
+                        la postulación ya está en revisión.
+
+                        El contenedor repite el ancho y los costados de la
+                        grilla de abajo para que las dos queden alineadas. */}
+                    <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 xl:px-20">
+                        <div
+                            id="leader-postulation-card"
+                            className="mt-8 md:mt-10 rounded-2xl border border-emerald-100 bg-[#F1FBF4] p-5 md:p-6 dark:border-emerald-900/40 dark:bg-emerald-950/25"
+                        >
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-8">
+                                <div className="min-w-0 md:flex-none">
+                                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.08em] text-[#118f46]">
+                                        <span className="h-[7px] w-[7px] flex-none rounded-full bg-[#118f46]" />
+                                        Postulaciones abiertas
+                                    </p>
+                                    {/* En el teléfono el botón comparte renglón con el
+                                        título: es lo que mantiene la franja en tres
+                                        líneas en vez de cinco. En escritorio se va a la
+                                        derecha del todo y este renglón queda solo. */}
+                                    <div className="mt-2 flex items-center justify-between gap-3 md:justify-start">
+                                        <h3 className="m-0 min-w-0 text-[17.5px] md:text-xl font-bold leading-[1.2] tracking-[-.01em] text-slate-900 dark:text-white">
+                                            ¿Querés ser anfitrión?
+                                        </h3>
+                                        <div className="md:hidden">{botonPostulacion}</div>
+                                    </div>
+                                </div>
+
+                                <p className="m-0 text-[13.5px] md:text-sm font-medium leading-[1.5] text-slate-600 md:flex-1 dark:text-zinc-300">
+                                    Si sentís el llamado a servir y guiar a otros en comunidad, nos encantaría conocerte.
+                                </p>
+
+                                <div className="hidden md:block">{botonPostulacion}</div>
+                            </div>
+                        </div>
+                    </div>
 
                     {/* BENTO GRID */}
                     <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 xl:px-20 py-12 md:py-16 lg:py-20 font-['Helvetica_Neue',sans-serif]">
@@ -1931,46 +1958,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             </div>
                         )}
 
-                        {/* CTA: Leader Postulation */}
-                        <div id="leader-postulation-card" className="mt-16 md:mt-24 rounded-2xl p-8 md:p-12 lg:p-16 xl:p-20 bg-slate-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white">
-                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-                                <div className="flex-1">
-                                    <p className="text-xs font-bold italic text-[#118f46] mb-3">// postulaciones abiertas //</p>
-                                    <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold uppercase tracking-tight leading-[1.1] mb-4">
-                                        ¿QUERÉS SER ANFITRIÓN?
-                                    </h3>
-                                    <p className="text-base font-medium text-white/70 max-w-lg">
-                                        Si sentís el llamado a servir y guiar a otros en comunidad, nos encantaría conocerte.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        if (isAnfitrion) {
-                                            showToast("Ya eres anfitrión", 'info');
-                                            return;
-                                        }
-                                        if (userApplicationStatus === 'PENDING') {
-                                            showToast("Ya tienes una postulación en revisión", 'info');
-                                            return;
-                                        }
-                                        if (userApplicationStatus === 'APPROVED') {
-                                            showToast("Tu postulación ya fue aprobada", 'success');
-                                            return;
-                                        }
-                                        setIsPostulationModalOpen(true);
-                                    }}
-                                    className="px-8 py-4 bg-[#118f46] text-white font-bold uppercase tracking-wide text-sm border-2 border-[#118f46] rounded-lg hover:bg-white hover:text-black hover:border-white transition-all flex items-center gap-3 group"
-                                >
-                                    POSTULARME
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </button>
-                            </div>
-                        </div>
-
                     </div>
 
                     {/* --- FOOTER --- */}
-                    <footer className="bg-white border-t-4 border-black mt-16">
+                    <footer className="bg-white border-t border-slate-200 dark:border-zinc-800 mt-16">
                         <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
                             <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                                 <div className="flex items-center gap-4">

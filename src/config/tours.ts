@@ -98,6 +98,14 @@ export const dashboardSteps: Step[] = [
 
 // 3. Groups Explorer Tour
 export const groupsSteps: Step[] = [
+    // La postulación va primera porque ahora vive arriba, entre el hero y el
+    // buscador: si quedara tercera, el recorrido bajaría al buscador y los
+    // filtros para volver a subir.
+    {
+        target: '#leader-postulation-card',
+        content: '¿Querés liderar tu propio grupo? Hacé clic acá para postularte como anfitrión.',
+        placement: 'bottom',
+    },
     {
         target: '#groups-search-bar',
         content: 'Usá este buscador para encontrar grupos por nombre, barrio o líder.',
@@ -106,11 +114,6 @@ export const groupsSteps: Step[] = [
     {
         target: '#groups-filter-bar',
         content: 'Filtrá los resultados por categoría, día de reunión o tipo de grupo para encontrar el ideal para vos.',
-        placement: 'bottom',
-    },
-    {
-        target: '#leader-postulation-card',
-        content: '¿Querés liderar tu propio grupo? Hacé clic acá para postularte como anfitrión.',
         placement: 'bottom',
     },
     {
