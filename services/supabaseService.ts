@@ -4067,19 +4067,56 @@ export const supabaseService = {
     registrationId: string,
     toGroupId: string
   ): Promise<{ ok: boolean; error?: string }> {
-    const { data, error } = await supabase.rpc('derivar_miembro', {
-      p_registration_id: registrationId,
-      p_to_group_id: toGroupId
+    // Con reloj.
+    //
+    // La consulta en sí tarda milisegundos, pero el pedido puede quedarse
+    // colgado antes de llegar a la base: supabase-js renueva la sesión antes
+    // de cada llamada, y en el teléfono —con la app minimizada un buen rato,
+    // o con varias pestañas abiertas— esa renovación a veces no vuelve
+    // nunca. Ahí la promesa no se resuelve ni falla, y el botón se quedaba
+    // en "Transfiriendo…" para siempre, sin aviso y sin poder reintentar.
+    //
+    // Con el corte, a los 20 segundos la pantalla vuelve a estar viva y dice
+    // qué hacer. Si la derivación alcanzó a entrar, el reintento lo va a
+    // contar: la función avisa que esa persona ya tiene un pedido en el
+    // grupo destino.
+    const CORTE_MS = 20_000;
+
+    let cortar: number | undefined;
+    const reloj = new Promise<'corte'>(resolve => {
+      cortar = window.setTimeout(() => resolve('corte'), CORTE_MS);
     });
 
-    if (error) {
-      console.error('[derivarMiembro] Error:', error);
-      return { ok: false, error: 'No pudimos completar la derivación.' };
+    try {
+      const carrera = await Promise.race([
+        supabase.rpc('derivar_miembro', {
+          p_registration_id: registrationId,
+          p_to_group_id: toGroupId
+        }),
+        reloj,
+      ]);
+
+      if (carrera === 'corte') {
+        console.error('[derivarMiembro] La llamada no volvió en', CORTE_MS, 'ms');
+        return {
+          ok: false,
+          error: 'La conexión tardó demasiado y no sabemos si el pase se pidió. Volvé a entrar en un momento y fijate antes de intentarlo de nuevo.',
+        };
+      }
+
+      const { data, error } = carrera;
+
+      if (error) {
+        console.error('[derivarMiembro] Error:', error);
+        return { ok: false, error: 'No pudimos completar la derivación.' };
+      }
+      return {
+        ok: data?.ok === true,
+        error: data?.error
+      };
+    } finally {
+      if (cortar) window.clearTimeout(cortar);
     }
-    return {
-      ok: data?.ok === true,
-      error: data?.error
-    };
   },
 
   async deleteGroupRegistration(registrationId: string, groupId: string): Promise<boolean> {
