@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { NOMBRE_MODALIDAD, modalidadDe, llevaDireccion } from '../../src/utils/modalidad';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Group, GroupTag, GroupCategory, esGrupoPendiente } from '../../types';
+import { Group, GroupTag, GroupCategory, SeasonSettings, DEFAULT_SEASON_SETTINGS, esGrupoPendiente } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 import PestanasGrupoAdmin from '../../components/GCX/PestanasGrupoAdmin';
 import { supabase } from '../../services/supabaseClient';
 import { Check, Loader2 } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
+import { esDeTemporadaActiva, nombreTemporadaActiva } from '../../src/utils/temporadaActiva';
 
 /**
  * Ficha de un grupo (design-claude/Admin GCX - Detalle e Inscriptos).
@@ -66,9 +67,26 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [adminNote, setAdminNote] = useState('');
     const [coHostDetails, setCoHostDetails] = useState<{ name: string; email: string } | null>(null);
+    // Qué temporada está abierta hoy. Decide a qué grupos se puede transferir:
+    // mandar a alguien a un grupo de una temporada cerrada no significa nada.
+    const [temporadas, setTemporadas] = useState<SeasonSettings>(DEFAULT_SEASON_SETTINGS);
     const [descripcionExpandida, setDescripcionExpandida] = useState(false);
-    const [modal, setModal] = useState<null | 'aprobar' | 'rechazar'>(null);
+    const [modal, setModal] = useState<null | 'aprobar' | 'rechazar' | 'transferir'>(null);
     useBloqueoDeFondo(modal !== null);
+
+    // Transferir un miembro a otro grupo. La ficha ya tiene las inscripciones
+    // y todos los grupos cargados, así que el modal no vuelve a pedir nada.
+    const [miembroATransferir, setMiembroATransferir] = useState<string | null>(null);
+    const [grupoDestino, setGrupoDestino] = useState<string | null>(null);
+    const [busquedaDestino, setBusquedaDestino] = useState('');
+    const [transfiriendo, setTransfiriendo] = useState(false);
+
+    const abrirTransferencia = () => {
+        setMiembroATransferir(null);
+        setGrupoDestino(null);
+        setBusquedaDestino('');
+        setModal('transferir');
+    };
 
     const fetchGroup = useCallback(async () => {
         if (!groupId) return;
@@ -97,6 +115,12 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
     useEffect(() => { fetchGroup(); }, [fetchGroup]);
 
     useEffect(() => {
+        supabaseService.getAppConfig()
+            .then(cfg => { if (cfg?.groupsConfig?.seasonSettings) setTemporadas(cfg.groupsConfig.seasonSettings); })
+            .catch(e => console.error('[Detalle] No se pudo leer la configuración de temporadas:', e));
+    }, []);
+
+    useEffect(() => {
         if (group?.co_host_id && !group.coHostFirstName && !group.coHostLastName) {
             supabase
                 .from('users')
@@ -108,6 +132,31 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
                 });
         }
     }, [group?.co_host_id, group?.coHostFirstName, group?.coHostLastName]);
+
+    const transferir = async () => {
+        if (!miembroATransferir || !grupoDestino) return;
+        setTransfiriendo(true);
+        try {
+            // derivar_miembro ya autoriza a staff además del anfitrión, así que
+            // no hace falta una RPC aparte para el panel. Los mensajes de error
+            // vienen de la función y ya están escritos para leerse.
+            const res = await supabaseService.derivarMiembro(miembroATransferir, grupoDestino);
+            if (res.ok) {
+                setModal(null);
+                const destino = todos.find(g => g.id === grupoDestino);
+                showToast(`Se pidió el pase a ${destino?.name || 'el otro grupo'}. Lo confirma quien lo recibe.`);
+
+                await fetchGroup();
+            } else {
+                showToast(res.error || 'No se pudo transferir a esa persona', 'error');
+            }
+        } catch (error) {
+            console.error('[Detalle] Error al transferir:', error);
+            showToast('No se pudo transferir a esa persona', 'error');
+        } finally {
+            setTransfiriendo(false);
+        }
+    };
 
     const decidir = async (estado: 'approved' | 'rejected') => {
         if (!group) return;
@@ -174,6 +223,31 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
         && !!group.maxCapacity && (group.isOnline || !!group.location);
 
     const telefonoLimpio = (group.leaderPhone || '').replace(/\D/g, '');
+
+    // Se puede transferir a un miembro y también a quien está esperando
+    // respuesta: anotarse en el grupo equivocado es justamente el caso que hay
+    // que poder corregir. Las rechazadas quedan afuera — mover un "no" a otro
+    // grupo no significa nada, y la RPC las rechaza.
+    //
+    // Los aprobados van primero: son los que se mueven más seguido.
+    const ordenTransferible = { APPROVED: 0, PENDING: 1 } as const;
+    const miembrosTransferibles = inscripciones
+        .filter(r => r.status === 'APPROVED' || r.status === 'PENDING')
+        .sort((a, b) => (ordenTransferible[a.status as 'APPROVED' | 'PENDING'] ?? 2)
+                      - (ordenTransferible[b.status as 'APPROVED' | 'PENDING'] ?? 2));
+
+    const qDestino = busquedaDestino.trim().toLowerCase();
+    // Sólo grupos de la temporada abierta: uno aprobado de una temporada que
+    // ya pasó sigue existiendo —se consulta, se reabre— pero sumarle un
+    // miembro no significa nada.
+    const destinosDeLaTemporada = todos.filter(g =>
+        g.id !== group.id && g.status === 'approved' && esDeTemporadaActiva(g, temporadas));
+
+    const destinosPosibles = destinosDeLaTemporada
+        .filter(g => !qDestino
+            || (g.name || '').toLowerCase().includes(qDestino)
+            || `${g.leaderName || ''} ${g.leaderSurname || ''}`.toLowerCase().includes(qDestino))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     const pill = (bg: string, fg: string, dot: string, texto: string) => (
         <span
@@ -298,6 +372,17 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
                         >
                             Editar ficha
                         </button>
+                        {/* Sólo con alguien a quien mover: la RPC exige que la
+                            inscripción esté aprobada, así que sin miembros el
+                            botón abriría un modal sin nada que elegir. */}
+                        {miembrosTransferibles.length > 0 && (
+                            <button
+                                onClick={abrirTransferencia}
+                                className={`${botonAccion} bg-[#f2f2f0] text-[#0a0a0a]`}
+                            >
+                                Transferir miembro
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -511,6 +596,134 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
             )}
 
             {/* ── Rechazar ────────────────────────────────────────── */}
+            {/* ── Transferir un miembro ───────────────────── */}
+            {modal === 'transferir' && (() => {
+                const elegido = miembrosTransferibles.find(r => r.id === miembroATransferir);
+                const destino = todos.find(g => g.id === grupoDestino);
+                const nombreDe = (r: any) => {
+                    const titular = `${r.firstName || ''} ${r.lastName || ''}`.trim() || 'Sin nombre';
+                    const pareja = r.partnerData
+                        ? `${r.partnerData.firstName || ''} ${r.partnerData.lastName || ''}`.trim()
+                        : '';
+                    return pareja ? `${titular} y ${pareja}` : titular;
+                };
+                const fila = (on: boolean) =>
+                    `flex w-full items-center gap-3 rounded-[16px] px-3.5 py-3 text-left transition-colors ${on
+                        ? 'bg-[#0a0a0a] text-white'
+                        : 'bg-[#f7f7f5] text-[#0a0a0a] hover:bg-[#efeeeb]'}`;
+
+                return (
+                    <div className="fixed inset-0 z-[80]">
+                        <div className="absolute inset-0 bg-[rgba(10,10,10,.42)]" onClick={() => !transfiriendo && setModal(null)} />
+                        <div
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Transferir un miembro a otro grupo"
+                            className="absolute inset-x-3 top-10 max-h-[88vh] overflow-auto rounded-[26px] bg-white shadow-[0_20px_50px_rgba(0,0,0,.25)] md:inset-x-auto md:left-1/2 md:top-[70px] md:w-[560px] md:-translate-x-1/2"
+                        >
+                            <div className="px-6 py-[22px]">
+                                <p className="text-[19px] font-semibold tracking-[-0.015em] text-[#0a0a0a]">Transferir un miembro</p>
+                                <p className="mt-2.5 text-[13.5px] font-medium leading-[1.65] text-black/[.66]">
+                                    {elegido?.status === 'PENDING'
+                                        ? `El pedido de ${(elegido.firstName || '').trim() || 'esta persona'} pasa al grupo que elijas. Lo resuelve quien lo recibe, y mientras tanto la solicitud en ${group.name} sigue en pie.`
+                                        : `Sale de ${group.name} y entra al grupo que elijas. No es inmediato: le llega como solicitud a quien lo recibe, y la persona sigue en este grupo hasta que la acepten.`}
+                                </p>
+
+                                <p className="mt-5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.58]">
+                                    A quién mover
+                                </p>
+                                <div className="mt-2 flex max-h-[180px] flex-col gap-1.5 overflow-auto">
+                                    {miembrosTransferibles.map(r => (
+                                        <button
+                                            key={r.id}
+                                            onClick={() => setMiembroATransferir(r.id)}
+                                            className={fila(miembroATransferir === r.id)}
+                                        >
+                                            <span className={`flex h-8 w-8 flex-none items-center justify-center rounded-[10px] text-[11px] font-semibold ${miembroATransferir === r.id ? 'bg-white/20 text-white' : 'bg-[#eceae6] text-black/[.58]'}`}>
+                                                {iniciales(nombreDe(r))}
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-[13.5px] font-semibold">{nombreDe(r)}</span>
+                                                <span className={`block truncate text-[11.5px] font-medium ${miembroATransferir === r.id ? 'text-white/60' : 'text-black/[.55]'}`}>
+                                                    {[
+                                                        r.status === 'PENDING' ? 'Esperando respuesta' : null,
+                                                        r.partnerData ? 'Se mueven los dos' : (r.email || 'sin email'),
+                                                    ].filter(Boolean).join(' · ')}
+                                                </span>
+                                            </span>
+                                            {miembroATransferir === r.id && <Check className="h-4 w-4 flex-none" strokeWidth={2.6} />}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* El rótulo nombra la temporada: si no, faltan
+                                    grupos de la lista y no se entiende por qué. */}
+                                <p className="mt-5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.58]">
+                                    A qué grupo de {nombreTemporadaActiva(temporadas)}
+                                </p>
+                                <input
+                                    type="text"
+                                    value={busquedaDestino}
+                                    onChange={e => setBusquedaDestino(e.target.value)}
+                                    placeholder="Buscar por nombre del grupo o del anfitrión"
+                                    aria-label="Buscar el grupo destino"
+                                    className="campo-desnudo mt-2 h-[42px] w-full rounded-full bg-[#f7f7f5] px-4 text-[13.5px] font-medium text-[#0a0a0a]"
+                                />
+                                <div className="mt-2 flex max-h-[200px] flex-col gap-1.5 overflow-auto">
+                                    {destinosPosibles.length === 0 ? (
+                                        <p className="px-1 py-4 text-center text-[13px] font-medium text-black/[.5]">
+                                            {busquedaDestino
+                                                ? `Ningún grupo de ${nombreTemporadaActiva(temporadas)} coincide con la búsqueda.`
+                                                : destinosDeLaTemporada.length === 0
+                                                    ? `No hay otro grupo aprobado en ${nombreTemporadaActiva(temporadas)}. Se puede transferir sólo dentro de la temporada abierta.`
+                                                    : 'No hay otro grupo al que transferirlo.'}
+                                        </p>
+                                    ) : destinosPosibles.map(g => {
+                                        const on = grupoDestino === g.id;
+                                        const n = (g.registrations || []).length;
+                                        const quien = `${g.leaderName || ''} ${g.leaderSurname || ''}`.trim() || 'Sin anfitrión';
+                                        const cuando = g.meetingDay ? ` · ${g.meetingDay} ${g.meetingTime || ''}`.trimEnd() : '';
+                                        const cupo = ` · ${n} de ${g.maxCapacity || '?'}`;
+                                        return (
+                                            <button key={g.id} onClick={() => setGrupoDestino(g.id)} className={fila(on)}>
+                                                <span className="min-w-0 flex-1">
+                                                    <span className="block truncate text-[13.5px] font-semibold">{g.name}</span>
+                                                    <span className={`block truncate text-[11.5px] font-medium ${on ? 'text-white/60' : 'text-black/[.55]'}`}>
+                                                        {quien}{cuando}{cupo}
+                                                    </span>
+                                                </span>
+                                                {on && <Check className="h-4 w-4 flex-none" strokeWidth={2.6} />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="mt-5 flex flex-wrap gap-2.5">
+                                    <button
+                                        onClick={transferir}
+                                        disabled={!miembroATransferir || !grupoDestino || transfiriendo}
+                                        className="h-[50px] min-w-[170px] flex-1 rounded-full bg-[#0a0a0a] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                                    >
+                                        {transfiriendo
+                                            ? 'Transfiriendo…'
+                                            : elegido && destino
+                                                ? `Pasar a ${(elegido.firstName || '').trim() || 'la persona'}`
+                                                : 'Transferir'}
+                                    </button>
+                                    <button
+                                        onClick={() => setModal(null)}
+                                        disabled={transfiriendo}
+                                        className="h-[50px] rounded-full bg-[#f2f2f0] px-[22px] text-[15px] font-semibold text-[#0a0a0a] disabled:opacity-40"
+                                    >
+                                        Volver
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             {modal === 'rechazar' && (
                 <div className="fixed inset-0 z-[80]">
                     <div className="absolute inset-0 bg-[rgba(10,10,10,.42)]" onClick={() => setModal(null)} />

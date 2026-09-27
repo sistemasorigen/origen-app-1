@@ -235,6 +235,8 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             coordinatorVariant: finales.includes(UserRole.COORDINATOR) && variantes.length > 0
                 ? variantes[0]
                 : undefined,
+            // Este panel es el único lugar donde se corrige el sexo.
+            gender: datos.sexo || base?.gender,
         };
 
         const ok = base
@@ -481,11 +483,14 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                         onGuardarRoles={async (roles, variantes, area) => {
                             if (!abierto) return false;
                             const partes = (abierto.name || '').trim().split(' ').filter(Boolean);
+                            // El sexo viaja con lo que ya tenía: guardar permisos no
+                            // puede borrar un dato que esta pantalla no está tocando.
                             const datos: DatosCuenta = {
                                 nombre: partes[0] || '',
                                 apellido: partes.slice(1).join(' '),
                                 email: abierto.email,
                                 activo: abierto.isActive,
+                                sexo: abierto.gender || '',
                             };
                             const ok = await escribirUsuario(abierto, datos, '', roles, variantes, area);
                             if (ok) avisar('Permisos actualizados.');

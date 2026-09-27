@@ -175,6 +175,8 @@ const esActual = (endDate?: string): boolean => {
 type ItemHistorial = Awaited<ReturnType<typeof supabaseService.getMiHistorialDeGrupos>>[number];
 
 type CampoNombre = 'name' | 'phone' | 'birthDate' | 'gender';
+/** Los que la persona sí puede tocar. El sexo lo corrige el panel de admin. */
+type CampoEditable = Exclude<CampoNombre, 'gender'>;
 
 // Los cuatro campos que ModalCompletarPerfil exige antes de dejar entrar a
 // la app. Acá se marcan igual: si le faltan a alguien que llegó por otro
@@ -267,13 +269,14 @@ const ProfilePage: React.FC = () => {
     // La referencia de "sin cambios" sale de `user`, no de un estado
     // aparte: al guardar, refreshSession() actualiza `user`, el efecto de
     // arriba recarga el formulario y el diff vuelve a cero solo.
+    // El sexo no entra: no se edita desde acá, así que nunca puede ser un
+    // cambio sin guardar.
     const guardado = {
         name: user?.name || '',
         phone: user?.phone || '',
         birthDate: user?.birthDate || '',
-        gender: user?.gender || '',
     };
-    const editados = (Object.keys(guardado) as CampoNombre[]).filter(k => formData[k] !== guardado[k]);
+    const editados = (Object.keys(guardado) as CampoEditable[]).filter(k => formData[k] !== guardado[k]);
     const hayCambios = editados.length > 0;
 
     const faltantes = CAMPOS_REQUERIDOS.filter(c => !formData[c.key].trim());
@@ -303,15 +306,20 @@ const ProfilePage: React.FC = () => {
                 ? calculateAge(formData.birthDate)
                 : user.age || 0;
 
+            // Sin gender a propósito: updateUserProfile sólo escribe las claves
+            // que recibe, así que omitirlo deja la columna intacta.
             const profileOk = await supabaseService.updateUserProfile(user.id, {
                 phone: formData.phone,
-                gender: formData.gender,
                 birthDate: formData.birthDate,
                 age,
             });
 
+            // El sexo se saca del objeto: updateUser ahora escribe esa columna
+            // cuando viene, y `...user` la arrastraba sin querer. Desde acá no
+            // se toca ni con el mismo valor.
+            const { gender: _sexoNoSeTocaDesdeElPerfil, ...sinSexo } = user;
             const nameOk = await supabaseService.updateUser({
-                ...user,
+                ...sinSexo,
                 name: formData.name,
             });
 
@@ -527,23 +535,23 @@ const ProfilePage: React.FC = () => {
                                     />
                                 </Campo>
 
+                                {/* El sexo se muestra pero no se edita: define a
+                                    qué grupos se puede entrar, así que lo corrige
+                                    el equipo y no cada persona. Va como dato y no
+                                    como campo deshabilitado — un select grisáceo
+                                    invita a tocarlo y no explica nada. */}
                                 <Campo
                                     id="perfil-sexo"
                                     label="Sexo"
-                                    falta={!formData.gender}
-                                    editado={editados.includes('gender')}
+                                    falta={!user?.gender}
+                                    ayuda="Lo cambia el equipo de Origen. Escribinos si hay que corregirlo."
                                 >
-                                    <select
+                                    <p
                                         id="perfil-sexo"
-                                        className="campo"
-                                        value={formData.gender}
-                                        onChange={(e) => setCampo('gender', e.target.value)}
+                                        className="flex h-[52px] items-center rounded-xl bg-slate-50 px-4 text-[15px] font-semibold text-slate-500 dark:bg-zinc-900 dark:text-zinc-400"
                                     >
-                                        <option value="">Seleccionar...</option>
-                                        <option value="Masculino">Masculino</option>
-                                        <option value="Femenino">Femenino</option>
-                                        <option value="No especificar">No especificar</option>
-                                    </select>
+                                        {user?.gender || 'Sin cargar'}
+                                    </p>
                                 </Campo>
                             </div>
 

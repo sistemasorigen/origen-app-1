@@ -45,6 +45,11 @@ export interface DatosCuenta {
     apellido: string;
     email: string;
     activo: boolean;
+    /**
+     * Se edita acá y no en /perfil: define a qué grupos puede entrar la
+     * persona, así que lo corrige el equipo. Vacío cuando nunca se cargó.
+     */
+    sexo: string;
 }
 
 interface Props {
@@ -110,7 +115,7 @@ const FichaUsuarioAdmin: React.FC<Props> = ({
     const original = useMemo(() => {
         const { nombre, apellido } = partirNombre(usuario?.name || '');
         return {
-            datos: { nombre, apellido, email: usuario?.email || '', activo: usuario?.isActive ?? true },
+            datos: { nombre, apellido, email: usuario?.email || '', activo: usuario?.isActive ?? true, sexo: usuario?.gender || '' },
             roles: usuario ? rolesDe(usuario) : [UserRole.VIEWER],
             variantes: usuario?.coordinatorVariants && usuario.coordinatorVariants.length > 0
                 ? usuario.coordinatorVariants
@@ -158,6 +163,7 @@ const FichaUsuarioAdmin: React.FC<Props> = ({
         datos.apellido !== original.datos.apellido ||
         datos.email !== original.datos.email ||
         datos.activo !== original.datos.activo ||
+        datos.sexo !== original.datos.sexo ||
         (pass.length > 0 && pass === pass2)
     );
 
@@ -385,6 +391,27 @@ const FichaUsuarioAdmin: React.FC<Props> = ({
                                     onChange={v => { setDatos(d => ({ ...d, email: v })); setDatosOk(false); }}
                                     ayuda="Es el usuario con el que inicia sesión. Si lo cambiás, tiene que entrar con el nuevo."
                                 />
+                            </div>
+
+                            <div className="mt-2.5">
+                                <label className="block">
+                                    <span className="mb-1.5 block text-[10.5px] font-semibold uppercase tracking-[0.07em] text-black/[.55]">
+                                        Sexo
+                                    </span>
+                                    <select
+                                        value={datos.sexo}
+                                        onChange={e => { setDatos(d => ({ ...d, sexo: e.target.value })); setDatosOk(false); }}
+                                        className="h-[46px] w-full rounded-[14px] bg-[#f7f7f5] px-3.5 text-[13.5px] font-medium text-[#0a0a0a]"
+                                    >
+                                        <option value="">Sin cargar</option>
+                                        <option value="Masculino">Masculino</option>
+                                        <option value="Femenino">Femenino</option>
+                                        <option value="No especificar">No especificar</option>
+                                    </select>
+                                    <span className="mt-[7px] block text-[11.5px] font-medium leading-[1.5] text-black/[.6]">
+                                        Decide a qué grupos puede entrar. Desde su perfil no lo puede cambiar.
+                                    </span>
+                                </label>
                             </div>
 
                             <div className="mt-4 border-t border-[#f2f2f0] pt-3.5">

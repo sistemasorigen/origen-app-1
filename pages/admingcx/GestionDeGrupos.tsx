@@ -6,6 +6,7 @@ import { supabaseService, deleteGroupDirect, toggleGroupCapacityLock, toggleGrou
 import AdminGCXLayout, { useAdminGCXToast, usePanelGCXConteos } from '../../components/layout/AdminGCXLayout';
 
 import GroupsAdminToolbar, { EstadoGrupo, TemporadaFiltro } from '../../components/GCX/BarraHerramientasGruposAdmin';
+import { leerFiltros, guardarFiltros } from '../../src/utils/filtrosRecordados';
 import GroupsAdminList from '../../components/GCX/ListaGruposAdmin';
 import ModalModeracionGrupos from '../../components/GCX/ModalModeracionGrupos';
 
@@ -29,6 +30,13 @@ const getSeasonFromDate = (dateStr?: string): 'S1' | 'S2' | 'S3' | null => {
     return null;
 };
 
+const CLAVE_FILTROS = 'admingcx.grupos.filtros';
+const FILTROS_VACIOS = {
+    estado: 'ALL' as EstadoGrupo,
+    temporada: 'ALL' as TemporadaFiltro,
+    busqueda: '',
+};
+
 const NOMBRE_TEMPORADA: Record<Exclude<TemporadaFiltro, 'ALL'>, string> = {
     S1: 'temporada 1',
     S2: 'temporada 2',
@@ -50,9 +58,26 @@ const GestionDeGruposContent: React.FC = () => {
     // Filtros. A diferencia de antes, el estado y la temporada se aplican
     // juntos: el diseño los muestra en la misma barra y "Todas" deja la
     // lista completa, que es como entraba el panel hasta ahora.
-    const [adminStatusFilter, setAdminStatusFilter] = useState<EstadoGrupo>('ALL');
-    const [adminSeasonFilter, setAdminSeasonFilter] = useState<TemporadaFiltro>('ALL');
-    const [adminSearchTerm, setAdminSearchTerm] = useState('');
+    //
+    // Arrancan en lo último que se usó en esta sesión: entrar a la ficha de un
+    // grupo desmonta esta pantalla, y sin esto volver dejaba el buscador vacío
+    // y la lista entera, obligando a tipear de nuevo para retomar. Se guardan
+    // los tres juntos porque restaurar sólo el texto y resetear el estado
+    // cambia igual lo que se ve.
+    // useMemo y no una llamada suelta: sin él se lee sessionStorage y se
+    // parsea el JSON en cada render, y sólo sirve el primero.
+    const recordado = useMemo(() => leerFiltros(CLAVE_FILTROS, FILTROS_VACIOS), []);
+    const [adminStatusFilter, setAdminStatusFilter] = useState<EstadoGrupo>(recordado.estado);
+    const [adminSeasonFilter, setAdminSeasonFilter] = useState<TemporadaFiltro>(recordado.temporada);
+    const [adminSearchTerm, setAdminSearchTerm] = useState(recordado.busqueda);
+
+    useEffect(() => {
+        guardarFiltros(CLAVE_FILTROS, {
+            estado: adminStatusFilter,
+            temporada: adminSeasonFilter,
+            busqueda: adminSearchTerm,
+        });
+    }, [adminStatusFilter, adminSeasonFilter, adminSearchTerm]);
 
     // Selección para las acciones de Moderación
     const [seleccionados, setSeleccionados] = useState<string[]>([]);

@@ -1990,7 +1990,10 @@ export const supabaseService = {
       coordinator_variants: user.coordinatorVariants || [],
       coordinator_variant: user.coordinatorVariants && user.coordinatorVariants.length > 0
         ? user.coordinatorVariants[0]
-        : user.coordinatorVariant
+        : user.coordinatorVariant,
+      // Condicional a propósito: los otros llamadores de updateUser no mandan
+      // gender, y nombrar la columna con undefined la dejaría en null.
+      ...(user.gender !== undefined && { gender: user.gender }),
     };
 
     const { error } = await supabase
@@ -2049,7 +2052,9 @@ export const supabaseService = {
       .update({
         phone: profileData.phone,
         age: profileData.age,
-        gender: profileData.gender,
+        // Mismo criterio que avatar_url: sólo se escribe si vino. /perfil ya no
+        // lo manda, y el onboarding sí: así cada uno toca lo suyo.
+        ...(profileData.gender !== undefined && { gender: profileData.gender }),
         birth_date: profileData.birthDate,
         ...(profileData.avatarUrl !== undefined && { avatar_url: profileData.avatarUrl }),
         is_active: true // Activate them if they are completing profile
