@@ -53,10 +53,19 @@ const PaginaDerivarMiembro: React.FC<{ currentUser: User }> = ({ currentUser }) 
     const hoy = new Date().toISOString().split('T')[0];
     const isFinished = !!group && !!(group.endDate && group.endDate < hoy);
 
-    const approvedMembers = (group?.registrations || []).filter(
-        (r: GroupRegistration) => r.status === 'APPROVED'
-    );
-    const elegido = approvedMembers.find(m => m.id === selectedRegistrationId);
+    // Miembros y también quienes esperan respuesta: derivar un pedido que
+    // todavía no se aceptó es justamente lo que se quiere poder hacer cuando
+    // alguien golpeó la puerta equivocada. La RPC ya acepta los dos estados;
+    // lo que faltaba era poder elegirlos acá. Las rechazadas quedan afuera:
+    // mudar un "no" a otro grupo no significa nada.
+    //
+    // Los miembros van primero — son el caso de todos los días— y los
+    // pendientes después, cada uno con su etiqueta para que nadie derive a
+    // alguien creyendo que ya estaba adentro.
+    const derivables = (group?.registrations || [])
+        .filter((r: GroupRegistration) => r.status === 'APPROVED' || r.status === 'PENDING')
+        .sort((a, b) => (a.status === b.status ? 0 : a.status === 'APPROVED' ? -1 : 1));
+    const elegido = derivables.find(m => m.id === selectedRegistrationId);
     const destino = destinos.find(g => g.id === selectedGroupId);
 
     // La inscripción de pareja se trata como una sola unidad: la RPC copia
@@ -92,7 +101,14 @@ const PaginaDerivarMiembro: React.FC<{ currentUser: User }> = ({ currentUser }) 
         // para el usuario, así que se muestra tal cual.
         const res = await supabaseService.derivarMiembro(selectedRegistrationId, selectedGroupId);
         setIsSubmitting(false);
-        if (res.ok) { navigate(`/mis-grupos/${groupId}`); return; }
+        if (res.ok) {
+            navigate(`/mis-grupos/${groupId}`, {
+                state: {
+                    avisoDerivacion: `Se pidió el pase de ${nombreElegido} a ${destino?.name || 'el otro grupo'}. Sigue en tu grupo hasta que ese anfitrión lo acepte.`,
+                },
+            });
+            return;
+        }
         setConfirmando(false);
         setSubmitError(res.error || 'No pudimos completar la derivación.');
     };
@@ -108,7 +124,7 @@ const PaginaDerivarMiembro: React.FC<{ currentUser: User }> = ({ currentUser }) 
 
     const ListaPersonas = (
         <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] overflow-hidden">
-            {approvedMembers.map((m, i) => {
+            {derivables.map((m, i) => {
                 const esteElegido = selectedRegistrationId === m.id;
                 const p = m.partnerData;
                 return (
@@ -139,7 +155,16 @@ const PaginaDerivarMiembro: React.FC<{ currentUser: User }> = ({ currentUser }) 
                                     <p className="text-[15.5px] font-semibold truncate">
                                         {p ? `${m.firstName} y ${p.firstName || 'su pareja'}` : `${m.firstName} ${m.lastName}`}
                                     </p>
-                                    {p && <p className="mt-0.5 text-[12.5px] font-medium text-black/45 dark:text-white/45">Pareja · 1 inscripción</p>}
+                                    {(p || m.status === 'PENDING') && (
+                                        <p className="mt-0.5 flex items-center gap-1.5 text-[12.5px] font-medium text-black/45 dark:text-white/45">
+                                            {m.status === 'PENDING' && (
+                                                <span className="rounded-full bg-[#f3e3c6] px-2 py-0.5 text-[11px] font-semibold text-[#7a4f10] dark:bg-[#3a2f18] dark:text-[#e8c88a]">
+                                                    Esperando respuesta
+                                                </span>
+                                            )}
+                                            {p && <span>Pareja · 1 inscripción</span>}
+                                        </p>
+                                    )}
                                 </div>
                                 <span className={`w-[26px] h-[26px] shrink-0 rounded-full flex items-center justify-center transition-colors ${esteElegido ? 'bg-[#0a0a0a] dark:bg-white' : 'bg-[#eeeeeb] dark:bg-[#2a2a28]'}`}>
                                     {esteElegido && (
@@ -243,7 +268,7 @@ const PaginaDerivarMiembro: React.FC<{ currentUser: User }> = ({ currentUser }) 
             <div className="bg-white dark:bg-[#1b1b1a] rounded-b-[28px] px-5 pt-4 pb-5 lg:rounded-none lg:px-8 lg:py-[18px]">
                 <div className="max-w-[1000px] mx-auto">
                     <Encabezado accion="Derivar a otro grupo" grupo={subtitulo} onVolver={volver} />
-                    {!isFinished && approvedMembers.length > 0 && (
+                    {!isFinished && derivables.length > 0 && (
                         <div className="mt-5 lg:hidden">
                             <Pasos actual={paso} total={2} nombre={paso === 1 ? '¿A quién derivás?' : '¿A qué grupo?'} />
                         </div>
@@ -261,7 +286,7 @@ const PaginaDerivarMiembro: React.FC<{ currentUser: User }> = ({ currentUser }) 
                             accion={{ texto: 'Volver al grupo', onClick: () => navigate(`/mis-grupos/${groupId}`) }}
                         />
                     </div>
-                ) : approvedMembers.length === 0 ? (
+                ) : derivables.length === 0 ? (
                     <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px]">
                         <Vacio
                             titulo="No hay miembros para derivar"

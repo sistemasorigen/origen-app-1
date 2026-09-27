@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Search, X, Plus, SlidersHorizontal, MoreHorizontal } from 'lucide-react';
-import { Group } from '../../types';
+import { Search, X, Plus, SlidersHorizontal, MoreHorizontal, Layers, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Group, GroupCategory } from '../../types';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
@@ -21,6 +21,14 @@ interface GroupsAdminToolbarProps {
     setStatusFilter: (status: EstadoGrupo) => void;
     seasonFilter: TemporadaFiltro;
     setSeasonFilter: (season: TemporadaFiltro) => void;
+    /**
+     * 'ALL' o el id de una categoría. Opcionales porque esta barra la comparte
+     * la vista admin vieja embebida en /gcx, que no tiene este filtro: sin
+     * ellas el control no se dibuja y esa pantalla queda igual que antes.
+     */
+    categoryFilter?: string;
+    setCategoryFilter?: (id: string) => void;
+    categories?: GroupCategory[];
     /** Grupos de la temporada elegida, para contar cada estado. */
     gruposDeTemporada: Group[];
     /** Cuántos quedan después de aplicar estado y búsqueda. */
@@ -37,6 +45,8 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
     searchTerm, setSearchTerm,
     statusFilter, setStatusFilter,
     seasonFilter, setSeasonFilter,
+    categoryFilter = 'ALL', setCategoryFilter,
+    categories,
     gruposDeTemporada,
     resultados,
     pendingDropoutCount,
@@ -47,6 +57,19 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
     const [hojaFiltros, setHojaFiltros] = useState(false);
     useBloqueoDeFondo(hojaFiltros);
 
+    // Escritorio: el desplegable de categorías.
+    const [catAbierta, setCatAbierta] = useState(false);
+    // Mobile: la hoja tiene dos paneles y se corre de costado. Se resetea al
+    // abrirla para que siempre empiece en los filtros y no donde quedó.
+    const [panelCat, setPanelCat] = useState(false);
+
+    const abrirHoja = () => { setPanelCat(false); setHojaFiltros(true); };
+
+    // Sólo se ofrece si quien monta la barra pasó las categorías y el setter.
+    const hayCategorias = !!categories && !!setCategoryFilter;
+    const elegirCategoria = (id: string) => setCategoryFilter?.(id);
+    const nombreCategoria = categories?.find(x => x.id === categoryFilter)?.name || '';
+
     const cuenta = {
         ALL: gruposDeTemporada.length,
         APPROVED: gruposDeTemporada.filter(g => g.status === 'approved' && !esFinalizado(g)).length,
@@ -54,7 +77,7 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
         FINALIZED: gruposDeTemporada.filter(g => g.status === 'approved' && esFinalizado(g)).length,
     };
 
-    const filtrosActivos = (statusFilter === 'ALL' ? 0 : 1) + (seasonFilter === 'ALL' ? 0 : 1);
+    const filtrosActivos = (statusFilter === 'ALL' ? 0 : 1) + (seasonFilter === 'ALL' ? 0 : 1) + (categoryFilter === 'ALL' ? 0 : 1);
 
     const chip = (activo: boolean, enHoja = false) =>
         `h-9 px-3.5 rounded-full flex items-center gap-2 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${activo ? 'bg-[#0a0a0a] text-white' : `${enHoja ? 'bg-[#f7f7f5]' : 'bg-white'} text-black/[.64] hover:text-[#0a0a0a]`}`;
@@ -81,6 +104,40 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
         { id: 'S2', corto: 'T2', largo: '2' },
         { id: 'S3', corto: 'T3', largo: '3' },
     ];
+
+    /** Las opciones de categoría. Misma lista en el desplegable y en la hoja. */
+    const opcionesCategoria = (alElegir: () => void) => (
+        <>
+            <button
+                onClick={() => { elegirCategoria('ALL'); alElegir(); }}
+                className={`flex w-full items-center justify-between rounded-[14px] px-3.5 py-3 text-left text-[13.5px] font-semibold transition-colors ${categoryFilter === 'ALL' ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-[#f7f7f5]'}`}
+            >
+                Todas las categorías
+                <span className={categoryFilter === 'ALL' ? 'text-white/70' : 'text-black/[.5]'}>
+                    {gruposDeTemporada.length}
+                </span>
+            </button>
+            {(categories || []).map(cat => {
+                const n = gruposDeTemporada.filter(g => g.categoryId === cat.id).length;
+                const activa = categoryFilter === cat.id;
+                return (
+                    <button
+                        key={cat.id}
+                        onClick={() => { elegirCategoria(activa ? 'ALL' : cat.id); alElegir(); }}
+                        className={`flex w-full items-center justify-between gap-3 rounded-[14px] px-3.5 py-3 text-left text-[13.5px] font-semibold transition-colors ${activa ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-[#f7f7f5]'}`}
+                    >
+                        <span className="min-w-0 truncate">{cat.name}</span>
+                        <span className={`flex-none ${activa ? 'text-white/70' : 'text-black/[.5]'}`}>{n}</span>
+                    </button>
+                );
+            })}
+            {(categories || []).length === 0 && (
+                <p className="px-3.5 py-6 text-center text-[13px] font-medium text-black/[.5]">
+                    Todavía no hay categorías cargadas.
+                </p>
+            )}
+        </>
+    );
 
     const chipsEstado = (enHoja = false) => (
         <div className="flex flex-wrap gap-2">
@@ -124,7 +181,7 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
 
                 {/* Mobile: filtros y acciones */}
                 <button
-                    onClick={() => setHojaFiltros(true)}
+                    onClick={abrirHoja}
                     className="flex h-[42px] flex-none items-center gap-1.5 rounded-full bg-white px-3 text-[13px] font-semibold text-black/[.64] md:hidden"
                 >
                     <SlidersHorizontal className="h-[15px] w-[15px]" />
@@ -177,8 +234,34 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
                 </div>
             </div>
 
-            {/* Chips de estado — escritorio */}
-            <div className="mt-3.5 hidden md:block">{chipsEstado()}</div>
+            {/* Chips de estado y categoría — escritorio.
+                La categoría va en este renglón y no arriba: es un filtro de la
+                lista, como el estado, y arriba viven las acciones. */}
+            <div className="relative mt-3.5 hidden flex-wrap items-center gap-2 md:flex">
+                {chipsEstado()}
+                {hayCategorias && (
+                <div className="relative">
+                    <button
+                        onClick={() => setCatAbierta(!catAbierta)}
+                        aria-expanded={catAbierta}
+                        className={`flex h-9 items-center gap-2 rounded-full px-3.5 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${categoryFilter !== 'ALL' ? 'bg-[#0a0a0a] text-white' : 'bg-white text-black/[.64] hover:text-[#0a0a0a]'}`}
+                    >
+                        <Layers className="h-[14px] w-[14px]" />
+                        {categoryFilter === 'ALL' ? 'Filtrado por categorías' : nombreCategoria}
+                        <ChevronDown className={`h-[14px] w-[14px] transition-transform ${catAbierta ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {catAbierta && (
+                        <>
+                            <div className="fixed inset-0 z-[55]" onClick={() => setCatAbierta(false)} />
+                            <div className="absolute left-0 top-full z-[56] mt-2 max-h-[320px] w-[260px] overflow-auto rounded-[18px] bg-white p-2 shadow-[0_16px_40px_rgba(0,0,0,.16)]">
+                                {opcionesCategoria(() => setCatAbierta(false))}
+                            </div>
+                        </>
+                    )}
+                </div>
+                )}
+            </div>
 
             {/* Resumen y crear — mobile.
                 Crear comparte renglón con el resumen en vez de ocupar uno
@@ -188,7 +271,7 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
                 grupos, que es donde nadie la iba a encontrar. */}
             <div className="mx-0.5 mt-3.5 flex items-center gap-3 md:hidden">
                 <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-black/[.62]">
-                    {resultados} de {gruposDeTemporada.length} grupos
+                    {resultados} de {gruposDeTemporada.length} {gruposDeTemporada.length === 1 ? 'grupo' : 'grupos'}
                 </p>
                 <button
                     onClick={onCreateGroup}
@@ -199,36 +282,105 @@ const GroupsAdminToolbar: React.FC<GroupsAdminToolbarProps> = ({
                 </button>
             </div>
 
-            {/* Hoja de filtros — mobile */}
+            {/* Hoja de filtros — mobile.
+
+                Dos paneles sobre un riel que se corre de costado: los filtros
+                y, detrás, la lista de categorías. Van así y no apilados porque
+                las categorías son muchas y empujarían todo lo demás fuera de
+                la vista.
+
+                El alto lo fija la hoja y el pie queda afuera del área que
+                scrollea, así "Ver N grupos" y "Limpiar filtros" no se mueven
+                al pasar de un panel al otro ni al bajar por las categorías. */}
             {hojaFiltros && (
                 <div className="fixed inset-0 z-[60] md:hidden">
                     <div className="absolute inset-0 bg-[rgba(10,10,10,.4)]" onClick={() => setHojaFiltros(false)} />
-                    <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-auto rounded-t-[28px] bg-white px-[18px] pb-6 pt-6">
-                        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">Estado</p>
-                        {chipsEstado(true)}
-                        <p className="mb-3 mt-[22px] text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">Temporada</p>
-                        <div className="flex gap-2">
-                            {TEMPORADAS.map(t => (
-                                <button key={t.id} onClick={() => setSeasonFilter(t.id)} className={ancho(seasonFilter === t.id)}>
-                                    {seasonFilter === t.id ? t.largo : t.corto}
-                                </button>
-                            ))}
+                    <div className="absolute inset-x-0 bottom-0 flex h-[78vh] flex-col rounded-t-[28px] bg-white">
+
+                        {/* Riel: dos paneles del ancho de la hoja */}
+                        <div className="min-h-0 flex-1 overflow-hidden">
+                            <div
+                                className="flex h-full w-[200%] transition-transform duration-300 ease-out"
+                                style={{ transform: panelCat ? 'translateX(-50%)' : 'translateX(0)' }}
+                            >
+                                {/* Panel 1 — estado, temporada y la puerta a categorías */}
+                                <div
+                                    className="h-full w-1/2 overflow-auto px-[18px] pb-4 pt-6"
+                                    aria-hidden={panelCat}
+                                >
+                                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">Estado</p>
+                                    {chipsEstado(true)}
+
+                                    <p className="mb-3 mt-[22px] text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">Temporada</p>
+                                    <div className="flex gap-2">
+                                        {TEMPORADAS.map(t => (
+                                            <button key={t.id} onClick={() => setSeasonFilter(t.id)} className={ancho(seasonFilter === t.id)}>
+                                                {seasonFilter === t.id ? t.largo : t.corto}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {hayCategorias && (<>
+                                    <p className="mb-3 mt-[22px] text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">Categoría</p>
+                                    <button
+                                        onClick={() => setPanelCat(true)}
+                                        className="flex h-[54px] w-full items-center gap-3 rounded-[18px] bg-[#f7f7f5] px-[18px] text-left"
+                                    >
+                                        <Layers className="h-[17px] w-[17px] flex-none text-black/[.55]" />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[14.5px] font-semibold text-[#0a0a0a]">Filtrado por categorías</span>
+                                            <span className="block truncate text-[12.5px] font-medium text-black/[.55]">
+                                                {categoryFilter === 'ALL' ? 'Todas' : nombreCategoria}
+                                            </span>
+                                        </span>
+                                        <ChevronRight className="h-[18px] w-[18px] flex-none text-black/[.35]" />
+                                    </button>
+                                    </>)}
+                                </div>
+
+                                {/* Panel 2 — las categorías, scrolleando */}
+                                <div
+                                    className="flex h-full w-1/2 flex-col"
+                                    aria-hidden={!panelCat}
+                                >
+                                    <div className="flex flex-none items-center gap-2 px-[18px] pt-6">
+                                        <button
+                                            onClick={() => setPanelCat(false)}
+                                            aria-label="Volver a los filtros"
+                                            className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#f2f2f0] text-[#0a0a0a]"
+                                        >
+                                            <ChevronLeft className="h-[18px] w-[18px]" />
+                                        </button>
+                                        <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">
+                                            Filtrado por categorías
+                                        </p>
+                                    </div>
+                                    <div className="mt-3 min-h-0 flex-1 overflow-auto px-[18px] pb-4">
+                                        {opcionesCategoria(() => setPanelCat(false))}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <button
-                            onClick={() => setHojaFiltros(false)}
-                            className="mt-[22px] h-[54px] w-full rounded-full bg-[#0a0a0a] text-[16px] font-semibold text-white"
-                        >
-                            Ver {resultados} grupos
-                        </button>
-                        <button
-                            onClick={() => { onResetFiltros(); setHojaFiltros(false); }}
-                            className="mt-[9px] h-12 w-full rounded-full bg-[#f2f2f0] text-[15px] font-semibold text-[#0a0a0a]"
-                        >
-                            Limpiar filtros
-                        </button>
+
+                        {/* Pie fijo: no entra en el riel ni en lo que scrollea */}
+                        <div className="flex-none border-t border-[#f2f2f0] px-[18px] pb-6 pt-3.5">
+                            <button
+                                onClick={() => setHojaFiltros(false)}
+                                className="h-[54px] w-full rounded-full bg-[#0a0a0a] text-[16px] font-semibold text-white"
+                            >
+                                Ver {resultados} {resultados === 1 ? 'grupo' : 'grupos'}
+                            </button>
+                            <button
+                                onClick={() => { onResetFiltros(); setHojaFiltros(false); }}
+                                className="mt-[9px] h-12 w-full rounded-full bg-[#f2f2f0] text-[15px] font-semibold text-[#0a0a0a]"
+                            >
+                                Limpiar filtros
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
+
         </>
     );
 };

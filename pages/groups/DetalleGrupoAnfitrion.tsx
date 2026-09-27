@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NOMBRE_MODALIDAD, modalidadDe, dondeSeReune } from '../../src/utils/modalidad';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { User, Group, GroupCategory, SeasonSettings, DEFAULT_SEASON_SETTINGS, esGrupoFinalizado } from '../../types';
 import { supabaseService, toggleGroupCapacityLock, updateGroupDirect } from '../../services/supabaseService';
 import { ArrowLeft, ArrowRight, Camera, Check, Link, Loader2 } from 'lucide-react';
@@ -47,6 +47,7 @@ function proximaReunion(meetingDay?: string): string | null {
 const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const { groupId } = useParams<{ groupId: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [group, setGroup] = useState<Group | null>(null);
     const [loading, setLoading] = useState(true);
@@ -56,6 +57,24 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalMessage, setSuccessModalMessage] = useState('');
     const [descripcionExpandida, setDescripcionExpandida] = useState(false);
+
+    /**
+     * Aviso de la derivación recién pedida.
+     *
+     * Derivar no mueve a nadie en el acto: crea un pedido en el otro grupo y
+     * la persona sigue acá hasta que ese anfitrión lo acepta. Sin este cartel
+     * la pantalla volvía igual que antes y parecía que no había pasado nada
+     * —y el segundo intento contestaba "ya tiene una solicitud pendiente",
+     * que se lee como un error—.
+     */
+    useEffect(() => {
+        const aviso = (location.state as { avisoDerivacion?: string } | null)?.avisoDerivacion;
+        if (!aviso) return;
+        setSuccessModalMessage(aviso);
+        setIsSuccessModalOpen(true);
+        // Se consume una sola vez: recargar o volver atrás no lo repite.
+        navigate(location.pathname, { replace: true, state: null });
+    }, [location.state, location.pathname, navigate]);
 
     // Categorías — usadas para tintar el QR con el color de la categoría del grupo
     const [categories, setCategories] = useState<GroupCategory[]>([]);
@@ -583,7 +602,11 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
                         <Check className="w-7 h-7" />
                     </div>
                     <p className="text-[21px] font-semibold tracking-[-.01em]">
-                        {successModalMessage.includes('creado') ? 'Grupo creado' : 'Solicitud enviada'}
+                        {successModalMessage.includes('creado')
+                            ? 'Grupo creado'
+                            : successModalMessage.includes('pase')
+                                ? 'Pase pedido'
+                                : 'Solicitud enviada'}
                     </p>
                     <p className="mt-2.5 text-[14.5px] leading-[1.6] font-medium text-black/55 dark:text-white/55">
                         {successModalMessage}

@@ -7,6 +7,7 @@ import AdminGCXLayout, { useAdminGCXToast, usePanelGCXConteos } from '../../comp
 
 import GroupsAdminToolbar, { EstadoGrupo, TemporadaFiltro } from '../../components/GCX/BarraHerramientasGruposAdmin';
 import { leerFiltros, guardarFiltros } from '../../src/utils/filtrosRecordados';
+import { useScrollRecordado } from '../../src/utils/scrollRecordado';
 import GroupsAdminList from '../../components/GCX/ListaGruposAdmin';
 import ModalModeracionGrupos from '../../components/GCX/ModalModeracionGrupos';
 
@@ -31,9 +32,11 @@ const getSeasonFromDate = (dateStr?: string): 'S1' | 'S2' | 'S3' | null => {
 };
 
 const CLAVE_FILTROS = 'admingcx.grupos.filtros';
+const CLAVE_SCROLL = 'admingcx.grupos';
 const FILTROS_VACIOS = {
     estado: 'ALL' as EstadoGrupo,
     temporada: 'ALL' as TemporadaFiltro,
+    categoria: 'ALL',
     busqueda: '',
 };
 
@@ -55,6 +58,11 @@ const GestionDeGruposContent: React.FC = () => {
     const [pendingDropoutCount, setPendingDropoutCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Volver de la ficha de un grupo devuelve el listado a donde estaba, no
+    // arriba de todo. Se restaura recién con los grupos cargados: antes la
+    // página no tiene alto y no habría a dónde bajar.
+    useScrollRecordado(CLAVE_SCROLL, !isLoading);
+
     // Filtros. A diferencia de antes, el estado y la temporada se aplican
     // juntos: el diseño los muestra en la misma barra y "Todas" deja la
     // lista completa, que es como entraba el panel hasta ahora.
@@ -69,15 +77,17 @@ const GestionDeGruposContent: React.FC = () => {
     const recordado = useMemo(() => leerFiltros(CLAVE_FILTROS, FILTROS_VACIOS), []);
     const [adminStatusFilter, setAdminStatusFilter] = useState<EstadoGrupo>(recordado.estado);
     const [adminSeasonFilter, setAdminSeasonFilter] = useState<TemporadaFiltro>(recordado.temporada);
+    const [adminCategoryFilter, setAdminCategoryFilter] = useState(recordado.categoria);
     const [adminSearchTerm, setAdminSearchTerm] = useState(recordado.busqueda);
 
     useEffect(() => {
         guardarFiltros(CLAVE_FILTROS, {
             estado: adminStatusFilter,
             temporada: adminSeasonFilter,
+            categoria: adminCategoryFilter,
             busqueda: adminSearchTerm,
         });
-    }, [adminStatusFilter, adminSeasonFilter, adminSearchTerm]);
+    }, [adminStatusFilter, adminSeasonFilter, adminCategoryFilter, adminSearchTerm]);
 
     // Selección para las acciones de Moderación
     const [seleccionados, setSeleccionados] = useState<string[]>([]);
@@ -134,6 +144,10 @@ const GestionDeGruposContent: React.FC = () => {
             });
         }
 
+        if (adminCategoryFilter !== 'ALL') {
+            filtered = filtered.filter(g => g.categoryId === adminCategoryFilter);
+        }
+
         if (adminSearchTerm.trim()) {
             const term = adminSearchTerm.toLowerCase().trim();
             filtered = filtered.filter(g => {
@@ -149,7 +163,7 @@ const GestionDeGruposContent: React.FC = () => {
         }
 
         return filtered;
-    }, [gruposDeTemporada, adminStatusFilter, adminSearchTerm, categories]);
+    }, [gruposDeTemporada, adminStatusFilter, adminCategoryFilter, adminSearchTerm, categories]);
 
     // Al cambiar los filtros, lo tildado que ya no está a la vista se suelta:
     // si no, se podría borrar un grupo que la persona dejó de ver.
@@ -274,10 +288,11 @@ const GestionDeGruposContent: React.FC = () => {
     const limpiarFiltros = () => {
         setAdminStatusFilter('ALL');
         setAdminSeasonFilter('ALL');
+        setAdminCategoryFilter('ALL');
         setAdminSearchTerm('');
     };
 
-    const hayFiltros = adminStatusFilter !== 'ALL' || adminSeasonFilter !== 'ALL' || adminSearchTerm.trim() !== '';
+    const hayFiltros = adminStatusFilter !== 'ALL' || adminSeasonFilter !== 'ALL' || adminCategoryFilter !== 'ALL' || adminSearchTerm.trim() !== '';
     const dondeMira = adminSeasonFilter === 'ALL' ? 'el panel' : `la ${NOMBRE_TEMPORADA[adminSeasonFilter]}`;
 
     return (
@@ -294,6 +309,9 @@ const GestionDeGruposContent: React.FC = () => {
                 pendingDropoutCount={pendingDropoutCount}
                 onCreateGroup={() => navigate('/admingcx/gestion-de-grupos/crear-grupo')}
                 onOpenModeracion={() => setModeracionAbierta(true)}
+                categoryFilter={adminCategoryFilter}
+                setCategoryFilter={setAdminCategoryFilter}
+                categories={categories}
                 onResetFiltros={limpiarFiltros}
             />
 

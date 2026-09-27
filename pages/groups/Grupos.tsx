@@ -1720,6 +1720,37 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
                                     <div className="w-px bg-slate-200 dark:bg-zinc-800 shrink-0" aria-hidden="true" />
 
+                                    {/* Categoría — la otra taxonomía del grupo, así que va
+                                        pegada a etiquetas y antes de disponibilidad, que es una
+                                        pregunta de otra naturaleza. El filtro ya existía y se
+                                        aplicaba; lo que faltaba era poder elegirla. */}
+                                    <div className="shrink-0">
+                                        <button
+                                            onClick={() => {
+                                                setIsCategoryFilterOpen(!isCategoryFilterOpen);
+                                                setIsTagFilterOpen(false);
+                                                setIsAvailabilityOpen(false);
+                                            }}
+                                            aria-label={selectedCategory !== 'ALL'
+                                                ? `Filtro activo: ${categories.find(c => c.id === selectedCategory)?.name || 'categoría'}`
+                                                : 'Filtrar por categoría'
+                                            }
+                                            title={selectedCategory !== 'ALL'
+                                                ? categories.find(c => c.id === selectedCategory)?.name || 'Filtro'
+                                                : 'Filtrar por categoría'
+                                            }
+                                            aria-expanded={isCategoryFilterOpen}
+                                            className={`h-full px-3.5 md:px-5 flex items-center justify-center transition-colors ${selectedCategory !== 'ALL'
+                                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                                                : 'bg-white dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
+                                                }`}
+                                        >
+                                            <Layers className="w-4 h-4 shrink-0" />
+                                        </button>
+                                    </div>
+
+                                    <div className="w-px bg-slate-200 dark:bg-zinc-800 shrink-0" aria-hidden="true" />
+
                                     {/* Availability Filter Trigger — mismo formato de ícono
                                         que el de etiquetas para no romper la cápsula */}
                                     <div className="shrink-0">
@@ -1820,6 +1851,62 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                                                                 }`}
                                                         >
                                                             #{tag.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Category Dropdown Panel — mismo patrón que el de etiquetas.
+                                    Nunca se abren dos a la vez: cada disparador cierra los otros. */}
+                                <AnimatePresence>
+                                    {isCategoryFilterOpen && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-40"
+                                                onClick={() => setIsCategoryFilterOpen(false)}
+                                            />
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -8 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -8 }}
+                                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                className="absolute top-full right-0 mt-2 z-50 min-w-[220px] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg origin-top"
+                                            >
+                                                <div className="px-3 py-2.5 border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800">
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+                                                        FILTRAR POR CATEGORÍA
+                                                    </span>
+                                                </div>
+                                                <div className="p-3 flex flex-wrap gap-2 max-h-[300px] overflow-y-auto">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedCategory('ALL');
+                                                            setIsCategoryFilterOpen(false);
+                                                        }}
+                                                        className={`px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide transition-colors border ${selectedCategory === 'ALL'
+                                                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white'
+                                                            : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:border-slate-300 dark:hover:border-zinc-600'
+                                                            }`}
+                                                    >
+                                                        TODAS
+                                                    </button>
+
+                                                    {categories.map(cat => (
+                                                        <button
+                                                            key={cat.id}
+                                                            onClick={() => {
+                                                                setSelectedCategory(selectedCategory === cat.id ? 'ALL' : cat.id);
+                                                                setIsCategoryFilterOpen(false);
+                                                            }}
+                                                            className={`px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide transition-colors border ${selectedCategory === cat.id
+                                                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white'
+                                                                : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:border-slate-300 dark:hover:border-zinc-600'
+                                                                }`}
+                                                        >
+                                                            {cat.name}
                                                         </button>
                                                     ))}
                                                 </div>
