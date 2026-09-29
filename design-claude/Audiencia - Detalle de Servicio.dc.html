@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#2563eb}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:999px; padding:6px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ showMobile }}" style="{{ mobBtn }}">Mobile</button>
+      <button onClick="{{ showDesktop }}" style="{{ deskBtn }}">Desktop</button>
+    </div>
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">SERVICIO</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <sc-for list="{{ opciones }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.elegir }}" style="{{ o.style }}">{{ o.label }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="flex:none; background:#f7f8fa; border-radius:22px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:hidden; display:flex; flex-direction:column; width:{{ frameW }}; height:{{ frameH }}">
+
+    <div style="flex:none; background:#e4e3df; padding:8px 12px 0; display:flex; align-items:flex-end; gap:4px">
+      <div style="height:32px; padding:0 14px; border-radius:10px 10px 0 0; background:#d6d5d0; display:flex; align-items:center; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55); max-width:170px; overflow:hidden; white-space:nowrap">Audiencia · Septiembre</div>
+      <div style="height:34px; padding:0 14px; border-radius:10px 10px 0 0; background:#fff; display:flex; align-items:center; gap:8px; font:600 11.5px Manrope,system-ui,sans-serif; color:#0a0a0a; min-width:0; overflow:hidden; white-space:nowrap"><span style="width:7px; height:7px; border-radius:999px; background:#2563eb; flex:none"></span>{{ tabTitulo }}</div>
+    </div>
+
+    <div style="flex:none; background:#fff; border-bottom:1px solid #e8e9ec; padding:{{ headPad }}">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+        <button style="height:38px; padding:0 14px 0 10px; border:1px solid #e8e9ec; border-radius:999px; background:#fff; display:flex; align-items:center; gap:6px; font:600 12.5px Manrope,system-ui,sans-serif; color:#374151; cursor:pointer; flex:none">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>Ir a la planilla
+        </button>
+        <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+          <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">Audiencia de Servicios</span>
+          <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#c3c7ce">/</span>
+          <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#9ca3af">{{ mesAnio }}</span>
+          <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#c3c7ce">/</span>
+          <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0f172a">{{ fechaCorta }}</span>
+        </sc-if>
+        <div style="margin-left:auto; display:flex; gap:6px">
+          <button onClick="{{ anterior }}" title="Servicio anterior" style="width:38px; height:38px; border:1px solid #e8e9ec; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg></button>
+          <button onClick="{{ siguiente }}" title="Servicio siguiente" style="width:38px; height:38px; border:1px solid #e8e9ec; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6l6 6-6 6"></path></svg></button>
+          <button style="height:38px; padding:0 16px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer">Editar</button>
+        </div>
+      </div>
+      <div style="margin-top:18px">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+          <span style="height:24px; padding:0 10px; border-radius:6px; background:#eaf0fc; color:#1d4ed8; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center">{{ categoria }}</span>
+          <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">{{ cargadoPor }}</span>
+        </div>
+        <h1 style="margin:10px 0 0; font:600 {{ h1Size }} Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.02em">{{ fechaLarga }}</h1>
+      </div>
+    </div>
+
+    <div style="flex:1; min-height:0; overflow:auto; padding:{{ bodyPad }}">
+
+      <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:{{ heroPad }}">
+        <div style="display:flex; align-items:flex-end; gap:18px; flex-wrap:wrap">
+          <div style="flex:1; min-width:200px">
+            <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; color:#6b7280">Total con online</p>
+            <div style="display:flex; align-items:baseline; gap:12px; margin-top:6px; flex-wrap:wrap">
+              <span style="font:600 44px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.035em">{{ combinado }}</span>
+              <span style="font:600 14px Manrope,system-ui,sans-serif; color:{{ deltaInk }}">{{ delta }} vs. 2025</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:28px; flex-wrap:wrap">
+            <div><p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; color:#6b7280">Auditorio</p><p style="margin:4px 0 0; font:600 18px Manrope,system-ui,sans-serif; color:#0f172a">{{ auditorio }}</p></div>
+            <div><p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; color:#6b7280">Online</p><p style="margin:4px 0 0; font:600 18px Manrope,system-ui,sans-serif; color:#0f172a">{{ online }}</p></div>
+            <div><p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; color:#6b7280">Voluntarios</p><p style="margin:4px 0 0; font:600 18px Manrope,system-ui,sans-serif; color:#0f172a">{{ pctVol }}</p></div>
+          </div>
+        </div>
+        <div style="display:flex; height:8px; border-radius:999px; overflow:hidden; margin-top:18px; background:#f2f3f5">
+          <span style="display:block; width:{{ pAud }}; background:#2563eb"></span>
+          <span style="display:block; width:{{ pOn }}; background:#a48ce8"></span>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:{{ mainCols }}; gap:14px; margin-top:14px; align-items:start">
+
+        <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px; min-width:0">
+          <div style="display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap">
+            <div style="flex:1; min-width:180px">
+              <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Contra el mismo servicio de {{ anioPrev }}</p>
+              <p style="margin:4px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">{{ yoyNota }}</p>
+            </div>
+            <div style="text-align:right">
+              <p style="margin:0; font:600 30px Manrope,system-ui,sans-serif; color:{{ deltaInk }}; letter-spacing:-.03em">{{ delta }}</p>
+              <p style="margin:2px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:#6b7280">en el total</p>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:{{ tortaCols }}; gap:16px; margin-top:20px">
+            <sc-for list="{{ tortas }}" as="t" hint-placeholder-count="2">
+              <div style="background:#f7f8fa; border-radius:12px; padding:16px; display:flex; align-items:center; gap:16px">
+                <div style="width:96px; height:96px; border-radius:999px; background:{{ t.conic }}; display:flex; align-items:center; justify-content:center; flex:none">
+                  <div style="width:62px; height:62px; border-radius:999px; background:#f7f8fa; display:flex; align-items:center; justify-content:center; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">{{ t.centro }}</div>
+                </div>
+                <div style="min-width:0">
+                  <p style="margin:0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0f172a">{{ t.titulo }}</p>
+                  <p style="margin:6px 0 0; font:500 12px/1.5 Manrope,system-ui,sans-serif; color:#6b7280">{{ t.texto }}</p>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:16px; margin-top:22px">
+            <sc-for list="{{ yoy }}" as="y" hint-placeholder-count="3">
+              <div>
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px">
+                  <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">{{ y.metrica }}</span>
+                  <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:{{ y.deltaInk }}">{{ y.delta }}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; margin-top:7px">
+                  <span style="width:36px; flex:none; font:600 11px Manrope,system-ui,sans-serif; color:#0f172a">{{ anio }}</span>
+                  <div style="flex:1; min-width:0; height:14px; border-radius:5px; background:#f2f3f5; overflow:hidden"><div style="width:{{ y.wAct }}; height:100%; background:{{ y.cAct }}; border-radius:5px"></div></div>
+                  <span style="width:52px; flex:none; text-align:right; font:600 12.5px Manrope,system-ui,sans-serif; color:#0f172a">{{ y.act }}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; margin-top:5px">
+                  <span style="width:36px; flex:none; font:600 11px Manrope,system-ui,sans-serif; color:#9ca3af">{{ anioPrev }}</span>
+                  <div style="flex:1; min-width:0; height:14px; border-radius:5px; background:#f2f3f5; overflow:hidden"><div style="width:{{ y.wPrev }}; height:100%; background:{{ y.cPrev }}; border-radius:5px"></div></div>
+                  <span style="width:52px; flex:none; text-align:right; font:600 12.5px Manrope,system-ui,sans-serif; color:#6b7280">{{ y.prev }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:14px; min-width:0">
+          <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+            <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Observaciones</p>
+            <p style="margin:10px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:{{ obsInk }}">{{ obs }}</p>
+          </div>
+
+          <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:20px 22px">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px">
+              <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Voluntarios por área</p>
+              <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0f172a">{{ volUnicos }}</span>
+            </div>
+            <p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">{{ volNota }}</p>
+            <div style="display:flex; flex-direction:column; gap:9px; margin-top:16px">
+              <sc-for list="{{ areas }}" as="a" hint-placeholder-count="10">
+                <div style="display:flex; align-items:center; gap:10px">
+                  <span style="width:104px; flex:none; font:500 12.5px Manrope,system-ui,sans-serif; color:#374151; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ a.nombre }}</span>
+                  <div style="flex:1; min-width:0; height:10px; border-radius:4px; background:#f2f3f5; overflow:hidden"><div style="width:{{ a.w }}; height:100%; background:#0f172a; border-radius:4px"></div></div>
+                  <span style="width:26px; flex:none; text-align:right; font:600 12.5px Manrope,system-ui,sans-serif; color:#0f172a">{{ a.n }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1340,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  state = { device: 'desktop', idx: 0 };
+
+  SERVICIOS = [
+    { fecha: 'Domingo 20 de septiembre de 2026', corta: 'Dom 20 sep · 10:00', cat: 'Servicio de Domingo', aud: 742, on: 286, rep: 6, obs: 'Bautismos: 14 personas.', por: 'Cargado por Lucía Paz el lunes 21',
+      areas: { Sonido: 4, Luces: 2, 'Cámaras': 5, Streaming: 3, 'Producción': 6, Bienvenida: 15, Ujieres: 10, Estacionamiento: 6, 'Cafetería': 8, 'Niñez': 24, 'Oración': 7, Seguridad: 4 },
+      prev: { aud: 688, on: 241, vol: 88 } },
+    { fecha: 'Martes 22 de septiembre de 2026', corta: 'Mar 22 sep · 20:00', cat: 'Martes', aud: 214, on: 92, rep: 2, obs: '', por: 'Cargado por Lucía Paz el martes 22',
+      areas: { Sonido: 2, Streaming: 2, Bienvenida: 6, 'Cafetería': 4, Alabanza: 7, 'Oración': 5 },
+      prev: { aud: 226, on: 71, vol: 24 } },
+    { fecha: 'Domingo 13 de septiembre de 2026', corta: 'Dom 13 sep · 19:00', cat: 'Servicio de Domingo', aud: 512, on: 158, rep: 4, obs: 'Lluvia fuerte toda la tarde.', por: 'Cargado por Tomás Vera el lunes 14',
+      areas: { Sonido: 3, Luces: 2, 'Cámaras': 4, Streaming: 3, 'Producción': 5, Bienvenida: 11, Ujieres: 8, Estacionamiento: 4, 'Cafetería': 6, 'Niñez': 16, 'Oración': 5, Seguridad: 3 },
+      prev: { aud: 590, on: 131, vol: 70 } }
+  ];
+
+  fmt(n) { return n.toLocaleString('es-AR'); }
+  dlt(a, b) { const d = Math.round((a / b - 1) * 100); return (d > 0 ? '+' : '') + d + '%'; }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'desktop';
+    const sv = this.SERVICIOS[s.idx];
+    const seg = (on) => 'height:32px; padding:0 14px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; white-space:nowrap';
+
+    const volTot = Object.values(sv.areas).reduce((a, b) => a + b, 0);
+    const vol = volTot - sv.rep;
+    const comb = sv.aud + sv.on;
+    const pctOn = Math.round(sv.on / comb * 100);
+    const pctVol = Math.round(vol / sv.aud * 100);
+    const pComb = sv.prev.aud + sv.prev.on;
+    const dTot = Math.round((comb / pComb - 1) * 100);
+    const maxA = Math.max(...Object.values(sv.areas));
+
+    const fila = (metrica, a, p, cA, cP) => {
+      const m = Math.max(a, p);
+      return {
+        metrica, act: this.fmt(a), prev: this.fmt(p),
+        wAct: (a / m * 100).toFixed(1) + '%', wPrev: (p / m * 100).toFixed(1) + '%',
+        cAct: cA, cPrev: cP,
+        delta: this.dlt(a, p), deltaInk: a >= p ? '#12783f' : '#b42318'
+      };
+    };
+
+    return {
+      showMobile: () => this.setState({ device: 'mobile' }),
+      showDesktop: () => this.setState({ device: 'desktop' }),
+      mobBtn: seg(!desk), deskBtn: seg(desk),
+      opciones: this.SERVICIOS.map((x, i) => ({ label: x.corta.split(' · ')[0], style: seg(s.idx === i), elegir: () => this.setState({ idx: i }) })),
+      isDesktop: desk,
+      frameW: desk ? '1280px' : '390px', frameH: desk ? '900px' : '820px',
+      headPad: desk ? '16px 28px 20px' : '12px 16px 16px',
+      bodyPad: desk ? '20px 28px 30px' : '14px 14px 26px',
+      heroPad: desk ? '22px 24px' : '18px 18px',
+      heroCols: desk ? 'minmax(0,1fr) minmax(0,1.3fr)' : 'minmax(0,1fr)',
+      mainCols: desk ? 'minmax(0,1.5fr) minmax(0,1fr)' : 'minmax(0,1fr)',
+      tortaCols: desk ? 'repeat(2,minmax(0,1fr))' : 'minmax(0,1fr)',
+      h1Size: desk ? '26px' : '21px',
+
+      tabTitulo: sv.corta + ' — Audiencia',
+      mesAnio: 'Septiembre 2026', fechaCorta: sv.corta,
+      categoria: sv.cat + ' · ' + sv.corta.split(' · ')[1],
+      cargadoPor: sv.por,
+      fechaLarga: sv.fecha,
+      anterior: () => this.setState({ idx: (s.idx + this.SERVICIOS.length - 1) % this.SERVICIOS.length }),
+      siguiente: () => this.setState({ idx: (s.idx + 1) % this.SERVICIOS.length }),
+
+      combinado: this.fmt(comb),
+      heroFrase: (dTot >= 0 ? dTot + '% más' : Math.abs(dTot) + '% menos') + ' que el mismo servicio de 2025. ' + pctOn + '% lo siguió online y ' + pctVol + '% de los presentes estaba sirviendo.',
+      auditorio: this.fmt(sv.aud), online: this.fmt(sv.on), pctVol: pctVol + '%',
+      pAud: (sv.aud / comb * 100).toFixed(1) + '%', pOn: (sv.on / comb * 100).toFixed(1) + '%',
+
+      anio: '2026', anioPrev: '2025',
+      yoyNota: sv.cat + ' · ' + sv.corta.split(' · ')[1] + ', semana equivalente del año pasado',
+      delta: (dTot > 0 ? '+' : '') + dTot + '%', deltaInk: dTot >= 0 ? '#12783f' : '#b42318',
+      tortas: [
+        { titulo: 'Auditorio y online', centro: pctOn + '%', conic: 'conic-gradient(#a48ce8 0 ' + pctOn + '%, #2563eb ' + pctOn + '% 100%)',
+          texto: this.fmt(sv.on) + ' online de ' + this.fmt(comb) + '. En 2025 fue ' + Math.round(sv.prev.on / pComb * 100) + '%.' },
+        { titulo: 'Voluntarios y público', centro: pctVol + '%', conic: 'conic-gradient(#0f172a 0 ' + pctVol + '%, #d7dbe2 ' + pctVol + '% 100%)',
+          texto: vol + ' de ' + this.fmt(sv.aud) + ' en el auditorio. En 2025 fue ' + Math.round(sv.prev.vol / sv.prev.aud * 100) + '%.' }
+      ],
+      yoy: [
+        fila('Auditorio', sv.aud, sv.prev.aud, '#2563eb', '#bcd0f7'),
+        fila('Online', sv.on, sv.prev.on, '#a48ce8', '#ddd3f6'),
+        fila('Voluntarios', vol, sv.prev.vol, '#0f172a', '#cfd4dc')
+      ],
+
+      obs: sv.obs || 'No se cargaron observaciones para este servicio.',
+      obsInk: sv.obs ? '#374151' : '#9ca3af',
+      volUnicos: vol + ' personas',
+      volNota: volTot + ' en total' + (sv.rep ? ', ' + sv.rep + ' sirvieron en dos áreas' : ''),
+      areas: Object.keys(sv.areas).sort((a, b) => sv.areas[b] - sv.areas[a]).map(k => ({ nombre: k, n: sv.areas[k], w: (sv.areas[k] / maxA * 100).toFixed(1) + '%' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

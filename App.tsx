@@ -47,6 +47,7 @@ import Coordinators from './pages/coordinadores/Coordinadores';
 import PastoralCareForm from './pages/audiencia/AudienciaServiciosFormulario';
 import Notifications from './pages/user/Notificaciones';
 import PastoralCareDashboard from './pages/audiencia/AudienciaServiciosPrincipal';
+import AudienciaServicioDetalle from './pages/audiencia/AudienciaServicioDetalle';
 import ProfilePage from './pages/user/PaginaPerfil';
 import Prode from './pages/prode/Prode';
 import AdminProde from './pages/prode/AdminProde';
@@ -902,6 +903,17 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_CUIDADO_PASTORAL
                                     ]))
                                         ? <PastoralCareForm currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                {/* El detalle de un servicio vive en su propia dirección para
+                                    poder compartirla y volver atrás; antes era un modal. */}
+                                <Route path="/audiencia-servicios/detalles/:id" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ADMIN_CUIDADO_PASTORAL
+                                    ]))
+                                        ? <AudienciaServicioDetalle currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/prode" element={<Prode />} />

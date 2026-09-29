@@ -701,6 +701,90 @@
       outline: none !important;
     }
 
+    /* Audiencia de Servicios (la planilla, la carga y el detalle de un
+       servicio). Misma familia que #gcx-panel y #admin-general: campo relleno
+       gris, sin borde, y al enfocarlo se pone blanco con borde negro.
+
+       Va scopeado por id y con la cadena de :not() repetida por la misma razón
+       explicada arriba: el override global llega a (0,9,1) con !important, así
+       que una clase de Tailwind no lo toca. Con el id y los mismos :not() esta
+       regla queda en (1,9,1) y gana. */
+    #audiencia-servicios input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="image"]),
+    #audiencia-servicios textarea,
+    #audiencia-servicios select {
+      background-color: #f2f2f0 !important;
+      color: #0a0a0a !important;
+      border: 1.5px solid transparent !important;
+      border-radius: 16px !important;
+      font-weight: 600;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    #audiencia-servicios input:focus,
+    #audiencia-servicios textarea:focus,
+    #audiencia-servicios select:focus {
+      background-color: #ffffff !important;
+      border-color: #0a0a0a !important;
+    }
+
+    #audiencia-servicios ::placeholder {
+      color: rgba(0, 0, 0, .42) !important;
+      font-weight: 500;
+    }
+
+    /* Los dos números con color propio: el del auditorio en azul y el de
+       online en violeta, como en el resto de la pantalla. Mantienen su tono
+       también enfocados —el borde negro ya avisa dónde está el foco— porque
+       si volvieran a blanco el campo grande perdería su identidad justo
+       cuando se lo está usando. */
+    #audiencia-servicios input.campo-auditorio,
+    #audiencia-servicios input.campo-auditorio:focus {
+      background-color: #eaf0fc !important;
+      color: #1d4ed8 !important;
+    }
+
+    #audiencia-servicios input.campo-online,
+    #audiencia-servicios input.campo-online:focus {
+      background-color: #f3effc !important;
+      color: #6d4fc8 !important;
+    }
+
+    /* El casillero de un área de voluntarios: chico, centrado, y azul cuando
+       tiene gente cargada. */
+    #audiencia-servicios input.campo-area {
+      border-radius: 12px !important;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    #audiencia-servicios input.campo-area-lleno,
+    #audiencia-servicios input.campo-area-lleno:focus {
+      background-color: #eaf0fc !important;
+    }
+
+    /* Las flechitas del input numérico ocupan lugar y no se usan: el número se
+       escribe o se mueve con los botones − y +. */
+    #audiencia-servicios input[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    #audiencia-servicios input[type="number"]::-webkit-inner-spin-button,
+    #audiencia-servicios input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    /* Los selectores de filtro son píldoras: la flecha la dibuja un svg
+       encima, así que hay que apagar la del navegador. */
+    #audiencia-servicios select.filtro-pildora {
+      border-radius: 999px !important;
+      appearance: none;
+      -webkit-appearance: none;
+      font-size: 13px;
+    }
+
     /* Pantallas de autenticación (/auth y /update-password): campos rellenos
        sin borde. Scopeado por id a propósito, NO por clase: el override global
        de arriba usa !important y llega a (0,8,1); una clase se quedaría en
@@ -904,7 +988,7 @@
         }
       })();
   </script>
-  <script type="module" crossorigin src="/assets/index-DXRGFacW.js"></script>
+  <script type="module" crossorigin src="/assets/index-fXKTLPHE.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-CVsVvX9w.css">
 </head>
 
@@ -912,7 +996,7 @@
   <!-- Accessibility: Skip to main content link -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <div id="root"></div>
+  <div id="root"></div>
 </body>
 
 </html>

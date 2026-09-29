@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 48px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; flex-direction:column; gap:10px; align-items:center">
+    <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:999px; padding:6px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center">
+      <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">EMAIL</span>
+      <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+        <button onClick="{{ setGrupo }}" style="{{ btnGrupo }}">Nuevo grupo</button>
+        <button onClick="{{ setPost }}" style="{{ btnPost }}">Postulación de anfitrión</button>
+      </div>
+      <sc-if value="{{ esPost }}" hint-placeholder-val="{{ false }}">
+        <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">REQUISITOS</span>
+        <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+          <button onClick="{{ setDos }}" style="{{ btnDos }}">Cumple los 2</button>
+          <button onClick="{{ setUno }}" style="{{ btnUno }}">Cumple 1</button>
+          <button onClick="{{ setCero }}" style="{{ btnCero }}">Ninguno</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:999px; padding:6px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center">
+      <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+      <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+        <button onClick="{{ setDesktop }}" style="{{ btnDesktop }}">Desktop</button>
+        <button onClick="{{ setMobile }}" style="{{ btnMobile }}">Celular</button>
+      </div>
+      <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+        <button onClick="{{ toggleDark }}" style="{{ btnDark }}">Modo oscuro</button>
+        <button onClick="{{ toggleImgs }}" style="{{ btnImgs }}">Imágenes bloqueadas</button>
+        <button onClick="{{ toggleVars }}" style="{{ btnVars }}">Ver variables</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap; justify-content:center; max-width:640px">
+    <span style="height:28px; padding:0 13px; border-radius:999px; background:#fff; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); display:flex; align-items:center">Asunto: {{ asunto }}</span>
+  </div>
+
+  <div style="background:#fff; border-radius:22px; padding:12px; box-shadow:0 4px 20px rgba(0,0,0,.09)">
+    <iframe ref="{{ frameRef }}" src="{{ src }}" onLoad="{{ onLoad }}" title="Vista previa del email" style="display:block; width:{{ frameW }}; height:{{ frameH }}; border:0; border-radius:14px; background:#e9e7e3"></iframe>
+  </div>
+
+  <p style="margin:0; max-width:620px; text-align:center; font:500 12.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ nota }}</p>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:760,&quot;height&quot;:1080}}">
+class Component extends DCLogic {
+  state = { email: 'grupo', variante: 'dos', device: 'desktop', dark: false, sinImgs: false, vars: false };
+  frameRef = React.createRef();
+
+  DATOS = {
+    nombreGrupo: 'Almagro Norte',
+    categoria: 'Jóvenes adultos',
+    anfitrion: 'Martín Sosa',
+    telefonoAnfitrion: '11 5533 7788',
+    dia: 'Jueves',
+    horario: '20:00',
+    modalidad: 'Presencial',
+    ubicacion: 'Av. Rivadavia 4820, 3º B',
+    capacidad: '12',
+    descripcion: 'Somos un grupo de jóvenes del barrio que nos juntamos los jueves a estudiar la biblia y compartir la cena. Empezamos el año pasado con cuatro personas y este año queremos abrir la casa a los que recién llegan a la iglesia. No hace falta saber nada, solo venir con ganas de conocer gente.',
+    fechaInicio: '3 mar 2026',
+    fechaFin: '18 dic 2026',
+    nombre: 'Camila Duarte',
+    email: 'camila.duarte@gmail.com',
+    telefono: '11 6045 2290',
+    completoCrecer: 'Sí',
+    completoCursoLideres: 'Sí',
+    linkRevision: 'https://app.origeniglesia.org/admin/grupos/1284'
+  };
+
+  src() {
+    const s = this.state;
+    if (s.email === 'grupo') return 'Email - Nuevo Grupo.html';
+    if (s.variante === 'uno') return 'Email - Postulacion Anfitrion -1 de 2-.html';
+    if (s.variante === 'cero') return 'Email - Postulacion Anfitrion -ninguno-.html';
+    return 'Email - Postulacion Anfitrion.html';
+  }
+
+  aplicar() {
+    const f = this.frameRef.current;
+    if (!f) return;
+    let doc;
+    try { doc = f.contentDocument; } catch (e) { return; }
+    if (!doc || !doc.body) return;
+
+    if (!doc.body.dataset.origHtml) doc.body.dataset.origHtml = doc.body.innerHTML;
+    let html = doc.body.dataset.origHtml;
+
+    if (!this.state.vars) {
+      Object.keys(this.DATOS).forEach(k => {
+        html = html.split('{{' + k + '}}').join(this.DATOS[k]);
+      });
+    }
+    if (doc.body.innerHTML !== html) doc.body.innerHTML = html;
+
+    doc.body.classList.toggle('force-dark', this.state.dark);
+
+    const imgs = doc.body.querySelectorAll('img');
+    for (let i = 0; i < imgs.length; i++) {
+      const img = imgs[i];
+      if (!img.dataset.realSrc) img.dataset.realSrc = img.getAttribute('src') || '';
+      if (this.state.sinImgs) {
+        img.removeAttribute('src');
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+      } else {
+        img.setAttribute('src', img.dataset.realSrc);
+        img.style.width = '104px';
+        img.style.height = '26px';
+      }
+    }
+  }
+
+  componentDidUpdate() { this.aplicar(); }
+
+  renderVals() {
+    const s = this.state;
+    const desk = s.device === 'desktop';
+    const seg = (on) => 'height:32px; padding:0 14px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; white-space:nowrap';
+
+    const asunto = s.email === 'grupo'
+      ? 'Grupo pendiente de aprobación: Almagro Norte'
+      : s.variante === 'dos' ? 'Camila Duarte se postuló como anfitriona · cumple los 2 requisitos'
+      : s.variante === 'uno' ? 'Camila Duarte se postuló como anfitriona · cumple 1 de 2'
+      : 'Camila Duarte se postuló como anfitriona · no cumple los requisitos';
+
+    const nota = s.sinImgs
+      ? 'Con las imágenes bloqueadas el logo cae en su texto alternativo y no se pierde ningún dato: todo está en texto.'
+      : s.vars
+      ? 'Las variables quedan entre llaves dobles, listas para que el sistema las reemplace al enviar.'
+      : s.dark
+      ? 'En modo oscuro cada table y td lleva el color en bgcolor y en style, así Gmail no puede invertirlo por su cuenta.'
+      : 'Archivos HTML listos para enviar. Cambiá de vista para revisar cómo caen en cada caso.';
+
+    return {
+      frameRef: this.frameRef,
+      src: this.src(),
+      onLoad: () => this.aplicar(),
+      frameW: desk ? '660px' : '390px',
+      frameH: desk ? '900px' : '780px',
+      asunto, nota,
+      esPost: s.email === 'post',
+      setGrupo: () => this.setState({ email: 'grupo' }),
+      setPost: () => this.setState({ email: 'post' }),
+      btnGrupo: seg(s.email === 'grupo'), btnPost: seg(s.email === 'post'),
+      setDos: () => this.setState({ variante: 'dos' }),
+      setUno: () => this.setState({ variante: 'uno' }),
+      setCero: () => this.setState({ variante: 'cero' }),
+      btnDos: seg(s.variante === 'dos'), btnUno: seg(s.variante === 'uno'), btnCero: seg(s.variante === 'cero'),
+      setDesktop: () => this.setState({ device: 'desktop' }),
+      setMobile: () => this.setState({ device: 'mobile' }),
+      btnDesktop: seg(desk), btnMobile: seg(!desk),
+      toggleDark: () => this.setState({ dark: !s.dark }),
+      toggleImgs: () => this.setState({ sinImgs: !s.sinImgs }),
+      toggleVars: () => this.setState({ vars: !s.vars }),
+      btnDark: seg(s.dark), btnImgs: seg(s.sinImgs), btnVars: seg(s.vars)
+    };
+  }
+}
+</script>
+</body>
+</html>

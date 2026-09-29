@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button,select{font-family:inherit}select:focus{outline:none}a{color:#0a0a0a}a:hover{color:#2563eb}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:999px; padding:6px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07)">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ showMobile }}" style="{{ mobBtn }}">Mobile</button>
+      <button onClick="{{ showDesktop }}" style="{{ deskBtn }}">Desktop</button>
+    </div>
+  </div>
+
+  <div style="flex:none; background:#f6f6f4; border-radius:22px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:hidden; display:flex; flex-direction:column; width:{{ frameW }}; height:{{ frameH }}">
+
+    <div style="flex:none; background:#fff; border-bottom:1px solid #ecebe8; padding:{{ headPad }}">
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+        <div style="min-width:0; flex:1">
+          <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">AUDIENCIA DE SERVICIOS</p>
+          <h1 style="margin:5px 0 0; font:600 {{ h1Size }} Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">{{ titulo }}</h1>
+        </div>
+        <button style="height:46px; padding:0 20px 0 16px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 14px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:8px; cursor:pointer; flex:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>{{ cargarLabel }}
+        </button>
+      </div>
+
+      <div style="display:grid; grid-template-columns:{{ filtroCols }}; gap:8px; margin-top:14px">
+        <label style="position:relative; display:block">
+          <select value="{{ anio }}" onChange="{{ onAnio }}" style="width:100%; height:42px; padding:0 34px 0 16px; border:0; border-radius:999px; background:#f2f2f0; font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a; appearance:none; -webkit-appearance:none; cursor:pointer">
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+          </select>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; right:14px; top:15px; pointer-events:none"><path d="M6 9l6 6 6-6"></path></svg>
+        </label>
+        <label style="position:relative; display:block">
+          <select value="{{ mes }}" onChange="{{ onMes }}" style="width:100%; height:42px; padding:0 34px 0 16px; border:0; border-radius:999px; background:#f2f2f0; font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a; appearance:none; -webkit-appearance:none; cursor:pointer">
+            <option value="-1">Todo el año</option>
+            <sc-for list="{{ mesesOpts }}" as="m" hint-placeholder-count="12"><option value="{{ m.v }}">{{ m.label }}</option></sc-for>
+          </select>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; right:14px; top:15px; pointer-events:none"><path d="M6 9l6 6 6-6"></path></svg>
+        </label>
+        <label style="position:relative; display:block">
+          <select value="{{ cat }}" onChange="{{ onCat }}" style="width:100%; height:42px; padding:0 34px 0 16px; border:0; border-radius:999px; background:#f2f2f0; font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a; appearance:none; -webkit-appearance:none; cursor:pointer">
+            <option value="todas">Todas las categorías</option>
+            <option value="Servicio de Domingo">Servicio de Domingo</option>
+            <option value="Martes">Martes</option>
+            <option value="Evento especial">Evento especial</option>
+            <option value="Conferencia">Conferencia</option>
+          </select>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; right:14px; top:15px; pointer-events:none"><path d="M6 9l6 6 6-6"></path></svg>
+        </label>
+        <label style="position:relative; display:block">
+          <select value="{{ hora }}" onChange="{{ onHora }}" style="width:100%; height:42px; padding:0 34px 0 16px; border:0; border-radius:999px; background:#f2f2f0; font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a; appearance:none; -webkit-appearance:none; cursor:pointer">
+            <option value="todos">Todos los horarios</option>
+            <option value="10:00">10:00</option>
+            <option value="19:00">19:00</option>
+            <option value="20:00">20:00</option>
+          </select>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; right:14px; top:15px; pointer-events:none"><path d="M6 9l6 6 6-6"></path></svg>
+        </label>
+      </div>
+    </div>
+
+    <div style="flex:1; min-height:0; overflow:auto; padding:{{ bodyPad }}">
+
+      <sc-if value="{{ hayFilas }}" hint-placeholder-val="{{ true }}">
+
+        <div style="display:grid; grid-template-columns:{{ kpiCols }}; gap:12px">
+          <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:16px 18px">
+            <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; color:#6b7280">Promedio por servicio</p>
+            <p style="margin:10px 0 0; font:600 28px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.03em">{{ kProm }}</p>
+            <p style="margin:6px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">{{ kPromNota }}</p>
+          </div>
+          <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:16px 18px">
+            <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; color:#6b7280">Siguen online</p>
+            <p style="margin:10px 0 0; font:600 28px Manrope,system-ui,sans-serif; color:#6d4fc8; letter-spacing:-.03em">{{ kOnline }}</p>
+            <p style="margin:6px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">del total combinado</p>
+          </div>
+          <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:16px 18px">
+            <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; color:#6b7280">Son voluntarios</p>
+            <p style="margin:10px 0 0; font:600 28px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.03em">{{ kVol }}</p>
+            <p style="margin:6px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">de los presentes en el auditorio</p>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:{{ chartCols }}; gap:12px; margin-top:12px">
+          <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px; min-width:0">
+            <div style="display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap">
+              <div style="min-width:0; flex:1">
+                <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Tendencia</p>
+                <p style="margin:4px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">{{ tendNota }}</p>
+              </div>
+              <div style="display:flex; gap:14px; flex:none">
+                <div style="display:flex; align-items:center; gap:6px"><span style="width:9px; height:9px; border-radius:2px; background:#2563eb"></span><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#4b5563">Auditorio</span></div>
+                <div style="display:flex; align-items:center; gap:6px"><span style="width:9px; height:9px; border-radius:2px; background:#a48ce8"></span><span style="font:600 11.5px Manrope,system-ui,sans-serif; color:#4b5563">Online</span></div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:flex-end; gap:{{ barGap }}; height:170px; margin-top:20px; border-bottom:1px solid #e8e9ec">
+              <sc-for list="{{ tendencia }}" as="t" hint-placeholder-count="12">
+                <button onClick="{{ t.elegir }}" title="{{ t.tip }}" style="flex:1; min-width:0; height:100%; padding:0; border:0; background:transparent; cursor:pointer; display:flex; flex-direction:column; justify-content:flex-end; align-items:stretch; opacity:{{ t.op }}">
+                  <span style="display:block; height:{{ t.hOn }}; background:#a48ce8; border-radius:4px 4px 0 0"></span>
+                  <span style="display:block; height:{{ t.hAud }}; background:#2563eb"></span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display:flex; gap:{{ barGap }}; margin-top:7px">
+              <sc-for list="{{ tendencia }}" as="t" hint-placeholder-count="12">
+                <span style="flex:1; min-width:0; text-align:center; font:500 10.5px Manrope,system-ui,sans-serif; color:{{ t.labInk }}; overflow:hidden; white-space:nowrap">{{ t.lab }}</span>
+              </sc-for>
+            </div>
+            <p style="margin:14px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">Tocá una barra para compararla con el año anterior.</p>
+          </div>
+
+          <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px; min-width:0">
+            <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">Contra el año anterior</p>
+            <p style="margin:4px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">{{ yoyNota }}</p>
+            <sc-if value="{{ hayYoy }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; align-items:baseline; gap:10px; margin-top:16px">
+                <span style="font:600 32px Manrope,system-ui,sans-serif; color:{{ yoyInk }}; letter-spacing:-.03em">{{ yoyDelta }}</span>
+                <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">{{ yoyDeltaNota }}</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:12px; margin-top:16px">
+                <sc-for list="{{ yoy }}" as="y" hint-placeholder-count="2">
+                  <div>
+                    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px">
+                      <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#374151">{{ y.label }}</span>
+                      <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0f172a">{{ y.total }}</span>
+                    </div>
+                    <div style="display:flex; height:14px; margin-top:6px; border-radius:5px; overflow:hidden; background:#f2f3f5; width:{{ y.w }}">
+                      <span style="display:block; width:{{ y.aud }}; background:{{ y.cAud }}"></span>
+                      <span style="display:block; width:{{ y.on }}; background:{{ y.cOn }}"></span>
+                    </div>
+                    <p style="margin:5px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:#6b7280">{{ y.split }}</p>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sinYoy }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px; background:#f7f8fa; border-radius:11px; padding:14px 16px">
+                <p style="margin:0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:#4b5563">No hay un servicio equivalente cargado el año anterior. La comparación aparece cuando existen los dos.</p>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:22px 2px 10px">
+          <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">SERVICIOS CARGADOS</p>
+          <span style="font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ nFilas }}</span>
+        </div>
+
+        <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <sc-for list="{{ filas }}" as="f" hint-placeholder-count="5">
+              <div style="background:#fff; border-radius:18px; padding:16px 16px 14px">
+                <div style="display:flex; align-items:flex-start; gap:12px">
+                  <div style="min-width:0; flex:1">
+                    <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ f.fecha }}</p>
+                    <p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ f.categoria }} · {{ f.horario }}</p>
+                  </div>
+                  <div style="text-align:right; flex:none">
+                    <p style="margin:0; font:600 22px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.025em">{{ f.combinadoTxt }}</p>
+                    <p style="margin:2px 0 0; font:500 11px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">total con online</p>
+                  </div>
+                </div>
+                <div style="display:flex; height:8px; border-radius:999px; overflow:hidden; margin-top:14px; background:#f2f2f0">
+                  <span style="display:block; width:{{ f.pAud }}; background:#2563eb"></span>
+                  <span style="display:block; width:{{ f.pOn }}; background:#a48ce8"></span>
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:10px; margin-top:8px">
+                  <span style="font:600 12px Manrope,system-ui,sans-serif; color:#1d4ed8">{{ f.audTxt }} en el auditorio</span>
+                  <span style="font:600 12px Manrope,system-ui,sans-serif; color:#6d4fc8">{{ f.onTxt }} online</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid #f2f2f0">
+                  <span style="height:28px; padding:0 11px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; gap:7px; font:600 12px Manrope,system-ui,sans-serif; color:#0a0a0a; flex:none"><span style="font-weight:700">{{ f.pctVol }}</span><span style="color:rgba(0,0,0,.58)">voluntarios · {{ f.vol }}</span></span>
+                  <span style="flex:1; min-width:0; font:500 12px Manrope,system-ui,sans-serif; color:{{ f.obsInk }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ f.obsCorta }}</span>
+                  <button style="width:38px; height:38px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none" title="Ver detalles (pestaña nueva)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4"></path></svg></button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff; border-radius:18px; overflow:hidden">
+            <div style="display:grid; grid-template-columns:{{ tCols }}; align-items:end; border-bottom:1px solid #eeeeec">
+              <span style="{{ th }}">FECHA</span>
+              <span style="{{ th }}">HORARIO</span>
+              <span style="{{ thNum }}">AUDITORIO</span>
+              <span style="{{ thOn }}">ONLINE</span>
+              <span style="{{ thOn }}">TOTAL C/ ONLINE</span>
+              <span style="{{ thNum }}">VOLUNT.</span>
+              <span style="{{ th }}">% VOLUNTARIOS</span>
+              <span style="{{ th }}">OBSERVACIONES</span>
+              <span style="{{ th }}"></span>
+            </div>
+            <sc-for list="{{ filas }}" as="f" hint-placeholder-count="8">
+              <div style="display:grid; grid-template-columns:{{ tCols }}; align-items:center; border-bottom:1px solid #f4f4f2; min-height:58px">
+                <div style="padding:10px 14px 10px 20px; min-width:0"><p style="margin:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ f.fecha }}</p><p style="margin:2px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ f.categoria }}</p></div>
+                <span style="padding:0 14px; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">{{ f.horario }}</span>
+                <span style="padding:0 14px; text-align:right; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ f.audTxt }}</span>
+                <span style="align-self:stretch; display:flex; align-items:center; justify-content:flex-end; padding:0 14px; background:#f7f4fd; font:600 13.5px Manrope,system-ui,sans-serif; color:#6d4fc8">{{ f.onTxt }}</span>
+                <span style="align-self:stretch; display:flex; align-items:center; justify-content:flex-end; padding:0 14px; background:#f7f4fd; font:700 14px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ f.combinadoTxt }}</span>
+                <span style="padding:0 14px; text-align:right; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ f.vol }}</span>
+                <div style="padding:0 14px; display:flex; align-items:center; gap:9px"><div style="flex:1; height:6px; border-radius:999px; background:#f0efec; overflow:hidden"><div style="width:{{ f.pctBar }}; height:100%; background:#0a0a0a"></div></div><span style="width:34px; text-align:right; font:700 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ f.pctVol }}</span></div>
+                <span style="padding:0 14px; font:500 12.5px Manrope,system-ui,sans-serif; color:{{ f.obsInk }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0">{{ f.obsCorta }}</span>
+                <div style="padding:0 16px 0 6px; display:flex; justify-content:flex-end; gap:6px">
+                  <button style="height:34px; padding:0 13px; border:0; border-radius:999px; background:#f2f2f0; font:600 12px Manrope,system-ui,sans-serif; color:#0a0a0a; display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap">Ver detalles<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5M19 5l-8 8"></path></svg></button>
+                  <button title="Editar" style="width:34px; height:34px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path></svg></button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ sinFilas }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff; border-radius:22px; padding:{{ vacioPad }}; display:flex; flex-direction:column; align-items:center; text-align:center">
+          <div style="display:flex; align-items:flex-end; gap:6px; height:56px">
+            <span style="width:14px; height:22px; border-radius:4px 4px 0 0; background:#eceae6"></span>
+            <span style="width:14px; height:34px; border-radius:4px 4px 0 0; background:#eceae6"></span>
+            <span style="width:14px; height:28px; border-radius:4px 4px 0 0; background:#eceae6"></span>
+            <span style="width:14px; height:6px; border-radius:4px 4px 0 0; background:#eceae6"></span>
+          </div>
+          <p style="margin:22px 0 0; font:600 19px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ vacioTitulo }}</p>
+          <p style="margin:10px 0 0; font:500 13.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); max-width:380px">{{ vacioTexto }}</p>
+          <div style="display:flex; gap:9px; margin-top:22px; flex-wrap:wrap; justify-content:center">
+            <button style="height:48px; padding:0 22px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Cargar un servicio</button>
+            <button onClick="{{ limpiar }}" style="height:48px; padding:0 22px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Ver todo el año</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1380,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  state = { device: 'mobile', anio: '2026', mes: '8', cat: 'todas', hora: 'todos', selId: null };
+
+  MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+  rnd(n) { const x = Math.sin(n * 91.7 + 13.1) * 43758.5453; return x - Math.floor(x); }
+
+  gen(year) {
+    if (this['_c' + year]) return this['_c' + year];
+    const out = [];
+    const hasta = year === 2026 ? new Date(2026, 8, 29) : new Date(2025, 11, 31);
+    const obs = ['Lluvia fuerte toda la mañana.', 'Bautismos: 14 personas.', 'Falló el streaming los primeros 20 minutos.', 'Santa Cena.', 'Visita del equipo de misiones.', 'Fin de semana largo.'];
+    let i = 0;
+    for (let d = new Date(year, 0, 1); d <= hasta; d.setDate(d.getDate() + 1)) {
+      const dow = d.getDay(), seed = year * 1000 + d.getMonth() * 40 + d.getDate();
+      const push = (cat, horario, aud, on, vol) => {
+        i++;
+        const r = this.rnd(seed + horario.length * 7 + i);
+        out.push({
+          id: year + '-' + i, date: new Date(d), mes: d.getMonth(), cat, horario, aud, on, vol,
+          obs: r < 0.3 ? obs[Math.floor(r * 20) % obs.length] : ''
+        });
+      };
+      const base = year === 2025 ? 0.92 : 1;
+      const lluvia = this.rnd(seed) < 0.12 ? 0.8 : 1;
+      if (dow === 0) {
+        const esp = d.getMonth() === 3 && d.getDate() <= 7;
+        push(esp ? 'Evento especial' : 'Servicio de Domingo', '10:00', Math.round((640 + this.rnd(seed + 1) * 150) * base * lluvia), Math.round((190 + this.rnd(seed + 2) * 130) / lluvia), Math.round(76 + this.rnd(seed + 3) * 34));
+        push('Servicio de Domingo', '19:00', Math.round((470 + this.rnd(seed + 4) * 160) * base * lluvia), Math.round((120 + this.rnd(seed + 5) * 100) / lluvia), Math.round(58 + this.rnd(seed + 6) * 26));
+      }
+      if (dow === 2) push('Martes', '20:00', Math.round((180 + this.rnd(seed + 7) * 90) * base), Math.round(60 + this.rnd(seed + 8) * 55), Math.round(24 + this.rnd(seed + 9) * 16));
+      if (dow === 6 && d.getMonth() === 5 && d.getDate() >= 13 && d.getDate() <= 19) push('Conferencia', '19:00', Math.round(1120 * base), 540, 142);
+    }
+    this['_c' + year] = out;
+    return out;
+  }
+
+  fmt(n) { return n.toLocaleString('es-AR'); }
+  fecha(d) { return this.DIAS[d.getDay()] + ' ' + d.getDate() + ' ' + this.MESES[d.getMonth()].slice(0, 3).toLowerCase(); }
+
+  renderVals() {
+    const s = this.state;
+    const desk = s.device === 'desktop';
+    const seg = (on) => 'height:32px; padding:0 14px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer';
+    const anio = +s.anio, mes = +s.mes;
+    const matchCH = r => (s.cat === 'todas' || r.cat === s.cat) && (s.hora === 'todos' || r.horario === s.hora);
+
+    const delAnio = this.gen(anio).filter(matchCH);
+    const filas0 = delAnio.filter(r => mes < 0 || r.mes === mes);
+    const filasDesc = filas0.slice().sort((a, b) => b.date - a.date || (a.horario < b.horario ? 1 : -1));
+
+    const hasta = filasDesc.length ? filasDesc[0].date : null;
+    const tend = hasta ? delAnio.filter(r => r.date <= hasta).sort((a, b) => a.date - b.date || (a.horario > b.horario ? 1 : -1)).slice(-12) : [];
+    const maxT = Math.max(1, ...tend.map(r => r.aud + r.on));
+
+    const domingos = filasDesc.filter(r => r.cat !== 'Martes');
+    const sel = tend.find(r => r.id === s.selId) || (domingos[0] || filasDesc[0]);
+    let prev = null;
+    if (sel) {
+      const objetivo = new Date(sel.date); objetivo.setDate(objetivo.getDate() - 364);
+      prev = this.gen(anio - 1).find(r => r.horario === sel.horario && r.cat === sel.cat && Math.abs(r.date - objetivo) < 86400000 * 2) || null;
+    }
+
+    const sum = (arr, k) => arr.reduce((a, r) => a + r[k], 0);
+    const tAud = sum(filas0, 'aud'), tOn = sum(filas0, 'on'), tVol = sum(filas0, 'vol');
+    const n = filas0.length;
+
+    const filas = filasDesc.map(r => {
+      const comb = r.aud + r.on;
+      const pct = Math.round((r.vol / r.aud) * 100);
+      return {
+        fecha: this.fecha(r.date), categoria: r.cat, horario: r.horario,
+        audTxt: this.fmt(r.aud), onTxt: this.fmt(r.on), combinadoTxt: this.fmt(comb), vol: r.vol,
+        pAud: (r.aud / comb * 100).toFixed(1) + '%', pOn: (r.on / comb * 100).toFixed(1) + '%',
+        pctVol: pct + '%', pctBar: Math.min(100, pct * 4) + '%',
+        obsCorta: r.obs || 'Sin observaciones', obsInk: r.obs ? 'rgba(0,0,0,.66)' : 'rgba(0,0,0,.38)'
+      };
+    });
+
+    const yoyMax = sel && prev ? Math.max(sel.aud + sel.on, prev.aud + prev.on) : 1;
+    const bar = (r, label, actual) => {
+      const tot = r.aud + r.on;
+      return {
+        label, total: this.fmt(tot),
+        w: (tot / yoyMax * 100).toFixed(1) + '%',
+        aud: (r.aud / tot * 100).toFixed(1) + '%', on: (r.on / tot * 100).toFixed(1) + '%',
+        cAud: actual ? '#2563eb' : '#9fb7ee', cOn: actual ? '#a48ce8' : '#d2c6f3',
+        split: this.fmt(r.aud) + ' en el auditorio · ' + this.fmt(r.on) + ' online'
+      };
+    };
+    let delta = 0;
+    if (sel && prev) delta = Math.round(((sel.aud + sel.on) / (prev.aud + prev.on) - 1) * 100);
+
+    const mesNombre = mes >= 0 ? this.MESES[mes] : '';
+    const futuro = anio === 2026 && mes > 8;
+
+    return {
+      showMobile: () => this.setState({ device: 'mobile' }),
+      showDesktop: () => this.setState({ device: 'desktop' }),
+      mobBtn: seg(!desk), deskBtn: seg(desk),
+      isMobile: !desk, isDesktop: desk,
+      frameW: desk ? '1320px' : '390px', frameH: desk ? '900px' : '820px',
+      headPad: desk ? '20px 28px 18px' : '16px 16px 14px',
+      bodyPad: desk ? '20px 28px 32px' : '14px 14px 28px',
+      h1Size: desk ? '24px' : '20px',
+      titulo: mes >= 0 ? mesNombre + ' ' + anio : 'Todo ' + anio,
+      cargarLabel: desk ? 'Cargar servicio' : 'Cargar',
+      filtroCols: desk ? '120px 170px 220px 190px' : 'minmax(0,1fr) minmax(0,1fr)',
+      kpiCols: desk ? 'repeat(3,minmax(0,1fr))' : 'minmax(0,1fr)',
+      chartCols: desk ? 'minmax(0,1.7fr) minmax(0,1fr)' : 'minmax(0,1fr)',
+      barGap: desk ? '8px' : '4px',
+      vacioPad: desk ? '60px 40px' : '40px 22px',
+      tCols: '1.3fr .7fr .9fr .8fr 1fr .7fr 1.2fr 1.6fr 170px',
+      th: 'padding:14px 14px 12px; font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.52)',
+      thNum: 'padding:14px 14px 12px; text-align:right; font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.52)',
+      thOn: 'padding:14px 14px 12px; text-align:right; background:#f7f4fd; font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:#6d4fc8',
+
+      anio: s.anio, mes: s.mes, cat: s.cat, hora: s.hora,
+      mesesOpts: this.MESES.map((m, i) => ({ v: String(i), label: m })),
+      onAnio: e => this.setState({ anio: e.target.value, selId: null }),
+      onMes: e => this.setState({ mes: e.target.value, selId: null }),
+      onCat: e => this.setState({ cat: e.target.value, selId: null }),
+      onHora: e => this.setState({ hora: e.target.value, selId: null }),
+      limpiar: () => this.setState({ mes: '-1', cat: 'todas', hora: 'todos', anio: '2026' }),
+
+      hayFilas: n > 0, sinFilas: n === 0, nFilas: n + (n === 1 ? ' servicio' : ' servicios'),
+      filas,
+      kProm: n ? this.fmt(Math.round((tAud + tOn) / n)) : '—',
+      kPromNota: n ? this.fmt(Math.round(tAud / n)) + ' en el auditorio + ' + this.fmt(Math.round(tOn / n)) + ' online' : '',
+      kOnline: n ? Math.round(tOn / (tAud + tOn) * 100) + '%' : '—',
+      kVol: n ? Math.round(tVol / tAud * 100) + '%' : '—',
+
+      tendNota: 'Últimos ' + tend.length + ' servicios' + (s.cat !== 'todas' ? ' · ' + s.cat : '') + (s.hora !== 'todos' ? ' · ' + s.hora : ''),
+      tendencia: tend.map(r => ({
+        hAud: (r.aud / maxT * 100).toFixed(1) + '%', hOn: (r.on / maxT * 100).toFixed(1) + '%',
+        op: sel && r.id === sel.id ? 1 : 0.55,
+        lab: r.date.getDate() + '/' + (r.date.getMonth() + 1),
+        labInk: sel && r.id === sel.id ? '#0f172a' : '#9ca3af',
+        tip: this.fecha(r.date) + ' ' + r.horario + ' · ' + this.fmt(r.aud + r.on),
+        elegir: () => this.setState({ selId: r.id })
+      })),
+
+      hayYoy: !!(sel && prev), sinYoy: !!sel && !prev,
+      yoyNota: sel ? sel.cat + ' ' + sel.horario + ' · ' + this.fecha(sel.date) : '',
+      yoyDelta: (delta > 0 ? '+' : '') + delta + '%',
+      yoyInk: delta >= 0 ? '#12783f' : '#b42318',
+      yoyDeltaNota: delta >= 0 ? 'más gente que el mismo domingo de ' + (anio - 1) : 'menos gente que el mismo domingo de ' + (anio - 1),
+      yoy: sel && prev ? [bar(sel, this.fecha(sel.date) + ' ' + anio, true), bar(prev, this.fecha(prev.date) + ' ' + (anio - 1), false)] : [],
+
+      vacioTitulo: futuro ? mesNombre + ' todavía no tiene servicios' : 'Ningún servicio con estos filtros',
+      vacioTexto: futuro
+        ? 'Los servicios se cargan después de cada reunión. Cuando alguien del equipo cargue el primero de ' + mesNombre.toLowerCase() + ', aparece acá con su gráfico.'
+        : 'Probá con otro horario o categoría, o mirá el año completo.'
+    };
+  }
+}
+</script>
+</body>
+</html>

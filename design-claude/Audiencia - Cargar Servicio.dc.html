@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics=""><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button,input,textarea{font-family:inherit}input:focus,textarea:focus{outline:none}input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}input[type=number]{-moz-appearance:textfield}a{color:#0a0a0a}a:hover{color:#2563eb}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:999px; padding:6px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ showMobile }}" style="{{ mobBtn }}">Mobile</button>
+      <button onClick="{{ showDesktop }}" style="{{ deskBtn }}">Desktop</button>
+    </div>
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">MODO</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ setCrear }}" style="{{ crearBtn }}">Cargar nuevo</button>
+      <button onClick="{{ setEditar }}" style="{{ editarBtn }}">Editar existente</button>
+    </div>
+  </div>
+
+  <div style="flex:none; background:#f6f6f4; border-radius:22px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:hidden; display:flex; flex-direction:column; width:{{ frameW }}; height:{{ frameH }}">
+
+    <div style="flex:none; background:#fff; border-bottom:1px solid #ecebe8; padding:{{ headPad }}">
+      <div style="display:flex; align-items:center; gap:12px">
+        <button style="height:38px; padding:0 14px 0 10px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; gap:6px; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer; flex:none">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>{{ volverLabel }}
+        </button>
+        <sc-if value="{{ esEditar }}" hint-placeholder-val="{{ false }}">
+          <span style="height:28px; padding:0 12px; border-radius:999px; background:#eaf0fc; color:#1d4ed8; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; margin-left:auto">Editando un registro guardado</span>
+        </sc-if>
+      </div>
+      <p style="margin:16px 0 0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">AUDIENCIA DE SERVICIOS</p>
+      <h1 style="margin:5px 0 0; font:600 {{ h1Size }} Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">{{ titulo }}</h1>
+
+      <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:16px">
+        <sc-for list="{{ pasos }}" as="p" hint-placeholder-count="3">
+          <button onClick="{{ p.ir }}" style="border:0; background:transparent; padding:0; text-align:left; cursor:{{ p.cursor }}; min-width:0">
+            <span style="display:block; height:5px; border-radius:999px; background:{{ p.barra }}"></span>
+            <span style="display:flex; align-items:center; gap:6px; margin-top:9px">
+              <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:{{ p.ink }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ p.label }}</span>
+            </span>
+            <span style="display:block; margin-top:2px; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ p.resumen }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="flex:1; min-height:0; overflow:auto; padding:{{ bodyPad }}">
+      <div style="display:grid; grid-template-columns:{{ bodyCols }}; gap:16px; align-items:start; max-width:1080px; margin:0 auto">
+
+        <div style="min-width:0">
+
+          <sc-if value="{{ paso1 }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#fff; border-radius:20px; padding:{{ cardPad }}">
+              <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a">¿Qué servicio vas a cargar?</p>
+
+              <p style="margin:20px 0 8px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">FECHA</p>
+              <input type="date" value="{{ fecha }}" onChange="{{ onFecha }}" style="width:100%; max-width:280px; height:50px; padding:0 18px; border:0; border-radius:16px; background:#f2f2f0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">
+
+              <p style="margin:22px 0 8px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">CATEGORÍA</p>
+              <div style="display:grid; grid-template-columns:{{ catCols }}; gap:8px">
+                <sc-for list="{{ categorias }}" as="c" hint-placeholder-count="4">
+                  <button onClick="{{ c.elegir }}" style="{{ c.style }}">
+                    <span style="display:block; font:600 14.5px Manrope,system-ui,sans-serif; color:{{ c.ink }}">{{ c.nombre }}</span>
+                    <span style="display:block; margin-top:4px; font:500 12px Manrope,system-ui,sans-serif; color:{{ c.sub }}">{{ c.detalle }}</span>
+                  </button>
+                </sc-for>
+              </div>
+
+              <p style="margin:22px 0 8px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">HORARIO</p>
+              <div style="display:flex; gap:6px; flex-wrap:wrap">
+                <input type="time" value="{{ horario }}" onChange="{{ onHorario }}" style="width:100%; max-width:180px; height:50px; padding:0 18px; border:0; border-radius:16px; background:#f2f2f0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+              </div>
+
+              
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ paso2 }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ hayAviso }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fdf3e3; border-radius:16px; padding:14px 16px; margin-bottom:12px; display:flex; align-items:flex-start; gap:12px">
+                <p style="margin:0; flex:1; font:500 13px/1.55 Manrope,system-ui,sans-serif; color:#5c3b0b">{{ aviso }}</p>
+                <button onClick="{{ cerrarAviso }}" style="height:32px; padding:0 12px; border:0; border-radius:999px; background:#fff; font:600 12px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer; flex:none">Entendido</button>
+              </div>
+            </sc-if>
+
+            <div style="background:#fff; border-radius:20px; padding:{{ cardPad }}">
+              <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a">¿Cuánta gente vino?</p>
+              <p style="margin:5px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Contá a todos los que estaban en el auditorio, voluntarios incluidos.</p>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:16px">
+                <input type="number" inputmode="numeric" value="{{ auditorio }}" onChange="{{ onAuditorio }}" placeholder="0" style="width:170px; height:62px; padding:0 20px; border:0; border-radius:18px; background:#eaf0fc; font:600 28px Manrope,system-ui,sans-serif; color:#1d4ed8; letter-spacing:-.02em">
+                <span style="font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">personas en el auditorio</span>
+              </div>
+            </div>
+
+            <div style="background:#fff; border-radius:20px; padding:{{ cardPad }}; margin-top:12px">
+              <div style="display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap">
+                <div style="flex:1; min-width:180px">
+                  <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a">Voluntarios por área</p>
+                  <p style="margin:5px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ areasNota }}</p>
+                </div>
+                <button onClick="{{ copiarAnterior }}" style="height:40px; padding:0 16px; border:0; border-radius:999px; background:#f2f2f0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer; flex:none">{{ copiarLabel }}</button>
+              </div>
+
+              <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="3">
+                <div style="margin-top:20px">
+                  <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px">
+                    <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">{{ g.titulo }}</p>
+                    <span style="font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ g.subtotal }}</span>
+                  </div>
+                  <div style="display:grid; grid-template-columns:{{ areaCols }}; column-gap:24px">
+                    <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+                      <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f2f2f0">
+                        <span style="flex:1; min-width:0; font:600 14px Manrope,system-ui,sans-serif; color:{{ it.ink }}">{{ it.nombre }}</span>
+                        <button onClick="{{ it.dec }}" style="width:40px; height:40px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+                        <input type="number" inputmode="numeric" value="{{ it.valor }}" onChange="{{ it.onInput }}" onFocus="{{ it.onFocus }}" placeholder="0" style="width:58px; height:40px; border:0; border-radius:12px; background:{{ it.bg }}; text-align:center; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">
+                        <button onClick="{{ it.inc }}" style="width:40px; height:40px; border:0; border-radius:999px; background:#0a0a0a; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ paso3 }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff; border-radius:20px; padding:{{ cardPad }}">
+              <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a">Lo que falta</p>
+
+              <div style="display:grid; grid-template-columns:{{ p3Cols }}; gap:14px; margin-top:18px">
+                <div>
+                  <p style="margin:0 0 8px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:#6d4fc8">ASISTENCIA ONLINE</p>
+                  <input type="number" inputmode="numeric" value="{{ online }}" onChange="{{ onOnline }}" placeholder="0" style="width:100%; height:56px; padding:0 18px; border:0; border-radius:16px; background:#f3effc; font:600 22px Manrope,system-ui,sans-serif; color:#6d4fc8">
+                  <p style="margin:7px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Pico de conexiones del streaming.</p>
+                </div>
+                <div>
+                  <p style="margin:0 0 8px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">VOLUNTARIOS REPETIDOS</p>
+                  <input type="number" inputmode="numeric" value="{{ repetidos }}" onChange="{{ onRepetidos }}" placeholder="0" style="width:100%; height:56px; padding:0 18px; border:0; border-radius:16px; background:#f2f2f0; font:600 22px Manrope,system-ui,sans-serif; color:#0a0a0a">
+                  <p style="margin:7px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Personas que sirvieron en dos áreas. Se restan una vez.</p>
+                </div>
+              </div>
+
+              <p style="margin:22px 0 8px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">OBSERVACIONES · OPCIONAL</p>
+              <textarea value="{{ obs }}" onChange="{{ onObs }}" rows="4" placeholder="Algo que explique los números: lluvia, bautismos, un corte del streaming…" style="width:100%; padding:14px 18px; border:0; border-radius:16px; background:#f2f2f0; font:500 14px/1.6 Manrope,system-ui,sans-serif; color:#0a0a0a; resize:vertical"></textarea>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ guardado }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff; border-radius:20px; padding:40px 24px; display:flex; flex-direction:column; align-items:center; text-align:center">
+              <div style="width:64px; height:64px; border-radius:999px; background:#eaf6ee; display:flex; align-items:center; justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#12783f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></div>
+              <p style="margin:18px 0 0; font:600 19px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ guardadoTitulo }}</p>
+              <p style="margin:8px 0 0; font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ guardadoTexto }}</p>
+              <div style="display:flex; gap:9px; margin-top:22px; flex-wrap:wrap; justify-content:center">
+                <button style="height:48px; padding:0 22px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Volver a la planilla</button>
+                <button onClick="{{ otroMas }}" style="height:48px; padding:0 22px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Cargar otro servicio</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff; border:1px solid #e8e9ec; border-radius:14px; padding:18px 20px; position:sticky; top:0">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">ASÍ QUEDA</p>
+            <p style="margin:10px 0 0; font:600 15px Manrope,system-ui,sans-serif; color:#0f172a">{{ resServicio }}</p>
+            <p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#6b7280">{{ resCat }}</p>
+            <p style="margin:18px 0 0; font:600 12px Manrope,system-ui,sans-serif; color:#6b7280">Total con online</p>
+            <p style="margin:4px 0 0; font:600 32px Manrope,system-ui,sans-serif; color:#0f172a; letter-spacing:-.03em">{{ resCombinado }}</p>
+            <div style="display:flex; height:10px; border-radius:999px; overflow:hidden; margin-top:10px; background:#f2f3f5">
+              <span style="display:block; width:{{ resPAud }}; background:#2563eb"></span>
+              <span style="display:block; width:{{ resPOn }}; background:#a48ce8"></span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:7px">
+              <span style="font:600 12px Manrope,system-ui,sans-serif; color:#1d4ed8">{{ resAud }} auditorio</span>
+              <span style="font:600 12px Manrope,system-ui,sans-serif; color:#6d4fc8">{{ resOn }} online</span>
+            </div>
+            <div style="height:1px; background:#eef0f3; margin:18px 0"></div>
+            <div style="display:flex; align-items:baseline; justify-content:space-between">
+              <span style="font:600 12px Manrope,system-ui,sans-serif; color:#6b7280">Voluntarios únicos</span>
+              <span style="font:600 18px Manrope,system-ui,sans-serif; color:#0f172a">{{ resVol }}</span>
+            </div>
+            <p style="margin:4px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">{{ resVolNota }}</p>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:12px">
+              <div style="flex:1; height:6px; border-radius:999px; background:#f0efec; overflow:hidden"><div style="width:{{ resPctBar }}; height:100%; background:#0a0a0a"></div></div>
+              <span style="font:700 13px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ resPct }}</span>
+            </div>
+            <p style="margin:6px 0 0; font:500 12px Manrope,system-ui,sans-serif; color:#6b7280">del auditorio sirvió ese día</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ muestraPie }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:none; background:#fff; border-top:1px solid #ecebe8; padding:{{ piePad }}">
+        <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px">
+            <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ pieResumen }}</span>
+            <span style="font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ resPct }} voluntarios</span>
+          </div>
+        </sc-if>
+        <div style="display:flex; gap:8px; max-width:1080px; margin:0 auto; justify-content:{{ pieJust }}">
+          <sc-if value="{{ puedeAtras }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ atras }}" style="height:52px; padding:0 22px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer; flex:{{ btnFlexAtras }}">Atrás</button>
+          </sc-if>
+          <button onClick="{{ siguiente }}" style="height:52px; padding:0 28px; border:0; border-radius:999px; background:{{ sigBg }}; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:{{ sigCursor }}; flex:{{ btnFlexSig }}">{{ sigLabel }}</button>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1340,&quot;height&quot;:980}}">
+class Component extends DCLogic {
+  AREAS_DOM = [
+    { titulo: 'TÉCNICA', items: ['Sonido', 'Luces', 'Cámaras', 'Streaming', 'Producción'] },
+    { titulo: 'RECEPCIÓN', items: ['Bienvenida', 'Ujieres', 'Estacionamiento', 'Cafetería'] },
+    { titulo: 'CUIDADO', items: ['Niñez', 'Oración', 'Seguridad'] }
+  ];
+  AREAS_MAR = [
+    { titulo: 'TÉCNICA', items: ['Sonido', 'Streaming'] },
+    { titulo: 'RECEPCIÓN', items: ['Bienvenida', 'Cafetería'] },
+    { titulo: 'MINISTRACIÓN', items: ['Alabanza', 'Oración'] }
+  ];
+  PREV = { Sonido: 4, Luces: 2, 'Cámaras': 5, Streaming: 3, 'Producción': 6, Bienvenida: 14, Ujieres: 10, Estacionamiento: 6, 'Cafetería': 8, 'Niñez': 22, 'Oración': 7, Seguridad: 4, Alabanza: 9 };
+  PREV_MAR = { Sonido: 2, Streaming: 2, Bienvenida: 6, 'Cafetería': 4, Alabanza: 7, 'Oración': 5 };
+  CATS = [
+    { nombre: 'Servicio de Domingo', detalle: '12 áreas de voluntarios', horas: ['10:00', '19:00'] },
+    { nombre: 'Martes', detalle: '6 áreas · otro formato', horas: ['20:00'] },
+    { nombre: 'Evento especial', detalle: '12 áreas, como un domingo', horas: ['10:00', '19:00', '20:00'] },
+    { nombre: 'Conferencia', detalle: '12 áreas, como un domingo', horas: ['10:00', '19:00', '20:00'] }
+  ];
+  MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+  inicial(modo) {
+    if (modo === 'editar') return {
+      paso: 1, fecha: '2026-09-20', cat: 'Servicio de Domingo', horario: '10:00',
+      vals: Object.assign({}, this.PREV, { Bienvenida: 15, 'Niñez': 24 }), auditorio: '742', online: '286', repetidos: '6',
+      obs: 'Bautismos: 14 personas.', aviso: '', guardado: false, visitados: 3
+    };
+    return { paso: 1, fecha: '2026-09-27', cat: '', horario: '', vals: {}, auditorio: '', online: '', repetidos: '', obs: '', aviso: '', guardado: false, visitados: 1 };
+  }
+
+  state = Object.assign({ device: 'mobile', modo: 'crear' }, this.inicial('crear'));
+
+  areas(cat) { return cat === 'Martes' ? this.AREAS_MAR : this.AREAS_DOM; }
+  lista(cat) { return this.areas(cat).reduce((a, g) => a.concat(g.items), []); }
+  n(v) { const x = parseInt(v, 10); return isNaN(x) ? 0 : Math.max(0, x); }
+  fmt(n) { return n.toLocaleString('es-AR'); }
+  fechaTxt(iso) { if (!iso) return ''; const d = new Date(iso + 'T12:00:00'); return this.DIAS[d.getDay()] + ' ' + d.getDate() + ' ' + this.MESES[d.getMonth()]; }
+
+  elegirCat(nombre) {
+    const s = this.state;
+    const cat = this.CATS.find(c => c.nombre === nombre);
+    const horario = s.horario || cat.horas[0];
+    let aviso = '';
+    const cargadas = Object.keys(s.vals).filter(k => this.n(s.vals[k]) > 0);
+    if (s.cat && cargadas.length && (s.cat === 'Martes') !== (nombre === 'Martes')) {
+      const nuevas = this.lista(nombre);
+      const quedan = cargadas.filter(k => nuevas.includes(k));
+      const fuera = cargadas.filter(k => !nuevas.includes(k));
+      aviso = 'Cambiaste a ' + nombre + '. ' + (quedan.length ? 'Se mantienen ' + quedan.join(', ') + '. ' : '') + (fuera.length ? fuera.join(', ') + (fuera.length === 1 ? ' no aplica' : ' no aplican') + ' y no se va' + (fuera.length === 1 ? '' : 'n') + ' a guardar, pero quedan en memoria si volvés a cambiar.' : '');
+    }
+    this.setState({ cat: nombre, horario, aviso });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const desk = s.device === 'desktop';
+    const seg = (on) => 'height:32px; padding:0 14px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer';
+    const editar = s.modo === 'editar';
+
+    const activas = s.cat ? this.lista(s.cat) : [];
+    const volTotal = activas.reduce((a, k) => a + this.n(s.vals[k]), 0);
+    const aud = this.n(s.auditorio), on = this.n(s.online), rep = this.n(s.repetidos);
+    const unicos = Math.max(0, volTotal - rep);
+    const comb = aud + on;
+    const pct = aud ? Math.round(unicos / aud * 100) : 0;
+    const ok1 = !!(s.fecha && s.cat && s.horario);
+    const ok2 = aud > 0;
+
+    const setVal = (k, v) => this.setState(st => ({ vals: Object.assign({}, st.vals, { [k]: v }) }));
+
+    const pasoData = [
+      { label: '1 · Servicio', resumen: ok1 ? this.fechaTxt(s.fecha) + ' · ' + s.horario : 'Fecha y categoría', ok: ok1 },
+      { label: '2 · Asistencia', resumen: aud ? this.fmt(aud) + ' · ' + volTotal + ' voluntarios' : 'Auditorio y áreas', ok: ok2 },
+      { label: '3 · Otros datos', resumen: on ? this.fmt(on) + ' online' : 'Online y notas', ok: s.visitados >= 3 }
+    ];
+
+    const irA = (n) => {
+      if (s.guardado) return;
+      if (n === 1 || (n === 2 && ok1) || (n === 3 && ok1 && ok2)) this.setState(st => ({ paso: n, visitados: Math.max(st.visitados, n) }));
+    };
+
+    const puedeSeguir = s.paso === 1 ? ok1 : s.paso === 2 ? ok2 : true;
+
+    return {
+      showMobile: () => this.setState({ device: 'mobile' }),
+      showDesktop: () => this.setState({ device: 'desktop' }),
+      mobBtn: seg(!desk), deskBtn: seg(desk),
+      setCrear: () => this.setState(Object.assign({ modo: 'crear' }, this.inicial('crear'))),
+      setEditar: () => this.setState(Object.assign({ modo: 'editar' }, this.inicial('editar'))),
+      crearBtn: seg(!editar), editarBtn: seg(editar),
+      isMobile: !desk, isDesktop: desk, esEditar: editar,
+      frameW: desk ? '1280px' : '390px', frameH: desk ? '860px' : '820px',
+      headPad: desk ? '18px 28px 18px' : '14px 16px 16px',
+      bodyPad: desk ? '22px 28px 28px' : '14px 14px 20px',
+      piePad: desk ? '14px 28px' : '12px 16px 16px',
+      cardPad: desk ? '22px 24px' : '18px 16px',
+      h1Size: desk ? '24px' : '21px',
+      bodyCols: desk ? 'minmax(0,1fr) 320px' : 'minmax(0,1fr)',
+      catCols: desk ? 'repeat(4,minmax(0,1fr))' : 'repeat(2,minmax(0,1fr))',
+      areaCols: desk ? 'repeat(2,minmax(0,1fr))' : 'minmax(0,1fr)',
+      p3Cols: desk ? 'repeat(2,minmax(0,1fr))' : 'minmax(0,1fr)',
+      volverLabel: desk ? 'Volver a la planilla' : 'Planilla',
+      titulo: editar ? 'Editar ' + this.fechaTxt('2026-09-20') + ' · 10:00' : 'Cargar servicio',
+
+      pasos: pasoData.map((p, i) => {
+        const n = i + 1, actual = s.paso === n && !s.guardado;
+        return {
+          label: p.label, resumen: p.resumen,
+          barra: actual ? '#0a0a0a' : (p.ok || s.guardado ? '#2563eb' : '#e6e5e1'),
+          ink: actual ? '#0a0a0a' : 'rgba(0,0,0,.6)',
+          cursor: s.guardado ? 'default' : 'pointer',
+          ir: () => irA(n)
+        };
+      }),
+
+      paso1: s.paso === 1 && !s.guardado, paso2: s.paso === 2 && !s.guardado, paso3: s.paso === 3 && !s.guardado,
+      guardado: s.guardado,
+
+      fecha: s.fecha, onFecha: e => this.setState({ fecha: e.target.value }),
+      categorias: this.CATS.map(c => {
+        const on = s.cat === c.nombre;
+        return {
+          nombre: c.nombre, detalle: c.detalle,
+          ink: on ? '#fff' : '#0a0a0a', sub: on ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.55)',
+          style: 'min-height:74px; padding:14px 16px; border:0; border-radius:16px; background:' + (on ? '#0a0a0a' : '#f2f2f0') + '; text-align:left; cursor:pointer',
+          elegir: () => this.elegirCat(c.nombre)
+        };
+      }),
+      horario: s.horario,
+      onHorario: e => this.setState({ horario: e.target.value }),
+      horarios: [].map(h => ({
+        label: h,
+        style: 'height:44px; padding:0 20px; border:0; border-radius:999px; background:' + (s.horario === h ? '#0a0a0a' : '#f2f2f0') + '; color:' + (s.horario === h ? '#fff' : '#0a0a0a') + '; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer',
+        elegir: () => this.setState({ horario: h })
+      })),
+      anticipoTitulo: s.cat === 'Martes'
+        ? 'Los martes tienen otro formato: en el paso 2 vas a cargar 6 áreas'
+        : s.cat ? 'En el paso 2 vas a cargar estas 12 áreas' : 'Elegí la categoría y te mostramos qué áreas vas a cargar',
+      anticipoAreas: (s.cat ? activas : []).map(a => ({ nombre: a })),
+
+      hayAviso: !!s.aviso, aviso: s.aviso, cerrarAviso: () => this.setState({ aviso: '' }),
+      auditorio: s.auditorio, onAuditorio: e => this.setState({ auditorio: e.target.value }),
+      areasNota: s.cat === 'Martes' ? 'Formato martes: 6 áreas.' : '12 áreas. Tocá + por cada persona o escribí el número.',
+      copiarLabel: s.cat === 'Martes' ? 'Copiar del martes pasado' : 'Copiar del domingo pasado',
+      copiarAnterior: () => this.setState(st => ({ vals: Object.assign({}, st.vals, st.cat === 'Martes' ? this.PREV_MAR : this.PREV) })),
+      grupos: (s.cat ? this.areas(s.cat) : []).map(g => ({
+        titulo: g.titulo,
+        subtotal: g.items.reduce((a, k) => a + this.n(s.vals[k]), 0) + ' personas',
+        items: g.items.map(k => {
+          const v = s.vals[k] === undefined ? '' : String(s.vals[k]);
+          const lleno = this.n(v) > 0;
+          return {
+            nombre: k, valor: v,
+            ink: lleno ? '#0a0a0a' : 'rgba(0,0,0,.6)',
+            bg: lleno ? '#eaf0fc' : '#f2f2f0',
+            dec: () => setVal(k, Math.max(0, this.n(s.vals[k]) - 1)),
+            inc: () => setVal(k, this.n(s.vals[k]) + 1),
+            onInput: e => setVal(k, e.target.value),
+            onFocus: e => e.target.select()
+          };
+        })
+      })),
+
+      online: s.online, onOnline: e => this.setState({ online: e.target.value }),
+      repetidos: s.repetidos, onRepetidos: e => this.setState({ repetidos: e.target.value }),
+      obs: s.obs, onObs: e => this.setState({ obs: e.target.value }),
+
+      resServicio: ok1 ? this.fechaTxt(s.fecha) + ' · ' + s.horario : 'Servicio sin elegir',
+      resCat: s.cat || 'Categoría pendiente',
+      resCombinado: comb ? this.fmt(comb) : '—',
+      resPAud: comb ? (aud / comb * 100).toFixed(1) + '%' : '0%',
+      resPOn: comb ? (on / comb * 100).toFixed(1) + '%' : '0%',
+      resAud: this.fmt(aud), resOn: this.fmt(on),
+      resVol: unicos,
+      resVolNota: volTotal + ' cargados' + (rep ? ' − ' + rep + ' repetidos' : ''),
+      resPct: pct + '%', resPctBar: Math.min(100, pct * 4) + '%',
+      pieResumen: comb ? this.fmt(comb) + ' en total · ' + unicos + ' voluntarios' : (s.paso === 1 ? (ok1 ? this.fechaTxt(s.fecha) + ' · ' + s.cat : 'Paso 1 de 3') : 'Todavía sin números'),
+
+      muestraPie: !s.guardado,
+      puedeAtras: s.paso > 1,
+      atras: () => this.setState({ paso: s.paso - 1 }),
+      siguiente: () => {
+        if (!puedeSeguir) return;
+        if (s.paso < 3) this.setState(st => ({ paso: st.paso + 1, visitados: Math.max(st.visitados, st.paso + 1), aviso: st.paso === 2 ? '' : st.aviso }));
+        else this.setState({ guardado: true });
+      },
+      sigLabel: s.paso === 1 ? 'Siguiente: asistencia' : s.paso === 2 ? 'Siguiente: otros datos' : (editar ? 'Guardar los cambios' : 'Guardar servicio'),
+      sigBg: puedeSeguir ? '#0a0a0a' : '#c9c8c4',
+      sigCursor: puedeSeguir ? 'pointer' : 'not-allowed',
+      pieJust: desk ? 'flex-end' : 'stretch',
+      btnFlexAtras: desk ? 'none' : '1', btnFlexSig: desk ? 'none' : '2',
+
+      guardadoTitulo: editar ? 'Cambios guardados' : 'Servicio guardado',
+      guardadoTexto: this.fechaTxt(s.fecha) + ' · ' + s.horario + ' · ' + this.fmt(comb) + ' personas en total',
+      otroMas: () => this.setState(Object.assign({ modo: 'crear' }, this.inicial('crear')))
+    };
+  }
+}
+</script>
+</body>
+</html>

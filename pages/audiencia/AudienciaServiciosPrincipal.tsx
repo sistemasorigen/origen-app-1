@@ -1,1048 +1,891 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowUpRight, Check, ChevronDown, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { User } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import {
-    Plus, Eye, GitCompareArrows, Pencil, Trash2,
-    TrendingUp, TrendingDown, Minus, ChevronUp, ChevronDown, Check,
-    X, AlertTriangle, ChevronRight, Calendar, Search, SlidersHorizontal, Clock, CalendarDays,
-    BarChart3
-} from 'lucide-react';
-import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import NeoModal from '../../components/ui/NeoModal';
-import FilterChip from '../../components/ui/FilterChip';
+import { useScrollRecordado } from '../../src/utils/scrollRecordado';
+import {
+    MESES, aFecha, anioDe, buscarAnioAnterior, calcStats, fechaCorta, fechaNumerica,
+    fmt, horarioDe,
+} from './datosDeAudiencia';
 
-interface PastoralCareDashboardProps { currentUser: User | null; }
+/**
+ * La planilla de Audiencia de Servicios — design-claude/Audiencia de Servicios.
+ *
+ * Tres capas, de arriba abajo: qué período se está mirando (los filtros), cómo
+ * viene ese período (tres números y la tendencia) y el detalle servicio por
+ * servicio (las filas). El resumen dejó de ser un panel que había que abrir:
+ * si la pantalla existe para ver cómo viene la asistencia, esos números tienen
+ * que estar a la vista al entrar.
+ *
+ * Los filtros arrancan en un año concreto y no en "todos": la comparación
+ * contra el año anterior y la tendencia sólo tienen sentido dentro de un año,
+ * y una lista que mezcla 2024 con 2026 no se puede leer de corrido.
+ *
+ * El detalle de un servicio se fue a su propia página
+ * (/audiencia-servicios/detalles/:id), donde antes eran dos modales sueltos.
+ * Acá quedan las tres acciones de la fila: verlo, editarlo y borrarlo.
+ */
 
-// ─── Calculation helpers ───────────────────────────────────────────────────
+interface Props { currentUser: User | null; }
 
-const getWeekOfMonth = (dateString: string | Date): number => {
-    const date = new Date(dateString);
-    return Math.ceil(date.getDate() / 7);
-};
+const CLAVE_SCROLL = 'audiencia.servicios';
+const TODOS = '';
+const ANIO_COMPLETO = '';
 
-const generateYoYKey = (dateString: string | Date): string => {
-    const date = new Date(dateString);
-    const month = date.getMonth() + 1;
-    const weekIndex = getWeekOfMonth(date);
-    return `${month}-${weekIndex}`;
-};
+// ─── Piezas chicas ────────────────────────────────────────────────────────
 
-const calcStats = (r: any) => {
-    const volFields = [
-        r.conecta, r.store, r.host_prevencion, r.punto_info, r.produccion,
-        r.equipo_ministracion, r.atmosfera, r.visuales, r.redes,
-        r.sala_bienvenida, r.sonido, r.ea, r.streaming, r.camaras,
-        r.fotos, r.profes_ninez
-    ].map(v => Number(v) || 0);
-
-    const totalVol = volFields.reduce((a, b) => a + b, 0);
-    const auditorio = Number(r.auditorio) || 0;
-    const online = Number(r.online) || 0;
-    const ninezSinProfes = [r.ninos_3_6, r.ninos_7_10, r.ninos_hd, r.borders]
-        .map(v => Number(v) || 0).reduce((a, b) => a + b, 0);
-
-    const auditorioSinVol = auditorio;
-    const auditorioConVol = totalVol + auditorio;
-    const audNinezSinProfes = auditorioSinVol + ninezSinProfes;
-    const totalFinal = audNinezSinProfes + totalVol;
-    const totalFinalConOnline = totalFinal + online;
-    const pctVol = audNinezSinProfes > 0 ? (totalVol / audNinezSinProfes) * 100 : 0;
-
-    return { totalVol, auditorioSinVol, auditorioConVol, ninezSinProfes, audNinezSinProfes, totalFinal, totalFinalConOnline, online, pctVol };
-};
-
-
-
-// ─── Shared UI atoms ──────────────────────────────────────────────────────
-
-const StatRow: React.FC<{ label: string; value: string | number; highlight?: boolean }> = ({ label, value, highlight }) => (
-    <div className={`flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-neutral-800 ${highlight ? 'bg-violet-50 dark:bg-violet-950/30 -mx-3 px-3 rounded' : ''}`}>
-        <span className={`text-sm ${highlight ? 'font-bold text-black dark:text-white' : 'text-black dark:text-white font-medium'}`}>{label}</span>
-        <span className={`font-black tabular-nums ${highlight ? 'text-violet-700 dark:text-violet-300 text-lg' : 'text-black dark:text-white'}`}>{value}</span>
-    </div>
+/** Un filtro con forma de píldora: select nativo con la flecha dibujada encima. */
+const Filtro: React.FC<{
+    etiqueta: string;
+    value: string;
+    onChange: (v: string) => void;
+    options: { label: string; value: string }[];
+}> = ({ etiqueta, value, onChange, options }) => (
+    <label className="relative block min-w-0">
+        <span className="sr-only">{etiqueta}</span>
+        <select
+            aria-label={etiqueta}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            className="filtro-pildora h-[42px] w-full cursor-pointer truncate pl-4 pr-9 text-[13px] font-semibold"
+        >
+            {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <ChevronDown
+            className="pointer-events-none absolute right-3.5 top-[14px] h-[14px] w-[14px] text-black/[.55]"
+            strokeWidth={2.6}
+        />
+    </label>
 );
 
-const Delta: React.FC<{ curr: number; prev: number; label: string; icon?: string }> = ({ curr, prev, label, icon }) => {
-    const diff = curr - prev;
-    const pct = prev !== 0 ? ((diff / prev) * 100).toFixed(1) : null;
-    const up = diff > 0;
-    const same = diff === 0;
-    const max = Math.max(curr, prev, 1);
-    const currPct = (curr / max) * 100;
-    const prevPct = (prev / max) * 100;
-
-    return (
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-100 dark:border-neutral-800 p-4 shadow-sm">
-            {/* Label row */}
-            <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wider leading-tight">{label}</p>
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black
-                    ${same
-                        ? 'bg-slate-100 text-slate-500 dark:bg-neutral-800 dark:text-neutral-400'
-                        : up
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'
-                    }`}>
-                    {same ? <Minus className="w-3 h-3" /> : up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {pct ? `${up ? '+' : ''}${pct}%` : '—'}
-                </span>
-            </div>
-
-            {/* Visual bar comparison */}
-            <div className="space-y-2 mb-3">
-                {/* Current bar */}
-                <div>
-                    <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Actual</span>
-                        <span className="text-base font-black tabular-nums text-black dark:text-white">{curr.toLocaleString()}</span>
-                    </div>
-                    <div className="h-2 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                        <div
-                            className={`h-full rounded-full transition-all duration-500 ${same ? 'bg-slate-400' : up ? 'bg-emerald-500' : 'bg-red-500'
-                                }`}
-                            style={{ width: `${currPct}%` }}
-                        />
-                    </div>
-                </div>
-                {/* Previous bar */}
-                <div>
-                    <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Anterior</span>
-                        <span className="text-sm font-bold tabular-nums text-slate-500 dark:text-neutral-400">{prev.toLocaleString()}</span>
-                    </div>
-                    <div className="h-2 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full rounded-full bg-slate-300 dark:bg-neutral-600 transition-all duration-500"
-                            style={{ width: `${prevPct}%` }}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Diff pill */}
-            {!same && (
-                <p className={`text-[11px] font-bold ${up ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {up ? '▲' : '▼'} {Math.abs(diff).toLocaleString()} {up ? 'más' : 'menos'} que el año anterior
-                </p>
-            )}
-        </div>
-    );
-};
-
-
-
-// ─── Detail Modal ─────────────────────────────────────────────────────────
-
-const DetailModal: React.FC<{ record: any; onClose: () => void }> = ({ record, onClose }) => {
-    const s = calcStats(record);
-    const fmt = (n: number) => n.toLocaleString('es-AR');
-
-    return (
-        <NeoModal isOpen={true} onClose={onClose} title="Detalle del Servicio" maxWidth="max-w-lg">
-            <div className="mb-4">
-                <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">
-                    {record.name || '—'} · {new Date(record.service_date + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}{record.service_time ? ` (${record.service_time})` : ''}
-                </p>
-            </div>
-            <div className="space-y-0.5">
-                <StatRow label="Total Voluntarios" value={fmt(s.totalVol)} />
-                <StatRow label="Total Auditorio (sin voluntarios)" value={fmt(s.auditorioSinVol)} />
-                <StatRow label="Total Auditorio (con voluntarios)" value={fmt(s.auditorioConVol)} />
-                <StatRow label="Total Final" value={fmt(s.totalFinal)} highlight />
-                <StatRow label="% Voluntarios" value={`${s.pctVol.toFixed(1)}%`} highlight />
-            </div>
-
-            {/* ── Total Asistencia + Online ── */}
-            <div className="mt-5 rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/30 dark:to-indigo-950/30 p-4 shadow-sm">
-                <p className="text-[10px] font-black uppercase tracking-widest text-sky-600 dark:text-sky-400 mb-2">📡 Total c/ Online</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">{fmt(s.totalFinalConOnline)}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-medium mt-1">Total Asistencia + {fmt(s.online)} online</p>
-                    </div>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 text-xs font-black">
-                        +{fmt(s.online)} online
-                    </span>
-                </div>
-            </div>
-
-            <div className="mt-6">
-                <p className="text-xs font-bold uppercase tracking-tight text-slate-400 mb-3">Desglose Voluntarios</p>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
-                    {[
-                        ['Conecta', record.conecta], ['Store', record.store],
-                        ['Host + Prevención', record.host_prevencion], ['Punto Info', record.punto_info],
-                        ['Producción', record.produccion], ['Eq. Ministración', record.equipo_ministracion],
-                        ['Atmosfera', record.atmosfera], ['Visuales', record.visuales],
-                        ['Redes', record.redes], ['Sala Bienvenida', record.sala_bienvenida],
-                        ['Sonido', record.sonido], ['EA', record.ea],
-                        ['Streaming', record.streaming], ['Cámaras', record.camaras],
-                        ['Fotos', record.fotos], ['Profes Niñez', record.profes_ninez],
-                        ['Auditorio', record.auditorio],
-                    ].map(([lbl, val]) => (
-                        <div key={lbl as string} className="flex justify-between border-b border-slate-100 dark:border-neutral-800 py-1.5">
-                            <span className="text-slate-500 text-xs">{lbl}</span>
-                            <span className="font-bold text-xs tabular-nums">{Number(val) || 0}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-            <div className="mt-6">
-                <p className="text-xs font-bold uppercase tracking-tight text-slate-400 mb-3">Niñez</p>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
-                    {[['Niños 3–6', record.ninos_3_6], ['Niños 7–10', record.ninos_7_10], ['Niños HD', record.ninos_hd], ['Borders', record.borders]]
-                        .map(([lbl, val]) => (
-                            <div key={lbl as string} className="flex justify-between border-b border-slate-100 dark:border-neutral-800 py-1.5">
-                                <span className="text-slate-500 text-xs">{lbl}</span>
-                                <span className="font-bold text-xs tabular-nums">{Number(val) || 0}</span>
-                            </div>
-                        ))}
-                </div>
-            </div>
-            <div className="mt-6">
-                <p className="text-xs font-bold uppercase tracking-tight text-slate-400 mb-3">Seguimiento</p>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
-                    {[
-                        ['Online', record.online], ['Vol. Repetidos', record.voluntarios_repetidos],
-                        ['Aceptaron', record.aceptaron], ['1ra Vez', record.asistieron_primera_vez],
-                        ['Reconciliaron', record.reconciliaron], ['Podcast', record.podcast],
-                        ['Oración', record.oracion],
-                    ].map(([lbl, val]) => (
-                        <div key={lbl as string} className="flex justify-between border-b border-slate-100 dark:border-neutral-800 py-1.5">
-                            <span className="text-slate-500 text-xs">{lbl}</span>
-                            <span className="font-bold text-xs tabular-nums">{Number(val) || 0}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {record.conference_sessions && record.conference_sessions.length > 0 && (
-                <div className="mt-6">
-                    <p className="text-xs font-bold uppercase tracking-tight text-slate-400 mb-3">Sesiones Especiales</p>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm">
-                        {record.conference_sessions.map((session: { name: string, attendees: number }, idx: number) => (
-                            <div key={idx} className="flex justify-between border-b border-slate-100 dark:border-neutral-800 py-1.5">
-                                <span className="text-slate-500 text-xs">{session.name}</span>
-                                <span className="font-bold text-xs tabular-nums">{session.attendees}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {record.observations && (
-                <div className="mt-6">
-                    <p className="text-xs font-bold uppercase tracking-tight text-slate-400 mb-3">Observaciones</p>
-                    <p className="text-sm text-slate-600 dark:text-neutral-300 leading-relaxed bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-lg px-4 py-3">
-                        {record.observations}
-                    </p>
-                </div>
-            )}
-
-        </NeoModal>
-    );
-};
-
-// ─── YoY Modal ────────────────────────────────────────────────────────────
-
-const YoYModal: React.FC<{ record: any; allRecords: any[]; onClose: () => void }> = ({ record, allRecords, onClose }) => {
-    const [yoyRecord, setYoyRecord] = useState<any | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const currentKey = generateYoYKey(record.service_date);
-        const currentYear = new Date(record.service_date).getFullYear();
-        
-        // Find a record from a previous year that matches the same month and week index
-        const match = allRecords.find(r => {
-            if (r.id === record.id) return false;
-            const rYear = new Date(r.service_date).getFullYear();
-            if (rYear >= currentYear) return false; // Only previous years
-            
-            return generateYoYKey(r.service_date) === currentKey;
-        });
-
-        setYoyRecord(match || null);
-        setLoading(false);
-    }, [record, allRecords]);
-
-    const curr = calcStats(record);
-    const prev = yoyRecord ? calcStats(yoyRecord) : null;
-
-    const formatDateLabel = (dateStr: string) =>
-        new Date(dateStr + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
-
-    return (
-        <NeoModal isOpen={true} onClose={onClose} title="Comparativa Año a Año" maxWidth="max-w-xl">
-            {loading && (
-                <div className="flex flex-col items-center justify-center py-14 gap-3">
-                    <div className="w-8 h-8 border-4 border-black dark:border-white border-t-transparent rounded-full animate-spin" />
-                    <p className="text-sm text-slate-400 font-medium">Buscando registro anterior...</p>
-                </div>
-            )}
-
-            {!loading && !yoyRecord && (
-                <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center mx-auto mb-4">
-                        <AlertTriangle className="w-8 h-8 text-amber-500" />
-                    </div>
-                    <p className="font-bold text-slate-700 dark:text-neutral-200 text-base mb-1">Sin datos para comparar</p>
-                    <p className="text-sm text-slate-400">No encontramos un registro del mismo mes en el año anterior.</p>
-                </div>
-            )}
-
-            {!loading && yoyRecord && prev && (
-                <>
-                    {/* Timeline header */}
-                    <div className="flex items-stretch gap-2 mb-6">
-                        <div className="flex-1 bg-slate-50 dark:bg-neutral-800 rounded-2xl p-3 text-center border border-slate-100 dark:border-neutral-700">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Año anterior</p>
-                            <p className="text-sm font-bold text-black dark:text-white leading-tight">{formatDateLabel(yoyRecord.service_date)}</p>
-                            {yoyRecord.service_time && (
-                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-slate-200 dark:bg-neutral-700 text-[10px] font-bold text-slate-500 dark:text-neutral-400">{yoyRecord.service_time}</span>
-                            )}
-                        </div>
-                        <div className="flex items-center justify-center w-8 shrink-0">
-                            <div className="flex flex-col items-center gap-0.5">
-                                <div className="w-px h-3 bg-slate-200 dark:bg-neutral-700" />
-                                <ChevronRight className="w-5 h-5 text-slate-400" />
-                                <div className="w-px h-3 bg-slate-200 dark:bg-neutral-700" />
-                            </div>
-                        </div>
-                        <div className="flex-1 bg-black dark:bg-white rounded-2xl p-3 text-center">
-                            <p className="text-[10px] font-black text-white/60 dark:text-black/60 uppercase tracking-widest mb-1">Actual</p>
-                            <p className="text-sm font-bold text-white dark:text-black leading-tight">{formatDateLabel(record.service_date)}</p>
-                            {record.service_time && (
-                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-white/20 dark:bg-black/20 text-[10px] font-bold text-white dark:text-black">{record.service_time}</span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Metric cards */}
-                    <div className="space-y-3">
-                        <Delta label="Auditorio (con voluntarios)" curr={curr.auditorioConVol} prev={prev.auditorioConVol} />
-                        <Delta label="Total Voluntarios" curr={curr.totalVol} prev={prev.totalVol} />
-                        <Delta label="Auditorio (sin voluntarios)" curr={curr.auditorioSinVol} prev={prev.auditorioSinVol} />
-                    </div>
-
-                    <p className="text-[10px] text-slate-400 mt-5 text-center font-mono">
-                        Comparado con: {yoyRecord.name || yoyRecord.service_date}{yoyRecord.service_time ? ` (${yoyRecord.service_time})` : ''}
-                    </p>
-                </>
-            )}
-        </NeoModal>
-    );
-};
-
-// ─── Confirm Delete Modal ─────────────────────────────────────────────────
-
-const ConfirmModal: React.FC<{ onConfirm: () => void; onClose: () => void; loading: boolean }> = ({ onConfirm, onClose, loading }) => (
-    <NeoModal isOpen={true} onClose={onClose} title="Eliminar Registro" maxWidth="max-w-md">
-        <p className="text-slate-600 dark:text-neutral-300 mb-6">¿Estás seguro que querés eliminar este registro? Esta acción no se puede deshacer.</p>
-        <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 py-3 border border-slate-300 rounded-lg text-slate-700 font-bold text-sm uppercase hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors">Cancelar</button>
-            <button onClick={onConfirm} disabled={loading} className="flex-1 py-3 bg-red-600 text-white rounded-lg font-bold text-sm uppercase hover:bg-red-700 transition-colors disabled:opacity-50">{loading ? 'Eliminando...' : 'Eliminar'}</button>
+const ConfirmarBorrado: React.FC<{ onConfirm: () => void; onClose: () => void; cargando: boolean }> = ({
+    onConfirm, onClose, cargando,
+}) => (
+    <NeoModal isOpen onClose={onClose} title="Eliminar registro" maxWidth="max-w-md">
+        <p className="text-[14px] font-medium leading-[1.6] text-black/[.68]">
+            Se borra el servicio y sus números. No se puede deshacer.
+        </p>
+        <div className="mt-6 flex gap-2.5">
+            <button
+                onClick={onClose}
+                className="h-12 flex-1 rounded-full bg-[#f2f2f0] text-[14px] font-semibold text-[#0a0a0a] transition-colors hover:bg-[#e9e8e5]"
+            >
+                Cancelar
+            </button>
+            <button
+                onClick={onConfirm}
+                disabled={cargando}
+                className="h-12 flex-1 rounded-full bg-[#a32218] text-[14px] font-semibold text-white transition-colors hover:bg-[#8c1c13] disabled:opacity-50"
+            >
+                {cargando ? 'Eliminando…' : 'Eliminar'}
+            </button>
         </div>
     </NeoModal>
 );
 
-// ─── Summary Panel ────────────────────────────────────────────────────────
+// ─── Pantalla ─────────────────────────────────────────────────────────────
 
-interface SummaryPanelProps {
-    sorted: any[];
-    allRecords: any[];
-}
-
-const SummaryPanel: React.FC<SummaryPanelProps> = ({ sorted, allRecords }) => {
-    // Arranca cerrado siempre: el resumen es contexto, no la tarea. Lo primero
-    // que tiene que verse al entrar es la lista de registros.
-    const [isCollapsed, setIsCollapsed] = useState(true);
-
-    const stats = useMemo(() => {
-        if (sorted.length === 0) return null;
-
-        const last8 = [...sorted]
-            .slice(0, 8)
-            .reverse()
-            .map(r => ({
-                label: new Date(r.service_date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
-                total: calcStats(r).totalFinal,
-                id: r.id,
-            }));
-
-        const last4 = sorted.slice(0, 4);
-        const avgLast4 = last4.length > 0
-            ? Math.round(last4.reduce((sum, r) => sum + calcStats(r).totalFinal, 0) / last4.length)
-            : 0;
-
-        const yoyMatches: number[] = [];
-        last4.forEach(rec => {
-            const key = generateYoYKey(rec.service_date);
-            const recYear = new Date(rec.service_date).getFullYear();
-            const match = allRecords.find(r => {
-                if (r.id === rec.id) return false;
-                const rYear = new Date(r.service_date).getFullYear();
-                if (rYear >= recYear) return false;
-                return generateYoYKey(r.service_date) === key;
-            });
-            if (match) yoyMatches.push(calcStats(match).totalFinal);
-        });
-        const avgYoY = yoyMatches.length > 0
-            ? Math.round(yoyMatches.reduce((a, b) => a + b, 0) / yoyMatches.length)
-            : null;
-
-        const withTotals = sorted.map(r => ({ ...r, _total: calcStats(r).totalFinal }));
-        const best = withTotals.reduce((a, b) => b._total > a._total ? b : a, withTotals[0]);
-        const worst = withTotals.reduce((a, b) => b._total < a._total ? b : a, withTotals[0]);
-
-        const sparkTrend = last8.length >= 2 ? last8[last8.length - 1].total - last8[0].total : 0;
-
-        return {
-            last8, avgLast4, avgYoY, best, worst, sparkTrend,
-            hasYoY: avgYoY !== null,
-            yoyDiff: avgYoY !== null ? avgLast4 - avgYoY : 0,
-            yoyPct: avgYoY !== null && avgYoY > 0
-                ? (((avgLast4 - avgYoY) / avgYoY) * 100).toFixed(1)
-                : null,
-        };
-    }, [sorted, allRecords]);
-
-    if (!stats) return null;
-
-    const fmtDate = (d: string) =>
-        new Date(d + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-    const sparkColor = stats.sparkTrend > 0 ? '#10b981' : stats.sparkTrend < 0 ? '#ef4444' : '#8b5cf6';
-
-    return (
-        <div className="mb-6 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-2xl overflow-hidden shadow-sm">
-            <button
-                type="button"
-                onClick={() => setIsCollapsed(c => !c)}
-                className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-inset"
-            >
-                <div className="flex items-center gap-2.5">
-                    <BarChart3 className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
-                    <span className="text-sm font-bold uppercase tracking-tight text-black dark:text-white">
-                        Resumen del período
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-neutral-500 font-mono normal-case">
-                        {sorted.length} servicio{sorted.length !== 1 ? 's' : ''}
-                    </span>
-                </div>
-                {isCollapsed
-                    ? <ChevronDown className="w-4 h-4 text-slate-400" />
-                    : <ChevronUp className="w-4 h-4 text-slate-400" />
-                }
-            </button>
-
-            {!isCollapsed && (
-                <div className="border-t border-slate-200 dark:border-neutral-700 px-5 py-5">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-                        {/* Promedio últimas 4 */}
-                        <div className="bg-violet-50 dark:bg-violet-950/30 rounded-xl p-4 border border-violet-100 dark:border-violet-900/50">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-violet-500 dark:text-violet-400 mb-1">
-                                Prom. últimas 4
-                            </p>
-                            <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">
-                                {stats.avgLast4.toLocaleString('es-AR')}
-                            </p>
-                            <p className="text-[10px] text-slate-400 dark:text-neutral-500 font-medium mt-1">
-                                personas por servicio
-                            </p>
-                        </div>
-
-                        {/* YoY */}
-                        <div className={`rounded-xl p-4 border ${
-                            !stats.hasYoY
-                                ? 'bg-slate-50 dark:bg-neutral-800/50 border-slate-100 dark:border-neutral-700/50'
-                                : stats.yoyDiff >= 0
-                                    ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-100 dark:border-emerald-900/50'
-                                    : 'bg-red-50 dark:bg-red-950/30 border-red-100 dark:border-red-900/50'
-                        }`}>
-                            <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-slate-500 dark:text-neutral-400">
-                                vs año anterior
-                            </p>
-                            {stats.hasYoY ? (
-                                <>
-                                    <p className={`text-3xl font-black tabular-nums leading-none ${
-                                        stats.yoyDiff >= 0
-                                            ? 'text-emerald-600 dark:text-emerald-400'
-                                            : 'text-red-600 dark:text-red-400'
-                                    }`}>
-                                        {stats.yoyDiff >= 0 ? '+' : ''}{stats.yoyDiff.toLocaleString('es-AR')}
-                                    </p>
-                                    <p className="text-[10px] font-bold mt-1 text-slate-400 dark:text-neutral-500 flex items-center gap-0.5">
-                                        {stats.yoyDiff >= 0
-                                            ? <TrendingUp className="inline w-3 h-3" />
-                                            : <TrendingDown className="inline w-3 h-3" />
-                                        }
-                                        {stats.yoyPct}% vs prom. anterior
-                                    </p>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-xl font-black text-slate-300 dark:text-neutral-600 leading-none">—</p>
-                                    <p className="text-[10px] text-slate-400 dark:text-neutral-500 font-medium mt-1">
-                                        sin datos comparables
-                                    </p>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Mejor servicio */}
-                        <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-4 border border-amber-100 dark:border-amber-900/40">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-500 mb-1">
-                                Mejor servicio
-                            </p>
-                            <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">
-                                {calcStats(stats.best).totalFinal.toLocaleString('es-AR')}
-                            </p>
-                            <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-medium mt-1 truncate">
-                                {stats.best.name || fmtDate(stats.best.service_date)}
-                            </p>
-                        </div>
-
-                        {/* Menor servicio */}
-                        <div className="bg-slate-50 dark:bg-neutral-800/50 rounded-xl p-4 border border-slate-100 dark:border-neutral-700/50">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-neutral-500 mb-1">
-                                Menor servicio
-                            </p>
-                            <p className="text-3xl font-black tabular-nums text-black dark:text-white leading-none">
-                                {calcStats(stats.worst).totalFinal.toLocaleString('es-AR')}
-                            </p>
-                            <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-medium mt-1 truncate">
-                                {stats.worst.name || fmtDate(stats.worst.service_date)}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Sparkline */}
-                    {stats.last8.length >= 2 && (
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-neutral-500 mb-3">
-                                Últimos {stats.last8.length} servicios — Total final
-                            </p>
-                            <div className="h-28">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={stats.last8} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: '#000', border: '2px solid #000',
-                                                color: '#fff', fontWeight: 'bold', fontSize: '11px', borderRadius: '8px'
-                                            }}
-                                            formatter={(value: number) => [value.toLocaleString('es-AR'), 'Total']}
-                                            labelStyle={{ color: '#ccc', fontSize: '10px' }}
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="total"
-                                            stroke={sparkColor}
-                                            strokeWidth={2.5}
-                                            dot={{ r: 4, fill: sparkColor, strokeWidth: 2, stroke: '#fff' }}
-                                            activeDot={{ r: 6, strokeWidth: 2, stroke: '#000' }}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="flex justify-between mt-1 px-2">
-                                <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-600 font-mono">
-                                    {stats.last8[0]?.label}
-                                </span>
-                                <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-600 font-mono">
-                                    {stats.last8[stats.last8.length - 1]?.label}
-                                </span>
-                            </div>
-                        </div>
-                    )}
-
-                    {stats.last8.length < 2 && (
-                        <p className="text-xs text-slate-400 dark:text-neutral-500 font-medium text-center py-4 border border-dashed border-slate-200 dark:border-neutral-700 rounded-xl">
-                            Se necesitan al menos 2 servicios para mostrar la tendencia gráfica.
-                        </p>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
-
-// ─── Main Dashboard ───────────────────────────────────────────────────────
-
-type SortKey = 'service_date' | 'name';
-
-const PastoralCareDashboard: React.FC<PastoralCareDashboardProps> = ({ currentUser }) => {
+const AudienciaServiciosPrincipal: React.FC<Props> = () => {
     const navigate = useNavigate();
-    const [records, setRecords] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [detailRecord, setDetailRecord] = useState<any | null>(null);
-    const [yoyRecord, setYoyRecord] = useState<any | null>(null);
-    const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
-    const [deleteLoading, setDeleteLoading] = useState(false);
-    const [deleteSuccess, setDeleteSuccess] = useState(false);
-    const [sortKey, setSortKey] = useState<SortKey>('service_date');
-    const [sortAsc, setSortAsc] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterYear, setFilterYear] = useState('');
-    const [filterMonth, setFilterMonth] = useState('');
-    const [filterTime, setFilterTime] = useState('');
-    const [filterCategory, setFilterCategory] = useState('');
 
-    const availableYears = Array.from(new Set(records.map(r => r.service_date?.substring(0, 4)).filter(Boolean))).sort().reverse();
+    const [registros, setRegistros] = useState<any[]>([]);
+    const [cargando, setCargando] = useState(true);
 
-    const load = useCallback(async () => {
-        setLoading(true);
+    const [anio, setAnio] = useState('');
+    const [mes, setMes] = useState(ANIO_COMPLETO);
+    const [categoria, setCategoria] = useState(TODOS);
+    const [horario, setHorario] = useState(TODOS);
+    const [busqueda, setBusqueda] = useState('');
+
+    /** Cuál de los servicios del período se compara contra el año anterior. */
+    const [elegido, setElegido] = useState<string | null>(null);
+
+    // La planilla vieja dejaba ordenar tocando el encabezado. El listado sigue
+    // arrancando por el más nuevo —es lo que se viene a mirar— pero quien
+    // necesita leer el año de principio a fin puede darlo vuelta.
+    const [masViejoPrimero, setMasViejoPrimero] = useState(false);
+
+    const [aBorrar, setABorrar] = useState<any | null>(null);
+    const [borrando, setBorrando] = useState(false);
+    const [aviso, setAviso] = useState('');
+
+    const cargar = useCallback(async () => {
+        setCargando(true);
         const data = await supabaseService.getServiceStatistics();
-        setRecords(data);
-        setLoading(false);
+        setRegistros(data);
+        setCargando(false);
     }, []);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => { cargar(); }, [cargar]);
 
-    const handleSort = (key: SortKey) => {
-        if (sortKey === key) setSortAsc(a => !a);
-        else { setSortKey(key); setSortAsc(true); }
+    useScrollRecordado(CLAVE_SCROLL, !cargando);
+
+    const anios = useMemo(
+        () => Array.from(new Set(registros.map(anioDe).filter(Boolean))).sort((a, b) => b - a),
+        [registros]
+    );
+
+    // El año arranca en el último con datos, no en el calendario: si todavía no
+    // se cargó nada de este año la pantalla abriría vacía sin explicar por qué.
+    useEffect(() => {
+        if (!anio && anios.length > 0) setAnio(String(anios[0]));
+    }, [anio, anios]);
+
+    const delAnio = useMemo(
+        () => registros.filter(r => String(anioDe(r)) === anio),
+        [registros, anio]
+    );
+
+    const categorias = useMemo(
+        () => Array.from(new Set(delAnio.map(r => r.category).filter(Boolean))).sort(),
+        [delAnio]
+    );
+    const horarios = useMemo(
+        () => Array.from(new Set(delAnio.map(horarioDe).filter(Boolean))).sort(),
+        [delAnio]
+    );
+
+    /** Todo menos el mes: es la base de la tendencia, que mira más atrás que el mes elegido. */
+    const sinMes = useMemo(() => {
+        const t = busqueda.trim().toLowerCase();
+        return delAnio.filter(r => {
+            if (categoria !== TODOS && (r.category || '') !== categoria) return false;
+            if (horario !== TODOS && horarioDe(r) !== horario) return false;
+            if (t) {
+                // Las observaciones entran en la búsqueda: son el único lugar donde
+                // queda escrito por qué un domingo dio distinto —lluvia, bautismos,
+                // un corte del streaming— y encontrar "bautismos" es justamente
+                // cómo se llega a esos servicios cuando no se recuerda la fecha.
+                const bolsa = [r.name, r.service_date, horarioDe(r), r.category, r.service_type, r.observations]
+                    .filter(Boolean).join(' ').toLowerCase();
+                if (!bolsa.includes(t)) return false;
+            }
+            return true;
+        });
+    }, [delAnio, categoria, horario, busqueda]);
+
+    const filas = useMemo(() => {
+        const conMes = mes === ANIO_COMPLETO
+            ? sinMes
+            : sinMes.filter(r => String(r.service_date || '').slice(5, 7) === mes);
+        const signo = masViejoPrimero ? -1 : 1;
+        return [...conMes].sort((a, b) => {
+            const d = (aFecha(b.service_date).getTime() - aFecha(a.service_date).getTime()) * signo;
+            return d !== 0 ? d : horarioDe(a).localeCompare(horarioDe(b));
+        });
+    }, [sinMes, mes, masViejoPrimero]);
+
+    /**
+     * Los servicios del período que sí tienen asistencia cargada.
+     *
+     * Los martes no miden auditorio ni online —sólo podcast y oración— así que
+     * dan cero. Si entraran en el promedio lo hundirían, y en la tendencia
+     * dejarían huecos donde parece que ese día no vino nadie. Siguen listados
+     * abajo con sus números; lo que no hacen es contar donde no tienen qué
+     * aportar.
+     */
+    const conAsistencia = useMemo(
+        () => filas.filter(r => calcStats(r).totalFinalConOnline > 0),
+        [filas]
+    );
+    const sinAsistencia = filas.length - conAsistencia.length;
+
+    /**
+     * Los últimos doce servicios hasta el final del período elegido.
+     *
+     * Se toman de `sinMes` a propósito: con un mes elegido el mes solo suele
+     * tener cuatro o cinco servicios, y una tendencia de cinco barras no
+     * muestra ninguna tendencia. Así se ve de dónde viene el mes que se está
+     * mirando, aunque las barras se pasen para atrás.
+     */
+    const tendencia = useMemo(() => {
+        if (conAsistencia.length === 0) return [];
+        const corte = Math.max(...conAsistencia.map(r => aFecha(r.service_date).getTime()));
+        return [...sinMes]
+            .filter(r => aFecha(r.service_date).getTime() <= corte && calcStats(r).totalFinalConOnline > 0)
+            .sort((a, b) => {
+                const d = aFecha(a.service_date).getTime() - aFecha(b.service_date).getTime();
+                return d !== 0 ? d : horarioDe(a).localeCompare(horarioDe(b));
+            })
+            .slice(-12);
+    }, [sinMes, conAsistencia]);
+
+    // Al cambiar de período la selección vieja puede no estar más entre las barras.
+    const seleccionado = useMemo(() => {
+        const enTendencia = tendencia.find(r => String(r.id) === String(elegido));
+        if (enTendencia) return enTendencia;
+        return tendencia.length > 0 ? tendencia[tendencia.length - 1] : (conAsistencia[0] || null);
+    }, [tendencia, elegido, conAsistencia]);
+
+    const comparable = useMemo(
+        () => (seleccionado ? buscarAnioAnterior(seleccionado, registros) : null),
+        [seleccionado, registros]
+    );
+
+    const resumen = useMemo(() => {
+        if (conAsistencia.length === 0) return null;
+        const conStats = conAsistencia.map(r => ({ r, s: calcStats(r) }));
+        const total = conStats.reduce((a, x) => ({
+            presencial: a.presencial + x.s.totalFinal,
+            online: a.online + x.s.online,
+            vol: a.vol + x.s.totalVol,
+            base: a.base + x.s.audNinezSinProfes,
+        }), { presencial: 0, online: 0, vol: 0, base: 0 });
+        const n = conStats.length;
+        const combinado = total.presencial + total.online;
+        const mejor = conStats.reduce((a, b) => (b.s.totalFinalConOnline > a.s.totalFinalConOnline ? b : a));
+        const menor = conStats.reduce((a, b) => (b.s.totalFinalConOnline < a.s.totalFinalConOnline ? b : a));
+        return {
+            n,
+            promedio: combinado / n,
+            promPresencial: total.presencial / n,
+            promOnline: total.online / n,
+            pctOnline: combinado > 0 ? (total.online / combinado) * 100 : 0,
+            pctVol: total.base > 0 ? (total.vol / total.base) * 100 : 0,
+            mejor, menor,
+        };
+    }, [conAsistencia]);
+
+    const maxTendencia = Math.max(1, ...tendencia.map(r => calcStats(r).totalFinalConOnline));
+
+    /** La fecha más nueva del período, sin depender de cómo esté ordenada la lista. */
+    const ultimaFecha = filas.reduce(
+        (a, r) => (!a || aFecha(r.service_date) > aFecha(a) ? r.service_date : a),
+        '' as string
+    );
+
+    const hayFiltros = mes !== ANIO_COMPLETO || categoria !== TODOS || horario !== TODOS || busqueda.trim() !== '';
+    const limpiar = () => { setMes(ANIO_COMPLETO); setCategoria(TODOS); setHorario(TODOS); setBusqueda(''); };
+
+    const borrar = async () => {
+        if (!aBorrar) return;
+        setBorrando(true);
+        const ok = await supabaseService.deleteServiceStatistic(aBorrar.id);
+        setBorrando(false);
+        if (!ok) { setAviso('No pudimos eliminar el registro.'); setTimeout(() => setAviso(''), 3500); return; }
+        setABorrar(null);
+        cargar();
+        setAviso('Registro eliminado');
+        setTimeout(() => setAviso(''), 3000);
     };
 
-    const sorted = [...records].filter(rec => {
-        const term = searchTerm.toLowerCase();
-        const matchesSearch = (
-            rec.name?.toLowerCase().includes(term) ||
-            rec.service_date?.includes(term) ||
-            rec.service_time?.toLowerCase().includes(term)
-        );
+    const verDetalle = (r: any) => navigate(`/audiencia-servicios/detalles/${r.id}`);
+    const editar = (r: any) => navigate('/audiencia-servicios/new', { state: { record: r } });
 
-        if (!matchesSearch) return false;
+    const titulo = mes === ANIO_COMPLETO
+        ? (anio ? `Todo ${anio}` : 'Servicios')
+        : `${MESES[Number(mes) - 1]} ${anio}`;
 
-        if (filterYear && !rec.service_date?.startsWith(filterYear)) return false;
-
-        if (filterMonth) {
-            const monthPart = rec.service_date?.split('-')[1];
-            if (monthPart !== filterMonth) return false;
-        }
-
-        if (filterTime && rec.service_time !== filterTime) return false;
-
-        if (filterCategory && rec.category !== filterCategory) return false;
-
-        return true;
-    }).sort((a, b) => {
-        const va = a[sortKey] ?? '';
-        const vb = b[sortKey] ?? '';
-        if (va < vb) return sortAsc ? -1 : 1;
-        if (va > vb) return sortAsc ? 1 : -1;
-        return 0;
-    });
-
-    const handleDelete = async () => {
-        if (!deleteTarget) return;
-        setDeleteLoading(true);
-        const ok = await supabaseService.deleteServiceStatistic(deleteTarget.id);
-        setDeleteLoading(false);
-        if (ok) {
-            setDeleteTarget(null);
-            load();
-            setDeleteSuccess(true);
-            setTimeout(() => setDeleteSuccess(false), 3000);
-        }
-    };
-
-    const fmtDate = (d: string) =>
-        new Date(d + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const botonRedondo = 'flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full bg-[#f2f2f0] text-[#0a0a0a] transition-colors hover:bg-[#e6e5e1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2';
+    const th = 'px-3.5 pb-3 pt-[14px] text-left text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.52]';
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-neutral-950 pb-16">
+        <div id="audiencia-servicios" className="min-h-screen bg-[#f6f6f4] pb-14">
 
-            {/* Header */}
-            <div className="bg-white dark:bg-black border-b border-slate-200 dark:border-white">
-                <div className="w-full px-4 sm:px-6 lg:px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
-                    <div>
-                        <h1 className="text-xl font-black uppercase tracking-tighter leading-none">Audiencia Servicios</h1>
-                        <p className="text-[10px] text-slate-600 dark:text-neutral-400 font-mono uppercase tracking-wider">Estadísticas de Servicios</p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
+            {aviso && (
+                <div
+                    role="status"
+                    className="fixed left-1/2 top-20 z-[130] -translate-x-1/2 rounded-full bg-[#0a0a0a] px-5 py-3 text-[13px] font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,.18)]"
+                >
+                    <span className="flex items-center gap-2"><Check className="h-4 w-4" />{aviso}</span>
+                </div>
+            )}
+
+            {/* ── Encabezado y filtros ── */}
+            <div className="border-b border-[#ecebe8] bg-white">
+                <div className="mx-auto max-w-[1360px] px-4 pb-3.5 pt-4 md:px-7 md:pb-[18px] md:pt-5">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.55]">
+                                Audiencia de Servicios
+                            </p>
+                            <h1 className="mt-[5px] text-[20px] font-semibold tracking-[-0.02em] text-[#0a0a0a] md:text-[24px]">
+                                {titulo}
+                            </h1>
+                        </div>
                         <button
                             onClick={() => navigate('/audiencia-servicios/new')}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-black dark:bg-white text-white dark:text-black font-bold text-xs uppercase rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            className="flex h-[46px] flex-none items-center gap-2 rounded-full bg-[#0a0a0a] pl-4 pr-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#242424] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                         >
-                            <Plus className="w-4 h-4" />
-                            Nuevo Registro
+                            <Plus className="h-4 w-4" strokeWidth={2.4} />
+                            <span className="hidden sm:inline">Cargar servicio</span>
+                            <span className="sm:hidden">Cargar</span>
                         </button>
                     </div>
+
+                    {!cargando && registros.length > 0 && (
+                        <>
+                            <div className="mt-3.5 grid grid-cols-2 gap-2 md:grid-cols-[120px_170px_minmax(0,220px)_minmax(0,190px)]">
+                                <Filtro
+                                    etiqueta="Año"
+                                    value={anio}
+                                    onChange={v => { setAnio(v); setElegido(null); }}
+                                    options={anios.map(a => ({ label: String(a), value: String(a) }))}
+                                />
+                                <Filtro
+                                    etiqueta="Mes"
+                                    value={mes}
+                                    onChange={v => { setMes(v); setElegido(null); }}
+                                    options={[
+                                        { label: 'Todo el año', value: ANIO_COMPLETO },
+                                        ...MESES.map((m, i) => ({ label: m, value: String(i + 1).padStart(2, '0') })),
+                                    ]}
+                                />
+                                <Filtro
+                                    etiqueta="Categoría"
+                                    value={categoria}
+                                    onChange={v => { setCategoria(v); setElegido(null); }}
+                                    options={[
+                                        { label: 'Todas las categorías', value: TODOS },
+                                        ...categorias.map(c => ({ label: c, value: c })),
+                                    ]}
+                                />
+                                <Filtro
+                                    etiqueta="Horario"
+                                    value={horario}
+                                    onChange={v => { setHorario(v); setElegido(null); }}
+                                    options={[
+                                        { label: 'Todos los horarios', value: TODOS },
+                                        ...horarios.map(h => ({ label: h, value: h })),
+                                    ]}
+                                />
+                            </div>
+
+                            {/* El buscador no está en el diseño, pero era la única forma de llegar a
+                                un servicio por nombre y sigue siendo la más rápida. Busca también
+                                dentro de las observaciones. */}
+                            <div className="relative mt-2">
+                                <Search className="pointer-events-none absolute left-4 top-[13px] h-4 w-4 text-black/[.42]" />
+                                <input
+                                    type="text"
+                                    value={busqueda}
+                                    onChange={e => setBusqueda(e.target.value)}
+                                    placeholder="Buscar por nombre, fecha, horario u observaciones"
+                                    className="h-[42px] w-full pl-10 pr-10 text-[13px] font-medium"
+                                />
+                                {busqueda && (
+                                    <button
+                                        onClick={() => setBusqueda('')}
+                                        aria-label="Limpiar la búsqueda"
+                                        className="absolute right-3 top-[11px] flex h-5 w-5 items-center justify-center rounded-full bg-black/[.08] text-black/60 transition-colors hover:bg-black/15"
+                                    >
+                                        <X className="h-3 w-3" strokeWidth={2.6} />
+                                    </button>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="w-full px-4 sm:px-6 lg:px-4 pt-8">
-                {loading && (
-                    <>
-                        {/* Skeleton filters */}
-                        <div className="mb-5 space-y-3">
-                            <div className="h-10 bg-slate-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="h-10 bg-slate-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
-                                <div className="h-10 bg-slate-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
-                                <div className="h-10 bg-slate-200 dark:bg-neutral-800 rounded-xl animate-pulse" />
-                            </div>
-                        </div>
-                        {/* Skeleton cards for mobile */}
-                        <div className="md:hidden space-y-3">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 animate-pulse">
-                                    <div className="flex justify-between mb-3">
-                                        <div className="h-6 w-16 bg-slate-200 dark:bg-neutral-800 rounded-lg" />
-                                        <div className="flex gap-1.5">
-                                            {[1, 2, 3, 4].map((j) => (
-                                                <div key={j} className="w-11 h-11 bg-slate-200 dark:bg-neutral-800 rounded-lg" />
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="h-6 w-3/4 bg-slate-200 dark:bg-neutral-800 rounded mb-3" />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="h-4 bg-slate-200 dark:bg-neutral-800 rounded" />
-                                        <div className="h-4 bg-slate-200 dark:bg-neutral-800 rounded" />
-                                    </div>
-                                </div>
+            <div className="mx-auto max-w-[1360px] px-4 pt-3.5 md:px-7 md:pt-5">
+
+                {cargando && (
+                    <div className="flex flex-col gap-3">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            {[0, 1, 2].map(i => (
+                                <div key={i} className="h-[104px] animate-pulse rounded-[14px] border border-[#e8e9ec] bg-white" />
                             ))}
                         </div>
-                        {/* Skeleton table for desktop */}
-                        <div className="hidden md:block bg-white dark:bg-black border border-slate-200 dark:border-white rounded-lg shadow-sm overflow-x-auto">
-                            <div className="p-4 space-y-3">
-                                {[1, 2, 3, 4, 5].map((i) => (
-                                    <div key={i} className="flex gap-4">
-                                        <div className="h-4 w-24 bg-slate-200 dark:bg-neutral-800 rounded animate-pulse" />
-                                        <div className="h-4 w-48 bg-slate-200 dark:bg-neutral-800 rounded animate-pulse" />
-                                        <div className="h-4 w-16 bg-slate-200 dark:bg-neutral-800 rounded animate-pulse" />
-                                        <div className="h-4 w-20 bg-slate-200 dark:bg-neutral-800 rounded animate-pulse" />
+                        <div className="h-[280px] animate-pulse rounded-[14px] border border-[#e8e9ec] bg-white" />
+                        {[0, 1, 2].map(i => (
+                            <div key={i} className="h-[120px] animate-pulse rounded-[18px] bg-white md:h-[58px]" />
+                        ))}
+                    </div>
+                )}
+
+                {!cargando && registros.length === 0 && (
+                    <div className="flex flex-col items-center rounded-[22px] bg-white px-[22px] py-10 text-center md:px-10 md:py-[60px]">
+                        <div className="flex h-14 items-end gap-1.5">
+                            <span className="h-[22px] w-3.5 rounded-t bg-[#eceae6]" />
+                            <span className="h-[34px] w-3.5 rounded-t bg-[#eceae6]" />
+                            <span className="h-7 w-3.5 rounded-t bg-[#eceae6]" />
+                            <span className="h-1.5 w-3.5 rounded-t bg-[#eceae6]" />
+                        </div>
+                        <p className="mt-[22px] text-[19px] font-semibold text-[#0a0a0a]">Todavía no hay servicios cargados</p>
+                        <p className="mt-2.5 max-w-[380px] text-[13.5px] font-medium leading-[1.65] text-black/[.62]">
+                            Cada servicio se carga después de la reunión. Cuando esté el primero, acá
+                            aparecen los promedios, la tendencia y la comparación contra el año anterior.
+                        </p>
+                        <button
+                            onClick={() => navigate('/audiencia-servicios/new')}
+                            className="mt-[22px] h-12 rounded-full bg-[#0a0a0a] px-[22px] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#242424]"
+                        >
+                            Cargar el primero
+                        </button>
+                    </div>
+                )}
+
+                {!cargando && registros.length > 0 && filas.length === 0 && (
+                    <div className="flex flex-col items-center rounded-[22px] bg-white px-[22px] py-10 text-center md:px-10 md:py-[60px]">
+                        <div className="flex h-14 items-end gap-1.5">
+                            <span className="h-[22px] w-3.5 rounded-t bg-[#eceae6]" />
+                            <span className="h-[34px] w-3.5 rounded-t bg-[#eceae6]" />
+                            <span className="h-7 w-3.5 rounded-t bg-[#eceae6]" />
+                            <span className="h-1.5 w-3.5 rounded-t bg-[#eceae6]" />
+                        </div>
+                        <p className="mt-[22px] text-[19px] font-semibold text-[#0a0a0a]">Ningún servicio con estos filtros</p>
+                        <p className="mt-2.5 max-w-[380px] text-[13.5px] font-medium leading-[1.65] text-black/[.62]">
+                            Probá con otro horario o categoría, o mirá el año completo.
+                        </p>
+                        <div className="mt-[22px] flex flex-wrap justify-center gap-2.5">
+                            <button
+                                onClick={limpiar}
+                                className="h-12 rounded-full bg-[#0a0a0a] px-[22px] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#242424]"
+                            >
+                                Ver todo {anio}
+                            </button>
+                            <button
+                                onClick={() => navigate('/audiencia-servicios/new')}
+                                className="h-12 rounded-full bg-[#f2f2f0] px-[22px] text-[14.5px] font-semibold text-[#0a0a0a] transition-colors hover:bg-[#e6e5e1]"
+                            >
+                                Cargar un servicio
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {!cargando && resumen && (
+                    <div className="mb-[22px]">
+                        {/* ── Tres números del período ── */}
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <div className="rounded-[14px] border border-[#e8e9ec] bg-white px-[18px] py-4">
+                                <p className="text-[12px] font-semibold text-[#6b7280]">Promedio por servicio</p>
+                                <p className="mt-2.5 text-[28px] font-semibold leading-none tracking-[-0.03em] text-[#0f172a]">
+                                    {fmt(resumen.promedio)}
+                                </p>
+                                <p className="mt-1.5 text-[12px] font-medium text-[#6b7280]">
+                                    {fmt(resumen.promPresencial)} presencial + {fmt(resumen.promOnline)} online
+                                    {sinAsistencia > 0 && (
+                                        <>
+                                            {' '}· sobre {resumen.n} con asistencia cargada
+                                        </>
+                                    )}
+                                </p>
+                            </div>
+                            <div className="rounded-[14px] border border-[#e8e9ec] bg-white px-[18px] py-4">
+                                <p className="text-[12px] font-semibold text-[#6b7280]">Siguen online</p>
+                                <p className="mt-2.5 text-[28px] font-semibold leading-none tracking-[-0.03em] text-[#6d4fc8]">
+                                    {Math.round(resumen.pctOnline)}%
+                                </p>
+                                <p className="mt-1.5 text-[12px] font-medium text-[#6b7280]">del total combinado</p>
+                            </div>
+                            <div className="rounded-[14px] border border-[#e8e9ec] bg-white px-[18px] py-4">
+                                <p className="text-[12px] font-semibold text-[#6b7280]">Son voluntarios</p>
+                                <p className="mt-2.5 text-[28px] font-semibold leading-none tracking-[-0.03em] text-[#0f172a]">
+                                    {Math.round(resumen.pctVol)}%
+                                </p>
+                                <p className="mt-1.5 text-[12px] font-medium text-[#6b7280]">de los presentes en el auditorio</p>
+                            </div>
+                        </div>
+
+                        {/* ── Tendencia y comparación ── */}
+                        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+
+                            <div className="min-w-0 rounded-[14px] border border-[#e8e9ec] bg-white px-[18px] py-[18px] md:px-5">
+                                <div className="flex flex-wrap items-start gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[15px] font-semibold text-[#0f172a]">Tendencia</p>
+                                        <p className="mt-1 text-[12.5px] font-medium text-[#6b7280]">
+                                            Últimos {tendencia.length} servicios
+                                            {categoria !== TODOS ? ` · ${categoria}` : ''}
+                                            {horario !== TODOS ? ` · ${horario}` : ''}
+                                        </p>
                                     </div>
-                                ))}
+                                    <div className="flex flex-none gap-3.5">
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="h-[9px] w-[9px] rounded-sm bg-[#2563eb]" />
+                                            <span className="text-[11.5px] font-semibold text-[#4b5563]">Presencial</span>
+                                        </span>
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="h-[9px] w-[9px] rounded-sm bg-[#a48ce8]" />
+                                            <span className="text-[11.5px] font-semibold text-[#4b5563]">Online</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 flex h-[170px] items-end gap-1 border-b border-[#e8e9ec] md:gap-2">
+                                    {tendencia.map(r => {
+                                        const st = calcStats(r);
+                                        const activo = seleccionado && String(r.id) === String(seleccionado.id);
+                                        return (
+                                            <button
+                                                key={r.id}
+                                                onClick={() => setElegido(String(r.id))}
+                                                title={`${fechaCorta(r.service_date)} ${horarioDe(r)} · ${fmt(st.totalFinalConOnline)}`}
+                                                className="flex h-full min-w-0 flex-1 flex-col justify-end transition-opacity"
+                                                style={{ opacity: activo ? 1 : 0.55 }}
+                                            >
+                                                <span
+                                                    className="block rounded-t bg-[#a48ce8]"
+                                                    style={{ height: `${(st.online / maxTendencia) * 100}%` }}
+                                                />
+                                                <span
+                                                    className="block bg-[#2563eb]"
+                                                    style={{ height: `${(st.totalFinal / maxTendencia) * 100}%` }}
+                                                />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="mt-[7px] flex gap-1 md:gap-2">
+                                    {tendencia.map(r => {
+                                        const activo = seleccionado && String(r.id) === String(seleccionado.id);
+                                        const d = aFecha(r.service_date);
+                                        return (
+                                            <span
+                                                key={r.id}
+                                                className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-center text-[10.5px] font-medium"
+                                                style={{ color: activo ? '#0f172a' : '#9ca3af' }}
+                                            >
+                                                {d.getDate()}/{d.getMonth() + 1}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                                <p className="mt-3.5 text-[12px] font-medium text-[#6b7280]">
+                                    Tocá una barra para compararla con el año anterior.
+                                </p>
+                                <p className="mt-1 text-[12px] font-medium text-[#6b7280]">
+                                    El más alto del período fue {fechaCorta(resumen.mejor.r.service_date)} con{' '}
+                                    {fmt(calcStats(resumen.mejor.r).totalFinalConOnline)}
+                                    {resumen.n > 1 && (
+                                        <>
+                                            {' '}· el más bajo, {fechaCorta(resumen.menor.r.service_date)} con{' '}
+                                            {fmt(calcStats(resumen.menor.r).totalFinalConOnline)}
+                                        </>
+                                    )}.
+                                </p>
+                            </div>
+
+                            <div className="min-w-0 rounded-[14px] border border-[#e8e9ec] bg-white px-[18px] py-[18px] md:px-5">
+                                <p className="text-[15px] font-semibold text-[#0f172a]">Contra el año anterior</p>
+                                <p className="mt-1 text-[12.5px] font-medium text-[#6b7280]">
+                                    {seleccionado
+                                        ? `${seleccionado.category || 'Sin categoría'} ${horarioDe(seleccionado)} · ${fechaCorta(seleccionado.service_date)}`
+                                        : ''}
+                                </p>
+
+                                {seleccionado && comparable ? (() => {
+                                    const act = calcStats(seleccionado);
+                                    const ant = calcStats(comparable.registro);
+                                    const max = Math.max(1, act.totalFinalConOnline, ant.totalFinalConOnline);
+                                    const d = ant.totalFinalConOnline > 0
+                                        ? Math.round((act.totalFinalConOnline / ant.totalFinalConOnline - 1) * 100)
+                                        : null;
+                                    const barras = [
+                                        { r: seleccionado, s: act, etiqueta: `${fechaCorta(seleccionado.service_date)} ${anio}`, cAud: '#2563eb', cOn: '#a48ce8' },
+                                        { r: comparable.registro, s: ant, etiqueta: `${fechaCorta(comparable.registro.service_date)} ${Number(anio) - 1}`, cAud: '#9fb7ee', cOn: '#d2c6f3' },
+                                    ];
+                                    return (
+                                        <>
+                                            <div className="mt-4 flex items-baseline gap-2.5">
+                                                <span
+                                                    className="text-[32px] font-semibold leading-none tracking-[-0.03em]"
+                                                    style={{ color: d === null ? '#6b7280' : d >= 0 ? '#12783f' : '#b42318' }}
+                                                >
+                                                    {d === null ? '—' : `${d > 0 ? '+' : ''}${d}%`}
+                                                </span>
+                                                <span className="text-[12.5px] font-medium text-[#6b7280]">
+                                                    {d !== null && d >= 0 ? 'más' : 'menos'} que en {Number(anio) - 1}
+                                                </span>
+                                            </div>
+                                            <div className="mt-4 flex flex-col gap-3">
+                                                {barras.map(b => (
+                                                    <div key={b.r.id}>
+                                                        <div className="flex items-baseline justify-between gap-2.5">
+                                                            <span className="text-[12.5px] font-semibold text-[#374151]">{b.etiqueta}</span>
+                                                            <span className="text-[13px] font-semibold text-[#0f172a]">{fmt(b.s.totalFinalConOnline)}</span>
+                                                        </div>
+                                                        <div
+                                                            className="mt-1.5 flex h-3.5 overflow-hidden rounded-[5px] bg-[#f2f3f5]"
+                                                            style={{ width: `${(b.s.totalFinalConOnline / max) * 100}%` }}
+                                                        >
+                                                            <span
+                                                                className="block"
+                                                                style={{
+                                                                    width: `${b.s.totalFinalConOnline > 0 ? (b.s.totalFinal / b.s.totalFinalConOnline) * 100 : 0}%`,
+                                                                    background: b.cAud,
+                                                                }}
+                                                            />
+                                                            <span
+                                                                className="block"
+                                                                style={{
+                                                                    width: `${b.s.totalFinalConOnline > 0 ? (b.s.online / b.s.totalFinalConOnline) * 100 : 0}%`,
+                                                                    background: b.cOn,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <p className="mt-1 text-[11.5px] font-medium text-[#6b7280]">
+                                                            {fmt(b.s.totalFinal)} presencial · {fmt(b.s.online)} online
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <button
+                                                onClick={() => verDetalle(seleccionado)}
+                                                className="mt-4 flex h-[38px] items-center gap-1.5 rounded-full bg-[#f2f2f0] px-4 text-[12px] font-semibold text-[#0a0a0a] transition-colors hover:bg-[#e6e5e1]"
+                                            >
+                                                Ver este servicio
+                                                <ArrowUpRight className="h-3 w-3" strokeWidth={2.4} />
+                                            </button>
+                                        </>
+                                    );
+                                })() : (
+                                    <div className="mt-4 rounded-[11px] bg-[#f7f8fa] px-4 py-3.5">
+                                        <p className="text-[12.5px] font-medium leading-[1.55] text-[#4b5563]">
+                                            No hay un servicio equivalente cargado el año anterior. La comparación
+                                            aparece cuando existen los dos.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
+                )}
+
+                {!cargando && filas.length > 0 && !resumen && (
+                    <div className="mb-3.5 rounded-[14px] border border-[#e8e9ec] bg-white px-[18px] py-4">
+                        <p className="text-[13px] font-medium leading-[1.55] text-[#4b5563]">
+                            Estos servicios no miden auditorio ni online, así que no hay promedios ni
+                            tendencia para mostrar. Abajo están igual, con lo que sí cargaron.
+                        </p>
+                    </div>
+                )}
+
+                {!cargando && filas.length > 0 && (
+                    <>
+                        {/* ── Las filas ── */}
+                        <div className="mx-0.5 mb-2.5 flex items-baseline justify-between gap-2.5">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.55]">
+                                Servicios cargados
+                            </p>
+                            <span className="text-[12px] font-semibold text-black/[.55]">
+                                {filas.length} {filas.length === 1 ? 'servicio' : 'servicios'}
+                                {hayFiltros ? ` de ${registros.length}` : ''}
+                            </span>
+                        </div>
+
+                        {/* Teléfono: una tarjeta por servicio. */}
+                        <div className="flex flex-col gap-2.5 md:hidden">
+                            {filas.map(r => {
+                                const st = calcStats(r);
+                                const pAud = st.totalFinalConOnline > 0 ? (st.totalFinal / st.totalFinalConOnline) * 100 : 0;
+                                const pOn = st.totalFinalConOnline > 0 ? (st.online / st.totalFinalConOnline) * 100 : 0;
+                                // Un martes no tiene asistencia cargada: mostrarle un 0 grande y
+                                // una barra vacía diría que no vino nadie, y lo que pasa es que
+                                // eso no se mide. Va lo que sí cargó.
+                                const sinAsist = st.totalFinalConOnline === 0;
+                                const podcast = Number(r.podcast) || 0;
+                                const oracion = Number(r.oracion) || 0;
+                                return (
+                                    <div key={r.id} className="rounded-[18px] bg-white px-4 pb-3.5 pt-4">
+                                        <div className="flex items-start gap-3">
+                                            <button onClick={() => verDetalle(r)} className="min-w-0 flex-1 text-left">
+                                                <p className="text-[15px] font-semibold text-[#0a0a0a]">{fechaCorta(r.service_date)}</p>
+                                                <p className="mt-0.5 truncate text-[12.5px] font-medium text-black/[.6]">
+                                                    {r.category || 'Sin categoría'}
+                                                    {horarioDe(r) ? ` · ${horarioDe(r)}` : ''}
+                                                    {r.name ? ` · ${r.name}` : ''}
+                                                </p>
+                                            </button>
+                                            {!sinAsist && (
+                                                <div className="flex-none text-right">
+                                                    <p className="text-[22px] font-semibold leading-none tracking-[-0.025em] text-[#0a0a0a]">
+                                                        {fmt(st.totalFinalConOnline)}
+                                                    </p>
+                                                    <p className="mt-1 text-[11px] font-medium text-black/[.55]">total con online</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {sinAsist ? (
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                <span className="flex h-7 items-center rounded-full bg-[#f2f2f0] px-2.5 text-[12px] font-semibold text-[#0a0a0a]">
+                                                    Podcast {fmt(podcast)}
+                                                </span>
+                                                <span className="flex h-7 items-center rounded-full bg-[#f2f2f0] px-2.5 text-[12px] font-semibold text-[#0a0a0a]">
+                                                    Oración {fmt(oracion)}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="mt-3.5 flex h-2 overflow-hidden rounded-full bg-[#f2f2f0]">
+                                                    <span className="block bg-[#2563eb]" style={{ width: `${pAud}%` }} />
+                                                    <span className="block bg-[#a48ce8]" style={{ width: `${pOn}%` }} />
+                                                </div>
+                                                <div className="mt-2 flex justify-between gap-2.5">
+                                                    <span className="text-[12px] font-semibold text-[#1d4ed8]">{fmt(st.totalFinal)} presencial</span>
+                                                    <span className="text-[12px] font-semibold text-[#6d4fc8]">{fmt(st.online)} online</span>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        <div className="mt-3 flex items-center gap-2 border-t border-[#f2f2f0] pt-3">
+                                            {!sinAsist && (
+                                                <span className="flex h-7 flex-none items-center gap-1.5 rounded-full bg-[#f2f2f0] px-2.5 text-[12px] font-semibold text-[#0a0a0a]">
+                                                    {Math.round(st.pctVol)}%
+                                                    <span className="font-semibold text-black/[.58]">vol · {fmt(st.totalVol)}</span>
+                                                </span>
+                                            )}
+                                            <span className="min-w-0 flex-1" />
+                                            <button onClick={() => verDetalle(r)} className={botonRedondo} title="Ver detalles" aria-label="Ver detalles">
+                                                <ArrowUpRight className="h-[15px] w-[15px]" strokeWidth={2.3} />
+                                            </button>
+                                            <button onClick={() => editar(r)} className={botonRedondo} title="Editar" aria-label="Editar">
+                                                <Pencil className="h-[14px] w-[14px]" strokeWidth={2.2} />
+                                            </button>
+                                            <button onClick={() => setABorrar(r)} className={botonRedondo} title="Eliminar" aria-label="Eliminar">
+                                                <Trash2 className="h-[14px] w-[14px]" strokeWidth={2.2} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Escritorio: la planilla. */}
+                        <div className="hidden overflow-hidden rounded-[18px] bg-white md:block">
+                            <table className="w-full table-fixed">
+                                <colgroup>
+                                    <col className="w-[15%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[10%]" />
+                                    <col className="w-[9%]" />
+                                    <col className="w-[11%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[13%]" />
+                                    <col className="w-[16%]" />
+                                    <col className="w-[10%]" />
+                                </colgroup>
+                                <thead>
+                                    <tr className="border-b border-[#eeeeec]">
+                                        <th className={`${th} !p-0`}>
+                                            <button
+                                                onClick={() => setMasViejoPrimero(v => !v)}
+                                                title={masViejoPrimero ? 'Mostrar primero el más nuevo' : 'Mostrar primero el más viejo'}
+                                                className="flex w-full items-center gap-1 px-3.5 pb-3 pt-[14px] text-left text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.52] transition-colors hover:text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-inset"
+                                            >
+                                                Fecha
+                                                <ChevronDown
+                                                    className={`h-3 w-3 transition-transform ${masViejoPrimero ? 'rotate-180' : ''}`}
+                                                    strokeWidth={2.6}
+                                                />
+                                            </button>
+                                        </th>
+                                        <th className={th}>Horario</th>
+                                        <th className={`${th} text-right`}>Presencial</th>
+                                        <th className={`${th} bg-[#f7f4fd] text-right !text-[#6d4fc8]`}>Online</th>
+                                        <th className={`${th} bg-[#f7f4fd] text-right !text-[#6d4fc8]`}>Total c/ online</th>
+                                        <th className={`${th} text-right`}>Volunt.</th>
+                                        <th className={th}>% Voluntarios</th>
+                                        <th className={th}>Observaciones</th>
+                                        <th className={`${th} text-right`}>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filas.map(r => {
+                                        const st = calcStats(r);
+                                        const pct = Math.round(st.pctVol);
+                                        const sinAsist = st.totalFinalConOnline === 0;
+                                        const guion = <span className="text-black/25">—</span>;
+                                        return (
+                                            <tr key={r.id} className="border-b border-[#f4f4f2] transition-colors hover:bg-[#fafafa]">
+                                                <td className="min-w-0 py-2.5 pl-5 pr-3.5">
+                                                    <p className="text-[13.5px] font-semibold text-[#0a0a0a]">{fechaCorta(r.service_date)}</p>
+                                                    <p className="mt-0.5 truncate text-[11.5px] font-medium text-black/[.55]" title={r.name || r.category || ''}>
+                                                        {r.category || 'Sin categoría'}{r.name ? ` · ${r.name}` : ''}
+                                                    </p>
+                                                </td>
+                                                <td className="px-3.5 text-[13px] font-medium text-black/[.66]">{horarioDe(r) || '—'}</td>
+                                                <td className="px-3.5 text-right text-[13.5px] font-semibold text-[#0a0a0a]">
+                                                    {sinAsist ? guion : fmt(st.totalFinal)}
+                                                </td>
+                                                <td className="bg-[#f7f4fd] px-3.5 text-right text-[13.5px] font-semibold text-[#6d4fc8]">
+                                                    {st.online > 0 ? fmt(st.online) : guion}
+                                                </td>
+                                                <td className="bg-[#f7f4fd] px-3.5 text-right text-[14px] font-bold text-[#0a0a0a]">
+                                                    {sinAsist ? guion : fmt(st.totalFinalConOnline)}
+                                                </td>
+                                                <td className="px-3.5 text-right text-[13.5px] font-semibold text-[#0a0a0a]">
+                                                    {sinAsist ? guion : fmt(st.totalVol)}
+                                                </td>
+                                                <td className="px-3.5">
+                                                    {sinAsist ? (
+                                                        <span className="text-[12.5px] font-medium text-black/[.38]">No se mide</span>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f0efec]">
+                                                                <div className="h-full bg-[#0a0a0a]" style={{ width: `${Math.min(100, pct * 4)}%` }} />
+                                                            </div>
+                                                            <span className="w-9 text-right text-[12.5px] font-bold text-[#0a0a0a]">{pct}%</span>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="min-w-0 px-3.5">
+                                                    <span
+                                                        className="block truncate text-[12.5px] font-medium"
+                                                        style={{ color: r.observations ? 'rgba(0,0,0,.66)' : 'rgba(0,0,0,.38)' }}
+                                                        title={r.observations || ''}
+                                                    >
+                                                        {r.observations || 'Sin observaciones'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-2.5 pl-1.5 pr-4">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <button
+                                                            onClick={() => verDetalle(r)}
+                                                            title="Ver detalles"
+                                                            aria-label="Ver detalles"
+                                                            className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#f2f2f0] text-[#0a0a0a] transition-colors hover:bg-[#e6e5e1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1"
+                                                        >
+                                                            <ArrowUpRight className="h-[14px] w-[14px]" strokeWidth={2.3} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => editar(r)}
+                                                            title="Editar"
+                                                            aria-label="Editar"
+                                                            className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#f2f2f0] text-[#0a0a0a] transition-colors hover:bg-[#e6e5e1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1"
+                                                        >
+                                                            <Pencil className="h-[13px] w-[13px]" strokeWidth={2.2} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setABorrar(r)}
+                                                            title="Eliminar"
+                                                            aria-label="Eliminar"
+                                                            className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#f2f2f0] text-[#0a0a0a] transition-colors hover:bg-[#f7dedb] hover:text-[#a32218] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a32218] focus-visible:ring-offset-1"
+                                                        >
+                                                            <Trash2 className="h-[13px] w-[13px]" strokeWidth={2.2} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                            <div className="border-t border-[#f4f4f2] px-5 py-3">
+                                <p className="text-[11.5px] font-medium text-black/[.5]">
+                                    {filas.length} {filas.length === 1 ? 'servicio' : 'servicios'} en pantalla ·{' '}
+                                    {registros.length} cargados en total
+                                    {conAsistencia.length > 0
+                                        ? ` · el último es del ${fechaNumerica(ultimaFecha)}`
+                                        : ''}
+                                </p>
                             </div>
                         </div>
                     </>
                 )}
-
-                {!loading && records.length === 0 && (
-                    <div className="text-center py-16 px-4">
-                        <div className="w-20 h-20 bg-slate-100 dark:bg-neutral-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Calendar className="w-10 h-10 text-slate-400 dark:text-neutral-500" />
-                        </div>
-                        <h3 className="text-lg font-black uppercase tracking-tight mb-2">Sin registros aún</h3>
-                        <p className="text-slate-600 dark:text-neutral-400 text-sm mb-6 max-w-sm mx-auto">
-                            Comenzá a registrar las estadísticas de los servicios para visualizar métricas y comparativas.
-                        </p>
-                        <button onClick={() => navigate('/audiencia-servicios/new')}
-                            className="inline-flex items-center gap-2 px-5 py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-sm uppercase
-                            rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
-                            <Plus className="w-4 h-4" />
-                            Crear primer registro
-                        </button>
-                    </div>
-                )}
-
-                {/* ── RESUMEN DEL PERÍODO ── */}
-                {!loading && records.length > 0 && (
-                    <SummaryPanel sorted={sorted} allRecords={records} />
-                )}
-
-                {!loading && records.length > 0 && (
-                    <div className="mb-5 space-y-3">
-                        {/* Search bar */}
-                        <div className="relative">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                            <input
-                                type="text"
-                                placeholder="Buscar por fecha, nombre o horario..."
-                                className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 bg-white text-black font-medium placeholder:text-slate-400 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/5 transition-all text-sm shadow-sm"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                            {searchTerm && (
-                                <button
-                                    onClick={() => setSearchTerm('')}
-                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 transition-colors"
-                                >
-                                    <X className="w-3 h-3" />
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Filter chips — 2 cols mobile / 4 cols desktop */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            <FilterChip
-                                label="Año"
-                                value={filterYear}
-                                onChange={setFilterYear}
-                                activeColor="bg-slate-900 border-slate-900 text-white"
-                                options={[
-                                    { label: 'Todos los años', value: '' },
-                                    ...availableYears.map(y => ({ label: y, value: y }))
-                                ]}
-                            />
-                            <FilterChip
-                                label="Mes"
-                                value={filterMonth}
-                                onChange={setFilterMonth}
-                                activeColor="bg-violet-600 border-violet-600 text-white"
-                                options={[
-                                    { label: 'Todos los meses', value: '' },
-                                    { label: 'Enero', value: '01' },
-                                    { label: 'Febrero', value: '02' },
-                                    { label: 'Marzo', value: '03' },
-                                    { label: 'Abril', value: '04' },
-                                    { label: 'Mayo', value: '05' },
-                                    { label: 'Junio', value: '06' },
-                                    { label: 'Julio', value: '07' },
-                                    { label: 'Agosto', value: '08' },
-                                    { label: 'Septiembre', value: '09' },
-                                    { label: 'Octubre', value: '10' },
-                                    { label: 'Noviembre', value: '11' },
-                                    { label: 'Diciembre', value: '12' },
-                                ]}
-                            />
-                            <FilterChip
-                                label="Horario"
-                                value={filterTime}
-                                onChange={setFilterTime}
-                                activeColor="bg-amber-500 border-amber-500 text-white"
-                                options={[
-                                    { label: 'Todos', value: '' },
-                                    { label: 'AM', value: 'AM' },
-                                    { label: 'PM', value: 'PM' },
-                                ]}
-                            />
-                            <FilterChip
-                                label="Categoría"
-                                value={filterCategory}
-                                onChange={setFilterCategory}
-                                activeColor="bg-emerald-600 border-emerald-600 text-white"
-                                options={[
-                                    { label: 'Todas', value: '' },
-                                    { label: 'Servicio de Domingo', value: 'Servicio de Domingo' },
-                                    { label: 'CXV', value: 'CXV' },
-                                    { label: 'Evento', value: 'Evento' },
-                                    { label: 'Conferencia', value: 'Conferencia' },
-                                ]}
-                            />
-                        </div>
-
-                        {/* Results count & clear all */}
-                        <div className="flex items-center justify-between px-1">
-                            <p className="text-xs text-slate-400 font-mono">
-                                {sorted.length} de {records.length} registros
-                            </p>
-                            {(filterYear || filterMonth || filterTime || filterCategory || searchTerm) && (
-                                <button
-                                    onClick={() => { setFilterYear(''); setFilterMonth(''); setFilterTime(''); setFilterCategory(''); setSearchTerm(''); }}
-                                    className="text-xs font-bold text-violet-600 hover:text-violet-800 underline underline-offset-2 transition-colors"
-                                >
-                                    Limpiar filtros
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* ── Mobile: Card list (Groups.tsx style) ── */}
-                {!loading && records.length > 0 && (
-                    <div className="md:hidden space-y-3">
-                        {sorted.map((rec) => {
-                            const s = calcStats(rec);
-                            return (
-                                <div key={rec.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                                    {/* Top row: badge + actions */}
-                                    <div className="flex items-start justify-between mb-3">
-                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide
-                                            ${rec.service_time === 'PM' ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'}`}>
-                                            {rec.service_hour || rec.service_time || '—'}
-                                        </span>
-                                        {/* Kebab-style inline action buttons - 44px minimum touch target */}
-                                        <div className="flex items-center gap-1.5">
-                                            <button onClick={() => setDetailRecord(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-black hover:text-white hover:border-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2" title="Ver detalles" aria-label="Ver detalles">
-                                                <Eye className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => setYoyRecord(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2" title="Comparativa YoY" aria-label="Comparativa año a año">
-                                                <GitCompareArrows className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => navigate('/audiencia-servicios/new', { state: { record: rec } })} className="w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2" title="Editar" aria-label="Editar registro">
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => setDeleteTarget(rec)} className="w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2" title="Eliminar" aria-label="Eliminar registro">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Name */}
-                                    <h3 className="text-base font-bold uppercase tracking-tight text-black leading-tight mb-3">
-                                        {rec.name || <span className="text-slate-400 normal-case font-medium">Sin nombre</span>}
-                                    </h3>
-
-                                    {/* Meta grid */}
-                                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 border-t border-slate-200 pt-3">
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Fecha</p>
-                                            <p className="text-sm font-bold text-black tabular-nums">{fmtDate(rec.service_date)}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Total Voluntarios</p>
-                                            <p className="text-sm font-black text-violet-600 tabular-nums">{s.totalVol.toLocaleString()}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">📡 Online</p>
-                                            <p className="text-sm font-black text-sky-600 tabular-nums">{s.online.toLocaleString()}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Total c/ Online</p>
-                                            <p className="text-sm font-black text-indigo-600 tabular-nums">{s.totalFinalConOnline.toLocaleString()}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                        <p className="text-xs text-slate-500 font-mono px-1 pt-1">
-                            {sorted.length} registro{sorted.length !== 1 ? 's' : ''}
-                        </p>
-                    </div>
-                )}
-
-                {/* ── Desktop: Table ── */}
-                {!loading && records.length > 0 && (
-                    <div className="hidden md:block bg-white dark:bg-black border border-slate-200 dark:border-white rounded-lg shadow-sm overflow-hidden">
-                        <table className="table-fixed w-full text-sm">
-                            {/* Nombre y Observaciones ceden ancho (11%→10%, 20%→17%)
-                                para Horario/Online/Voluntarios/%Vol (6/6/8/5%→8/7/9/6%):
-                                son palabras cortas o medias sin espacio donde partir
-                                ("HORARIO", "ONLINE", "VOLUNTARIOS"), así que con muy
-                                poco margen quedaban partidas letra por letra en vez de
-                                en un punto prolijo — "VOLUNTARIOS" con 8% dejaba una
-                                "S" sola huérfana en la segunda línea incluso en
-                                pantallas grandes (1440px). Nombre y Observaciones
-                                truncan con "…" y conservan el texto completo en el
-                                title al pasar el mouse, así que ceder ese margen no
-                                pierde información. */}
-                            <colgroup>
-                                <col style={{width:'8%'}} />
-                                <col style={{width:'10%'}} />
-                                <col style={{width:'8%'}} />
-                                <col style={{width:'8%'}} />
-                                <col style={{width:'7%'}} />
-                                <col style={{width:'9%'}} />
-                                <col style={{width:'9%'}} />
-                                <col style={{width:'6%'}} />
-                                <col style={{width:'17%'}} />
-                                <col style={{width:'18%'}} />
-                            </colgroup>
-                            {/* Cabecera responsiva: 9px hasta xl (tablet y notebooks
-                                chicos, donde el ancho real por columna sigue siendo
-                                escaso pese al breakpoint), subiendo recién en xl
-                                (≥1280px) al 10px estándar del resto de la app, que es
-                                donde el contenedor ya tiene aire de sobra. Subir la
-                                fuente en lg (1024px) resultó contraproducente: en ese
-                                punto la tabla apenas creció en píxeles reales (el
-                                sidebar fijo se come una porción similar del viewport),
-                                así que texto más grande + más padding a la vez achicó
-                                el espacio disponible en vez de darle más aire.
-                                Sin whitespace-nowrap + break-words: los títulos largos
-                                parten a una segunda línea o, en el peor caso, dentro de
-                                la palabra, en vez de desbordar sobre la columna vecina
-                                — que es lo que pasaba antes en pantallas angostas. */}
-                            <thead>
-                                <tr className="border-b border-slate-200 dark:border-white bg-slate-50 dark:bg-neutral-900">
-                                    <th
-                                        className={`text-left px-1.5 py-2.5 xl:px-4 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words cursor-pointer hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors select-none ${sortKey === 'service_date' ? 'text-black dark:text-white' : 'text-slate-400'}`}
-                                        onClick={() => handleSort('service_date')}
-                                    >
-                                        Fecha
-                                    </th>
-                                    <th
-                                        className={`text-left px-1.5 py-2.5 xl:px-4 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words cursor-pointer hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors select-none ${sortKey === 'name' ? 'text-black dark:text-white' : 'text-slate-400'}`}
-                                        onClick={() => handleSort('name')}
-                                    >
-                                        Nombre
-                                    </th>
-                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">Horario</th>
-                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">Total Asist.</th>
-                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400 bg-sky-50 dark:bg-sky-950/30">Online</th>
-                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400 bg-indigo-50 dark:bg-indigo-950/30">Total c/ Online</th>
-                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">Voluntarios</th>
-                                    <th className="text-center px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">% Vol</th>
-                                    <th className="text-left px-1.5 py-2.5 xl:px-3 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">Observaciones</th>
-                                    <th className="text-center px-1.5 py-2.5 xl:px-4 xl:py-3 text-[9px] xl:text-[10px] font-black uppercase tracking-widest leading-tight break-words text-slate-400">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sorted.map((rec, idx) => {
-                                    const s = calcStats(rec);
-                                    return (
-                                        <tr key={rec.id} className={`border-b border-slate-100 dark:border-neutral-900 hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors ${idx % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-neutral-900/30'}`}>
-                                            <td className="px-4 py-3 font-mono text-sm font-bold tabular-nums whitespace-nowrap">{fmtDate(rec.service_date)}</td>
-                                            <td className="px-4 py-3 font-bold uppercase tracking-tight text-slate-700 dark:text-neutral-300 truncate">
-                                                <span className="block truncate" title={rec.name || '—'}>{rec.name || <span className="text-slate-300 dark:text-neutral-600">—</span>}</span>
-                                            </td>
-                                            <td className="px-3 py-3 font-mono text-sm font-bold text-black dark:text-white text-center">
-                                                {rec.service_hour || rec.service_time || "—"}
-                                            </td>
-                                            <td className="px-3 py-3 font-black tabular-nums text-black dark:text-white text-center text-sm">{s.totalFinal.toLocaleString('es-AR')}</td>
-                                            <td className="px-3 py-3 text-center bg-sky-50/60 dark:bg-sky-950/20">
-                                                {s.online > 0 ? (
-                                                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/50 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 text-xs font-black tabular-nums">
-                                                        {s.online.toLocaleString('es-AR')}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-slate-300 dark:text-neutral-700 text-xs">—</span>
-                                                )}
-                                            </td>
-                                            <td className="px-3 py-3 text-center bg-indigo-50/60 dark:bg-indigo-950/20">
-                                                <span className="font-black tabular-nums text-indigo-700 dark:text-indigo-300 text-sm">{s.totalFinalConOnline.toLocaleString('es-AR')}</span>
-                                            </td>
-                                            <td className="px-3 py-3 font-black tabular-nums text-violet-600 dark:text-violet-400 text-center text-sm">{s.totalVol.toLocaleString('es-AR')}</td>
-                                            <td className="px-3 py-3 font-bold tabular-nums text-slate-500 text-center text-sm">{s.pctVol.toFixed(1)}%</td>
-                                            <td className="px-3 py-3 text-xs text-slate-500 dark:text-neutral-400 truncate" title={rec.observations || ''}>
-                                                {rec.observations || '—'}
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <div className="flex items-center justify-center gap-1.5">
-                                                    <button onClick={() => setDetailRecord(rec)} title="Ver detalles" aria-label="Ver detalles" className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-neutral-700 hover:border-black dark:hover:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1">
-                                                        <Eye className="w-4 h-4" />
-                                                    </button>
-                                                    <button onClick={() => setYoyRecord(rec)} title="Comparativa YoY" aria-label="Comparativa año a año" className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-neutral-700 hover:border-violet-600 hover:bg-violet-600 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-1">
-                                                        <GitCompareArrows className="w-4 h-4" />
-                                                    </button>
-                                                    <button onClick={() => navigate('/audiencia-servicios/new', { state: { record: rec } })} title="Editar" aria-label="Editar registro" className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-neutral-700 hover:border-amber-500 hover:bg-amber-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1">
-                                                        <Pencil className="w-4 h-4" />
-                                                    </button>
-                                                    <button onClick={() => setDeleteTarget(rec)} title="Eliminar" aria-label="Eliminar registro" className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-neutral-700 hover:border-red-500 hover:bg-red-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1">
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                        <div className="px-4 py-3 border-t border-slate-100 dark:border-neutral-900 text-xs text-slate-400 font-mono">
-                            {records.length} registro{records.length !== 1 ? 's' : ''}
-                        </div>
-                    </div>
-                )}
             </div>
 
-            {/* Modals */}
-            {detailRecord && <DetailModal record={detailRecord} onClose={() => setDetailRecord(null)} />}
-            {yoyRecord && <YoYModal record={yoyRecord} allRecords={records} onClose={() => setYoyRecord(null)} />}
-            {deleteTarget && <ConfirmModal onConfirm={handleDelete} onClose={() => setDeleteTarget(null)} loading={deleteLoading} />}
-
-            {/* Toast notification */}
-            {deleteSuccess && (
-                <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 bg-black text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-fadeIn">
-                    <Check className="w-4 h-4" />
-                    <span className="font-bold text-sm uppercase">Registro eliminado</span>
-                </div>
+            {aBorrar && (
+                <ConfirmarBorrado onConfirm={borrar} onClose={() => setABorrar(null)} cargando={borrando} />
             )}
         </div>
     );
 };
 
-export default PastoralCareDashboard;
+export default AudienciaServiciosPrincipal;
