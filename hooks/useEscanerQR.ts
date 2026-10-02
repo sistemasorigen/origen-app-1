@@ -80,6 +80,33 @@ export const useEscanerQR = ({ contenedorId, onCodigo, activo = true }: Opciones
     // cámara no se reinicia cada vez que quien usa el hook vuelve a renderizar.
     useEffect(() => { onCodigoRef.current = onCodigo; }, [onCodigo]);
 
+    /**
+     * Agranda el video hasta tapar su contenedor, con un transform.
+     *
+     * No con width/height: html5-qrcode copia cada cuadro a un lienzo del
+     * tamaño del elemento y mapea la región con `videoWidth / clientWidth` en
+     * X y `videoHeight / clientHeight` en Y. Cambiarle la caja al video
+     * descoloca esos dos factores —el cuadro llega deformado y no se lee
+     * nada— y además infla el lienzo. Un transform es puro dibujo: el layout
+     * no se entera, el lienzo queda del tamaño del stream y la copia es 1:1.
+     *
+     * Se recalcula cuando cambia el tamaño del stream (evento `resize` del
+     * video) y cuando gira el teléfono.
+     */
+    const ajustarEscala = useCallback(() => {
+        const contenedor = document.getElementById(contenedorId);
+        const video = contenedor?.querySelector('video');
+        if (!contenedor || !video) return;
+        const { clientWidth: ancho, clientHeight: alto } = video;
+        if (!ancho || !alto) return;
+        const escala = Math.max(
+            contenedor.clientWidth / ancho,
+            contenedor.clientHeight / alto,
+        );
+        if (!Number.isFinite(escala) || escala <= 0) return;
+        video.style.transform = `translate(-50%, -50%) scale(${escala})`;
+    }, [contenedorId]);
+
     const iniciar = useCallback(async () => {
         // Si ya hay un arranque en curso, se espera a que termine antes de
         // empezar otro.
@@ -159,8 +186,20 @@ export const useEscanerQR = ({ contenedorId, onCodigo, activo = true }: Opciones
                 // dos— y además limita la lectura a un cuadrado centrado que
                 // no coincide con el marco que la persona está mirando. Sin
                 // qrbox se lee todo el cuadro, que en una puerta es más
-                // perdonador.
-                { fps: 10 },
+                // perdonador. Probado: con qrbox, una entrada acercada de más
+                // se sale del recuadro y deja de leerse.
+                {
+                    // 25 y no 10: entre cuadro y cuadro la librería duerme
+                    // 1000/fps. Con 10 eran 100 ms de nada en cada intento,
+                    // y la lectura ahora tarda menos que esa siesta.
+                    fps: 25,
+                    // Cada cuadro que NO tiene QR —o sea, todos los que la
+                    // persona pasa apuntando— se decodifica dos veces: la
+                    // segunda, espejado. Una entrada en la pantalla de un
+                    // celular nunca está espejada, así que ese segundo
+                    // intento es la mitad del trabajo tirada a la basura.
+                    disableFlip: true,
+                },
                 texto => {
                     if (pausadoRef.current) return;
                     onCodigoRef.current(texto);
@@ -171,6 +210,15 @@ export const useEscanerQR = ({ contenedorId, onCodigo, activo = true }: Opciones
             );
             pausadoRef.current = false;
             setActiva(true);
+
+            // El video ya está en el DOM con su tamaño natural: ahora se lo
+            // agranda hasta tapar. El rAF es por si el layout todavía no
+            // asentó; el evento `resize` del video cubre el caso de la cámara
+            // que cambia de resolución sola.
+            ajustarEscala();
+            requestAnimationFrame(ajustarEscala);
+            const video = document.getElementById(contenedorId)?.querySelector('video');
+            video?.addEventListener('resize', ajustarEscala);
 
             // La linterna sólo existe en algunos dispositivos y navegadores.
             // Si no está, el botón no se muestra: mejor que uno que no hace nada.
@@ -187,7 +235,19 @@ export const useEscanerQR = ({ contenedorId, onCodigo, activo = true }: Opciones
             // sirve para diagnosticar sin tener el dispositivo a mano.
             console.error('[useEscanerQR] error de cámara:', err?.name || 'desconocido', err);
         }
-    }, [contenedorId]);
+    }, [contenedorId, ajustarEscala]);
+
+    // Girar el teléfono cambia el contenedor, no el stream: hay que volver a
+    // calcular cuánto tiene que agrandarse el video para taparlo.
+    useEffect(() => {
+        const alCambiar = () => ajustarEscala();
+        window.addEventListener('resize', alCambiar);
+        window.addEventListener('orientationchange', alCambiar);
+        return () => {
+            window.removeEventListener('resize', alCambiar);
+            window.removeEventListener('orientationchange', alCambiar);
+        };
+    }, [ajustarEscala]);
 
 
     // Sólo al montar. El reintento llama a `iniciar` directo, sin pasar por

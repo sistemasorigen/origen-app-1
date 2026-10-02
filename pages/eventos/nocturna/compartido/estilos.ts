@@ -91,9 +91,23 @@ export const ESTILOS_PANEL = `
        forzar width/height al 100% con object-fit:cover dejó el escáner
        ciego, y se veía perfecto.
 
-       Por eso el tamaño sale de min-width/min-height, que recortan
-       conservando el aspecto, y nunca de width/height. El único invariante
-       es clientWidth / clientHeight === videoWidth / videoHeight. */
+       Por eso la caja del video conserva su tamaño natural y el que la
+       agranda hasta tapar la pantalla es un transform, que es puro dibujo y
+       no toca el layout: clientWidth y clientHeight siguen siendo los del
+       stream. La escala la calcula useEscanerQR, que es el único que sabe
+       cuánto mide la cámara, y por eso el transform de acá abajo NO lleva
+       !important: tiene que poder pisarlo desde el inline.
+
+       Esto además es lo que hace que lea rápido. El lienzo mide lo que la
+       caja, así que con la caja en su tamaño natural la copia es 1:1 y
+       zxing trabaja sobre 640x480 en vez de sobre los 1125x844 de la
+       pantalla. Medido con un cuadro sin QR —que es lo que la cámara mira
+       mientras la persona apunta, o sea casi siempre—: 9 ms contra 48 ms.
+
+       Dos invariantes, entonces:
+         clientWidth / clientHeight === videoWidth / videoHeight
+         y la caja no crece más allá del stream: agrandar el lienzo no
+         agrega información, sólo trabajo. */
     #nocturna-panel #nocturna-qr {
         /* position va con !important porque html5-qrcode le escribe
            "position: relative" inline al contenedor, y eso lo saca del
@@ -110,16 +124,25 @@ export const ESTILOS_PANEL = `
         position: absolute !important;
         top: 50% !important;
         left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        /* Tapar sin deformar: la caja crece hasta cubrir y lo que sobra lo
-           recorta el overflow del contenedor. */
+        /* Sin !important y sin escala: el hook lo reemplaza por completo
+           cuando sabe cuánto mide el stream. Mientras tanto, centrado. */
+        transform: translate(-50%, -50%);
+        transform-origin: center;
+        /* El tamaño natural del stream. html5-qrcode le escribe el ancho del
+           contenedor inline, de ahí el !important. */
         width: auto !important;
         height: auto !important;
-        min-width: 100% !important;
-        min-height: 100% !important;
-        max-width: none !important;
-        max-height: none !important;
-        object-fit: cover !important;
+        /* Techo, para que un celular que entregue 1080p no deje un lienzo de
+           2 MP: cada cuadro costaría más que antes de todo esto. Recorta
+           conservando el aspecto, que es el invariante que no se puede
+           romper.
+
+           960 y no 720: medido con una cámara de 720p y una entrada chica en
+           el cuadro —la que se lee de más lejos—, con techo de 720 se
+           pierde y con 960 se lee, por 4 ms más. Bajar más el techo ahorra
+           milisegundos que no se notan y recorta el alcance, que sí. */
+        max-width: 960px !important;
+        max-height: 960px !important;
         display: block !important;
     }
     /* El recuadro sombreado que dibuja la librería: el marco es el del
