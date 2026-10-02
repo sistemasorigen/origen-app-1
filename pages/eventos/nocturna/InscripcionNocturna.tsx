@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { Check, ChevronLeft, Loader2, Plus } from 'lucide-react';
+import { Check, ChevronLeft, Loader2, Lock, Plus } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { useBarraDeAppOculta } from '../../../contexts/BarraDeApp';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
-import { calcularEdad } from '../../../src/utils/nocturna';
+import { calcularEdad, EDAD_MAXIMA, EDAD_MINIMA } from '../../../src/utils/nocturna';
 import {
     ADULTO_VACIO,
     AdultoForm,
@@ -15,7 +15,9 @@ import {
     adultoEsMenorDeEdad,
     armarPayloadNocturna,
     ChicoForm,
+    chicoFueraDeEdad,
     chicosCompletos,
+    edadDelChicoEnElEvento,
     enLista,
     faltanDelChico,
     OTRO_VACIO,
@@ -30,7 +32,9 @@ import {
 } from './compartido/formulario';
 import {
     NocturnaAltaResultado,
+    NocturnaChicoDelGrupo,
     NocturnaConfig,
+    NocturnaGrupo,
     NocturnaTribu,
 } from '../../../types';
 
@@ -45,6 +49,11 @@ import {
  * unicidad de los DNI los valida register_nocturna en la base. Lo de esta
  * pantalla es ayuda visual para no hacerle perder el viaje a nadie.
  */
+
+// El fondo de la pantalla. Está acá y no suelto en el JSX porque lo usan
+// dos cosas: el marco de la página y el <body>, que tiene que quedar del
+// mismo color (ver el efecto de más abajo).
+const FONDO = '#e9e7e3';
 
 // ── Datos del evento y del pago ───────────────────────────────────────────
 // La cuenta es de Mercado Pago, así que el número es un CVU y no un CBU. Se
@@ -68,17 +77,12 @@ const TELEFONO_CONTACTO = '11 5566 7788';
 // del evento y se va a necesitar el día que haya una pantalla de "qué es
 // Nocturna".
 const EVENTO = {
-    // La fecha, escrita entera: dice el día en que entran y el día en que
-    // salen. Para un padre que decide si manda al hijo, "de 23 a 6" obliga a
-    // deducir que la vuelta es al otro día.
-    //
-    // Los   son espacios duros: atan la hora a su AM/PM para que no
-    // se parta entre dos renglones —"11" al final de una línea y "PM" al
-    // principio de la otra es justo el dato que la gente viene a buscar—.
-    // Van escritos con el escape para que se vean en el código.
-    cuando: 'Viernes 30 de Octubre a las 11\u00a0PM hasta Sábado 31 de Octubre hasta las 6\u00a0AM',
+    // La fecha. Las horas van pegadas —"11pm", no "11 pm"— justamente
+    // para que no se puedan partir entre dos renglones: es el dato que la
+    // gente viene a buscar.
+    cuando: 'Viernes 30 de octubre a\u00a0las 11pm hasta las 6am',
     // La invitación: lo que es Nocturna en una línea.
-    propuesta: '¡Un espacio donde adoraremos a Dios y definiremos quién es la mejor Tribu!',
+    propuesta: 'Una noche para pasarla increíble y definir quién es la mejor tribu',
     donde: 'Av. Eva Perón 3932.',
 };
 
@@ -108,7 +112,7 @@ const RUTA = '/nocturna-inscripcion';
 // el alias, pero no quedar guardado para siempre en un dispositivo
 // compartido. Son datos de menores.
 const CLAVE_BORRADOR = 'nocturna.inscripcion.borrador';
-const VERSION_BORRADOR = 1;
+const VERSION_BORRADOR = 2;
 
 interface Comprobante {
     path: string;
@@ -129,6 +133,14 @@ interface Borrador {
     autoriza: boolean | null;
     fotos: boolean | null;
     comprobante: Comprobante | null;
+    /**
+     * La inscripción a la que se le están sumando chicos, si es ese el caso.
+     *
+     * Va en el borrador porque sin esto una recarga a mitad de camino devolvía
+     * a la persona al formulario normal, con los chicos nuevos cargados, para
+     * rebotar recién al final contra "ya hay una inscripción con ese DNI".
+     */
+    grupo?: NocturnaGrupo | null;
 }
 
 const chicoNuevo = (apellido = ''): ChicoForm => ({
@@ -295,7 +307,7 @@ const Bajada: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const Marco: React.FC<{ children: React.ReactNode; sinBarra?: boolean }> = ({ children, sinBarra }) => (
-    <div id="nocturna-inscripcion" className={sinBarra ? 'sin-barra' : undefined} style={{ background: '#e9e7e3' }}>
+    <div id="nocturna-inscripcion" className={sinBarra ? 'sin-barra' : undefined} style={{ background: FONDO }}>
         <style>{ESTILOS}</style>
         {children}
     </div>
@@ -335,18 +347,55 @@ const InscripcionNocturna: React.FC = () => {
     const [errorEnvio, setErrorEnvio] = useState<{ conexion: boolean; texto: string } | null>(null);
     const [resultado, setResultado] = useState<NocturnaAltaResultado | null>(null);
 
+    /**
+     * La inscripción que esta persona YA tiene, cuando la hay y quedó
+     * verificada. Con esto puesto el formulario deja de crear una inscripción
+     * nueva y pasa a sumarle chicos a la que existe.
+     */
+    const [grupo, setGrupo] = useState<NocturnaGrupo | null>(null);
+    /** La hoja de aviso, antes de que decida. */
+    const [aviso, setAviso] = useState<NocturnaGrupo | null>(null);
+    const [buscandoGrupo, setBuscandoGrupo] = useState(false);
+    /**
+     * El último DNI+fecha que se consultó. Sin esto, volver atrás y tocar
+     * "Continuar" de nuevo vuelve a abrir la misma hoja que ya respondió.
+     */
+    const consultado = useRef('');
+
     // Candado del doble envío: un ref y no un estado, porque el segundo toque
     // puede llegar antes de que React vuelva a renderizar.
     const enviandoRef = useRef(false);
     const autocompletado = useRef(false);
     // Mientras se cierra la sesión hay un render en el que el estado ya está
-    // vacío pero `pantalla` sigue en 1 y `user` sigue cargado. Sin este ref,
-    // el efecto de guardado volvía a escribir un borrador justo después de
-    // borrarlo, y el que salta al paso 1 rebotaba a la persona adentro.
+    // vacío pero `pantalla` todavía no volvió a 0. Sin este ref, el efecto de
+    // guardado volvía a escribir un borrador justo después de borrarlo.
     const saliendo = useRef(false);
     const qrRef = useRef<HTMLDivElement>(null);
 
-    useBloqueoDeFondo(modalSalir);
+    useBloqueoDeFondo(modalSalir || !!aviso);
+
+    /**
+     * El fondo, hasta el borde de la pantalla.
+     *
+     * El Layout pinta slate-50 y le deja 32 px de padding abajo a <main>, que
+     * quedan afuera del fondo de esta página: al terminar el scroll se ve un
+     * corte de color. El rebote de iOS muestra lo mismo, porque ahí lo que
+     * asoma es el fondo del <body>.
+     *
+     * Se arregla desde acá y no desde el Layout porque el color es de esta
+     * pantalla; al desmontarse, todo vuelve como estaba.
+     */
+    useEffect(() => {
+        const main = document.getElementById('main-content');
+        const fondoPrevio = document.body.style.backgroundColor;
+        const padPrevio = main ? main.style.paddingBottom : '';
+        document.body.style.backgroundColor = FONDO;
+        if (main) main.style.paddingBottom = '0px';
+        return () => {
+            document.body.style.backgroundColor = fondoPrevio;
+            if (main) main.style.paddingBottom = padPrevio;
+        };
+    }, []);
 
     // ── Config + borrador ─────────────────────────────────────────────────
     useEffect(() => {
@@ -376,6 +425,7 @@ const InscripcionNocturna: React.FC = () => {
                         setAutoriza(b.autoriza ?? null);
                         setFotos(b.fotos ?? null);
                         setComprobante(b.comprobante ?? null);
+                        if (b.grupo?.verificado) setGrupo(b.grupo);
                         const paso = Math.min(6, Math.max(1, Number(b.paso) || 1));
                         setPantalla(paso as Pantalla);
                     } else {
@@ -414,6 +464,7 @@ const InscripcionNocturna: React.FC = () => {
             autoriza,
             fotos,
             comprobante,
+            grupo,
         };
         try { sessionStorage.setItem(CLAVE_BORRADOR, JSON.stringify(b)); } catch { /* sin storage */ }
     }, [cargando, config, pantalla, adulto, chicos, retiro, retiroQuien, otro, autoriza, fotos, comprobante]);
@@ -442,11 +493,6 @@ const InscripcionNocturna: React.FC = () => {
             : { ...a, nombre: cuenta.nombre, apellido: cuenta.apellido, email: cuenta.email, nac: cuenta.nac }));
     }, [cargando, cuenta]);
 
-    // Con sesión no hace falta preguntar cómo entrar.
-    useEffect(() => {
-        if (!cargando && user && pantalla === 0 && !saliendo.current) setPantalla(1);
-    }, [cargando, user, pantalla]);
-
     // Sin sesión ya no hay nada de lo que salir.
     useEffect(() => { if (!user) saliendo.current = false; }, [user]);
 
@@ -459,11 +505,22 @@ const InscripcionNocturna: React.FC = () => {
     useEffect(() => () => { if (vistaPrevia) URL.revokeObjectURL(vistaPrevia); }, [vistaPrevia]);
 
     // ── Derivados ─────────────────────────────────────────────────────────
-    const precio = config?.precioEntrada ?? 0;
+    /**
+     * Sumando chicos, no se crea nada: se le agregan a la inscripción que ya
+     * existe. Cambia el precio, los pasos, lo que dice la pantalla y a qué
+     * función de la base se le manda todo.
+     */
+    const agregando = !!grupo?.verificado;
+    const yaAnotados = grupo?.chicos ?? [];
+
+    // Al que suma un hermano se le cobra el precio que pagó cuando se
+    // inscribió, no el de hoy: es lo mismo que hace la base al rehacer el
+    // total, y si la pantalla dijera otra cosa estaría mintiendo.
+    const precio = (agregando ? grupo?.precioUnitario : config?.precioEntrada) ?? 0;
     const cantidad = chicos.length;
     const total = precio * cantidad;
     const varios = cantidad > 1;
-    const nombres = chicos.map(c => c.nombre.trim() || 'un chico');
+    const nombres = chicos.map(c => c.nombre.trim() || 'un joven');
 
     const edadAdulto = calcularEdad(adulto.nac);
     const adultoEsMenor = adultoEsMenorDeEdad(adulto);
@@ -490,6 +547,48 @@ const InscripcionNocturna: React.FC = () => {
 
     const hayPie = typeof pantalla === 'number' && pantalla >= 1 && pantalla <= 6;
 
+    /**
+     * Los que ya están anotados, en gris y con candado.
+     *
+     * Se dibuja igual en la hoja de aviso y en el paso de los chicos: es el
+     * mismo dato y tiene que leerse como el mismo dato. El candado no es
+     * decoración — es la única señal de que esas filas no se tocan.
+     */
+    const listaDeChicos = (cs: NocturnaChicoDelGrupo[]) => (
+        <div className="rounded-[20px]" style={{ background: PANEL, padding: '2px 16px' }}>
+            {cs.map((c, i) => (
+                <div
+                    key={`${c.nombre}-${c.dni}-${i}`}
+                    className="flex items-center gap-3"
+                    style={{ padding: '13px 0', borderTop: i === 0 ? 'none' : '1px solid #ecebe8' }}
+                >
+                    <Lock className="w-[15px] h-[15px] flex-none" style={{ color: 'rgba(0,0,0,.42)' }} strokeWidth={2.2} />
+                    <span className="min-w-0 flex-1">
+                        <span className="block truncate" style={{ ...fuente(600, '14.5px'), color: 'rgba(0,0,0,.72)' }}>
+                            {`${c.nombre} ${c.apellido}`.trim()}
+                        </span>
+                        <span className="block" style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.5)', marginTop: 1 }}>
+                            {c.tribu} · DNI {c.dni}
+                        </span>
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+
+    /**
+     * Sumando chicos, la pantalla de las fotos no se muestra.
+     *
+     * `acepta_fotos` es una sola respuesta para toda la inscripción y ya está
+     * contestada; la base ignora lo que mande el formulario. Volver a
+     * preguntarlo sería simular que su respuesta de hoy cambia algo.
+     *
+     * La autorización, en cambio, SÍ se vuelve a pedir: los chicos nuevos no
+     * estaban en lo que firmó, y la base guarda esa constancia aparte.
+     */
+    const ultimoPaso = agregando ? 5 : 6;
+    const pasoMostrado = agregando && pantalla === 6 ? 5 : pantalla;
+
     // ── Acciones ──────────────────────────────────────────────────────────
     const irA = (p: Pantalla) => {
         setPantalla(p);
@@ -508,10 +607,11 @@ const InscripcionNocturna: React.FC = () => {
 
     const atras = () => {
         if (pantalla === 'noAut') return irA(4);
-        if (pantalla === 1) {
-            if (user) { setModalSalir(true); return; }
-            return irA(0);
-        }
+        // Volver es volver: la portada ahora existe también con sesión, así
+        // que ya no hay que cerrarla para llegar. Cambiar de cuenta es una
+        // decisión aparte y vive en la portada.
+        if (pantalla === 1) return irA(0);
+        if (agregando && pantalla === 6) return irA(4);
         if (typeof pantalla === 'number' && pantalla > 1) irA((pantalla - 1) as Pantalla);
     };
 
@@ -612,7 +712,11 @@ const InscripcionNocturna: React.FC = () => {
         setEnviando(true);
         setErrorEnvio(null);
 
-        const res = await supabaseService.registerNocturna(armarPayloadNocturna({
+        // El mismo payload para los dos caminos. Sumando, la base lee de acá
+        // el DNI y la fecha del adulto —para reconocerlo—, los chicos nuevos,
+        // el comprobante y la versión de las declaraciones, y lo demás lo
+        // saca de la inscripción guardada.
+        const payload = armarPayloadNocturna({
             adulto,
             chicos,
             seRetiranSolos: retiro === null ? null : retiro === 'si',
@@ -621,7 +725,11 @@ const InscripcionNocturna: React.FC = () => {
             autoriza: autoriza === true,
             aceptaFotos: fotos === true,
             comprobantePath: comprobante.path,
-        }));
+        });
+
+        const res = agregando
+            ? await supabaseService.agregarJovenesNocturna(payload)
+            : await supabaseService.registerNocturna(payload);
 
         if (!res.ok) {
             // Un corte de conexión y un rechazo de la inscripción se arreglan
@@ -643,13 +751,59 @@ const InscripcionNocturna: React.FC = () => {
         irA(7);
     };
 
+    /**
+     * ¿Este adulto ya tiene una inscripción?
+     *
+     * Se pregunta al salir del paso de sus datos, no al final. Al final ya
+     * transfirió $40.000 y subió el comprobante: enterarse ahí de que no
+     * puede inscribirse de nuevo es el peor momento posible.
+     *
+     * Si la consulta falla, la base contesta "no existe" y se sigue como
+     * siempre: el rechazo del final sigue estando, así que nadie se cuela.
+     */
+    const revisarSiYaEstaInscripto = async () => {
+        const clave = `${adulto.dni.trim()}|${adulto.nac}`;
+
+        // Volvió atrás y cambió el DNI o la fecha después de haber aceptado
+        // sumar: ese grupo ya no es el suyo. Se deja de sumar y se vuelve a
+        // preguntar con los datos nuevos, o terminaría agregándole chicos a
+        // una familia que no es la que tiene escrita en la pantalla.
+        if (grupo && clave !== consultado.current) setGrupo(null);
+
+        if (consultado.current === clave) { irA(2); return; }
+
+        setBuscandoGrupo(true);
+        const encontrado = await supabaseService.buscarGrupoNocturna(adulto.dni.trim(), adulto.nac);
+        setBuscandoGrupo(false);
+        consultado.current = clave;
+
+        if (!encontrado.existe) { irA(2); return; }
+        setAviso(encontrado);
+    };
+
+    /** Desde la hoja: sumarle chicos a la inscripción que ya tiene. */
+    const sumarAEsteGrupo = () => {
+        if (!aviso?.verificado) return;
+        setGrupo(aviso);
+        setAviso(null);
+        // Los chicos del formulario pasan a ser SÓLO los que agrega. Los que
+        // ya estaban se muestran aparte y no se tocan.
+        setChicos([]);
+        setAbierto(null);
+        irA(2);
+    };
+
     const seguir = () => {
-        if (!puedeSeguir) {
+        if (!puedeSeguir || buscandoGrupo) {
             setIntento(true);
             if (pantalla === 2 && incompletos[0]) setAbierto(incompletos[0].id);
             return;
         }
+        if (pantalla === 1) { void revisarSiYaEstaInscripto(); return; }
         if (pantalla === 6) { enviar(); return; }
+        // Sumando, de la autorización se va derecho al pago: lo de las fotos
+        // ya está contestado para esta inscripción.
+        if (agregando && pantalla === 4) { irA(6); return; }
         if (typeof pantalla === 'number') irA((pantalla + 1) as Pantalla);
     };
 
@@ -828,9 +982,9 @@ const InscripcionNocturna: React.FC = () => {
     const pendienteTexto = pantalla === 1
         ? 'Completá todos tus datos para seguir.'
         : pantalla === 2
-            ? cantidad === 0 ? 'Agregá al menos un chico.'
-                : incompletos.length === 1 ? `A ${incompletos[0].nombre.trim() || 'un chico'} le faltan datos.`
-                    : `Hay ${incompletos.length} chicos con datos incompletos.`
+            ? cantidad === 0 ? 'Agregá al menos un joven.'
+                : incompletos.length === 1 ? `A ${incompletos[0].nombre.trim() || 'un joven'} le faltan datos.`
+                    : `Hay ${incompletos.length} jóvenes con datos incompletos.`
             : pantalla === 3 ? 'Elegí cómo se retiran.'
                 : pantalla === 4 ? 'Elegí una opción.'
                     : pantalla === 5 ? 'Elegí una opción. Cualquiera te deja seguir.'
@@ -862,18 +1016,26 @@ const InscripcionNocturna: React.FC = () => {
                             >
                                 <ChevronLeft className="w-[17px] h-[17px]" style={{ color: INK }} strokeWidth={2.3} />
                             </button>
-                            {/* El nombre del evento, no el logo: de la marca se
-                                ocupa la navbar de arriba, que lo tiene centrado y
-                                en su tamaño real. */}
-                            <span className="flex-1 text-center" style={{ ...fuente(600, '15px'), color: INK }}>Nocturna</span>
+                            {/* El medio va vacío: de decir dónde está parada la
+                                persona ya se ocupan la navbar de arriba —con el
+                                logo— y la barra de pasos de abajo. Repetir
+                                "Nocturna" entre las dos era una tercera etiqueta
+                                para lo mismo. Queda el espacio, que es lo que
+                                mantiene el botón a la izquierda y el contador a
+                                la derecha. */}
+                            <span className="flex-1" />
                             <span className="w-11 text-right flex-none" style={{ ...fuente(600, '12.5px'), color: 'rgba(0,0,0,.55)' }}>
-                                {hayPie ? `${pantalla} de 6` : ''}
+                                {hayPie ? `${pasoMostrado} de ${ultimoPaso}` : ''}
                             </span>
                         </div>
                         {hayPie && (
                             <div className="grid gap-2 mt-3.5" style={{ gridTemplateColumns: '2fr 3fr 1fr' }}>
-                                {([['1 · Datos', 1, 2], ['2 · Información', 3, 5], ['3 · Pago', 6, 6]] as [string, number, number][]).map(([label, ini, fin]) => {
-                                    const p = pantalla as number;
+                                {([
+                                    ['1 · Datos', 1, 2],
+                                    ['2 · Información', 3, agregando ? 4 : 5],
+                                    ['3 · Pago', ultimoPaso, ultimoPaso],
+                                ] as [string, number, number][]).map(([label, ini, fin]) => {
+                                    const p = pasoMostrado as number;
                                     const tot = fin - ini + 1;
                                     const hechos = Math.max(0, Math.min(tot, p - ini + 1));
                                     const actual = p >= ini && p <= fin;
@@ -986,40 +1148,49 @@ const InscripcionNocturna: React.FC = () => {
                             que se lean juntos, con más aire recién antes de la
                             invitación, que es tono y no dato. */}
                         <div className="mt-7 text-center">
-                            {/* `textWrap: balance` reparte las palabras entre las
-                                dos líneas en vez de dejar una larga y una corta:
-                                en texto centrado ese desbalance es lo primero que
-                                se nota. Donde no está soportado, se ignora. */}
+                            {/* Tres cosas distintas, en este orden: el saludo, el
+                                dato que decide si podés venir, y el tono.
+
+                                El título puede ser grande porque ahora es corto:
+                                entra en dos renglones y deja el nombre del evento
+                                solo en el segundo. Ese corte, y el tamaño, son todo
+                                el énfasis que lleva: no hace falta pintar
+                                "Nocturna" de otro color para que se note.
+
+                                `textWrap: balance` reparte las palabras entre los
+                                renglones en vez de dejar uno largo y uno corto: en
+                                texto centrado ese desbalance es lo primero que se
+                                ve. Donde no está soportado, se ignora. */}
                             <h1
                                 style={{
-                                    ...fuente(700, 'inherit', '1.18'),
-                                    fontSize: 'clamp(24px, 6.8vw, 28px)',
+                                    ...fuente(700, 'inherit', '1.1'),
+                                    fontSize: 'clamp(30px, 8vw, 38px)',
                                     color: INK,
-                                    letterSpacing: '-.022em',
+                                    letterSpacing: '-.03em',
                                     textWrap: 'balance',
                                     margin: 0,
                                 }}
                             >
-                                ¡Bienvenidos a las inscripciones a Nocturna!
+                                ¡Bienvenidos a Nocturna!
                             </h1>
                             <p
                                 style={{
                                     ...fuente(600, '16.5px', '1.4'),
                                     color: INK,
                                     textWrap: 'balance',
-                                    margin: '12px auto 0',
-                                    maxWidth: 330,
+                                    margin: '14px auto 0',
+                                    maxWidth: 380,
                                 }}
                             >
                                 {EVENTO.cuando}
                             </p>
                             <p
                                 style={{
-                                    ...fuente(500, '14.5px', '1.6'),
-                                    color: 'rgba(0,0,0,.6)',
+                                    ...fuente(500, '15px', '1.6'),
+                                    color: 'rgba(0,0,0,.58)',
                                     textWrap: 'balance',
                                     margin: '18px auto 0',
-                                    maxWidth: 420,
+                                    maxWidth: 360,
                                 }}
                             >
                                 {EVENTO.propuesta}
@@ -1029,8 +1200,18 @@ const InscripcionNocturna: React.FC = () => {
                         {/* La zona de acción. El salto de 32 px la separa de la
                             bienvenida; adentro, todo va junto. */}
                         <div className="flex flex-col gap-2.5 mt-8">
-                            <Boton onClick={() => irAutenticarse(false)}>Continuar iniciando sesión</Boton>
-                            <Boton variante="suave" onClick={() => irA(1)}>Entrar a la inscripción sin sesión</Boton>
+                            {user ? (
+                                // Con sesión no hay nada que elegir: una sola
+                                // forma de seguir. La portada igual se muestra
+                                // —es donde dice qué es Nocturna, cuándo es y
+                                // qué hay que tener a mano antes de empezar—.
+                                <Boton onClick={() => irA(1)}>Continuar con la inscripción</Boton>
+                            ) : (
+                                <>
+                                    <Boton onClick={() => irAutenticarse(false)}>Continuar iniciando sesión</Boton>
+                                    <Boton variante="suave" onClick={() => irA(1)}>Entrar a la inscripción sin sesión</Boton>
+                                </>
+                            )}
                         </div>
 
                         {/* Debajo de los botones: no habla de cómo entrar, habla de
@@ -1041,7 +1222,8 @@ const InscripcionNocturna: React.FC = () => {
                             explica por qué rompe el centrado. */}
                         <div className="mt-5 rounded-[20px]" style={{ background: PANEL, padding: '16px 18px' }}>
                             <p style={{ ...fuente(500, '13.5px', '1.6'), color: 'rgba(0,0,0,.66)', margin: 0 }}>
-                                La completa un adulto responsable. Vas a necesitar el DNI de cada chico y el comprobante de la transferencia.
+                                <strong style={{ fontWeight: 600, color: INK }}>Es para jóvenes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.</strong>{' '}
+                                La completa un adulto responsable: vas a necesitar el DNI de cada joven y el comprobante de la transferencia.
                             </p>
                         </div>
 
@@ -1058,16 +1240,38 @@ const InscripcionNocturna: React.FC = () => {
                                 maxWidth: 400,
                             }}
                         >
-                            Si ya tenés cuenta, iniciá sesión y tus datos se completan solos.{' '}
-                            ¿No tenés?{' '}
-                            <button
-                                type="button"
-                                onClick={() => irAutenticarse(true)}
-                                className="border-0 bg-transparent cursor-pointer p-0 underline"
-                                style={{ ...fuente(600, '13px'), color: INK, textUnderlineOffset: 3 }}
-                            >
-                                Registrate en la app
-                            </button>
+                            {user ? (
+                                // Con sesión, lo único que falta decir es con
+                                // qué cuenta se está entrando: en un celular
+                                // prestado puede no ser la propia, y se entera
+                                // recién al ver sus datos en el paso 1.
+                                <>
+                                    Entrás como{' '}
+                                    <strong style={{ fontWeight: 600, color: INK }}>{user.name || user.email}</strong>
+                                    {' '}y tus datos se completan solos.{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => setModalSalir(true)}
+                                        className="border-0 bg-transparent cursor-pointer p-0 underline"
+                                        style={{ ...fuente(600, '13px'), color: INK, textUnderlineOffset: 3 }}
+                                    >
+                                        Usar otra cuenta
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    Si ya tenés cuenta, iniciá sesión y tus datos se completan solos.{' '}
+                                    ¿No tenés?{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => irAutenticarse(true)}
+                                        className="border-0 bg-transparent cursor-pointer p-0 underline"
+                                        style={{ ...fuente(600, '13px'), color: INK, textUnderlineOffset: 3 }}
+                                    >
+                                        Registrate en la app
+                                    </button>
+                                </>
+                            )}
                         </p>
                     </div>
                 )}
@@ -1076,7 +1280,7 @@ const InscripcionNocturna: React.FC = () => {
                 {pantalla === 1 && (
                     <div className="pt-4">
                         <Titulo>Tus datos</Titulo>
-                        <Bajada>Los del adulto responsable de los chicos.</Bajada>
+                        <Bajada>Los del adulto responsable de los jóvenes.</Bajada>
                         {!!cuenta && (
                             <div className="flex gap-3 rounded-[18px] mt-4" style={{ background: PANEL, padding: '14px 16px' }}>
                                 <Tilde />
@@ -1122,18 +1326,41 @@ const InscripcionNocturna: React.FC = () => {
                     </div>
                 )}
 
-                {/* Paso 2 — los chicos */}
+                {/* Paso 2 — los jóvenes */}
                 {pantalla === 2 && (
                     <div className="pt-4">
-                        <Titulo>¿A quién vas a anotar?</Titulo>
-                        <Bajada>Podés anotar a varios chicos en esta misma inscripción.</Bajada>
+                        <Titulo>{agregando ? '¿A quién sumás?' : '¿A quién vas a anotar?'}</Titulo>
+                        <Bajada>
+                            {agregando
+                                ? 'Se agregan a la inscripción que ya tenés, sin tocar lo que está cargado.'
+                                : `Podés anotar a varios en esta misma inscripción. Nocturna es para jóvenes de ${EDAD_MINIMA} a ${EDAD_MAXIMA} años.`}
+                        </Bajada>
+
+                        {agregando && yaAnotados.length > 0 && (
+                            <div className="mt-5">
+                                <p style={{ ...fuente(600, '13px'), color: 'rgba(0,0,0,.55)', margin: '0 2px 8px' }}>
+                                    {yaAnotados.length === 1 ? 'Ya está anotado' : 'Ya están anotados'}
+                                </p>
+                                {listaDeChicos(yaAnotados)}
+                                <p style={{ ...fuente(500, '12.5px', '1.55'), color: 'rgba(0,0,0,.5)', margin: '8px 2px 0' }}>
+                                    Desde acá no se editan. Si hay algo para corregir, escribinos al {TELEFONO_CONTACTO} y lo cambiamos nosotros.
+                                </p>
+                            </div>
+                        )}
+
                         <div className="flex flex-col gap-2.5 mt-5">
                             {chicos.map((c, i) => {
                                 const esteAbierto = abierto === c.id;
                                 const falt = faltan(c);
                                 const nombreCompleto = `${c.nombre} ${c.apellido}`.trim();
                                 const edad = calcularEdad(c.nac);
-                                const alerta = falt.length > 0 && (intento || !esteAbierto);
+                                // La regla del evento: 13 a 18, medidos el día de
+                                // Nocturna. Se mira aparte de `falt` porque no es un
+                                // dato que falte sino uno que no entra.
+                                const fueraDeEdad = chicoFueraDeEdad(c);
+                                const edadEnNocturna = edadDelChicoEnElEvento(c);
+                                const trabado = falt.length > 0 || fueraDeEdad;
+                                const alerta = trabado && (intento || !esteAbierto);
                                 return (
                                     <div
                                         key={c.id}
@@ -1166,7 +1393,7 @@ const InscripcionNocturna: React.FC = () => {
                                                 </span>
                                                 <span className="flex-1 min-w-0">
                                                     <span className="block truncate" style={{ ...fuente(600, '15.5px'), color: INK }}>
-                                                        {nombreCompleto || `Chico ${i + 1}`}
+                                                        {nombreCompleto || `Joven ${i + 1}`}
                                                     </span>
                                                     <span className="block" style={{ ...fuente(500, '13px'), color: falt.length ? AMBAR_INK : 'rgba(0,0,0,.6)', marginTop: 3 }}>
                                                         {falt.length ? `Falta: ${falt.join(', ')}` : `${edad} años · ${c.tribu}`}
@@ -1182,7 +1409,7 @@ const InscripcionNocturna: React.FC = () => {
                                         ) : (
                                             <div style={{ padding: '18px 16px 16px' }}>
                                                 <div className="flex items-center gap-2.5">
-                                                    <Rotulo className="flex-1">{`CHICO ${i + 1} DE ${cantidad}`}</Rotulo>
+                                                    <Rotulo className="flex-1">{`JOVEN ${i + 1} DE ${cantidad}`}</Rotulo>
                                                     <button
                                                         type="button"
                                                         onClick={() => quitarChico(c, i)}
@@ -1193,15 +1420,15 @@ const InscripcionNocturna: React.FC = () => {
                                                     </button>
                                                 </div>
                                                 <div className="grid gap-2 mt-2.5 grid-cols-1 lg:grid-cols-2">
-                                                    <input className="campo" value={c.nombre} placeholder="Nombre" aria-label="Nombre del chico" onChange={e => editarChico(c.id, 'nombre', e.target.value)} />
-                                                    <input className="campo" value={c.apellido} placeholder="Apellido" aria-label="Apellido del chico" onChange={e => editarChico(c.id, 'apellido', e.target.value)} />
+                                                    <input className="campo" value={c.nombre} placeholder="Nombre" aria-label="Nombre del joven" onChange={e => editarChico(c.id, 'nombre', e.target.value)} />
+                                                    <input className="campo" value={c.apellido} placeholder="Apellido" aria-label="Apellido del joven" onChange={e => editarChico(c.id, 'apellido', e.target.value)} />
                                                 </div>
                                                 <input
                                                     className="campo mt-2"
                                                     value={c.dni}
                                                     placeholder="DNI"
                                                     inputMode="numeric"
-                                                    aria-label="DNI del chico"
+                                                    aria-label="DNI del joven"
                                                     onChange={e => editarChico(c.id, 'dni', soloDigitos(e.target.value, 9))}
                                                 />
                                                 <p style={{ ...fuente(600, '13px'), color: 'rgba(0,0,0,.62)', margin: '18px 0 8px' }}>Fecha de nacimiento</p>
@@ -1211,20 +1438,34 @@ const InscripcionNocturna: React.FC = () => {
                                                         style={{ flex: 1, minWidth: 0 }}
                                                         type="date"
                                                         value={c.nac}
-                                                        aria-label="Fecha de nacimiento del chico"
+                                                        aria-label="Fecha de nacimiento del joven"
                                                         onChange={e => editarChico(c.id, 'nac', e.target.value)}
                                                     />
                                                     <span
                                                         className="h-[54px] px-4 rounded-2xl flex items-center whitespace-nowrap flex-none"
                                                         style={{
                                                             ...fuente(600, '14.5px'),
-                                                            background: edad === null ? '#fafaf9' : INK,
-                                                            color: edad === null ? 'rgba(0,0,0,.4)' : '#fff',
+                                                            background: edad === null ? '#fafaf9' : fueraDeEdad ? AMBAR : INK,
+                                                            color: edad === null ? 'rgba(0,0,0,.4)' : fueraDeEdad ? AMBAR_INK : '#fff',
                                                         }}
                                                     >
                                                         {edad === null ? 'Edad —' : `${edad} años`}
                                                     </span>
                                                 </div>
+                                                {/* El número que importa no es el de hoy sino el
+                                                    del día del evento, y por eso el mensaje lo
+                                                    dice con todas las letras: si no, alguien que
+                                                    ve "12 años" y cumple la semana que viene no
+                                                    entiende por qué no lo deja. */}
+                                                {fueraDeEdad && (
+                                                    <p
+                                                        className="rounded-[14px]"
+                                                        style={{ ...fuente(500, '13px', '1.55'), color: AMBAR_INK, background: AMBAR, padding: '10px 12px', margin: '10px 0 0' }}
+                                                    >
+                                                        Nocturna es para jóvenes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.{' '}
+                                                        {c.nombre.trim() || 'Este joven'} va a tener {edadEnNocturna} el día del evento.
+                                                    </p>
+                                                )}
                                                 <p style={{ ...fuente(600, '13px'), color: 'rgba(0,0,0,.62)', margin: '18px 0 8px' }}>Tribu</p>
                                                 <div className="grid grid-cols-3 gap-1.5">
                                                     {TRIBUS.map(t => (
@@ -1246,18 +1487,22 @@ const InscripcionNocturna: React.FC = () => {
                                                 </div>
                                                 <button
                                                     type="button"
-                                                    onClick={() => { if (!falt.length) setAbierto(null); }}
+                                                    onClick={() => { if (!trabado) setAbierto(null); }}
                                                     className="w-full rounded-full border-0 mt-5"
                                                     style={{
                                                         minHeight: 54,
                                                         padding: '0 18px',
                                                         ...fuente(600, '15px'),
-                                                        background: falt.length ? CAMPO : INK,
-                                                        color: falt.length ? 'rgba(0,0,0,.55)' : '#fff',
-                                                        cursor: falt.length ? 'default' : 'pointer',
+                                                        background: trabado ? CAMPO : INK,
+                                                        color: trabado ? 'rgba(0,0,0,.55)' : '#fff',
+                                                        cursor: trabado ? 'default' : 'pointer',
                                                     }}
                                                 >
-                                                    {falt.length ? `Falta: ${falt.join(', ')}` : `Listo, guardar a ${c.nombre.trim() || 'este chico'}`}
+                                                    {falt.length
+                                                        ? `Falta: ${falt.join(', ')}`
+                                                        : fueraDeEdad
+                                                            ? 'No entra en la edad de Nocturna'
+                                                            : `Listo, guardar a ${c.nombre.trim() || 'este joven'}`}
                                                 </button>
                                             </div>
                                         )}
@@ -1267,7 +1512,7 @@ const InscripcionNocturna: React.FC = () => {
                             {cantidad === 0 && (
                                 <div className="rounded-[22px] text-center" style={{ background: PANEL, padding: '28px 20px' }}>
                                     <p style={{ ...fuente(600, '15px'), color: INK, margin: 0 }}>Todavía no anotaste a nadie</p>
-                                    <p style={{ ...fuente(500, '13.5px'), color: 'rgba(0,0,0,.6)', margin: '6px 0 0' }}>Agregá al primer chico para seguir.</p>
+                                    <p style={{ ...fuente(500, '13.5px'), color: 'rgba(0,0,0,.6)', margin: '6px 0 0' }}>Agregá al primer joven para seguir.</p>
                                 </div>
                             )}
                             <button
@@ -1277,7 +1522,7 @@ const InscripcionNocturna: React.FC = () => {
                                 style={{ border: '1.5px dashed #d9d8d4', ...fuente(600, '15px'), color: INK }}
                             >
                                 <Plus className="w-[17px] h-[17px]" strokeWidth={2.4} />
-                                {cantidad ? 'Agregar otro chico' : 'Agregar un chico'}
+                                {cantidad ? 'Agregar otro joven' : 'Agregar un joven'}
                             </button>
                         </div>
                     </div>
@@ -1412,8 +1657,17 @@ const InscripcionNocturna: React.FC = () => {
                             <p style={{ ...fuente(600, '13px'), color: 'rgba(255,255,255,.6)', margin: 0 }}>Total a transferir</p>
                             <p style={{ ...fuente(600, '36px'), color: '#fff', letterSpacing: '-.03em', margin: '6px 0 0' }}>{plata(total)}</p>
                             <p style={{ ...fuente(500, '13px'), color: 'rgba(255,255,255,.66)', margin: '4px 0 0' }}>
-                                {cantidad} {cantidad === 1 ? 'chico' : 'chicos'} × {plata(precio)}
+                                {cantidad} {cantidad === 1 ? 'joven' : 'jóvenes'} × {plata(precio)}
                             </p>
+                            {/* Sumando, el monto es sólo por los nuevos y al precio
+                                que pagó esta familia. Sin esta línea, quien ya pagó
+                                tres entradas ve un número y no sabe si le están
+                                cobrando todo de nuevo. */}
+                            {agregando && (
+                                <p style={{ ...fuente(500, '12.5px', '1.5'), color: 'rgba(255,255,255,.66)', margin: '10px 0 0' }}>
+                                    Es sólo por {cantidad === 1 ? 'el que suma' : 'los que suma'}s ahora, al mismo precio que pagaste al inscribirte. Lo que ya pagaste no se vuelve a cobrar.
+                                </p>
+                            )}
                         </div>
                         {/* Los datos para transferir, en UNA tarjeta.
                             ──────────────────────────────────────────────────
@@ -1575,9 +1829,13 @@ const InscripcionNocturna: React.FC = () => {
                             <div className="w-[60px] h-[60px] mx-auto rounded-full flex items-center justify-center" style={{ background: '#eaf6ee' }}>
                                 <Check className="w-[26px] h-[26px]" style={{ color: VERDE }} strokeWidth={2.6} />
                             </div>
-                            <h1 style={{ ...fuente(600, '26px', '1.2'), color: INK, letterSpacing: '-.02em', margin: '18px 0 0' }}>Quedaron anotados</h1>
+                            <h1 style={{ ...fuente(600, '26px', '1.2'), color: INK, letterSpacing: '-.02em', margin: '18px 0 0' }}>
+                                {agregando ? 'Quedaron sumados' : 'Quedaron anotados'}
+                            </h1>
                             <p style={{ ...fuente(500, '14.5px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px auto 0', maxWidth: 400 }}>
-                                La entrada también te llega por email a {adulto.email || 'tu correo'}. Puede demorar un rato, por eso te la dejamos acá.
+                                {agregando
+                                    ? 'Están en la misma inscripción que ya tenías. El QR y el código no cambiaron: si guardaste la entrada, esa misma sirve para todos.'
+                                    : `La entrada también te llega por email a ${adulto.email || 'tu correo'}. Puede demorar un rato, por eso te la dejamos acá.`}
                             </p>
                         </div>
                         <div className="rounded-[24px] mt-5 flex flex-col items-center" style={{ background: PANEL, padding: 22 }}>
@@ -1599,7 +1857,7 @@ const InscripcionNocturna: React.FC = () => {
                         </div>
                         <div className="mt-3.5">
                             {([
-                                [varios ? 'Chicos' : 'Chico', enLista(chicos.map(c => `${c.nombre} ${c.apellido}`.trim() || 'Sin nombre'))],
+                                [varios ? 'Jóvenes' : 'Joven', enLista(chicos.map(c => `${c.nombre} ${c.apellido}`.trim() || 'Sin nombre'))],
                                 ['A nombre de', nombreAdulto || '—'],
                                 ['Retiro', retiroTexto],
                                 ['Pagado', plata(resultado.total ?? total)],
@@ -1617,7 +1875,7 @@ const InscripcionNocturna: React.FC = () => {
                 )}
             </main>
 
-            {/* Deshacer el quitado de un chico */}
+            {/* Deshacer el quitado de un joven */}
             {quitado && pantalla === 2 && (
                 <div className="fixed left-4 right-4 z-30 flex justify-center pointer-events-none" style={{ bottom: 104 }}>
                     <div
@@ -1625,7 +1883,7 @@ const InscripcionNocturna: React.FC = () => {
                         style={{ maxWidth: 420, background: INK, padding: '10px 10px 10px 18px' }}
                     >
                         <span className="flex-1 min-w-0" style={{ ...fuente(600, '13.5px'), color: '#fff' }}>
-                            Quitaste a {quitado.chico.nombre.trim() || 'un chico'}
+                            Quitaste a {quitado.chico.nombre.trim() || 'un joven'}
                         </span>
                         <button
                             type="button"
@@ -1659,15 +1917,15 @@ const InscripcionNocturna: React.FC = () => {
                                     <p style={{ ...fuente(600, '17px'), color: INK, margin: 0 }}>{plata(total)}</p>
                                     <p style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.58)', margin: '2px 0 0' }}>
                                         {cantidad
-                                            ? `${cantidad} ${cantidad === 1 ? 'chico' : 'chicos'} × ${plata(precio)}`
-                                            : 'Agregá al menos un chico'}
+                                            ? `${cantidad} ${cantidad === 1 ? 'joven' : 'jóvenes'} × ${plata(precio)}`
+                                            : 'Agregá al menos un joven'}
                                     </p>
                                 </div>
                             )}
                             <button
                                 type="button"
                                 onClick={seguir}
-                                disabled={enviando}
+                                disabled={enviando || buscandoGrupo}
                                 // Sin aria-disabled a propósito: el botón se ve
                                 // apagado pero responde, y al tocarlo dice qué
                                 // falta. Anunciarlo como deshabilitado sería
@@ -1682,8 +1940,8 @@ const InscripcionNocturna: React.FC = () => {
                                     cursor: enviando ? 'default' : 'pointer',
                                 }}
                             >
-                                {enviando && <Loader2 className="w-4 h-4 animate-spin" />}
-                                {enviando ? 'Guardando…' : etiquetaSeguir}
+                                {(enviando || buscandoGrupo) && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {enviando ? 'Guardando…' : buscandoGrupo ? 'Revisando…' : etiquetaSeguir}
                             </button>
                         </div>
                         {intento && !puedeSeguir && !(pantalla === 1 && adultoEsMenor) && (
@@ -1693,7 +1951,62 @@ const InscripcionNocturna: React.FC = () => {
                 </div>
             )}
 
-            {/* Volver atrás con sesión abierta */}
+            {/* El aviso: con ese DNI ya hay una inscripción.
+                ────────────────────────────────────────────────────────────
+                Aparece al salir del paso de sus datos y no al final, que es
+                donde aparecía antes: para entonces ya transfirió. */}
+            {aviso && (
+                <div
+                    className="fixed inset-0 z-40 flex justify-center items-end lg:items-center"
+                    style={{ background: 'rgba(10,10,10,.42)', padding: 12 }}
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div className="w-full rounded-[26px]" style={{ maxWidth: 440, background: '#fff', padding: '24px 22px 20px' }}>
+                        {aviso.verificado ? (
+                            <>
+                                <p style={{ ...fuente(600, '19px', '1.3'), color: INK, margin: 0 }}>
+                                    Ya tenés una inscripción
+                                </p>
+                                <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0' }}>
+                                    Con tu DNI ya {(aviso.chicos?.length ?? 0) === 1 ? 'hay un joven anotado' : `hay ${aviso.chicos?.length ?? 0} jóvenes anotados`} para Nocturna. No hace falta hacer otra: podés sumar a quien falte acá mismo y queda todo en la misma entrada.
+                                </p>
+
+                                <div className="mt-4">{listaDeChicos(aviso.chicos ?? [])}</div>
+
+                                <p style={{ ...fuente(500, '12.5px', '1.55'), color: 'rgba(0,0,0,.5)', margin: '10px 2px 0' }}>
+                                    A ellos no los vas a poder editar desde acá. Si hay algo para corregir, escribinos al {TELEFONO_CONTACTO}.
+                                </p>
+
+                                <div className="flex flex-col gap-2 mt-5">
+                                    <Boton onClick={sumarAEsteGrupo}>Sumar a alguien más</Boton>
+                                    <Boton variante="suave" onClick={() => setAviso(null)}>Revisar mis datos</Boton>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                {/* Sin la fecha de nacimiento no se muestra NADA de
+                                    esa inscripción: son chicos, y el DNI de un
+                                    desconocido no puede ser la llave para verlos. */}
+                                <p style={{ ...fuente(600, '19px', '1.3'), color: INK, margin: 0 }}>
+                                    Ya hay una inscripción con ese DNI
+                                </p>
+                                <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0' }}>
+                                    Si es tuya, revisá la fecha de nacimiento: tiene que ser la misma que cargaste cuando te inscribiste. Si no es tuya, fijate que el DNI esté bien escrito.
+                                </p>
+                                <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '12px 0 0' }}>
+                                    Si sigue sin andar, escribinos al {TELEFONO_CONTACTO} y lo vemos.
+                                </p>
+                                <div className="flex flex-col gap-2 mt-5">
+                                    <Boton onClick={() => setAviso(null)}>Revisar mis datos</Boton>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Cambiar de cuenta, desde la portada */}
             {modalSalir && (
                 <div
                     className="fixed inset-0 z-40 flex justify-center items-end lg:items-center"
@@ -1702,13 +2015,13 @@ const InscripcionNocturna: React.FC = () => {
                     aria-modal="true"
                 >
                     <div className="w-full rounded-[26px]" style={{ maxWidth: 420, background: '#fff', padding: '24px 22px 20px' }}>
-                        <p style={{ ...fuente(600, '19px', '1.3'), color: INK, margin: 0 }}>Si volvés, se cierra tu sesión</p>
+                        <p style={{ ...fuente(600, '19px', '1.3'), color: INK, margin: 0 }}>¿Usar otra cuenta?</p>
                         <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0' }}>
-                            Volvés a la pantalla de entrada para elegir otra forma de inscribirte. Lo que cargaste se borra de este dispositivo.
+                            Se cierra la sesión{cuenta?.nombre ? ` de ${cuenta.nombre}` : ''} en este dispositivo. Lo que hayas cargado de esta inscripción se borra.
                         </p>
                         <div className="flex flex-col gap-2 mt-5">
-                            <Boton onClick={() => setModalSalir(false)}>Seguir con mi inscripción</Boton>
-                            <Boton variante="suave" onClick={cerrarSesionYVolver}>Cerrar sesión y volver</Boton>
+                            <Boton onClick={() => setModalSalir(false)}>Seguir con esta cuenta</Boton>
+                            <Boton variante="suave" onClick={cerrarSesionYVolver}>Cerrar sesión</Boton>
                         </div>
                     </div>
                 </div>

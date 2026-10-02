@@ -39,9 +39,6 @@ export const PLANTILLA_ENTRADA = String.raw`<!DOCTYPE html>
   .muted{color:#a8a6a1 !important}
   .rule td{border-top-color:#2f2f2c !important}
   td.qrbox,.qrbox,.qrbox td{background-color:#ffffff !important}
-  td.retiro,.retiro,.retiro td{background-color:#f4f3f0 !important}
-  .retiro .rink{color:#0a0a0a !important}
-  .retiro .rmuted{color:#55534e !important}
 }
 body.force-dark .canvas,body.force-dark .canvas td{background-color:#141413 !important}
 body.force-dark td.card,body.force-dark .card,body.force-dark .card td{background-color:#1c1c1a !important}
@@ -50,9 +47,6 @@ body.force-dark .ink{color:#f4f3f0 !important}
 body.force-dark .muted{color:#a8a6a1 !important}
 body.force-dark .rule td{border-top-color:#2f2f2c !important}
 body.force-dark td.qrbox,body.force-dark .qrbox,body.force-dark .qrbox td{background-color:#ffffff !important}
-body.force-dark td.retiro,body.force-dark .retiro,body.force-dark .retiro td{background-color:#f4f3f0 !important}
-body.force-dark .retiro .rink{color:#0a0a0a !important}
-body.force-dark .retiro .rmuted{color:#55534e !important}
 </style>
 </head>
 <body style="margin:0;padding:0;background-color:#f2f2f0" bgcolor="#f2f2f0">
@@ -79,7 +73,7 @@ body.force-dark .retiro .rmuted{color:#55534e !important}
 
         <tr><td class="px ink" bgcolor="#ffffff" style="background-color:#ffffff;padding:32px 36px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#0a0a0a">Hola {{nombreAdulto}}, tu inscripción a Nocturna quedó confirmada.</td></tr>
         <tr><td class="px ink h1" bgcolor="#ffffff" style="background-color:#ffffff;padding:10px 36px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:30px;line-height:36px;font-weight:600;letter-spacing:-0.5px;color:#0a0a0a">Esta es tu entrada</td></tr>
-        <tr><td class="px muted" bgcolor="#ffffff" style="background-color:#ffffff;padding:8px 36px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#55534e"><strong class="ink" style="color:#0a0a0a;font-weight:600">Un solo QR para toda la familia.</strong> Entran todos con este mismo código, no hay uno por chico.</td></tr>
+        <tr><td class="px muted" bgcolor="#ffffff" style="background-color:#ffffff;padding:8px 36px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#55534e"><strong class="ink" style="color:#0a0a0a;font-weight:600">Un solo QR para toda la familia.</strong> Entran todos con este mismo código, no hay uno por joven.</td></tr>
 
         <tr><td class="px" align="center" bgcolor="#ffffff" style="background-color:#ffffff;padding:22px 36px 0">
           <table role="presentation" class="qrbox" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color:#ffffff;border:1px solid #e3e2de;border-radius:20px">
@@ -109,33 +103,6 @@ body.force-dark .retiro .rmuted{color:#55534e !important}
             </td></tr>
           </table>
         </td></tr>
-
-        <tr><td class="px ink" bgcolor="#ffffff" style="background-color:#ffffff;padding:32px 36px 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:19px;line-height:26px;font-weight:600;color:#0a0a0a">Quiénes van y cómo vuelven</td></tr>
-        <tr><td class="px muted" bgcolor="#ffffff" style="background-color:#ffffff;padding:0 36px 6px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#55534e">Termina el sábado a las 6 AM. Revisá quién retira a cada uno.</td></tr>
-
-        <!-- INICIO CHICO -->
-        <tr><td class="px" bgcolor="#ffffff" style="background-color:#ffffff;padding:10px 36px 0">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color:#ffffff;border:1px solid #e3e2de;border-radius:18px">
-            <tr><td bgcolor="#ffffff" style="background-color:#ffffff;padding:16px 20px 12px;border-radius:18px 18px 0 0">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color:#ffffff">
-                <tr>
-                  <td class="ink" bgcolor="#ffffff" style="background-color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:16px;line-height:22px;font-weight:600;color:#0a0a0a">{{nombreChico}}</td>
-                  <td class="muted" align="right" bgcolor="#ffffff" style="background-color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:13px;line-height:22px;color:#6b6a66;white-space:nowrap">{{tribuChico}}</td>
-                </tr>
-              </table>
-            </td></tr>
-            <tr><td style="padding:0 8px 8px">
-              <table role="presentation" class="retiro" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color:#0a0a0a;border-radius:12px">
-                <tr><td class="retiro" bgcolor="#0a0a0a" style="background-color:#0a0a0a;padding:12px 14px;border-radius:12px">
-                  <span class="rmuted" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.6px;color:#bdbbb5">RETIRO A LAS 6 AM</span><br>
-                  <span class="rink" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:17px;line-height:24px;font-weight:600;color:#ffffff">{{retiroChico}}</span>
-                </td></tr>
-              </table>
-            </td></tr>
-          </table>
-        </td></tr>
-        <!-- FIN CHICO -->
-
         <tr><td class="px" bgcolor="#ffffff" style="background-color:#ffffff;padding:24px 36px 0">
           <table role="presentation" class="rule" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color:#ffffff">
             <tr><td bgcolor="#ffffff" style="background-color:#ffffff;border-top:1px solid #ecebe8;font-size:0;line-height:0;height:1px">&nbsp;</td></tr>
@@ -154,12 +121,11 @@ body.force-dark .retiro .rmuted{color:#55534e !important}
           <table role="presentation" class="soft" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f2" style="background-color:#f4f4f2;border-radius:18px">
             <tr><td class="soft" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:18px 20px 6px;border-radius:18px 18px 0 0">
               <span class="ink" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:16px;line-height:22px;font-weight:600;color:#0a0a0a">En la puerta</span>
-              <span class="muted" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:12px;line-height:22px;color:#8a8984">&nbsp;·&nbsp;texto provisorio</span>
+              
             </td></tr>
-            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:6px 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">1.&nbsp; El ingreso abre a las 22:30. Llegá con tiempo.</td></tr>
-            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:8px 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">2.&nbsp; Tené este QR abierto y subí el brillo del celular.</td></tr>
-            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:8px 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">3.&nbsp; El adulto responsable tiene que estar en la entrada con su DNI.</td></tr>
-            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:8px 20px 18px;border-radius:0 0 18px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">4.&nbsp; A las 6 AM, quien retira a cada chico tiene que mostrar su DNI.</td></tr>
+            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:6px 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">1.&nbsp; El ingreso abre 11 PM. Llegá con tiempo.</td></tr>
+            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:8px 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">2.&nbsp; Tené el QR a mano, se te pedirá para poder ingresar.</td></tr>
+            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:8px 20px 18px;border-radius:0 0 18px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">3.&nbsp; A las 6 AM, el adulto que retira a cada joven debe mostrar su DNI.</td></tr>
           </table>
         </td></tr>
       </table>

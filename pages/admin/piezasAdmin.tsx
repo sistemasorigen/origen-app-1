@@ -95,16 +95,17 @@ export interface PedidoConfirmacion {
 
 export const ModalConfirmacion: React.FC<{
     pedido: PedidoConfirmacion | null;
-    onCancelar: () => void;
-}> = ({ pedido, onCancelar }) => {
+    /** Cierra el modal: al cancelar, al tocar afuera, con Escape y al confirmar. */
+    onCerrar: () => void;
+}> = ({ pedido, onCerrar }) => {
     useBloqueoDeFondo(!!pedido);
 
     useEffect(() => {
         if (!pedido) return;
-        const alSalir = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancelar(); };
+        const alSalir = (e: KeyboardEvent) => { if (e.key === 'Escape') onCerrar(); };
         window.addEventListener('keydown', alSalir);
         return () => window.removeEventListener('keydown', alSalir);
-    }, [pedido, onCancelar]);
+    }, [pedido, onCerrar]);
 
     if (!pedido) return null;
     const destructivo = pedido.tipo === 'destructivo';
@@ -115,7 +116,7 @@ export const ModalConfirmacion: React.FC<{
             aria-modal="true"
             aria-label={pedido.titulo}
             className="fixed inset-0 z-[120] flex items-end justify-center bg-[rgba(10,10,10,.42)] p-0 md:items-center md:p-10"
-            onClick={onCancelar}
+            onClick={onCerrar}
         >
             <div
                 onClick={e => e.stopPropagation()}
@@ -136,14 +137,20 @@ export const ModalConfirmacion: React.FC<{
 
                 <div className="mt-5 flex flex-col gap-2.5">
                     <button
-                        onClick={pedido.onConfirmar}
+                        // Cerrar es responsabilidad del modal, no de cada
+                        // acción. Antes cada `onConfirmar` tenía que acordarse
+                        // de hacerlo: el de eliminar la cuenta se acordaba y
+                        // los tres de roles no, así que al quitar un rol el
+                        // modal quedaba abierto tapando el aviso de "1 cambio
+                        // sin guardar" que ya estaba detrás.
+                        onClick={() => { onCerrar(); pedido.onConfirmar(); }}
                         autoFocus
                         className={`h-[52px] w-full rounded-full text-[14.5px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${destructivo ? 'bg-[#a32218]' : 'bg-[#0a0a0a]'}`}
                     >
                         {pedido.etiquetaBoton}
                     </button>
                     <button
-                        onClick={onCancelar}
+                        onClick={onCerrar}
                         className="h-[52px] w-full rounded-full bg-[#f2f2f0] text-[14.5px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
                     >
                         Cancelar

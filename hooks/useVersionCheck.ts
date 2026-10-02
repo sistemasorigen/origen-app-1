@@ -26,6 +26,31 @@ const ESPERA_ENTRE_CONSULTAS_MS = 20_000;
 const RESET_STORAGE_KEY = 'origen_version_reset';
 const MAX_RESET_ATTEMPTS = 3;
 
+/**
+ * La versión que esta persona decidió no instalar ahora.
+ *
+ * El aviso tapa la app entera, y hay momentos en los que eso es peor que
+ * quedarse una versión atrás: alguien cargando la inscripción de sus hijos,
+ * o el que está escaneando entradas en la puerta con fila. Sin forma de
+ * posponerlo, el único camino era recargar en el medio de lo que estaba
+ * haciendo —y si el reload no traía la versión nueva, el cartel volvía—.
+ *
+ * En sessionStorage y no en localStorage a propósito: vale para esta
+ * pestaña y hasta cerrarla, no para siempre.
+ */
+const POSPUESTA_STORAGE_KEY = 'origen_version_pospuesta';
+
+/**
+ * Qué build se intentó traer sin éxito.
+ *
+ * Cuando se agotan los reintentos, el servidor sigue entregando el bundle
+ * viejo: puede ser una caché intermedia, un deploy a medio propagar o una
+ * copia vieja en el hosting. Repetir "actualizá" en esa situación es mandar
+ * a alguien a apretar un botón que ya se sabe que no arregla nada, así que
+ * el cartel cambia de texto y deja seguir.
+ */
+const FALLO_STORAGE_KEY = 'origen_version_fallo';
+
 // Mismo flag que setea el script inline de index.html cuando el
 // <script type="module"> principal falla al cargar (MIME type de un
 // index.html apuntando a un bundle que un deploy posterior ya borró). Si
@@ -56,6 +81,9 @@ const reloadWithCacheBust = () => {
 
 export function useVersionCheck() {
     const [updateAvailable, setUpdateAvailable] = useState(false);
+    // Un reload anterior no consiguió la versión nueva: cambia el texto del
+    // cartel y el peso de los botones.
+    const [actualizacionFallida, setActualizacionFallida] = useState(false);
     const pendingVersionRef = useRef<string | null>(null);
     const ultimaConsultaRef = useRef(0);
     const avisadoRef = useRef(false);
@@ -98,6 +126,11 @@ export function useVersionCheck() {
 
         const avisar = (version: string) => {
             if (avisadoRef.current) return;
+            // Ya dijo "ahora no" para esta misma versión: no se vuelve a
+            // preguntar hasta que cierre la pestaña.
+            try {
+                if (sessionStorage.getItem(POSPUESTA_STORAGE_KEY) === version) return;
+            } catch { /* sin storage: se avisa igual */ }
             avisadoRef.current = true;
             // Se guarda para que forceHardReset sepa, sin volver a
             // preguntarle a la base, qué build está esperando.
@@ -217,9 +250,32 @@ export function useVersionCheck() {
             // quedarse con una versión vieja pero usable que insistir en un
             // loop de reloads que la persona ni puede frenar a mano.
             sessionStorage.removeItem(RESET_STORAGE_KEY);
+            // Queda anotado para que el cartel diga la verdad —que el reload
+            // ya se probó y no alcanzó— en vez de volver a pedir lo mismo.
+            try { sessionStorage.setItem(FALLO_STORAGE_KEY, pending.expectedVersion); } catch { /* sin storage */ }
+            setActualizacionFallida(true);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Al montar: si el intento anterior quedó marcado como fallido, el cartel
+    // arranca con el texto que corresponde.
+    useEffect(() => {
+        try {
+            if (sessionStorage.getItem(FALLO_STORAGE_KEY)) setActualizacionFallida(true);
+        } catch { /* sin storage */ }
+    }, []);
+
+    /** "Ahora no": sigue con esta versión y no vuelve a preguntar en esta pestaña. */
+    const posponer = () => {
+        try {
+            if (pendingVersionRef.current) {
+                sessionStorage.setItem(POSPUESTA_STORAGE_KEY, pendingVersionRef.current);
+            }
+            sessionStorage.removeItem(FALLO_STORAGE_KEY);
+        } catch { /* sin storage: al menos se cierra el cartel */ }
+        setUpdateAvailable(false);
+    };
 
     const forceHardReset = async () => {
         try {
@@ -245,5 +301,5 @@ export function useVersionCheck() {
         reloadWithCacheBust();
     };
 
-    return { updateAvailable, forceHardReset };
+    return { updateAvailable, actualizacionFallida, forceHardReset, posponer };
 }

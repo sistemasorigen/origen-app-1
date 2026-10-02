@@ -100,6 +100,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
     const [aviso, setAviso] = useState<string | null>(null);
     const [ocupado, setOcupado] = useState<string | null>(null);
     const [comprobanteUrl, setComprobanteUrl] = useState<string | null>(null);
+
     const [salidaPendiente, setSalidaPendiente] = useState<null | (() => void)>(null);
 
     useBloqueoDeFondo(confirmando || !!comprobanteUrl || !!salidaPendiente);
@@ -228,14 +229,18 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
         await cargar();
     };
 
-    const verComprobante = async () => {
-        if (!insc?.comprobantePath) return;
+    const verComprobanteDe = async (path: string) => {
         setOcupado('comprobante');
         // La URL se pide al tocar: vence a los 5 minutos.
-        const url = await supabaseService.getNocturnaComprobanteUrl(insc.comprobantePath);
+        const url = await supabaseService.getNocturnaComprobanteUrl(path);
         setOcupado(null);
         if (!url) { setAviso('No pudimos abrir el comprobante. Probá de nuevo.'); return; }
         setComprobanteUrl(url);
+    };
+
+    const verComprobante = () => {
+        if (!insc?.comprobantePath) return;
+        void verComprobanteDe(insc.comprobantePath);
     };
 
     const reenviar = async () => {
@@ -365,7 +370,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                         </span>
                     </div>
                     <p style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.6)', margin: '5px 0 0' }}>
-                        Entrada {insc.codigoEntrada} · {jovenes.length} {jovenes.length === 1 ? 'chico' : 'chicos'}
+                        Entrada {insc.codigoEntrada} · {jovenes.length} {jovenes.length === 1 ? 'joven' : 'jóvenes'}
                         {insc.aprobadoAt ? ` · ingresó ${hora(insc.aprobadoAt)}` : ''}
                     </p>
                 </div>
@@ -444,7 +449,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                 }
                             >
                                 <p style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.6)', margin: '5px 0 0' }}>
-                                    Tocá a cada persona que entró. Para aprobar hace falta el adulto y al menos un chico.
+                                    Tocá a cada persona que entró. Para aprobar hace falta el adulto y al menos un joven.
                                 </p>
                                 <div className="flex flex-col gap-2 mt-3.5">
                                     {[{ id: 'adulto', nombre: nombreAdulto, rol: 'Adulto responsable', marcado: adultoMarcado, desde: insc.adultoAcreditadoAt },
@@ -493,8 +498,8 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                 <p style={{ ...fuente(500, '12.5px'), color: estadoValido ? 'rgba(0,0,0,.58)' : AMBAR_INK, margin: '14px 2px 0' }}>
                                     {!estadoValido
                                         ? (marcados > 0 && !adultoMarcado
-                                            ? 'No se puede registrar a un chico sin el adulto responsable.'
-                                            : 'Marcá al menos un chico además del adulto.')
+                                            ? 'No se puede registrar a un joven sin el adulto responsable.'
+                                            : 'Marcá al menos un joven además del adulto.')
                                         : hayCambios
                                             ? 'Los cambios todavía no se guardaron.'
                                             : 'Sin cambios para guardar.'}
@@ -531,7 +536,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
 
                         {/* ── Columna de datos ───────────────────────────── */}
                         <div className="flex flex-col gap-3.5 min-w-0 mt-3.5 lg:mt-0">
-                            <Carta titulo="Chicos">
+                            <Carta titulo="Jóvenes">
                                 <div className="flex flex-col mt-2.5">
                                     {jovenes.map((j, i) => (
                                         <div
@@ -582,11 +587,33 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                     <Fila k="Total" v={plata(insc.total)} />
                                     <Fila
                                         k="Comprobante"
-                                        ultima
+                                        ultima={(insc.comprobantes || []).length === 0}
                                         v={insc.cargadoPorAdmin
                                             ? `Cargada por ${nombreAdmin || 'un administrador'}`
                                             : insc.comprobantePath ? 'Subido por la familia' : 'Sin comprobante'}
                                     />
+                                    {/* Los pagos de los chicos que la familia sumó
+                                        después. Van acá y no en otra tarjeta: lo que
+                                        se está mirando es si esta inscripción está
+                                        paga, y la respuesta es la suma de todos. */}
+                                    {(insc.comprobantes || []).map((c, i) => (
+                                        <Fila
+                                            key={c.id}
+                                            k={c.chicos === 1 ? 'Sumó un joven' : `Sumó ${c.chicos} jóvenes`}
+                                            ultima={i === (insc.comprobantes || []).length - 1}
+                                            v={
+                                                <button
+                                                    type="button"
+                                                    onClick={() => verComprobanteDe(c.path)}
+                                                    disabled={ocupado === 'comprobante'}
+                                                    className="border-0 bg-transparent cursor-pointer underline p-0"
+                                                    style={{ ...fuente(600, '13px'), color: INK }}
+                                                >
+                                                    {plata(c.monto)} · ver comprobante
+                                                </button>
+                                            }
+                                        />
+                                    ))}
                                 </div>
                             </Carta>
 

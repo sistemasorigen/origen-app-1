@@ -321,6 +321,39 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     // aparecer — si no, quedaría atrapado.
     const splashVisible = showMobileSplash && mode === 'LOGIN' && !registrationComplete;
 
+    /**
+     * A dónde vuelve la flecha de arriba a la izquierda.
+     *
+     * Antes era siempre el home, y eso dejaba tirada a la persona lejos de lo
+     * que estaba haciendo: desde la inscripción a Nocturna, por ejemplo, se
+     * toca "Continuar iniciando sesión", se piensa mejor, se vuelve… y
+     * apareciás en el home, con la inscripción a medio cargar en otra parte.
+     *
+     * Dos fuentes, las mismas dos que escribe quien manda acá: `location.state`
+     * para el login con email —no hay recarga— y sessionStorage para el de
+     * Google, que recarga la página entera y se lleva el state puesto. Si no
+     * hay ninguna —alguien que entró directo a /auth— sigue siendo el home.
+     */
+    const volverA = (() => {
+        const desdeState = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
+        if (desdeState?.pathname && desdeState.pathname !== '/auth') {
+            return `${desdeState.pathname}${desdeState.search || ''}${desdeState.hash || ''}`;
+        }
+        try {
+            const guardado = sessionStorage.getItem('post_login_redirect');
+            if (guardado && guardado !== '/auth') return guardado;
+        } catch { /* sin storage */ }
+        return '/';
+    })();
+
+    const volverAlOrigen = () => {
+        // Quien vuelve no se está logueando: el destino guardado ya no aplica y
+        // dejarlo haría que un login posterior, desde otra pantalla, lo mande a
+        // un lugar que ya abandonó.
+        try { sessionStorage.removeItem('post_login_redirect'); } catch { /* sin storage */ }
+        navigate(volverA);
+    };
+
     // Una sola flecha para toda la pantalla mobile, con un paso atrás por vez:
     // confirmación → login → splash. Antes hacían falta dos botones apilados
     // en la misma esquina para cubrir lo mismo.
@@ -406,8 +439,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 por CSS (lg:hidden), no por estado. Sin el `lg:` de cada clase, el
                 botón de desktop perdería la etiqueta y se volvería blanco. */}
             <button
-                onClick={() => navigate('/')}
-                aria-label="Volver al home"
+                onClick={volverAlOrigen}
+                aria-label={volverA === '/' ? 'Volver al home' : 'Volver a donde estabas'}
                 className={`absolute top-4 left-4 z-50 items-center gap-2 rounded-lg text-sm font-bold transition-all ${
                     splashVisible
                         ? 'flex p-3 text-white hover:bg-white/10 lg:px-3 lg:py-2 lg:text-slate-600 lg:hover:text-black lg:hover:bg-slate-100'
@@ -415,7 +448,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 }`}
             >
                 <ArrowLeft className={splashVisible ? 'w-5 h-5 lg:w-4 lg:h-4' : 'w-4 h-4'} />
-                <span className={splashVisible ? 'hidden lg:inline' : ''}>Volver al home</span>
+                <span className={splashVisible ? 'hidden lg:inline' : ''}>{volverA === '/' ? 'Volver al home' : 'Volver'}</span>
             </button>
 
             {/* Tutorial Components */}

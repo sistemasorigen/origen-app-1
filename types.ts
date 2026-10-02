@@ -1854,6 +1854,12 @@ export interface NocturnaInscripcion {
     emailIntentos: number;
 
     jovenes: NocturnaJoven[];
+
+    /**
+     * Los pagos que llegaron después del alta, cuando la familia sumó chicos.
+     * El comprobante del alta sigue siendo `comprobantePath`.
+     */
+    comprobantes?: NocturnaComprobanteExtra[];
 }
 
 /** Un chico tal como se manda al registrar, antes de existir en la base. */
@@ -1915,6 +1921,63 @@ export interface NocturnaAltaResultado {
     ok: boolean;
     inscripcionId?: string;
     codigoEntrada?: string;
+    total?: number;
+    error?: string;
+}
+
+/**
+ * Un chico ya inscripto, visto desde el formulario público.
+ *
+ * El DNI viene enmascarado de la base (••••123) y no hay id: desde acá no se
+ * puede editar a nadie, así que no hace falta poder nombrarlo.
+ */
+export interface NocturnaChicoDelGrupo {
+    nombre: string;
+    apellido: string;
+    dni: string;
+    tribu: NocturnaTribu;
+}
+
+/**
+ * La respuesta de nocturna_buscar_grupo.
+ *
+ * `existe` sin `verificado` es todo lo que ve quien escribió un DNI ajeno:
+ * que hay una inscripción con ese número. Los chicos aparecen recién cuando
+ * la fecha de nacimiento del adulto también coincide.
+ */
+export interface NocturnaGrupo {
+    existe: boolean;
+    verificado?: boolean;
+    inscripcionId?: string;
+    adultoNombre?: string;
+    precioUnitario?: number;
+    chicos?: NocturnaChicoDelGrupo[];
+}
+
+/**
+ * Un pago posterior al alta: los chicos que una familia sumó después.
+ *
+ * El comprobante del alta sigue viviendo en la inscripción; éstos son los que
+ * llegan después, y el panel tiene que poder verificarlos por separado.
+ */
+export interface NocturnaComprobanteExtra {
+    id: string;
+    path: string;
+    monto: number;
+    chicos: number;
+    subidoAt: string;
+}
+
+/** Lo que devuelve nocturna_agregar_jovenes. */
+export interface NocturnaAgregadoResultado {
+    ok: boolean;
+    inscripcionId?: string;
+    codigoEntrada?: string;
+    /** Cuántos chicos entraron en este agregado. */
+    agregados?: number;
+    /** Lo que correspondía pagar por esos chicos. */
+    aPagar?: number;
+    /** El total de la inscripción ya con ellos adentro. */
     total?: number;
     error?: string;
 }

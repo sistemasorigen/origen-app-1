@@ -65,14 +65,6 @@ export function enPesos(valor: string | number): string {
   return centavos === 0 ? `$${conPuntos}` : `$${conPuntos},${String(centavos).padStart(2, "0")}`;
 }
 
-/** Cómo se retira un chico, en una frase que lee el adulto responsable. */
-export function fraseDeRetiro(j: Joven): string {
-  if (j.retiro_tipo === "solo") return "Se retira solo";
-  if (j.retiro_tipo === "adulto") return "Lo retirás vos";
-  const quien = `${j.retiro_nombre ?? ""} ${j.retiro_apellido ?? ""}`.trim();
-  return quien ? `Lo retira ${quien}` : "Lo retira otra persona";
-}
-
 /** Reemplaza TODAS las apariciones de {{clave}}, sin tocar el resto. */
 export function reemplazar(html: string, valores: Record<string, string>): string {
   let salida = html;
@@ -83,34 +75,15 @@ export function reemplazar(html: string, valores: Record<string, string>): strin
 }
 
 export function armarHtml(insc: Inscripcion): string {
-  const INICIO = "<!-- INICIO CHICO -->";
-  const FIN = "<!-- FIN CHICO -->";
-
-  const desde = PLANTILLA_ENTRADA.indexOf(INICIO);
-  const hasta = PLANTILLA_ENTRADA.indexOf(FIN);
-  if (desde === -1 || hasta === -1 || hasta < desde) {
-    throw new Error("La plantilla perdió las marcas INICIO CHICO / FIN CHICO");
-  }
-
-  const bloque = PLANTILLA_ENTRADA.slice(desde, hasta + FIN.length);
-  const bloques = insc.jovenes
-    .map((j) =>
-      reemplazar(bloque, {
-        nombreChico: escaparHtml(`${j.nombre} ${j.apellido}`.trim()),
-        // "Sin tribu" ya se explica solo: anteponerle el rótulo daba
-        // "Tribu Sin tribu".
-        tribuChico: escaparHtml(j.tribu === "Sin tribu" ? "Sin tribu" : `Tribu ${j.tribu}`),
-        retiroChico: escaparHtml(fraseDeRetiro(j)),
-      })
-    )
-    .join("");
-
-  const conChicos = PLANTILLA_ENTRADA.slice(0, desde) + bloques +
-    PLANTILLA_ENTRADA.slice(hasta + FIN.length);
-
+  // La entrada ya no lista quién va: era la sección "Quiénes van y cómo
+  // vuelven", y se sacó. Por eso acá no hay bloque que repetir por persona
+  // —antes se recortaba entre dos marcas de la plantilla— y queda sólo el
+  // reemplazo de los datos de la familia.
+  //
+  // La cantidad sigue haciendo falta: la fila del pago dice "2 entradas".
   const cantidad = insc.jovenes.length;
 
-  return reemplazar(conChicos, {
+  return reemplazar(PLANTILLA_ENTRADA, {
     nombreAdulto: escaparHtml(`${insc.adulto_nombre} ${insc.adulto_apellido}`.trim()),
     codigoEntrada: escaparHtml(insc.codigo_entrada),
     cantidadChicos: String(cantidad),

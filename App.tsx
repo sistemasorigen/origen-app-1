@@ -1284,7 +1284,7 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-    const { updateAvailable, forceHardReset } = useVersionCheck();
+    const { updateAvailable, actualizacionFallida, forceHardReset, posponer } = useVersionCheck();
 
     return (
         <ErrorBoundary>
@@ -1295,7 +1295,13 @@ const App: React.FC = () => {
                             <HashRouter>
                                 <AppContent />
                             </HashRouter>
-                            {updateAvailable && <ModalActualizacion onConfirm={forceHardReset} />}
+                            {updateAvailable && (
+                                <ModalActualizacion
+                                    onConfirm={forceHardReset}
+                                    onPosponer={posponer}
+                                    fallido={actualizacionFallida}
+                                />
+                            )}
                         </ToastProvider>
                     </NotificationProvider>
                 </AuthProvider>

@@ -47,6 +47,43 @@ export const calcularEdad = (fechaNacimiento: string, hoy: Date = new Date()): n
 };
 
 /**
+ * El día del evento, para medir la edad contra esa fecha y no contra hoy.
+ *
+ * Entre que abren las inscripciones y Nocturna hay casi un mes, y en ese mes
+ * hay chicos que cumplen años: el que cumple 13 el 29 de octubre entra, y el
+ * que cumple 19 el 15 no. Medido contra hoy, los dos casos saldrían al revés
+ * de lo que va a pasar en la puerta.
+ *
+ * La misma fecha está en sql/nocturna_edad.sql, que es la validación que de
+ * verdad decide. Si el evento se mueve, se cambia en los dos lados.
+ */
+export const FECHA_DEL_EVENTO = { anio: 2026, mes: 10, dia: 30 };
+
+/** Nocturna es para jóvenes de 13 a 18 años, inclusive. */
+export const EDAD_MINIMA = 13;
+export const EDAD_MAXIMA = 18;
+
+/** La edad que va a tener esa noche. `null` si la fecha no es válida. */
+export const edadEnElEvento = (fechaNacimiento: string): number | null =>
+    calcularEdad(
+        fechaNacimiento,
+        new Date(FECHA_DEL_EVENTO.anio, FECHA_DEL_EVENTO.mes - 1, FECHA_DEL_EVENTO.dia),
+    );
+
+/**
+ * Si entra en la edad del evento.
+ *
+ * Con una fecha inválida devuelve true: de las fechas que faltan o no existen
+ * ya avisa el formulario por su lado, y no hay que mostrar dos errores por el
+ * mismo campo.
+ */
+export const edadHabilitada = (fechaNacimiento: string): boolean => {
+    const edad = edadEnElEvento(fechaNacimiento);
+    if (edad === null) return true;
+    return edad >= EDAD_MINIMA && edad <= EDAD_MAXIMA;
+};
+
+/**
  * Si el adulto responsable llega a los 18.
  *
  * Es ayuda visual nada más: sirve para avisar en el formulario antes de que

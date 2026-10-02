@@ -684,7 +684,7 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                         <p style={{ ...fuente(600, '12px'), color: cuentas.vuelve ? VERDE : 'rgba(0,0,0,.55)', margin: 0 }}>
                                             {cuentas.vuelve
                                                 ? `VUELVEN A ESCANEAR · ${familia.insc.codigo_entrada}`
-                                                : `${familia.insc.codigo_entrada} · ${familia.jovenes.length} ${familia.jovenes.length === 1 ? 'chico' : 'chicos'}`}
+                                                : `${familia.insc.codigo_entrada} · ${familia.jovenes.length} ${familia.jovenes.length === 1 ? 'joven' : 'jóvenes'}`}
                                         </p>
                                         <h2 style={{ ...fuente(600, '22px', '1.2'), color: INK, letterSpacing: '-.02em', margin: '4px 0 0' }}>
                                             Familia {familia.insc.adulto_apellido}
@@ -755,7 +755,7 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                         : !familia.adulto
                                             ? 'Falta marcar al adulto responsable'
                                             : !familia.jovenes.some(j => familia.chicos[j.id])
-                                                ? 'Falta marcar al menos un chico'
+                                                ? 'Falta marcar al menos un joven'
                                                 : 'Marcá a quien acaba de llegar'}
                                 </p>
 

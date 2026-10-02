@@ -56,7 +56,7 @@ const fechaYHora = (iso: string | null): string => {
 
 type Overlay =
     | { tipo: 'eliminar'; insc: NocturnaInscripcion }
-    | { tipo: 'comprobante'; insc: NocturnaInscripcion; url: string }
+    | { tipo: 'comprobante'; insc: NocturnaInscripcion; vistas: VistaComprobante[] }
     | null;
 
 /**
@@ -65,6 +65,13 @@ type Overlay =
  * dejan de caer sobre su columna.
  */
 const COLUMNAS = '140px minmax(0,1fr) minmax(0,1.5fr) 180px 130px 180px';
+
+/** Un comprobante listo para mirar: de dónde sale y qué cubrió. */
+interface VistaComprobante {
+    titulo: string;
+    detalle: string;
+    url: string;
+}
 
 const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
     const navigate = useNavigate();
@@ -164,15 +171,50 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
     }, [inscripciones]);
 
     // ── Acciones ──────────────────────────────────────────────────────────
+    /**
+     * Todos los pagos de una inscripción, en orden: primero el del alta y
+     * después los que llegaron cuando la familia sumó chicos.
+     *
+     * El del alta no tiene fila propia en la base —vive en la inscripción—,
+     * así que su monto se deduce: el total de hoy menos lo que cubrieron los
+     * agregados. Mostrarle el total a secas sería decir que ese comprobante
+     * pagó algo que todavía no existía.
+     */
+    const pagosDe = (insc: NocturnaInscripcion) => {
+        const extras = insc.comprobantes || [];
+        const sumado = extras.reduce((a, c) => a + c.monto, 0);
+        const chicosSumados = extras.reduce((a, c) => a + c.chicos, 0);
+        const chicosDelAlta = Math.max(0, (insc.jovenes || []).length - chicosSumados);
+
+        return [
+            ...(insc.comprobantePath ? [{
+                path: insc.comprobantePath,
+                titulo: extras.length ? 'Pago de la inscripción' : 'Comprobante',
+                detalle: `${plata(Math.max(0, insc.total - sumado))} · ${chicosDelAlta} ${chicosDelAlta === 1 ? 'joven' : 'jóvenes'}`,
+            }] : []),
+            ...extras.map(c => ({
+                path: c.path,
+                titulo: c.chicos === 1 ? 'Sumó un joven' : `Sumó ${c.chicos} jóvenes`,
+                detalle: plata(c.monto),
+            })),
+        ];
+    };
+
     const verComprobante = async (insc: NocturnaInscripcion) => {
-        if (!insc.comprobantePath) return;
+        const pagos = pagosDe(insc);
+        if (pagos.length === 0) return;
         setOcupado(`comp-${insc.id}`);
         // La URL se pide recién acá: vence a los 5 minutos, así que generarla
         // al cargar la planilla serviría para nada.
-        const url = await supabaseService.getNocturnaComprobanteUrl(insc.comprobantePath);
+        // Un link firmado por cada uno. Se piden al tocar porque vencen a los
+        // 5 minutos, y en paralelo para no encadenar esperas.
+        const urls = await Promise.all(pagos.map(x => supabaseService.getNocturnaComprobanteUrl(x.path)));
         setOcupado(null);
-        if (!url) { setAviso('No pudimos abrir el comprobante. Probá de nuevo.'); return; }
-        setOverlay({ tipo: 'comprobante', insc, url });
+        const vistas: VistaComprobante[] = pagos
+            .map((x, i) => ({ titulo: x.titulo, detalle: x.detalle, url: urls[i] || '' }))
+            .filter(v => !!v.url);
+        if (vistas.length === 0) { setAviso('No pudimos abrir el comprobante. Probá de nuevo.'); return; }
+        setOverlay({ tipo: 'comprobante', insc, vistas });
     };
 
     const eliminar = async (insc: NocturnaInscripcion) => {
@@ -235,7 +277,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
         <span
             className="flex items-center gap-1.5 flex-none"
             style={{ height: 24, padding: '0 8px', borderRadius: 999, background: AMBAR, color: AMBAR_INK, ...fuente(600, '11px') }}
-            title="La familia no autorizó el uso de imágenes de sus chicos."
+            title="La familia no autorizó el uso de imágenes de sus jóvenes."
         >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="3" y="7" width="18" height="13" rx="3" /><path d="M3 3l18 18" />
@@ -297,23 +339,9 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
     );
 
     const Comprobante: React.FC<{ insc: NocturnaInscripcion; bloque?: boolean }> = ({ insc, bloque }) => {
-        if (insc.cargadoPorAdmin) {
-            const nombre = nombresAdmin[insc.cargadoPorAdmin] || 'un administrador';
-            return (
-                <div className="flex items-start gap-2">
-                    <Pencil className="w-3.5 h-3.5 flex-none mt-0.5" style={{ color: 'rgba(0,0,0,.55)' }} />
-                    <span style={{ ...fuente(500, '12px', '1.45'), color: 'rgba(0,0,0,.66)' }}>
-                        Acreditado por un administrador
-                        <br />
-                        <strong style={{ fontWeight: 600, color: INK }}>{nombre}</strong>
-                    </span>
-                </div>
-            );
-        }
-        if (!insc.comprobantePath) {
-            return <span style={{ ...fuente(500, '12px'), color: 'rgba(0,0,0,.45)' }}>Sin comprobante</span>;
-        }
-        return (
+        const cuantos = pagosDe(insc).length;
+
+        const boton = cuantos > 0 && (
             <button
                 type="button"
                 onClick={() => verComprobante(insc)}
@@ -321,9 +349,36 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                 className={`border-0 rounded-full cursor-pointer ${bloque ? 'flex-1' : ''}`}
                 style={{ height: bloque ? 38 : 32, padding: '0 13px', background: bloque ? CAMPO_HONDO : CAMPO, color: INK, ...fuente(600, bloque ? '12.5px' : '12px') }}
             >
-                {ocupado === `comp-${insc.id}` ? 'Abriendo…' : 'Ver comprobante'}
+                {ocupado === `comp-${insc.id}`
+                    ? 'Abriendo…'
+                    : cuantos === 1 ? 'Ver comprobante' : `Ver ${cuantos} comprobantes`}
             </button>
         );
+
+        if (insc.cargadoPorAdmin) {
+            const nombre = nombresAdmin[insc.cargadoPorAdmin] || 'un administrador';
+            return (
+                <div className="flex flex-col gap-2 min-w-0">
+                    <div className="flex items-start gap-2">
+                        <Pencil className="w-3.5 h-3.5 flex-none mt-0.5" style={{ color: 'rgba(0,0,0,.55)' }} />
+                        <span style={{ ...fuente(500, '12px', '1.45'), color: 'rgba(0,0,0,.66)' }}>
+                            Acreditado por un administrador
+                            <br />
+                            <strong style={{ fontWeight: 600, color: INK }}>{nombre}</strong>
+                        </span>
+                    </div>
+                    {/* Cargada a mano pero con pagos después: la familia sumó un
+                        hermano desde el formulario y ese comprobante sí existe. */}
+                    {boton}
+                </div>
+            );
+        }
+
+        if (cuantos === 0) {
+            return <span style={{ ...fuente(500, '12px'), color: 'rgba(0,0,0,.45)' }}>Sin comprobante</span>;
+        }
+
+        return boton;
     };
 
     // ── Pantallas completas ───────────────────────────────────────────────
@@ -425,8 +480,8 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                 className="campo campo--desnudo"
                                 value={busqueda}
                                 onChange={e => setBusqueda(e.target.value)}
-                                placeholder="Buscar adulto o chico"
-                                aria-label="Buscar por nombre de adulto o de chico"
+                                placeholder="Buscar adulto o joven"
+                                aria-label="Buscar por nombre de adulto o de joven"
                             />
                             {!!busqueda && (
                                 <button
@@ -537,7 +592,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                     {/* Resumen */}
                     <div className="flex gap-4 mt-3 flex-wrap">
                         <span style={{ ...fuente(600, '12.5px'), color: INK }}>
-                            {resumen.familias} {resumen.familias === 1 ? 'familia' : 'familias'} · {resumen.chicos} {resumen.chicos === 1 ? 'chico' : 'chicos'}
+                            {resumen.familias} {resumen.familias === 1 ? 'familia' : 'familias'} · {resumen.chicos} {resumen.chicos === 1 ? 'joven' : 'jóvenes'}
                         </span>
                         <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: VERDE }}>
                             <span style={{ width: 7, height: 7, borderRadius: 999, background: '#16a34a' }} />
@@ -569,7 +624,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                             </p>
                             <p style={{ ...fuente(500, '13.5px'), color: 'rgba(0,0,0,.6)', margin: '8px 0 0' }}>
                                 {busqueda
-                                    ? 'Buscamos entre adultos y chicos. Probá solo con el apellido.'
+                                    ? 'Buscamos entre adultos y jóvenes. Probá solo con el apellido.'
                                     : 'Cuando alguien se inscriba, su familia aparece acá.'}
                             </p>
                             {busqueda && (
@@ -664,7 +719,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                     className="grid"
                                     style={{ gridTemplateColumns: COLUMNAS, borderBottom: '1px solid #eeeeec' }}
                                 >
-                                    {['FECHA', 'ADULTO RESPONSABLE', 'CHICOS INSCRIPTOS', 'PAGO', 'ESTADO', ''].map((t, i) => (
+                                    {['FECHA', 'ADULTO RESPONSABLE', 'JÓVENES INSCRIPTOS', 'PAGO', 'ESTADO', ''].map((t, i) => (
                                         <span key={i} style={{ padding: '12px 14px', ...fuente(600, '11px'), letterSpacing: '.07em', color: 'rgba(0,0,0,.55)' }}>{t}</span>
                                     ))}
                                 </div>
@@ -773,7 +828,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                     ¿Eliminar la inscripción de {overlay.insc.adultoNombre} {overlay.insc.adultoApellido}?
                                 </p>
                                 <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0' }}>
-                                    Se borran también {(overlay.insc.jovenes || []).length === 1 ? 'su chico' : `sus ${(overlay.insc.jovenes || []).length} chicos`} y el comprobante. Su QR deja de funcionar en la puerta. No se puede deshacer.
+                                    Se borran también {(overlay.insc.jovenes || []).length === 1 ? 'su joven' : `sus ${(overlay.insc.jovenes || []).length} jóvenes`} y el comprobante. Su QR deja de funcionar en la puerta. No se puede deshacer.
                                 </p>
                                 <div className="flex flex-col gap-2 mt-5">
                                     <button
@@ -801,7 +856,8 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                             <>
                                 <div className="flex items-center gap-2.5">
                                     <p className="flex-1" style={{ ...fuente(600, '16px'), color: INK, margin: 0 }}>
-                                        Comprobante · {overlay.insc.adultoNombre} {overlay.insc.adultoApellido}
+                                        {overlay.vistas.length === 1 ? 'Comprobante' : `${overlay.vistas.length} comprobantes`}
+                                        {' · '}{overlay.insc.adultoNombre} {overlay.insc.adultoApellido}
                                     </p>
                                     <button
                                         type="button"
@@ -812,14 +868,35 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                         Cerrar
                                     </button>
                                 </div>
-                                <img
-                                    src={overlay.url}
-                                    alt={`Comprobante de ${overlay.insc.adultoNombre} ${overlay.insc.adultoApellido}`}
-                                    className="w-full rounded-[16px] mt-3.5"
-                                    style={{ maxHeight: '70vh', objectFit: 'contain', background: CAMPO }}
-                                />
+                                {/* Uno abajo del otro y no un carrusel: lo que se
+                                    hace acá es sumar montos y ver si cierran con el
+                                    total, y para eso hay que poder volver atrás con
+                                    el dedo. Con uno solo se ve igual que antes. */}
+                                <div
+                                    className="flex flex-col gap-4 mt-3.5"
+                                    style={{ maxHeight: '70vh', overflowY: 'auto' }}
+                                >
+                                    {overlay.vistas.map((v, i) => (
+                                        <div key={`${v.url}-${i}`}>
+                                            {overlay.vistas.length > 1 && (
+                                                <div className="flex items-baseline gap-2" style={{ margin: '0 2px 7px' }}>
+                                                    <span style={{ ...fuente(600, '13px'), color: INK }}>{v.titulo}</span>
+                                                    <span style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.55)' }}>{v.detalle}</span>
+                                                </div>
+                                            )}
+                                            <img
+                                                src={v.url}
+                                                alt={`${v.titulo} de ${overlay.insc.adultoNombre} ${overlay.insc.adultoApellido}`}
+                                                className="w-full rounded-[16px]"
+                                                style={{ objectFit: 'contain', background: CAMPO }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
                                 <p style={{ ...fuente(500, '12px', '1.5'), color: 'rgba(0,0,0,.55)', margin: '10px 2px 0' }}>
-                                    El link vence en 5 minutos. Si se cierra, volvé a abrirlo desde la planilla.
+                                    {overlay.vistas.length === 1
+                                        ? 'El link vence en 5 minutos. Si se cierra, volvé a abrirlo desde la planilla.'
+                                        : `Los ${overlay.vistas.length} suman ${plata(overlay.insc.total)}, que es el total de la inscripción. Los links vencen en 5 minutos.`}
                                 </p>
                             </>
                         )}

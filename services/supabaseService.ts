@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient';
 import { db } from './dbService';
 import { safeUUID } from './uuidUtils';
 import { comprimirImagen } from '../src/utils/nocturna';
-import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado } from '../types';
+import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado, NocturnaGrupo, NocturnaAgregadoResultado, NocturnaComprobanteExtra } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
 const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
@@ -9354,6 +9354,18 @@ export const supabaseService = {
       emailError: row.email_error ?? null,
       emailIntentos: row.email_intentos ?? 0,
       jovenes: (row.jovenes || []).map((j: any) => supabaseService._nocturnaJovenDesdeDb(j)),
+      // Ordenados por fecha: el primero de la lista es el primer pago que
+      // llegó después del alta, que es como se leen.
+      comprobantes: (row.comprobantes || [])
+        .map((c: any) => ({
+          id: c.id,
+          path: c.path,
+          monto: Number(c.monto),
+          chicos: Number(c.chicos),
+          subidoAt: c.subido_at,
+        }))
+        .sort((a: NocturnaComprobanteExtra, b: NocturnaComprobanteExtra) =>
+          (a.subidoAt || '').localeCompare(b.subidoAt || '')),
     };
   },
 
@@ -9402,6 +9414,68 @@ export const supabaseService = {
     } catch (err) {
       console.error('[Nocturna] registerNocturna:', err);
       return { ok: false, error: 'No pudimos completar la inscripción. Probá de nuevo.' };
+    }
+  },
+
+  /**
+   * ¿Este adulto ya tiene una inscripción en esta edición?
+   *
+   * Se pregunta apenas termina de cargar sus datos, para avisarle ANTES de
+   * que llene todo y transfiera. Si el DNI figura pero la fecha de nacimiento
+   * no coincide, la base contesta que existe y nada más: los chicos son
+   * menores y no se muestran por tipear un número.
+   *
+   * Un fallo de red devuelve `existe: false` a propósito. Lo peor que puede
+   * pasar entonces es que el aviso no aparezca y el rechazo llegue al final,
+   * que es exactamente como funcionaba antes; cortarle la inscripción a
+   * alguien porque se cayó una consulta opcional sería peor.
+   */
+  async buscarGrupoNocturna(dni: string, fechaNacimiento: string): Promise<NocturnaGrupo> {
+    try {
+      const { data, error } = await supabase.rpc('nocturna_buscar_grupo', {
+        p_dni: dni,
+        p_fecha_nacimiento: fechaNacimiento,
+      });
+      if (error) throw error;
+      return {
+        existe: data?.existe === true,
+        verificado: data?.verificado === true,
+        inscripcionId: data?.inscripcionId,
+        adultoNombre: data?.adultoNombre,
+        precioUnitario: data?.precioUnitario !== undefined ? Number(data.precioUnitario) : undefined,
+        chicos: data?.chicos || [],
+      };
+    } catch (err) {
+      console.error('[Nocturna] buscarGrupoNocturna:', err);
+      return { existe: false };
+    }
+  },
+
+  /**
+   * Suma chicos a una inscripción que ya existe.
+   *
+   * Toma el mismo payload que el alta: la base lee de ahí el DNI y la fecha
+   * del adulto —para reconocerlo—, los chicos nuevos, el comprobante y la
+   * versión de las declaraciones. Todo lo demás de la inscripción sale de lo
+   * que ya está guardado, así que por acá no se puede cambiar nada de lo
+   * cargado.
+   */
+  async agregarJovenesNocturna(payload: NocturnaPayload): Promise<NocturnaAgregadoResultado> {
+    try {
+      const { data, error } = await supabase.rpc('nocturna_agregar_jovenes', { p_payload: payload });
+      if (error) throw error;
+      return {
+        ok: data?.ok === true,
+        inscripcionId: data?.inscripcionId,
+        codigoEntrada: data?.codigoEntrada,
+        agregados: data?.agregados !== undefined ? Number(data.agregados) : undefined,
+        aPagar: data?.aPagar !== undefined ? Number(data.aPagar) : undefined,
+        total: data?.total !== undefined ? Number(data.total) : undefined,
+        error: data?.error,
+      };
+    } catch (err) {
+      console.error('[Nocturna] agregarJovenesNocturna:', err);
+      return { ok: false, error: 'No pudimos agregar a los jóvenes. Probá de nuevo.' };
     }
   },
 
@@ -9506,7 +9580,7 @@ export const supabaseService = {
     try {
       const { data, error } = await supabase
         .from('nocturna_inscripciones')
-        .select('*, jovenes:nocturna_jovenes(*)')
+        .select('*, jovenes:nocturna_jovenes(*), comprobantes:nocturna_comprobantes(*)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -9656,7 +9730,7 @@ export const supabaseService = {
     try {
       const { data, error } = await supabase
         .from('nocturna_inscripciones')
-        .select('*, jovenes:nocturna_jovenes(*)')
+        .select('*, jovenes:nocturna_jovenes(*), comprobantes:nocturna_comprobantes(*)')
         .eq('id', id)
         .maybeSingle();
       if (error) throw error;

@@ -266,7 +266,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             detalle: `${u.name || 'Sin nombre'} · ${u.email}${rolesDe(u).length ? ` · ${rolesDe(u).map(nombreDeRol).join(', ')}` : ''}`,
             etiquetaBoton: 'Sí, eliminar la cuenta',
             onConfirmar: async () => {
-                setConfirmacion(null);
+                // El cierre lo hace ModalConfirmacion.
                 const ok = await supabaseService.deleteUser(u.id);
                 if (ok) {
                     await refrescarUsuarios();
@@ -535,7 +535,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                 {seccion === 'auditoria' && <AdminAuditLogs />}
             </div>
 
-            <ModalConfirmacion pedido={confirmacion} onCancelar={() => setConfirmacion(null)} />
+            <ModalConfirmacion pedido={confirmacion} onCerrar={() => setConfirmacion(null)} />
         </div>
     );
 };

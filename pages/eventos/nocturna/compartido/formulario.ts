@@ -1,5 +1,5 @@
 import { NocturnaJovenPayload, NocturnaPayload, NocturnaRetiro, NocturnaTribu } from '../../../../types';
-import { aplicarRetiroFamiliar, calcularEdad, esMayorDeEdad } from '../../../../src/utils/nocturna';
+import { aplicarRetiroFamiliar, calcularEdad, edadEnElEvento, edadHabilitada, esMayorDeEdad } from '../../../../src/utils/nocturna';
 
 /**
  * El modelo del formulario de Nocturna, compartido entre la inscripción
@@ -103,6 +103,19 @@ export const faltanDelChico = (c: ChicoForm): string[] => {
     return f;
 };
 
+/**
+ * Si el chico queda afuera por edad.
+ *
+ * Separado de `faltanDelChico` a propósito: no es un dato que falte, es un
+ * dato que ya está y no cumple la regla. El mensaje también es otro.
+ */
+export const chicoFueraDeEdad = (c: ChicoForm): boolean =>
+    !!c.nac && calcularEdad(c.nac) !== null && !edadHabilitada(c.nac);
+
+/** La edad que va a tener en el evento, para poder decírselo con el número. */
+export const edadDelChicoEnElEvento = (c: ChicoForm): number | null =>
+    c.nac ? edadEnElEvento(c.nac) : null;
+
 export const adultoEsMenorDeEdad = (a: AdultoForm): boolean =>
     !!a.nac && calcularEdad(a.nac) !== null && !esMayorDeEdad(a.nac);
 
@@ -111,7 +124,8 @@ export const adultoCompleto = (a: AdultoForm): boolean =>
     && !!a.email.trim() && !!a.nac && calcularEdad(a.nac) !== null && !adultoEsMenorDeEdad(a);
 
 export const chicosCompletos = (chicos: ChicoForm[]): boolean =>
-    chicos.length > 0 && chicos.every(c => faltanDelChico(c).length === 0);
+    chicos.length > 0
+    && chicos.every(c => faltanDelChico(c).length === 0 && !chicoFueraDeEdad(c));
 
 /** El retiro de la familia, con los datos del tercero si corresponde. */
 export const retiroCompleto = (

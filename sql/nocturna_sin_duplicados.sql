@@ -72,6 +72,19 @@ COMMENT ON INDEX public.idx_nocturna_insc_adulto_dni_edicion IS
 -- ════════════════════════════════════════════════════════════════════════════
 -- PASO 3 — La validación, con las cuatro puertas cerradas
 -- ════════════════════════════════════════════════════════════════════════════
+--
+-- CUIDADO: esta función la tocan dos trabajos distintos. Además de los
+-- chequeos de duplicados que trajo este archivo, tiene la regla de edad
+-- (13 a 18 años medidos contra el día del evento) que vino por otro lado.
+-- CREATE OR REPLACE reemplaza el cuerpo entero: aplicar una versión vieja
+-- borra lo del otro en silencio, sin error y sin que nada deje de compilar.
+-- Ya pasó una vez, el 2026-10-02, y lo detectaron las pruebas.
+--
+-- Antes de reemplazarla: traer la definición viva con pg_get_functiondef,
+-- agregarle lo nuevo, y correr sql/PROBAR_nocturna_duplicados.sql y
+-- sql/PROBAR_nocturna_agregar.sql. Si alguna falla, falta algo del otro lado.
+--
+-- Lo que sigue es la definición VIVA al 2026-10-02, ya con las dos cosas.
 -- Reemplaza la de sql/nocturna_edicion.sql. Es la misma, con un bloque nuevo
 -- al final: lo anterior no se tocó.
 --
@@ -84,31 +97,32 @@ COMMENT ON INDEX public.idx_nocturna_insc_adulto_dni_edicion IS
 --
 -- La quinta —el mismo chico dos veces— ya estaba cerrada.
 
-CREATE OR REPLACE FUNCTION public.nocturna_validar_payload(
-    p_payload              JSONB,
-    p_edicion              INTEGER,
-    p_exigir_comprobante   BOOLEAN DEFAULT false,
-    p_exigir_version       BOOLEAN DEFAULT true,
-    p_excluir_inscripcion  UUID    DEFAULT NULL
-)
-RETURNS TEXT
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
+CREATE OR REPLACE FUNCTION public.nocturna_validar_payload(p_payload jsonb, p_edicion integer, p_exigir_comprobante boolean DEFAULT false, p_exigir_version boolean DEFAULT true, p_excluir_inscripcion uuid DEFAULT NULL::uuid)
+ RETURNS text
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
 DECLARE
-    v_adulto      JSONB;
-    v_jovenes     JSONB;
-    v_j           JSONB;
-    v_nac         DATE;
-    v_edad        INTEGER;
-    v_n           INTEGER;
-    v_dnis        TEXT[] := ARRAY[]::TEXT[];
-    v_dup         TEXT;
-    v_tribu       TEXT;
-    v_retiro      TEXT;
-    v_dni_adulto  TEXT;
+    -- El día del evento. La edad de los chicos se mide contra esta fecha y no
+    -- contra hoy (ver más abajo). Está también en src/utils/nocturna.ts, que
+    -- es la que usa el formulario para avisar antes de enviar: si la fecha se
+    -- mueve, se cambia en los dos lados.
+    v_fecha_evento CONSTANT DATE := DATE '2026-10-30';
+    v_edad_minima  CONSTANT INTEGER := 13;
+    v_edad_maxima  CONSTANT INTEGER := 18;
+
+    v_adulto  JSONB;
+    v_jovenes JSONB;
+    v_j       JSONB;
+    v_nac     DATE;
+    v_edad    INTEGER;
+    v_n       INTEGER;
+    v_dnis    TEXT[] := ARRAY[]::TEXT[];
+    v_dup     TEXT;
+    v_tribu   TEXT;
+    v_retiro  TEXT;
+    v_dni_adulto TEXT;
 BEGIN
     v_adulto  := p_payload -> 'adulto';
     v_jovenes := COALESCE(p_payload -> 'jovenes', '[]'::jsonb);
@@ -140,7 +154,7 @@ BEGIN
 
     v_n := jsonb_array_length(v_jovenes);
     IF v_n IS NULL OR v_n < 1 THEN
-        RETURN 'Agregá al menos un chico a la inscripción.';
+        RETURN 'Agregá al menos un joven a la inscripción.';
     END IF;
 
     IF COALESCE((p_payload->>'autorizaAsistencia')::BOOLEAN, false) IS NOT TRUE THEN
@@ -160,21 +174,33 @@ BEGIN
         RETURN 'Subí el comprobante de pago para terminar.';
     END IF;
 
-    -- ── Chicos: validar TODO antes de insertar nada ─────────────────────────
     FOR v_j IN SELECT * FROM jsonb_array_elements(v_jovenes)
     LOOP
         IF btrim(COALESCE(v_j->>'nombre',''))   = ''
         OR btrim(COALESCE(v_j->>'apellido','')) = ''
         OR btrim(COALESCE(v_j->>'dni',''))      = ''
         OR COALESCE(v_j->>'fechaNacimiento','') = '' THEN
-            RETURN 'Completá nombre, apellido, DNI y fecha de nacimiento de cada chico.';
+            RETURN 'Completá nombre, apellido, DNI y fecha de nacimiento de cada joven.';
         END IF;
 
         BEGIN
-            PERFORM (v_j->>'fechaNacimiento')::DATE;
+            v_nac := (v_j->>'fechaNacimiento')::DATE;
         EXCEPTION WHEN others THEN
             RETURN format('La fecha de nacimiento de %s no es válida.', btrim(v_j->>'nombre'));
         END;
+
+        -- Nocturna es para jóvenes de 13 a 18 años, inclusive y sin excepciones.
+        --
+        -- Se mide contra el DÍA DEL EVENTO, no contra hoy: quien cumple 13 la
+        -- semana anterior entra, y quien cumple 19 antes del viernes queda
+        -- afuera. Es exactamente la edad que va a tener esa noche, que es la
+        -- que mira quien está en la puerta.
+        v_edad := date_part('year', age(v_fecha_evento, v_nac))::INTEGER;
+        IF v_edad < v_edad_minima OR v_edad > v_edad_maxima THEN
+            RETURN format(
+                'Nocturna es para jóvenes de %s a %s años. %s va a tener %s el día del evento.',
+                v_edad_minima, v_edad_maxima, btrim(v_j->>'nombre'), v_edad);
+        END IF;
 
         v_tribu := COALESCE(v_j->>'tribu', 'Sin tribu');
         IF v_tribu NOT IN ('Trueno','Garra','Sin tribu') THEN
@@ -214,19 +240,19 @@ BEGIN
     END IF;
 
     -- ── Una persona, una vez ────────────────────────────────────────────────
-    -- Arriba se controló que no se repita un CHICO. Falta la otra mitad: el
+    -- Arriba se controló que no se repita un JOVEN. Falta la otra mitad: el
     -- adulto responsable también entra al evento, y el DNI no distingue entre
-    -- "adulto" y "chico" — es la misma persona en las dos listas.
+    -- "adulto" y "joven" — es la misma persona en las dos listas.
     v_dni_adulto := btrim(v_adulto->>'dni');
 
-    -- 4 · El adulto cargado también como chico, en este mismo formulario.
+    -- El adulto cargado también como joven, en este mismo formulario.
     IF v_dni_adulto = ANY (v_dnis) THEN
         RETURN format(
-            'El DNI %s está cargado como adulto responsable y como chico en la misma inscripción.',
+            'El DNI %s está cargado como adulto responsable y como joven en la misma inscripción.',
             v_dni_adulto);
     END IF;
 
-    -- 1 · El adulto ya tiene una inscripción.
+    -- El adulto ya tiene una inscripción.
     PERFORM 1
        FROM public.nocturna_inscripciones i
       WHERE i.edicion = p_edicion
@@ -234,21 +260,21 @@ BEGIN
         AND (p_excluir_inscripcion IS NULL OR i.id IS DISTINCT FROM p_excluir_inscripcion);
     IF FOUND THEN
         RETURN format(
-            'Ya hay una inscripción con el DNI %s como adulto responsable. Si falta agregar un chico, se agrega a esa inscripción.',
+            'Ya hay una inscripción con el DNI %s como adulto responsable. Si falta agregar un joven, se agrega a esa inscripción.',
             v_dni_adulto);
     END IF;
 
-    -- 2 · El adulto ya está anotado, pero como chico.
+    -- El adulto ya está anotado, pero como joven.
     PERFORM 1
        FROM public.nocturna_jovenes j
       WHERE j.edicion = p_edicion
         AND btrim(j.dni) = v_dni_adulto
         AND (p_excluir_inscripcion IS NULL OR j.inscripcion_id IS DISTINCT FROM p_excluir_inscripcion);
     IF FOUND THEN
-        RETURN format('El DNI %s ya está inscripto como chico.', v_dni_adulto);
+        RETURN format('El DNI %s ya está inscripto como joven.', v_dni_adulto);
     END IF;
 
-    -- 3 · Un chico que ya está anotado como adulto responsable.
+    -- Un joven que ya está anotado como adulto responsable.
     SELECT btrim(i.adulto_dni) INTO v_dup
       FROM public.nocturna_inscripciones i
      WHERE i.edicion = p_edicion
@@ -261,7 +287,7 @@ BEGIN
 
     RETURN NULL;
 END;
-$$;
+$function$;
 
 REVOKE EXECUTE ON FUNCTION public.nocturna_validar_payload(JSONB, INTEGER, BOOLEAN, BOOLEAN, UUID) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.nocturna_validar_payload(JSONB, INTEGER, BOOLEAN, BOOLEAN, UUID) FROM anon;
