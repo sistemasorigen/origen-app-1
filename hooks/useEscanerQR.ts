@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 /**
  * El núcleo de cámara del escáner de QR, extraído de
@@ -141,7 +141,14 @@ export const useEscanerQR = ({ contenedorId, onCodigo, activo = true }: Opciones
         const contenedor = document.getElementById(contenedorId);
         if (contenedor) contenedor.innerHTML = '';
 
-        const escaner = new Html5Qrcode(contenedorId, { verbose: false });
+        // Sólo QR. Por omisión la librería prueba además una docena de
+        // códigos de barras en cada cuadro, y eso duplica el tiempo de
+        // lectura —medido: 69 ms contra 34 ms por cuadro con un QR de
+        // entrada—. Acá no hay otra cosa que leer.
+        const escaner = new Html5Qrcode(contenedorId, {
+            verbose: false,
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        });
         escanerRef.current = escaner;
 
         try {

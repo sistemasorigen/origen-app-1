@@ -77,8 +77,23 @@ export const ESTILOS_PANEL = `
     /* ── El visor del escáner ─────────────────────────────────────────
        html5-qrcode le escribe al contenedor y al <video> un alto calculado
        del aspecto de la cámara, con estilos inline. En una pantalla de
-       puerta eso dejaba el video ocupando un tercio y el resto en negro.
-       Se fuerza a que llene, recortando lo que sobra. */
+       puerta eso dejaba el video ocupando un tercio y el resto en negro, así
+       que acá se lo hace tapar la pantalla —pero SIN cambiarle la relación de
+       aspecto, y eso no es una preferencia de diseño—.
+
+       html5-qrcode no lee del <video>: cada cuadro lo copia a un canvas del
+       tamaño del elemento, y para saber qué parte copiar divide
+       videoWidth / clientWidth en el eje X y videoHeight / clientHeight en el
+       Y. Si la caja del video no tiene el aspecto del stream, esos dos
+       factores no coinciden y el cuadro llega deformado al decodificador:
+       ZXing descarta los patrones de posición cuando el módulo no mide lo
+       mismo de ancho que de alto, así que la cámara no lee NADA. Pasó:
+       forzar width/height al 100% con object-fit:cover dejó el escáner
+       ciego, y se veía perfecto.
+
+       Por eso el tamaño sale de min-width/min-height, que recortan
+       conservando el aspecto, y nunca de width/height. El único invariante
+       es clientWidth / clientHeight === videoWidth / videoHeight. */
     #nocturna-panel #nocturna-qr {
         /* position va con !important porque html5-qrcode le escribe
            "position: relative" inline al contenedor, y eso lo saca del
@@ -92,8 +107,18 @@ export const ESTILOS_PANEL = `
         overflow: hidden;
     }
     #nocturna-panel #nocturna-qr video {
-        width: 100% !important;
-        height: 100% !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        /* Tapar sin deformar: la caja crece hasta cubrir y lo que sobra lo
+           recorta el overflow del contenedor. */
+        width: auto !important;
+        height: auto !important;
+        min-width: 100% !important;
+        min-height: 100% !important;
+        max-width: none !important;
+        max-height: none !important;
         object-fit: cover !important;
         display: block !important;
     }
