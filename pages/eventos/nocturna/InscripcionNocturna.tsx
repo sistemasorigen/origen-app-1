@@ -382,18 +382,30 @@ const InscripcionNocturna: React.FC = () => {
      * corte de color. El rebote de iOS muestra lo mismo, porque ahí lo que
      * asoma es el fondo del <body>.
      *
+     * En el iPhone había un segundo bache que en Chrome no se ve: el wrapper
+     * del Layout mide `min-h-screen` (100vh, el viewport grande de Safari) y
+     * esta página mide 100dvh (el chico, con la barra de abajo visible). La
+     * diferencia es justo el alto de esa barra, y ahí asomaba el slate-50 del
+     * wrapper —que pinta su propio fondo, encima del <body>—. En Chrome los
+     * dos altos son iguales y el bache no existe, por eso pasó la primera
+     * medición. El wrapper queda transparente y deja ver el fondo del body.
+     *
      * Se arregla desde acá y no desde el Layout porque el color es de esta
      * pantalla; al desmontarse, todo vuelve como estaba.
      */
     useEffect(() => {
         const main = document.getElementById('main-content');
+        const wrapper = main?.closest<HTMLElement>('.min-h-screen') ?? null;
         const fondoPrevio = document.body.style.backgroundColor;
         const padPrevio = main ? main.style.paddingBottom : '';
+        const fondoWrapperPrevio = wrapper ? wrapper.style.backgroundColor : '';
         document.body.style.backgroundColor = FONDO;
         if (main) main.style.paddingBottom = '0px';
+        if (wrapper) wrapper.style.backgroundColor = 'transparent';
         return () => {
             document.body.style.backgroundColor = fondoPrevio;
             if (main) main.style.paddingBottom = padPrevio;
+            if (wrapper) wrapper.style.backgroundColor = fondoWrapperPrevio;
         };
     }, []);
 
@@ -1273,6 +1285,28 @@ const InscripcionNocturna: React.FC = () => {
                                 </>
                             )}
                         </p>
+
+                        {/* La salida a la app. La portada no tiene navbar —la foto
+                            ocupa ese lugar—, así que sin esto la única forma de
+                            volver era el botón atrás del navegador, y a quien
+                            entró desde un link de WhatsApp ni siquiera eso lo
+                            lleva a Origen.
+
+                            Va al pie, angosto y centrado: es una salida, no una
+                            tercera forma de entrar, y no tiene que competir con
+                            el botón negro. "Inicio" con mayúscula porque es el
+                            nombre de esa sección en el menú de la app. */}
+                        <div className="flex justify-center mt-7">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/')}
+                                className="inline-flex items-center gap-1.5 h-12 rounded-full border-0 cursor-pointer"
+                                style={{ ...fuente(600, '14.5px'), color: INK, background: CAMPO, padding: '0 20px 0 14px' }}
+                            >
+                                <ChevronLeft className="w-[17px] h-[17px]" style={{ color: INK }} strokeWidth={2.3} />
+                                Volver al Inicio
+                            </button>
+                        </div>
                     </div>
                 )}
 

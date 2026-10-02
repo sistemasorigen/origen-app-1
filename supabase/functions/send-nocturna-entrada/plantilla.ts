@@ -123,9 +123,9 @@ body.force-dark td.qrbox,body.force-dark .qrbox,body.force-dark .qrbox td{backgr
               <span class="ink" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:16px;line-height:22px;font-weight:600;color:#0a0a0a">En la puerta</span>
               
             </td></tr>
-            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:6px 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">1.&nbsp; El ingreso abre 11 PM. Llegá con tiempo.</td></tr>
+            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:6px 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">1.&nbsp; El ingreso abre 11pm. Llegá con tiempo.</td></tr>
             <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:8px 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">2.&nbsp; Tené el QR a mano, se te pedirá para poder ingresar.</td></tr>
-            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:8px 20px 18px;border-radius:0 0 18px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">3.&nbsp; A las 6 AM, el adulto que retira a cada joven debe mostrar su DNI.</td></tr>
+            <tr><td class="soft ink" bgcolor="#f4f4f2" style="background-color:#f4f4f2;padding:8px 20px 18px;border-radius:0 0 18px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#0a0a0a">3.&nbsp; A las 6 am, el adulto que retira a cada chico debe mostrar su DNI.</td></tr>
           </table>
         </td></tr>
       </table>
