@@ -5,7 +5,7 @@ import { useEscanerQR, useMantenerPantallaEncendida } from '../../../hooks/useEs
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
 import { User } from '../../../types';
 import { enLista } from './compartido/formulario';
-import { esLecturaRepetida, esUUID, UltimaLectura } from './compartido/lecturaQR';
+import { esCodigoDeEntrada, esLecturaRepetida, esUUID, normalizarCodigo, UltimaLectura } from './compartido/lecturaQR';
 import { AMBAR, AMBAR_INK, CAMPO, ESTILOS_PANEL, fuente, INK, ROJO, VERDE } from './compartido/estilos';
 
 /**
@@ -110,24 +110,58 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         procesandoRef.current = true;
         ultimoCodigoRef.current = { texto: limpio, at: Date.now() };
 
-        // Antes de molestar a la base. Los QR del Día del Niño llevan un
-        // prefijo y no pasan por acá; los de otros eventos pueden ser UUID y
-        // sí llegan, pero la RPC no los encuentra. En los dos casos el
-        // mensaje tiene que decir que no es una entrada de Nocturna, no un
-        // "código inválido" que no le dice nada a nadie.
+        // Dos formas de nombrar la misma entrada: el QR lleva el id, y el
+        // código de 6 caracteres —el que figura abajo del QR en el email— es
+        // el que se tipea cuando la cámara no arranca o la pantalla del celular
+        // no se deja leer. El código se resuelve a id acá y de ahí los dos
+        // siguen por el mismo camino.
+        let idEntrada = limpio;
+
         if (!esUUID(limpio)) {
-            pitido(false);
-            setPanel({
-                tipo: 'aviso', clase: 'otroEvento', rotulo: 'NO ES DE NOCTURNA',
-                titulo: 'Este QR no es una entrada de Nocturna',
-                texto: 'Puede ser de otro evento, o una captura borrosa. Pediles que suban el brillo del celular y volvé a escanear. Si sigue igual, buscalos por nombre en el panel.',
-            });
-            procesandoRef.current = false;
-            return;
+            // Los QR del Día del Niño llevan un prefijo; los de otros eventos
+            // pueden ser UUID y sí llegan, pero la RPC no los encuentra. En esos
+            // casos el mensaje tiene que decir que no es una entrada de
+            // Nocturna, no un "código inválido" que no le dice nada a nadie.
+            if (!esCodigoDeEntrada(limpio)) {
+                pitido(false);
+                setPanel({
+                    tipo: 'aviso', clase: 'otroEvento', rotulo: 'NO ES DE NOCTURNA',
+                    titulo: 'Este QR no es una entrada de Nocturna',
+                    texto: 'Puede ser de otro evento, o una captura borrosa. Pediles que suban el brillo del celular y volvé a escanear. Si sigue igual, buscalos por nombre en el panel.',
+                });
+                procesandoRef.current = false;
+                return;
+            }
+
+            setBuscando(true);
+            const porCodigo = await supabaseService.getNocturnaPorCodigo(limpio);
+            setBuscando(false);
+
+            if (!porCodigo.ok || !porCodigo.inscripcionId) {
+                pitido(false);
+                procesandoRef.current = false;
+                // Un código bien formado que no existe es casi siempre un error
+                // de tipeo, no una entrada falsa: el aviso va en tono neutro y
+                // dice qué revisar.
+                setPanel(porCodigo.motivo === 'conexion'
+                    ? {
+                        tipo: 'aviso', clase: 'eliminada', rotulo: 'SIN CONEXIÓN',
+                        titulo: 'No pudimos buscar ese código',
+                        texto: 'Se cortó la conexión. No quiere decir que la entrada esté mal: probá de nuevo en un momento.',
+                    }
+                    : {
+                        tipo: 'aviso', clase: 'otroEvento', rotulo: 'CÓDIGO NO ENCONTRADO',
+                        titulo: 'No hay ninguna entrada con el código ' + normalizarCodigo(limpio),
+                        texto: 'Revisalo con la familia: son 6 caracteres y están abajo del QR, en el email. Si sigue sin aparecer, buscalos por nombre en el panel.',
+                    });
+                return;
+            }
+
+            idEntrada = porCodigo.inscripcionId;
         }
 
         setBuscando(true);
-        const res = await supabaseService.getNocturnaParaAcreditar(limpio);
+        const res = await supabaseService.getNocturnaParaAcreditar(idEntrada);
         setBuscando(false);
         procesandoRef.current = false;
 
@@ -278,11 +312,18 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         setConfirmando(true);
         setErrorConfirmar(null);
 
-        // El estado COMPLETO: los que ya estaban más los nuevos. La RPC fija
-        // el estado exacto, así que mandar sólo los nuevos desacreditaría a
-        // los anteriores.
+        // `sumar`: en la puerta se agrega gente, nunca se saca. Es lo que
+        // evita que dos personas del staff se pisen —una escanea a la familia
+        // mientras la otra tiene la misma ficha abierta de hace dos minutos—.
+        // Con el modo exacto, la segunda en guardar borraba el ingreso de
+        // quienes ya habían entrado, y la base contestaba que todo bien.
+        //
+        // Se sigue mandando el estado completo que ve la pantalla: en este
+        // modo, marcar de nuevo a alguien que ya entró no cambia nada.
         const ids = familia.jovenes.filter(j => familia.chicos[j.id]).map(j => j.id);
-        const res = await supabaseService.setNocturnaAcreditacion(familia.insc.id, familia.adulto, ids);
+        const res = await supabaseService.setNocturnaAcreditacion(
+            familia.insc.id, familia.adulto, ids, { modo: 'sumar' },
+        );
 
         if (!res.ok) {
             // Nada se marca como acreditado sin que la base lo confirme: un
@@ -332,7 +373,16 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                     placeholder="Pegá el código de la entrada"
                     aria-label="Código de la entrada"
                     className="campo flex-1"
-                    style={{ minWidth: 0 }}
+                    /* El código se guarda en mayúsculas igual, pero verlo así
+                       mientras se escribe evita el "¿lo puse bien?" con una
+                       fila esperando. El teclado del celular arranca en
+                       mayúsculas por autoCapitalize, y sin corrector: un
+                       código de 6 letras es justo lo que el corrector
+                       arruina. */
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    style={{ minWidth: 0, textTransform: 'uppercase' }}
                 />
                 <button
                     type="submit"

@@ -188,9 +188,30 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
         setErrorGuardar(null);
 
         const ids = jovenes.filter(j => chicosMarcados[j.id]).map(j => j.id);
-        const res = await supabaseService.setNocturnaAcreditacion(insc.id, adultoMarcado, ids);
+        // La foto del estado que esta pantalla tenía cuando cargó —`insc` sólo
+        // cambia al recargar—. Si en la base ya no es ese, alguien acreditó
+        // mientras tanto y guardar borraría su trabajo: la base rechaza y
+        // devuelve lo que hay de verdad.
+        const res = await supabaseService.setNocturnaAcreditacion(insc.id, adultoMarcado, ids, {
+            modo: 'exacto',
+            visto: {
+                adulto: !!insc.adultoAcreditadoAt,
+                jovenes: jovenes.filter(j => j.acreditadoAt).map(j => j.id),
+            },
+        });
 
         if (!res.ok) {
+            // Choque con otra pantalla: no es un error de conexión ni algo que
+            // convenga reintentar a ciegas. Se recarga la ficha para que se vea
+            // cómo quedó y se decida sobre lo que hay.
+            if (res.motivo === 'cambio') {
+                await cargar();
+                setGuardando(false);
+                setConfirmando(false);
+                setErrorGuardar({ conexion: false, texto: res.error || 'La familia cambió mientras tenías la ficha abierta.' });
+                return;
+            }
+
             // Nada se da por guardado sin que la base lo confirme: un tilde
             // verde que no se escribió deja a alguien contado de más.
             const hayBase = await probarConexionBase();

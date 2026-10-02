@@ -9533,6 +9533,42 @@ export const supabaseService = {
     }
   },
 
+  /**
+   * El id de una entrada, buscada por su código de 6 caracteres.
+   *
+   * Es el camino de la puerta cuando la cámara no arranca o la pantalla del
+   * celular no se deja leer: el código está impreso abajo del QR, en el email.
+   * Resuelve el código a `id` y de ahí sigue por `getNocturnaParaAcreditar`,
+   * que es la que decide permisos y arma la ficha —acá no se duplica ninguna
+   * de esas dos cosas—.
+   *
+   * Lee la tabla directo, con las mismas policies que usa la planilla (sólo
+   * staff), así que no hace falta una RPC nueva. Sin fila no se puede
+   * distinguir "no existe" de "no soy staff", pero a esta pantalla sólo se
+   * entra siendo staff, y si no lo fuera la RPC de abajo lo diría igual.
+   */
+  async getNocturnaPorCodigo(
+    codigo: string,
+  ): Promise<{ ok: boolean; inscripcionId?: string; motivo?: 'no_existe' | 'conexion' }> {
+    try {
+      const limpio = (codigo || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+      if (!limpio) return { ok: false, motivo: 'no_existe' };
+
+      const { data, error } = await supabase
+        .from('nocturna_inscripciones')
+        .select('id')
+        .eq('codigo_entrada', limpio)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data?.id) return { ok: false, motivo: 'no_existe' };
+      return { ok: true, inscripcionId: data.id as string };
+    } catch (err) {
+      console.error('[Nocturna] getNocturnaPorCodigo:', err);
+      return { ok: false, motivo: 'conexion' };
+    }
+  },
+
   /** Lo que lee el escáner al leer un QR. */
   async getNocturnaParaAcreditar(
     inscripcionId: string,
@@ -9565,18 +9601,39 @@ export const supabaseService = {
     inscripcionId: string,
     adulto: boolean,
     jovenIds: string[],
-  ): Promise<{ ok: boolean; inscripcion?: any; jovenes?: any[]; error?: string }> {
+    opciones?: {
+      /**
+       * `sumar` para la puerta: agrega y nunca borra, así dos escáneres con
+       * pantallas desfasadas no pueden pisarse. `exacto` para la ficha, que
+       * sí necesita poder desmarcar.
+       */
+      modo?: 'exacto' | 'sumar';
+      /**
+       * El estado que el cliente tenía en pantalla ANTES de tocar nada. Si en
+       * la base cambió desde entonces, el guardado se rechaza con
+       * `motivo: 'cambio'` en vez de pisar lo que hizo otro.
+       */
+      visto?: { adulto: boolean; jovenes: string[] };
+    },
+  ): Promise<{ ok: boolean; inscripcion?: any; jovenes?: any[]; motivo?: string; error?: string }> {
     try {
       const { data, error } = await supabase.rpc('set_nocturna_acreditacion', {
         p_inscripcion_id: inscripcionId,
         p_adulto: adulto,
         p_jovenes: jovenIds,
+        p_modo: opciones?.modo || 'exacto',
+        p_visto_adulto: opciones?.visto ? opciones.visto.adulto : null,
+        p_visto_jovenes: opciones?.visto ? opciones.visto.jovenes : null,
       });
       if (error) throw error;
+      // Cuando rechaza por choque, la base manda además el estado de verdad:
+      // la pantalla se actualiza sin volver a preguntar.
+      const estado = data?.motivo === 'cambio' ? data?.estado : null;
       return {
         ok: data?.ok === true,
-        inscripcion: data?.inscripcion,
-        jovenes: data?.jovenes,
+        inscripcion: estado?.inscripcion ?? data?.inscripcion,
+        jovenes: estado?.jovenes ?? data?.jovenes,
+        motivo: data?.motivo,
         error: data?.error,
       };
     } catch (err) {
