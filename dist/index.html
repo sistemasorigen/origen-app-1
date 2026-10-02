@@ -479,6 +479,68 @@
       display: flex !important;
     }
 
+    /* Entrada de la app, cuando el velo de carga se va.
+       ───────────────────────────────────────────────────────────────────
+       Antes el velo se desvanecía y abajo ya estaba todo quieto: un cruce
+       de opacidad entre una pantalla gris clara y el video oscuro del hero,
+       que se lee como un corte. Ahora la app llega: sube diez píxeles y
+       termina de abrirse mientras el velo se disuelve, así las dos cosas se
+       sienten un solo movimiento y no dos pantallas pegadas.
+
+       La opacidad termina en el 55% del recorrido —a los ~310 ms— a
+       propósito: el velo recién se va del todo a los 400, así que el tramo
+       translúcido queda tapado y nunca se ve el fondo de la página a través
+       de la app.
+
+       Arranca en .55 y no en 0 por lo mismo: desde cero el tramo visible
+       sería más largo que el velo.
+
+       ⚠ Mientras corre, el `transform` convierte a este div en el bloque
+       contenedor de todo lo que tenga position:fixed adentro (la navbar,
+       los modales). Por eso la clase se saca apenas termina y NO lleva
+       will-change: con la clase puesta para siempre, un modal abierto se
+       posicionaría contra este div en vez de contra la ventana. */
+    @keyframes appEntra {
+      from { opacity: .4; transform: translateY(26px) scale(.97) }
+      45%  { opacity: 1 }
+      to   { opacity: 1; transform: none }
+    }
+
+    /* Los 250 ms de demora son el truco, y la primera versión no los tenía:
+       sin ellos la animación corría MIENTRAS el velo todavía tapaba, llegaba
+       al final a los ~300 ms y el velo recién se iba a los 400. Para cuando
+       había algo que mirar, ya estaba todo en su lugar: se veía aparecer de
+       golpe igual que antes.
+
+       Con la demora, `both` deja la app quieta en el estado inicial —26 px
+       más abajo y traslúcida— mientras el velo se disuelve encima. Recién
+       cuando el velo se fue, la app sube. El movimiento pasa a la vista, que
+       era todo el punto.
+
+       Los números están calzados con los 280 ms del velo (PantallaCargaApp):
+       al destaparse, a la app le quedan ~19 px de recorrido y medio segundo
+       de movimiento. Con la primera versión le quedaban 3 px, y con la
+       segunda 8,8 — por eso se seguía viendo como un corte. La curva es un
+       ease-out suave y no una de las aceleradas de la casa justamente para
+       que el recorrido no se gaste en los primeros milisegundos, que son los
+       que pasan tapados. */
+    .app-entrando {
+      animation: appEntra .72s cubic-bezier(0, 0, .42, 1) .2s both;
+    }
+
+    /* Con "menos movimiento" no se mueve nada, pero sí se funde: lo que
+       molesta de las animaciones es el desplazamiento, no un cambio de
+       opacidad. Apagarlo del todo dejaba un corte seco, que es justo lo que
+       esto viene a sacar. */
+    @keyframes appEntraSuave {
+      from { opacity: .4 }
+      to { opacity: 1 }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .app-entrando { animation: appEntraSuave .45s ease .2s both }
+    }
+
     /* Las cuatro animaciones del diseño: entrada de cada bloque nuevo, latido
        del paso en curso, spinner y el sello de "encontramos a tu pareja". */
     @keyframes inscSube {
@@ -988,7 +1050,7 @@
         }
       })();
   </script>
-  <script type="module" crossorigin src="/assets/index-fXKTLPHE.js"></script>
+  <script type="module" crossorigin src="/assets/index-B6B3ru09.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-CVsVvX9w.css">
 </head>
 
@@ -996,7 +1058,7 @@
   <!-- Accessibility: Skip to main content link -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <div id="root"></div>
+  <div id="root"></div>
 </body>
 
 </html>

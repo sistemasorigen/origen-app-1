@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { UserRole, AppConfig, User } from '../../types';
 import { db } from '../../services/dbService';
 import { HeroLayoutContext } from '../../contexts/HeroContext';
+import { BarraDeAppContext } from '../../contexts/BarraDeApp';
 
 import GlobalPlayer from './ReproductorGlobal';
 import DrawerMenu, { HamburgerButton } from './MenuDeslizable';
@@ -22,9 +23,19 @@ interface LayoutProps {
     appConfig: AppConfig;
     onToggleTheme?: () => void;
     onVolunteerClick?: () => void;
+    /**
+     * Deja la navbar con el logo solo: sin menú, sin barra lateral y sin
+     * campana.
+     *
+     * Para las pantallas que son un trámite de principio a fin —la
+     * inscripción pública a Nocturna, por ejemplo—, donde ofrecer una salida
+     * a mitad de un formulario de datos de menores es invitar a abandonarlo.
+     * La marca arriba queda igual, que es lo que da confianza.
+     */
+    sinNavegacion?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogout, onToggleTheme }) => {
+const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogout, onToggleTheme, sinNavegacion = false }) => {
     useAttendanceReminder();
     const location = useLocation();
     const navigate = useNavigate();
@@ -49,6 +60,15 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
         () => ({ hasFullBleedHero, setHasFullBleedHero }),
         [hasFullBleedHero]
     );
+
+    // Lo mismo para la barra de arriba: hay pantallas que la quieren fuera en
+    // algunos de sus modos y puesta en otros, sin cambiar de ruta — ver
+    // contexts/BarraDeApp.tsx.
+    const [barraOculta, setBarraOculta] = useState(false);
+    const barraDeApp = useMemo(
+        () => ({ barraOculta, setBarraOculta }),
+        [barraOculta]
+    );
     const isDashboard = location.pathname === '/' || location.pathname === '/gcx' || location.pathname === '/ninez' || hasFullBleedHero;
     // `/ninez` entra acá junto con isDashboard, no por separado: el -mt-16 que
     // monta el hero bajo la navbar sólo tiene sentido si el contenido va a
@@ -56,7 +76,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     // márgenes laterales y 32px de blanco arriba, y el logo invertido a blanco
     // caería sobre ese blanco. Ninez.tsx ya limita su propio contenido con un
     // max-w-4xl interno, así que no necesita el de acá.
-    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/gcx' || location.pathname === '/ninez' || location.pathname === '/punto-de-informacion' || location.pathname === '/alabanza' || location.pathname === '/prode' || location.pathname.startsWith('/coordinators') || location.pathname.startsWith('/audiencia-servicios');
+    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/gcx' || location.pathname === '/ninez' || location.pathname === '/punto-de-informacion' || location.pathname === '/alabanza' || location.pathname === '/prode' || location.pathname.startsWith('/coordinators') || location.pathname.startsWith('/audiencia-servicios') || location.pathname === '/nocturna-inscripcion';
 
     // En el dashboard la navbar arranca sin fondo, montada sobre el hero.
     // Al scrollear recupera el fondo: si no, quedaría flotando transparente
@@ -114,32 +134,39 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
 
     return (
         <HeroLayoutContext.Provider value={heroLayout}>
+        <BarraDeAppContext.Provider value={barraDeApp}>
         <div className="min-h-screen flex font-sans text-slate-900 dark:text-white bg-slate-50 dark:bg-black transition-colors duration-300 relative">
 
             {/* Desktop Sidebar */}
-            <DrawerMenu
-                type="sidebar"
-                isOpen={true} // Not used in sidebar mode
-                onClose={() => { }}
-                currentUser={currentUser || null}
-                onLogout={handleLogoutAction}
-                onToggleTheme={onToggleTheme}
-                isCollapsed={isSidebarCollapsed}
-                onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            />
+            {!sinNavegacion && (
+                <DrawerMenu
+                    type="sidebar"
+                    isOpen={true} // Not used in sidebar mode
+                    onClose={() => { }}
+                    currentUser={currentUser || null}
+                    onLogout={handleLogoutAction}
+                    onToggleTheme={onToggleTheme}
+                    isCollapsed={isSidebarCollapsed}
+                    onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                />
+            )}
 
             {/* Mobile Drawer */}
-            <DrawerMenu
-                type="drawer"
-                isOpen={isMenuOpen}
-                onClose={() => setIsMenuOpen(false)}
-                currentUser={currentUser || null}
-                onLogout={handleLogoutAction}
-                onToggleTheme={onToggleTheme}
-            />
+            {!sinNavegacion && (
+                <DrawerMenu
+                    type="drawer"
+                    isOpen={isMenuOpen}
+                    onClose={() => setIsMenuOpen(false)}
+                    currentUser={currentUser || null}
+                    onLogout={handleLogoutAction}
+                    onToggleTheme={onToggleTheme}
+                />
+            )}
 
             {/* Main Content Area */}
-            <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 print:ml-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+            {/* El margen izquierdo existe sólo para dejarle lugar a la barra
+                lateral; sin ella, el contenido arranca pegado al borde. */}
+            <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 print:ml-0 ${sinNavegacion ? '' : isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
 
                 {renderModuleBackground()}
 
@@ -151,6 +178,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                 )}
 
                 {/* Navbar */}
+                {!barraOculta && (
                 <header className={`no-print print:hidden sticky top-0 z-30 flex-shrink-0 h-16 border-b transition-colors duration-300 ${isNavbarTransparent
                     ? 'bg-transparent border-transparent'
                     : 'bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-slate-200 dark:border-zinc-800'
@@ -159,10 +187,12 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
 
                         {/* Left: Hamburger (mobile only) */}
                         <div className="flex-1 flex items-center md:hidden print:hidden">
-                            <HamburgerButton
-                                onClick={() => setIsMenuOpen(true)}
-                                onMedia={isNavbarTransparent}
-                            />
+                            {!sinNavegacion && (
+                                <HamburgerButton
+                                    onClick={() => setIsMenuOpen(true)}
+                                    onMedia={isNavbarTransparent}
+                                />
+                            )}
                         </div>
 
                         {/* Portal for pages (desktop) */}
@@ -219,7 +249,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                                     <Moon className="h-5 w-5 hidden dark:block" />
                                 </button>
                             )}
-                            {currentUser && (
+                            {currentUser && !sinNavegacion && (
                                 <NotificationBell
                                     onToggleDrawer={() => setIsNotifDrawerOpen(true)}
                                     onMedia={isNavbarTransparent}
@@ -246,6 +276,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                         </div>
                     </div>
                 </header>
+                )}
 
                 {/* Main Content */}
                 {/* En el dashboard el contenido sube 64px (el alto de la navbar)
@@ -268,6 +299,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                 onClose={() => setIsNotifDrawerOpen(false)}
             />
         </div>
+        </BarraDeAppContext.Provider>
         </HeroLayoutContext.Provider>
     );
 };

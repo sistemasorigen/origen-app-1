@@ -4,7 +4,7 @@ import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import {
     CalendarDays, ChevronRight,
-    Users, LayoutDashboard, Trophy, PartyPopper, Swords
+    Users, LayoutDashboard, Trophy, PartyPopper, Swords, Moon
 } from 'lucide-react';
 
 interface PanelEventosProps {
@@ -38,6 +38,21 @@ const PANELES_EVENTOS = [
             UserRole.SUPER_ADMIN,
             UserRole.PASTOR,
             UserRole.ENCARGADO_EVENTOS,
+        ]
+    },
+    {
+        id: 'nocturna',
+        titulo: 'Nocturna',
+        descripcion: 'Planilla de inscripciones, entradas y acreditación del evento.',
+        ruta: '/panel-eventos/nocturna',
+        icono: Moon,
+        color: '#1E293B',  // slate oscuro
+        roles: [
+            UserRole.SUPER_ADMIN,
+            UserRole.PASTOR,
+            UserRole.ENCARGADO_EVENTOS,
+            // Los mismos cuatro de is_nocturna_staff().
+            UserRole.ACREDITACION,
         ]
     },
     {

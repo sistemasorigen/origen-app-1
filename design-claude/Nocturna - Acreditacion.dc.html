@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 56px; display:flex; flex-direction:column; align-items:safe center; gap:12px">
+
+  <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:22px; padding:8px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center; max-width:1100px">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ showMobile }}" style="{{ mobBtn }}">Mobile</button>
+      <button onClick="{{ showDesktop }}" style="{{ deskBtn }}">Desktop</button>
+    </div>
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">SIMULAR ESCANEO</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px; flex-wrap:wrap">
+      <sc-for list="{{ sims }}" as="m" hint-placeholder-count="6"><button onClick="{{ m.ir }}" style="{{ m.style }}">{{ m.label }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; background:#0b0b0c; border-radius:30px; box-shadow:0 4px 24px rgba(0,0,0,.18); overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; display:flex">
+
+    <div style="position:relative; flex:1; min-width:0; height:100%; overflow:hidden">
+
+      <sc-if value="{{ camOk }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute; inset:0; background:repeating-linear-gradient(135deg,#141416 0 14px,#18181b 14px 28px)"></div>
+        <div style="position:absolute; left:0; right:0; top:0; padding:16px 16px 0; display:flex; align-items:center; gap:10px">
+          <button style="height:44px; padding:0 16px 0 12px; border:0; border-radius:999px; background:rgba(255,255,255,.12); color:#fff; display:flex; align-items:center; gap:6px; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>Panel</button>
+          <div style="margin-left:auto; text-align:right">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(255,255,255,.6)">ADENTRO ESTA NOCHE</p>
+            <p style="margin:2px 0 0; font:600 20px Manrope,system-ui,sans-serif; color:#fff">{{ adentro }}</p>
+          </div>
+        </div>
+        <div style="position:absolute; left:50%; top:{{ marcoTop }}; transform:translate(-50%,-50%); width:236px; height:236px">
+          <span style="position:absolute; left:0; top:0; width:46px; height:46px; border-left:4px solid #fff; border-top:4px solid #fff; border-top-left-radius:22px"></span>
+          <span style="position:absolute; right:0; top:0; width:46px; height:46px; border-right:4px solid #fff; border-top:4px solid #fff; border-top-right-radius:22px"></span>
+          <span style="position:absolute; left:0; bottom:0; width:46px; height:46px; border-left:4px solid #fff; border-bottom:4px solid #fff; border-bottom-left-radius:22px"></span>
+          <span style="position:absolute; right:0; bottom:0; width:46px; height:46px; border-right:4px solid #fff; border-bottom:4px solid #fff; border-bottom-right-radius:22px"></span>
+          <span style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font:500 10.5px ui-monospace,Menlo,monospace; color:rgba(255,255,255,.4)">vista de cámara</span>
+        </div>
+        <div style="position:absolute; left:0; right:0; top:{{ textoTop }}; text-align:center; padding:0 30px">
+          <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#fff">Apuntá al QR de la entrada</p>
+          <p style="margin:6px 0 0; font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.66)">Uno por familia. Se lee solo.</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ camNo }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; inset:0; background:#fff; overflow:auto; padding:22px 20px 26px">
+          <div style="max-width:440px; margin:0 auto">
+            <div style="width:64px; height:64px; border-radius:999px; background:#fdf3e3; display:flex; align-items:center; justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7a4f10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="3"></rect><path d="M3 3l18 18"></path></svg></div>
+            <h1 style="margin:18px 0 0; font:600 24px/1.25 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">La app no puede usar la cámara</h1>
+            <p style="margin:10px 0 0; font:500 14.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">En algunos Android el aviso para dar permiso no aparece. Activalo a mano, son tres toques:</p>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:16px">
+              <sc-for list="{{ pasosPermiso }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex; align-items:center; gap:12px; background:#f4f4f2; border-radius:16px; padding:14px 16px">
+                  <span style="width:30px; height:30px; border-radius:999px; background:#0a0a0a; color:#fff; font:600 13px Manrope,system-ui,sans-serif; display:flex; align-items:center; justify-content:center; flex:none">{{ p.n }}</span>
+                  <span style="font:600 14.5px/1.4 Manrope,system-ui,sans-serif; color:#0a0a0a">{{ p.t }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <button onClick="{{ reintentar }}" style="width:100%; height:60px; margin-top:20px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 16.5px Manrope,system-ui,sans-serif; cursor:pointer">{{ reintentarLabel }}</button>
+            <p style="margin:12px 0 0; text-align:center; font:500 13px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.58)">Si sigue sin andar, cerrá el navegador y volvé a abrir el link. En iPhone: Ajustes → Safari → Cámara → Permitir.</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; left:14px; right:14px; top:76px; display:flex; justify-content:center">
+          <div style="width:100%; max-width:400px; background:#16a34a; border-radius:20px; padding:12px 12px 12px 16px; display:flex; align-items:center; gap:12px; box-shadow:0 10px 30px rgba(0,0,0,.35)">
+            <span style="width:34px; height:34px; border-radius:999px; background:rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></span>
+            <div style="flex:1; min-width:0">
+              <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#fff">{{ toastTitulo }}</p>
+              <p style="margin:2px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.88)">{{ toastSub }}</p>
+            </div>
+            <button onClick="{{ deshacer }}" style="height:40px; padding:0 14px; border:0; border-radius:999px; background:#fff; color:#0a0a0a; font:600 13px Manrope,system-ui,sans-serif; cursor:pointer; flex:none">Deshacer</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ haySheet }}" hint-placeholder-val="{{ true }}">
+        <div style="{{ sheetWrap }}">
+          <div style="{{ sheetCard }}">
+            <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}"><div style="width:44px; height:5px; border-radius:999px; background:#dddcd8; margin:0 auto 14px"></div></sc-if>
+
+            <sc-if value="{{ sOk }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; align-items:flex-start; gap:12px">
+                <div style="flex:1; min-width:0">
+                  <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; color:{{ fEtiquetaInk }}">{{ fEtiqueta }}</p>
+                  <h2 style="margin:4px 0 0; font:600 22px/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">Familia {{ fApellido }}</h2>
+                </div>
+                <button onClick="{{ cerrar }}" title="Cerrar sin cambios" style="width:44px; height:44px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+              </div>
+
+              <sc-if value="{{ haySinFotos }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; align-items:center; gap:10px; margin-top:12px; background:#fdf3e3; border-radius:14px; padding:10px 14px">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7a4f10" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect x="3" y="7" width="18" height="13" rx="3"></rect><path d="M3 3l18 18"></path></svg>
+                  <span style="font:600 13.5px/1.4 Manrope,system-ui,sans-serif; color:#5c3b0b">{{ sinFotosTxt }}</span>
+                </div>
+              </sc-if>
+
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px">
+                <sc-for list="{{ personas }}" as="p" hint-placeholder-count="4">
+                  <button onClick="{{ p.toggle }}" style="{{ p.style }}">
+                    <span style="{{ p.check }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ p.tickInk }}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></span>
+                    <span style="flex:1; min-width:0; text-align:left">
+                      <span style="display:block; font:600 17px Manrope,system-ui,sans-serif; color:{{ p.ink }}">{{ p.nombre }}</span>
+                      <span style="display:block; margin-top:3px; font:500 13px Manrope,system-ui,sans-serif; color:{{ p.subInk }}">{{ p.sub }}</span>
+                    </span>
+                    <sc-if value="{{ p.sinFotos }}" hint-placeholder-val="{{ false }}">
+                      <span style="height:28px; padding:0 10px; border-radius:999px; background:#fdf3e3; color:#7a4f10; font:600 12px Manrope,system-ui,sans-serif; display:flex; align-items:center; flex:none">Sin fotos</span>
+                    </sc-if>
+                  </button>
+                </sc-for>
+              </div>
+
+              <sc-if value="{{ hayMarcarTodos }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ marcarTodos }}" style="width:100%; height:48px; margin-top:10px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">{{ marcarTodosLabel }}</button>
+              </sc-if>
+              <p style="margin:12px 2px 0; text-align:center; font:600 13px Manrope,system-ui,sans-serif; color:{{ reglaInk }}">{{ regla }}</p>
+              <button onClick="{{ acreditar }}" style="{{ acreditarStyle }}">{{ acreditarLabel }}</button>
+            </sc-if>
+
+            <sc-if value="{{ sAviso }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding-top:4px">
+                <div style="width:72px; height:72px; border-radius:999px; background:{{ avisoBg }}; display:flex; align-items:center; justify-content:center">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ avisoIcon }}"></path></svg>
+                </div>
+                <p style="margin:16px 0 0; font:600 12.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:{{ avisoInk }}">{{ avisoRotulo }}</p>
+                <h2 style="margin:6px 0 0; font:600 23px/1.25 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">{{ avisoTitulo }}</h2>
+                <p style="margin:10px 0 0; max-width:360px; font:500 14.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">{{ avisoTexto }}</p>
+              </div>
+              <sc-if value="{{ hayAvisoLista }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:16px; background:#f7f7f5; border-radius:18px; padding:4px 16px">
+                  <sc-for list="{{ avisoLista }}" as="l" hint-placeholder-count="4">
+                    <div style="display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid #ecebe8"><span style="font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ l.nombre }}</span><span style="font:600 13px Manrope,system-ui,sans-serif; color:#12783f">Entró {{ l.hora }}</span></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <button onClick="{{ cerrar }}" style="width:100%; height:60px; margin-top:18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 16.5px Manrope,system-ui,sans-serif; cursor:pointer">Seguir escaneando</button>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1160,&quot;height&quot;:920}}">
+class Component extends DCLogic {
+  familias() {
+    return {
+      nueva: { codigo: 'NOC-0412', apellido: 'Fernández', adulto: { nombre: 'Diego Fernández', hora: null }, chicos: [
+        { nombre: 'Lucas Fernández', edad: 14, tribu: 'Garra', fotos: true, hora: null },
+        { nombre: 'Mateo Fernández', edad: 16, tribu: 'Garra', fotos: true, hora: null },
+        { nombre: 'Valentina Fernández', edad: 12, tribu: 'Sin tribu', fotos: false, hora: null }] },
+      vuelve: { codigo: 'NOC-0455', apellido: 'Suárez', adulto: { nombre: 'Hernán Suárez', hora: '23:12' }, chicos: [
+        { nombre: 'Thiago Suárez', edad: 15, tribu: 'Garra', fotos: true, hora: '23:12' },
+        { nombre: 'Lola Suárez', edad: 12, tribu: 'Trueno', fotos: true, hora: null }] },
+      completa: { codigo: 'NOC-0398', apellido: 'Giménez', adulto: { nombre: 'Laura Giménez', hora: '23:07' }, chicos: [
+        { nombre: 'Benjamín Giménez', edad: 13, tribu: 'Trueno', fotos: true, hora: '23:07' },
+        { nombre: 'Catalina Giménez', edad: 15, tribu: 'Trueno', fotos: true, hora: '23:07' },
+        { nombre: 'Joaquín Giménez', edad: 17, tribu: 'Garra', fotos: true, hora: '23:07' }] }
+    };
+  }
+
+  state = { device: 'mobile', cam: true, permisoIntentos: 0, sheet: 'nueva', fams: this.familias(), marcas: null, toast: null, adentro: 84, hora: 23 * 60 + 38 };
+
+  componentDidMount() { this.abrir('nueva'); }
+
+  abrir(k) {
+    if (k === 'permiso') return this.setState({ cam: false, sheet: null, toast: null });
+    const f = this.state.fams[k];
+    const marcas = f ? { a: !!f.adulto.hora, c: f.chicos.map(c => !!c.hora) } : null;
+    this.setState({ cam: true, sheet: k, marcas, toast: null });
+  }
+
+  hh(m) { return Math.floor(m / 60) % 24 + ':' + String(m % 60).padStart(2, '0'); }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'desktop';
+    const seg = on => 'height:32px; padding:0 12px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; white-space:nowrap';
+    const actual = s.cam ? s.sheet : 'permiso';
+    const f = s.fams[s.sheet];
+    const m = s.marcas;
+    const esFam = !!(f && m && s.cam);
+
+    let v = {};
+    if (esFam) {
+      const yaTodos = f.adulto.hora && f.chicos.every(c => c.hora);
+      if (yaTodos) {
+        v = {
+          sOk: false, sAviso: true,
+          avisoBg: '#b42318', avisoInk: '#b42318', avisoIcon: 'M12 7v6M12 16.5v.5',
+          avisoRotulo: 'ENTRADA YA USADA',
+          avisoTitulo: 'La familia ' + f.apellido + ' ya entró completa',
+          avisoTexto: 'Este QR se usó para las ' + (f.chicos.length + 1) + ' personas. Si alguien intenta entrar de nuevo, pedile el DNI y consultá con un coordinador.',
+          hayAvisoLista: true,
+          avisoLista: [{ nombre: f.adulto.nombre, hora: f.adulto.hora }].concat(f.chicos.map(c => ({ nombre: c.nombre, hora: c.hora })))
+        };
+      } else {
+        const nuevosA = m.a && !f.adulto.hora;
+        const nuevosC = m.c.filter((x, i) => x && !f.chicos[i].hora).length;
+        const nuevos = (nuevosA ? 1 : 0) + nuevosC;
+        const total = f.chicos.length + 1;
+        const quedan = (m.a ? 1 : 0) + m.c.filter(Boolean).length;
+        const okRegla = m.a && m.c.some(Boolean);
+        const habil = okRegla && nuevos > 0;
+        const vuelve = !!f.adulto.hora;
+        const per = (nombre, sub, on, prev, sinFotos, fn) => ({
+          nombre, sinFotos,
+          sub: prev ? 'Ya entró a las ' + prev : sub,
+          ink: prev ? 'rgba(0,0,0,.55)' : '#0a0a0a',
+          subInk: prev ? '#12783f' : 'rgba(0,0,0,.58)',
+          tickInk: on ? '#fff' : 'transparent',
+          style: 'width:100%; min-height:74px; padding:12px 16px 12px 12px; border:0; border-radius:20px; display:flex; align-items:center; gap:14px; cursor:' + (prev ? 'default' : 'pointer') + '; background:' + (prev ? '#f4f4f2' : (on ? '#eaf7ef' : '#fff')) + '; box-shadow:' + (prev ? 'none' : (on ? '0 0 0 2px #16a34a inset' : '0 0 0 1.5px #dcdbd7 inset')),
+          check: 'width:44px; height:44px; border-radius:999px; flex:none; display:flex; align-items:center; justify-content:center; background:' + (on ? (prev ? '#86c79f' : '#16a34a') : '#fff') + '; box-shadow:' + (on ? 'none' : '0 0 0 2px #cfcec9 inset'),
+          toggle: prev ? () => {} : fn
+        });
+        const sinF = f.chicos.filter(c => !c.fotos).map(c => c.nombre.split(' ')[0]);
+        const pend = [!f.adulto.hora && !m.a].concat(f.chicos.map((c, i) => !c.hora && !m.c[i])).some(Boolean);
+        v = {
+          sOk: true, sAviso: false,
+          fApellido: f.apellido,
+          fEtiqueta: vuelve ? 'VUELVEN A ESCANEAR · ' + f.codigo : f.codigo + ' · ' + f.chicos.length + (f.chicos.length === 1 ? ' chico' : ' chicos'),
+          fEtiquetaInk: vuelve ? '#12783f' : 'rgba(0,0,0,.55)',
+          haySinFotos: sinF.length > 0,
+          sinFotosTxt: sinF.join(' y ') + ' no tiene' + (sinF.length > 1 ? 'n' : '') + ' permiso de fotos. Avisale al equipo de fotografía.',
+          personas: [per(f.adulto.nombre, 'Adulto responsable', m.a, f.adulto.hora, false, () => this.setState(st => ({ marcas: Object.assign({}, st.marcas, { a: !st.marcas.a }) })))]
+            .concat(f.chicos.map((c, i) => per(c.nombre, c.edad + ' años · ' + c.tribu, m.c[i], c.hora, !c.fotos, () => this.setState(st => { const cc = st.marcas.c.slice(); cc[i] = !cc[i]; return { marcas: Object.assign({}, st.marcas, { c: cc }) }; })))),
+          hayMarcarTodos: pend,
+          marcarTodosLabel: vuelve ? 'Marcar a los que faltan' : 'Llegaron todos',
+          marcarTodos: () => this.setState({ marcas: { a: true, c: f.chicos.map(() => true) } }),
+          regla: habil ? (vuelve ? 'Se suma' + (nuevos > 1 ? 'n ' : ' ') + nuevos + '. Quedan ' + quedan + '/' + total + ' adentro.' : 'Entran ' + quedan + ' de ' + total + '.')
+            : (!m.a ? 'Falta marcar al adulto responsable' : (!m.c.some(Boolean) ? 'Falta marcar al menos un chico' : 'Marcá a quien acaba de llegar')),
+          reglaInk: habil ? '#12783f' : '#7a4f10',
+          acreditarLabel: habil ? (vuelve ? 'Acreditar ' + nuevos + ' más' : 'Acreditar ' + quedan + '/' + total) : 'Acreditar',
+          acreditarStyle: 'width:100%; height:64px; margin-top:10px; border:0; border-radius:999px; font:600 18px Manrope,system-ui,sans-serif; cursor:' + (habil ? 'pointer' : 'not-allowed') + '; background:' + (habil ? '#0a0a0a' : '#e6e5e1') + '; color:' + (habil ? '#fff' : 'rgba(0,0,0,.4)'),
+          acreditar: () => {
+            if (!habil) return;
+            const hora = this.hh(s.hora);
+            const previo = JSON.parse(JSON.stringify(f));
+            const nf = JSON.parse(JSON.stringify(f));
+            if (m.a && !nf.adulto.hora) nf.adulto.hora = hora;
+            nf.chicos.forEach((c, i) => { if (m.c[i] && !c.hora) c.hora = hora; });
+            this.setState(st => ({
+              fams: Object.assign({}, st.fams, { [st.sheet]: nf }), sheet: null, marcas: null,
+              adentro: st.adentro + nuevos, hora: st.hora + 1,
+              toast: { titulo: 'Familia ' + f.apellido + ' · Aprobado ' + quedan + '/' + total, sub: 'Listo para la próxima familia', key: st.sheet, previo, n: nuevos }
+            }));
+            clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), 6000);
+          }
+        };
+      }
+    } else if (s.cam && (s.sheet === 'invalido' || s.sheet === 'eliminada')) {
+      const inv = s.sheet === 'invalido';
+      v = {
+        sOk: false, sAviso: true, hayAvisoLista: false,
+        avisoBg: inv ? '#0a0a0a' : '#b42318', avisoInk: inv ? 'rgba(0,0,0,.6)' : '#b42318',
+        avisoIcon: inv ? 'M6 6l12 12M18 6L6 18' : 'M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12',
+        avisoRotulo: inv ? 'QR NO VÁLIDO' : 'INSCRIPCIÓN ELIMINADA',
+        avisoTitulo: inv ? 'Este QR no es de Nocturna 2026' : 'Esta inscripción ya no existe',
+        avisoTexto: inv ? 'Puede ser de otro evento o una captura borrosa. Pedí que suban el brillo del celular y volvé a escanear. Si sigue igual, buscalos por nombre en el panel.'
+          : 'La familia Rossi fue dada de baja el jueves 29 por Lucía Paz. Con este QR no pueden entrar. Mandalos a la mesa de ayuda.'
+      };
+    }
+
+    return Object.assign({
+      showMobile: () => this.setState({ device: 'mobile' }), showDesktop: () => this.setState({ device: 'desktop' }),
+      mobBtn: seg(!desk), deskBtn: seg(desk),
+      sims: [['nueva', 'Familia nueva'], ['vuelve', 'Vuelve a escanear'], ['completa', 'Ya entraron todos'], ['invalido', 'QR inválido'], ['eliminada', 'Eliminada'], ['permiso', 'Sin permiso de cámara']]
+        .map(([k, l]) => ({ label: l, style: seg(actual === k), ir: () => { if (k !== 'permiso' && k !== 'invalido' && k !== 'eliminada' && s.fams[k] === undefined) return; if (k === 'nueva' || k === 'vuelve' || k === 'completa') this.setState({ fams: Object.assign({}, s.fams, { [k]: this.familias()[k] }) }, () => this.abrir(k)); else this.abrir(k); } })),
+      isMobile: !desk,
+      frameW: desk ? '1100px' : '390px', frameH: desk ? '760px' : '820px',
+      marcoTop: desk ? '44%' : '36%', textoTop: desk ? '64%' : '53%',
+      camOk: s.cam, camNo: !s.cam,
+      adentro: s.adentro,
+      pasosPermiso: [{ n: 1, t: 'Tocá el candado al lado de la dirección, arriba' }, { n: 2, t: 'Entrá a Permisos' }, { n: 3, t: 'Cámara → Permitir' }],
+      reintentar: () => this.setState(st => st.permisoIntentos >= 1 ? { cam: true, permisoIntentos: 0, sheet: null } : { permisoIntentos: st.permisoIntentos + 1 }),
+      reintentarLabel: s.permisoIntentos ? 'Seguimos sin acceso · Reintentar' : 'Reintentar el acceso a la cámara',
+
+      haySheet: s.cam && !!s.sheet && (esFam || s.sheet === 'invalido' || s.sheet === 'eliminada'),
+      sheetWrap: desk
+        ? 'position:absolute; top:0; right:0; bottom:0; width:440px; padding:20px; display:flex; align-items:stretch'
+        : 'position:absolute; left:0; right:0; bottom:0; top:0; background:rgba(0,0,0,.35); display:flex; align-items:flex-end',
+      sheetCard: desk
+        ? 'flex:1; background:#fff; border-radius:26px; padding:22px; overflow:auto'
+        : 'width:100%; max-height:92%; overflow:auto; background:#fff; border-radius:28px 28px 0 0; padding:12px 16px 22px',
+      cerrar: () => this.setState({ sheet: null, marcas: null }),
+
+      hayToast: !!s.toast,
+      toastTitulo: s.toast ? s.toast.titulo : '', toastSub: s.toast ? s.toast.sub : '',
+      deshacer: () => { const t = s.toast; if (!t) return; this.setState(st => ({ fams: Object.assign({}, st.fams, { [t.key]: t.previo }), adentro: st.adentro - t.n, toast: null }), () => this.abrir(t.key)); }
+    }, v);
+  }
+}
+</script>
+</body>
+</html>

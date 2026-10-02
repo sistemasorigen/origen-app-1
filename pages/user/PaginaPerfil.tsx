@@ -324,6 +324,16 @@ const ProfilePage: React.FC = () => {
             });
 
             if (profileOk && nameOk) {
+                // Lo recién guardado baja a las copias: la lista de miembros
+                // del anfitrión, la ficha de la inscripción y el nombre que
+                // muestra la tarjeta del grupo. Sin esto el dato bueno queda
+                // sólo en `users` y nadie lo mira.
+                //
+                // No se chequea el resultado a propósito: si la sincronización
+                // falla, el perfil igual se guardó bien y decirle a la persona
+                // que algo salió mal sería mentirle. Queda en la consola.
+                await supabaseService.sincronizarMisDatos();
+
                 await refreshSession();
                 setAviso({ tipo: 'ok', texto: 'Cambios guardados.' });
                 setTimeout(() => setAviso(null), 3000);

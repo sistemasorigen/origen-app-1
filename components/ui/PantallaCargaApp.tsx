@@ -34,9 +34,14 @@ const PantallaCargaApp: React.FC<{
 
     // Respaldo de la transición: en una pestaña de fondo el navegador no
     // dispara transitionend y el velo se quedaría puesto para siempre.
+    //
+    // 320 = los 280 del fundido más un margen. El velo se va rápido a
+    // propósito: la entrada de la app (.app-entrando, en index.html) arranca
+    // a los 200 ms y lo bueno pasa DESPUÉS de que esto desaparece. Un velo
+    // lento se come el movimiento y la app vuelve a aparecer de golpe.
     useEffect(() => {
         if (!saliendo) return;
-        const id = window.setTimeout(onSalida, 440);
+        const id = window.setTimeout(onSalida, 320);
         return () => window.clearTimeout(id);
     }, [saliendo, onSalida]);
 
@@ -48,7 +53,7 @@ const PantallaCargaApp: React.FC<{
             style={{
                 opacity: saliendo ? 0 : 1,
                 transform: saliendo ? 'scale(1.015)' : 'none',
-                transition: 'opacity .4s ease, transform .4s cubic-bezier(.4,0,.2,1)',
+                transition: 'opacity .28s ease, transform .28s cubic-bezier(.4,0,.2,1)',
             }}
         >
             <img

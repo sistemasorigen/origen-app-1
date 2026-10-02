@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabaseClient';
 import { User } from '../../types';
@@ -20,9 +20,19 @@ type AuthMode = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD';
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
 
-    const [mode, setMode] = useState<AuthMode>('LOGIN');
+    // `/auth?registro=1` abre directo en el formulario de registro. Lo usa la
+    // inscripción pública de Nocturna, que manda a crear cuenta y vuelve. El
+    // splash de mobile solo aparece en modo LOGIN, así que se saltea solo.
+    //
+    // Se lee de location.search y NO de window.location.search: la app usa
+    // HashRouter, así que la query vive dentro del hash y window.location.search
+    // viene vacío.
+    const [mode, setMode] = useState<AuthMode>(
+        new URLSearchParams(location.search).get('registro') === '1' ? 'REGISTER' : 'LOGIN',
+    );
     // Splash de bienvenida — SOLO mobile (lg:hidden).
     // Arranca en true: en mobile, lo primero que se ve
     // es la imagen con los 2 botones. Al elegir "email"

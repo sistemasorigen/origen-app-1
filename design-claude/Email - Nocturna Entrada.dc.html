@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 48px; display:flex; flex-direction:column; align-items:safe center; gap:12px">
+  <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:22px; padding:8px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center; max-width:900px">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">CHICOS</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ setUno }}" style="{{ btnUno }}">1 chico</button>
+      <button onClick="{{ setTres }}" style="{{ btnTres }}">3 chicos</button>
+    </div>
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ setMobile }}" style="{{ btnMobile }}">Celular</button>
+      <button onClick="{{ setDesktop }}" style="{{ btnDesktop }}">Desktop</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ toggleDark }}" style="{{ btnDark }}">Modo oscuro</button>
+      <button onClick="{{ toggleImgs }}" style="{{ btnImgs }}">Imágenes bloqueadas</button>
+      <button onClick="{{ toggleVars }}" style="{{ btnVars }}">Ver código</button>
+    </div>
+  </div>
+
+  <span style="height:28px; padding:0 13px; border-radius:999px; background:#fff; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); display:flex; align-items:center">Asunto: Tu entrada para Nocturna · viernes 30/10, 11 PM</span>
+
+  <div style="background:#fff; border-radius:22px; padding:12px; box-shadow:0 4px 20px rgba(0,0,0,.09)">
+    <iframe ref="{{ frameRef }}" src="Email - Entrada Nocturna.html" onLoad="{{ onLoad }}" title="Vista previa del email" style="display:block; width:{{ frameW }}; height:900px; border:0; border-radius:14px; background:#f2f2f0"></iframe>
+  </div>
+
+  <p style="margin:0; max-width:620px; text-align:center; font:500 12.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ nota }}</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:760,&quot;height&quot;:1080}}">
+class Component extends DCLogic {
+  state = { n: 3, device: 'mobile', dark: false, sinImgs: false, vars: false };
+  frameRef = React.createRef();
+
+  CHICOS = {
+    1: { adulto: 'Carolina Méndez', codigo: 'NOC-K7P4', total: '$40.000', chicos: [{ nombreChico: 'Martina Méndez', tribuChico: 'Trueno', retiroChico: 'Lo retirás vos' }] },
+    3: { adulto: 'Diego Fernández', codigo: 'NOC-R2M9', total: '$120.000', chicos: [
+      { nombreChico: 'Lucas Fernández', tribuChico: 'Garra', retiroChico: 'Lo retirás vos' },
+      { nombreChico: 'Mateo Fernández', tribuChico: 'Garra', retiroChico: 'Se retira solo' },
+      { nombreChico: 'Valentina Fernández', tribuChico: 'Sin tribu', retiroChico: 'Lo retira Raúl Fernández' }] }
+  };
+
+  aplicar() {
+    const f = this.frameRef.current;
+    if (!f) return;
+    let doc; try { doc = f.contentDocument; } catch (e) { return; }
+    if (!doc || !doc.body) return;
+    if (!doc.body.dataset.orig) doc.body.dataset.orig = doc.body.innerHTML;
+    let html = doc.body.dataset.orig;
+    const s = this.state, d = this.CHICOS[s.n];
+    if (!s.vars) {
+      const a = html.indexOf('<!-- INICIO CHICO -->'), b = html.indexOf('<!-- FIN CHICO -->');
+      if (a > -1 && b > a) {
+        const bloque = html.slice(a, b + '<!-- FIN CHICO -->'.length);
+        const rep = d.chicos.map(c => Object.keys(c).reduce((t, k) => t.split('{{' + k + '}}').join(c[k]), bloque)).join('');
+        html = html.slice(0, a) + rep + html.slice(b + '<!-- FIN CHICO -->'.length);
+      }
+      const vals = { nombreAdulto: d.adulto, codigoEntrada: d.codigo, cantidadChicos: String(s.n), totalPagado: d.total,
+        qrUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=0&data=' + d.codigo };
+      Object.keys(vals).forEach(k => { html = html.split('{{' + k + '}}').join(vals[k]); });
+    }
+    if (doc.body.innerHTML !== html) doc.body.innerHTML = html;
+    doc.body.classList.toggle('force-dark', s.dark);
+    doc.body.querySelectorAll('img').forEach(img => {
+      if (!img.dataset.real) img.dataset.real = img.getAttribute('src') || '';
+      if (s.sinImgs) img.removeAttribute('src'); else img.setAttribute('src', img.dataset.real);
+    });
+  }
+  componentDidUpdate() { this.aplicar(); }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'desktop';
+    const seg = on => 'height:32px; padding:0 14px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; white-space:nowrap';
+    return {
+      frameRef: this.frameRef, onLoad: () => this.aplicar(),
+      setUno: () => this.setState({ n: 1 }), setTres: () => this.setState({ n: 3 }), btnUno: seg(s.n === 1), btnTres: seg(s.n === 3),
+      setMobile: () => this.setState({ device: 'mobile' }), setDesktop: () => this.setState({ device: 'desktop' }), btnMobile: seg(!desk), btnDesktop: seg(desk),
+      toggleDark: () => this.setState({ dark: !s.dark }), toggleImgs: () => this.setState({ sinImgs: !s.sinImgs }), toggleVars: () => this.setState({ vars: !s.vars }),
+      btnDark: seg(s.dark), btnImgs: seg(s.sinImgs), btnVars: seg(s.vars),
+      frameW: desk ? '680px' : '390px',
+      nota: s.vars ? 'Así queda el archivo listo para enviar: variables entre llaves dobles y un solo bloque de chico entre INICIO CHICO y FIN CHICO, que el sistema repite.'
+        : s.sinImgs ? 'Sin imágenes, el QR cae en su texto alternativo y el código de entrada sigue visible en texto, con el nombre del adulto como segunda vía.'
+        : s.dark ? 'En modo oscuro el fondo del email cambia pero la celda del QR queda blanca siempre, y el retiro pasa a una franja clara para no perder contraste.'
+        : 'Archivo: Email - Entrada Nocturna.html. Cambiá de vista para revisar cómo cae en cada caso.'
+    };
+  }
+}
+</script>
+</body>
+</html>

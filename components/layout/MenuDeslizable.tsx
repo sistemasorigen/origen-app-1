@@ -438,8 +438,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             // Sin esto, estar adentro de Día del Niño dejaba el menú entero
             // apagado: "Eventos" (arriba, en General) ya no las reclama, y sin
             // ningún ítem encendido se pierde de dónde se entró.
-            activePaths: ['/eventos/admin', '/trivia/admin'],
-            roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS],
+            activePaths: ['/eventos/admin', '/trivia/admin', '/panel-eventos/nocturna'],
+            // ACREDITACION entra por Nocturna. Sin esto, quien sólo tiene ese
+            // rol no veía NINGÚN ítem y la sección "Administración" entera
+            // desaparecía: tenía permiso en la base y ninguna puerta en la app.
+            roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS, UserRole.ACREDITACION],
         },
         {
             label: 'Influos',

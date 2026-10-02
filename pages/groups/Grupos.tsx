@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
 import GroupCard from '../../components/GCX/TarjetaGrupo';
+import { useInscripcionesDelUsuario } from '../../src/hooks/useInscripcionesDelUsuario';
 import JoinGroupModal from '../../components/GCX/ModalUnirseGrupo';
 import AdminGroupReviewModal from '../../components/admin/ModalRevisionGrupoAdmin';
 import CreateGroupModal from '../../components/GCX/ModalCrearGrupo';
@@ -403,7 +404,6 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
 
     // State for mobile kebab menu
     const [openMenuGroupId, setOpenMenuGroupId] = useState<string | null>(null);
-    const [userRegistrations, setUserRegistrations] = useState<GroupRegistration[]>([]); // New State
 
     // State for reviewing groups (approval workflow)
     const [reviewingGroup, setReviewingGroup] = useState<Group | null>(null);
@@ -646,40 +646,15 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         }
     }, [currentUser]);
 
-    // Fetch User Registrations for Join Logic
-    const fetchUserRegistrations = async () => {
-        if (currentUser) {
-            try {
-                // 1. Fetch by User ID (Main + Linked Partner)
-                const regsById = await supabaseService.getUserRegistrations(currentUser.id, currentUser.email);
-
-                // 2. Fetch by Email (Fallback for Unlinked Partner)
-                // This covers cases where partner_user_id wasn't set but email matches
-                let regsByEmail: GroupRegistration[] = [];
-                if (currentUser.email) {
-                    regsByEmail = await supabaseService.getPartnerRegistrationsByEmail(currentUser.email);
-                }
-
-                // 3. Merge results (avoid duplicates)
-                const allRegs = [...regsById];
-                regsByEmail.forEach(r => {
-                    if (!allRegs.find(existing => existing.id === r.id)) {
-                        allRegs.push(r);
-                    }
-                });
-
-                setUserRegistrations(allRegs);
-            } catch (err) {
-                console.error("Error fetching my registrations:", err);
-            }
-        } else {
-            setUserRegistrations([]);
-        }
-    };
-
-    useEffect(() => {
-        fetchUserRegistrations();
-    }, [currentUser]);
+    // En qué grupos está anotada esta persona. Vive en un hook porque el
+    // carrusel "Grupos para vos" del Home muestra las mismas tarjetas y
+    // necesita responder igual: con dos copias de esta lógica —que tiene la
+    // vuelta de las parejas— alcanzaba con tocar una para que el mismo grupo
+    // dijera "Unirme" en una pantalla y "Ya sos miembro" en la otra.
+    const {
+        estadoEnGrupo: getUserGroupStatus,
+        recargar: fetchUserRegistrations,
+    } = useInscripcionesDelUsuario(currentUser);
 
 
     const isSuperAdmin = currentUser ? hasRole(currentUser, UserRole.SUPER_ADMIN) : false;
@@ -726,36 +701,6 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         setTags(tgs);
     };
 
-    const getUserGroupStatus = (groupId: string): 'PENDING' | 'APPROVED' | 'REJECTED' | null => {
-        // Filter registrations for this group where user is main or partner
-        const groupRegs = userRegistrations.filter(r => {
-            if (r.groupId !== groupId) return false;
-
-            const isMainUser = r.userId === currentUser?.id;
-
-            // Link by ID or Email - DUAL VISIBILITY for couples
-            const isPartner = (r.partnerUserId === currentUser?.id) ||
-                (currentUser?.email && r.partnerData?.email &&
-                    r.partnerData.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim());
-
-            return isMainUser || isPartner;
-        });
-
-        // Priority: APPROVED > PENDING > REJECTED > null
-        // DUAL VISIBILITY: Both main user AND partner see the same status
-        const approved = groupRegs.find(r => r.status === 'APPROVED');
-        if (approved) return 'APPROVED';
-
-        const pending = groupRegs.find(r => r.status === 'PENDING');
-        if (pending) return 'PENDING';
-
-        // FIXED: Both main user AND partner can see REJECTED and re-apply
-        // This enables couples to re-apply together after rejection
-        const rejected = groupRegs.find(r => r.status === 'REJECTED');
-        if (rejected) return 'REJECTED';
-
-        return null;
-    };
 
     useEffect(() => {
         // Fetch based on current view

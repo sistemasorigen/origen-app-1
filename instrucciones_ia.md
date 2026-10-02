@@ -430,6 +430,19 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `generate-image` | Generación de imágenes con Google Imagen (Gemini) |
 | `admin-manage-user` | Gestión administrativa de usuarios vía service role |
 | `prode-sync-results` | Sincronización automática de resultados del Mundial con worldcup26.ir. Cron cada 5 min. Calcula puntos automáticamente. |
+| `send-dianino-tickets` | Email con los QR del Día del Niño. **Sin verificación de la clave: cualquiera puede invocarla.** |
+| `send-nocturna-entrada` | Email con la entrada de Nocturna. La dispara `trigger_nocturna_entrada` y la RPC `reenviar_nocturna_email`. Acepta **sólo** la clave de servicio. |
+
+> ⚠️ **El límite de Resend es de 100 emails por día.** No es teórico: un día de
+> muchas inscripciones se alcanza. Cualquier función que mande emails en lote
+> tiene que registrar qué salió y qué no, y dejar reenviar. `nocturna_inscripciones`
+> lo hace con `email_enviado_at`, `email_error` y `email_intentos`.
+
+**Autenticación de las funciones que disparan triggers.** `verify_jwt` NO
+alcanza: la clave `anon` también es un JWT válido y viaja en el bundle del
+frontend, así que con `verify_jwt = true` cualquiera que abra la app puede
+llamar a la función. Hay que comparar el bearer contra la clave de servicio
+adentro de la función, como hace `send-nocturna-entrada`.
 
 **Variables de entorno requeridas en las Edge Functions:**
 - `RESEND_API_KEY` — Proveedor de emails
@@ -453,7 +466,7 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `group_categories` | GCX | Categorías de grupos |
 | `group_tags` | GCX | Etiquetas de grupos |
 | `group_attendance` | GCX | Asistencias a grupos. Columnas: `date DATE`, `present_members JSONB` (array de registration IDs) |
-| `dropout_requests` | GCX | Solicitudes de baja de grupos |
+| `group_dropout_requests` | GCX | Solicitudes de baja de grupos |
 | `welcome_visitors` | Bienvenida | Registro de nuevos ingresantes. Columnas relevantes: `accepted_jesus TEXT`, `localidad TEXT`, `form_reminder_count INT`, `form_reminder_sent_at TIMESTAMPTZ` |
 | `influos_attendees` | Influos | Asistentes al evento Influos (menores). Columnas relevantes: `tribu TEXT`, `localidad TEXT`, `accepted_jesus TEXT` |
 | `service_statistics` | Pastoral | Estadísticas de servicios dominicales |
@@ -472,6 +485,9 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `trivia_jugadores` | Trivia | Jugadores por partida. `juego_id`, `nickname`, `avatar_emoji`, `puntaje_total`, `racha_actual`, `max_racha` |
 | `trivia_respuestas` | Trivia | Respuestas registradas. `jugador_id`, `pregunta_id`, `opcion_id`, `tiempo_respuesta_ms`, `puntos_ganados` |
 | `trivia_estado_pregunta` | Trivia | Estado en vivo de cada pregunta. `juego_id`, `pregunta_id`, `estado`, `total_respuestas` |
+| `nocturna_config` | Nocturna | Una sola fila: edición, precio y si las inscripciones están abiertas. Única del módulo que lee el público |
+| `nocturna_inscripciones` | Nocturna | Una por familia. El `id` es lo que codifica el QR. **Datos de menores: sin policies para `anon`** |
+| `nocturna_jovenes` | Nocturna | Un chico por fila, con su retiro. La edad se calcula de `fecha_nacimiento`, no se guarda |
 
 **Columnas nuevas en tablas existentes (v5.0):**
 - `groups.capacity_locked` (bool, default `false`) — bloqueo manual de cupo, ver sección 24
@@ -596,11 +612,33 @@ pero con funcionalidad extendida para usuarios con sesión.
 | Menú — Inicio, GCX, Tutoriales | Visibles (roles: `[]`) | Visibles |
 
 ### RLS de Supabase para acceso público
-Las siguientes tablas tienen SELECT abierto al rol `anon`:
-- `groups` — solo `status = 'approved'`
+
+> ⚠️ **Actualizado tras la auditoría de seguridad (2026-09).** La versión
+> anterior de esta sección decía que `group_registrations` tenía `SELECT`
+> abierto a `anon`. **Ya no es así, y no hay que volver a abrirlo**: esa
+> policy fue una de las dos fugas reales del proyecto (la otra fue
+> `influos_attendees`). Un agente que lea lo viejo puede tomarlo como permiso
+> vigente y reabrirla.
+
+Tablas con `SELECT` abierto al rol `anon`:
+- `groups` — solo `status = 'approved'` y `is_hidden IS NOT TRUE`
 - `group_categories` — sin restricciones adicionales
 - `group_tags` — sin restricciones adicionales
-- `group_registrations` — solo SELECT; INSERT/UPDATE/DELETE requieren `authenticated`
+- `nocturna_config` — solo precio y si las inscripciones están abiertas; a
+  propósito no guarda nada sensible
+
+Tablas donde `anon` **escribe pero no lee**:
+- `group_registrations` — `anon` tiene únicamente `INSERT` (la inscripción
+  pública). El `SELECT` es para `authenticated` y además autorizado: la
+  propia persona, su pareja, el anfitrión o co-anfitrión del grupo, o staff.
+
+**Datos de menores — ninguna policy para `anon`, ni de lectura:**
+- `nocturna_inscripciones`, `nocturna_jovenes` — todo el acceso público pasa
+  por RPCs `SECURITY DEFINER` acotadas. Ver `sql/create_nocturna.sql`.
+- `influos_attendees`, `dianino_sessions`, `dianino_tickets` — mismo criterio.
+
+**Comprobantes de pago:** van a buckets **privados** y se leen con URL
+firmada. El bucket `images` es **público** — no sirve para esto.
 
 Política de ejemplo:
 ```sql

@@ -60,6 +60,7 @@ import PanelEventos from './pages/eventos/PanelEventos';
 import InscripcionDPadre from './pages/eventos/dpadre/InscripcionDPadre';
 import RankingDPadre from './pages/eventos/dpadre/RankingDPadre';
 import InscripcionDiaNino from './pages/eventos/dianino/InscripcionDiaNino';
+import InscripcionNocturna from './pages/eventos/nocturna/InscripcionNocturna';
 import InscripcionInfluosDia from './pages/eventos/influos/InscripcionInfluosDia';
 import BuscarInfluosDia from './pages/eventos/influos/BuscarInfluosDia';
 import AdminInfluosDia from './pages/eventos/influos/AdminInfluosDia';
@@ -68,6 +69,10 @@ import CrearEventoGeneral from './pages/eventos/general/CrearEventoGeneral';
 import NuevaInfluosDia from './pages/eventos/influos/NuevaInfluosDia';
 import BuscarDiaNino from './pages/eventos/dianino/BuscarDiaNino';
 import AdminDiaNino from './pages/eventos/dianino/AdminDiaNino';
+import AdminNocturna from './pages/eventos/nocturna/AdminNocturna';
+import CrearInscripcionNocturna from './pages/eventos/nocturna/CrearInscripcionNocturna';
+import AcreditarNocturna from './pages/eventos/nocturna/AcreditarNocturna';
+import DetalleNocturna from './pages/eventos/nocturna/DetalleNocturna';
 import DetalleDiaNino from './pages/eventos/dianino/DetalleDiaNino';
 import NuevaDiaNino from './pages/eventos/dianino/NuevaDiaNino';
 import EscanerDiaNino from './pages/eventos/dianino/EscanerDiaNino';
@@ -103,6 +108,7 @@ import SystemLoginModal from './components/modals/ModalLoginSistema';
 import CompleteProfileModal from './components/modals/ModalCompletarPerfil';
 import AvisoConexion from './components/ui/AvisoConexion';
 import PantallaCargaApp from './components/ui/PantallaCargaApp';
+import { hayMediaPendiente, olvidarMedia, suscribirMedia } from './src/utils/mediaDeEntrada';
 import { User, UserRole, AppConfig } from './types';
 import { db } from './services/dbService';
 import { supabaseService } from './services/supabaseService';
@@ -286,18 +292,31 @@ const AppContent: React.FC = () => {
     // ya dibujada entera.
     const [faseEntrada, setFaseEntrada] = useState<'hidratando' | 'accesos' | 'saliendo' | 'lista'>('hidratando');
     const [veloVisible, setVeloVisible] = useState(false);
-    const sinMovimiento = useMemo(
-        () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
-        []
-    );
+    // Los medios pesados de la pantalla que se está montando detrás. El Home
+    // reserva al montarse y libera cuando el video del hero y el banner de
+    // música ya se pueden ver; las demás pantallas no reservan nada y entran
+    // sin esperar. Ver src/utils/mediaDeEntrada.ts.
+    const [mediaLista, setMediaLista] = useState(!hayMediaPendiente());
+    useEffect(() => {
+        const revisar = () => setMediaLista(!hayMediaPendiente());
+        revisar();
+        return suscribirMedia(revisar);
+    }, []);
 
     // El velo no aparece de inmediato: con la sesión en caché la app está
     // lista en decenas de milisegundos y sería un parpadeo.
+    //
+    // El temporizador sigue armado en 'accesos' mientras falten los medios:
+    // con la sesión cacheada la autenticación termina enseguida y, si el velo
+    // sólo se armara en 'hidratando', el video del hero volvería a entrar a
+    // la vista — que es justo lo que esto viene a evitar.
     useEffect(() => {
-        if (faseEntrada !== 'hidratando') return;
+        if (veloVisible) return;
+        const esperando = faseEntrada === 'hidratando' || (faseEntrada === 'accesos' && !mediaLista);
+        if (!esperando) return;
         const id = window.setTimeout(() => setVeloVisible(true), 220);
         return () => window.clearTimeout(id);
-    }, [faseEntrada]);
+    }, [faseEntrada, veloVisible, mediaLista]);
 
     // Recién iniciada la sesión el velo vuelve a ponerse: es el caso que más
     // importa: se viene de /auth, donde no había usuario ni velo, y detrás
@@ -323,18 +342,71 @@ const AppContent: React.FC = () => {
 
     // Con los roles ya en la mano se monta el árbol detrás del velo y se le
     // da un respiro para que el menú y la ruta se dibujen antes de destapar.
+    // Si la pantalla de atrás avisó que tiene medios pesados, se espera
+    // también a esos: el velo se va con el hero ya dibujado, no con un
+    // rectángulo negro esperando el video.
     useEffect(() => {
-        if (faseEntrada !== 'accesos') return;
-        if (!veloVisible || sinMovimiento) { setFaseEntrada('lista'); return; }
+        // Se mira el registro en vivo además del estado. En el mismo commit en
+        // que esta fase monta <Routes>, el Home se monta y reserva ANTES de que
+        // corra este efecto —los efectos de los hijos van primero— pero el
+        // `mediaLista` de este render todavía dice que no hay nada que esperar.
+        // Sin esta lectura directa se programaría una salida que después hay
+        // que cancelar.
+        if (faseEntrada !== 'accesos' || !mediaLista || hayMediaPendiente()) return;
+        // Antes, con "menos movimiento" se saltaba derecho a 'lista' y el velo
+        // desaparecía de un cuadro al otro — un corte seco, peor que una
+        // transición. Ahora pasa por 'saliendo' como todos: el velo se funde y
+        // lo único que se apaga es el desplazamiento, que lo decide el CSS.
+        if (!veloVisible) { setFaseEntrada('lista'); return; }
         const id = window.setTimeout(() => setFaseEntrada('saliendo'), 320);
         return () => window.clearTimeout(id);
-    }, [faseEntrada, veloVisible, sinMovimiento]);
+    }, [faseEntrada, veloVisible, mediaLista]);
+
+    // La app entra con la suya mientras el velo se va. Arranca junto con el
+    // desvanecido —no después— para que sea un solo movimiento: el velo se
+    // abre hacia adelante y la app sube a ocupar su lugar.
+    //
+    // La clase dura lo que dura la animación y se saca: lleva un `transform`,
+    // y un transform permanente acá abajo rompería el position:fixed de la
+    // navbar y de todos los modales de la app.
+    const [animandoEntrada, setAnimandoEntrada] = useState(false);
+    useEffect(() => {
+        if (faseEntrada !== 'saliendo') return;
+        setAnimandoEntrada(true);
+    }, [faseEntrada]);
+
+    // El reloj que la apaga cuelga de la bandera y NO de la fase. Colgado de
+    // la fase se cancelaba solo: 'saliendo' dura 440 ms y la animación 560,
+    // así que el paso a 'lista' limpiaba el timeout antes de tiempo y la
+    // clase se quedaba puesta para siempre. No se notaba —la animación
+    // termina en `transform: none`, que no rompe nada— pero alcanzaba con
+    // que ese div se volviera a montar para que la app entrara de nuevo.
+    useEffect(() => {
+        if (!animandoEntrada) return;
+        const id = window.setTimeout(() => setAnimandoEntrada(false), 1000);
+        return () => window.clearTimeout(id);
+    }, [animandoEntrada]);
+
+    // El tope. Un video que no termina de bajar —o un servidor caído— no
+    // puede dejar a nadie mirando la pantalla de carga: a los 6 segundos se
+    // deja de esperar y la app se muestra igual, con el hero entrando cuando
+    // pueda. Vale la pena esperar un video; no vale la pena quedarse afuera
+    // de la app por uno.
+    useEffect(() => {
+        if (faseEntrada !== 'accesos' || mediaLista) return;
+        const id = window.setTimeout(olvidarMedia, 6000);
+        return () => window.clearTimeout(id);
+    }, [faseEntrada, mediaLista]);
 
     const entrada = isLoadingSession
-        ? { objetivo: 38, etapa: 'Verificando tu sesión…' }
+        ? { objetivo: 32, etapa: 'Verificando tu sesión…' }
         : isLoadingProfile
-            ? { objetivo: 76, etapa: 'Trayendo tu perfil y tus permisos…' }
-            : { objetivo: 100, etapa: 'Preparando tus accesos…' };
+            ? { objetivo: 64, etapa: 'Trayendo tu perfil y tus permisos…' }
+            : !mediaLista
+                // La barra no llega al 100 mientras falte algo: un 100% que
+                // se queda quieto se lee como colgado.
+                ? { objetivo: 90, etapa: 'Cargando el inicio…' }
+                : { objetivo: 100, etapa: 'Preparando tus accesos…' };
 
     // La pantalla con el botón de reintentar se reserva para lo que de
     // verdad necesita una decisión: un error, o una espera que ya es
@@ -379,6 +451,7 @@ const AppContent: React.FC = () => {
         )}
 
         {faseEntrada !== 'hidratando' && (
+        <div className={animandoEntrada ? 'app-entrando' : undefined}>
         <Routes>
             {/* ── RUTAS SIN LAYOUT ────────────────── */}
             <Route
@@ -397,6 +470,39 @@ const AppContent: React.FC = () => {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/form" element={<Formulario />} />
             <Route path="/dia-del-nino" element={<InscripcionDiaNino />} />
+            {/* El escáner va FUERA del Layout, a diferencia del de Día del Niño.
+                Es una pantalla de puerta: se usa de noche, de pie y con una
+                mano. Adentro del Layout, la navbar y el aviso de notificaciones
+                se comen un cuarto de la pantalla y empujan el visor de la
+                cámara abajo del pliegue. El guard de roles es el mismo. */}
+            <Route path="/panel-eventos/nocturna/acreditar" element={
+                (user && hasRole(user, [
+                    UserRole.SUPER_ADMIN,
+                    UserRole.PASTOR,
+                    UserRole.ENCARGADO_EVENTOS,
+                    UserRole.ACREDITACION,
+                ]))
+                    ? <AcreditarNocturna currentUser={user} />
+                    : <Navigate to="/" />
+            } />
+            {/* Con Layout aunque sea pública: la navbar de siempre arriba,
+                pegajosa, con el logo centrado en su tamaño real.
+
+                `sinNavegacion` la deja con el logo solo —sin menú, sin barra
+                lateral, sin campana—: esto es un trámite de principio a fin y
+                ofrecer una salida en medio de un formulario con datos de
+                menores es invitar a abandonarlo. */}
+            <Route path="/nocturna-inscripcion" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                    sinNavegacion
+                >
+                    <InscripcionNocturna />
+                </Layout>
+            } />
             <Route path="/tribal-wars" element={<InscripcionInfluosDia />} />
             <Route path="/tribal-wars/buscar" element={<BuscarInfluosDia />} />
             <Route path="/dia-del-nino/buscar" element={<BuscarDiaNino />} />
@@ -935,6 +1041,11 @@ const AppContent: React.FC = () => {
                                         UserRole.PASTOR,
                                         UserRole.ENCARGADO_EVENTOS,
                                         UserRole.PRODE,
+                                        // Sin esto, quien sólo tiene ACREDITACION no puede
+                                        // abrir el índice y la tarjeta de Nocturna queda
+                                        // inalcanzable. El índice ya filtra por rol: va a
+                                        // ver únicamente Nocturna.
+                                        UserRole.ACREDITACION,
                                     ]))
                                         ? <PanelEventos currentUser={user} />
                                         : <Navigate to="/" />
@@ -957,6 +1068,55 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <AdminDiaNino currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                {/* Nocturna. Los 4 roles son los mismos que mira
+                                    is_nocturna_staff() en la base: si acá y allá no
+                                    coinciden, alguien entra a una pantalla que después
+                                    no le devuelve datos. */}
+                                <Route path="/panel-eventos/nocturna" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.ACREDITACION,
+                                    ]))
+                                        ? <AdminNocturna currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/panel-eventos/nocturna/nueva" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.ACREDITACION,
+                                    ]))
+                                        ? <CrearInscripcionNocturna currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                {/* La ficha y su edición van DESPUÉS de /nueva y de
+                                    /acreditar (esta última vive arriba, fuera del
+                                    Layout): si `:id` se declarara primero, se comería
+                                    esas rutas tomando "nueva" por un identificador.
+                                    Ya pasó en los reportes de GCX. */}
+                                <Route path="/panel-eventos/nocturna/:id/editar" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.ACREDITACION,
+                                    ]))
+                                        ? <CrearInscripcionNocturna currentUser={user} modoEdicion />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/panel-eventos/nocturna/:id" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.ACREDITACION,
+                                    ]))
+                                        ? <DetalleNocturna currentUser={user} />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/eventos/admin/tribal-wars" element={
@@ -1117,6 +1277,7 @@ const AppContent: React.FC = () => {
                     )
             } />
         </Routes>
+        </div>
         )}
         </>
     );

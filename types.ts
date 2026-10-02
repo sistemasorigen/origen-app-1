@@ -1765,3 +1765,156 @@ export interface ResumenDemograficoReporte {
     noEspecifica: number;
     sinDato: number;
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// NOCTURNA — evento con menores
+// ════════════════════════════════════════════════════════════════════════════
+// Derivado de sql/create_nocturna.sql, que es la fuente de verdad. camelCase
+// acá, snake_case en la base, con mapeo explícito en el servicio.
+
+/** Estado visible de una inscripción. Aprobado = acreditado en la puerta. */
+export type NocturnaEstado = 'Inscripto' | 'Aprobado';
+
+export type NocturnaTribu = 'Trueno' | 'Garra' | 'Sin tribu';
+
+export type NocturnaRetiroTipo = 'solo' | 'adulto' | 'otra_persona';
+
+/**
+ * Cómo se retira un chico a las 6 de la mañana.
+ *
+ * El formulario pregunta una sola vez para toda la familia y la misma
+ * respuesta se copia a cada chico (ver aplicarRetiroFamiliar). La base lo
+ * guarda por chico, así que mañana se puede diferenciar sin migrar nada.
+ */
+export interface NocturnaRetiro {
+    tipo: NocturnaRetiroTipo;
+    /** Sólo con tipo 'otra_persona'. La base los exige con un CHECK. */
+    nombre?: string;
+    apellido?: string;
+    dni?: string;
+    telefono?: string;
+}
+
+export interface NocturnaConfig {
+    edicion: number;
+    precioEntrada: number;
+    inscripcionesAbiertas: boolean;
+}
+
+export interface NocturnaJoven {
+    id: string;
+    inscripcionId?: string;
+    nombre: string;
+    apellido: string;
+    dni: string;
+    /** 'YYYY-MM-DD'. La edad NO se guarda: se calcula con calcularEdad(). */
+    fechaNacimiento: string;
+    tribu: NocturnaTribu;
+    retiro: NocturnaRetiro;
+    acreditadoAt: string | null;
+}
+
+export interface NocturnaInscripcion {
+    id: string;
+    edicion: number;
+    createdAt: string;
+    /** Respaldo legible del QR: 6 caracteres sin ambiguos. */
+    codigoEntrada: string;
+    userId: string | null;
+
+    adultoNombre: string;
+    adultoApellido: string;
+    adultoDni: string;
+    adultoEmail: string;
+    adultoFechaNacimiento: string;
+
+    autorizaAsistencia: boolean;
+    aceptaFotos: boolean;
+    declaracionesVersion: string;
+    declaracionesAceptadasAt: string;
+
+    /** Foto del precio al inscribirse: no sigue al precio actual. */
+    precioUnitario: number;
+    total: number;
+
+    /** Ruta dentro del bucket privado. La URL se pide firmada y aparte. */
+    comprobantePath: string | null;
+    cargadoPorAdmin: string | null;
+
+    adultoAcreditadoAt: string | null;
+    aprobadoAt: string | null;
+
+    /**
+     * Qué pasó con el email de la entrada. El plan de Resend corta en 100 por
+     * día: un día de muchas inscripciones hay familias que se quedan sin su
+     * entrada, y el staff tiene que poder verlo y reenviarla.
+     */
+    emailEnviadoAt: string | null;
+    emailError: string | null;
+    emailIntentos: number;
+
+    jovenes: NocturnaJoven[];
+}
+
+/** Un chico tal como se manda al registrar, antes de existir en la base. */
+export interface NocturnaJovenPayload {
+    /**
+     * Sólo al editar. Con id, la base actualiza a ese chico en el lugar y
+     * conserva su `acreditado_at`; sin id, lo crea. Borrar y volver a crear
+     * le cambiaría el id, que es justo lo que el escáner ya registró.
+     */
+    id?: string;
+    nombre: string;
+    apellido: string;
+    dni: string;
+    fechaNacimiento: string;
+    tribu: NocturnaTribu;
+    retiroTipo: NocturnaRetiroTipo;
+    retiroNombre?: string;
+    retiroApellido?: string;
+    retiroDni?: string;
+    retiroTelefono?: string;
+}
+
+/**
+ * Lo que viaja a register_nocturna / admin_crear_nocturna.
+ *
+ * No lleva precio ni total: los calcula la base. Mandarlos no rompe nada —
+ * se ignoran— pero no tiene sentido.
+ */
+export interface NocturnaPayload {
+    adulto: {
+        nombre: string;
+        apellido: string;
+        dni: string;
+        email: string;
+        fechaNacimiento: string;
+    };
+    jovenes: NocturnaJovenPayload[];
+    autorizaAsistencia: boolean;
+    aceptaFotos: boolean;
+    declaracionesVersion: string;
+    /** Obligatorio en la inscripción pública; opcional en el alta del panel. */
+    comprobantePath?: string;
+}
+
+/** Lo que devuelve admin_editar_nocturna. */
+export interface NocturnaEdicionResultado {
+    ok: boolean;
+    total?: number;
+    totalAnterior?: number;
+    /** Positiva: hay que cobrar. Negativa: hay que devolver. */
+    diferencia?: number;
+    precioUnitario?: number;
+    chicos?: number;
+    error?: string;
+}
+
+/** Lo que devuelven las dos RPCs de alta. */
+export interface NocturnaAltaResultado {
+    ok: boolean;
+    inscripcionId?: string;
+    codigoEntrada?: string;
+    total?: number;
+    error?: string;
+}

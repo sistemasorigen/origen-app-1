@@ -1,7 +1,9 @@
 
 import { supabase } from './supabaseClient';
 import { db } from './dbService';
-import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX } from '../types';
+import { safeUUID } from './uuidUtils';
+import { comprimirImagen } from '../src/utils/nocturna';
+import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
 const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
@@ -2034,6 +2036,42 @@ export const supabaseService = {
       return { success: false, error: error.message };
     }
     return { success: true };
+  },
+
+  /**
+   * Lleva los datos del perfil a las copias que quedaron en otras tablas.
+   *
+   * Al inscribirse a un GCX, el formulario autocompleta nombre, email y
+   * teléfono desde la cuenta y los GUARDA en la fila de la inscripción. Esa
+   * copia no se actualizaba nunca: quien corregía su teléfono en /perfil
+   * seguía figurando con el viejo en la lista del anfitrión. Lo mismo con el
+   * nombre del anfitrión y del co-anfitrión, que viven duplicados en la fila
+   * del grupo (ver co-anfitrion-guardado-dos-veces).
+   *
+   * Va por RPC y no por un UPDATE desde acá porque la policy de
+   * group_registrations deja que una persona toque su propia inscripción sólo
+   * si NO queda aprobada — o sea, los miembros ya aprobados, que son
+   * justamente los que importan, no pueden corregirse a sí mismos desde el
+   * cliente. La RPC es SECURITY DEFINER y no nombra `status`.
+   *
+   * Ver sql/sincronizar_datos_del_perfil.sql.
+   *
+   * No falla hacia afuera: si la función todavía no está aplicada en la base,
+   * guardar el perfil tiene que seguir funcionando igual. Lo único que pasa es
+   * que las copias quedan como estaban, que es el comportamiento de siempre.
+   */
+  async sincronizarMisDatos(): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const { data, error } = await supabase.rpc('sincronizar_mis_datos');
+      if (error) {
+        console.warn('[Perfil] No se pudieron sincronizar los datos copiados:', error.message);
+        return { ok: false, error: error.message };
+      }
+      return { ok: data?.ok === true, error: data?.error };
+    } catch (err) {
+      console.warn('[Perfil] Excepción al sincronizar los datos copiados:', err);
+      return { ok: false, error: 'No se pudo sincronizar.' };
+    }
   },
 
   // Update user profile fields (phone, age, gender, birthDate) - used for OAuth profile completion
@@ -5023,6 +5061,36 @@ export const supabaseService = {
       console.error('[nombreDeUsuario] no se pudo resolver', id, e);
       return '';
     }
+  },
+
+  /**
+   * Varios nombres de una sola consulta.
+   *
+   * El RLS de `users` sólo deja leer a SUPER_ADMIN, PASTOR y los roles de
+   * grupos y punto: ni ENCARGADO_EVENTOS ni ACREDITACION. En vez de abrirlo
+   * —serían 439 fichas de gente expuestas para mostrar un nombre— va por
+   * `nombres_de_usuarios`, que es SECURITY DEFINER y devuelve sólo id y
+   * nombre. La RPC corta en 50 ids, así que se pide de a tandas.
+   */
+  async nombresDeUsuarios(ids: string[]): Promise<Record<string, string>> {
+    const unicos = [...new Set(ids.filter(Boolean))];
+    if (!unicos.length) return {};
+    const porId: Record<string, string> = {};
+    try {
+      for (let i = 0; i < unicos.length; i += 50) {
+        const { data, error } = await supabase.rpc('nombres_de_usuarios', {
+          p_ids: unicos.slice(i, i + 50),
+        });
+        if (error) throw error;
+        for (const fila of ((data as any[]) || [])) {
+          if (fila?.id && fila?.name) porId[fila.id] = fila.name;
+        }
+      }
+    } catch (e) {
+      // Sin nombres la planilla sigue sirviendo: dice "un administrador".
+      console.error('[nombresDeUsuarios] no se pudieron resolver', e);
+    }
+    return porId;
   },
 
   async searchUsersGlobal(term: string): Promise<User[]> {
@@ -9224,6 +9292,446 @@ export const supabaseService = {
     } catch (err) {
       console.error('[Trivia] eliminarJugador:', err);
       return false;
+    }
+  },
+
+
+  // ══════════════════════════════════════════════════════════════════════
+  // NOCTURNA — evento con menores
+  // ══════════════════════════════════════════════════════════════════════
+  // Toda la escritura pasa por RPCs: las tablas no tienen policy de INSERT y
+  // `anon` no tiene NINGUNA policy de lectura. Ver sql/create_nocturna.sql.
+  //
+  // Los mensajes de error vienen de las RPCs ya redactados en español para
+  // quien los va a leer. Se pasan tal cual: reinterpretarlos acá sólo los
+  // empeora.
+
+  /** Lo que devuelve la base → lo que usa la app. */
+  _nocturnaJovenDesdeDb(row: any): NocturnaJoven {
+    return {
+      id: row.id,
+      inscripcionId: row.inscripcion_id,
+      nombre: row.nombre,
+      apellido: row.apellido,
+      dni: row.dni,
+      fechaNacimiento: row.fecha_nacimiento,
+      tribu: row.tribu,
+      retiro: {
+        tipo: row.retiro_tipo,
+        nombre: row.retiro_nombre || undefined,
+        apellido: row.retiro_apellido || undefined,
+        dni: row.retiro_dni || undefined,
+        telefono: row.retiro_telefono || undefined,
+      },
+      acreditadoAt: row.acreditado_at,
+    };
+  },
+
+  _nocturnaInscripcionDesdeDb(row: any): NocturnaInscripcion {
+    return {
+      id: row.id,
+      edicion: row.edicion,
+      createdAt: row.created_at,
+      codigoEntrada: row.codigo_entrada,
+      userId: row.user_id,
+      adultoNombre: row.adulto_nombre,
+      adultoApellido: row.adulto_apellido,
+      adultoDni: row.adulto_dni,
+      adultoEmail: row.adulto_email,
+      adultoFechaNacimiento: row.adulto_fecha_nacimiento,
+      autorizaAsistencia: row.autoriza_asistencia,
+      aceptaFotos: row.acepta_fotos,
+      declaracionesVersion: row.declaraciones_version,
+      declaracionesAceptadasAt: row.declaraciones_aceptadas_at,
+      precioUnitario: Number(row.precio_unitario),
+      total: Number(row.total),
+      comprobantePath: row.comprobante_path,
+      cargadoPorAdmin: row.cargado_por_admin,
+      adultoAcreditadoAt: row.adulto_acreditado_at,
+      aprobadoAt: row.aprobado_at,
+
+      emailEnviadoAt: row.email_enviado_at ?? null,
+      emailError: row.email_error ?? null,
+      emailIntentos: row.email_intentos ?? 0,
+      jovenes: (row.jovenes || []).map((j: any) => supabaseService._nocturnaJovenDesdeDb(j)),
+    };
+  },
+
+  // ── Público ───────────────────────────────────────────────────────────
+
+  /**
+   * Precio y si las inscripciones están abiertas.
+   *
+   * nocturna_config es la única tabla del módulo que lee el público, y a
+   * propósito no guarda nada sensible.
+   *
+   * Devuelve null cuando falla, no un objeto con precio 0: un precio
+   * inventado es peor que no mostrar precio.
+   */
+  async getNocturnaConfig(): Promise<NocturnaConfig | null> {
+    try {
+      const { data, error } = await supabase
+        .from('nocturna_config')
+        .select('edicion, precio_entrada, inscripciones_abiertas')
+        .eq('id', 1)
+        .single();
+      if (error) throw error;
+      return {
+        edicion: data.edicion,
+        precioEntrada: Number(data.precio_entrada),
+        inscripcionesAbiertas: data.inscripciones_abiertas,
+      };
+    } catch (err) {
+      console.error('[Nocturna] getNocturnaConfig:', err);
+      return null;
+    }
+  },
+
+  /** Inscripción pública. El comprobante es obligatorio y lo exige la base. */
+  async registerNocturna(payload: NocturnaPayload): Promise<NocturnaAltaResultado> {
+    try {
+      const { data, error } = await supabase.rpc('register_nocturna', { p_payload: payload });
+      if (error) throw error;
+      return {
+        ok: data?.ok === true,
+        inscripcionId: data?.inscripcion_id,
+        codigoEntrada: data?.codigo_entrada,
+        total: data?.total !== undefined ? Number(data.total) : undefined,
+        error: data?.error,
+      };
+    } catch (err) {
+      console.error('[Nocturna] registerNocturna:', err);
+      return { ok: false, error: 'No pudimos completar la inscripción. Probá de nuevo.' };
+    }
+  },
+
+  // ── Comprobante ───────────────────────────────────────────────────────
+
+  /**
+   * Sube el comprobante al bucket PRIVADO y devuelve su path.
+   *
+   * No se usa uploadBase64Image: ese sube a `images`, que es público, y
+   * devuelve una URL pública. Un comprobante lleva nombre, CBU y monto.
+   *
+   * El nombre del archivo es un UUID: ni DNI ni nombre en la ruta. Quien
+   * consiga el path no aprende nada de quién es.
+   *
+   * Se comprime antes porque el bucket corta en 5 MB y una foto de celular
+   * pesa entre 3 y 8: sin esto fallaría en el último paso de la inscripción.
+   */
+  async uploadNocturnaComprobante(
+    file: File,
+    edicion: number,
+  ): Promise<{ ok: boolean; path?: string; error?: string }> {
+    try {
+      if (!file.type.startsWith('image/')) {
+        return { ok: false, error: 'El comprobante tiene que ser una imagen.' };
+      }
+
+      const comprimido = await comprimirImagen(file);
+
+      const LIMITE = 5 * 1024 * 1024;
+      if (comprimido.size > LIMITE) {
+        return {
+          ok: false,
+          error: 'La imagen es muy pesada incluso después de achicarla. Probá con una captura de pantalla.',
+        };
+      }
+
+      const ext = comprimido.type === 'image/png' ? 'png' : 'jpg';
+      const nombre = `${edicion}/${safeUUID()}.${ext}`;
+
+      const { error } = await supabase.storage
+        .from('nocturna-comprobantes')
+        .upload(nombre, comprimido, { contentType: comprimido.type, upsert: false });
+
+      if (error) throw error;
+      return { ok: true, path: nombre };
+    } catch (err) {
+      console.error('[Nocturna] uploadNocturnaComprobante:', err);
+      return { ok: false, error: 'No pudimos subir el comprobante. Probá de nuevo.' };
+    }
+  },
+
+  /**
+   * URL firmada para ver un comprobante desde el panel.
+   *
+   * Vence en 5 minutos: alcanza para abrirlo y no sobrevive a que el link
+   * quede pegado en un chat. La policy del bucket ya limita esto a staff.
+   */
+  async getNocturnaComprobanteUrl(path: string): Promise<string | null> {
+    try {
+      const { data, error } = await supabase.storage
+        .from('nocturna-comprobantes')
+        .createSignedUrl(path, 300);
+      if (error) throw error;
+      return data?.signedUrl || null;
+    } catch (err) {
+      console.error('[Nocturna] getNocturnaComprobanteUrl:', err);
+      return null;
+    }
+  },
+
+  // ── Staff ─────────────────────────────────────────────────────────────
+
+  /** Alta desde el panel. No exige comprobante y registra quién la cargó. */
+  async adminCrearNocturna(payload: NocturnaPayload): Promise<NocturnaAltaResultado> {
+    try {
+      const { data, error } = await supabase.rpc('admin_crear_nocturna', { p_payload: payload });
+      if (error) throw error;
+      return {
+        ok: data?.ok === true,
+        inscripcionId: data?.inscripcion_id,
+        codigoEntrada: data?.codigo_entrada,
+        total: data?.total !== undefined ? Number(data.total) : undefined,
+        error: data?.error,
+      };
+    } catch (err) {
+      console.error('[Nocturna] adminCrearNocturna:', err);
+      return { ok: false, error: 'No pudimos cargar la inscripción. Probá de nuevo.' };
+    }
+  },
+
+  /**
+   * Todas las inscripciones con sus chicos, para el panel.
+   *
+   * Aprobados primero y, dentro de cada grupo, los más nuevos arriba.
+   *
+   * Devuelve `error` en vez de una lista vacía cuando la consulta falla. Una
+   * caída de conexión que se dibuja como "todavía no hay inscriptos" es
+   * exactamente el incidente del modal de perfil: la pantalla miente con
+   * cara de certeza.
+   */
+  async getNocturnaInscripciones(): Promise<{ ok: boolean; inscripciones: NocturnaInscripcion[]; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('nocturna_inscripciones')
+        .select('*, jovenes:nocturna_jovenes(*)')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const lista = (data || []).map((r: any) => supabaseService._nocturnaInscripcionDesdeDb(r));
+
+      // El orden por estado se hace acá: PostgREST no ordena por una
+      // expresión, y "aprobado_at NULLS LAST" pondría los aprobados viejos
+      // arriba de los nuevos.
+      lista.sort((a, b) => {
+        const ap = (a.aprobadoAt ? 0 : 1) - (b.aprobadoAt ? 0 : 1);
+        if (ap !== 0) return ap;
+        return (b.createdAt || '').localeCompare(a.createdAt || '');
+      });
+
+      return { ok: true, inscripciones: lista };
+    } catch (err) {
+      console.error('[Nocturna] getNocturnaInscripciones:', err);
+      return {
+        ok: false,
+        inscripciones: [],
+        error: 'No pudimos traer las inscripciones. Revisá la conexión y volvé a intentar.',
+      };
+    }
+  },
+
+  /** Lo que lee el escáner al leer un QR. */
+  async getNocturnaParaAcreditar(
+    inscripcionId: string,
+  ): Promise<{ ok: boolean; inscripcion?: any; jovenes?: any[]; motivo?: string; error?: string }> {
+    try {
+      const { data, error } = await supabase.rpc('get_nocturna_para_acreditar', {
+        p_inscripcion_id: inscripcionId,
+      });
+      if (error) throw error;
+      return {
+        ok: data?.ok === true,
+        inscripcion: data?.inscripcion,
+        jovenes: data?.jovenes,
+        motivo: data?.motivo,
+        error: data?.error,
+      };
+    } catch (err) {
+      console.error('[Nocturna] getNocturnaParaAcreditar:', err);
+      return { ok: false, motivo: 'conexion', error: 'No pudimos leer la entrada. Revisá la conexión.' };
+    }
+  },
+
+  /**
+   * Fija el estado exacto de acreditación de una familia.
+   *
+   * La base rechaza los estados que no son reales (un chico sin el adulto) y
+   * no pisa las horas ya puestas. Devuelve la inscripción al día.
+   */
+  async setNocturnaAcreditacion(
+    inscripcionId: string,
+    adulto: boolean,
+    jovenIds: string[],
+  ): Promise<{ ok: boolean; inscripcion?: any; jovenes?: any[]; error?: string }> {
+    try {
+      const { data, error } = await supabase.rpc('set_nocturna_acreditacion', {
+        p_inscripcion_id: inscripcionId,
+        p_adulto: adulto,
+        p_jovenes: jovenIds,
+      });
+      if (error) throw error;
+      return {
+        ok: data?.ok === true,
+        inscripcion: data?.inscripcion,
+        jovenes: data?.jovenes,
+        error: data?.error,
+      };
+    } catch (err) {
+      console.error('[Nocturna] setNocturnaAcreditacion:', err);
+      return { ok: false, error: 'No pudimos registrar la acreditación. Probá de nuevo.' };
+    }
+  },
+
+  /**
+   * Una inscripción con sus chicos, para la ficha.
+   *
+   * Va por la tabla y no por `get_nocturna_para_acreditar`: aquella devuelve
+   * lo justo para la puerta y la ficha necesita además el comprobante, el
+   * estado del email, quién la cargó y lo que se pagó. El RLS ya limita el
+   * SELECT a staff.
+   */
+  async getNocturnaInscripcion(
+    id: string,
+  ): Promise<{ ok: boolean; inscripcion?: NocturnaInscripcion; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('nocturna_inscripciones')
+        .select('*, jovenes:nocturna_jovenes(*)')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return { ok: false, error: 'Esta inscripción no existe o fue eliminada.' };
+      return { ok: true, inscripcion: supabaseService._nocturnaInscripcionDesdeDb(data) };
+    } catch (err) {
+      console.error('[Nocturna] getNocturnaInscripcion:', err);
+      return { ok: false, error: 'No pudimos leer la inscripción. Revisá la conexión.' };
+    }
+  },
+
+  /**
+   * Edita una inscripción. Sólo staff.
+   *
+   * Los chicos que ya existen viajan con su `id` y la base los actualiza en
+   * el lugar. El total se recalcula con el precio que pagó esta familia, no
+   * con el de hoy, y vuelve la diferencia: si se agregó un chico, el staff
+   * necesita saber cuánto cobrar.
+   */
+  async adminEditarNocturna(
+    inscripcionId: string,
+    payload: NocturnaPayload,
+  ): Promise<NocturnaEdicionResultado> {
+    try {
+      const { data, error } = await supabase.rpc('admin_editar_nocturna', {
+        p_inscripcion_id: inscripcionId,
+        p_payload: payload,
+      });
+      if (error) throw error;
+      return {
+        ok: data?.ok === true,
+        total: data?.total !== undefined ? Number(data.total) : undefined,
+        totalAnterior: data?.total_anterior !== undefined ? Number(data.total_anterior) : undefined,
+        diferencia: data?.diferencia !== undefined ? Number(data.diferencia) : undefined,
+        precioUnitario: data?.precio_unitario !== undefined ? Number(data.precio_unitario) : undefined,
+        chicos: data?.chicos,
+        error: data?.error,
+      };
+    } catch (err) {
+      console.error('[Nocturna] adminEditarNocturna:', err);
+      return { ok: false, error: 'No pudimos guardar los cambios. Probá de nuevo.' };
+    }
+  },
+
+  /**
+   * Abre o cierra las inscripciones públicas.
+   *
+   * Es un UPDATE directo y no una RPC: la policy de UPDATE de
+   * `nocturna_config` ya está limitada a staff, así que una función
+   * SECURITY DEFINER sólo agregaría una capa que repite el mismo chequeo.
+   */
+  async setNocturnaInscripcionesAbiertas(abiertas: boolean): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('nocturna_config')
+        .update({ inscripciones_abiertas: abiertas, updated_at: new Date().toISOString() })
+        .eq('id', 1);
+      if (error) throw error;
+      return { ok: true };
+    } catch (err) {
+      console.error('[Nocturna] setNocturnaInscripcionesAbiertas:', err);
+      return { ok: false, error: 'No pudimos cambiar el estado de las inscripciones.' };
+    }
+  },
+
+  /**
+   * Vuelve a pedir el email de la entrada.
+   *
+   * El pedido pasa por la base y no por el navegador a propósito: así la Edge
+   * Function acepta únicamente la clave de servicio y no tiene que autenticar
+   * staff por su cuenta. La RPC chequea is_nocturna_staff().
+   *
+   * El envío es asincrónico: cuando esto devuelve ok, el email se pidió, no
+   * llegó. Hay que volver a leer la inscripción para ver si salió.
+   */
+  async reenviarNocturnaEmail(inscripcionId: string): Promise<{ ok: boolean; mensaje?: string; error?: string }> {
+    try {
+      const { data, error } = await supabase.rpc('reenviar_nocturna_email', {
+        p_inscripcion_id: inscripcionId,
+      });
+      if (error) throw error;
+      return { ok: data?.ok === true, mensaje: data?.mensaje, error: data?.error };
+    } catch (err) {
+      console.error('[Nocturna] reenviarNocturnaEmail:', err);
+      return { ok: false, error: 'No pudimos pedir el reenvío. Probá de nuevo.' };
+    }
+  },
+
+  /** Cambia el precio de acá en adelante; las inscripciones viejas no se tocan. */
+  async updateNocturnaPrecio(precio: number): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const { data, error } = await supabase.rpc('update_nocturna_precio', { p_precio: precio });
+      if (error) throw error;
+      return { ok: data?.ok === true, error: data?.error };
+    } catch (err) {
+      console.error('[Nocturna] updateNocturnaPrecio:', err);
+      return { ok: false, error: 'No pudimos cambiar el precio. Probá de nuevo.' };
+    }
+  },
+
+  /**
+   * Borra una inscripción y su comprobante.
+   *
+   * El archivo va primero: si se borrara sólo la fila, quedaría una imagen
+   * con datos bancarios de una inscripción que ya no existe y sin nada que
+   * la referencie. Si el archivo no se puede borrar igual se sigue — pero
+   * queda en el log, que es lo que permite limpiarlo después.
+   */
+  async deleteNocturnaInscripcion(id: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const { data: fila, error: errorLectura } = await supabase
+        .from('nocturna_inscripciones')
+        .select('comprobante_path')
+        .eq('id', id)
+        .single();
+      if (errorLectura) throw errorLectura;
+
+      if (fila?.comprobante_path) {
+        const { error: errorArchivo } = await supabase.storage
+          .from('nocturna-comprobantes')
+          .remove([fila.comprobante_path]);
+        if (errorArchivo) {
+          console.error('[Nocturna] quedó un comprobante sin borrar:', fila.comprobante_path, errorArchivo);
+        }
+      }
+
+      const { error } = await supabase.from('nocturna_inscripciones').delete().eq('id', id);
+      if (error) throw error;
+      return { ok: true };
+    } catch (err) {
+      console.error('[Nocturna] deleteNocturnaInscripcion:', err);
+      return { ok: false, error: 'No pudimos eliminar la inscripción. Probá de nuevo.' };
     }
   },
 

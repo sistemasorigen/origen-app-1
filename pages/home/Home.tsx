@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, AppConfig, FooterLinks, EventoGeneral, Group, GroupCategory, MusicaBannerSlide } from '../../types';
+import { User, AppConfig, FooterLinks, EventoGeneral, Group, GroupCategory, GroupTag, MusicaBannerSlide } from '../../types';
 import { db } from '../../services/dbService';
 import { supabaseService, getEventosGeneralPublic, getMusicaBannerSlides } from '../../services/supabaseService';
 import {
@@ -17,6 +17,10 @@ import {
     Quote
 } from 'lucide-react';
 import HeroCarousel, { getMediaFrameStyle } from '../../components/ui/CarruselHero';
+import { liberarMedia, precargarMedia, reservarMedia } from '../../src/utils/mediaDeEntrada';
+import GroupCard from '../../components/GCX/TarjetaGrupo';
+import JoinGroupModal from '../../components/GCX/ModalUnirseGrupo';
+import { useInscripcionesDelUsuario } from '../../src/hooks/useInscripcionesDelUsuario';
 
 // --- TUTORIAL INTEGRATION ---
 import { useTutorial } from '../../src/hooks/useTutorial';
@@ -402,99 +406,74 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
 
 // Carrusel "Grupos para vos" — scroll horizontal nativo con snap
 // (mismo criterio que HeroCarousel: scroll-snap-type + botones de flecha
-// que desplazan una tarjeta por click) sobre grupos reales con lugar
-// disponible (supabaseService.getGroups() + getGroupCategories()).
-// `categoryWeights` viene del algoritmo de recomendación en Dashboard:
-// cuenta cuántos grupos APPROVED tiene el usuario por categoría, y acá
-// solo se usa para decidir si una tarjeta se gana el badge "Para vos".
-const GruposCarousel: React.FC<{ groups: Group[]; categories: GroupCategory[]; categoryWeights: Map<string, number> }> = ({ groups, categories, categoryWeights }) => {
-    const navigate = useNavigate();
+// que desplazan una tarjeta por click).
+//
+// Las tarjetas son las MISMAS que las de /gcx: el componente compartido
+// components/GCX/TarjetaGrupo. Antes acá vivía una tarjeta propia, más
+// chica y con otra información —sin descripción, sin etiquetas, sin modalidad,
+// sin compartir—, así que el mismo grupo se veía de dos maneras distintas
+// según por dónde se llegara. Con una sola tarjeta eso no puede volver a
+// pasar: lo que se arregla o se agrega en /gcx aparece acá solo.
+//
+// Lo único que sigue siendo de acá es el ancho del slide, porque un carrusel
+// necesita un ancho fijo y la grilla de /gcx no: ahí la tarjeta se estira con
+// la columna.
+const GruposCarousel: React.FC<{
+    groups: Group[];
+    categories: GroupCategory[];
+    tags: GroupTag[];
+    currentUser: User | null;
+    onJoin: (g: Group) => void;
+    estadoEnGrupo: (groupId: string) => 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+}> = ({ groups, categories, tags, currentUser, onJoin, estadoEnGrupo }) => {
     const scrollRef = useRef<HTMLDivElement>(null);
-
-    const getCategoryName = (categoryId?: string) => categories.find(c => c.id === categoryId)?.name || 'Grupo';
-
-    const getCupoLabel = (g: Group) => {
-        const left = g.maxCapacity - g.membersCount;
-        if (g.capacityLocked || left <= 0) return { label: 'Lleno', bg: '#fef2f2', color: '#b91c1c' };
-        if (left <= 3) return { label: `${left} lugar${left === 1 ? '' : 'es'}`, bg: '#fffbeb', color: '#b45309' };
-        return { label: 'Abierto', bg: '#ecfdf5', color: '#047857' };
-    };
 
     const scrollByCard = (dir: 1 | -1) => {
         const el = scrollRef.current;
         if (!el) return;
         const card = el.querySelector<HTMLElement>('[data-group-card]');
-        const amount = card ? card.offsetWidth + 16 : el.clientWidth * 0.8;
+        const amount = card ? card.offsetWidth + 24 : el.clientWidth * 0.8;
         el.scrollBy({ left: amount * dir, behavior: 'smooth' });
     };
-
-    // /gcx ya sabe abrir un grupo puntual por query param (ver
-    // `redirectToLoginForGroup` y el deep-link `?groupId=` en Grupos.tsx):
-    // si hay sesión abre directo el modal de inscripción real (con
-    // validación de edad y cupo incluida); si no, manda a /auth y vuelve
-    // acá solo después de loguearse. Es el mismo flujo de "Unirme" que ya
-    // usa toda la app — no uno nuevo.
-    const goToJoin = (groupId: string) => navigate(`/gcx?groupId=${groupId}`);
 
     if (groups.length === 0) return null;
 
     return (
         <div className="relative group/carousel">
+            {/* gap-6 y no gap-4: es el mismo espacio entre tarjetas que usa la
+                grilla de /gcx. */}
             <div
                 ref={scrollRef}
-                className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide pb-1"
+                className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide pb-1 items-stretch"
             >
-                {groups.map(g => {
-                    const cupo = getCupoLabel(g);
-                    const isMatch = !!g.categoryId && (categoryWeights.get(g.categoryId) || 0) > 0;
-                    const isFull = cupo.label === 'Lleno';
-                    return (
-                        <div
-                            key={g.id}
-                            data-group-card
-                            className="snap-start shrink-0 w-[280px] sm:w-[320px] flex flex-col bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-lg hover:border-slate-300 dark:hover:border-zinc-700 transition-all overflow-hidden"
-                        >
-                            <div className="relative h-44 sm:h-52 shrink-0 bg-slate-100 dark:bg-zinc-800">
-                                {g.imageUrl && <img src={g.imageUrl} alt="" className="w-full h-full object-cover" />}
-                                <span className="absolute top-3 left-3 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm text-slate-700 dark:text-zinc-200 text-xs font-semibold tracking-[0.02em] px-3 py-1.5 rounded-full">
-                                    {getCategoryName(g.categoryId)}
-                                </span>
-                                {isMatch && (
-                                    <span className="absolute top-3 right-3 bg-emerald-600 text-white text-[11px] font-semibold tracking-[0.04em] px-3 py-1.5 rounded-full">
-                                        Para vos
-                                    </span>
-                                )}
-                            </div>
-                            <div className="p-4 sm:p-5 flex flex-col flex-1">
-                                <div className="font-bold tracking-[-0.01em] text-slate-900 dark:text-white text-base sm:text-lg leading-tight">{g.name}</div>
-                                <div className="flex flex-col gap-1 mt-2.5">
-                                    <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-zinc-400 font-normal">
-                                        <Clock className="w-4 h-4 text-emerald-600 shrink-0" /> {g.meetingDay} {g.meetingTime}
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-zinc-400 font-normal">
-                                        <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                                        <span className="truncate">{g.location}</span>
-                                    </div>
-                                </div>
-                                <span
-                                    className="self-start text-[11px] font-semibold px-2.5 py-1 rounded-full mt-3"
-                                    style={{ backgroundColor: cupo.bg, color: cupo.color }}
-                                >
-                                    {cupo.label}
-                                </span>
+                {groups.map(g => (
+                    /* [&>*]:h-full es lo que iguala las alturas. El riel estira
+                       cada slide hasta el más alto (items-stretch), pero la
+                       tarjeta de adentro seguía midiendo lo que mide su
+                       contenido: un grupo con descripción corta quedaba más
+                       bajo que uno largo. Con la altura completa, el cuerpo de
+                       la tarjeta —que ya es flex-1— se estira y el pie con el
+                       anfitrión y el botón queda abajo de todo.
 
-                                <button
-                                    onClick={() => goToJoin(g.id)}
-                                    disabled={isFull}
-                                    className="mt-4 w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20"
-                                >
-                                    {isFull ? 'Sin lugar' : 'Unirme'}
-                                    {!isFull && <ChevronRight className="w-4 h-4" />}
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
+                       En /gcx esto no hace falta porque lo resuelve la grilla:
+                       todas las tarjetas de una fila comparten alto. Acá la
+                       fila es un riel horizontal y hay que pedirlo. */
+                    <div
+                        key={g.id}
+                        data-group-card
+                        className="snap-start shrink-0 w-[300px] sm:w-[320px] lg:w-[290px] [&>*]:h-full"
+                    >
+                        <GroupCard
+                            group={g}
+                            tags={tags}
+                            categories={categories}
+                            onJoin={onJoin}
+                            onInquiry={onJoin}
+                            userStatus={estadoEnGrupo(g.id)}
+                            currentUser={currentUser}
+                        />
+                    </div>
+                ))}
             </div>
 
             {groups.length > 1 && (
@@ -502,14 +481,14 @@ const GruposCarousel: React.FC<{ groups: Group[]; categories: GroupCategory[]; c
                     <button
                         onClick={() => scrollByCard(-1)}
                         aria-label="Grupos anteriores"
-                        className="hidden sm:flex absolute -left-3 top-[96px] -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md items-center justify-center text-slate-600 dark:text-zinc-300 opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-slate-50 dark:hover:bg-zinc-700"
+                        className="hidden sm:flex absolute -left-3 top-[112px] -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md items-center justify-center text-slate-600 dark:text-zinc-300 opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-slate-50 dark:hover:bg-zinc-700 z-10"
                     >
                         <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                         onClick={() => scrollByCard(1)}
                         aria-label="Más grupos"
-                        className="hidden sm:flex absolute -right-3 top-[96px] -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md items-center justify-center text-slate-600 dark:text-zinc-300 opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-slate-50 dark:hover:bg-zinc-700"
+                        className="hidden sm:flex absolute -right-3 top-[112px] -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md items-center justify-center text-slate-600 dark:text-zinc-300 opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-slate-50 dark:hover:bg-zinc-700 z-10"
                     >
                         <ChevronRight className="w-4 h-4" />
                     </button>
@@ -758,21 +737,122 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
     // --- Datos reales para "Próximos eventos" y "Grupos para vos" ---
     const [eventos, setEventos] = useState<EventoGeneral[]>([]);
     const [musicaSlides, setMusicaSlides] = useState<MusicaBannerSlide[]>([]);
+
+    // Para la pantalla de entrada: si los datos llegaron ya se sabe QUÉ hay
+    // que precargar. "Resuelto" incluye que la consulta haya fallado — lo que
+    // no puede pasar es quedarse esperando una respuesta que no viene.
+    const [configResuelta, setConfigResuelta] = useState(false);
+    const [musicaResuelta, setMusicaResuelta] = useState(false);
     const [groups, setGroups] = useState<Group[]>([]);
     const [categories, setCategories] = useState<GroupCategory[]>([]);
+    // Las etiquetas las pide la tarjeta de /gcx, que las muestra abajo del todo.
+    const [tags, setTags] = useState<GroupTag[]>([]);
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
         getEventosGeneralPublic().then(setEventos);
-        getMusicaBannerSlides().then(setMusicaSlides);
+        getMusicaBannerSlides()
+            .then(setMusicaSlides)
+            .catch(() => { /* sin banner de música se sigue igual */ })
+            .finally(() => setMusicaResuelta(true));
         supabaseService.getGroups().then(setGroups);
         supabaseService.getGroupCategories().then(setCategories);
+        supabaseService.getGroupTags().then(setTags);
     }, []);
 
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(id);
     }, []);
+
+    // ── La pantalla de entrada espera a los dos medios pesados de acá ──
+    //
+    // El velo de App.tsx ya esperaba la sesión y los roles, pero el video del
+    // hero empieza a bajar recién cuando llega la config, bastante después:
+    // el velo se iba y arriba quedaba un rectángulo negro que se llenaba un
+    // segundo más tarde. Lo mismo con el banner de Origen Música.
+    //
+    // Se precarga SÓLO el primer slide de cada carrusel: es el que se ve al
+    // destapar. Esperar los cinco sería esperar lo que nadie está mirando.
+    //
+    // La reserva se toma al montar, antes de saber qué hay que cargar: si se
+    // esperara a tener los datos, el velo ya se habría ido para cuando esta
+    // pantalla levanta la mano.
+    useEffect(() => {
+        reservarMedia('inicio');
+        // Irse del Home libera: nadie tiene que esperar un video que ya no
+        // está en pantalla.
+        return () => liberarMedia('inicio');
+    }, []);
+
+    const heroPrimero = config.banner?.slides?.[0];
+    const musicaPrimero = musicaSlides[0];
+
+    useEffect(() => {
+        if (!configResuelta || !musicaResuelta) return;
+
+        let vivo = true;
+        const pendientes: Promise<void>[] = [];
+
+        if (heroPrimero) {
+            pendientes.push(heroPrimero.mediaType === 'video' && heroPrimero.videoUrl
+                ? precargarMedia(heroPrimero.videoUrl, 'video')
+                : precargarMedia(heroPrimero.imageUrl, 'image'));
+        }
+        if (musicaPrimero) {
+            pendientes.push(musicaPrimero.mediaType === 'video' && musicaPrimero.videoUrl
+                ? precargarMedia(musicaPrimero.videoUrl, 'video')
+                : precargarMedia(musicaPrimero.mediaUrl, 'image'));
+        }
+
+        // `precargarMedia` nunca rechaza y tiene su propio tope, así que esto
+        // siempre termina.
+        Promise.all(pendientes).then(() => { if (vivo) liberarMedia('inicio'); });
+
+        return () => { vivo = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [configResuelta, musicaResuelta, heroPrimero?.id, heroPrimero?.videoUrl, heroPrimero?.imageUrl, musicaPrimero?.id]);
+
+    // ── Unirse a un grupo desde el Home ──────────────────────────────
+    //
+    // Antes "Unirme" mandaba a /gcx?groupId=… y el modal se abría allá. Eso
+    // significaba perder el Home —y el scroll— para hacer algo que se puede
+    // hacer acá mismo. Ahora el modal es el mismo componente y se abre en el
+    // lugar, con los mismos dos controles previos que hace /gcx: sin sesión
+    // se manda a entrar (y se vuelve), y la edad se chequea antes de abrir.
+    const { estadoEnGrupo, recargar: recargarInscripciones } = useInscripcionesDelUsuario(currentUser);
+    const [grupoAUnirse, setGrupoAUnirse] = useState<Group | null>(null);
+    const [avisoGrupo, setAvisoGrupo] = useState('');
+
+    const mostrarAviso = (texto: string) => {
+        setAvisoGrupo(texto);
+        window.setTimeout(() => setAvisoGrupo(''), 3500);
+    };
+
+    const handleJoinClick = (g: Group) => {
+        if (!currentUser) {
+            // Mismo guardado que /gcx: después de entrar, la persona vuelve
+            // al grupo que estaba mirando, no a la portada.
+            sessionStorage.setItem('post_login_redirect', `/gcx?groupId=${g.id}`);
+            navigate('/auth', { state: { from: { pathname: '/gcx', search: `?groupId=${g.id}` } } });
+            return;
+        }
+
+        if (currentUser.age) {
+            const minima = g.minAge || 0;
+            const maxima = g.maxAge || 100;
+            if (currentUser.age < minima) {
+                mostrarAviso(`No podés unirte: hay que tener al menos ${minima} años.`);
+                return;
+            }
+            if (currentUser.age > maxima) {
+                mostrarAviso(`No podés unirte: la edad máxima es ${maxima} años.`);
+                return;
+            }
+        }
+
+        setGrupoAUnirse(g);
+    };
 
     // --- TUTORIAL INTEGRATION ---
     const {
@@ -800,7 +880,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
             if (remoteConfig) db.saveAppConfig(remoteConfig);
         };
 
-        init();
+        init().finally(() => setConfigResuelta(true));
         if (!isLoaded) {
             setTimeout(() => setIsLoaded(true), 100);
         }
@@ -1054,7 +1134,14 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                                         ? <>Como participás de grupos de <span className="font-semibold text-slate-700 dark:text-zinc-200">{topCategoryName}</span>, esto te puede interesar.</>
                                         : 'Grupos con lugar disponible esta semana.'}
                                 </p>
-                                <GruposCarousel groups={recommendedGroups} categories={categories} categoryWeights={userCategoryWeights} />
+                                <GruposCarousel
+                                    groups={recommendedGroups}
+                                    categories={categories}
+                                    tags={tags}
+                                    currentUser={currentUser}
+                                    onJoin={handleJoinClick}
+                                    estadoEnGrupo={estadoEnGrupo}
+                                />
                             </div>
                         )}
                     </div>
@@ -1128,6 +1215,32 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                     </div>
                 </footer>
             </div>
+
+            {/* El modal de inscripción, el mismo de /gcx. Se monta sólo con un
+                grupo elegido para que no quede escuchando de fondo. */}
+            {grupoAUnirse && (
+                <JoinGroupModal
+                    isOpen
+                    onClose={() => setGrupoAUnirse(null)}
+                    group={grupoAUnirse}
+                    currentUser={currentUser}
+                    userStatus={estadoEnGrupo(grupoAUnirse.id)}
+                    onSuccess={recargarInscripciones}
+                    categories={categories}
+                    tags={tags}
+                />
+            )}
+
+            {/* Para los dos avisos de edad, que son lo único que esta pantalla
+                tiene que decir antes de abrir el modal. */}
+            {avisoGrupo && (
+                <div
+                    role="status"
+                    className="fixed left-1/2 top-20 z-[130] -translate-x-1/2 rounded-full bg-[#0a0a0a] px-5 py-3 text-[13px] font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,.18)]"
+                >
+                    {avisoGrupo}
+                </div>
+            )}
         </>
     );
 };

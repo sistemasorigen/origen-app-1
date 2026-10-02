@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button,input{font-family:inherit}input:focus{outline:none}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 56px; display:flex; flex-direction:column; align-items:safe center; gap:12px">
+
+  <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:999px; padding:6px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ showMobile }}" style="{{ mobBtn }}">Mobile</button>
+      <button onClick="{{ showDesktop }}" style="{{ deskBtn }}">Desktop</button>
+    </div>
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">IR AL PASO</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px; flex-wrap:wrap">
+      <sc-for list="{{ saltos }}" as="j" hint-placeholder-count="8"><button onClick="{{ j.ir }}" style="{{ j.style }}">{{ j.label }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; background:#fff; border-radius:28px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:hidden; display:flex; flex-direction:column; width:{{ frameW }}; height:820px">
+
+    <div style="flex:none; padding:{{ headPad }}">
+      <div style="max-width:560px; margin:0 auto">
+        <div style="display:flex; align-items:center; gap:10px; min-height:44px">
+          <sc-if value="{{ hayAtras }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ atras }}" style="width:44px; height:44px; border:0; border-radius:999px; background:#f4f4f2; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg></button>
+          </sc-if>
+          <sc-if value="{{ sinAtras }}" hint-placeholder-val="{{ false }}"><span style="width:44px; flex:none"></span></sc-if>
+          <span style="flex:1; text-align:center; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Nocturna</span>
+          <span style="width:44px; text-align:right; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55); flex:none">{{ pasoTxt }}</span>
+        </div>
+        <sc-if value="{{ hayProgreso }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid; grid-template-columns:2fr 3fr 1fr; gap:8px; margin-top:14px">
+            <sc-for list="{{ secciones }}" as="b" hint-placeholder-count="3">
+              <div style="min-width:0">
+                <div style="height:4px; border-radius:999px; background:#e8e7e4; overflow:hidden"><div style="width:{{ b.fill }}; height:100%; border-radius:999px; background:#0a0a0a; transition:width .3s ease"></div></div>
+                <p style="margin:7px 0 0; font:600 12px Manrope,system-ui,sans-serif; color:{{ b.ink }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ b.label }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="flex:1; min-height:0; overflow:auto; padding:{{ bodyPad }}">
+      <div style="max-width:560px; margin:0 auto">
+
+        <sc-if value="{{ p0 }}" hint-placeholder-val="{{ false }}">
+          <div style="padding-top:{{ p0Top }}">
+            <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">INSCRIPCIÓN</p>
+            <h1 style="margin:10px 0 0; font:600 38px/1.1 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.03em">Nocturna</h1>
+            <p style="margin:14px 0 0; font:500 15px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">Viernes 30 de Octubre a las 11 PM hasta Sábado 31 de Octubre hasta las 6 AM. Av. Eva Perón 3932. $40.000 por chico.</p>
+            <div style="background:#f7f7f5; border-radius:20px; padding:16px 18px; margin-top:24px">
+              <p style="margin:0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">La completa un adulto responsable. Vas a necesitar el DNI de cada chico y el comprobante de la transferencia.</p>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:28px">
+              <button onClick="{{ irLogin }}" style="height:56px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">Continuar iniciando sesión</button>
+              <button onClick="{{ sinSesion }}" style="height:56px; border:0; border-radius:999px; background:#f4f4f2; color:#0a0a0a; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">Entrar a la inscripción sin sesión</button>
+            </div>
+            <p style="margin:16px 4px 0; text-align:center; font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Si ya tenés cuenta, conviene iniciar sesión: tus datos se completan solos.</p>
+            <p style="margin:18px 0 0; text-align:center; font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">¿No tenés cuenta? <a onClick="{{ irRegistro }}" style="color:#0a0a0a; font-weight:600; text-decoration:underline; text-underline-offset:3px; cursor:pointer">Registrate en la app</a></p>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ pLogin }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0; font:600 {{ h1Size }}/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">{{ loginTitulo }}</h1>
+          <p style="margin:8px 0 0; font:500 14.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Al terminar volvés directo a la inscripción de Nocturna.</p>
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:24px">
+            <input value="mariela.ramos@gmail.com" readonly="readonly" style="height:54px; padding:0 18px; border:0; border-radius:16px; background:#f4f4f2; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+            <input type="password" value="contraseña" readonly="readonly" style="height:54px; padding:0 18px; border:0; border-radius:16px; background:#f4f4f2; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+          </div>
+          <button onClick="{{ hacerLogin }}" style="width:100%; height:56px; margin-top:18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">{{ loginBtn }}</button>
+          <p style="margin:14px 0 0; text-align:center; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Pantalla de la app, simplificada para el prototipo.</p>
+        </sc-if>
+
+        <sc-if value="{{ p1 }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0; font:600 {{ h1Size }}/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">Tus datos</h1>
+          <p style="margin:8px 0 0; font:500 14.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Los del adulto responsable de los chicos.</p>
+          <sc-if value="{{ sesion }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; gap:12px; background:#f7f7f5; border-radius:18px; padding:14px 16px; margin-top:18px">
+              <span style="width:28px; height:28px; border-radius:999px; background:#0a0a0a; display:flex; align-items:center; justify-content:center; flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></span>
+              <p style="margin:0; font:500 13px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)"><strong style="font-weight:600; color:#0a0a0a">Completamos esto desde tu cuenta.</strong> Revisalo. Si cambiás algo, vale solo para esta inscripción: tu cuenta queda igual.</p>
+            </div>
+          </sc-if>
+          <div style="display:flex; flex-direction:column; gap:14px; margin-top:20px">
+            <sc-for list="{{ adultoCampos }}" as="f" hint-placeholder-count="5">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:7px; min-height:22px">
+                  <span style="flex:1; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ f.label }}</span>
+                  <sc-if value="{{ f.hasTag }}" hint-placeholder-val="{{ false }}"><span style="{{ f.tagStyle }}">{{ f.tag }}</span></sc-if>
+                </div>
+                <input type="{{ f.type }}" inputmode="{{ f.mode }}" value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" style="{{ f.style }}" />
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ esMenor }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:20px; background:#fdf3e3; padding:18px; margin-top:18px">
+              <p style="margin:0; font:600 15.5px Manrope,system-ui,sans-serif; color:#0a0a0a">Esta inscripción la tiene que hacer un adulto</p>
+              <p style="margin:8px 0 0; font:500 13.5px/1.6 Manrope,system-ui,sans-serif; color:#5c3b0b">{{ menorTexto }}</p>
+              <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap">
+                <button style="height:44px; padding:0 18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">Mandarle el link a un adulto</button>
+                <button onClick="{{ corregirFecha }}" style="height:44px; padding:0 18px; border:0; border-radius:999px; background:#fff; color:#0a0a0a; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">Corregir la fecha</button>
+              </div>
+            </div>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ p2 }}" hint-placeholder-val="{{ true }}">
+          <h1 style="margin:0; font:600 {{ h1Size }}/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">¿A quién vas a anotar?</h1>
+          <p style="margin:8px 0 0; font:500 14.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Podés anotar a varios chicos en esta misma inscripción.</p>
+          <div style="display:flex; flex-direction:column; gap:10px; margin-top:22px">
+            <sc-for list="{{ chicos }}" as="c" hint-placeholder-count="2">
+              <div style="{{ c.cardStyle }}">
+                <sc-if value="{{ c.cerrado }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ c.abrir }}" style="width:100%; border:0; background:transparent; padding:16px; display:flex; align-items:center; gap:13px; cursor:pointer; text-align:left">
+                    <span style="width:46px; height:46px; border-radius:999px; background:{{ c.avBg }}; color:{{ c.avInk }}; display:flex; align-items:center; justify-content:center; font:600 14px Manrope,system-ui,sans-serif; flex:none">{{ c.ini }}</span>
+                    <span style="flex:1; min-width:0">
+                      <span style="display:block; font:600 15.5px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ c.titulo }}</span>
+                      <span style="display:block; margin-top:3px; font:500 13px Manrope,system-ui,sans-serif; color:{{ c.subInk }}">{{ c.sub }}</span>
+                    </span>
+                    <span style="height:34px; padding:0 14px; border-radius:999px; background:#fff; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; display:flex; align-items:center; flex:none">{{ c.accion }}</span>
+                  </button>
+                </sc-if>
+                <sc-if value="{{ c.editando }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:18px 16px 16px">
+                    <div style="display:flex; align-items:center; gap:10px">
+                      <p style="margin:0; flex:1; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">{{ c.rotulo }}</p>
+                      <button onClick="{{ c.quitar }}" style="height:34px; padding:0 13px; border:0; border-radius:999px; background:transparent; font:600 12.5px Manrope,system-ui,sans-serif; color:#b42318; cursor:pointer">Quitar</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns:{{ nomCols }}; gap:8px; margin-top:10px">
+                      <input value="{{ c.nombre }}" onChange="{{ c.onNombre }}" placeholder="Nombre" style="height:54px; padding:0 18px; border:0; border-radius:16px; background:#f4f4f2; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a; min-width:0" />
+                      <input value="{{ c.apellido }}" onChange="{{ c.onApellido }}" placeholder="Apellido" style="height:54px; padding:0 18px; border:0; border-radius:16px; background:#f4f4f2; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a; min-width:0" />
+                    </div>
+                    <input value="{{ c.dni }}" onChange="{{ c.onDni }}" placeholder="DNI" inputmode="numeric" style="width:100%; height:54px; padding:0 18px; margin-top:8px; border:0; border-radius:16px; background:#f4f4f2; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                    <p style="margin:18px 0 8px; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Fecha de nacimiento</p>
+                    <div style="display:flex; align-items:center; gap:10px">
+                      <input type="date" value="{{ c.nac }}" onChange="{{ c.onNac }}" style="flex:1; min-width:0; height:54px; padding:0 18px; border:0; border-radius:16px; background:#f4f4f2; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                      <span style="{{ c.edadStyle }}">{{ c.edadTxt }}</span>
+                    </div>
+                    <p style="margin:18px 0 8px; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Tribu</p>
+                    <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px">
+                      <sc-for list="{{ c.tribus }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.elegir }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+                    </div>
+                    <button onClick="{{ c.listo }}" style="{{ c.listoStyle }}">{{ c.listoLabel }}</button>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+            <sc-if value="{{ sinChicos }}" hint-placeholder-val="{{ false }}">
+              <div style="border-radius:22px; background:#f7f7f5; padding:28px 20px; text-align:center">
+                <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Todavía no anotaste a nadie</p>
+                <p style="margin:6px 0 0; font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Agregá al primer chico para seguir.</p>
+              </div>
+            </sc-if>
+            <button onClick="{{ agregar }}" style="height:58px; border:1.5px dashed #d9d8d4; border-radius:22px; background:transparent; display:flex; align-items:center; justify-content:center; gap:9px; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>{{ agregarLabel }}
+            </button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ p3 }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0; font:600 {{ h1Size }}/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">{{ retiroTitulo }}</h1>
+          <p style="margin:8px 0 0; font:500 14.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ retiroSub }}</p>
+          <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:22px">
+            <button onClick="{{ retiroSi }}" style="{{ retiroSiStyle }}">Sí, se retira solo</button>
+            <button onClick="{{ retiroNo }}" style="{{ retiroNoStyle }}">No</button>
+          </div>
+          <sc-if value="{{ retiroEsNo }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:26px 0 10px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">¿QUIÉN LO RETIRA?</p>
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <button onClick="{{ retiroYo }}" style="{{ retiroYoStyle }}">
+                <span style="display:block; font:600 15px Manrope,system-ui,sans-serif; color:inherit">Lo retiro yo</span>
+                <sc-if value="{{ retiroEsYo }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:block; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.18); font:500 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(255,255,255,.78)">{{ adultoResumen }}<br />Los datos del paso 1. Si algo está mal, volvé a ese paso.</span>
+                </sc-if>
+              </button>
+              <button onClick="{{ retiroOtro }}" style="{{ retiroOtroStyle }}"><span style="display:block; font:600 15px Manrope,system-ui,sans-serif; color:inherit">Lo retirará otra persona</span></button>
+            </div>
+            <sc-if value="{{ retiroEsOtro }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px">
+                <sc-for list="{{ otroCampos }}" as="f" hint-placeholder-count="4">
+                  <input inputmode="{{ f.mode }}" value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" style="height:54px; padding:0 18px; border:0; border-radius:16px; background:#f4f4f2; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                </sc-for>
+                <p style="margin:4px 2px 0; font:500 12.5px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.58)">Va a tener que mostrar su DNI en la puerta a las 6 AM.</p>
+              </div>
+            </sc-if>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ p4 }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0; font:600 {{ h1Size }}/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">Autorización de asistencia</h1>
+          <p style="margin:8px 0 0; font:500 14.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Obligatoria: sin esta autorización no pueden asistir.</p>
+          <div style="background:#f7f7f5; border-radius:20px; padding:20px; margin-top:20px">
+            <p style="margin:0; font:500 15px/1.7 Manrope,system-ui,sans-serif; color:#0a0a0a">Declaro que soy el padre / madre / tutor o encargado del menor cuya entrada se está adquiriendo y que autorizo al mismo a participar del evento "Nocturna" realizado por Origen Iglesia, en Av. Eva Perón 3932, con horario de comienzo el día 30 de octubre de 2026 a las 11pm y finalizando el día 31 de octubre de 2026 a las 6am.</p>
+          </div>
+          <p style="margin:14px 2px 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ autorizaPara }}</p>
+          <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px">
+            <button onClick="{{ autorizoSi }}" style="{{ autorizoSiStyle }}">Autorizo</button>
+            <button onClick="{{ autorizoNo }}" style="{{ autorizoNoStyle }}">No autorizo</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ pNoAut }}" hint-placeholder-val="{{ false }}">
+          <div style="padding-top:30px; text-align:center">
+            <div style="width:72px; height:72px; margin:0 auto; border-radius:999px; background:#f4f4f2; display:flex; align-items:center; justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round"><path d="M12 7v6M12 16.5v.5"></path><circle cx="12" cy="12" r="9"></circle></svg></div>
+            <h1 style="margin:22px 0 0; font:600 24px/1.25 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">Sin autorización, no pueden asistir</h1>
+            <p style="margin:12px auto 0; max-width:380px; font:500 14.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">{{ noAutTexto }}</p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:28px">
+              <button onClick="{{ volverAutorizar }}" style="height:56px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">Volver y cambiar mi respuesta</button>
+              <button onClick="{{ salir }}" style="height:56px; border:0; border-radius:999px; background:#f4f4f2; color:#0a0a0a; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">Salir de la inscripción</button>
+            </div>
+            <p style="margin:16px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">¿Dudas? Escribinos al 11 5566 7788.</p>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ p5 }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0; font:600 {{ h1Size }}/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">Fotos y video</h1>
+          <p style="margin:8px 0 0; font:500 14.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Opcional: respondas lo que respondas, pueden asistir igual.</p>
+          <div style="background:#f7f7f5; border-radius:20px; padding:20px; margin-top:20px">
+            <p style="margin:0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Aviso sobre registro fotográfico y audiovisual.</p>
+            <p style="margin:8px 0 0; font:500 15px/1.7 Manrope,system-ui,sans-serif; color:#0a0a0a">Te informamos que durante el evento se tomarán fotografías y grabaciones de video de las distintas actividades. Este material será utilizado exclusivamente por Origen Iglesia con fines de difusión, comunicación y registro informativo en nuestros canales oficiales (redes sociales, sitio web y material impreso de la iglesia).</p>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:16px">
+            <button onClick="{{ fotoSi }}" style="{{ fotoSiStyle }}">Sí, acepto</button>
+            <button onClick="{{ fotoNo }}" style="{{ fotoNoStyle }}">No acepto</button>
+          </div>
+          <sc-if value="{{ fotoEsNo }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; gap:12px; background:#f7f7f5; border-radius:18px; padding:14px 16px; margin-top:12px">
+              <span style="width:26px; height:26px; border-radius:999px; background:#0a0a0a; display:flex; align-items:center; justify-content:center; flex:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></span>
+              <p style="margin:0; font:500 13px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">Queda registrado. El equipo va a evitar publicar imágenes donde aparezcan. Podés seguir.</p>
+            </div>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ p6 }}" hint-placeholder-val="{{ false }}">
+          <h1 style="margin:0; font:600 {{ h1Size }}/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">Pago</h1>
+          <div style="background:#0a0a0a; border-radius:22px; padding:20px; margin-top:18px">
+            <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.6)">Total a transferir</p>
+            <p style="margin:6px 0 0; font:600 36px Manrope,system-ui,sans-serif; color:#fff; letter-spacing:-.03em">{{ total }}</p>
+            <p style="margin:4px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.66)">{{ totalNota }}</p>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px">
+            <sc-for list="{{ datosPago }}" as="d" hint-placeholder-count="3">
+              <div style="background:#f7f7f5; border-radius:18px; padding:12px 12px 12px 18px; display:flex; align-items:center; gap:12px">
+                <div style="flex:1; min-width:0">
+                  <p style="margin:0; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ d.label }}</p>
+                  <p style="margin:3px 0 0; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow-wrap:anywhere">{{ d.valor }}</p>
+                </div>
+                <sc-if value="{{ d.copiable }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ d.copiar }}" style="{{ d.btnStyle }}">{{ d.btnLabel }}</button>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin:24px 0 10px; font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">COMPROBANTE</p>
+          <sc-if value="{{ sinComprobante }}" hint-placeholder-val="{{ true }}">
+            <label style="height:96px; border:1.5px dashed #d9d8d4; border-radius:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer">
+              <input type="file" accept="image/*" onChange="{{ onComprobante }}" style="display:none" />
+              <span style="font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Subir la captura de la transferencia</span>
+              <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Una imagen. Sin comprobante no se puede terminar.</span>
+            </label>
+            <button onClick="{{ simularComprobante }}" style="margin-top:8px; border:0; background:transparent; font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55); text-decoration:underline; text-underline-offset:3px; cursor:pointer; padding:4px">Usar un comprobante de ejemplo</button>
+          </sc-if>
+          <sc-if value="{{ hayComprobante }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#f7f7f5; border-radius:20px; padding:10px; display:flex; align-items:center; gap:12px">
+              <div style="width:60px; height:60px; border-radius:14px; background:{{ compBg }}; background-size:cover; background-position:center; flex:none"></div>
+              <div style="flex:1; min-width:0">
+                <p style="margin:0; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ compNombre }}</p>
+                <p style="margin:3px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#12783f">Comprobante cargado</p>
+              </div>
+              <button onClick="{{ quitarComprobante }}" style="height:38px; padding:0 14px; border:0; border-radius:999px; background:#fff; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer; flex:none">Cambiar</button>
+            </div>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ p7 }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center; padding-top:8px">
+            <div style="width:60px; height:60px; margin:0 auto; border-radius:999px; background:#eaf6ee; display:flex; align-items:center; justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#12783f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></div>
+            <h1 style="margin:18px 0 0; font:600 26px/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">Quedaron anotados</h1>
+            <p style="margin:10px auto 0; max-width:400px; font:500 14.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">{{ confTexto }}</p>
+          </div>
+          <div style="background:#f7f7f5; border-radius:24px; padding:22px; margin-top:22px; display:flex; flex-direction:column; align-items:center">
+            <div style="width:196px; height:196px; border-radius:18px; background:#fff; padding:14px">
+              <div style="width:100%; height:100%; border-radius:8px; background:repeating-linear-gradient(135deg,#ecebe8 0 8px,#e2e1dd 8px 16px); display:flex; align-items:center; justify-content:center">
+                <span style="font:500 11px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.55)">código QR</span>
+              </div>
+            </div>
+            <p style="margin:14px 0 0; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a">Entrada · NOC-2026-0487</p>
+            <p style="margin:5px 0 0; font:500 12.5px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); text-align:center">Guardala o sacale captura: es lo que se escanea en la puerta.</p>
+            <button style="height:48px; padding:0 22px; margin-top:14px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">Guardar la entrada</button>
+          </div>
+          <div style="margin-top:14px">
+            <sc-for list="{{ resumen }}" as="r" hint-placeholder-count="4">
+              <div style="display:flex; justify-content:space-between; gap:14px; padding:12px 4px; border-bottom:1px solid #f0efec">
+                <span style="font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ r.k }}</span>
+                <span style="font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">{{ r.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <button onClick="{{ salir }}" style="width:100%; height:54px; margin-top:20px; border:0; border-radius:999px; background:#f4f4f2; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Volver al inicio</button>
+        </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ hayDeshacer }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; left:16px; right:16px; bottom:100px; display:flex; justify-content:center; pointer-events:none">
+        <div style="pointer-events:auto; max-width:420px; width:100%; background:#0a0a0a; border-radius:18px; padding:10px 10px 10px 18px; display:flex; align-items:center; gap:12px">
+          <span style="flex:1; min-width:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#fff">{{ deshacerTexto }}</span>
+          <button onClick="{{ deshacer }}" style="height:38px; padding:0 16px; border:0; border-radius:999px; background:#fff; color:#0a0a0a; font:600 13px Manrope,system-ui,sans-serif; cursor:pointer; flex:none">Deshacer</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayPie }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:none; border-top:1px solid #efeeeb; background:#fff; padding:{{ piePad }}">
+        <div style="max-width:560px; margin:0 auto; display:flex; align-items:center; gap:14px">
+          <sc-if value="{{ hayPieInfo }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1; min-width:0">
+              <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ total }}</p>
+              <p style="margin:2px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.58)">{{ totalNota }}</p>
+            </div>
+          </sc-if>
+          <button onClick="{{ seguir }}" style="{{ seguirStyle }}">{{ seguirLabel }}</button>
+        </div>
+        <sc-if value="{{ hayPendiente }}" hint-placeholder-val="{{ false }}">
+          <p style="max-width:560px; margin:10px auto 0; font:500 12.5px Manrope,system-ui,sans-serif; color:#7a4f10">{{ pendienteTexto }}</p>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayModal }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; background:rgba(10,10,10,.42); display:flex; align-items:{{ modalAlign }}; justify-content:center; padding:{{ modalPad }}">
+        <div style="width:100%; max-width:420px; background:#fff; border-radius:26px; padding:24px 22px 20px">
+          <p style="margin:0; font:600 19px/1.3 Manrope,system-ui,sans-serif; color:#0a0a0a">Si volvés, se cierra tu sesión</p>
+          <p style="margin:10px 0 0; font:500 14px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">Volvés a la pantalla de entrada para elegir otra forma de inscribirte. Lo que cargaste en este paso se pierde.</p>
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:20px">
+            <button onClick="{{ cerrarModal }}" style="height:52px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Seguir con mi inscripción</button>
+            <button onClick="{{ logout }}" style="height:52px; border:0; border-radius:999px; background:#f4f4f2; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Cerrar sesión y volver</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1160,&quot;height&quot;:940}}">
+class Component extends DCLogic {
+  EVENTO = new Date(2026, 9, 30);
+  HOY = new Date(2026, 8, 30);
+  CUENTA = { nombre: 'Mariela', apellido: 'Ramos', dni: '25481093', email: 'mariela.ramos@gmail.com', nac: '1979-04-11' };
+  VACIO = { nombre: '', apellido: '', dni: '', email: '', nac: '' };
+  nextId = 3;
+
+  state = {
+    device: 'mobile', paso: 0, authModo: 'login', sesion: false, modal: false,
+    adulto: Object.assign({}, this.VACIO),
+    abierto: 2,
+    chicos: [
+      { id: 1, nombre: 'Sofía', apellido: 'Ramos', dni: '48392015', nac: '2011-05-14', tribu: 'Trueno' },
+      { id: 2, nombre: 'Tomás', apellido: 'Ramos', dni: '', nac: '2013-08-02', tribu: '' }
+    ],
+    quitado: null, intento: false,
+    retiro: null, retiroQuien: null, otro: { nombre: '', apellido: '', dni: '', tel: '' },
+    autoriza: null, foto: null, comp: null, copiado: null
+  };
+
+  edadAl(iso, ref) {
+    if (!iso) return null;
+    const d = new Date(iso + 'T12:00:00');
+    let a = ref.getFullYear() - d.getFullYear();
+    if (ref.getMonth() < d.getMonth() || (ref.getMonth() === d.getMonth() && ref.getDate() < d.getDate())) a--;
+    return a;
+  }
+  faltan(c) {
+    const f = [];
+    if (!c.nombre.trim()) f.push('nombre');
+    if (!c.apellido.trim()) f.push('apellido');
+    if (!c.dni.trim()) f.push('DNI');
+    if (!c.nac) f.push('fecha de nacimiento');
+    if (!c.tribu) f.push('tribu');
+    return f;
+  }
+  upd(id, k, v) { this.setState(s => ({ chicos: s.chicos.map(c => c.id === id ? Object.assign({}, c, { [k]: v }) : c) })); }
+  lista(arr) { return arr.length <= 1 ? (arr[0] || '') : arr.slice(0, -1).join(', ') + ' y ' + arr[arr.length - 1]; }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'desktop', P = s.paso;
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer';
+    const choice = (on, extra) => 'min-height:58px; padding:14px 16px; border:0; border-radius:20px; background:' + (on ? '#0a0a0a' : '#f4f4f2') + '; color:' + (on ? '#fff' : '#0a0a0a') + '; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer; text-align:' + (extra || 'center');
+    const fmt = v => '$' + v.toLocaleString('es-AR');
+
+    const n = s.chicos.length;
+    const nombres = s.chicos.map(c => c.nombre || 'un chico');
+    const incompletos = s.chicos.filter(c => this.faltan(c).length);
+    const ok2 = n > 0 && !incompletos.length;
+    const a = s.adulto;
+    const edadA = this.edadAl(a.nac, this.HOY);
+    const esMenor = edadA !== null && edadA < 18;
+    const ok1 = a.nombre && a.apellido && a.dni && a.email && a.nac && !esMenor;
+    const o = s.otro;
+    const ok3 = s.retiro === 'si' || (s.retiro === 'no' && (s.retiroQuien === 'yo' || (s.retiroQuien === 'otro' && o.nombre && o.apellido && o.dni && o.tel)));
+    const ok = { 1: ok1, 2: ok2, 3: ok3, 4: s.autoriza === 'si', 5: !!s.foto, 6: !!s.comp }[P];
+
+    const go = p => this.setState({ paso: p, intento: false, quitado: null, modal: false });
+
+    const campo = (k, label, type, mode, ph) => {
+      const auto = s.sesion && a[k] === this.CUENTA[k];
+      const edit = s.sesion && a[k] !== this.CUENTA[k];
+      const menorF = k === 'nac' && esMenor;
+      return {
+        label, type, mode, ph, value: a[k],
+        onChange: e => { const v = k === 'dni' ? e.target.value.replace(/\D/g, '').slice(0, 9) : e.target.value; this.setState(st => ({ adulto: Object.assign({}, st.adulto, { [k]: v }) })); },
+        hasTag: s.sesion,
+        tag: auto ? 'De tu cuenta' : (edit ? 'Cambiado solo acá' : ''),
+        tagStyle: 'height:24px; padding:0 10px; border-radius:999px; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; ' + (auto ? 'background:#f4f4f2; color:rgba(0,0,0,.62)' : 'background:#fdf3e3; color:#7a4f10'),
+        style: 'width:100%; height:54px; padding:0 18px; border:0; border-radius:16px; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a; ' + (menorF ? 'background:#fdf3e3; box-shadow:0 0 0 1.5px #e8b96a inset' : (auto ? 'background:#fafaf9; box-shadow:0 0 0 1.5px #ecebe8 inset' : 'background:#f4f4f2'))
+      };
+    };
+
+    const chicos = s.chicos.map((c, i) => {
+      const abierto = s.abierto === c.id, falt = this.faltan(c), ed = this.edadAl(c.nac, this.EVENTO);
+      const nombre = (c.nombre + ' ' + c.apellido).trim();
+      const alerta = falt.length && (s.intento || !abierto);
+      return {
+        cerrado: !abierto, editando: abierto,
+        cardStyle: 'border-radius:22px; background:' + (abierto ? '#fff' : '#f7f7f5') + '; box-shadow:' + (abierto ? '0 0 0 1.5px #0a0a0a inset' : (alerta ? '0 0 0 1.5px #f0d9b4 inset' : 'none')),
+        ini: nombre ? nombre.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() : String(i + 1),
+        avBg: falt.length ? '#fdf3e3' : '#0a0a0a', avInk: falt.length ? '#7a4f10' : '#fff',
+        titulo: nombre || 'Chico ' + (i + 1),
+        sub: falt.length ? 'Falta: ' + falt.join(', ') : ed + ' años · ' + c.tribu,
+        subInk: falt.length ? '#7a4f10' : 'rgba(0,0,0,.6)',
+        accion: falt.length ? 'Completar' : 'Editar',
+        abrir: () => this.setState({ abierto: c.id }),
+        rotulo: 'CHICO ' + (i + 1) + ' DE ' + n,
+        nombre: c.nombre, apellido: c.apellido, dni: c.dni, nac: c.nac,
+        onNombre: e => this.upd(c.id, 'nombre', e.target.value),
+        onApellido: e => this.upd(c.id, 'apellido', e.target.value),
+        onDni: e => this.upd(c.id, 'dni', e.target.value.replace(/\D/g, '').slice(0, 9)),
+        onNac: e => this.upd(c.id, 'nac', e.target.value),
+        edadTxt: ed === null ? 'Edad —' : ed + ' años',
+        edadStyle: 'height:54px; padding:0 16px; border-radius:16px; background:' + (ed === null ? '#fafaf9' : '#0a0a0a') + '; color:' + (ed === null ? 'rgba(0,0,0,.4)' : '#fff') + '; font:600 14.5px Manrope,system-ui,sans-serif; display:flex; align-items:center; white-space:nowrap; flex:none',
+        tribus: ['Trueno', 'Garra', 'Sin tribu'].map(t => ({
+          label: t, elegir: () => this.upd(c.id, 'tribu', t),
+          style: 'height:48px; border:0; border-radius:999px; background:' + (c.tribu === t ? '#0a0a0a' : '#f4f4f2') + '; color:' + (c.tribu === t ? '#fff' : '#0a0a0a') + '; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer'
+        })),
+        listo: () => { if (!falt.length) this.setState({ abierto: null }); },
+        listoLabel: falt.length ? 'Falta: ' + falt.join(', ') : 'Listo, guardar a ' + (c.nombre || 'este chico'),
+        listoStyle: 'width:100%; min-height:54px; padding:0 18px; margin-top:20px; border:0; border-radius:999px; background:' + (falt.length ? '#f4f4f2' : '#0a0a0a') + '; color:' + (falt.length ? 'rgba(0,0,0,.55)' : '#fff') + '; font:600 15px Manrope,system-ui,sans-serif; cursor:' + (falt.length ? 'default' : 'pointer'),
+        quitar: () => this.setState(st => ({ quitado: { chico: c, idx: i }, chicos: st.chicos.filter(x => x.id !== c.id), abierto: null }))
+      };
+    });
+
+    const labels = { 1: 'Continuar', 2: 'Siguiente', 3: 'Siguiente', 4: 'Siguiente', 5: 'Siguiente', 6: 'Listo' };
+    const retiroTxt = s.retiro === 'si' ? 'Se retira solo' : s.retiroQuien === 'yo' ? 'Lo retira ' + a.nombre + ' ' + a.apellido : s.retiroQuien === 'otro' ? 'Lo retira ' + o.nombre + ' ' + o.apellido : '—';
+    const plural = n > 1;
+
+    return {
+      showMobile: () => this.setState({ device: 'mobile' }),
+      showDesktop: () => this.setState({ device: 'desktop' }),
+      mobBtn: seg(!desk), deskBtn: seg(desk),
+      saltos: [0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ label: String(i), style: seg(P === i), ir: () => go(i) })),
+      frameW: desk ? '1100px' : '390px',
+      headPad: desk ? '26px 40px 10px' : '14px 18px 8px',
+      bodyPad: desk ? '26px 40px 30px' : '18px 18px 26px',
+      piePad: desk ? '16px 40px 20px' : '12px 18px 18px',
+      h1Size: desk ? '30px' : '26px',
+      nomCols: desk ? 'repeat(2,minmax(0,1fr))' : 'minmax(0,1fr)',
+      p0Top: desk ? '40px' : '24px',
+      modalAlign: desk ? 'center' : 'flex-end', modalPad: desk ? '24px' : '12px',
+
+      hayAtras: P !== 0 && P !== 7, sinAtras: P === 0 || P === 7,
+      atras: () => {
+        if (P === 'login') go(0);
+        else if (P === 'noAut') go(4);
+        else if (P === 1) { if (s.sesion) this.setState({ modal: true }); else go(0); }
+        else go(P - 1);
+      },
+      pasoTxt: typeof P === 'number' && P >= 1 && P <= 6 ? P + ' de 6' : '',
+      hayProgreso: typeof P === 'number' && P >= 1 && P <= 6,
+      secciones: [['1 · Datos', 1, 2], ['2 · Información', 3, 5], ['3 · Pago', 6, 6]].map(([label, ini, fin]) => {
+        const p = typeof P === 'number' ? P : 0;
+        const tot = fin - ini + 1;
+        const hechos = Math.max(0, Math.min(tot, p - ini + 1));
+        const actual = p >= ini && p <= fin;
+        return { label, fill: (hechos / tot * 100) + '%', ink: actual ? '#0a0a0a' : (p > fin ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.4)') };
+      }),
+
+      p0: P === 0, pLogin: P === 'login', p1: P === 1, p2: P === 2, p3: P === 3, p4: P === 4, pNoAut: P === 'noAut', p5: P === 5, p6: P === 6, p7: P === 7,
+
+      irLogin: () => this.setState({ paso: 'login', authModo: 'login' }),
+      irRegistro: () => this.setState({ paso: 'login', authModo: 'registro' }),
+      sinSesion: () => this.setState({ paso: 1, sesion: false, adulto: Object.assign({}, this.VACIO) }),
+      loginTitulo: s.authModo === 'registro' ? 'Crear tu cuenta' : 'Iniciar sesión',
+      loginBtn: s.authModo === 'registro' ? 'Crear cuenta y volver' : 'Iniciar sesión',
+      hacerLogin: () => this.setState({ paso: 1, sesion: true, adulto: Object.assign({}, this.CUENTA) }),
+
+      sesion: s.sesion,
+      adultoCampos: [
+        campo('nombre', 'Nombre', 'text', 'text', 'Tu nombre'),
+        campo('apellido', 'Apellido', 'text', 'text', 'Tu apellido'),
+        campo('dni', 'DNI', 'text', 'numeric', 'Sin puntos'),
+        campo('email', 'Email', 'email', 'email', 'Acá te llega la entrada'),
+        campo('nac', 'Fecha de nacimiento', 'date', 'text', '')
+      ],
+      esMenor,
+      menorTexto: 'Según la fecha que cargaste tenés ' + edadA + ' años. Para anotarte a Nocturna, pedile a tu mamá, papá o a un adulto a cargo que complete la inscripción desde su celular.',
+      corregirFecha: () => this.setState(st => ({ adulto: Object.assign({}, st.adulto, { nac: '' }) })),
+      hayModal: s.modal,
+      cerrarModal: () => this.setState({ modal: false }),
+      logout: () => this.setState({ modal: false, sesion: false, paso: 0, adulto: Object.assign({}, this.VACIO) }),
+
+      chicos, sinChicos: n === 0,
+      agregarLabel: n ? 'Agregar otro chico' : 'Agregar un chico',
+      agregar: () => { const id = this.nextId++; this.setState(st => ({ chicos: st.chicos.concat({ id, nombre: '', apellido: st.chicos[0] ? st.chicos[0].apellido : '', dni: '', nac: '', tribu: '' }), abierto: id, quitado: null })); },
+      hayDeshacer: !!s.quitado && P === 2,
+      deshacerTexto: s.quitado ? 'Quitaste a ' + (s.quitado.chico.nombre || 'un chico') : '',
+      deshacer: () => this.setState(st => { const arr = st.chicos.slice(); arr.splice(st.quitado.idx, 0, st.quitado.chico); return { chicos: arr, quitado: null }; }),
+
+      retiroTitulo: plural ? '¿Se retiran solos a las 6 h?' : '¿' + (nombres[0] || 'Tu hijo') + ' se retira solo a las 6 h?',
+      retiroSub: plural ? 'Una respuesta para ' + this.lista(nombres) + '. Salen juntos.' : 'El evento termina el sábado 31 a las 6 de la mañana.',
+      retiroSi: () => this.setState({ retiro: 'si', retiroQuien: null }),
+      retiroNo: () => this.setState({ retiro: 'no' }),
+      retiroSiStyle: choice(s.retiro === 'si'), retiroNoStyle: choice(s.retiro === 'no'),
+      retiroEsNo: s.retiro === 'no',
+      retiroYo: () => this.setState({ retiroQuien: 'yo' }), retiroOtro: () => this.setState({ retiroQuien: 'otro' }),
+      retiroYoStyle: choice(s.retiroQuien === 'yo', 'left'), retiroOtroStyle: choice(s.retiroQuien === 'otro', 'left'),
+      retiroEsYo: s.retiroQuien === 'yo', retiroEsOtro: s.retiroQuien === 'otro',
+      adultoResumen: (a.nombre + ' ' + a.apellido).trim() + ' · DNI ' + (a.dni || '—'),
+      otroCampos: [['nombre', 'Nombre', 'text'], ['apellido', 'Apellido', 'text'], ['dni', 'DNI', 'numeric'], ['tel', 'Teléfono', 'tel']].map(([k, ph, mode]) => ({
+        ph, mode, value: o[k],
+        onChange: e => { const v = (k === 'dni' || k === 'tel') ? e.target.value.replace(/[^\d ]/g, '') : e.target.value; this.setState(st => ({ otro: Object.assign({}, st.otro, { [k]: v }) })); }
+      })),
+
+      autorizaPara: 'Para ' + this.lista(nombres) + '.',
+      autorizoSi: () => this.setState({ autoriza: 'si' }),
+      autorizoNo: () => this.setState({ autoriza: 'no', paso: 'noAut' }),
+      autorizoSiStyle: choice(s.autoriza === 'si'), autorizoNoStyle: choice(false),
+      noAutTexto: 'Para que ' + this.lista(nombres) + (plural ? ' puedan' : ' pueda') + ' ir a Nocturna necesitamos la autorización de un adulto responsable. No guardamos esta inscripción ni se cobra nada.',
+      volverAutorizar: () => this.setState({ autoriza: null, paso: 4 }),
+      salir: () => this.setState({ paso: 0, sesion: false, adulto: Object.assign({}, this.VACIO), autoriza: null, foto: null, comp: null, retiro: null, retiroQuien: null }),
+
+      fotoSi: () => this.setState({ foto: 'si' }), fotoNo: () => this.setState({ foto: 'no' }),
+      fotoSiStyle: choice(s.foto === 'si'), fotoNoStyle: choice(s.foto === 'no'), fotoEsNo: s.foto === 'no',
+
+      total: fmt(40000 * n),
+      totalNota: n ? n + (n === 1 ? ' chico' : ' chicos') + ' × ' + fmt(40000) : 'Agregá al menos un chico',
+      datosPago: [
+        { label: 'Alias', valor: 'eventosorigen.mp', copiable: true, k: 'alias' },
+        { label: 'CVU', valor: '0000 0031 0003 6316 6583 90', copiable: true, k: 'cvu' },
+        { label: 'Titular', valor: 'Asociación Civil Origen Iglesia', copiable: false, k: 'tit' }
+      ].map(d => ({
+        label: d.label, valor: d.valor, copiable: d.copiable,
+        btnLabel: s.copiado === d.k ? 'Copiado' : 'Copiar',
+        btnStyle: 'height:40px; padding:0 16px; border:0; border-radius:999px; background:' + (s.copiado === d.k ? '#eaf6ee' : '#0a0a0a') + '; color:' + (s.copiado === d.k ? '#12783f' : '#fff') + '; font:600 13px Manrope,system-ui,sans-serif; cursor:pointer; flex:none',
+        copiar: () => { try { navigator.clipboard && navigator.clipboard.writeText(d.valor.replace(/ /g, '')); } catch (e) {} this.setState({ copiado: d.k }); }
+      })),
+      sinComprobante: !s.comp, hayComprobante: !!s.comp,
+      onComprobante: e => { const f = e.target.files && e.target.files[0]; if (f) this.setState({ comp: { nombre: f.name, url: URL.createObjectURL(f) } }); },
+      simularComprobante: () => this.setState({ comp: { nombre: 'transferencia-nocturna.jpg', url: null } }),
+      quitarComprobante: () => this.setState({ comp: null }),
+      compNombre: s.comp ? s.comp.nombre : '',
+      compBg: s.comp && s.comp.url ? 'url(' + s.comp.url + ')' : 'repeating-linear-gradient(135deg,#ecebe8 0 6px,#e2e1dd 6px 12px)',
+
+      confTexto: 'La entrada también te llega por email a ' + (a.email || 'tu correo') + '. Puede demorar un rato, por eso te la dejamos acá.',
+      resumen: [
+        { k: plural ? 'Chicos' : 'Chico', v: this.lista(s.chicos.map(c => (c.nombre + ' ' + c.apellido).trim() || 'Sin nombre')) },
+        { k: 'A nombre de', v: (a.nombre + ' ' + a.apellido).trim() || '—' },
+        { k: 'Retiro', v: retiroTxt },
+        { k: 'Pagado', v: fmt(40000 * n) }
+      ],
+
+      hayPie: typeof P === 'number' && P >= 1 && P <= 6,
+      hayPieInfo: P === 2 || P === 6,
+      seguir: () => {
+        if (ok) go(P + 1);
+        else if (P === 2) this.setState({ intento: true, abierto: incompletos[0] ? incompletos[0].id : null });
+        else this.setState({ intento: true });
+      },
+      seguirLabel: labels[P] || 'Siguiente',
+      seguirStyle: 'height:54px; padding:0 30px; border:0; border-radius:999px; background:' + (ok ? '#0a0a0a' : '#c9c8c4') + '; color:#fff; font:600 15.5px Manrope,system-ui,sans-serif; cursor:pointer; ' + ((P === 2 || P === 6) ? 'flex:none' : 'flex:1'),
+      hayPendiente: s.intento && !ok && !(P === 1 && esMenor),
+      pendienteTexto: P === 2 ? (incompletos.length === 1 ? 'A ' + (incompletos[0].nombre || 'un chico') + ' le faltan datos.' : 'Hay ' + incompletos.length + ' chicos con datos incompletos.')
+        : P === 1 ? 'Completá todos tus datos para seguir.'
+        : P === 3 ? 'Elegí cómo se retiran.'
+        : P === 4 ? 'Elegí una opción.'
+        : P === 5 ? 'Elegí una opción. Cualquiera te deja seguir.'
+        : P === 6 ? 'Subí el comprobante para terminar.' : ''
+    };
+  }
+}
+</script>
+</body>
+</html>

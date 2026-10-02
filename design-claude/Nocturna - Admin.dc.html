@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button,input{font-family:inherit}input:focus{outline:none}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 56px; display:flex; flex-direction:column; align-items:safe center; gap:12px">
+
+  <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:999px; padding:6px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ showMobile }}" style="{{ mobBtn }}">Mobile</button>
+      <button onClick="{{ showDesktop }}" style="{{ deskBtn }}">Desktop</button>
+    </div>
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">PANTALLA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ goPlanilla }}" style="{{ vPlan }}">Planilla</button>
+      <button onClick="{{ goCrear }}" style="{{ vCrear }}">Crear</button>
+      <button onClick="{{ goDetalleDemo }}" style="{{ vDet }}">Detalle</button>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; background:#f6f6f4; border-radius:24px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:hidden; display:flex; flex-direction:column; width:{{ frameW }}; height:{{ frameH }}">
+
+    <sc-if value="{{ vistaPlanilla }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:none; background:#fff; border-bottom:1px solid #ecebe8; padding:{{ headPad }}">
+        <div style="display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap">
+          <div style="flex:1; min-width:160px">
+            <h1 style="margin:0; font:600 {{ h1Size }} Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">Nocturna</h1>
+            <p style="margin:3px 0 0; font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.58)">Nocturna 2026</p>
+          </div>
+          <div style="display:flex; gap:8px; flex:{{ accFlex }}; min-width:0">
+            <button onClick="{{ acreditar }}" style="height:46px; padding:0 18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 14px Manrope,system-ui,sans-serif; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; flex:1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M4 12h16"></path></svg>Acreditar
+            </button>
+            <button onClick="{{ goCrear }}" style="height:46px; padding:0 18px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14px Manrope,system-ui,sans-serif; display:flex; align-items:center; justify-content:center; gap:7px; cursor:pointer; flex:1; white-space:nowrap">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>{{ crearLabel }}
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap">
+          <div style="flex:1; min-width:200px; height:44px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; gap:10px; padding:0 8px 0 16px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.2" stroke-linecap="round" style="flex:none"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+            <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Buscar adulto o chico" style="flex:1; min-width:0; border:0; background:transparent; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+            <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ clearQuery }}" style="width:30px; height:30px; border:0; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            </sc-if>
+          </div>
+          <sc-if value="{{ precioLectura }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ editarPrecio }}" style="height:44px; padding:0 8px 0 16px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; gap:10px; cursor:pointer; flex:none">
+              <span style="font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Entrada</span>
+              <span style="font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ precioTxt }}</span>
+              <span style="height:30px; padding:0 12px; border-radius:999px; background:#fff; font:600 12px Manrope,system-ui,sans-serif; color:#0a0a0a; display:flex; align-items:center">Editar</span>
+            </button>
+          </sc-if>
+          <sc-if value="{{ precioEditando }}" hint-placeholder-val="{{ false }}">
+            <div style="height:44px; padding:0 6px 0 16px; border-radius:999px; background:#fff; box-shadow:0 0 0 1.5px #0a0a0a inset; display:flex; align-items:center; gap:6px; flex:none">
+              <span style="font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a">$</span>
+              <input value="{{ precioDraft }}" onChange="{{ onPrecio }}" inputmode="numeric" style="width:84px; border:0; background:transparent; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+              <button onClick="{{ cancelarPrecio }}" style="height:32px; padding:0 12px; border:0; border-radius:999px; background:#f2f2f0; font:600 12px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">Cancelar</button>
+              <button onClick="{{ guardarPrecio }}" style="height:32px; padding:0 12px; border:0; border-radius:999px; background:#0a0a0a; font:600 12px Manrope,system-ui,sans-serif; color:#fff; cursor:pointer">Guardar</button>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="display:flex; gap:16px; margin-top:12px; flex-wrap:wrap">
+          <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ resumenTotal }}</span>
+          <span style="display:flex; align-items:center; gap:6px; font:600 12.5px Manrope,system-ui,sans-serif; color:#12783f"><span style="width:7px; height:7px; border-radius:999px; background:#16a34a"></span>{{ resumenAprob }}</span>
+          <span style="display:flex; align-items:center; gap:6px; font:600 12.5px Manrope,system-ui,sans-serif; color:#7a4f10"><span style="width:7px; height:7px; border-radius:999px; background:#e8b96a"></span>{{ resumenFotos }}</span>
+        </div>
+      </div>
+
+      <div style="flex:1; min-height:0; overflow:auto; padding:{{ bodyPad }}">
+        <sc-if value="{{ hayResultados }}" hint-placeholder-val="{{ true }}">
+
+          <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="2">
+              <p style="margin:6px 4px 10px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">{{ g.titulo }}</p>
+              <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px">
+                <sc-for list="{{ g.filas }}" as="f" hint-placeholder-count="4">
+                  <div style="background:#fff; border-radius:20px; padding:16px">
+                    <div style="display:flex; align-items:flex-start; gap:10px">
+                      <div style="flex:1; min-width:0">
+                        <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.05em; color:rgba(0,0,0,.5)">ADULTO RESPONSABLE</p>
+                        <p style="margin:3px 0 0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ f.adulto }}</p>
+                      </div>
+                      <span style="{{ f.estadoStyle }}"><span style="{{ f.estadoDot }}"></span>{{ f.estado }}</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:7px; margin-top:12px">
+                      <sc-for list="{{ f.chicos }}" as="c" hint-placeholder-count="2">
+                        <div style="display:flex; align-items:center; gap:8px; min-height:26px">
+                          <span style="{{ c.tick }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></span>
+                          <span style="flex:1; min-width:0; font:500 14px Manrope,system-ui,sans-serif; color:#0a0a0a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ c.nombre }}</span>
+                          <sc-if value="{{ c.sinFotos }}" hint-placeholder-val="{{ false }}">
+                            <span style="height:24px; padding:0 8px; border-radius:999px; background:#fdf3e3; color:#7a4f10; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:5px; flex:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="3"></rect><path d="M3 3l18 18"></path></svg>Sin fotos</span>
+                          </sc-if>
+                          <span style="{{ c.tribuStyle }}"><span style="{{ c.tribuDot }}"></span>{{ c.tribu }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px; margin-top:12px; padding-top:12px; border-top:1px solid #f2f2f0">
+                      <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Inscripción {{ f.fecha }}</span>
+                      <sc-if value="{{ f.hayIngreso }}" hint-placeholder-val="{{ false }}">
+                        <span style="display:flex; align-items:center; gap:6px; font:600 12.5px Manrope,system-ui,sans-serif; color:#12783f"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg>Ingresó {{ f.ingreso }}</span>
+                      </sc-if>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:12px">
+                      <sc-if value="{{ f.porAdmin }}" hint-placeholder-val="{{ false }}">
+                        <span style="flex:1; min-width:0; height:38px; padding:0 12px; border-radius:12px; background:#f4f4f2; display:flex; align-items:center; gap:7px; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); overflow:hidden; white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path></svg><span style="overflow:hidden; text-overflow:ellipsis">{{ f.adminTxt }}</span></span>
+                      </sc-if>
+                      <sc-if value="{{ f.conComp }}" hint-placeholder-val="{{ true }}">
+                        <button onClick="{{ f.verComp }}" style="flex:1; height:38px; border:0; border-radius:999px; background:#f4f4f2; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">Ver comprobante</button>
+                      </sc-if>
+                      <button onClick="{{ f.abrir }}" style="flex:1; height:38px; border:0; border-radius:999px; background:#0a0a0a; font:600 12.5px Manrope,system-ui,sans-serif; color:#fff; cursor:pointer">Ver detalles</button>
+                      <button onClick="{{ f.eliminar }}" title="Eliminar inscripción" style="width:38px; height:38px; border:0; border-radius:999px; background:#fdecea; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"></path></svg></button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </sc-if>
+
+          <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff; border-radius:18px; overflow:hidden">
+              <div style="display:grid; grid-template-columns:{{ tCols }}; border-bottom:1px solid #eeeeec">
+                <span style="{{ th }}">FECHA</span><span style="{{ th }}">ADULTO RESPONSABLE</span><span style="{{ th }}">CHICOS INSCRIPTOS</span><span style="{{ th }}">PAGO</span><span style="{{ th }}">ESTADO</span><span style="{{ th }}"></span>
+              </div>
+              <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="2">
+                <div style="padding:10px 20px; background:#fafaf9; border-bottom:1px solid #f2f2f0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">{{ g.titulo }}</div>
+                <sc-for list="{{ g.filas }}" as="f" hint-placeholder-count="5">
+                  <div style="display:grid; grid-template-columns:{{ tCols }}; align-items:start; border-bottom:1px solid #f4f4f2">
+                    <div style="padding:16px 14px 16px 20px">
+                      <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ f.fecha }}</p>
+                      <sc-if value="{{ f.hayIngreso }}" hint-placeholder-val="{{ false }}">
+                        <p style="margin:4px 0 0; display:flex; align-items:center; gap:5px; font:600 12px Manrope,system-ui,sans-serif; color:#12783f"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg>{{ f.ingreso }}</p>
+                      </sc-if>
+                    </div>
+                    <div style="padding:16px 14px"><p style="margin:0; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ f.adulto }}</p><sc-if value="{{ f.hayMatch }}" hint-placeholder-val="{{ false }}"><p style="margin:3px 0 0; font:500 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ f.match }}</p></sc-if></div>
+                    <div style="padding:13px 14px; display:flex; flex-direction:column; gap:6px">
+                      <sc-for list="{{ f.chicos }}" as="c" hint-placeholder-count="2">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+                          <span style="{{ c.tick }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></span>
+                          <span style="font:500 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ c.nombre }}</span>
+                          <span style="{{ c.tribuStyle }}"><span style="{{ c.tribuDot }}"></span>{{ c.tribu }}</span>
+                          <sc-if value="{{ c.sinFotos }}" hint-placeholder-val="{{ false }}">
+                            <span style="height:24px; padding:0 8px; border-radius:999px; background:#fdf3e3; color:#7a4f10; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="3"></rect><path d="M3 3l18 18"></path></svg>Sin fotos</span>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="padding:14px">
+                      <sc-if value="{{ f.conComp }}" hint-placeholder-val="{{ true }}">
+                        <button onClick="{{ f.verComp }}" style="height:32px; padding:0 13px; border:0; border-radius:999px; background:#f2f2f0; font:600 12px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">Ver comprobante</button>
+                      </sc-if>
+                      <sc-if value="{{ f.porAdmin }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex; align-items:flex-start; gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:2px"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path></svg><span style="font:500 12px/1.45 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">Acreditado por un administrador<br /><strong style="font-weight:600; color:#0a0a0a">{{ f.adminNombre }}</strong></span></div>
+                      </sc-if>
+                    </div>
+                    <div style="padding:14px"><span style="{{ f.estadoStyle }}"><span style="{{ f.estadoDot }}"></span>{{ f.estado }}</span></div>
+                    <div style="padding:13px 20px 13px 6px; display:flex; justify-content:flex-end; gap:6px">
+                      <button onClick="{{ f.abrir }}" style="height:34px; padding:0 14px; border:0; border-radius:999px; background:#0a0a0a; font:600 12px Manrope,system-ui,sans-serif; color:#fff; cursor:pointer; white-space:nowrap">Ver detalles</button>
+                      <button onClick="{{ f.eliminar }}" title="Eliminar inscripción" style="width:34px; height:34px; border:0; border-radius:999px; background:#fdecea; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"></path></svg></button>
+                    </div>
+                  </div>
+                </sc-for>
+              </sc-for>
+            </div>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ sinResultados }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff; border-radius:22px; padding:44px 24px; text-align:center">
+            <p style="margin:0; font:600 17px Manrope,system-ui,sans-serif; color:#0a0a0a">Nadie se llama así</p>
+            <p style="margin:8px 0 0; font:500 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Buscamos entre adultos y chicos. Probá solo con el apellido.</p>
+            <button onClick="{{ clearQuery }}" style="height:46px; padding:0 22px; margin-top:18px; border:0; border-radius:999px; background:#f2f2f0; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">Limpiar la búsqueda</button>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vistaDetalle }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:none; background:#fff; border-bottom:1px solid #ecebe8; padding:{{ headPad }}">
+        <div style="display:flex; align-items:center; gap:10px">
+          <button onClick="{{ goPlanilla }}" style="height:40px; padding:0 14px 0 10px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; gap:6px; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>Planilla</button>
+          <div style="margin-left:auto; display:flex; gap:6px">
+            <sc-if value="{{ dConComp }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ dVerComp }}" style="height:40px; padding:0 14px; border:0; border-radius:999px; background:#f2f2f0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">{{ compLabel }}</button>
+            </sc-if>
+            <button onClick="{{ toggleEditar }}" style="height:40px; padding:0 14px; border:0; border-radius:999px; background:#f2f2f0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">{{ editarLabel }}</button>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap">
+          <h1 style="margin:0; font:600 {{ h1Size }} Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">{{ dAdulto }}</h1>
+          <span style="{{ dEstadoStyle }}"><span style="{{ dEstadoDot }}"></span>{{ dEstado }}</span>
+        </div>
+        <p style="margin:5px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ dSub }}</p>
+      </div>
+
+      <div style="flex:1; min-height:0; overflow:auto; padding:{{ bodyPad }}">
+        <div style="display:grid; grid-template-columns:{{ detCols }}; gap:14px; align-items:start; max-width:1080px; margin:0 auto">
+          <div style="display:flex; flex-direction:column; gap:14px; min-width:0">
+
+            <div style="background:#fff; border-radius:22px; padding:20px; box-shadow:0 0 0 2px #0a0a0a inset">
+              <div style="display:flex; align-items:center; gap:8px">
+                <span style="height:26px; padding:0 11px; border-radius:999px; background:#0a0a0a; color:#fff; font:600 11.5px Manrope,system-ui,sans-serif; display:flex; align-items:center">Salida 6 h</span>
+                <span style="font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Sábado 31 de octubre</span>
+              </div>
+              <div style="display:flex; flex-direction:column; margin-top:6px">
+                <sc-for list="{{ dRetiros }}" as="r" hint-placeholder-count="1">
+                  <div style="padding:14px 0; border-bottom:{{ r.borde }}">
+                    <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">{{ r.chico }}</p>
+                    <p style="margin:6px 0 0; font:600 20px/1.3 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">{{ r.quien }}</p>
+                    <sc-if value="{{ r.hayDatos }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap">
+                        <sc-for list="{{ r.datos }}" as="d" hint-placeholder-count="2">
+                          <span style="height:30px; padding:0 12px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; gap:6px; font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a"><span style="font-weight:500; color:rgba(0,0,0,.58)">{{ d.k }}</span>{{ d.v }}</span>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:#fff; border-radius:22px; padding:20px">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px">
+                <p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">Ingreso</p>
+                <span style="font:600 13px Manrope,system-ui,sans-serif; color:{{ dConteoInk }}">{{ dConteo }}</span>
+              </div>
+              <p style="margin:5px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Tocá a cada persona que entró. Para aprobar hace falta el adulto y al menos un chico.</p>
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px">
+                <sc-for list="{{ dPersonas }}" as="p" hint-placeholder-count="3">
+                  <button onClick="{{ p.toggle }}" style="{{ p.style }}">
+                    <span style="{{ p.check }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></span>
+                    <span style="flex:1; min-width:0; text-align:left">
+                      <span style="display:block; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ p.nombre }}</span>
+                      <span style="display:block; margin-top:2px; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.58)">{{ p.rol }}</span>
+                    </span>
+                    <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:{{ p.estadoInk }}; flex:none">{{ p.estado }}</span>
+                  </button>
+                </sc-for>
+              </div>
+              <p style="margin:14px 2px 0; font:500 12.5px Manrope,system-ui,sans-serif; color:{{ dReglaInk }}">{{ dRegla }}</p>
+              <button onClick="{{ guardarIngreso }}" style="{{ guardarIngresoStyle }}">Guardar cambios</button>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:14px; min-width:0">
+            <sc-if value="{{ dLeyendo }}" hint-placeholder-val="{{ true }}">
+              <div style="background:#fff; border-radius:22px; padding:20px">
+                <p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">Chicos</p>
+                <div style="display:flex; flex-direction:column; margin-top:10px">
+                  <sc-for list="{{ dChicos }}" as="c" hint-placeholder-count="2">
+                    <div style="display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid #f2f2f0; flex-wrap:wrap">
+                      <div style="flex:1; min-width:140px"><p style="margin:0; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ c.nombre }}</p><p style="margin:2px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.58)">{{ c.edad }} años · DNI {{ c.dni }}</p></div>
+                      <span style="{{ c.tribuStyle }}"><span style="{{ c.tribuDot }}"></span>{{ c.tribu }}</span>
+                      <span style="{{ c.fotoStyle }}">{{ c.foto }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="background:#fff; border-radius:22px; padding:20px">
+                <p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">Adulto responsable</p>
+                <div style="margin-top:8px">
+                  <sc-for list="{{ dAdultoDatos }}" as="d" hint-placeholder-count="3">
+                    <div style="display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #f2f2f0"><span style="font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ d.k }}</span><span style="font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:right">{{ d.v }}</span></div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="background:#fff; border-radius:22px; padding:20px">
+                <p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">Declaraciones</p>
+                <div style="display:flex; justify-content:space-between; gap:12px; padding:12px 0 10px; border-bottom:1px solid #f2f2f0"><span style="font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Autorización de asistencia</span><span style="font:600 13px Manrope,system-ui,sans-serif; color:#12783f">Autorizó</span></div>
+                <div style="display:flex; justify-content:space-between; gap:12px; padding:10px 0"><span style="font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Fotos y video</span><span style="font:600 13px Manrope,system-ui,sans-serif; color:{{ dFotosInk }}; text-align:right">{{ dFotos }}</span></div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ dEditando }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff; border-radius:22px; padding:20px; box-shadow:0 0 0 1.5px #0a0a0a inset">
+                <p style="margin:0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">Editar inscripción</p>
+                <p style="margin:16px 0 8px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">ADULTO RESPONSABLE</p>
+                <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px">
+                  <sc-for list="{{ eAdulto }}" as="f" hint-placeholder-count="4">
+                    <input value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" style="min-width:0; height:48px; padding:0 14px; border:0; border-radius:14px; background:#f4f4f2; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                  </sc-for>
+                </div>
+                <sc-for list="{{ eChicos }}" as="c" hint-placeholder-count="2">
+                  <p style="margin:18px 0 8px; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">{{ c.rotulo }}</p>
+                  <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px">
+                    <input value="{{ c.nombre }}" onChange="{{ c.onNombre }}" placeholder="Nombre" style="min-width:0; height:48px; padding:0 14px; border:0; border-radius:14px; background:#f4f4f2; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                    <input value="{{ c.apellido }}" onChange="{{ c.onApellido }}" placeholder="Apellido" style="min-width:0; height:48px; padding:0 14px; border:0; border-radius:14px; background:#f4f4f2; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                  </div>
+                  <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap">
+                    <sc-for list="{{ c.tribus }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.elegir }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+                    <button onClick="{{ c.toggleFoto }}" style="{{ c.fotoBtn }}">{{ c.fotoLabel }}</button>
+                  </div>
+                </sc-for>
+                <div style="display:flex; gap:8px; margin-top:20px">
+                  <button onClick="{{ toggleEditar }}" style="flex:1; height:50px; border:0; border-radius:999px; background:#f2f2f0; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">Cancelar</button>
+                  <button onClick="{{ guardarEdicion }}" style="flex:2; height:50px; border:0; border-radius:999px; background:#0a0a0a; font:600 14.5px Manrope,system-ui,sans-serif; color:#fff; cursor:pointer">Guardar datos</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vistaCrear }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:none; background:#fff; border-bottom:1px solid #ecebe8; padding:{{ headPad }}">
+        <div style="display:flex; align-items:center; gap:10px">
+          <button onClick="{{ goPlanilla }}" style="height:40px; padding:0 14px 0 10px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; gap:6px; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"></path></svg>Planilla</button>
+          <span style="margin-left:auto; height:28px; padding:0 12px; border-radius:999px; background:#f2f2f0; font:600 11.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); display:flex; align-items:center">Carga de administrador</span>
+        </div>
+        <h1 style="margin:14px 0 0; font:600 {{ h1Size }} Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">Crear una inscripción</h1>
+        <p style="margin:4px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Todo en una sola página. Tab para pasar de campo en campo.</p>
+      </div>
+
+      <div style="flex:1; min-height:0; overflow:auto; padding:{{ bodyPad }}">
+        <div style="display:grid; grid-template-columns:{{ crearCols }}; gap:14px; align-items:start; max-width:1080px; margin:0 auto">
+          <div style="display:flex; flex-direction:column; gap:12px; min-width:0">
+            <div style="background:#fff; border-radius:22px; padding:20px">
+              <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">1 · ADULTO RESPONSABLE</p>
+              <div style="display:grid; grid-template-columns:{{ dosCols }}; gap:8px; margin-top:12px">
+                <sc-for list="{{ nAdulto }}" as="f" hint-placeholder-count="5">
+                  <input value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" inputmode="{{ f.mode }}" style="min-width:0; height:50px; padding:0 16px; border:0; border-radius:14px; background:#f4f4f2; font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:#fff; border-radius:22px; padding:20px">
+              <div style="display:flex; align-items:baseline; justify-content:space-between"><p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">2 · CHICOS</p><span style="font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ nCantidad }}</span></div>
+              <sc-for list="{{ nChicos }}" as="c" hint-placeholder-count="1">
+                <div style="margin-top:12px; padding:14px; border-radius:16px; background:#fafaf9">
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+                    <span style="flex:1; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ c.rotulo }}</span>
+                    <sc-if value="{{ c.quitable }}" hint-placeholder-val="{{ false }}"><button onClick="{{ c.quitar }}" style="height:30px; padding:0 10px; border:0; background:transparent; font:600 12px Manrope,system-ui,sans-serif; color:#b42318; cursor:pointer">Quitar</button></sc-if>
+                  </div>
+                  <div style="display:grid; grid-template-columns:{{ chicoCols }}; gap:8px">
+                    <input value="{{ c.nombre }}" onChange="{{ c.onNombre }}" placeholder="Nombre" style="min-width:0; height:48px; padding:0 14px; border:0; border-radius:14px; background:#fff; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                    <input value="{{ c.apellido }}" onChange="{{ c.onApellido }}" placeholder="Apellido" style="min-width:0; height:48px; padding:0 14px; border:0; border-radius:14px; background:#fff; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                    <input value="{{ c.dni }}" onChange="{{ c.onDni }}" placeholder="DNI" inputmode="numeric" style="min-width:0; height:48px; padding:0 14px; border:0; border-radius:14px; background:#fff; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                    <input value="{{ c.edad }}" onChange="{{ c.onEdad }}" placeholder="Edad" inputmode="numeric" style="min-width:0; height:48px; padding:0 14px; border:0; border-radius:14px; background:#fff; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                  </div>
+                  <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:8px">
+                    <sc-for list="{{ c.tribus }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.elegir }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+                  </div>
+                </div>
+              </sc-for>
+              <button onClick="{{ nAgregar }}" style="width:100%; height:48px; margin-top:10px; border:1.5px dashed #d9d8d4; border-radius:16px; background:transparent; font:600 14px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">+ Agregar otro chico</button>
+            </div>
+
+            <div style="background:#fff; border-radius:22px; padding:20px">
+              <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">3 · RETIRO A LAS 6 H</p>
+              <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:12px">
+                <sc-for list="{{ nRetiro }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.elegir }}" style="{{ r.style }}">{{ r.label }}</button></sc-for>
+              </div>
+              <sc-if value="{{ nRetiroOtro }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid; grid-template-columns:{{ dosCols }}; gap:8px; margin-top:10px">
+                  <sc-for list="{{ nOtro }}" as="f" hint-placeholder-count="4">
+                    <input value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" style="min-width:0; height:48px; padding:0 14px; border:0; border-radius:14px; background:#f4f4f2; font:600 14.5px Manrope,system-ui,sans-serif; color:#0a0a0a" />
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="background:#fff; border-radius:22px; padding:20px">
+              <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">4 · DECLARACIONES · LEÉSELAS A LA PERSONA</p>
+              <div style="background:#f7f7f5; border-radius:16px; padding:16px; margin-top:12px">
+                <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a">Autorización de asistencia · obligatoria</p>
+                <p style="margin:8px 0 0; font:500 14px/1.65 Manrope,system-ui,sans-serif; color:#0a0a0a">"Declaro que soy el padre / madre / tutor o encargado del menor cuya entrada se está adquiriendo y que autorizo al mismo a participar del evento "Nocturna" realizado por Origen Iglesia, en Av. Eva Perón 3932, con horario de comienzo el día 30 de octubre de 2026 a las 11pm y finalizando el día 31 de octubre de 2026 a las 6am."</p>
+                <button onClick="{{ nToggleAut }}" style="{{ nAutStyle }}"><span style="{{ nAutCheck }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></span>La persona autoriza</button>
+              </div>
+              <div style="background:#f7f7f5; border-radius:16px; padding:16px; margin-top:10px">
+                <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a">Fotos y video · opcional, por chico</p>
+                <p style="margin:8px 0 0; font:500 14px/1.65 Manrope,system-ui,sans-serif; color:#0a0a0a">"Te informamos que durante el evento se tomarán fotografías y grabaciones de video de las distintas actividades. Este material será utilizado exclusivamente por Origen Iglesia con fines de difusión, comunicación y registro informativo en nuestros canales oficiales (redes sociales, sitio web y material impreso de la iglesia)."</p>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-top:12px">
+                  <sc-for list="{{ nFotos }}" as="f" hint-placeholder-count="1">
+                    <div style="display:flex; align-items:center; gap:10px">
+                      <span style="flex:1; min-width:0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a">{{ f.nombre }}</span>
+                      <div style="display:flex; gap:3px; background:#fff; border-radius:999px; padding:3px">
+                        <button onClick="{{ f.si }}" style="{{ f.siStyle }}">Acepta</button>
+                        <button onClick="{{ f.no }}" style="{{ f.noStyle }}">No acepta</button>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#fff; border-radius:22px; padding:20px; position:{{ pagoPos }}; top:0">
+            <p style="margin:0; font:600 11px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55)">5 · PAGO</p>
+            <p style="margin:12px 0 0; font:600 32px Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.03em">{{ nTotal }}</p>
+            <p style="margin:2px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ nTotalNota }}</p>
+            <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px; margin-top:14px">
+              <sc-for list="{{ nMedios }}" as="m" hint-placeholder-count="2"><button onClick="{{ m.elegir }}" style="{{ m.style }}">{{ m.label }}</button></sc-for>
+            </div>
+            <button onClick="{{ nTogglePago }}" style="{{ nPagoStyle }}"><span style="{{ nPagoCheck }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></span>{{ nPagoLabel }}</button>
+            <p style="margin:10px 2px 0; font:500 12px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.58)">En la planilla va a figurar "Acreditado por un administrador · Pablo Arce".</p>
+            <sc-if value="{{ nFaltaAlgo }}" hint-placeholder-val="{{ true }}">
+              <p style="margin:14px 2px 0; font:500 12.5px/1.5 Manrope,system-ui,sans-serif; color:#7a4f10">Falta: {{ nFaltan }}</p>
+            </sc-if>
+            <button onClick="{{ nCrear }}" style="{{ nCrearStyle }}">Crear inscripción</button>
+            <button onClick="{{ nCrearOtra }}" style="{{ nOtraStyle }}">Crear y cargar otra</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; left:16px; right:16px; bottom:20px; display:flex; justify-content:center; pointer-events:none">
+        <div style="pointer-events:auto; max-width:420px; width:100%; background:#0a0a0a; border-radius:18px; padding:14px 18px; display:flex; align-items:center; gap:12px">
+          <span style="flex:1; font:600 13.5px Manrope,system-ui,sans-serif; color:#fff">{{ toast }}</span>
+          <button onClick="{{ cerrarToast }}" style="border:0; background:transparent; font:600 13px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.7); cursor:pointer">OK</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayOverlay }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cerrarOverlay }}" style="position:absolute; inset:0; background:rgba(10,10,10,.42); display:flex; align-items:{{ ovAlign }}; justify-content:center; padding:{{ ovPad }}">
+        <div onClick="{{ frenar }}" style="{{ ovCard }}">
+          <sc-if value="{{ ovEliminar }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:0; font:600 19px/1.3 Manrope,system-ui,sans-serif; color:#0a0a0a">¿Eliminar la inscripción de {{ elimNombre }}?</p>
+            <p style="margin:10px 0 0; font:500 14px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">Se borran también {{ elimChicos }}. Su QR deja de funcionar en la puerta. No se puede deshacer.</p>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:20px">
+              <button onClick="{{ confirmarEliminar }}" style="height:52px; border:0; border-radius:999px; background:#b42318; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Eliminar inscripción</button>
+              <button onClick="{{ cerrarOverlay }}" style="height:52px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Cancelar</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ ovComp }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; align-items:center; gap:10px"><p style="margin:0; flex:1; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a">Comprobante · {{ compNombre }}</p><button onClick="{{ cerrarOverlay }}" style="height:36px; padding:0 14px; border:0; border-radius:999px; background:#f2f2f0; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer">Cerrar</button></div>
+            <div style="height:360px; margin-top:14px; border-radius:16px; background:repeating-linear-gradient(135deg,#ecebe8 0 10px,#e2e1dd 10px 20px); display:flex; align-items:center; justify-content:center"><span style="font:500 11px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.55)">captura de la transferencia</span></div>
+          </sc-if>
+          <sc-if value="{{ ovGuardado }}" hint-placeholder-val="{{ false }}">
+            <div style="width:52px; height:52px; border-radius:999px; background:#eaf6ee; display:flex; align-items:center; justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#12783f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 6.5"></path></svg></div>
+            <p style="margin:16px 0 0; font:600 19px Manrope,system-ui,sans-serif; color:#0a0a0a">Cambios guardados</p>
+            <p style="margin:8px 0 0; font:500 14px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">{{ guardadoTexto }}</p>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:20px">
+              <button onClick="{{ goPlanilla }}" style="height:52px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Volver a la planilla</button>
+              <button onClick="{{ cerrarOverlay }}" style="height:52px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">Seguir en esta ficha</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1340,&quot;height&quot;:960}}">
+class Component extends DCLogic {
+  TRIBU = { Trueno: '#2563eb', Garra: '#c2410c', 'Sin tribu': '#9a9a95' };
+  nuevoVacio() { return { adulto: { nombre: '', apellido: '', dni: '', tel: '', email: '' }, chicos: [{ nombre: '', apellido: '', dni: '', edad: '', tribu: '', fotos: true }], retiro: 'adulto', otro: { nombre: '', apellido: '', dni: '', tel: '' }, aut: false, pago: false, medio: 'Efectivo' }; }
+
+  seed() {
+    const ch = s => s.split(';').map(x => { const [n, e, t, f, i] = x.split('|'); const [nombre, ...ap] = n.split(' '); return { nombre, apellido: ap.join(' '), edad: +e, tribu: t, fotos: f !== 'n', ingreso: i === 'i', dni: String(45000000 + Math.floor(Math.abs(Math.sin(e * n.length)) * 4000000)) }; });
+    const R = (id, fecha, adulto, tel, chicos, o) => Object.assign({ id, fecha, adulto, tel, dni: String(20000000 + id * 731293 % 9000000), chicos: ch(chicos), adultoIngreso: false, ingreso: null, admin: null, retiro: 'adulto' }, o || {});
+    return [
+      R(1, 'lun 5 oct', 'Mariela Ramos', '11 5544 2210', 'Sofía Ramos|15|Trueno||i;Tomás Ramos|13|Garra||i', { adultoIngreso: true, ingreso: 'vie 30 · 23:04' }),
+      R(2, 'lun 5 oct', 'Laura Giménez', '11 6033 1180', 'Benjamín Giménez|13|Trueno||i;Catalina Giménez|15|Trueno||i;Joaquín Giménez|17|Garra||i', { adultoIngreso: true, ingreso: 'vie 30 · 23:07', retiro: 'solo' }),
+      R(3, 'mar 6 oct', 'Diego Fernández', '11 4477 9032', 'Lucas Fernández|14|Garra||i;Mateo Fernández|16|Garra|;Valentina Fernández|12|Sin tribu|n', { adultoIngreso: true, ingreso: 'vie 30 · 23:11', retiro: { nombre: 'Raúl Fernández', dni: '17 882 301', tel: '11 6120 8834' } }),
+      R(4, 'mié 7 oct', 'Carolina Méndez', '11 2299 4410', 'Martina Méndez|15|Trueno||i', { adultoIngreso: true, ingreso: 'vie 30 · 23:15', admin: 'Pablo Arce' }),
+      R(5, 'mié 7 oct', 'Gustavo Paz', '11 3388 2044', 'Agustina Paz|16|Garra||i;Ignacio Paz|14|Sin tribu||i', { adultoIngreso: true, ingreso: 'vie 30 · 23:22', retiro: 'solo' }),
+      R(6, 'jue 8 oct', 'Silvina Etchart', '11 5533 7788', 'Camila Etchart|13|Trueno|n', {}),
+      R(7, 'jue 8 oct', 'Hernán Suárez', '11 4410 2290', 'Thiago Suárez|15|Garra;Lola Suárez|12|Trueno', { retiro: { nombre: 'Andrea Molina', dni: '28 110 442', tel: '11 3300 9921' } }),
+      R(8, 'vie 9 oct', 'Natalia Rossi', '11 6655 1203', 'Francisco Rossi|14|Trueno', { admin: 'Lucía Paz' }),
+      R(9, 'sáb 10 oct', 'Pablo Acosta', '11 2233 8870', 'Juana Acosta|16|Garra;Felipe Acosta|13|Garra;Emilia Acosta|12|Sin tribu', {}),
+      R(10, 'dom 11 oct', 'Verónica Luna', '11 7788 3321', 'Santino Luna|17|Trueno', { retiro: 'solo' }),
+      R(11, 'lun 12 oct', 'Martín Castro', '11 4901 6612', 'Renata Castro|14|Garra|n;Bautista Castro|16|Trueno', {}),
+      R(12, 'mar 13 oct', 'Florencia Díaz', '11 3120 5543', 'Olivia Díaz|13|Sin tribu', {}),
+      R(13, 'mié 14 oct', 'Ricardo Sosa', '11 6021 7784', 'Julián Sosa|15|Garra;Mía Sosa|13|Trueno', { admin: 'Pablo Arce' }),
+      R(14, 'jue 15 oct', 'Andrea Torres', '11 5210 3398', 'Delfina Torres|16|Trueno', { retiro: 'solo' }),
+      R(15, 'vie 16 oct', 'Sebastián Ríos', '11 4488 1902', 'Lautaro Ríos|14|Garra;Pilar Ríos|12|Garra|n', {}),
+      R(16, 'sáb 17 oct', 'Gabriela Núñez', '11 3099 6620', 'Ciro Núñez|15|Sin tribu', {})
+    ];
+  }
+
+  state = { device: 'mobile', vista: 'planilla', query: '', precio: 40000, precioEdit: false, precioDraft: '40000', lista: this.seed(), detId: null, draft: null, editando: false, edit: null, overlay: null, elimId: null, toast: '', nuevo: this.nuevoVacio(), nextId: 17 };
+
+  aprobado(r) { return r.adultoIngreso && r.chicos.some(c => c.ingreso); }
+  cuenta(r) { return (r.adultoIngreso ? 1 : 0) + r.chicos.filter(c => c.ingreso).length; }
+  fmt(v) { return '$' + v.toLocaleString('es-AR'); }
+  lista2(a) { return a.length <= 1 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' y ' + a[a.length - 1]; }
+  tribuChip(t) { return { style: 'height:24px; padding:0 9px; border-radius:999px; background:#f4f4f2; color:rgba(0,0,0,.7); font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:5px; flex:none', dot: 'width:6px; height:6px; border-radius:999px; background:' + (this.TRIBU[t] || '#9a9a95') }; }
+  pill(ap, n, tot) {
+    return { txt: ap ? 'Aprobado ' + n + '/' + tot : 'Inscripto', style: 'height:28px; padding:0 11px; border-radius:999px; background:' + (ap ? '#eaf6ee' : '#f2f2f0') + '; color:' + (ap ? '#12783f' : 'rgba(0,0,0,.62)') + '; font:600 12px Manrope,system-ui,sans-serif; display:inline-flex; align-items:center; gap:6px; flex:none; white-space:nowrap', dot: 'width:6px; height:6px; border-radius:999px; background:' + (ap ? '#16a34a' : '#a3a39e') };
+  }
+  updNuevo(fn) { this.setState(s => { const n = JSON.parse(JSON.stringify(s.nuevo)); fn(n); return { nuevo: n }; }); }
+  updEdit(fn) { this.setState(s => { const n = JSON.parse(JSON.stringify(s.edit)); fn(n); return { edit: n }; }); }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'desktop';
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer';
+    const choice = on => 'height:46px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : '#f4f4f2') + '; color:' + (on ? '#fff' : '#0a0a0a') + '; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer';
+    const check = (on, lg) => 'width:' + (lg ? 30 : 22) + 'px; height:' + (lg ? 30 : 22) + 'px; border-radius:999px; flex:none; display:flex; align-items:center; justify-content:center; background:' + (on ? '#16a34a' : '#fff') + '; box-shadow:' + (on ? 'none' : '0 0 0 1.5px #d6d5d1 inset');
+    const q = s.query.trim().toLowerCase();
+
+    const abrir = (id) => { const r = s.lista.find(x => x.id === id); this.setState({ vista: 'detalle', detId: id, draft: { a: r.adultoIngreso, c: r.chicos.map(c => c.ingreso) }, editando: false, overlay: null }); };
+
+    const filaDe = r => {
+      const ap = this.aprobado(r), p = this.pill(ap, this.cuenta(r), r.chicos.length + 1);
+      const hitA = q && r.adulto.toLowerCase().includes(q);
+      const hitC = q ? r.chicos.filter(c => (c.nombre + ' ' + c.apellido).toLowerCase().includes(q)) : [];
+      return {
+        r, visible: !q || hitA || hitC.length,
+        fila: {
+          fecha: r.fecha, adulto: r.adulto,
+          hayMatch: !!(q && !hitA && hitC.length), match: 'Coincide: ' + hitC.map(c => c.nombre).join(', '),
+          hayIngreso: ap && !!r.ingreso, ingreso: r.ingreso,
+          estado: p.txt, estadoStyle: p.style, estadoDot: p.dot,
+          porAdmin: !!r.admin, conComp: !r.admin, adminNombre: r.admin, adminTxt: 'Cargada por ' + r.admin,
+          chicos: r.chicos.map(c => { const t = this.tribuChip(c.tribu); return { nombre: c.nombre + ' ' + c.apellido, tribu: c.tribu, tribuStyle: t.style, tribuDot: t.dot, sinFotos: !c.fotos, tick: check(ap && c.ingreso).replace(/22px/g, '16px') + (ap ? '' : '; display:none') }; }),
+          abrir: () => abrir(r.id),
+          verComp: () => this.setState({ overlay: 'comp', elimId: r.id }),
+          eliminar: () => this.setState({ overlay: 'eliminar', elimId: r.id })
+        }
+      };
+    };
+    const todas = s.lista.map(filaDe).filter(x => x.visible);
+    const aprob = todas.filter(x => this.aprobado(x.r)).map(x => x.fila);
+    const insc = todas.filter(x => !this.aprobado(x.r)).map(x => x.fila);
+    const grupos = [];
+    if (aprob.length) grupos.push({ titulo: 'APROBADOS · ' + aprob.length, filas: aprob });
+    if (insc.length) grupos.push({ titulo: 'INSCRIPTOS · ' + insc.length, filas: insc });
+
+    const totalChicos = s.lista.reduce((a, r) => a + r.chicos.length, 0);
+    const sinFotos = s.lista.reduce((a, r) => a + r.chicos.filter(c => !c.fotos).length, 0);
+
+    const det = s.lista.find(x => x.id === s.detId);
+    const dr = s.draft;
+    let dv = {};
+    if (det && dr) {
+      const apD = dr.a && dr.c.some(Boolean), nD = (dr.a ? 1 : 0) + dr.c.filter(Boolean).length, tot = det.chicos.length + 1;
+      const cambio = dr.a !== det.adultoIngreso || dr.c.some((v, i) => v !== det.chicos[i].ingreso);
+      const pAct = this.pill(this.aprobado(det), this.cuenta(det), tot);
+      const per = (nombre, rol, on, fn) => ({
+        nombre, rol, estado: on ? 'Ingresó' : 'No ingresó', estadoInk: on ? '#12783f' : 'rgba(0,0,0,.45)',
+        style: 'width:100%; min-height:62px; padding:10px 14px; border:0; border-radius:16px; display:flex; align-items:center; gap:12px; cursor:pointer; background:' + (on ? '#f0f9f3' : '#f7f7f5') + '; box-shadow:' + (on ? '0 0 0 1.5px #bfe3cc inset' : 'none'),
+        check: check(on, true), toggle: fn
+      });
+      const quien = c => det.retiro === 'solo' ? { quien: 'Se retira solo', datos: '', hay: false }
+        : det.retiro === 'adulto' ? { quien: 'Lo retira ' + det.adulto, datos: 'Adulto responsable · DNI ' + det.dni + ' · ' + det.tel, hay: true }
+        : { quien: 'Lo retira ' + det.retiro.nombre, datos: 'DNI ' + det.retiro.dni + ' · ' + det.retiro.tel, hay: true };
+      const nf = det.chicos.filter(c => !c.fotos).map(c => c.nombre);
+      dv = {
+        dAdulto: det.adulto, dEstado: pAct.txt, dEstadoStyle: pAct.style, dEstadoDot: pAct.dot,
+        dSub: 'Inscripción ' + det.fecha + ' · ' + det.chicos.length + (det.chicos.length === 1 ? ' chico' : ' chicos') + (det.ingreso && this.aprobado(det) ? ' · ingresó ' + det.ingreso : ''),
+        dConComp: !det.admin, compLabel: 'Ver comprobante',
+        dRetiros: (() => {
+          const w = quien(det.chicos[0]);
+          const datos = det.retiro === 'solo' ? [] : det.retiro === 'adulto'
+            ? [{ k: 'DNI', v: det.dni }, { k: 'Tel', v: det.tel }]
+            : [{ k: 'DNI', v: det.retiro.dni }, { k: 'Tel', v: det.retiro.tel }];
+          const nombres = det.chicos.map(c => c.nombre);
+          return [{ chico: det.chicos.length > 1 ? this.lista2(nombres) + ' · salen juntos' : det.chicos[0].nombre + ' ' + det.chicos[0].apellido, quien: w.quien + (det.retiro === 'adulto' ? ' (adulto responsable)' : ''), datos, hayDatos: datos.length > 0, borde: 'none' }];
+        })(),
+        dConteo: nD + '/' + tot + ' ingresaron', dConteoInk: apD ? '#12783f' : 'rgba(0,0,0,.6)',
+        dPersonas: [per(det.adulto, 'Adulto responsable', dr.a, () => this.setState(st => ({ draft: Object.assign({}, st.draft, { a: !st.draft.a }) })))]
+          .concat(det.chicos.map((c, i) => per(c.nombre + ' ' + c.apellido, c.edad + ' años · ' + c.tribu, dr.c[i], () => this.setState(st => { const cc = st.draft.c.slice(); cc[i] = !cc[i]; return { draft: Object.assign({}, st.draft, { c: cc }) }; })))),
+        dRegla: apD ? 'Con esto la inscripción queda Aprobada ' + nD + '/' + tot + '.' : (dr.a ? 'Falta al menos un chico para aprobar.' : (dr.c.some(Boolean) ? 'Falta el adulto para aprobar.' : 'Nadie marcado todavía.')),
+        dReglaInk: apD ? '#12783f' : '#7a4f10',
+        guardarIngresoStyle: 'width:100%; height:52px; margin-top:14px; border:0; border-radius:999px; background:' + (cambio ? '#0a0a0a' : '#e6e5e1') + '; color:' + (cambio ? '#fff' : 'rgba(0,0,0,.45)') + '; font:600 15px Manrope,system-ui,sans-serif; cursor:' + (cambio ? 'pointer' : 'default'),
+        guardarIngreso: () => {
+          if (!cambio) return;
+          this.setState(st => ({
+            lista: st.lista.map(x => x.id !== det.id ? x : Object.assign({}, x, { adultoIngreso: dr.a, chicos: x.chicos.map((c, i) => Object.assign({}, c, { ingreso: dr.c[i] })), ingreso: apD ? (x.ingreso || 'vie 30 · 23:41') : null })),
+            overlay: 'guardado'
+          }));
+        },
+        guardadoTexto: apD ? det.adulto + ': Aprobada ' + nD + '/' + tot + '. Ya figura en verde en la planilla.' : det.adulto + ' sigue como Inscripto: todavía no están el adulto y al menos un chico.',
+        dChicos: det.chicos.map(c => { const t = this.tribuChip(c.tribu); return { nombre: c.nombre + ' ' + c.apellido, edad: c.edad, dni: c.dni, tribu: c.tribu, tribuStyle: t.style, tribuDot: t.dot, foto: c.fotos ? 'Fotos: sí' : 'Sin fotos', fotoStyle: 'height:24px; padding:0 9px; border-radius:999px; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center; ' + (c.fotos ? 'background:#f4f4f2; color:rgba(0,0,0,.6)' : 'background:#fdf3e3; color:#7a4f10') }; }),
+        dAdultoDatos: [{ k: 'DNI', v: det.dni }, { k: 'Teléfono', v: det.tel }, { k: 'Pago', v: det.admin ? 'Verificado por ' + det.admin : 'Transferencia con comprobante' }],
+        dFotos: nf.length ? 'No aceptó para ' + this.lista2(nf) : 'Aceptó para todos',
+        dFotosInk: nf.length ? '#7a4f10' : '#12783f'
+      };
+    }
+
+    const e = s.edit;
+    const n = s.nuevo;
+    const faltan = [];
+    if (!n.adulto.nombre || !n.adulto.apellido || !n.adulto.dni) faltan.push('datos del adulto');
+    if (n.chicos.some(c => !c.nombre || !c.apellido || !c.tribu)) faltan.push('datos de los chicos');
+    if (n.retiro === 'otro' && (!n.otro.nombre || !n.otro.dni)) faltan.push('quién retira');
+    if (!n.aut) faltan.push('autorización');
+    if (!n.pago) faltan.push('confirmar el pago');
+    const okN = !faltan.length;
+    const crear = (otra) => {
+      if (!okN) return;
+      const id = s.nextId;
+      const reg = {
+        id, fecha: 'hoy', adulto: (n.adulto.nombre + ' ' + n.adulto.apellido).trim(), tel: n.adulto.tel || '—', dni: n.adulto.dni,
+        chicos: n.chicos.map(c => ({ nombre: c.nombre, apellido: c.apellido, edad: +c.edad || 0, tribu: c.tribu, fotos: c.fotos, ingreso: false, dni: c.dni || '—' })),
+        adultoIngreso: false, ingreso: null, admin: 'Pablo Arce',
+        retiro: n.retiro === 'otro' ? { nombre: n.otro.nombre + ' ' + n.otro.apellido, dni: n.otro.dni, tel: n.otro.tel } : n.retiro
+      };
+      this.setState(st => ({ lista: st.lista.concat(reg), nextId: id + 1, nuevo: this.nuevoVacio(), vista: otra ? 'crear' : 'planilla', query: '', toast: 'Inscripción de ' + reg.adulto + ' creada.' }));
+    };
+    const elim = s.lista.find(x => x.id === s.elimId);
+
+    return Object.assign({
+      showMobile: () => this.setState({ device: 'mobile' }), showDesktop: () => this.setState({ device: 'desktop' }),
+      mobBtn: seg(!desk), deskBtn: seg(desk),
+      vPlan: seg(s.vista === 'planilla'), vCrear: seg(s.vista === 'crear'), vDet: seg(s.vista === 'detalle'),
+      goPlanilla: () => this.setState({ vista: 'planilla', overlay: null, editando: false }),
+      goCrear: () => this.setState({ vista: 'crear', overlay: null }),
+      goDetalleDemo: () => abrir(3),
+      vistaPlanilla: s.vista === 'planilla', vistaDetalle: s.vista === 'detalle' && !!det, vistaCrear: s.vista === 'crear',
+      isMobile: !desk, isDesktop: desk,
+      frameW: desk ? '1280px' : '390px', frameH: desk ? '860px' : '820px',
+      headPad: desk ? '20px 28px 18px' : '16px 16px 14px', bodyPad: desk ? '18px 28px 30px' : '14px 12px 28px',
+      h1Size: desk ? '26px' : '22px',
+      accFlex: desk ? 'none' : '1 1 100%', crearLabel: desk ? 'Crear una inscripción' : 'Crear',
+      tCols: '120px minmax(0,1fr) minmax(0,1.9fr) 170px 140px 150px',
+      th: 'padding:13px 14px 11px; font:600 10.5px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.52)',
+      detCols: desk ? 'minmax(0,1fr) minmax(0,1fr)' : 'minmax(0,1fr)',
+      crearCols: desk ? 'minmax(0,1.6fr) minmax(0,1fr)' : 'minmax(0,1fr)',
+      dosCols: desk ? 'repeat(2,minmax(0,1fr))' : 'minmax(0,1fr)',
+      chicoCols: desk ? 'repeat(4,minmax(0,1fr))' : 'repeat(2,minmax(0,1fr))',
+      pagoPos: desk ? 'sticky' : 'static',
+
+      query: s.query, hasQuery: !!s.query, onQuery: ev => this.setState({ query: ev.target.value }), clearQuery: () => this.setState({ query: '' }),
+      acreditar: () => this.setState({ toast: 'El escáner de la puerta lo diseñamos en el próximo paso.' }),
+      precioLectura: !s.precioEdit, precioEditando: s.precioEdit, precioTxt: this.fmt(s.precio), precioDraft: s.precioDraft,
+      editarPrecio: () => this.setState({ precioEdit: true, precioDraft: String(s.precio) }),
+      onPrecio: ev => this.setState({ precioDraft: ev.target.value.replace(/\D/g, '') }),
+      cancelarPrecio: () => this.setState({ precioEdit: false }),
+      guardarPrecio: () => { const v = parseInt(s.precioDraft, 10); if (v > 0) this.setState({ precio: v, precioEdit: false, toast: 'Entrada actualizada a ' + this.fmt(v) + '. Vale para las inscripciones nuevas.' }); },
+      resumenTotal: s.lista.length + ' inscripciones · ' + totalChicos + ' chicos',
+      resumenAprob: s.lista.filter(r => this.aprobado(r)).length + ' aprobadas',
+      resumenFotos: sinFotos + (sinFotos === 1 ? ' chico sin fotos' : ' chicos sin fotos'),
+      grupos, hayResultados: todas.length > 0, sinResultados: todas.length === 0,
+
+      dLeyendo: !s.editando, dEditando: s.editando && !!e,
+      editarLabel: s.editando ? 'Cancelar edición' : 'Editar inscripción',
+      toggleEditar: () => { if (s.editando) this.setState({ editando: false }); else if (det) { const [nom, ...ap] = det.adulto.split(' '); this.setState({ editando: true, edit: { nombre: nom, apellido: ap.join(' '), dni: det.dni, tel: det.tel, chicos: det.chicos.map(c => ({ nombre: c.nombre, apellido: c.apellido, tribu: c.tribu, fotos: c.fotos })) } }); } },
+      eAdulto: e ? [['nombre', 'Nombre'], ['apellido', 'Apellido'], ['dni', 'DNI'], ['tel', 'Teléfono']].map(([k, ph]) => ({ ph, value: e[k], onChange: ev => { const v = ev.target.value; this.updEdit(x => { x[k] = v; }); } })) : [],
+      eChicos: e ? e.chicos.map((c, i) => ({
+        rotulo: 'CHICO ' + (i + 1), nombre: c.nombre, apellido: c.apellido,
+        onNombre: ev => { const v = ev.target.value; this.updEdit(x => { x.chicos[i].nombre = v; }); },
+        onApellido: ev => { const v = ev.target.value; this.updEdit(x => { x.chicos[i].apellido = v; }); },
+        tribus: ['Trueno', 'Garra', 'Sin tribu'].map(t => ({ label: t, style: choice(c.tribu === t).replace('height:46px', 'height:38px; padding:0 14px').replace('13.5px', '12.5px'), elegir: () => this.updEdit(x => { x.chicos[i].tribu = t; }) })),
+        fotoLabel: c.fotos ? 'Fotos: sí' : 'Sin fotos',
+        fotoBtn: 'height:38px; padding:0 14px; border:0; border-radius:999px; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; ' + (c.fotos ? 'background:#f4f4f2; color:#0a0a0a' : 'background:#fdf3e3; color:#7a4f10'),
+        toggleFoto: () => this.updEdit(x => { x.chicos[i].fotos = !x.chicos[i].fotos; })
+      })) : [],
+      guardarEdicion: () => this.setState(st => ({ editando: false, toast: 'Datos de la inscripción actualizados.', lista: st.lista.map(x => x.id !== det.id ? x : Object.assign({}, x, { adulto: (e.nombre + ' ' + e.apellido).trim(), dni: e.dni, tel: e.tel, chicos: x.chicos.map((c, i) => Object.assign({}, c, e.chicos[i])) })) })),
+      dVerComp: () => this.setState({ overlay: 'comp', elimId: s.detId }),
+
+      nAdulto: [['nombre', 'Nombre', 'text'], ['apellido', 'Apellido', 'text'], ['dni', 'DNI', 'numeric'], ['tel', 'Teléfono', 'tel'], ['email', 'Email (opcional)', 'email']].map(([k, ph, mode]) => ({ ph, mode, value: n.adulto[k], onChange: ev => { const v = ev.target.value; this.updNuevo(x => { x.adulto[k] = v; }); } })),
+      nCantidad: n.chicos.length + (n.chicos.length === 1 ? ' chico' : ' chicos'),
+      nChicos: n.chicos.map((c, i) => ({
+        rotulo: 'Chico ' + (i + 1), quitable: n.chicos.length > 1, quitar: () => this.updNuevo(x => { x.chicos.splice(i, 1); }),
+        nombre: c.nombre, apellido: c.apellido, dni: c.dni, edad: c.edad,
+        onNombre: ev => { const v = ev.target.value; this.updNuevo(x => { x.chicos[i].nombre = v; }); },
+        onApellido: ev => { const v = ev.target.value; this.updNuevo(x => { x.chicos[i].apellido = v; }); },
+        onDni: ev => { const v = ev.target.value.replace(/\D/g, ''); this.updNuevo(x => { x.chicos[i].dni = v; }); },
+        onEdad: ev => { const v = ev.target.value.replace(/\D/g, '').slice(0, 2); this.updNuevo(x => { x.chicos[i].edad = v; }); },
+        tribus: ['Trueno', 'Garra', 'Sin tribu'].map(t => ({ label: t, style: choice(c.tribu === t).replace('#f4f4f2', '#fff'), elegir: () => this.updNuevo(x => { x.chicos[i].tribu = t; }) }))
+      })),
+      nAgregar: () => this.updNuevo(x => { x.chicos.push({ nombre: '', apellido: x.chicos[0].apellido || x.adulto.apellido, dni: '', edad: '', tribu: '', fotos: true }); }),
+      nRetiro: [['solo', 'Se retira solo'], ['adulto', 'El adulto'], ['otro', 'Otra persona']].map(([k, l]) => ({ label: l, style: choice(n.retiro === k), elegir: () => this.updNuevo(x => { x.retiro = k; }) })),
+      nRetiroOtro: n.retiro === 'otro',
+      nOtro: [['nombre', 'Nombre'], ['apellido', 'Apellido'], ['dni', 'DNI'], ['tel', 'Teléfono']].map(([k, ph]) => ({ ph, value: n.otro[k], onChange: ev => { const v = ev.target.value; this.updNuevo(x => { x.otro[k] = v; }); } })),
+      nToggleAut: () => this.updNuevo(x => { x.aut = !x.aut; }),
+      nAutStyle: 'margin-top:12px; height:46px; padding:0 16px 0 10px; border:0; border-radius:999px; display:flex; align-items:center; gap:10px; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer; background:' + (n.aut ? '#f0f9f3' : '#fff') + '; color:#0a0a0a; box-shadow:' + (n.aut ? '0 0 0 1.5px #bfe3cc inset' : 'none'),
+      nAutCheck: check(n.aut),
+      nFotos: n.chicos.map((c, i) => ({
+        nombre: c.nombre || 'Chico ' + (i + 1),
+        siStyle: seg(c.fotos).replace('height:32px', 'height:30px'), noStyle: seg(!c.fotos).replace('height:32px', 'height:30px').replace('#0a0a0a', '#7a4f10'),
+        si: () => this.updNuevo(x => { x.chicos[i].fotos = true; }), no: () => this.updNuevo(x => { x.chicos[i].fotos = false; })
+      })),
+      nTotal: this.fmt(s.precio * n.chicos.length), nTotalNota: n.chicos.length + ' × ' + this.fmt(s.precio),
+      nMedios: ['Efectivo', 'Transferencia'].map(m => ({ label: m, style: seg(n.medio === m) + '; flex:1', elegir: () => this.updNuevo(x => { x.medio = m; }) })),
+      nTogglePago: () => this.updNuevo(x => { x.pago = !x.pago; }),
+      nPagoStyle: 'width:100%; margin-top:12px; min-height:52px; padding:10px 16px 10px 12px; border:0; border-radius:18px; display:flex; align-items:center; gap:10px; text-align:left; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer; color:#0a0a0a; background:' + (n.pago ? '#f0f9f3' : '#f4f4f2') + '; box-shadow:' + (n.pago ? '0 0 0 1.5px #bfe3cc inset' : 'none'),
+      nPagoCheck: check(n.pago),
+      nPagoLabel: 'Verifiqué el pago de ' + this.fmt(s.precio * n.chicos.length) + (n.medio === 'Efectivo' ? ' en efectivo' : ' por transferencia'),
+      nFaltaAlgo: !okN, nFaltan: faltan.join(', '),
+      nCrear: () => crear(false), nCrearOtra: () => crear(true),
+      nCrearStyle: 'width:100%; height:54px; margin-top:16px; border:0; border-radius:999px; background:' + (okN ? '#0a0a0a' : '#c9c8c4') + '; color:#fff; font:600 15.5px Manrope,system-ui,sans-serif; cursor:' + (okN ? 'pointer' : 'not-allowed'),
+      nOtraStyle: 'width:100%; height:48px; margin-top:8px; border:0; border-radius:999px; background:#f2f2f0; color:' + (okN ? '#0a0a0a' : 'rgba(0,0,0,.4)') + '; font:600 14px Manrope,system-ui,sans-serif; cursor:' + (okN ? 'pointer' : 'not-allowed'),
+
+      hayToast: !!s.toast, toast: s.toast, cerrarToast: () => this.setState({ toast: '' }),
+      hayOverlay: !!s.overlay, ovEliminar: s.overlay === 'eliminar', ovComp: s.overlay === 'comp', ovGuardado: s.overlay === 'guardado',
+      cerrarOverlay: () => this.setState({ overlay: null }), frenar: ev => ev.stopPropagation(),
+      ovAlign: desk ? 'center' : 'flex-end', ovPad: desk ? '24px' : '0',
+      ovCard: 'width:100%; max-width:' + (s.overlay === 'comp' ? '460px' : '420px') + '; background:#fff; padding:24px 22px ' + (desk ? '22px' : '28px') + '; border-radius:' + (desk ? '26px' : '26px 26px 0 0'),
+      elimNombre: elim ? elim.adulto : '', elimChicos: elim ? this.lista2(elim.chicos.map(c => c.nombre)) : '',
+      compNombre: elim ? elim.adulto : '',
+      confirmarEliminar: () => this.setState(st => ({ lista: st.lista.filter(x => x.id !== st.elimId), overlay: null, vista: 'planilla', toast: 'Inscripción de ' + (elim ? elim.adulto : '') + ' eliminada.' }))
+    }, dv);
+  }
+}
+</script>
+</body>
+</html>
