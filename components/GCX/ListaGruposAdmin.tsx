@@ -1,5 +1,6 @@
 import React from 'react';
 import { Group, GroupCategory, GroupTag, esGrupoPendiente } from '../../types';
+import { lugaresOcupados } from '../../src/utils/cupos';
 
 /**
  * Lista de grupos del panel (design-claude/Admin GCX - Panel).
@@ -78,16 +79,9 @@ const GroupsAdminList: React.FC<GroupsAdminListProps> = ({
         return group.endDate < new Date().toISOString().split('T')[0];
     };
 
-    // Los grupos de parejas ocupan dos lugares por inscripción, así que el
-    // cupo se cuenta distinto. Es la misma regla que usa el catálogo.
-    const ocupados = (group: Group) => {
-        const cat = categories.find(c => c.id === group.categoryId);
-        const esParejas = (cat?.name?.toLowerCase() === 'parejas'
-            || group.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas'))
-            && group.targetGender === 'Mixto';
-        const inscriptos = group.registrations?.length || 0;
-        return esParejas ? inscriptos * 2 : inscriptos;
-    };
+    // Un lugar por persona: cada inscripción ocupa uno, o dos si vino con
+    // pareja. Lo decide la inscripción, no el grupo —ver src/utils/cupos.ts—.
+    const ocupados = (group: Group) => lugaresOcupados(group.registrations);
 
     const porcentaje = (group: Group) =>
         Math.min(100, Math.round((ocupados(group) / (group.maxCapacity || 1)) * 100));

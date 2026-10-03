@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Group, GroupCategory, GroupTag, esGrupoPendiente } from '../../types';
+import { lugaresOcupados } from '../../src/utils/cupos';
 import { supabaseService } from '../../services/supabaseService';
 import { supabase } from '../../services/supabaseClient';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
@@ -317,7 +318,7 @@ const AgregarMiembroGrupoContent: React.FC<{
                                 {[
                                     categories.find(c => c.id === grupoElegido.categoryId)?.name,
                                     `${grupoElegido.meetingDay?.toLowerCase()} ${grupoElegido.meetingTime}`,
-                                    `${esDeParejas(grupoElegido) ? (grupoElegido.registrations?.length || 0) * 2 : (grupoElegido.registrations?.length || 0)}/${grupoElegido.maxCapacity}`,
+                                    `${lugaresOcupados(grupoElegido.registrations)}/${grupoElegido.maxCapacity}`,
                                 ].filter(Boolean).join(' · ')}
                             </p>
                             {esDeParejas(grupoElegido) && (
@@ -363,7 +364,7 @@ const AgregarMiembroGrupoContent: React.FC<{
                 {listaGrupos.map(g => {
                     const elegido = g.id === selectedGroupId;
                     const cat = categories.find(c => c.id === g.categoryId);
-                    const ocupados = esDeParejas(g) ? (g.registrations?.length || 0) * 2 : (g.registrations?.length || 0);
+                    const ocupados = lugaresOcupados(g.registrations);
                     return (
                         <button
                             type="button"

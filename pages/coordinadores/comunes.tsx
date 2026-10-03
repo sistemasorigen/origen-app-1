@@ -1,5 +1,6 @@
 import React from 'react';
 import { Group, GroupCategory, GroupRegistration, GroupTag, TemporadaGCX } from '../../types';
+import { lugaresOcupados as contarLugares } from '../../src/utils/cupos';
 import { getSeasonFromDate } from '../../services/supabaseService';
 
 /**
@@ -151,22 +152,20 @@ export const esGrupoFinalizado = (g: Group): boolean => {
 };
 
 /**
- * Cupo ocupado. Una inscripción de un grupo de parejas ocupa dos lugares:
- * es la misma regla que usan el catálogo y el panel de administración, y
- * tiene que dar el mismo número que ve un admin del mismo grupo.
+ * Cupo ocupado: un lugar por persona. Cada inscripción ocupa uno, o dos si
+ * vino con pareja —la regla vive en src/utils/cupos.ts y la usa también el
+ * panel de administración—, así que un coordinador y un admin ven el mismo
+ * número para el mismo grupo.
+ *
+ * Antes contaba doble cada inscripción de un grupo "de parejas", viniera o
+ * no con alguien. Categorías y etiquetas ya no deciden la cuenta; se dejan
+ * en la firma para no tocar a quienes la llaman.
  */
 export const lugaresOcupados = (
     g: Group,
-    categories: GroupCategory[],
-    tags: GroupTag[]
-): number => {
-    const cat = categories.find(c => c.id === g.categoryId);
-    const esParejas = (cat?.name?.toLowerCase() === 'parejas'
-        || g.tags?.some(tId => tags.find(t => t.id === tId)?.name?.toLowerCase() === 'parejas'))
-        && g.targetGender === 'Mixto';
-    const inscriptos = g.registrations?.length || 0;
-    return esParejas ? inscriptos * 2 : inscriptos;
-};
+    _categories?: GroupCategory[],
+    _tags?: GroupTag[]
+): number => contarLugares(g.registrations);
 
 /**
  * Las personas de una inscripción: el titular y, si la hay, la pareja.

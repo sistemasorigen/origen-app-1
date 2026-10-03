@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { NOMBRE_MODALIDAD, modalidadDe, llevaDireccion } from '../../src/utils/modalidad';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Group, GroupTag, GroupCategory, SeasonSettings, DEFAULT_SEASON_SETTINGS, esGrupoPendiente } from '../../types';
+import { lugaresOcupados, tienePareja } from '../../src/utils/cupos';
 import { supabaseService } from '../../services/supabaseService';
 import AdminGCXLayout, { useAdminGCXToast } from '../../components/layout/AdminGCXLayout';
 import PestanasGrupoAdmin from '../../components/GCX/PestanasGrupoAdmin';
@@ -200,13 +201,15 @@ const DetalleGrupoAdminContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
         ? `${group.coHostFirstName || ''} ${group.coHostLastName || ''}`.trim()
         : coHostDetails?.name || '';
 
-    // Cupo: una inscripción de parejas ocupa dos lugares.
+    // Cupo: un lugar por persona. Cada inscripción ocupa uno, o dos si vino
+    // con pareja —ver src/utils/cupos.ts—. Que el grupo sea "de parejas" no
+    // cambia la cuenta: si alguien se anotó solo, ocupa un lugar.
     const esGrupoDeParejas = (category?.name?.toLowerCase() === 'parejas'
         || groupTags.some(t => t.name?.toLowerCase() === 'parejas'))
         && group.targetGender === 'Mixto';
     const inscripciones = group.registrations || [];
-    const nParejas = inscripciones.filter(r => !!r.partnerData).length;
-    const ocupados = esGrupoDeParejas ? inscripciones.length * 2 : inscripciones.length;
+    const nParejas = inscripciones.filter(tienePareja).length;
+    const ocupados = lugaresOcupados(inscripciones);
     const libres = Math.max(0, (group.maxCapacity || 0) - ocupados);
     const pct = Math.min(100, Math.round((ocupados / (group.maxCapacity || 1)) * 100));
 
