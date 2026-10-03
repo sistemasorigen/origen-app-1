@@ -9497,14 +9497,39 @@ export const supabaseService = {
     file: File,
     edicion: number,
   ): Promise<{ ok: boolean; path?: string; error?: string }> {
+    // Los únicos tipos que el bucket acepta. Si sube algo fuera de esta
+    // lista, Storage contesta 400 y el mensaje no le sirve a nadie.
+    const PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
+    const LIMITE = 5 * 1024 * 1024;
+
     try {
-      if (!file.type.startsWith('image/')) {
-        return { ok: false, error: 'El comprobante tiene que ser una imagen.' };
+      // No se exige que `file.type` empiece con "image/": en Android la
+      // galería muchas veces entrega el archivo SIN tipo, y ese chequeo
+      // rechazaba capturas de pantalla perfectamente válidas antes de
+      // intentar nada. Lo que decide es si se puede decodificar como imagen,
+      // y de eso se encarga comprimirImagen.
+      const esNoImagenDeclarada = !!file.type && !file.type.startsWith('image/');
+      if (esNoImagenDeclarada) {
+        return { ok: false, error: 'El comprobante tiene que ser una imagen. Si tenés un PDF, sacale una captura.' };
       }
 
       const comprimido = await comprimirImagen(file);
 
-      const LIMITE = 5 * 1024 * 1024;
+      // comprimirImagen devuelve el original cuando no pudo decodificarlo.
+      // Ahí el tipo es el que vino, y puede no servir.
+      if (!PERMITIDOS.includes(comprimido.type)) {
+        console.error('[Nocturna] comprobante con tipo no soportado:', {
+          tipoOriginal: file.type || '(vacío)',
+          tipoFinal: comprimido.type || '(vacío)',
+          tamaño: file.size,
+          nombre: file.name,
+        });
+        return {
+          ok: false,
+          error: 'No pudimos leer esa imagen. Probá con una captura de pantalla del comprobante.',
+        };
+      }
+
       if (comprimido.size > LIMITE) {
         return {
           ok: false,
@@ -9512,7 +9537,10 @@ export const supabaseService = {
         };
       }
 
-      const ext = comprimido.type === 'image/png' ? 'png' : 'jpg';
+      const ext = comprimido.type === 'image/png' ? 'png'
+        : comprimido.type === 'image/webp' ? 'webp'
+          : comprimido.type === 'image/heic' ? 'heic'
+            : 'jpg';
       const nombre = `${edicion}/${safeUUID()}.${ext}`;
 
       const { error } = await supabase.storage
@@ -9521,8 +9549,13 @@ export const supabaseService = {
 
       if (error) throw error;
       return { ok: true, path: nombre };
-    } catch (err) {
-      console.error('[Nocturna] uploadNocturnaComprobante:', err);
+    } catch (err: any) {
+      // El mensaje real de Storage queda en la consola: sin esto, "no pudimos
+      // subir" es todo lo que hay para diagnosticar un reporte de la puerta.
+      console.error('[Nocturna] uploadNocturnaComprobante:', err?.message || err, {
+        tipo: file?.type || '(vacío)',
+        tamaño: file?.size,
+      });
       return { ok: false, error: 'No pudimos subir el comprobante. Probá de nuevo.' };
     }
   },

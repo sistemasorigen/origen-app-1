@@ -154,8 +154,13 @@ const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
         if (!q) return true;
         const nombre = `${r.firstName} ${r.lastName}`.toLowerCase();
         const pareja = r.partnerData ? `${r.partnerData.firstName} ${r.partnerData.lastName}`.toLowerCase() : '';
+        // El teléfono y el email de la pareja también: ahora se ven en la
+        // tarjeta, y buscar por un dato que está a la vista y no encontrarlo
+        // se lee como que la persona no está inscripta.
         return nombre.includes(q) || pareja.includes(q)
-            || (r.phone || '').includes(q) || (r.email || '').toLowerCase().includes(q);
+            || (r.phone || '').includes(q) || (r.email || '').toLowerCase().includes(q)
+            || (r.partnerData?.phone || '').includes(q)
+            || (r.partnerData?.email || '').toLowerCase().includes(q);
     });
 
     // Las que esperan respuesta van primero: son las únicas que piden una
@@ -198,6 +203,32 @@ const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
                         : `${r.partnerData!.firstName} cargada a mano, sin email`}`
                 : 'Inscripción individual',
         };
+    };
+
+    /**
+     * El contacto de cada persona de la inscripción, en el mismo orden que el
+     * nombre de la tarjeta: primero quien se anotó, después su pareja.
+     *
+     * Antes sólo se veía el del titular, y para llamar a la pareja había que
+     * abrir "Ver o editar la pareja". Los datos estaban: las 72 parejas
+     * cargadas tienen teléfono.
+     *
+     * El email de la pareja va sólo si lo hay. Si falta, la línea de arriba
+     * ya dice "cargada a mano, sin email": repetir "sin email" acá sería
+     * decir lo mismo dos veces.
+     */
+    const contactosDe = (r: GroupRegistration) => {
+        const titular = { quien: r.firstName, telefono: r.phone || '', email: r.email || '', mostrarEmail: true };
+        if (!r.partnerData) return [titular];
+        return [
+            titular,
+            {
+                quien: r.partnerData.firstName,
+                telefono: r.partnerData.phone || '',
+                email: r.partnerData.email || '',
+                mostrarEmail: !!r.partnerData.email,
+            },
+        ];
     };
 
     const botonChico = 'h-8 rounded-full px-3 text-[12px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1';
@@ -409,8 +440,22 @@ const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
                                         </div>
                                     </div>
 
-                                    <span className="truncate text-[13px] font-medium text-black/[.66]">{r.phone || 'sin teléfono'}</span>
-                                    <span className="truncate text-[13px] font-medium text-black/[.66]">{r.email || 'sin email'}</span>
+                                    {/* Uno abajo del otro, en el orden del nombre: el
+                                        titular arriba, la pareja abajo. */}
+                                    <div className="flex min-w-0 flex-col gap-0.5">
+                                        {contactosDe(r).map((c, i) => (
+                                            <span key={i} className="truncate text-[13px] font-medium text-black/[.66]">
+                                                {c.telefono || 'sin teléfono'}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div className="flex min-w-0 flex-col gap-0.5">
+                                        {contactosDe(r).filter(c => c.mostrarEmail).map((c, i) => (
+                                            <span key={i} className="truncate text-[13px] font-medium text-black/[.66]">
+                                                {c.email || 'sin email'}
+                                            </span>
+                                        ))}
+                                    </div>
                                     {pill(r)}
 
                                     <div className="flex justify-end gap-1.5">{acciones(r, false)}</div>
@@ -447,9 +492,26 @@ const InscriptosGrupoContent: React.FC<ContenidoProps> = ({ onGrupo }) => {
                                         {pill(r)}
                                     </div>
 
-                                    <div className="mt-3 flex flex-col gap-1">
-                                        <p className="text-[13px] font-medium text-black/[.66]">{r.phone || 'sin teléfono'}</p>
-                                        <p className="truncate text-[13px] font-medium text-black/[.66]">{r.email || 'sin email'}</p>
+                                    {/* En una pareja cada bloque lleva el nombre de
+                                        quien es: dos teléfonos sueltos no dicen a
+                                        quién se está llamando. En una inscripción
+                                        individual no hace falta y queda como antes. */}
+                                    <div className="mt-3 flex flex-col gap-2.5">
+                                        {contactosDe(r).map((c, i) => (
+                                            <div key={i} className="flex min-w-0 gap-3">
+                                                {esPareja && (
+                                                    <span className="w-[68px] flex-none truncate pt-px text-[12.5px] font-semibold text-black/[.5]">
+                                                        {c.quien}
+                                                    </span>
+                                                )}
+                                                <div className="flex min-w-0 flex-col gap-1">
+                                                    <p className="text-[13px] font-medium text-black/[.66]">{c.telefono || 'sin teléfono'}</p>
+                                                    {c.mostrarEmail && (
+                                                        <p className="truncate text-[13px] font-medium text-black/[.66]">{c.email || 'sin email'}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
 
                                     <div className="mt-3.5 flex gap-2">{acciones(r, true)}</div>

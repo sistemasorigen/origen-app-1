@@ -1805,8 +1805,12 @@ const InscripcionNocturna: React.FC = () => {
                                 >
                                     <input
                                         type="file"
-                                        accept="image/*"
-                                        className="hidden"
+                                        accept="image/*,.jpg,.jpeg,.png,.webp,.heic"
+                                        /* sr-only y no hidden: `hidden` es display:none, y
+                                           hay navegadores embebidos de Android que no abren
+                                           el selector de un input que no está renderizado.
+                                           Así queda invisible pero existiendo. */
+                                        className="sr-only"
                                         onChange={e => { quitarComprobante(); elegirComprobante(e.target.files?.[0]); }}
                                     />
                                     Cambiar
@@ -1823,7 +1827,17 @@ const InscripcionNocturna: React.FC = () => {
                                 className="rounded-[20px] flex items-center gap-3.5 cursor-pointer"
                                 style={{ background: PANEL, padding: '16px 18px' }}
                             >
-                                <input type="file" accept="image/*" className="hidden" onChange={e => elegirComprobante(e.target.files?.[0])} />
+                                {/* sr-only y no hidden: ver el otro input de más
+                                    arriba. Y `accept` con extensiones además del
+                                    image/*: hay selectores de Android que muestran
+                                    menos lugares de dónde sacar el archivo cuando
+                                    sólo ven el comodín. */}
+                                <input
+                                    type="file"
+                                    accept="image/*,.jpg,.jpeg,.png,.webp,.heic"
+                                    className="sr-only"
+                                    onChange={e => elegirComprobante(e.target.files?.[0])}
+                                />
                                 <span
                                     className="w-11 h-11 rounded-[14px] flex items-center justify-center flex-none"
                                     style={{ background: INK }}

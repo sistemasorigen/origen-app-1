@@ -149,38 +149,92 @@ export const aplicarRetiroFamiliar = (
  * Devuelve el original si ya es chico y no es una imagen rasterizada que
  * convenga recomprimir.
  */
+/**
+ * Decodifica la imagen, con plan B.
+ *
+ * `createImageBitmap` es lo más rápido pero no está en todas partes y falla
+ * con archivos que el `<img>` de toda la vida abre sin problema —pasa en
+ * Android con algunas galerías—. Si el primero no puede, se prueba el
+ * segundo antes de rendirse.
+ */
+const decodificarImagen = async (
+    file: File,
+): Promise<ImageBitmap | HTMLImageElement | null> => {
+    if (typeof createImageBitmap === 'function') {
+        const bitmap = await createImageBitmap(file).catch(() => null);
+        if (bitmap) return bitmap;
+    }
+
+    return new Promise<HTMLImageElement | null>(resolve => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        const terminar = (valor: HTMLImageElement | null) => {
+            URL.revokeObjectURL(url);
+            resolve(valor);
+        };
+        img.onload = () => terminar(img);
+        img.onerror = () => terminar(null);
+        img.src = url;
+    });
+};
+
+/**
+ * Achica una foto antes de subirla y la deja SIEMPRE en JPEG.
+ *
+ * Las dos cosas importan por igual:
+ *
+ *  · El tamaño, porque el bucket corta en 5 MB y una foto de celular pesa
+ *    entre 3 y 8.
+ *  · El tipo, porque el bucket sólo acepta jpeg, png, webp y heic. Un
+ *    Android puede entregar el archivo con el tipo vacío —la galería no se lo
+ *    dice al navegador— o como image/heif, y entonces la subida se rechaza
+ *    con un error que no le dice nada a nadie. Si se pudo decodificar, se
+ *    sube el JPEG que sale del canvas, que siempre es un tipo válido, aunque
+ *    pese un poco más que el original.
+ *
+ * Si no se pudo decodificar, se devuelve el original y que decida quien sube.
+ */
 export const comprimirImagen = async (
     file: File,
     maxLado = 1600,
     calidad = 0.8,
 ): Promise<File> => {
-    if (!file.type.startsWith('image/')) return file;
-
-    const bitmap = await createImageBitmap(file).catch(() => null);
-    if (!bitmap) return file;
+    // Ojo: no se mira `file.type` para decidir si vale la pena. En Android
+    // viene vacío bastante seguido, y ese era justo el caso que no se podía
+    // subir.
+    const imagen = await decodificarImagen(file);
+    if (!imagen) return file;
 
     try {
-        const escala = Math.min(1, maxLado / Math.max(bitmap.width, bitmap.height));
-        const ancho = Math.round(bitmap.width * escala);
-        const alto = Math.round(bitmap.height * escala);
+        const anchoOriginal = imagen.width;
+        const altoOriginal = imagen.height;
+        if (!anchoOriginal || !altoOriginal) return file;
+
+        const escala = Math.min(1, maxLado / Math.max(anchoOriginal, altoOriginal));
+        const ancho = Math.max(1, Math.round(anchoOriginal * escala));
+        const alto = Math.max(1, Math.round(altoOriginal * escala));
 
         const canvas = document.createElement('canvas');
         canvas.width = ancho;
         canvas.height = alto;
         const ctx = canvas.getContext('2d');
         if (!ctx) return file;
-        ctx.drawImage(bitmap, 0, 0, ancho, alto);
+        // Fondo blanco: un PNG con transparencia sobre JPEG queda negro.
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, ancho, alto);
+        ctx.drawImage(imagen, 0, 0, ancho, alto);
 
         const blob = await new Promise<Blob | null>(resolve =>
             canvas.toBlob(resolve, 'image/jpeg', calidad),
         );
-        if (!blob) return file;
-
-        // Si comprimir no ayudó —ya venía optimizada— se queda el original.
-        if (blob.size >= file.size) return file;
+        if (!blob || blob.size === 0) return file;
 
         return new File([blob], 'comprobante.jpg', { type: 'image/jpeg' });
+    } catch {
+        // Un canvas que se queda sin memoria con una foto enorme no puede
+        // dejar a la familia sin inscribirse: sube el original.
+        return file;
     } finally {
-        bitmap.close();
+        if (typeof ImageBitmap !== 'undefined' && imagen instanceof ImageBitmap) imagen.close();
     }
 };

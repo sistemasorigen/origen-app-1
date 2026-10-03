@@ -20,6 +20,22 @@ const MOMENTO_DEL_BUILD = Date.parse(__BUILD_TIME__) || 0;
  */
 const ESPERA_ENTRE_CONSULTAS_MS = 20_000;
 
+/**
+ * Cada cuánto se vuelve a preguntar mientras la app está a la vista.
+ *
+ * El aviso en tiempo real sólo le llega a quien tiene la conexión abierta
+ * justo cuando se publica, y no se reenvía. Con el teléfono bloqueado o en
+ * otra app —el banco, WhatsApp— la conexión está dormida y el aviso se
+ * pierde. Al volver hay un chequeo, pero si fallaba —la red todavía
+ * despertándose— no había otro: la persona quedaba en la versión vieja, sin
+ * cartel, hasta cambiar de app otra vez.
+ *
+ * Con la pestaña oculta no corre (`revisar` lo descarta), así que no cuesta
+ * nada en segundo plano. A la vista es una lectura de una fila cada minuto y
+ * medio.
+ */
+const INTERVALO_A_LA_VISTA_MS = 90_000;
+
 // El reload destruye todo el estado de React, así que lo único que
 // sobrevive de un intento a otro es lo que quedó en sessionStorage antes
 // de que la página se fuera.
@@ -162,7 +178,15 @@ export function useVersionCheck() {
                 .eq('id', 1)
                 .single();
 
-            if (cancelado || error || !data) return;
+            if (cancelado) return;
+            if (error || !data) {
+                // Un fallo no cuenta como consulta hecha: si no, el freno de
+                // arriba bloqueaba el reintento durante 20 segundos, y al
+                // volver de otra app el primer intento suele ser justo el
+                // que falla.
+                ultimaConsultaRef.current = 0;
+                return;
+            }
             if (esMasNueva(data)) avisar(data.version);
         };
 
@@ -174,6 +198,7 @@ export function useVersionCheck() {
         // el escritorio cuando se cambia de ventana sin ocultar la pestaña.
         // Disparan juntos muchas veces; para eso está el freno de arriba.
         const alVolver = () => { revisar(); };
+        const periodico = window.setInterval(() => { revisar(); }, INTERVALO_A_LA_VISTA_MS);
         document.addEventListener('visibilitychange', alVolver);
         window.addEventListener('pageshow', alVolver);
         window.addEventListener('focus', alVolver);
@@ -202,6 +227,7 @@ export function useVersionCheck() {
             document.removeEventListener('visibilitychange', alVolver);
             window.removeEventListener('pageshow', alVolver);
             window.removeEventListener('focus', alVolver);
+            window.clearInterval(periodico);
             supabase.removeChannel(channel);
         };
     }, []);
