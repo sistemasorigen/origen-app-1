@@ -5,7 +5,7 @@ import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
 import { calcularEdad, contarAcreditados, estadoInscripcion } from '../../../src/utils/nocturna';
 import { NocturnaInscripcion, NocturnaJoven, User } from '../../../types';
-import { COLOR_TRIBU, enLista, plata } from './compartido/formulario';
+import { COLOR_TRIBU, enLista, etiquetaRestriccion, plata } from './compartido/formulario';
 import {
     AMBAR,
     AMBAR_INK,
@@ -370,7 +370,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                         </span>
                     </div>
                     <p style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.6)', margin: '5px 0 0' }}>
-                        Entrada {insc.codigoEntrada} · {jovenes.length} {jovenes.length === 1 ? 'joven' : 'jóvenes'}
+                        Entrada {insc.codigoEntrada} · {jovenes.length} {jovenes.length === 1 ? 'adolescente' : 'adolescentes'}
                         {insc.aprobadoAt ? ` · ingresó ${hora(insc.aprobadoAt)}` : ''}
                     </p>
                 </div>
@@ -449,7 +449,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                 }
                             >
                                 <p style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.6)', margin: '5px 0 0' }}>
-                                    Tocá a cada persona que entró. Para aprobar hace falta el adulto y al menos un joven.
+                                    Tocá a cada persona que entró. Para aprobar hace falta el adulto y al menos un adolescente.
                                 </p>
                                 <div className="flex flex-col gap-2 mt-3.5">
                                     {[{ id: 'adulto', nombre: nombreAdulto, rol: 'Adulto responsable', marcado: adultoMarcado, desde: insc.adultoAcreditadoAt },
@@ -498,8 +498,8 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                 <p style={{ ...fuente(500, '12.5px'), color: estadoValido ? 'rgba(0,0,0,.58)' : AMBAR_INK, margin: '14px 2px 0' }}>
                                     {!estadoValido
                                         ? (marcados > 0 && !adultoMarcado
-                                            ? 'No se puede registrar a un joven sin el adulto responsable.'
-                                            : 'Marcá al menos un joven además del adulto.')
+                                            ? 'No se puede registrar a un adolescente sin el adulto responsable.'
+                                            : 'Marcá al menos un adolescente además del adulto.')
                                         : hayCambios
                                             ? 'Los cambios todavía no se guardaron.'
                                             : 'Sin cambios para guardar.'}
@@ -536,7 +536,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
 
                         {/* ── Columna de datos ───────────────────────────── */}
                         <div className="flex flex-col gap-3.5 min-w-0 mt-3.5 lg:mt-0">
-                            <Carta titulo="Jóvenes">
+                            <Carta titulo="Adolescentes">
                                 <div className="flex flex-col mt-2.5">
                                     {jovenes.map((j, i) => (
                                         <div
@@ -557,6 +557,17 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                                 <span style={{ width: 6, height: 6, borderRadius: 999, background: COLOR_TRIBU[j.tribu] || '#9a9a95' }} />
                                                 {j.tribu}
                                             </span>
+                                            {/* Sólo si tiene algo: una ficha que dice
+                                                "ninguna" en cada adolescente hace que la que
+                                                importa deje de verse. */}
+                                            {(j.restriccion || 'ninguna') !== 'ninguna' && (
+                                                <span
+                                                    className="flex items-center flex-none"
+                                                    style={{ height: 24, padding: '0 10px', borderRadius: 999, background: AMBAR, color: AMBAR_INK, ...fuente(600, '11px') }}
+                                                >
+                                                    {etiquetaRestriccion(j.restriccion)}
+                                                </span>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -599,7 +610,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                     {(insc.comprobantes || []).map((c, i) => (
                                         <Fila
                                             key={c.id}
-                                            k={c.chicos === 1 ? 'Sumó un joven' : `Sumó ${c.chicos} jóvenes`}
+                                            k={c.chicos === 1 ? 'Sumó un adolescente' : `Sumó ${c.chicos} adolescentes`}
                                             ultima={i === (insc.comprobantes || []).length - 1}
                                             v={
                                                 <button

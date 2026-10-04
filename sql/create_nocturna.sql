@@ -414,7 +414,7 @@ BEGIN
     -- Al menos un chico
     v_n := jsonb_array_length(v_jovenes);
     IF v_n IS NULL OR v_n < 1 THEN
-        RETURN jsonb_build_object('ok', false, 'error', 'Agregá al menos un joven a la inscripción.');
+        RETURN jsonb_build_object('ok', false, 'error', 'Agregá al menos un adolescente a la inscripción.');
     END IF;
 
     -- Declaraciones. autoriza tiene que ser true; acepta_fotos tiene que venir
@@ -445,7 +445,7 @@ BEGIN
         OR btrim(COALESCE(v_j->>'apellido','')) = ''
         OR btrim(COALESCE(v_j->>'dni',''))      = ''
         OR COALESCE(v_j->>'fechaNacimiento','') = '' THEN
-            RETURN jsonb_build_object('ok', false, 'error', 'Completá nombre, apellido, DNI y fecha de nacimiento de cada joven.');
+            RETURN jsonb_build_object('ok', false, 'error', 'Completá nombre, apellido, DNI y fecha de nacimiento de cada adolescente.');
         END IF;
 
         BEGIN
@@ -713,7 +713,7 @@ BEGIN
         WHERE j.id = u AND j.inscripcion_id = p_inscripcion_id
     );
     IF v_ajenos > 0 THEN
-        RETURN jsonb_build_object('ok', false, 'error', 'Alguno de los jóvenes no pertenece a esta entrada.');
+        RETURN jsonb_build_object('ok', false, 'error', 'Alguno de los adolescentes no pertenece a esta entrada.');
     END IF;
 
     -- Estado válido. IS NOT TRUE y no "= false": p_adulto puede venir NULL.
@@ -723,10 +723,10 @@ BEGIN
         NULL;                                   -- adulto + al menos un chico: válido
     ELSIF p_adulto IS TRUE THEN
         RETURN jsonb_build_object('ok', false, 'error',
-            'Marcá al menos un joven además del adulto.');
+            'Marcá al menos un adolescente además del adulto.');
     ELSE
         RETURN jsonb_build_object('ok', false, 'error',
-            'No se puede acreditar a un joven sin el adulto responsable.');
+            'No se puede acreditar a un adolescente sin el adulto responsable.');
     END IF;
 
     -- Adulto: se fija la hora sólo si no la tenía.

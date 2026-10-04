@@ -9316,6 +9316,10 @@ export const supabaseService = {
       dni: row.dni,
       fechaNacimiento: row.fecha_nacimiento,
       tribu: row.tribu,
+      // Las filas de antes de octubre no tienen la columna cargada desde la
+      // app, pero la base les puso 'ninguna'. El COALESCE es para un row que
+      // llegue de una consulta vieja sin la columna.
+      restriccion: row.restriccion || 'ninguna',
       retiro: {
         tipo: row.retiro_tipo,
         nombre: row.retiro_nombre || undefined,

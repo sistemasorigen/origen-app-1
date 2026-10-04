@@ -5,7 +5,7 @@ import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { supabaseService } from '../../../services/supabaseService';
 import { contarAcreditados, estadoInscripcion } from '../../../src/utils/nocturna';
 import { NocturnaConfig, NocturnaInscripcion, User } from '../../../types';
-import { COLOR_TRIBU, plata, sinTildes } from './compartido/formulario';
+import { COLOR_TRIBU, etiquetaRestriccion, plata, sinTildes } from './compartido/formulario';
 import {
     AMBAR,
     AMBAR_INK,
@@ -64,7 +64,36 @@ type Overlay =
  * tienen que usar exactamente la misma grilla: si se separan, los títulos
  * dejan de caer sobre su columna.
  */
-const COLUMNAS = '140px minmax(0,1fr) minmax(0,1.5fr) 180px 130px 180px';
+// La de COMIDA es angosta a propósito: casi siempre está vacía, y lo que
+// tiene que saltar a la vista es la fila que NO lo está.
+const COLUMNAS = '130px minmax(0,1fr) minmax(0,1.4fr) 128px 170px 120px 150px';
+
+/**
+ * Lo que no puede comer cada adolescente de una inscripción.
+ *
+ * Sólo los que tienen algo: una columna llena de "ninguna" hace que la única
+ * fila que importa se pierda entre las demás. En ámbar, el mismo color con el
+ * que la planilla ya marca lo que pide atención.
+ */
+const Restricciones: React.FC<{ insc: NocturnaInscripcion; compacto?: boolean }> = ({ insc, compacto }) => {
+    const con = (insc.jovenes || []).filter(j => (j.restriccion || 'ninguna') !== 'ninguna');
+    if (!con.length) {
+        return compacto ? null : <span style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.32)' }}>—</span>;
+    }
+    return (
+        <>
+            {con.map(j => (
+                <span
+                    key={j.id}
+                    className="flex items-center w-fit"
+                    style={{ height: 24, padding: '0 10px', borderRadius: 999, background: AMBAR, color: AMBAR_INK, ...fuente(600, '11.5px') }}
+                >
+                    {etiquetaRestriccion(j.restriccion)} · {j.nombre}
+                </span>
+            ))}
+        </>
+    );
+};
 
 /** Un comprobante listo para mirar: de dónde sale y qué cubrió. */
 interface VistaComprobante {
@@ -190,11 +219,11 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
             ...(insc.comprobantePath ? [{
                 path: insc.comprobantePath,
                 titulo: extras.length ? 'Pago de la inscripción' : 'Comprobante',
-                detalle: `${plata(Math.max(0, insc.total - sumado))} · ${chicosDelAlta} ${chicosDelAlta === 1 ? 'joven' : 'jóvenes'}`,
+                detalle: `${plata(Math.max(0, insc.total - sumado))} · ${chicosDelAlta} ${chicosDelAlta === 1 ? 'adolescente' : 'adolescentes'}`,
             }] : []),
             ...extras.map(c => ({
                 path: c.path,
-                titulo: c.chicos === 1 ? 'Sumó un joven' : `Sumó ${c.chicos} jóvenes`,
+                titulo: c.chicos === 1 ? 'Sumó un adolescente' : `Sumó ${c.chicos} adolescentes`,
                 detalle: plata(c.monto),
             })),
         ];
@@ -277,7 +306,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
         <span
             className="flex items-center gap-1.5 flex-none"
             style={{ height: 24, padding: '0 8px', borderRadius: 999, background: AMBAR, color: AMBAR_INK, ...fuente(600, '11px') }}
-            title="La familia no autorizó el uso de imágenes de sus jóvenes."
+            title="La familia no autorizó el uso de imágenes de sus adolescentes."
         >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="3" y="7" width="18" height="13" rx="3" /><path d="M3 3l18 18" />
@@ -480,8 +509,8 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                 className="campo campo--desnudo"
                                 value={busqueda}
                                 onChange={e => setBusqueda(e.target.value)}
-                                placeholder="Buscar adulto o joven"
-                                aria-label="Buscar por nombre de adulto o de joven"
+                                placeholder="Buscar adulto o adolescente"
+                                aria-label="Buscar por nombre de adulto o de adolescente"
                             />
                             {!!busqueda && (
                                 <button
@@ -592,7 +621,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                     {/* Resumen */}
                     <div className="flex gap-4 mt-3 flex-wrap">
                         <span style={{ ...fuente(600, '12.5px'), color: INK }}>
-                            {resumen.familias} {resumen.familias === 1 ? 'familia' : 'familias'} · {resumen.chicos} {resumen.chicos === 1 ? 'joven' : 'jóvenes'}
+                            {resumen.familias} {resumen.familias === 1 ? 'familia' : 'familias'} · {resumen.chicos} {resumen.chicos === 1 ? 'adolescente' : 'adolescentes'}
                         </span>
                         <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: VERDE }}>
                             <span style={{ width: 7, height: 7, borderRadius: 999, background: '#16a34a' }} />
@@ -624,7 +653,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                             </p>
                             <p style={{ ...fuente(500, '13.5px'), color: 'rgba(0,0,0,.6)', margin: '8px 0 0' }}>
                                 {busqueda
-                                    ? 'Buscamos entre adultos y jóvenes. Probá solo con el apellido.'
+                                    ? 'Buscamos entre adultos y adolescentes. Probá solo con el apellido.'
                                     : 'Cuando alguien se inscriba, su familia aparece acá.'}
                             </p>
                             {busqueda && (
@@ -677,6 +706,11 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                                             </div>
                                                         ))}
                                                         {!insc.aceptaFotos && <div className="mt-0.5 flex"><ChipSinFotos /></div>}
+                                                        {/* En el teléfono no hay columna donde ponerlo:
+                                                            va con los adolescentes, y sólo si hay algo. */}
+                                                        <div className="flex flex-col gap-1.5 mt-0.5">
+                                                            <Restricciones insc={insc} compacto />
+                                                        </div>
                                                     </div>
 
                                                     <div className="flex flex-col gap-1 mt-3 pt-3" style={{ borderTop: `1px solid ${CAMPO}` }}>
@@ -719,7 +753,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                     className="grid"
                                     style={{ gridTemplateColumns: COLUMNAS, borderBottom: '1px solid #eeeeec' }}
                                 >
-                                    {['FECHA', 'ADULTO RESPONSABLE', 'JÓVENES INSCRIPTOS', 'PAGO', 'ESTADO', ''].map((t, i) => (
+                                    {['FECHA', 'ADULTO RESPONSABLE', 'ADOLESCENTES INSCRIPTOS', 'COMIDA', 'PAGO', 'ESTADO', ''].map((t, i) => (
                                         <span key={i} style={{ padding: '12px 14px', ...fuente(600, '11px'), letterSpacing: '.07em', color: 'rgba(0,0,0,.55)' }}>{t}</span>
                                     ))}
                                 </div>
@@ -764,6 +798,10 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                                         </div>
                                                     ))}
                                                     {!insc.aceptaFotos && <div className="flex"><ChipSinFotos /></div>}
+                                                </div>
+
+                                                <div className="flex flex-col gap-1.5" style={{ padding: '15px 14px', minWidth: 0 }}>
+                                                    <Restricciones insc={insc} />
                                                 </div>
 
                                                 <div style={{ padding: 14, minWidth: 0 }}><Comprobante insc={insc} /></div>
@@ -828,7 +866,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                     ¿Eliminar la inscripción de {overlay.insc.adultoNombre} {overlay.insc.adultoApellido}?
                                 </p>
                                 <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0' }}>
-                                    Se borran también {(overlay.insc.jovenes || []).length === 1 ? 'su joven' : `sus ${(overlay.insc.jovenes || []).length} jóvenes`} y el comprobante. Su QR deja de funcionar en la puerta. No se puede deshacer.
+                                    Se borran también {(overlay.insc.jovenes || []).length === 1 ? 'su adolescente' : `sus ${(overlay.insc.jovenes || []).length} adolescentes`} y el comprobante. Su QR deja de funcionar en la puerta. No se puede deshacer.
                                 </p>
                                 <div className="flex flex-col gap-2 mt-5">
                                     <button

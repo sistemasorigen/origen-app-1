@@ -1780,6 +1780,14 @@ export type NocturnaTribu = 'Trueno' | 'Garra' | 'Sin tribu';
 export type NocturnaRetiroTipo = 'solo' | 'adulto' | 'otra_persona';
 
 /**
+ * Lo que un joven no puede comer.
+ *
+ * Son las dos que cambian cómo se arma una vianda, no un historial médico: lo
+ * declara el adulto responsable en la inscripción y lo lee quien cocina.
+ */
+export type NocturnaRestriccion = 'ninguna' | 'diabetes' | 'celiaco';
+
+/**
  * Cómo se retira un chico a las 6 de la mañana.
  *
  * El formulario pregunta una sola vez para toda la familia y la misma
@@ -1812,6 +1820,9 @@ export interface NocturnaJoven {
     tribu: NocturnaTribu;
     retiro: NocturnaRetiro;
     acreditadoAt: string | null;
+
+    /** Lo que no puede comer. 'ninguna' si no declaró nada. */
+    restriccion: NocturnaRestriccion;
 }
 
 export interface NocturnaInscripcion {
@@ -1880,6 +1891,12 @@ export interface NocturnaJovenPayload {
     retiroApellido?: string;
     retiroDni?: string;
     retiroTelefono?: string;
+
+    /**
+     * Lo que no puede comer. Si no viaja, la base pone 'ninguna': así una
+     * versión vieja de la app sigue pudiendo inscribir.
+     */
+    restriccion?: NocturnaRestriccion;
 }
 
 /**

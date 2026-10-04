@@ -154,7 +154,7 @@ BEGIN
 
     v_n := jsonb_array_length(v_jovenes);
     IF v_n IS NULL OR v_n < 1 THEN
-        RETURN 'Agregá al menos un joven a la inscripción.';
+        RETURN 'Agregá al menos un adolescente a la inscripción.';
     END IF;
 
     IF COALESCE((p_payload->>'autorizaAsistencia')::BOOLEAN, false) IS NOT TRUE THEN
@@ -180,7 +180,7 @@ BEGIN
         OR btrim(COALESCE(v_j->>'apellido','')) = ''
         OR btrim(COALESCE(v_j->>'dni',''))      = ''
         OR COALESCE(v_j->>'fechaNacimiento','') = '' THEN
-            RETURN 'Completá nombre, apellido, DNI y fecha de nacimiento de cada joven.';
+            RETURN 'Completá nombre, apellido, DNI y fecha de nacimiento de cada adolescente.';
         END IF;
 
         BEGIN
@@ -189,7 +189,7 @@ BEGIN
             RETURN format('La fecha de nacimiento de %s no es válida.', btrim(v_j->>'nombre'));
         END;
 
-        -- Nocturna es para jóvenes de 13 a 18 años, inclusive y sin excepciones.
+        -- Nocturna es para adolescentes de 13 a 18 años, inclusive y sin excepciones.
         --
         -- Se mide contra el DÍA DEL EVENTO, no contra hoy: quien cumple 13 la
         -- semana anterior entra, y quien cumple 19 antes del viernes queda
@@ -198,7 +198,7 @@ BEGIN
         v_edad := date_part('year', age(v_fecha_evento, v_nac))::INTEGER;
         IF v_edad < v_edad_minima OR v_edad > v_edad_maxima THEN
             RETURN format(
-                'Nocturna es para jóvenes de %s a %s años. %s va a tener %s el día del evento.',
+                'Nocturna es para adolescentes de %s a %s años. %s va a tener %s el día del evento.',
                 v_edad_minima, v_edad_maxima, btrim(v_j->>'nombre'), v_edad);
         END IF;
 
@@ -240,15 +240,15 @@ BEGIN
     END IF;
 
     -- ── Una persona, una vez ────────────────────────────────────────────────
-    -- Arriba se controló que no se repita un JOVEN. Falta la otra mitad: el
+    -- Arriba se controló que no se repita un ADOLESCENTE. Falta la otra mitad: el
     -- adulto responsable también entra al evento, y el DNI no distingue entre
-    -- "adulto" y "joven" — es la misma persona en las dos listas.
+    -- "adulto" y "adolescente" — es la misma persona en las dos listas.
     v_dni_adulto := btrim(v_adulto->>'dni');
 
-    -- El adulto cargado también como joven, en este mismo formulario.
+    -- El adulto cargado también como adolescente, en este mismo formulario.
     IF v_dni_adulto = ANY (v_dnis) THEN
         RETURN format(
-            'El DNI %s está cargado como adulto responsable y como joven en la misma inscripción.',
+            'El DNI %s está cargado como adulto responsable y como adolescente en la misma inscripción.',
             v_dni_adulto);
     END IF;
 
@@ -260,21 +260,21 @@ BEGIN
         AND (p_excluir_inscripcion IS NULL OR i.id IS DISTINCT FROM p_excluir_inscripcion);
     IF FOUND THEN
         RETURN format(
-            'Ya hay una inscripción con el DNI %s como adulto responsable. Si falta agregar un joven, se agrega a esa inscripción.',
+            'Ya hay una inscripción con el DNI %s como adulto responsable. Si falta agregar un adolescente, se agrega a esa inscripción.',
             v_dni_adulto);
     END IF;
 
-    -- El adulto ya está anotado, pero como joven.
+    -- El adulto ya está anotado, pero como adolescente.
     PERFORM 1
        FROM public.nocturna_jovenes j
       WHERE j.edicion = p_edicion
         AND btrim(j.dni) = v_dni_adulto
         AND (p_excluir_inscripcion IS NULL OR j.inscripcion_id IS DISTINCT FROM p_excluir_inscripcion);
     IF FOUND THEN
-        RETURN format('El DNI %s ya está inscripto como joven.', v_dni_adulto);
+        RETURN format('El DNI %s ya está inscripto como adolescente.', v_dni_adulto);
     END IF;
 
-    -- Un joven que ya está anotado como adulto responsable.
+    -- Un adolescente que ya está anotado como adulto responsable.
     SELECT btrim(i.adulto_dni) INTO v_dup
       FROM public.nocturna_inscripciones i
      WHERE i.edicion = p_edicion

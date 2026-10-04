@@ -102,7 +102,7 @@ BEGIN
 
     v_n := jsonb_array_length(v_jovenes);
     IF v_n IS NULL OR v_n < 1 THEN
-        RETURN 'Agregá al menos un joven a la inscripción.';
+        RETURN 'Agregá al menos un adolescente a la inscripción.';
     END IF;
 
     IF COALESCE((p_payload->>'autorizaAsistencia')::BOOLEAN, false) IS NOT TRUE THEN
@@ -128,7 +128,7 @@ BEGIN
         OR btrim(COALESCE(v_j->>'apellido','')) = ''
         OR btrim(COALESCE(v_j->>'dni',''))      = ''
         OR COALESCE(v_j->>'fechaNacimiento','') = '' THEN
-            RETURN 'Completá nombre, apellido, DNI y fecha de nacimiento de cada joven.';
+            RETURN 'Completá nombre, apellido, DNI y fecha de nacimiento de cada adolescente.';
         END IF;
 
         BEGIN
@@ -361,7 +361,7 @@ BEGIN
             BEGIN
                 v_ids := v_ids || (v_j->>'id')::UUID;
             EXCEPTION WHEN others THEN
-                RETURN jsonb_build_object('ok', false, 'error', 'Uno de los jóvenes tiene un identificador inválido.');
+                RETURN jsonb_build_object('ok', false, 'error', 'Uno de los adolescentes tiene un identificador inválido.');
             END;
         END IF;
     END LOOP;
@@ -375,7 +375,7 @@ BEGIN
         WHERE j.id = u AND j.inscripcion_id = p_inscripcion_id
     );
     IF v_ajenos > 0 THEN
-        RETURN jsonb_build_object('ok', false, 'error', 'Alguno de los jóvenes no pertenece a esta inscripción.');
+        RETURN jsonb_build_object('ok', false, 'error', 'Alguno de los adolescentes no pertenece a esta inscripción.');
     END IF;
 
     -- ── No se puede quitar a alguien que ya entró ───────────────────────────

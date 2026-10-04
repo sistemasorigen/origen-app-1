@@ -235,7 +235,7 @@ BEGIN
     v_jovenes := COALESCE(p_payload->'jovenes', '[]'::jsonb);
     v_n := jsonb_array_length(v_jovenes);
     IF v_n IS NULL OR v_n < 1 THEN
-        RETURN jsonb_build_object('ok', false, 'error', 'Agregá al menos un joven.');
+        RETURN jsonb_build_object('ok', false, 'error', 'Agregá al menos un adolescente.');
     END IF;
 
     -- La misma validación que el alta, con el adulto REAL de la inscripción

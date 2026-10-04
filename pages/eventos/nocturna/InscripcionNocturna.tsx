@@ -23,6 +23,7 @@ import {
     OTRO_VACIO,
     OtroForm,
     plata,
+    RESTRICCIONES,
     retiroCompleto,
     soloDigitos,
     TEXTO_AUTORIZACION,
@@ -35,6 +36,7 @@ import {
     NocturnaChicoDelGrupo,
     NocturnaConfig,
     NocturnaGrupo,
+    NocturnaRestriccion,
     NocturnaTribu,
 } from '../../../types';
 
@@ -112,14 +114,17 @@ const RUTA = '/nocturna-inscripcion';
 // el alias, pero no quedar guardado para siempre en un dispositivo
 // compartido. Son datos de menores.
 const CLAVE_BORRADOR = 'nocturna.inscripcion.borrador';
-const VERSION_BORRADOR = 2;
+const VERSION_BORRADOR = 3;
 
 interface Comprobante {
     path: string;
     nombre: string;
 }
 
-type Pantalla = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 'noAut';
+// 6 es la de comida y 7 la del pago; la 8 es el final. Si se agrega una
+// pantalla en el medio hay que mover TODOS los números de acá abajo: la barra
+// de pasos, puedeSeguir, el borrador y los saltos de `agregando`.
+type Pantalla = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 'noAut';
 
 interface Borrador {
     v: number;
@@ -132,6 +137,7 @@ interface Borrador {
     otro: OtroForm;
     autoriza: boolean | null;
     fotos: boolean | null;
+    restriccion: NocturnaRestriccion | null;
     comprobante: Comprobante | null;
     /**
      * La inscripción a la que se le están sumando chicos, si es ese el caso.
@@ -150,6 +156,7 @@ const chicoNuevo = (apellido = ''): ChicoForm => ({
     dni: '',
     nac: '',
     tribu: '',
+    restriccion: 'ninguna',
 });
 
 // ── Estilo ────────────────────────────────────────────────────────────────
@@ -333,6 +340,15 @@ const InscripcionNocturna: React.FC = () => {
     const [otro, setOtro] = useState<OtroForm>(OTRO_VACIO);
     const [autoriza, setAutoriza] = useState<boolean | null>(null);
     const [fotos, setFotos] = useState<boolean | null>(null);
+    /**
+     * La respuesta de la familia sobre comida.
+     *
+     * Lo que se guarda es la restricción de CADA adolescente (vive en su ficha);
+     * esto es la pregunta de la pantalla, que hace falta aparte para
+     * distinguir "dijo que ninguno" de "todavía no contestó". Las dos dejan a
+     * todos en 'ninguna'.
+     */
+    const [restriccion, setRestriccion] = useState<NocturnaRestriccion | null>(null);
     const [comprobante, setComprobante] = useState<Comprobante | null>(null);
 
     const [intento, setIntento] = useState(false);
@@ -436,9 +452,10 @@ const InscripcionNocturna: React.FC = () => {
                         setOtro({ ...OTRO_VACIO, ...(b.otro || {}) });
                         setAutoriza(b.autoriza ?? null);
                         setFotos(b.fotos ?? null);
+                        setRestriccion(b.restriccion ?? null);
                         setComprobante(b.comprobante ?? null);
                         if (b.grupo?.verificado) setGrupo(b.grupo);
-                        const paso = Math.min(6, Math.max(1, Number(b.paso) || 1));
+                        const paso = Math.min(7, Math.max(1, Number(b.paso) || 1));
                         setPantalla(paso as Pantalla);
                     } else {
                         sessionStorage.removeItem(CLAVE_BORRADOR);
@@ -463,7 +480,7 @@ const InscripcionNocturna: React.FC = () => {
     useEffect(() => {
         if (cargando || !config || saliendo.current) return;
         const paso = pantalla === 'noAut' ? 4 : pantalla;
-        if (typeof paso !== 'number' || paso < 1 || paso > 6) return;
+        if (typeof paso !== 'number' || paso < 1 || paso > 7) return;
         const b: Borrador = {
             v: VERSION_BORRADOR,
             edicion: config.edicion,
@@ -475,11 +492,12 @@ const InscripcionNocturna: React.FC = () => {
             otro,
             autoriza,
             fotos,
+            restriccion,
             comprobante,
             grupo,
         };
         try { sessionStorage.setItem(CLAVE_BORRADOR, JSON.stringify(b)); } catch { /* sin storage */ }
-    }, [cargando, config, pantalla, adulto, chicos, retiro, retiroQuien, otro, autoriza, fotos, comprobante]);
+    }, [cargando, config, pantalla, adulto, chicos, retiro, retiroQuien, otro, autoriza, fotos, restriccion, comprobante]);
 
     // ── Autocompletado desde la cuenta ────────────────────────────────────
     const cuenta = useMemo(() => {
@@ -532,7 +550,7 @@ const InscripcionNocturna: React.FC = () => {
     const cantidad = chicos.length;
     const total = precio * cantidad;
     const varios = cantidad > 1;
-    const nombres = chicos.map(c => c.nombre.trim() || 'un joven');
+    const nombres = chicos.map(c => c.nombre.trim() || 'un adolescente');
 
     const edadAdulto = calcularEdad(adulto.nac);
     const adultoEsMenor = adultoEsMenorDeEdad(adulto);
@@ -545,6 +563,11 @@ const InscripcionNocturna: React.FC = () => {
     const ok2 = chicosCompletos(chicos);
     const ok3 = retiroCompleto(retiro === null ? null : retiro === 'si', retiroQuien, otro);
 
+    // Contestó lo de comida: o dijo que ninguno, o dijo cuál y marcó a
+    // alguien. Decir "celíaco" sin decir quién no le sirve a la cocina.
+    const ok6 = restriccion !== null
+        && (restriccion === 'ninguna' || chicos.some(c => c.restriccion !== 'ninguna'));
+
     const puedeSeguir = ((): boolean => {
         switch (pantalla) {
             case 1: return ok1;
@@ -552,12 +575,21 @@ const InscripcionNocturna: React.FC = () => {
             case 3: return ok3;
             case 4: return autoriza === true;
             case 5: return fotos !== null;
-            case 6: return !!comprobante && !subiendo;
+            case 6: return ok6;
+            case 7: return !!comprobante && !subiendo;
             default: return false;
         }
     })();
 
-    const hayPie = typeof pantalla === 'number' && pantalla >= 1 && pantalla <= 6;
+    const hayPie = typeof pantalla === 'number' && pantalla >= 1 && pantalla <= 7;
+
+    // Para el resumen del final: "Celíaco: Lucas" o vacío si no hay nada.
+    const textoRestricciones = (() => {
+        const con = chicos.filter(c => c.restriccion !== 'ninguna');
+        if (con.length === 0) return '';
+        const etiqueta = RESTRICCIONES.find(r => r.valor === con[0].restriccion)?.corto || '';
+        return `${etiqueta}: ${enLista(con.map(c => c.nombre.trim() || 'un adolescente'))}`;
+    })();
 
     /**
      * Los que ya están anotados, en gris y con candado.
@@ -598,8 +630,13 @@ const InscripcionNocturna: React.FC = () => {
      * La autorización, en cambio, SÍ se vuelve a pedir: los chicos nuevos no
      * estaban en lo que firmó, y la base guarda esa constancia aparte.
      */
-    const ultimoPaso = agregando ? 5 : 6;
-    const pasoMostrado = agregando && pantalla === 6 ? 5 : pantalla;
+    const ultimoPaso = agregando ? 6 : 7;
+    // Sumando, la pantalla de fotos no se muestra: las que quedan son seis y
+    // se numeran de 1 a 6, aunque por dentro sean la 6 y la 7.
+    const pasoMostrado = !agregando ? pantalla
+        : pantalla === 6 ? 5
+            : pantalla === 7 ? 6
+                : pantalla;
 
     // ── Acciones ──────────────────────────────────────────────────────────
     const irA = (p: Pantalla) => {
@@ -705,6 +742,30 @@ const InscripcionNocturna: React.FC = () => {
         setComprobante({ path: res.path, nombre: file.name });
     };
 
+    /**
+     * La respuesta de la familia sobre comida.
+     *
+     * Cambiar de respuesta limpia lo marcado antes: si venía "celíaco: Celia"
+     * y ahora dicen "diabetes", Celia no puede quedar marcada por arrastre.
+     * Con un solo adolescente no hay a quién elegir, así que se marca solo.
+     */
+    const elegirRestriccion = (valor: NocturnaRestriccion) => {
+        setRestriccion(valor);
+        setChicos(cs => cs.map(c => ({
+            ...c,
+            restriccion: valor !== 'ninguna' && cs.length === 1 ? valor : 'ninguna',
+        })));
+    };
+
+    const alternarRestriccionDe = (id: string) => {
+        if (!restriccion || restriccion === 'ninguna') return;
+        setChicos(cs => cs.map(c => (
+            c.id === id
+                ? { ...c, restriccion: c.restriccion === restriccion ? 'ninguna' : restriccion }
+                : c
+        )));
+    };
+
     const quitarComprobante = () => {
         // El archivo ya subido queda en el bucket privado sin fila que lo
         // referencie. Borrarlo desde acá pediría DELETE para anon, que es
@@ -760,7 +821,7 @@ const InscripcionNocturna: React.FC = () => {
         setEnviando(false);
         // enviandoRef queda en true: la inscripción ya existe y un segundo
         // toque no puede crear otra.
-        irA(7);
+        irA(8);
     };
 
     /**
@@ -812,7 +873,7 @@ const InscripcionNocturna: React.FC = () => {
             return;
         }
         if (pantalla === 1) { void revisarSiYaEstaInscripto(); return; }
-        if (pantalla === 6) { enviar(); return; }
+        if (pantalla === 7) { enviar(); return; }
         // Sumando, de la autorización se va derecho al pago: lo de las fotos
         // ya está contestado para esta inscripción.
         if (agregando && pantalla === 4) { irA(6); return; }
@@ -994,15 +1055,17 @@ const InscripcionNocturna: React.FC = () => {
     const pendienteTexto = pantalla === 1
         ? 'Completá todos tus datos para seguir.'
         : pantalla === 2
-            ? cantidad === 0 ? 'Agregá al menos un joven.'
-                : incompletos.length === 1 ? `A ${incompletos[0].nombre.trim() || 'un joven'} le faltan datos.`
-                    : `Hay ${incompletos.length} jóvenes con datos incompletos.`
+            ? cantidad === 0 ? 'Agregá al menos un adolescente.'
+                : incompletos.length === 1 ? `A ${incompletos[0].nombre.trim() || 'un adolescente'} le faltan datos.`
+                    : `Hay ${incompletos.length} adolescentes con datos incompletos.`
             : pantalla === 3 ? 'Elegí cómo se retiran.'
                 : pantalla === 4 ? 'Elegí una opción.'
                     : pantalla === 5 ? 'Elegí una opción. Cualquiera te deja seguir.'
-                        : pantalla === 6 ? 'Subí el comprobante para terminar.' : '';
+                        : pantalla === 6
+                            ? (restriccion === null ? 'Elegí una opción.' : 'Marcá quién tiene esa restricción.')
+                            : pantalla === 7 ? 'Subí el comprobante para terminar.' : '';
 
-    const etiquetaSeguir = pantalla === 1 ? 'Continuar' : pantalla === 6 ? 'Listo' : 'Siguiente';
+    const etiquetaSeguir = pantalla === 1 ? 'Continuar' : pantalla === 7 ? 'Listo' : 'Siguiente';
 
     return (
         <Marco sinBarra={portadaConFoto}>
@@ -1044,7 +1107,7 @@ const InscripcionNocturna: React.FC = () => {
                             <div className="grid gap-2 mt-3.5" style={{ gridTemplateColumns: '2fr 3fr 1fr' }}>
                                 {([
                                     ['1 · Datos', 1, 2],
-                                    ['2 · Información', 3, agregando ? 4 : 5],
+                                    ['2 · Información', 3, agregando ? 5 : 6],
                                     ['3 · Pago', ultimoPaso, ultimoPaso],
                                 ] as [string, number, number][]).map(([label, ini, fin]) => {
                                     const p = pasoMostrado as number;
@@ -1234,8 +1297,8 @@ const InscripcionNocturna: React.FC = () => {
                             explica por qué rompe el centrado. */}
                         <div className="mt-5 rounded-[20px]" style={{ background: PANEL, padding: '16px 18px' }}>
                             <p style={{ ...fuente(500, '13.5px', '1.6'), color: 'rgba(0,0,0,.66)', margin: 0 }}>
-                                <strong style={{ fontWeight: 600, color: INK }}>Es para jóvenes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.</strong>{' '}
-                                La completa un adulto responsable: vas a necesitar el DNI de cada joven y el comprobante de la transferencia.
+                                <strong style={{ fontWeight: 600, color: INK }}>Es para adolescentes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.</strong>{' '}
+                                La completa un adulto responsable: vas a necesitar el DNI de cada adolescente y el comprobante de la transferencia.
                             </p>
                         </div>
 
@@ -1314,7 +1377,7 @@ const InscripcionNocturna: React.FC = () => {
                 {pantalla === 1 && (
                     <div className="pt-4">
                         <Titulo>Tus datos</Titulo>
-                        <Bajada>Los del adulto responsable de los jóvenes.</Bajada>
+                        <Bajada>Los del adulto responsable de los adolescentes.</Bajada>
                         {!!cuenta && (
                             <div className="flex gap-3 rounded-[18px] mt-4" style={{ background: PANEL, padding: '14px 16px' }}>
                                 <Tilde />
@@ -1360,14 +1423,14 @@ const InscripcionNocturna: React.FC = () => {
                     </div>
                 )}
 
-                {/* Paso 2 — los jóvenes */}
+                {/* Paso 2 — los adolescentes */}
                 {pantalla === 2 && (
                     <div className="pt-4">
                         <Titulo>{agregando ? '¿A quién sumás?' : '¿A quién vas a anotar?'}</Titulo>
                         <Bajada>
                             {agregando
                                 ? 'Se agregan a la inscripción que ya tenés, sin tocar lo que está cargado.'
-                                : `Podés anotar a varios en esta misma inscripción. Nocturna es para jóvenes de ${EDAD_MINIMA} a ${EDAD_MAXIMA} años.`}
+                                : `Podés anotar a varios en esta misma inscripción. Nocturna es para adolescentes de ${EDAD_MINIMA} a ${EDAD_MAXIMA} años.`}
                         </Bajada>
 
                         {agregando && yaAnotados.length > 0 && (
@@ -1427,7 +1490,7 @@ const InscripcionNocturna: React.FC = () => {
                                                 </span>
                                                 <span className="flex-1 min-w-0">
                                                     <span className="block truncate" style={{ ...fuente(600, '15.5px'), color: INK }}>
-                                                        {nombreCompleto || `Joven ${i + 1}`}
+                                                        {nombreCompleto || `Adolescente ${i + 1}`}
                                                     </span>
                                                     <span className="block" style={{ ...fuente(500, '13px'), color: falt.length ? AMBAR_INK : 'rgba(0,0,0,.6)', marginTop: 3 }}>
                                                         {falt.length ? `Falta: ${falt.join(', ')}` : `${edad} años · ${c.tribu}`}
@@ -1443,7 +1506,7 @@ const InscripcionNocturna: React.FC = () => {
                                         ) : (
                                             <div style={{ padding: '18px 16px 16px' }}>
                                                 <div className="flex items-center gap-2.5">
-                                                    <Rotulo className="flex-1">{`JOVEN ${i + 1} DE ${cantidad}`}</Rotulo>
+                                                    <Rotulo className="flex-1">{`ADOLESCENTE ${i + 1} DE ${cantidad}`}</Rotulo>
                                                     <button
                                                         type="button"
                                                         onClick={() => quitarChico(c, i)}
@@ -1454,15 +1517,15 @@ const InscripcionNocturna: React.FC = () => {
                                                     </button>
                                                 </div>
                                                 <div className="grid gap-2 mt-2.5 grid-cols-1 lg:grid-cols-2">
-                                                    <input className="campo" value={c.nombre} placeholder="Nombre" aria-label="Nombre del joven" onChange={e => editarChico(c.id, 'nombre', e.target.value)} />
-                                                    <input className="campo" value={c.apellido} placeholder="Apellido" aria-label="Apellido del joven" onChange={e => editarChico(c.id, 'apellido', e.target.value)} />
+                                                    <input className="campo" value={c.nombre} placeholder="Nombre" aria-label="Nombre del adolescente" onChange={e => editarChico(c.id, 'nombre', e.target.value)} />
+                                                    <input className="campo" value={c.apellido} placeholder="Apellido" aria-label="Apellido del adolescente" onChange={e => editarChico(c.id, 'apellido', e.target.value)} />
                                                 </div>
                                                 <input
                                                     className="campo mt-2"
                                                     value={c.dni}
                                                     placeholder="DNI"
                                                     inputMode="numeric"
-                                                    aria-label="DNI del joven"
+                                                    aria-label="DNI del adolescente"
                                                     onChange={e => editarChico(c.id, 'dni', soloDigitos(e.target.value, 9))}
                                                 />
                                                 <p style={{ ...fuente(600, '13px'), color: 'rgba(0,0,0,.62)', margin: '18px 0 8px' }}>Fecha de nacimiento</p>
@@ -1472,7 +1535,7 @@ const InscripcionNocturna: React.FC = () => {
                                                         style={{ flex: 1, minWidth: 0 }}
                                                         type="date"
                                                         value={c.nac}
-                                                        aria-label="Fecha de nacimiento del joven"
+                                                        aria-label="Fecha de nacimiento del adolescente"
                                                         onChange={e => editarChico(c.id, 'nac', e.target.value)}
                                                     />
                                                     <span
@@ -1496,8 +1559,8 @@ const InscripcionNocturna: React.FC = () => {
                                                         className="rounded-[14px]"
                                                         style={{ ...fuente(500, '13px', '1.55'), color: AMBAR_INK, background: AMBAR, padding: '10px 12px', margin: '10px 0 0' }}
                                                     >
-                                                        Nocturna es para jóvenes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.{' '}
-                                                        {c.nombre.trim() || 'Este joven'} va a tener {edadEnNocturna} el día del evento.
+                                                        Nocturna es para adolescentes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.{' '}
+                                                        {c.nombre.trim() || 'Este adolescente'} va a tener {edadEnNocturna} el día del evento.
                                                     </p>
                                                 )}
                                                 <p style={{ ...fuente(600, '13px'), color: 'rgba(0,0,0,.62)', margin: '18px 0 8px' }}>Tribu</p>
@@ -1536,7 +1599,7 @@ const InscripcionNocturna: React.FC = () => {
                                                         ? `Falta: ${falt.join(', ')}`
                                                         : fueraDeEdad
                                                             ? 'No entra en la edad de Nocturna'
-                                                            : `Listo, guardar a ${c.nombre.trim() || 'este joven'}`}
+                                                            : `Listo, guardar a ${c.nombre.trim() || 'este adolescente'}`}
                                                 </button>
                                             </div>
                                         )}
@@ -1546,7 +1609,7 @@ const InscripcionNocturna: React.FC = () => {
                             {cantidad === 0 && (
                                 <div className="rounded-[22px] text-center" style={{ background: PANEL, padding: '28px 20px' }}>
                                     <p style={{ ...fuente(600, '15px'), color: INK, margin: 0 }}>Todavía no anotaste a nadie</p>
-                                    <p style={{ ...fuente(500, '13.5px'), color: 'rgba(0,0,0,.6)', margin: '6px 0 0' }}>Agregá al primer joven para seguir.</p>
+                                    <p style={{ ...fuente(500, '13.5px'), color: 'rgba(0,0,0,.6)', margin: '6px 0 0' }}>Agregá al primer adolescente para seguir.</p>
                                 </div>
                             )}
                             <button
@@ -1556,7 +1619,7 @@ const InscripcionNocturna: React.FC = () => {
                                 style={{ border: '1.5px dashed #d9d8d4', ...fuente(600, '15px'), color: INK }}
                             >
                                 <Plus className="w-[17px] h-[17px]" strokeWidth={2.4} />
-                                {cantidad ? 'Agregar otro joven' : 'Agregar un joven'}
+                                {cantidad ? 'Agregar otro adolescente' : 'Agregar un adolescente'}
                             </button>
                         </div>
                     </div>
@@ -1683,15 +1746,98 @@ const InscripcionNocturna: React.FC = () => {
                     </div>
                 )}
 
-                {/* Paso 6 — pago */}
+                {/* Paso 6 — comida */}
                 {pantalla === 6 && (
+                    <div className="pt-4">
+                        <Titulo>Comida</Titulo>
+                        <Bajada>Una sola pregunta, y es para que haya algo que puedan comer todos.</Bajada>
+
+                        <div className="rounded-[20px] mt-5" style={{ background: PANEL, padding: 20 }}>
+                            <p style={{ ...fuente(600, '15px'), color: INK, margin: 0 }}>
+                                ¿Alguno tiene una restricción alimentaria?
+                            </p>
+                            <p style={{ ...fuente(500, '14.5px', '1.65'), color: 'rgba(0,0,0,.66)', margin: '8px 0 0' }}>
+                                En Nocturna se come, y la comida se compra antes. Si alguno es celíaco o tiene diabetes, avisanos acá y le preparamos lo suyo aparte. Si no, elegí “Ninguna” y seguí.
+                            </p>
+                        </div>
+
+                        {/* En el teléfono una abajo de la otra, en pantalla grande
+                            las tres en fila: son tres botones cortos y apilados en
+                            un monitor quedan tres renglones de nada. */}
+                        <div className="grid gap-2 mt-4 sm:grid-cols-3">
+                            {RESTRICCIONES.map(r => (
+                                <Opcion
+                                    key={r.valor}
+                                    activa={restriccion === r.valor}
+                                    onClick={() => elegirRestriccion(r.valor)}
+                                >
+                                    {r.etiqueta}
+                                </Opcion>
+                            ))}
+                        </div>
+
+                        {restriccion !== null && restriccion !== 'ninguna' && (
+                            <div className="mt-5">
+                                <Rotulo margen="0 2px 10px">
+                                    {chicos.length === 1 ? 'QUIÉN' : '¿QUIÉNES? PODÉS MARCAR VARIOS'}
+                                </Rotulo>
+
+                                {/* Casillas y no un menú desplegable: elegir de una
+                                    lista corta con el pulgar es un toque por persona,
+                                    y un <select multiple> en el celular se opera
+                                    peleando con el teclado. */}
+                                <div className="flex flex-col gap-2">
+                                    {chicos.map(c => {
+                                        const marcado = c.restriccion === restriccion;
+                                        const nombreChico = `${c.nombre} ${c.apellido}`.trim();
+                                        return (
+                                            <button
+                                                key={c.id}
+                                                type="button"
+                                                onClick={() => alternarRestriccionDe(c.id)}
+                                                aria-pressed={marcado}
+                                                className="border-0 rounded-[20px] cursor-pointer flex items-center gap-3 text-left transition-colors"
+                                                style={{
+                                                    minHeight: 58,
+                                                    padding: '14px 16px',
+                                                    background: marcado ? INK : CAMPO,
+                                                    color: marcado ? '#fff' : INK,
+                                                }}
+                                            >
+                                                <span
+                                                    className="w-[22px] h-[22px] rounded-[7px] flex items-center justify-center flex-none"
+                                                    style={{
+                                                        background: marcado ? '#fff' : 'transparent',
+                                                        boxShadow: marcado ? 'none' : 'inset 0 0 0 1.5px rgba(0,0,0,.25)',
+                                                    }}
+                                                >
+                                                    {marcado && <Check className="w-[14px] h-[14px]" style={{ color: INK }} strokeWidth={3} />}
+                                                </span>
+                                                <span className="min-w-0 truncate" style={{ ...fuente(600, '15px') }}>
+                                                    {nombreChico || 'Sin nombre'}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <p style={{ ...fuente(500, '12.5px', '1.55'), color: 'rgba(0,0,0,.55)', margin: '10px 2px 0' }}>
+                                    Esto lo ve el equipo de cocina. No es un diagnóstico ni queda en ningún otro lado.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Paso 7 — pago */}
+                {pantalla === 7 && (
                     <div className="pt-4">
                         <Titulo>Pago</Titulo>
                         <div className="rounded-[22px] mt-4" style={{ background: INK, padding: 20 }}>
                             <p style={{ ...fuente(600, '13px'), color: 'rgba(255,255,255,.6)', margin: 0 }}>Total a transferir</p>
                             <p style={{ ...fuente(600, '36px'), color: '#fff', letterSpacing: '-.03em', margin: '6px 0 0' }}>{plata(total)}</p>
                             <p style={{ ...fuente(500, '13px'), color: 'rgba(255,255,255,.66)', margin: '4px 0 0' }}>
-                                {cantidad} {cantidad === 1 ? 'joven' : 'jóvenes'} × {plata(precio)}
+                                {cantidad} {cantidad === 1 ? 'adolescente' : 'adolescentes'} × {plata(precio)}
                             </p>
                             {/* Sumando, el monto es sólo por los nuevos y al precio
                                 que pagó esta familia. Sin esta línea, quien ya pagó
@@ -1871,7 +2017,7 @@ const InscripcionNocturna: React.FC = () => {
                 )}
 
                 {/* Paso 7 — confirmación */}
-                {pantalla === 7 && resultado && (
+                {pantalla === 8 && resultado && (
                     <div className="pt-8 pb-4">
                         <div className="text-center">
                             <div className="w-[60px] h-[60px] mx-auto rounded-full flex items-center justify-center" style={{ background: '#eaf6ee' }}>
@@ -1905,9 +2051,10 @@ const InscripcionNocturna: React.FC = () => {
                         </div>
                         <div className="mt-3.5">
                             {([
-                                [varios ? 'Jóvenes' : 'Joven', enLista(chicos.map(c => `${c.nombre} ${c.apellido}`.trim() || 'Sin nombre'))],
+                                [varios ? 'Adolescentes' : 'Adolescente', enLista(chicos.map(c => `${c.nombre} ${c.apellido}`.trim() || 'Sin nombre'))],
                                 ['A nombre de', nombreAdulto || '—'],
                                 ['Retiro', retiroTexto],
+                                ...(textoRestricciones ? [['Comida', textoRestricciones] as [string, string]] : []),
                                 ['Pagado', plata(resultado.total ?? total)],
                             ] as [string, string][]).map(([k, v]) => (
                                 <div key={k} className="flex justify-between gap-3.5" style={{ padding: '12px 4px', borderBottom: '1px solid #f0efec' }}>
@@ -1923,7 +2070,7 @@ const InscripcionNocturna: React.FC = () => {
                 )}
             </main>
 
-            {/* Deshacer el quitado de un joven */}
+            {/* Deshacer el quitado de un adolescente */}
             {quitado && pantalla === 2 && (
                 <div className="fixed left-4 right-4 z-30 flex justify-center pointer-events-none" style={{ bottom: 104 }}>
                     <div
@@ -1931,7 +2078,7 @@ const InscripcionNocturna: React.FC = () => {
                         style={{ maxWidth: 420, background: INK, padding: '10px 10px 10px 18px' }}
                     >
                         <span className="flex-1 min-w-0" style={{ ...fuente(600, '13.5px'), color: '#fff' }}>
-                            Quitaste a {quitado.chico.nombre.trim() || 'un joven'}
+                            Quitaste a {quitado.chico.nombre.trim() || 'un adolescente'}
                         </span>
                         <button
                             type="button"
@@ -1960,13 +2107,13 @@ const InscripcionNocturna: React.FC = () => {
                         style={{ maxWidth: 596, paddingBottom: 'calc(18px + env(safe-area-inset-bottom))' }}
                     >
                         <div className="flex items-center gap-3.5">
-                            {(pantalla === 2 || pantalla === 6) && (
+                            {(pantalla === 2 || pantalla === 7) && (
                                 <div className="flex-1 min-w-0">
                                     <p style={{ ...fuente(600, '17px'), color: INK, margin: 0 }}>{plata(total)}</p>
                                     <p style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.58)', margin: '2px 0 0' }}>
                                         {cantidad
-                                            ? `${cantidad} ${cantidad === 1 ? 'joven' : 'jóvenes'} × ${plata(precio)}`
-                                            : 'Agregá al menos un joven'}
+                                            ? `${cantidad} ${cantidad === 1 ? 'adolescente' : 'adolescentes'} × ${plata(precio)}`
+                                            : 'Agregá al menos un adolescente'}
                                     </p>
                                 </div>
                             )}
@@ -1979,7 +2126,7 @@ const InscripcionNocturna: React.FC = () => {
                                 // falta. Anunciarlo como deshabilitado sería
                                 // mentirle a quien usa lector de pantalla.
                                 aria-describedby={intento && !puedeSeguir ? 'noc-pendiente' : undefined}
-                                className={`h-[54px] rounded-full border-0 flex items-center justify-center gap-2 ${pantalla === 2 || pantalla === 6 ? 'flex-none' : 'flex-1'}`}
+                                className={`h-[54px] rounded-full border-0 flex items-center justify-center gap-2 ${pantalla === 2 || pantalla === 7 ? 'flex-none' : 'flex-1'}`}
                                 style={{
                                     padding: '0 30px',
                                     ...fuente(600, '15.5px'),
@@ -2017,7 +2164,7 @@ const InscripcionNocturna: React.FC = () => {
                                     Ya tenés una inscripción
                                 </p>
                                 <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0' }}>
-                                    Con tu DNI ya {(aviso.chicos?.length ?? 0) === 1 ? 'hay un joven anotado' : `hay ${aviso.chicos?.length ?? 0} jóvenes anotados`} para Nocturna. No hace falta hacer otra: podés sumar a quien falte acá mismo y queda todo en la misma entrada.
+                                    Con tu DNI ya {(aviso.chicos?.length ?? 0) === 1 ? 'hay un adolescente anotado' : `hay ${aviso.chicos?.length ?? 0} adolescentes anotados`} para Nocturna. No hace falta hacer otra: podés sumar a quien falte acá mismo y queda todo en la misma entrada.
                                 </p>
 
                                 <div className="mt-4">{listaDeChicos(aviso.chicos ?? [])}</div>

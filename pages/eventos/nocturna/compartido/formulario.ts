@@ -1,4 +1,4 @@
-import { NocturnaJovenPayload, NocturnaPayload, NocturnaRetiro, NocturnaTribu } from '../../../../types';
+import { NocturnaJovenPayload, NocturnaPayload, NocturnaRestriccion, NocturnaRetiro, NocturnaTribu } from '../../../../types';
 import { aplicarRetiroFamiliar, calcularEdad, edadEnElEvento, edadHabilitada, esMayorDeEdad } from '../../../../src/utils/nocturna';
 
 /**
@@ -66,7 +66,26 @@ export interface ChicoForm {
     dni: string;
     nac: string;
     tribu: NocturnaTribu | '';
+    /**
+     * Lo que no puede comer.
+     *
+     * Vive en cada adolescente aunque la inscripción pública lo pregunte una vez
+     * para toda la familia: es el dato de una persona, no de un grupo, y el
+     * día que una familia tenga un celíaco y un diabético esto no hay que
+     * rehacerlo.
+     */
+    restriccion: NocturnaRestriccion;
 }
+
+/** Cómo se nombra cada restricción en pantalla. */
+export const RESTRICCIONES: { valor: NocturnaRestriccion; etiqueta: string; corto: string }[] = [
+    { valor: 'ninguna',  etiqueta: 'Ninguna',  corto: '—' },
+    { valor: 'diabetes', etiqueta: 'Diabetes', corto: 'Diabetes' },
+    { valor: 'celiaco',  etiqueta: 'Celíaco',  corto: 'Celíaco' },
+];
+
+export const etiquetaRestriccion = (r: NocturnaRestriccion | undefined): string =>
+    RESTRICCIONES.find(x => x.valor === (r || 'ninguna'))?.corto || '—';
 
 export interface OtroForm {
     nombre: string;
@@ -189,6 +208,7 @@ export const armarPayloadNocturna = (opciones: {
         dni: c.dni.trim(),
         fechaNacimiento: c.nac,
         tribu: (c.tribu || 'Sin tribu') as NocturnaTribu,
+        restriccion: c.restriccion || 'ninguna',
     }));
 
     const jovenes: NocturnaJovenPayload[] = aplicarRetiroFamiliar(

@@ -15,6 +15,7 @@ import {
     ChicoForm,
     chicoFueraDeEdad,
     chicosCompletos,
+    RESTRICCIONES,
     edadDelChicoEnElEvento,
     faltanDelChico,
     OTRO_VACIO,
@@ -75,6 +76,7 @@ const chicoNuevo = (apellido = ''): ChicoForm => ({
     dni: '',
     nac: '',
     tribu: '',
+    restriccion: 'ninguna',
 });
 
 const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = false }) => {
@@ -143,6 +145,7 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                     dni: j.dni,
                     nac: (j.fechaNacimiento || '').slice(0, 10),
                     tribu: j.tribu,
+                    restriccion: j.restriccion || 'ninguna',
                 })));
                 const primero = (i.jovenes || [])[0];
                 const tipo = primero?.retiro?.tipo;
@@ -188,9 +191,9 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
         const f: string[] = [];
         if (!adultoCompleto(adulto)) f.push(adultoMenor ? 'el adulto es menor de 18' : 'datos del adulto');
         const incompletos = chicos.filter(c => faltanDelChico(c).length);
-        if (!chicos.length) f.push('agregar un joven');
-        else if (incompletos.length === 1) f.push(`datos de ${incompletos[0].nombre.trim() || 'el joven'}`);
-        else if (incompletos.length > 1) f.push(`datos de ${incompletos.length} jóvenes`);
+        if (!chicos.length) f.push('agregar un adolescente');
+        else if (incompletos.length === 1) f.push(`datos de ${incompletos[0].nombre.trim() || 'el adolescente'}`);
+        else if (incompletos.length > 1) f.push(`datos de ${incompletos.length} adolescentes`);
         if (!retiroCompleto(seRetiranSolos, quienRetira, otro)) f.push('cómo se retiran');
         if (!autoriza) f.push('la autorización');
         if (aceptaFotos === null) f.push('la respuesta sobre fotos');
@@ -368,7 +371,7 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                     </div>
                     <p className="text-center" style={{ ...fuente(600, '20px'), color: INK, margin: '16px 0 0' }}>Cambios guardados</p>
                     <p className="text-center" style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '8px 0 0' }}>
-                        {adulto.nombre} {adulto.apellido} · {guardado.chicos} {guardado.chicos === 1 ? 'joven' : 'jóvenes'}
+                        {adulto.nombre} {adulto.apellido} · {guardado.chicos} {guardado.chicos === 1 ? 'adolescente' : 'adolescentes'}
                     </p>
 
                     {dif !== 0 && (
@@ -546,16 +549,16 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                                     )}
                                 </Carta>
 
-                                {/* 2 · Jóvenes */}
+                                {/* 2 · Adolescentes */}
                                 <Carta
-                                    rotulo="2 · JÓVENES"
-                                    extra={<span style={{ ...fuente(600, '12px'), color: 'rgba(0,0,0,.55)' }}>{cantidad} {cantidad === 1 ? 'joven' : 'jóvenes'}</span>}
+                                    rotulo="2 · ADOLESCENTES"
+                                    extra={<span style={{ ...fuente(600, '12px'), color: 'rgba(0,0,0,.55)' }}>{cantidad} {cantidad === 1 ? 'adolescente' : 'adolescentes'}</span>}
                                 >
                                     {chicos.map((c, i) => (
                                         <div key={c.id} className="rounded-[16px]" style={{ marginTop: 12, padding: 14, background: '#fafaf9' }}>
                                             <div className="flex items-center gap-2 mb-2">
                                                 <span className="flex-1" style={{ ...fuente(600, '12.5px'), color: INK }}>
-                                                    Joven {i + 1}
+                                                    Adolescente {i + 1}
                                                 </span>
                                                 {chicos.length > 1 && (
                                                     <button
@@ -569,9 +572,9 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                                                 )}
                                             </div>
                                             <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-                                                <input className="campo campo--claro" value={c.nombre} placeholder="Nombre" aria-label={`Nombre del joven ${i + 1}`} onChange={e => editarChico(c.id, 'nombre', e.target.value)} />
-                                                <input className="campo campo--claro" value={c.apellido} placeholder="Apellido" aria-label={`Apellido del joven ${i + 1}`} onChange={e => editarChico(c.id, 'apellido', e.target.value)} />
-                                                <input className="campo campo--claro" value={c.dni} placeholder="DNI" inputMode="numeric" aria-label={`DNI del joven ${i + 1}`} onChange={e => editarChico(c.id, 'dni', soloDigitos(e.target.value, 9))} />
+                                                <input className="campo campo--claro" value={c.nombre} placeholder="Nombre" aria-label={`Nombre del adolescente ${i + 1}`} onChange={e => editarChico(c.id, 'nombre', e.target.value)} />
+                                                <input className="campo campo--claro" value={c.apellido} placeholder="Apellido" aria-label={`Apellido del adolescente ${i + 1}`} onChange={e => editarChico(c.id, 'apellido', e.target.value)} />
+                                                <input className="campo campo--claro" value={c.dni} placeholder="DNI" inputMode="numeric" aria-label={`DNI del adolescente ${i + 1}`} onChange={e => editarChico(c.id, 'dni', soloDigitos(e.target.value, 9))} />
                                             </div>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <input
@@ -579,7 +582,7 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                                                     style={{ flex: 1, minWidth: 0 }}
                                                     type="date"
                                                     value={c.nac}
-                                                    aria-label={`Fecha de nacimiento del joven ${i + 1}`}
+                                                    aria-label={`Fecha de nacimiento del adolescente ${i + 1}`}
                                                     onChange={e => editarChico(c.id, 'nac', e.target.value)}
                                                 />
                                                 <span
@@ -603,6 +606,28 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                                                     </button>
                                                 ))}
                                             </div>
+                                            {/* Comida. Por adolescente, que es como lo
+                                                guarda la base: acá el staff puede
+                                                cargar un celíaco y un diabético en
+                                                la misma familia, cosa que el
+                                                formulario público no deja. */}
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="flex-none" style={{ ...fuente(600, '11.5px'), color: 'rgba(0,0,0,.5)' }}>COMIDA</span>
+                                                <div className="grid grid-cols-3 gap-1.5 flex-1">
+                                                    {RESTRICCIONES.map(r => (
+                                                        <button
+                                                            key={r.valor}
+                                                            type="button"
+                                                            onClick={() => editarChico(c.id, 'restriccion', r.valor)}
+                                                            aria-pressed={c.restriccion === r.valor}
+                                                            className="border-0 rounded-full cursor-pointer"
+                                                            style={{ height: 38, background: c.restriccion === r.valor ? INK : CARTA, color: c.restriccion === r.valor ? '#fff' : INK, ...fuente(600, '12.5px') }}
+                                                        >
+                                                            {r.etiqueta}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
                                             {intento && !!faltanDelChico(c).length && (
                                                 <p style={{ ...fuente(500, '12px'), color: AMBAR_INK, margin: '8px 2px 0' }}>
                                                     Falta: {faltanDelChico(c).join(', ')}
@@ -617,8 +642,8 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                                                     className="rounded-[12px]"
                                                     style={{ ...fuente(500, '12.5px', '1.5'), color: AMBAR_INK, background: AMBAR, padding: '8px 10px', margin: '8px 0 0' }}
                                                 >
-                                                    Nocturna es para jóvenes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.{' '}
-                                                    {c.nombre.trim() || `El joven ${i + 1}`} va a tener {edadDelChicoEnElEvento(c)} el día del evento.
+                                                    Nocturna es para adolescentes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.{' '}
+                                                    {c.nombre.trim() || `El adolescente ${i + 1}`} va a tener {edadDelChicoEnElEvento(c)} el día del evento.
                                                 </p>
                                             )}
                                         </div>
@@ -629,7 +654,7 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                                         className="w-full bg-transparent cursor-pointer mt-2.5"
                                         style={{ height: 48, border: '1.5px dashed #d9d8d4', borderRadius: 16, ...fuente(600, '14px'), color: INK }}
                                     >
-                                        + Agregar otro joven
+                                        + Agregar otro adolescente
                                     </button>
                                 </Carta>
 
