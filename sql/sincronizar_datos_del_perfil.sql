@@ -30,6 +30,11 @@
 --
 --   SÍ · group_registrations (como titular y como pareja)
 --   SÍ · groups (nombre del anfitrión y del co-anfitrión)
+--        ⚠ Desde el 2026-10-05 esto ya lo hace un trigger sobre users, para
+--        cualquier cambio de nombre y no sólo al guardar el perfil: ver
+--        sql/sincronizar_nombre_anfitriones.sql. Los pasos 3 y 4 de la RPC
+--        quedan redundantes (no hacen daño) y el emparejado opcional de groups
+--        del final ya se corrió.
 --
 --   NO · baptisms, presentations, dianino_tickets, movements
 --        Son actas: dicen qué pasó y con qué nombre se hizo ese día.
