@@ -1,9 +1,24 @@
 # 🛸 Origen App — IA Instructions & Style Guide
-> Versión 5.0 · Obligatorio leer antes de cualquier intervención
+> Versión 6.0 · Octubre 2026 · Obligatorio leer antes de cualquier intervención
 
 Este archivo es la **memoria central y autoridad arquitectónica** del proyecto.
 Todo agente de IA que trabaje en este repositorio debe leerlo completo antes
 de escribir una sola línea de código. Su cumplimiento no es opcional.
+
+### ⚠️ Lo que cambió respecto de la v5.0 y más se rompe si se ignora
+
+1. **El router es `HashRouter`.** Las URLs son `/#/ruta`. La v5.0 decía
+   `BrowserRouter`: era falso. Ver secciones 1 y 7.12.
+2. **El estilo neo-brutalista quedó en el pasado.** La sección 8 de la v5.0
+   mandaba bordes negros gruesos, sombras duras y `font-black`. Seguirla
+   deshace el rediseño de toda la app. El estándar actual es el del login.
+3. **El repositorio es público** y `npm run deploy` hace `git add -A`: todo
+   lo que esté en la carpeta se publica. Ver sección 12.
+4. **Seguridad:** la auditoría de septiembre de 2026 encontró una escalación
+   a `SUPER_ADMIN` sin sesión y dos fugas de datos personales. Las reglas que
+   salieron de ahí están en la sección 12 y no son opcionales.
+5. **Verificar contra el código y la base, no contra este archivo.** Si algo
+   de acá no coincide con lo que hay, manda lo que hay — y se corrige acá.
 
 ---
 
@@ -13,19 +28,27 @@ de escribir una sola línea de código. Su cumplimiento no es opcional.
 |---|---|---|
 | Frontend | React 19 + TypeScript + Vite | Componentes funcionales, sin clases |
 | Estilos | Tailwind CSS vía CDN | Config personalizada en `index.html` |
-| Backend / DB | Supabase | Auth, Postgres, Storage, Edge Functions |
+| Backend / DB | Supabase | Auth, Postgres, Storage, Edge Functions, Realtime, `pg_net`, `pg_cron`, Vault |
 | IA / Texto | Google Gemini 2.5 Flash | `@google/generative-ai` + `@google/genai` |
 | Animaciones | Framer Motion 12 | `motion`, `AnimatePresence` |
-| Iconos | Lucide React 0.555 | Siempre desde `lucide-react` |
-| Física | Matter.js | Solo para efectos decorativos en Home |
-| Audio | Context API propio | `contexts/AudioContext.tsx` |
+| Iconos | Lucide React | Siempre desde `lucide-react` |
+| Routing | React Router DOM 7 | **`HashRouter`** — las URLs son `/#/ruta` |
+| Gráficos | Recharts | Dashboards con datos reales |
+| QR | `html5-qrcode` (escanear), `qrcode.react` (dibujar), `npm:qrcode` (Edge Functions) | |
+| Emails | Resend | **100 emails por día** en el plan actual (sección 35) |
+| Tutoriales | `react-joyride` | Configuración en `src/config/tours.ts` |
 | Estado global | React Context API | Sin Redux ni Zustand |
-| Routing | React Router DOM 7 | BrowserRouter (`/ruta`) |
-| Gráficos | Recharts 2 | Solo para dashboards de datos reales |
+| Audio | Context API propio | `contexts/AudioContext.tsx` |
 
 **Dependencias instaladas — NO instalar alternativas:**
-`clsx`, `framer-motion`, `idb`, `lucide-react`, `matter-js`, `react-easy-crop`,
-`react-joyride`, `react-router-dom`, `recharts`, `tailwind-merge`, `xlsx`
+`@google/genai`, `@google/generative-ai`, `@supabase/supabase-js`,
+`class-variance-authority`, `clsx`, `framer-motion`, `html5-qrcode`, `idb`,
+`lucide-react`, `qrcode.react`, `react-easy-crop`, `react-joyride`,
+`react-router-dom`, `recharts`, `tailwind-merge`, `xlsx`
+
+⚠️ **`matter-js` y `@types/matter-js` siguen instalados pero no se usan**
+(solo los importa el archivo huérfano `Home-IgnacioPC.tsx`). Pendiente:
+`npm uninstall matter-js @types/matter-js`. No usarlos en código nuevo.
 
 ---
 
@@ -34,31 +57,42 @@ de escribir una sola línea de código. Su cumplimiento no es opcional.
 ```
 origen-app/
 ├── components/
-│   ├── GCX/              # Módulo Grupos de Conexión (13 componentes)
+│   ├── GCX/              # Módulo Grupos de Conexión
 │   ├── Reportes/         # Paneles de analíticas
 │   ├── admin/            # Componentes del panel Admin
 │   ├── calendar/         # CalendarioIglesia.tsx
 │   ├── info-point/       # Sidebar y menús del Punto de Info
-│   ├── layout/           # Estructura, MenuDeslizable, ReproductorGlobal
-│   ├── media/            # SubidaImagen, SubidaAvatar, EntradaImagenInteligente
+│   ├── layout/           # Estructura, MenuDeslizable, AdminGCXLayout, ReproductorGlobal
+│   ├── media/            # SubidaImagen, SubidaVideo, SubidaAvatar, EncuadreMedia
 │   ├── modals/           # ModalLoginSistema, ModalCompletarPerfil, ModalCodigoQR
 │   ├── notifications/    # BannerPermisoNotificaciones, InterfazNotificaciones
-│   ├── onboarding/       # Tours interactivos (ControladorTutorial, TourBienvenida)
+│   ├── onboarding/       # Tours (ControladorTutorial, TourBienvenida)
 │   └── ui/               # NeoModal, CarruselHero, CargadorEsqueleto, LimiteError
 ├── contexts/             # AuthContext, AudioContext, NotificationContext
-├── hooks/                # useRole, useSpellingAI, usePushNotifications, etc.
+├── design-claude/        # Diseños exportados de Claude Design (*.dc.html) — sección 36
+├── hooks/                # useRole, useEscanerQR, useVersionCheck, useBarraDeProgreso,
+│                         # useBloqueoDeFondo, useAttendanceReminder, useSpellingAI, ...
 ├── pages/
-│   ├── admin/            # Administrador.tsx
-│   ├── audiencia/        # Pastores, AudienciaServiciosPrincipal, Formulario
-│   ├── auth/             # PantallaAutenticacion, ActualizarContrasena, etc.
-│   ├── bienvenida/       # Bienvenida, Formulario, modales de visitantes
-│   ├── coordinadores/    # Coordinadores y subpaneles
-│   ├── groups/           # Grupos, PanelAnfitrion
-│   ├── home/             # Home.tsx (Dashboard principal)
-│   ├── influos/          # InfluosPagina, InfluosAcceso, modales
+│   ├── admin/            # Administrador.tsx (/panel-admin), ConfiguracionApp.tsx
+│   ├── admingcx/         # Administración de GCX (/admingcx/*) — sección 21
+│   ├── audiencia/        # Audiencia de Servicios + Pastores (/reportes viejo)
+│   ├── auth/             # PantallaAutenticacion, ActualizarContrasena, ...
+│   ├── bienvenida/       # Planilla de ingresantes, alta, detalle, formulario público
+│   ├── coordinadores/    # Panel de coordinadores
+│   ├── eventos/          # PanelEventos, Eventos + dianino/, dpadre/, general/,
+│   │                     # influos/ (Tribal Wars), nocturna/
+│   ├── gcx/              # CalendarioGCX
+│   ├── groups/           # Grupos (/gcx), PanelAnfitrion y páginas de /mis-grupos
+│   ├── home/             # Home.tsx
+│   ├── influos/          # InfluosPagina, InfluosAcceso
+│   ├── ninez/            # Niñez y su configuración
 │   ├── primarias/        # PuntoInformacion, Tienda, Alabanza
-│   ├── punto-informacion/# Subvistas del Punto de Info + context/ContextoToast
+│   ├── prode/            # Prode Mundial 2026
+│   ├── punto-informacion/# Vistas del Punto de Info + context/ContextoToast
+│   ├── reportes/         # Reportes GCX (/reportes/gcx/*) — sección 31
+│   ├── trivia/           # Trivia Origen
 │   └── user/             # PaginaPerfil, Notificaciones, PaginaTutoriales
+├── scripts/              # generate-build-version, publish-dist, notify-deploy — sección 27
 ├── services/
 │   ├── supabaseClient.ts # Cliente Supabase (exporta `supabase`)
 │   ├── supabaseService.ts# Todas las queries a Supabase
@@ -67,14 +101,29 @@ origen-app/
 │   ├── geminiService.ts  # Corrector ortográfico con Gemini
 │   └── db.ts             # dbAPI — wrapper de supabaseService
 ├── src/
-│   ├── config/tours.ts   # Configuración de tours de onboarding
+│   ├── config/tours.ts   # Tours de onboarding (los pasos apuntan a ids del DOM)
 │   ├── hooks/            # useIsMobile, useTutorial
-│   └── utils/cropImage.ts# Utilidad de recorte de imágenes
-├── supabase/functions/   # Edge Functions (Deno + Resend)
-├── sql/                  # Migraciones y scripts SQL
+│   └── utils/            # ver tabla abajo
+├── supabase/functions/   # Edge Functions (Deno + Resend) — sección 10
+├── sql/                  # Migraciones y scripts. PROBAR_*.sql = suites de prueba
 ├── types.ts              # ÚNICA fuente de tipos globales
 └── App.tsx               # Rutas, providers, lógica de sesión
 ```
+
+**`src/utils/` — helpers puros, reusar antes de reescribir:**
+
+| Archivo | Qué hace |
+|---|---|
+| `calendario.ts` | Genera el `.ics` de la reunión semanal de un grupo |
+| `cropImage.ts` | Recorte de avatares (necesita un `pixelCrop`; no sirve para comprimir) |
+| `cupos.ts` | Cuántos lugares ocupa cada inscripción de un GCX (las parejas ocupan dos) |
+| `filtrosRecordados.ts` | Recordar los filtros de una lista mientras dura la sesión |
+| `mediaDeEntrada.ts` | Qué medios espera la pantalla de entrada antes de mostrar la app |
+| `modalidad.ts` | Modalidad de un grupo: presencial, online o híbrido |
+| `nocturna.ts` | `calcularEdad`, `esMayorDeEdad`, `comprimirImagen` y helpers de Nocturna |
+| `scrollRecordado.ts` | Recordar el scroll de una lista mientras dura la sesión |
+| `temporadaActiva.ts` | Si un grupo pertenece a la temporada abierta hoy |
+| `whatsapp.ts` | Armar el link de WhatsApp a partir de un teléfono cargado a mano |
 
 ---
 
@@ -118,54 +167,70 @@ import NeoModal from '@/components/ui/NeoModal';
 
 ## 5. RUTAS PÚBLICAS Y PROTEGIDAS
 
-Las rutas se declaran en `App.tsx`. Hay **tres zonas**:
+Las rutas se declaran en `App.tsx`. Hay **tres zonas**. La frontera real: todo
+lo que vive dentro del `<Route path="*">` (≈ línea 605) **exige sesión**; si no
+hay usuario, ese `*` muestra el login.
+
+**Regla de orden:** las rutas con parámetro (`:id`, `:groupId`) van **después**
+de las rutas literales del mismo nivel (`/nueva`, `/acreditar`, `/comp-temp`).
+Si no, el parámetro captura el literal como si fuera un id.
 
 ### Zona 1 — Públicas sin Layout (sin auth, sin chrome)
-| Ruta | Componente |
-|---|---|
-| `/auth` | PantallaAutenticacion |
-| `/update-password` | ActualizarContrasena |
-| `/verify-email` | VerificarEmail |
-| `/form` | Formulario (público de bienvenida) |
-| `/influos-acceso` | InfluosAcceso (verificador público) |
-
-### Zona 2 — Públicas con Layout (sin auth, con chrome)
-Accesibles sin login. `currentUser` puede ser `null` en estos componentes.
 | Ruta | Componente | Notas |
 |---|---|---|
-| `/` | Home / Dashboard | Sin sesión muestra contenido general |
-| `/gcx` | Grupos (Grupos.tsx) | Botón UNIRME requiere sesión para inscribirse |
+| `/auth` | PantallaAutenticacion | Acepta modo registro por query (leído del router) |
+| `/update-password` | ActualizarContrasena | |
+| `/verify-email` | VerificarEmail | |
+| `/form` | Formulario | Formulario público de Bienvenida |
+| `/dia-del-nino`, `/dia-del-nino/buscar` | Inscripción y búsqueda del Día del Niño | **Desactivadas** con `EVENT_ENDED` (sección 28) |
+| `/tribal-wars`, `/tribal-wars/buscar` | Inscripción y búsqueda de Tribal Wars | |
+| `/nocturna-inscripcion` | InscripcionNocturna | Sección 29 |
+| `/influos-acceso` | InfluosAcceso | Verificador público de tribu |
+| `/id-dpadre`, `/eventos/ranking-diadelpadre` | Día del Padre | |
+| `/trivia`, `/trivia/unirse/:pin`, `/trivia/jugar/:pin`, `/trivia/pantalla/:pin` | Trivia (jugador y proyector) | Sección 20 |
 
-### Zona 3 — Protegidas con Layout (requieren auth)
-Redirigen a `/auth` con `state.from` si no hay sesión activa.
-| Ruta | Módulo | Roles (guard en App.tsx) |
+**Caso especial:** `/panel-eventos/nocturna/acreditar` (escáner) está **fuera
+del Layout** a propósito —la navbar le quitaba un cuarto de pantalla al
+visor— pero **con guard de roles**: `SUPER_ADMIN`, `PASTOR`,
+`ENCARGADO_EVENTOS`, `ACREDITACION`.
+
+### Zona 2 — Públicas con Layout (sin auth, con chrome)
+`currentUser` puede ser `null`. Ver sección 7.6.
+| Ruta | Componente |
+|---|---|
+| `/` | Home |
+| `/gcx` | Grupos (catálogo público) |
+| `/eventos` | Eventos (listado público) |
+
+### Zona 3 — Requieren sesión (con Layout)
+"Sin rol" = basta con tener sesión.
+
+| Ruta | Módulo | Roles |
 |---|---|---|
-| `/punto-de-informacion` | Punto de Información | Todos (autenticados) |
-| `/panel-admin` | Sistemas / Admin | SUPER_ADMIN |
-| `/store` | Tienda | Todos (autenticados) |
-| `/alabanza` | Alabanza | Todos (autenticados) |
-| `/reportes` | Reportes | SUPER_ADMIN, PASTOR, ENCARGADO_PUNTO, ADMIN_PUNTO, ENCARGADO_GRUPOS, REPORTES, ADMIN_GROUPS |
-| `/bienvenida` | Bienvenida | SUPER_ADMIN, ENCARGADO_BIENVENIDA, VOLUNTARIO_BIENVENIDA |
-| `/influos` | Influos | SUPER_ADMIN, PASTOR, INFLUOS |
-| `/mis-grupos` | Panel Anfitrión | SUPER_ADMIN, ADMIN_GROUPS, ANFITRION, CO_ANFITRION |
-| `/coordinators` | Coordinadores | SUPER_ADMIN, COORDINATOR |
-| `/tutoriales` | Tutoriales | Todos (autenticados) |
-| `/audiencia-servicios` | Audiencia Servicios | SUPER_ADMIN, PASTOR, ADMIN_CUIDADO_PASTORAL |
-| `/audiencia-servicios/new` | Formulario Pastoral | SUPER_ADMIN, PASTOR, ADMIN_CUIDADO_PASTORAL |
-| `/notificaciones` | Notificaciones | Todos (autenticados) |
-| `/perfil` | Perfil Personal | Todos (autenticados) |
-| `/prode` | Prode Mundial | Solo gender='Masculino' |
-| `/prode/ranking` | Ranking Prode | Solo gender='Masculino' |
-| `/prode/resultados` | Resultados + Predicciones | Solo gender='Masculino' |
-| `/prode/administracion` | Admin Prode | SUPER_ADMIN, PASTOR, PRODE |
-| `/gcx/calendario` | Calendario GCX | Autenticados con grupos |
-| `/admingcx/*` (13 rutas) | Admin GCX | SUPER_ADMIN, ADMIN_GROUPS (+ ENCARGADO_GRUPOS en 7 de las 13) — ver sección 21 |
-| `/mis-grupos/*` (10 rutas) | Panel Anfitrión | SUPER_ADMIN, ADMIN_GROUPS, ANFITRION, CO_ANFITRION — ver sección 22 |
-| `/trivia/*` (públicas) | Trivia Origen (jugador/proyector) | Sin guard — ver sección 20 |
-| `/trivia/admin`, `/trivia/admin/nuevo`, `/trivia/admin/:id`, `/trivia/historial`, `/trivia/historial/:id` | Trivia Origen (admin) | SUPER_ADMIN, PASTOR, ENCARGADO_EVENTOS — ver sección 20 |
-| `/panel-eventos` | Panel de Eventos | SUPER_ADMIN, PASTOR, ENCARGADO_EVENTOS |
-| `/eventos` | Eventos (landing) | Autenticados, sin guard de rol |
-| `/eventos/admin/diadelpadre`, `/eventos/puntuacion`, `/eventos/futboltenis`, `/eventos/dpadre/:id` | Módulo Día del Padre | SUPER_ADMIN, PASTOR, ENCARGADO_EVENTOS (+ EVENTOS en 3 de las 4) |
+| `/punto-de-informacion` | Punto de Información | Sin rol (la vista interna se decide adentro por rol) |
+| `/punto-de-informacion/{anuncios,eventos,bautismos,prestamos,movimientos,presentacion-ninos}/nuevo` | Altas del Punto de Info | **Sin guard de rol** — ⚠️ verificar que cada página o el RLS bloquee a quien no corresponde |
+| `/panel-admin` | Admin general | Solo `SUPER_ADMIN` (`isSuperAdmin`) |
+| `/store`, `/alabanza`, `/tutoriales`, `/notificaciones`, `/perfil` | | Sin rol |
+| `/gcx/calendario` | Calendario GCX | Sin rol |
+| `/prode`, `/prode/ranking`, `/prode/resultados` | Prode | Sin rol; el género se chequea adentro (sección 18) |
+| `/prode/administracion` | Admin Prode | `SUPER_ADMIN`, `PASTOR`, `PRODE` |
+| `/reportes` | Reportes (versión vieja, `Pastores.tsx`) | `SUPER_ADMIN`, `PASTOR`, `ENCARGADO_PUNTO`, `ADMIN_PUNTO`, `ENCARGADO_GRUPOS`, `REPORTES`, `ADMIN_GROUPS` |
+| `/reportes/gcx`, `/reportes/gcx/comp-temp`, `/reportes/gcx/:groupId` | Reportes GCX | Los mismos 7 roles — sección 31 |
+| `/bienvenida`, `/bienvenida/nuevo`, `/bienvenida/v/:id` | Bienvenida | `SUPER_ADMIN`, `ENCARGADO_BIENVENIDA`, `VOLUNTARIO_BIENVENIDA` — sección 32 |
+| `/influos` | Influos | `SUPER_ADMIN`, `PASTOR`, `INFLUOS` |
+| `/mis-grupos/*` (12 rutas) | Panel de Anfitrión | `SUPER_ADMIN`, `ADMIN_GROUPS`, `ANFITRION`, `CO_ANFITRION` — sección 22 |
+| `/admingcx/*` (14 rutas) | Admin GCX | Ver sección 21 |
+| `/coordinators` | Coordinadores | `SUPER_ADMIN`, `ADMIN_GROUPS`, `COORDINATOR` |
+| `/audiencia-servicios`, `/audiencia-servicios/new`, `/audiencia-servicios/detalles/:id` | Audiencia de Servicios | `SUPER_ADMIN`, `PASTOR`, `ADMIN_CUIDADO_PASTORAL` — sección 33 |
+| `/ninez`, `/admin-ninez/configuracion` | Niñez | `SUPER_ADMIN`, `PASTOR`, `ENCARGADO_NINEZ` |
+| `/panel-eventos` | Panel de Eventos | `SUPER_ADMIN`, `PASTOR`, `ENCARGADO_EVENTOS`, `PRODE`, `ACREDITACION` |
+| `/eventos/admin/diadelnino`, `/nueva`, `/escaner`, `/escaner/:ticketId`, `/:sessionId` | Día del Niño (admin) | `SUPER_ADMIN`, `PASTOR`, `ENCARGADO_EVENTOS`, `ENCARGADO_NINEZ`, `ACREDITACION` |
+| `/panel-eventos/nocturna`, `/nueva`, `/:id`, `/:id/editar` | Nocturna (admin) | `SUPER_ADMIN`, `PASTOR`, `ENCARGADO_EVENTOS`, `ACREDITACION` |
+| `/eventos/admin/tribal-wars`, `/nueva` | Tribal Wars (admin) | `SUPER_ADMIN`, `PASTOR`, `ENCARGADO_EVENTOS`, `INFLUOS` |
+| `/eventos/admin/general`, `/crear-evento` | Eventos generales | `SUPER_ADMIN`, `ENCARGADO_EVENTOS` |
+| `/eventos/admin/diadelpadre` | Día del Padre (admin) | `SUPER_ADMIN`, `PASTOR`, `ENCARGADO_EVENTOS` |
+| `/eventos/puntuacion`, `/eventos/futboltenis`, `/eventos/dpadre/:id` | Día del Padre | `SUPER_ADMIN`, `PASTOR`, `EVENTOS`, `ENCARGADO_EVENTOS` |
+| `/trivia/admin`, `/nuevo`, `/:id`, `/trivia/historial`, `/:id` | Trivia (admin) | `SUPER_ADMIN`, `PASTOR`, `ENCARGADO_EVENTOS` |
 
 ---
 
@@ -178,36 +243,51 @@ enum UserRole {
     ANFITRION, CO_ANFITRION,
     ENCARGADO_PUNTO, ENCARGADO_GRUPOS, ENCARGADO_STORE,
     ENCARGADO_ALABANZA, ENCARGADO_BIENVENIDA,
+    ENCARGADO_NINEZ,    // Módulo Niñez + Día del Niño
     VOLUNTARIO, VOLUNTARIO_INFO, VOLUNTARIO_GRUPOS, VOLUNTARIO_BIENVENIDA,
-    COORDINATOR,        // Usa coordinatorVariants (array) — ver sección 25
+    COORDINATOR,        // Usa coordinatorVariants (array) — sección 25
     ADMIN_CUIDADO_PASTORAL,
-    INFLUOS,            // Módulo gestión de menores
+    INFLUOS,            // Módulo de menores + Tribal Wars
     REPORTES,
     PRODE,              // Administración del Prode Mundial
-    EVENTOS, ENCARGADO_EVENTOS,  // Módulo Eventos + Trivia Origen — ver secciones 20 y 25
-    USUARIO, VIEWER, VOLUNTEER  // Roles básicos / legacy
+    EVENTOS, ENCARGADO_EVENTOS,  // Eventos + Trivia — secciones 20 y 25
+    ACREDITACION,       // Puerta de eventos: Día del Niño y Nocturna (acceso completo a ambos)
+    USUARIO, VIEWER, VOLUNTEER   // Roles básicos / legacy
 }
 ```
 
-**⚠️ Desincronización conocida con el enum de Postgres (`user_role`):**
-`ADMIN_CUIDADO_PASTORAL` y `PRODE` existen en este enum de
-TypeScript pero **todavía no** en el enum `user_role` de la base de
-datos real — escribir esos valores en la columna `users.role`
-(singular, tipada) falla hasta correr un `ALTER TYPE ... ADD VALUE`
-manual. Ver sección 25 para el detalle y el patrón ya usado con
-`EVENTOS`/`ENCARGADO_EVENTOS` (`sql/fix_user_role_enum_eventos.sql`).
+**Dos columnas de rol conviven en `users`:**
+- `users.role` — singular, tipada con el enum `user_role` de Postgres
+- `users.roles` — **`text[]`**, no `user_role[]`. En SQL, comparar con
+  `::text[]`; castear a `user_role[]` hace abortar el `CREATE POLICY`
 
-Para verificar permisos usar siempre `hasRole()` de `services/authUtils.ts`:
+**⚠️ Rol nuevo = `ALTER TYPE` manual.** Cada valor nuevo de `UserRole` necesita
+`ALTER TYPE user_role ADD VALUE 'NUEVO_ROL';` en la base, o escribir ese rol en
+`users.role` falla. `ACREDITACION` y `ENCARGADO_NINEZ` ya están en el enum
+(verificado contra `pg_enum`). Para `ADMIN_CUIDADO_PASTORAL` y `PRODE`, la v5.0
+decía que faltaban: **verificar** con
+`SELECT enumlabel FROM pg_enum WHERE enumtypid = 'user_role'::regtype;`
+
+**Un trigger protege los roles:** `proteger_columnas_de_rol` pisa `role`/`roles`
+cuando escribe `anon` o `authenticated`. Asignar roles desde el cliente no
+funciona — va por las RPCs de admin (sección 12).
+
+Para verificar permisos usar siempre `hasRole()`:
 ```typescript
 import { hasRole } from '../../services/authUtils';
 if (hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR])) { ... }
 ```
 
-Para obtener el rol actual del usuario en un componente:
+Para el rol actual en un componente:
 ```typescript
 import { useRole } from '../../hooks/useRole';
 const { isSuperAdmin, isAnfitrion, canManageGroups } = useRole();
 ```
+
+**Un rol nuevo necesita tres puertas en la app**, no solo permiso en la base:
+la ruta en `App.tsx`, la tarjeta en el panel correspondiente, y el ítem en
+`MenuDeslizable.tsx` (incluido su separador). `ACREDITACION` tuvo permiso en la
+base y ninguna puerta en la app hasta que se probó con un usuario real.
 
 ---
 
@@ -339,47 +419,156 @@ separadores "Coordinación" y "Administración").
 La interfaz `MenuItem` soporta `requiresAuth?: boolean`
 para ocultar ítems a usuarios sin sesión aunque
 `roles: []` los haga visibles a todos los autenticados.
+### 7.8 Rutas nuevas: su propio ToastProvider, y esperar antes de navegar
+Una ruta nueva **no hereda** el `ToastProvider` de la página que la enlaza.
+Usar el patrón Content + Provider (7.4) en cada página nueva.
+
+`toast.success(...)` seguido de `navigate(...)` desmonta el toast antes de que
+se pinte. Esperar unos 600 ms antes de navegar (medido: el toast aparece a los
+~270 ms).
+
+### 7.9 Un fallo de consulta no es un dato vacío
+**Es la causa de un incidente real.** Cuando la base se cayó, el perfil no se
+pudo traer, el código lo trató como "perfil vacío" y le mostró a **todos** los
+usuarios el modal de "completá tu perfil". La gente lo llenaba y fallaba sin
+parar.
+
+- Nunca desestructurar `{ data }` descartando el `error`
+- Distinguir "la consulta anduvo y no hay datos" de "la consulta falló"
+- `AuthContext` usa un estado explícito: `'pendiente' | 'ok' | 'sin-perfil' |
+  'error-db'`. El modal de perfil solo aparece con `'sin-perfil'`
+- En listas: si la consulta falla, mostrar error, **nunca** una lista vacía
+  que diga "no hay inscripciones"
+
+### 7.10 Fechas: parseo manual
+`new Date('YYYY-MM-DD')` se interpreta en UTC y **en Argentina (UTC-3) da un
+día menos**. Para edades, eso puede hacer pasar como mayor de 18 a alguien
+que no lo es.
+- Parsear `YYYY-MM-DD` a mano. Usar `calcularEdad()` y `esMayorDeEdad()` de
+  `src/utils/nocturna.ts`
+- Horas de eventos en formato de **24 h** (a las 23 en una puerta, "08:52 p. m."
+  se lee mal)
+
+### 7.11 Imágenes
+- **Comprimir antes de subir** con `comprimirImagen()` (`src/utils/nocturna.ts`):
+  una foto de celular pesa 3 a 8 MB. Medido: 52 MB → 1,2 MB
+- **El bucket `images` es público.** Sirve para portadas y banners, **nunca**
+  para comprobantes de pago ni documentos. `uploadBase64Image()` sube ahí
+- Datos sensibles → bucket **privado** + **URL firmada** con vencimiento corto,
+  generada **al hacer clic**, no al cargar la lista
+- La ruta de un archivo **no lleva datos personales** (ni DNI ni nombre): UUID
+
+### 7.12 HashRouter
+- Un link para compartir (WhatsApp, email) **lleva `/#/`**:
+  `https://app.origeniglesia.org/#/nocturna-inscripcion`. Sin eso no abre.
+- Los query params viven **dentro del hash**: `window.location.search` viene
+  vacío. Leerlos con `useLocation().search`.
+- Los links en emails también llevan `#`.
+
+### 7.13 Tutoriales: no perder los ids
+Los pasos de `src/config/tours.ts` apuntan a **ids del DOM**
+(`#btn-new-visitor`, `#auth-form`, `#tour-wrap-5`, ...). Si se reescribe una
+sección, **preservar los ids**. Joyride no tira error: salta el paso en
+silencio.
+
+### 7.14 Formularios largos
+- **Borrador en `sessionStorage`** mientras se completa, restaurado al volver,
+  borrado al terminar y al cerrar sesión. Caso real: el padre sale a la app del
+  banco a transferir y el celular descarta la pestaña. `sessionStorage` y no
+  `localStorage`: no queda guardado para siempre en un dispositivo compartido.
+- **Bloquear el doble envío** (probar con varios clicks sincrónicos)
+- **Nombres con `.trim()`** al guardar: un espacio de más rompe búsquedas por
+  igualdad exacta (pasó en el formulario público de Bienvenida)
+- `window.open()` **antes** de cualquier `await` (sección 16)
+
+### 7.15 Accesibilidad mínima
+Un botón que responde no se anuncia como `aria-disabled`. Si se ve apagado pero
+explica qué falta al tocarlo, apuntarlo a un `role="status"`. Botones con texto
+partido (`"Entrada $40.000 Editar"`) llevan `aria-label`.
 
 ---
 
-## 8. ESTÉTICA — SISTEMA NEO-BRUTALIST
+## 8. ESTÉTICA — EL ESTILO DEL LOGIN
 
-El proyecto tiene un sistema de diseño propio y definido. Toda UI nueva
-debe ser coherente con él.
+> **La v5.0 mandaba el sistema neo-brutalista** (bordes `border-2 border-black`,
+> sombras `shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`, `font-black uppercase`) y
+> **prohibía** `rounded-lg` y `shadow-sm`. **Eso quedó en el pasado.** La app se
+> rediseñó módulo por módulo durante 2026. Lo neo-brutalista que quede es
+> **legacy pendiente de migrar**: no copiarlo en código nuevo.
 
-### Reglas visuales
-- **Bordes:** `border-2 border-black` (o `border-4` para contenedores principales)
-- **Sombras brutalist:** `shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`
-  o `shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]` para elementos destacados
-- **Tipografía:** `font-black uppercase tracking-tight` para títulos
-- **Labels de campos:** `text-[11px] font-black uppercase tracking-widest`
-- **Fuente:** Proxima Nova (cargada globalmente — NO cambiar)
-- **Botón primario:**
-  ```
-  bg-black text-white font-black uppercase tracking-widest
-  border-2 border-black hover:bg-white hover:text-black
-  hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all
-  ```
-- **Input estándar:**
-  ```
-  border-2 border-black font-bold text-black bg-white
-  focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] outline-none
-  ```
-- **Dark mode:** clases `dark:` en paralelo. El modo se maneja con `darkMode: 'class'`
-- **Animaciones:** Framer Motion para transiciones de pantalla, CSS para microinteracciones
-- **NO usar:** rounded-lg en elementos principales, sombras suaves tipo `shadow-sm`,
-  colores pasteles sin contexto, gradientes genéricos
+### La referencia: `pages/auth/PantallaAutenticacion.tsx`
+```
+input:     w-full px-4 py-3.5 rounded-xl outline-none
+           text-black font-medium placeholder-slate-400
+label:     block text-[13px] font-semibold text-slate-700 mb-1.5
+botón 1°:  w-full py-4 bg-black text-white font-semibold rounded-full
+           hover:bg-neutral-800 active:scale-[0.99]
+botón 2°:  bg-slate-100 text-black font-semibold rounded-full
+```
+Lo distintivo: **botones píldora**, campos `rounded-xl`, negro puro como
+primario, gris casi blanco como secundario, `font-semibold`, mucho aire.
 
-### Colores de acento por módulo
+### Tokens generales (fuente: `pages/home/Home.tsx`)
+```
+Fondo de página:  bg-slate-50 dark:bg-zinc-950
+Tarjetas:         bg-white dark:bg-zinc-900
+                  border border-slate-200 dark:border-zinc-800
+                  rounded-2xl shadow-sm hover:shadow-lg
+Botón primario:   bg-slate-900 dark:bg-white text-white dark:text-slate-900
+                  font-semibold active:scale-[0.98]
+                  focus-visible:ring-4 focus-visible:ring-slate-900/20
+Inputs:           rounded-xl border border-slate-200 dark:border-zinc-800
+                  focus:ring-4 focus:ring-slate-900/10
+```
+
+### Reglas
+- **Tipografía:** `font-semibold` para casi todo; `font-bold` para títulos y
+  números grandes. **`font-black` solo en el `<h1>` de página**, si acaso.
+- **Dark mode:** en oscuro, la familia de grises es **`zinc`**, no `slate`.
+- **Breakpoint mobile/desktop: `lg`**, no `md`. Usar `md` rompe las tablets.
+- **Separar mobile de desktop con CSS** (`lg:hidden`), no detectando el ancho
+  con JavaScript: con JS hay parpadeos y casos de resize.
+- **Mobile:** en iOS, alto completo con `100dvh` (`100vh` cuenta la barra del
+  navegador). En tablas anchas, versión en tarjetas para mobile.
+- **Fuente:** Proxima Nova, cargada globalmente — no cambiar.
+
+### Variantes por contexto
+| Contexto | Estilo |
+|---|---|
+| Páginas públicas y de usuario | Login + tokens de `Home.tsx` |
+| Paneles de administración | "Admin GCX Soft": `AdminGCXLayout.tsx` + `AdminDiaNino.tsx` como referencia (`rounded-lg`, `border-slate-200`, `shadow-sm`) |
+| Panel admin de GCX dentro de `Grupos.tsx` | Solo modo claro, por decisión |
+| Heroes (`/`, `/gcx`, `/ninez`) | `CarruselHero` con `theme="soft"` |
+| Trivia en vivo | "Electric Communion" (sección 20) |
+
+### Colores funcionales — no se tocan al rediseñar
+Un color que **codifica información** se conserva; lo que se suaviza es el
+tratamiento (bordes, sombras), no el color. Ejemplos:
+- Colores por tribu (Influos) y por etapa (`STAGE_CONFIG` de Bienvenida)
+- Estados: verde aprobado / ámbar pendiente / rojo rechazado / gris finalizado
+- `fill` y `stroke` de las series de `recharts`
+- Ámbar = editar, rojo = eliminar
+- Rosa = parejas
+
+### Color de identidad por módulo
 | Módulo | Color |
 |---|---|
-| Grupos (GCX) | `#28a946` (verde — usado en TarjetaGrupo, botones UNIRME, badges) |
+| Grupos (GCX) | `#28a946` y esmeralda |
+| Coordinadores | esmeralda |
 | Bienvenida | emerald-500 |
-| Influos | violet-600 |
-| Pastoral / Audiencia | violet-700 |
-| Reportes | amber-500 |
-| Admin / Sistemas | neutral-900 |
-| Alabanza | pink-500 |
+| Influos | violeta |
+| Reportes | ámbar |
+| Alabanza | rosa |
+
+### Detectar neo-brutalismo que quedó
+```bash
+grep -cE "border-[2-9] border-black|shadow-\[[0-9]+px_[0-9]+px_0px_0px_rgba\(0,0,0" archivo.tsx
+grep -c "font-black" archivo.tsx
+```
+El patrón tiene que incluir **variantes direccionales** (`border-b-4`,
+`border-t-2`) y **alfas distintos de 1** (`rgba(0,0,0,0.5)`). Si un patrón es
+prefijo de otro, reemplazar del más largo al más corto. Hay archivos con
+fin de línea **CRLF**: los patrones multilínea necesitan `\r?\n`.
 
 ---
 
@@ -413,6 +602,9 @@ para cada tipo de entrega y **deben leerse antes de escribir código**.
 
 **Para este proyecto, `frontend-design` aplica en la mayoría de los casos.**
 Leerla antes de crear cualquier componente nuevo, página o rediseño de UI.
+### Diseños de Claude Design
+Los diseños se hacen en Claude Design y se exportan a `design-claude/` como
+`*.dc.html` (HTML plano, se lee directo). Al implementar uno, ver sección 36.
 
 ---
 
@@ -454,61 +646,180 @@ adentro de la función, como hace `send-nocturna-entrada`.
 
 **Nunca hardcodear estas keys. Siempre usar `Deno.env.get('...')`.**
 
+**Reglas que salieron de construir `send-nocturna-entrada` (aplicar a toda
+función nueva):**
+- El trigger manda **solo el id**, nunca `row_to_json(NEW)`: `pg_net` guarda el
+  cuerpo de cada pedido en `net._http_request_queue` y `net._http_response`.
+  Con la fila entera, DNI y emails quedan escritos ahí.
+- `timeout_milliseconds := 20000` en el `net.http_post` si la función hace
+  algo pesado (generar un QR y esperar a Resend no entra en los 5000 por
+  defecto).
+- La clave para invocar va en Vault (`webhook_service_role_key`), no en
+  `current_setting()`.
+- Un archivo que se importa en `index.ts` y llama a `serve()` no se puede
+  probar: separar la lógica en un módulo aparte (`armado.ts`).
+
+**URL del proyecto hardcodeada:** los triggers de webhook y los cron jobs
+tienen escrita la URL `https://oqtumgalnozppqnnjjdb.supabase.co/functions/v1/...`
+(Día del Niño, Nocturna, GCX, `welcome-reminder`, `prode-sync-results`), y
+también `pages/prode/AdminProde.tsx`. Si el proyecto cambiara de **ref**, hay
+que reescribirlas todas. Una **transferencia** de proyecto entre
+organizaciones conserva el ref y no las afecta.
+
+**Estado conocido:**
+- `prode-sync-results` falla cada 5 minutos con `API login failed: 404`
+  (visto en `net._http_response`). Revisar las credenciales de worldcup26.ir.
+
 ---
 
 ## 11. BASE DE DATOS — TABLAS PRINCIPALES
 
-| Tabla | Módulo | Descripción |
+**Proyecto Supabase:** ref `oqtumgalnozppqnnjjdb`. Hay una transferencia
+planificada a una organización oficial de la iglesia; una transferencia
+conserva el ref. Confirmar el ref vigente antes de usar el MCP.
+
+### Global y GCX
+| Tabla | Descripción |
+|---|---|
+| `users` | Perfil. `role` (enum singular) + `roles` (`text[]`) — sección 6 |
+| `groups` | Grupos de conexión — ver columnas abajo |
+| `group_registrations` | Inscripciones. `status` en **MAYÚSCULAS** (`APPROVED`, `PENDING`, `REJECTED`) |
+| `group_categories`, `group_tags` | Categorías (11 en uso) y etiquetas |
+| `group_attendance` | `date DATE`, `present_members JSONB`, `meeting_mode` (sección 19) |
+| `group_dropout_requests` | Solicitudes de baja (el nombre **no** es `dropout_requests`) |
+| `group_transfer_requests` | Transferencia de titularidad entre anfitriones |
+| `welcome_visitors` | Ingresantes de Bienvenida |
+| `service_statistics` | Audiencia de Servicios — sección 33 |
+| `app_events`, `announcements` | Punto de Información |
+| `notifications` | Notificaciones in-app |
+| `audit_logs` | Auditoría |
+| `app_version` | Una fila con la versión publicada (sección 27) |
+
+### Eventos
+| Tabla | Descripción |
+|---|---|
+| `dianino_sessions`, `dianino_tickets` | Día del Niño — sección 28 |
+| `influos_attendees` | Asistentes de Influos (**menores**) |
+| `influos_dia_registrations` | Tribal Wars. `comprobante_url` apunta al bucket público `images` (ver sección 38) |
+| `eventos_general` | Eventos generales del listado público |
+| `nocturna_config` | Una fila: edición, precio, inscripciones abiertas. Única de Nocturna que lee el público |
+| `nocturna_inscripciones` | Una por familia. El `id` es lo que codifica el QR. **Datos de menores** |
+| `nocturna_jovenes` | Un chico por fila, con su retiro. La edad se calcula, no se guarda |
+
+### Contenido y banners
+| Tabla | Descripción |
+|---|---|
+| `ninez_banner_slides` | Banner de `/ninez` |
+| `home_musica_banner_slides` | Banner "Origen Música" de la Home. `target_url` nunca se muestra |
+| `punto_info_banner_slides` | Banner de `/punto-de-informacion` |
+
+### Prode y Trivia
+Ver secciones 18 y 20 (`prode_*`, `trivia_*`).
+
+### Columnas y comportamientos que hay que conocer
+- **`groups.status` va en minúsculas** (`approved`, `pending`, `rejected`) y
+  `group_registrations.status` en mayúsculas. Comparar con `upper()` o
+  conociendo la tabla.
+- **`groups_status_check` no acepta `'finished'`.** Un grupo "finalizado" se
+  deriva de `end_date`, no del status. Ver sección 19 (re-apertura).
+- `groups.is_online`, `groups.is_hybrid` (con un `CHECK` que impide las dos a
+  la vez), `capacity_locked`, `is_hidden`, `co_host_id`, `parent_group_id`.
+- **3 grupos tenían `co_host_id = host_id`** (el anfitrión como su propio
+  co-anfitrión). Los reportes los excluyen. Es un dato sucio en origen.
+- `group_registrations.transfer_from_group_id` — la inscripción es una
+  derivación desde ese grupo (sección 22).
+- **`group_attendance.present_members` guarda ids de inscripción, y la pareja
+  va con el sufijo `-partner`.** Sin contemplarlo, toda pareja figura como que
+  nunca asistió.
+- **`groups.members_count` lo mantiene el trigger `trg_update_members_count`**
+  (`COUNT(*) WHERE status='APPROVED'`). Es la fuente de verdad. **No sumar ni
+  restar a mano**: `manage_group_registration_v3` lo hacía y dejaba 52 de 82
+  grupos con el número mal.
+- `users.coordinator_variants` (`text[]`) convive con el legacy singular.
+
+### Storage
+| Bucket | Visibilidad | Uso |
 |---|---|---|
-| `users` | Global | Perfil de usuarios (roles, avatar, datos personales) |
-| `groups` | GCX | Grupos de conexión con anfitriones |
-| `group_registrations` | GCX | Inscripciones a grupos |
-| `group_categories` | GCX | Categorías de grupos |
-| `group_tags` | GCX | Etiquetas de grupos |
-| `group_attendance` | GCX | Asistencias a grupos. Columnas: `date DATE`, `present_members JSONB` (array de registration IDs) |
-| `group_dropout_requests` | GCX | Solicitudes de baja de grupos |
-| `welcome_visitors` | Bienvenida | Registro de nuevos ingresantes. Columnas relevantes: `accepted_jesus TEXT`, `localidad TEXT`, `form_reminder_count INT`, `form_reminder_sent_at TIMESTAMPTZ` |
-| `influos_attendees` | Influos | Asistentes al evento Influos (menores). Columnas relevantes: `tribu TEXT`, `localidad TEXT`, `accepted_jesus TEXT` |
-| `service_statistics` | Pastoral | Estadísticas de servicios dominicales |
-| `app_events` | Info Point | Eventos del calendario |
-| `announcements` | Info Point | Anuncios del tablero |
-| `notifications` | Global | Notificaciones in-app |
-| `audit_logs` | Admin | Registro de auditoría |
-| `group_transfer_requests` | GCX | Solicitudes de transferencia de titularidad de grupos entre anfitriones. Estados: pending/accepted/rejected/cancelled |
-| `prode_matches` | Prode | Partidos del Mundial 2026. Campos clave: external_match_id, is_open, is_finished, home/away_score_real |
-| `prode_participants` | Prode | Participantes del prode (con o sin cuenta). Acumula total_points |
-| `prode_predictions` | Prode | Predicciones por participante por partido. points_earned null hasta que haya resultado |
-| `prode_sync_log` | Prode | Auditoría de sincronizaciones automáticas con API externa |
-| `trivia_juegos` | Trivia | Partidas/plantillas. Columnas: `pin`, `estado`, `pregunta_actual_idx`, `timer_pausado`, `started_at`, `finished_at`, `is_template` |
-| `trivia_preguntas` | Trivia | Preguntas por juego. `juego_id`, `orden`, `texto`, `tiempo_limite`, `es_doble_puntos` |
-| `trivia_opciones` | Trivia | Opciones por pregunta. `pregunta_id`, `texto`, `es_correcta`, `color`, `orden` |
-| `trivia_jugadores` | Trivia | Jugadores por partida. `juego_id`, `nickname`, `avatar_emoji`, `puntaje_total`, `racha_actual`, `max_racha` |
-| `trivia_respuestas` | Trivia | Respuestas registradas. `jugador_id`, `pregunta_id`, `opcion_id`, `tiempo_respuesta_ms`, `puntos_ganados` |
-| `trivia_estado_pregunta` | Trivia | Estado en vivo de cada pregunta. `juego_id`, `pregunta_id`, `estado`, `total_respuestas` |
-| `nocturna_config` | Nocturna | Una sola fila: edición, precio y si las inscripciones están abiertas. Única del módulo que lee el público |
-| `nocturna_inscripciones` | Nocturna | Una por familia. El `id` es lo que codifica el QR. **Datos de menores: sin policies para `anon`** |
-| `nocturna_jovenes` | Nocturna | Un chico por fila, con su retiro. La edad se calcula de `fecha_nacimiento`, no se guarda |
+| `images` | **Público** | Portadas, banners, avatares. Nunca datos sensibles |
+| `nocturna-comprobantes` | **Privado** | Comprobantes de Nocturna. 5 MB, solo imágenes. Lectura con URL firmada |
 
-**Columnas nuevas en tablas existentes (v5.0):**
-- `groups.capacity_locked` (bool, default `false`) — bloqueo manual de cupo, ver sección 24
-- `groups.is_hidden` (bool, default `false`) — ocultar de `/gcx`, ver sección 24
-- `groups.co_host_id` (uuid) — co-anfitrión del grupo
-- `users.coordinator_variants` (`text[]`, NOT NULL) — multi-rol de coordinador, ver sección 25 (convive con `users.coordinator_variant` legacy singular)
-- `users.roles` (`text[]`) — array de roles, convive con `users.role` (singular, enum `user_role`)
-
-**Todas las tablas tienen RLS habilitado.** Al crear tablas nuevas siempre
-agregar policies correspondientes. Ver Sección 17 para tablas con acceso `anon`.
+**Todas las tablas tienen RLS habilitado.** Ver sección 12 antes de crear una.
 
 ---
 
 ## 12. SEGURIDAD — REGLAS OBLIGATORIAS
 
-- **Nunca** exponer API keys en código fuente. Usar `import.meta.env.VITE_*`
-- **Nunca** commitear archivos `.env`, `test_*.js`, `debug_*.js` o `*.backup`
-- El archivo `supabase/.temp/` contiene el project ID — no publicar
-- Las Edge Functions deben verificar autenticación antes de ejecutar lógica
-- El `SUPER_ADMIN` es el único rol que puede asignar roles privilegiados
-- El cache de `localStorage` nunca se usa para decisiones de acceso — solo para render optimista
+> Salen de una auditoría real (septiembre de 2026) que encontró: una forma de
+> que **cualquiera sin sesión se diera `SUPER_ADMIN`**, funciones para borrar
+> usuarios y grupos sin ningún chequeo, cuatro versiones de
+> `manage_group_registration` que permitían aprobar cualquier inscripción sin
+> sesión, y **dos fugas de datos personales** (`group_registrations` con 572
+> personas legibles sin sesión, e `influos_attendees`).
+
+### En PL/pgSQL
+1. **`IF NULL THEN` vale falso y saltea el `RAISE`.** Sin sesión, `auth.uid()`
+   es `NULL`, y `IF caller_role != 'ADMIN' THEN RAISE ...` **no se dispara**.
+   Usar siempre `IS DISTINCT FROM` / `IS NOT DISTINCT FROM`, y chequear
+   `auth.uid() IS NULL` explícitamente.
+2. **Toda función `SECURITY DEFINER` lleva `SET search_path = public`.**
+3. **`CREATE OR REPLACE FUNCTION` vuelve a dar `EXECUTE` a `PUBLIC`**, y
+   Supabase además se lo da a `anon` aparte. Después de crear o recrear:
+   ```sql
+   REVOKE EXECUTE ON FUNCTION public.fn(args) FROM PUBLIC;
+   REVOKE EXECUTE ON FUNCTION public.fn(args) FROM anon;
+   GRANT  EXECUTE ON FUNCTION public.fn(args) TO authenticated;
+   ```
+   Verificar con `has_function_privilege('anon', 'public.fn(args)', 'EXECUTE')`.
+4. **Nunca confiar en el cliente:** precios, totales, edades, unicidad,
+   permisos — se validan en la base. Un total enviado por el cliente se ignora.
+5. **Las validaciones en un solo lugar.** Si el alta y la edición validan lo
+   mismo, factorizar la validación en una función interna, no copiarla.
+
+### RLS
+6. **Ninguna policy `FOR SELECT TO anon` sobre tablas con datos personales.**
+   El acceso público va por RPCs `SECURITY DEFINER` que devuelven lo mínimo.
+7. **Las policies permisivas se combinan con OR.** Si hay dos y una tiene
+   `USING (true)`, cerrar la otra no sirve: revisarlas todas. Una policy
+   duplicada anuló en silencio un fix en `groups` (sección 24).
+8. **`USING` dice qué filas se tocan; `WITH CHECK`, cómo pueden quedar.** Sin
+   `WITH CHECK`, un usuario que puede editar su inscripción puede ponerse
+   `status = 'APPROVED'` y auto-aprobarse.
+9. **Cerrar una policy puede romper algo que la usaba.** Antes de restringir,
+   buscar qué código lee o escribe esa tabla directo (no por RPC), y con qué
+   rol. Si un panel queda vacío sin error, falta un rol en la policy.
+
+### Edge Functions
+10. **`verify_jwt` no alcanza**: la clave `anon` es un JWT válido y viaja en el
+    bundle. Comparar el bearer contra la clave de servicio adentro de la
+    función (como `send-nocturna-entrada`).
+
+### Repositorio y datos
+11. **El repo `sistemasorigen/origen-app-1` es público**, y `npm run deploy`
+    hace **`git add -A`**: todo lo que esté en la carpeta se publica. Nunca
+    dejar en la carpeta datos personales, exportaciones, comprobantes ni
+    capturas de pantallas con datos reales. **Ojo con `design-claude/uploads/`**:
+    lo que se pega en Claude Design se guarda ahí y se publica en el próximo
+    deploy.
+12. El `.gitignore` excluye `test_*.js` pero **no** `.cjs` ni `.mjs`, ni
+    `*.backup_*`, ni `design-claude/uploads/` (ver sección 38).
+13. **Nunca** commitear `.env` ni claves. Usar `import.meta.env.VITE_*` en el
+    frontend y `Deno.env.get()` en las funciones.
+14. **No escribir datos personales reales en este archivo** (emails, teléfonos,
+    DNI): el archivo es público.
+15. `SUPER_ADMIN` es el único que asigna roles privilegiados, y lo hace por RPC
+    (el trigger `proteger_columnas_de_rol` bloquea hacerlo desde el cliente).
+16. El caché de `localStorage` nunca decide acceso: solo sirve para render
+    optimista.
+
+### Cómo probar seguridad
+- **Ataques simulados reales** dentro de `BEGIN ... ROLLBACK`, no solo leer el
+  código: `SET LOCAL role = 'anon'`, y para un usuario,
+  `set_config('request.jwt.claims', ...)` + `SET LOCAL role = 'authenticated'`.
+- Probar **con la clave anon**, que es el ataque realista.
+- Probar con un usuario **autenticado sin el rol**, no solo sin sesión.
+- Para crear usuarios de prueba: insertar en `auth.users` dispara
+  `handle_new_user`, que crea la fila en `public.users` con `{VIEWER}`. Usar
+  `ON CONFLICT DO UPDATE` para asignarle el rol de la prueba.
 
 ---
 
@@ -556,19 +867,25 @@ La IA debe:
 
 ## 15. REGLAS DE ORO — CHECKLIST ANTES DE EJECUTAR
 
-Antes de escribir cualquier código, confirmar mentalmente:
-
 - [ ] ¿Leí `instrucciones_ia.md` completo?
-- [ ] ¿Leí todos los archivos que voy a modificar?
+- [ ] ¿Leí todos los archivos que voy a modificar, en su estado actual?
 - [ ] ¿Usé rutas relativas (`../../`) en los imports?
-- [ ] ¿Apliqué la skill correspondiente si existe?
+- [ ] ¿Leí la skill correspondiente (`frontend-design` para UI)?
+- [ ] ¿El estilo es el del login (sección 8), no el neo-brutalista?
+- [ ] ¿Respeté los colores funcionales?
 - [ ] ¿Usé `NeoModal` para modales y `ContextoToast` para toasts?
 - [ ] ¿Evité `any` en TypeScript?
-- [ ] ¿El estilo es coherente con el sistema neo-brutalist?
-- [ ] ¿Los campos nuevos tienen su columna SQL + tipo en `types.ts`?
-- [ ] ¿La nueva ruta tiene su guard de roles en `App.tsx`?
-- [ ] ¿No hardcodeé ninguna API key?
-- [ ] ¿En componentes de zona pública usé `currentUser?.role` con optional chaining?
+- [ ] ¿Los campos nuevos tienen su columna SQL + tipo en `types.ts` + mapeo
+      de lectura **y** de escritura en el servicio?
+- [ ] ¿La ruta nueva tiene guard en `App.tsx`, y está después de las literales?
+- [ ] ¿Las funciones SQL nuevas son NULL-safe, con `search_path` y permisos
+      revocados (sección 12)?
+- [ ] ¿Los links que se comparten llevan `/#/`?
+- [ ] ¿Un fallo de consulta se distingue de un dato vacío?
+- [ ] ¿Preservé los ids que usan los tutoriales?
+- [ ] ¿No hardcodeé ninguna clave?
+- [ ] ¿En zona pública usé `currentUser?.role`?
+- [ ] ¿Dejé producción limpia y sin datos de prueba (sección 37)?
 
 ---
 
@@ -662,8 +979,6 @@ currentUser ? hasRole(currentUser, [...]) : false  // ✅
 
 ---
 
----
-
 ## 18. MÓDULO PRODE MUNDIAL 2026
 
 ### Acceso
@@ -740,8 +1055,16 @@ Componente: `components/GCX/ModalTransferirGrupo.tsx`
 ### Re-apertura de grupos por temporada
 El reopen ya NO sobreescribe el grupo original.
 Crea un NUEVO grupo con nuevo UUID y el campo
-`parent_group_id` apuntando al original. El original
-pasa a status `finished` conservando su historial.
+`parent_group_id` apuntando al original.
+
+⚠️ **Contradicción a resolver:** esta sección decía que el original pasa a
+`status = 'finished'`, pero `groups_status_check` **no acepta** `'finished'`.
+Verificar qué hace hoy `cloneGroupForNewSeason` con el original. Mientras
+tanto, "finalizado" se deriva de `end_date`.
+
+Al reabrir, el grupo nuevo **hereda** `is_online` e `is_hybrid` del original
+(el clon copia del grupo en la base, no del formulario: los campos de
+`PaginaReabrirGrupo` no se envían).
 
 **Función:** `supabaseService.cloneGroupForNewSeason(
 originalGroupId, newStartDate, newEndDate, isAdminView)`
@@ -772,6 +1095,30 @@ El modal de selección permite elegir qué grupos agregar.
 
 **Acceso mobile:** botón "Mis grupos anotados"
 debajo del filtro de etiquetas en `/gcx`.
+
+### Modalidad: presencial, online o híbrido
+- `groups.is_online` y `groups.is_hybrid` (un `CHECK` impide las dos a la vez).
+  Lógica en `src/utils/modalidad.ts`.
+- **Presencial:** con dirección. **Online:** sin dirección (`location` vacío).
+  **Híbrido:** con dirección, y a veces online; al tomar asistencia el
+  anfitrión elige cómo fue **esa** reunión (`group_attendance.meeting_mode`).
+- `admin_update_group_v2` guarda `is_online` e `is_hybrid`. Hubo un defecto en
+  el que editar desde el panel del anfitrión no guardaba la modalidad
+  (`sql/fix_host_edit_group_v2.sql`). **Todo campo nuevo de `groups` tiene que
+  pasar también por esa RPC**, o el panel lo pierde al editar.
+
+### Funciones de 2026 en `/gcx` y `/mis-grupos`
+- **Filtro de disponibilidad** en `/gcx`: varios días + franja (mañana antes de
+  las 12, tarde de 12 a 18, noche desde las 18). Días con O entre sí, días y
+  franjas con Y.
+- **Agregar al calendario** desde la tarjeta, para miembros aprobados, con
+  `src/utils/calendario.ts`. ⚠️ El Calendario GCX (`/gcx/calendario`) tiene su
+  **propio** generador de `.ics`: son dos implementaciones del mismo formato.
+- **Baja directa** de un miembro por el anfitrión (sección 22).
+- **Derivar** a un miembro a otro grupo (sección 22).
+- **Historial de grupos** en `/perfil` (`getMiHistorialDeGrupos`).
+- **Postulación a anfitrión** como franja arriba del catálogo, sin botón
+  flotante.
 
 ---
 
@@ -874,8 +1221,7 @@ violeta `#9B59B6`, con íconos de forma `▲ ◆ ● ■ ★ ♥`). Usado
 **exclusivamente** en las pantallas de juego en vivo (`TriviaLanding`,
 `TriviaUnirse`, `TriviaJugador`, `TriviaProyector`) — el panel admin
 (`AdminTrivia`, `CrearJuego`, `TriviaControl`, `TriviaHistorial`,
-`TriviaPlanilla`) usa la estética neo-brutalist clara estándar del
-resto de la app (sección 8). No mezclar ambos sistemas visuales.
+`TriviaPlanilla`) usa la estética estándar actual de la app (sección 8). No mezclar ambos sistemas visuales.
 
 ### Sistema de puntos
 
@@ -904,7 +1250,7 @@ if (esDoble) puntos *= 2; // trivia_preguntas.es_doble_puntos
 ### Migración desde `/gcx?tab=X`
 
 Toda la administración de Grupos de Conexión vive hoy en páginas
-propias bajo `/admingcx/*` (13 rutas planas, sin nesting real de
+propias bajo `/admingcx/*` (14 rutas planas, sin nesting real de
 React Router). El menú principal (`components/layout/MenuDeslizable.tsx`)
 ya apunta directo a las rutas nuevas. Para compatibilidad con links
 viejos guardados (favoritos, mensajes de WhatsApp con
@@ -986,6 +1332,17 @@ interface AdminGCXLayoutProps {
 }
 ```
 
+**Ruta agregada:** `/admingcx/gestion-de-grupos/reabrir-grupo/:groupId`
+(`ReabrirGrupoAdmin`), con el guard de los 3 roles.
+
+**El panel de administración de GCX existe dos veces**: estas páginas de
+`/admingcx/*`, y las sub-pestañas de `view === 'admin'` dentro de
+`pages/groups/Grupos.tsx` (grupos, categorías, etiquetas, configuración,
+anfitriones, coordinadores, temporadas). **Por decisión, se mantienen las dos
+por ahora**; todo cambio funcional se aplica en ambas o una va a divergir.
+`Grupos.tsx` mezcla el catálogo público con ese panel (~2900 líneas):
+separarlo es la mejora pendiente más grande del módulo.
+
 ---
 
 ## 22. PANEL DE ANFITRIÓN (`/mis-grupos/*`)
@@ -1043,6 +1400,38 @@ están vivos:
 | `ModalCrearGrupo.tsx` | **Vivo**, doble uso: alta de grupo vía `?modal=createGroup` (link desde Tutoriales), y **reciclado con `isReopenRequest={true}`** como modal de re-apertura desde `Grupos.tsx`/`GestionDeGrupos.tsx` — no existe un `ModalReabrirGrupo.tsx` separado |
 | `ModalAsistencia.tsx`, `ModalSolicitudBaja.tsx`, `ModalTransferirGrupo.tsx` | **Huérfanos** — siguen importados y con estado (`useState`) en `PanelAnfitrion.tsx`, pero ningún botón visible los dispara ya (reemplazados por `PaginaAsistenciaGrupo`, `PaginaBajaGrupo`, `PaginaTransferirGrupo`). Código muerto pendiente de limpieza, no removido en la migración. `ModalTransferirGrupo.tsx` tampoco se usa desde `/admingcx/gestion-de-grupos`. |
 | `ModalCrearGrupo-IgnacioPC.tsx` | Archivo de desarrollo, no importado en ningún lado |
+
+### Rutas agregadas
+| Ruta | Componente |
+|---|---|
+| `/mis-grupos/:groupId/derivar` | `PaginaDerivarMiembro` |
+| `/mis-grupos/:groupId/inscriptos` | `PaginaInscriptosGrupo` |
+
+### Baja directa (sin aprobación)
+- **Dar de baja a un miembro** es inmediato: `deleteGroupRegistration`, y
+  **después**, solo si salió bien, se deja el registro histórico en
+  `group_dropout_requests` con `status: 'APPROVED'`.
+- **Cerrar el grupo entero** sigue siendo una solicitud `PENDING` que aprueba
+  un administrador.
+- Confirmación en dos pasos con el nombre de la persona. Es irreversible:
+  `deleteGroupRegistration` borra la fila, no la marca.
+
+### Derivar a un miembro a otro grupo
+El anfitrión manda a un miembro a otro grupo; el anfitrión del destino lo
+aprueba como cualquier inscripción. El miembro no participa desde la app.
+- RPC **`derivar_miembro(p_registration_id, p_to_group_id)`**: valida permisos,
+  duplicados (por `user_id` y por email), y copia los datos y la pareja. Va en
+  la base porque con el RLS actual el anfitrión de origen no ve las
+  inscripciones del destino: un chequeo desde el cliente daría siempre vacío.
+- Crea una inscripción `PENDING` en el destino con `transfer_from_group_id`.
+- **La baja del grupo de origen la hace `manage_group_registration_v3` al
+  aprobar, en la misma transacción.** Si el destino rechaza, la persona sigue
+  en su grupo. Si el grupo de origen ya no existe, la derivación se completa
+  igual.
+- En las solicitudes, un cartel: "Derivado desde [Grupo] — si aceptás, sale de
+  ese grupo automáticamente".
+- Se llama **"Derivar"** y no "transferir": transferir es pasar el grupo
+  entero a otro anfitrión.
 
 ---
 
@@ -1237,6 +1626,15 @@ este problema). **Regla:** cada rol nuevo agregado a `UserRole` en
 es automático. Ver `sql/fix_user_role_enum_eventos.sql` como
 ejemplo del patrón ya usado para `EVENTOS`/`ENCARGADO_EVENTOS`.
 
+### `ENCARGADO_NINEZ` y `ACREDITACION`
+- **`ENCARGADO_NINEZ`:** `/ninez`, `/admin-ninez/configuracion` y el Día del
+  Niño. Helper SQL `is_ninez_staff()`.
+- **`ACREDITACION`:** rol de la puerta. **Acceso completo** al Día del Niño y a
+  Nocturna (incluye eliminar, precio y comprobantes), y entra a
+  `/panel-eventos`. No ve nada más. Si en algún momento lo tienen voluntarios
+  que solo escanean, conviene separar un helper `is_*_acreditador()` para
+  escanear y acreditar.
+
 ---
 
 ## 26. LOGIN Y REDIRECTS SEGUROS PARA OAUTH
@@ -1293,23 +1691,424 @@ vale la pena unificarlo con el mecanismo de doble capa.
 
 ---
 
-*Cambios v4.0: Módulo Prode Mundial 2026 completo (sección 18), features GCX 2026 (sección 19),
- BrowserRouter confirmado, rol PRODE agregado,
- tablas group_transfer_requests/prode_matches/prode_participants/prode_predictions/prode_sync_log,
- Edge Function prode-sync-results, calendario GCX,
- re-apertura por temporada con parent_group_id,
- configuración de temporadas, transferencia de grupos,
- patrones SubMenuItem extendidos (sección 7.7)*
+**Con `HashRouter`, los query params van dentro del hash.** El modo registro
+de `/auth` se pasa por query y se lee con `useLocation().search`, no con
+`window.location.search` (que viene vacío).
 
-*Última actualización: Julio 2026 — Versión 5.0*
-*Cambios v5.0: Trivia Origen completo (sección 20),
- migración completa de Gestión de Grupos y Panel de
- Anfitrión de modales a páginas propias bajo
- /admingcx y /mis-grupos (secciones 21-22), wizard
- de inscripción de pareja con soporte de pareja sin
- email (sección 23), bloqueo de cupos y ocultar
- grupos (sección 24), coordinador multi-rol y rol
- ENCARGADO_EVENTOS (sección 25), mecanismo de doble
- capa para login seguro con Google OAuth (sección 26)*
+**El redirect espera al perfil:** `App.tsx` consume `post_login_redirect`
+recién cuando `needsProfileCompletion` es `false`. Una cuenta nueva completa el
+perfil y después vuelve a donde estaba.
+
+**Login en mobile:** antes del formulario, un splash con la imagen de
+`/auth-bg.jpg` y dos botones (email / Google). Se separa con `lg:hidden`. El
+splash solo aparece en modo `LOGIN`: el modo registro lo saltea.
+
+---
+
+## 27. DEPLOY Y SISTEMA DE ACTUALIZACIÓN
+
+### El deploy
+```
+npm run deploy =
+  git pull upstream main
+  → npm run build            (generate-build-version.js + vite build)
+  → git add -f dist && git add -A && git commit -m "chore: deploy"
+  → git push upstream main
+  → node scripts/publish-dist.js   (sube dist/ por FTPS y confirma)
+  → node scripts/notify-deploy.js  (avisa a la app que hay versión nueva)
+```
+- **`dist/` se commitea** (con `-f`, porque está en el `.gitignore`).
+  Todo cambio de frontend necesita build antes de publicarse.
+- **`git add -A` agrega todo lo que haya en la carpeta.** Ver sección 12.
+- El hook `pre-push` está **desactivado** (`.git/hooks/pre-push.disabled`) en
+  las dos máquinas de trabajo: tenía una condición de carrera que borraba el
+  JS viejo sin subir el nuevo y dejó producción sin JavaScript.
+- El hosting es Apache (cPanel) y responde **200 `text/html`** a cualquier ruta
+  que no existe (fallback de SPA). Un archivo JS que falta no da 404: da HTML,
+  y el navegador falla con "Failed to load module script".
+
+### Aviso de versión nueva
+- `scripts/generate-build-version.js` toma la versión de
+  `git rev-parse HEAD` (no de la fecha: un rebuild sin commit nuevo no tiene
+  que disparar el aviso). `vite.config.ts` la embebe como `__BUILD_VERSION__`.
+- `notify-deploy.js` espera 20 s (propagación del hosting) y escribe la versión
+  en la tabla `app_version`.
+- `hooks/useVersionCheck.ts` escucha `app_version` por **Realtime** (no por
+  polling: el CDN cacheaba las consultas). Si cambia, ofrece actualizar y hace
+  un hard reset con verificación y hasta 3 reintentos.
+- `index.html` tiene un listener que detecta el error de MIME y reintenta con
+  cache-busting **antes** de que monte React.
+- `public/.htaccess` define `Cache-Control` reales (vía `mod_headers`).
+
+**Ya no hay recarga automática por inactividad:** `useAutoRefresh` se eliminó
+porque el aviso por Realtime lo hace innecesario. La config de la Home se
+sigue cacheando en `localStorage`, como respaldo ante fallas de red.
+
+---
+
+## 28. MÓDULO EVENTOS
+
+`/panel-eventos` (`PanelEventos.tsx`) muestra una tarjeta por evento según el
+rol. Cada evento tiene su propio helper SQL de staff — **no compartirlos**: el
+aislamiento entre eventos fue una decisión explícita.
+
+### Día del Niño (agosto 2026 — terminado)
+- `dianino_sessions` (la inscripción) y `dianino_tickets` (cada persona).
+  Helper `is_dianino_staff()`.
+- **Un QR maestro por familia**, enviado al adulto (texto con prefijo
+  `ORIGEN-DIANINO-`). Al escanearlo se acredita al adulto y se abre
+  `/eventos/admin/diadelnino/escaner/:ticketId` para tildar a los chicos.
+- El contador "N de M" cuenta **solo a los chicos**.
+- Desacreditar: RPC `uncheckin_dianino_ticket`.
+- **Inscripción cerrada:** `InscripcionDiaNino.tsx` y `BuscarDiaNino.tsx` tienen
+  una constante `EVENT_ENDED = true` que muestra el cartel de evento terminado.
+  Para reabrir el año que viene, pasarla a `false`.
+- El email (`send-dianino-tickets`) sube el QR al bucket **público** `images`
+  con `margin: 1`, y no verifica quién la llama (sección 38).
+
+### Tribal Wars (Influos)
+- `/tribal-wars`: inscripción en 4 pasos (datos, tribu, comprobante,
+  confirmación). `influos_dia_registrations`, RPC `register_influos_dia`.
+- Helper `is_influos_dia_staff()`, separado del Día del Niño.
+- El comprobante va al bucket público `images` (sección 38).
+
+### Eventos generales
+- `eventos_general`, listado público en `/eventos`, administración en
+  `/eventos/admin/general`.
+- **`is_eventos_general_staff()` incluye solo a `ENCARGADO_EVENTOS`**, por
+  decisión explícita. La ruta admite también `SUPER_ADMIN`: verificar si puede
+  escribir o si el RLS lo frena.
+
+### Nocturna
+Sección 29.
+
+---
+
+## 29. NOCTURNA
+
+Evento para adolescentes: 30 de octubre de 2026, de 23 a 6 h, Av. Eva Perón
+3932. Un adulto responsable inscribe a uno o varios chicos.
+
+### Rutas
+| Ruta | Qué es |
+|---|---|
+| `/nocturna-inscripcion` | Inscripción pública, con o sin sesión |
+| `/panel-eventos/nocturna` | Planilla, búsqueda, precio, interruptor de inscripciones |
+| `/panel-eventos/nocturna/nueva` | Alta por el staff |
+| `/panel-eventos/nocturna/acreditar` | Escáner de la puerta (fuera del Layout) |
+| `/panel-eventos/nocturna/:id` | Ficha, acreditación manual |
+| `/panel-eventos/nocturna/:id/editar` | Edición (mismo componente que el alta, `modoEdicion`) |
+
+Staff: `is_nocturna_staff()` = `SUPER_ADMIN`, `PASTOR`, `ENCARGADO_EVENTOS`,
+`ACREDITACION`.
+
+### Base (`sql/create_nocturna.sql`, `create_nocturna_email.sql`, `nocturna_edicion.sql`)
+- **Cero policies para `anon`** en inscripciones y chicos. Todo entra por RPC.
+- RPCs: `register_nocturna` (pública), `admin_crear_nocturna`,
+  `admin_editar_nocturna`, `get_nocturna_para_acreditar`,
+  `set_nocturna_acreditacion`, `update_nocturna_precio`,
+  `reenviar_nocturna_email`. La validación vive una sola vez en
+  `nocturna_validar_payload`.
+- **Se valida en la base:** adulto de 18 o más, al menos un chico,
+  `autoriza_asistencia = true` (además con un `CHECK`), comprobante en la
+  pública, DNI de chico único por edición, retiro completo.
+- **Se calcula en la base:** `precio_unitario` (foto del precio al inscribirse:
+  cambiar el precio no toca las anteriores), `total`, `codigo_entrada` (6
+  caracteres sin ambiguos).
+- `edicion` está denormalizada en `nocturna_jovenes`, atada con una **FK
+  compuesta** `(inscripcion_id, edicion)`. No hay otra FK simple al mismo
+  padre: con dos, PostgREST no puede embeber.
+- Las referencias al staff (`cargado_por_admin`, `updated_by`) son
+  `ON DELETE SET NULL`.
+
+### Reglas de negocio
+- **Retiro:** la base lo guarda **por chico**; la interfaz pregunta **una vez
+  por familia** y lo copia a todos (`aplicarRetiroFamiliar`).
+- **"No autorizo" corta** la inscripción. **"No acepto" las fotos sigue**, y se
+  marca en el panel para el equipo de fotografía (es por familia).
+- **Estados:** `Inscripto` o `Aprobado`. Aprobado = **acreditado en la puerta**.
+- **El contador cuenta adulto + chicos** ("2/4"). Para aprobar hace falta **el
+  adulto y al menos un chico**. Volver a escanear suma a los que faltaban y no
+  pisa la hora de los que ya entraron.
+- `set_nocturna_acreditacion` fija el **estado exacto**: hay que mandarle los
+  que ya estaban más los nuevos.
+- La edición deja agregar y quitar chicos (no al último ni a uno acreditado),
+  conserva sus ids y acreditación, recalcula el total con el **precio
+  original** y devuelve la diferencia a cobrar. La autorización no se edita.
+
+### Antes de abrir inscripciones
+Las inscripciones quedan **cerradas** (`inscripciones_abiertas = false`) hasta
+reemplazar en `InscripcionNocturna.tsx` los datos de pago y el teléfono de
+contacto (marcados `// TODO`), y el texto "En la puerta · texto provisorio"
+del email. Abiertas con datos de ejemplo, una familia transferiría a una cuenta
+que no existe.
+
+### Pruebas
+`sql/PROBAR_nocturna*.sql` (suites SQL). Hay una verificación de punta a punta
+pendiente, que incluye **dos personas del staff acreditando a la misma familia
+a la vez** (por el estado exacto de `set_nocturna_acreditacion`).
+
+---
+
+## 30. ESCÁNER QR
+
+`hooks/useEscanerQR.ts` concentra lo que costó varias rondas en el Día del
+Niño. **Usarlo para cualquier escáner nuevo**, no copiar código.
+
+Lo que resuelve:
+- `html5-qrcode` (reemplazó a `qr-scanner`, que fallaba en iOS Safari),
+  cámara trasera
+- Refs espejo para que el `useEffect` no reinicie la cámara en bucle
+- `try/catch` en la limpieza ("Cannot stop, scanner is not running")
+- **`await` real antes de crear otra instancia**: sin eso, el reintento
+  crasheaba en Android (dos instancias sobre el mismo `div`)
+- Reintento del permiso de cámara, aviso de navegador embebido (WhatsApp,
+  Instagram) y de permiso denegado, y log de `err.name`
+- **Wake Lock** para que la pantalla no se apague, con liberación correcta
+  (hubo dos fugas que dejaban el celular encendido)
+
+Lo que agrega cada pantalla (ver `AcreditarNocturna.tsx` y
+`nocturna/compartido/lecturaQR.ts`):
+- Pausar la lectura mientras hay un panel abierto, e **ignorar el mismo código
+  unos segundos** al cerrarlo: `html5-qrcode` dispara la lectura mientras el
+  QR esté frente a la cámara
+- Validar el formato antes de llamar a la base
+- **Buscador por código manual** cuando no hay cámara: sin eso, un permiso
+  denegado deja la puerta sin forma de acreditar
+- Con corte de red: el panel no se cierra y **nada se da por acreditado sin
+  confirmación de la base**
+
+`EscanerDiaNino.tsx` **no** está migrado al hook (está enredado con la lógica
+propia del Día del Niño y no se puede probar sin cámara).
+
+---
+
+## 31. REPORTES GCX
+
+`/reportes/gcx` (dashboard), `/reportes/gcx/:groupId` (detalle) y
+`/reportes/gcx/comp-temp` (comparativa). El `/reportes` viejo
+(`Pastores.tsx`) sigue funcionando aparte.
+
+### Datos
+- **Llamar a `getReportesGCX(season, year)`**, que devuelve todo junto.
+  Usa `_cargarBaseReportesGCX`: 5 consultas por temporada, cacheadas 30 s.
+- Funciones: `getKPIsReportesGCX`, `getAsistenciaPersonas`,
+  `getGruposQueReportan`, `getGeneroPorCategoria`, `getEdadesPorCategoria`,
+  `getTablaGruposReporte`, `getDetalleGrupoReporte`. Las de asistencia
+  aceptan filtros de **modalidad** y **grupo** (secciones Presencial, Online e
+  Híbrido), aplicados después de la caché.
+- Temporadas con `getSeasonFromDate()` (S1 23/3–31/5, S2 29/6–23/8,
+  S3 5/10–29/11).
+
+### Decisiones
+- **Solo inscripciones `APPROVED`, en todo el tablero.** La función vieja
+  `getGroupRegistrationAnalytics` cuenta también `PENDING` y `REJECTED` (por
+  eso daba 133 donde el tablero da 127). **No mezclar las dos** en una pantalla.
+- **"Asistieron" = vinieron al menos una vez.** Solo se puede calcular sobre los
+  grupos que cargan asistencia; el resto se muestra como `sinDatos`, no se
+  esconde.
+- **Género y edad cubren ~84%** de los inscriptos: los anotados a mano por el
+  anfitrión no tienen cuenta ni esos datos. Se muestra como `sinDato`.
+- Edad: `birth_date` calculada, con `age` de respaldo.
+- Categorías en **barras horizontales**: los nombres largos no entran en un
+  eje X.
+- **El "veredicto" de salud del grupo** (sano / en marcha / en riesgo) usa
+  umbrales propuestos que **el equipo de grupos no validó todavía**. Están en
+  `diagnosticar()` de `DetalleGrupoReporte.tsx`.
+- No se muestra el "origen" de una inscripción (solicitud propia o carga
+  manual): el esquema no lo guarda. Solo se distingue la derivación.
+
+---
+
+## 32. BIENVENIDA
+
+- `/bienvenida`: **planilla** (ya no Kanban) con filtro de etapa en un
+  `<select>`, KPIs y buscador. `/bienvenida/nuevo` (alta) y `/bienvenida/v/:id`
+  (detalle y edición, con selector de etapa).
+- Lee y escribe `welcome_visitors` directo (sin RPC).
+- **`.trim()` en nombre y apellido** al guardar: el formulario público busca por
+  igualdad exacta.
+- En el alta, **`window.open` del WhatsApp va antes del `await`** (Safari iOS).
+- `STAGE_CONFIG` y los colores de los KPIs son funcionales.
+- El tutorial apunta a `#btn-new-visitor`, `#visitor-stages-menu` y
+  `#visitors-grid`: se preservaron al pasar a planilla.
+
+---
+
+## 33. AUDIENCIA DE SERVICIOS
+
+- `service_statistics`. Categorías: `'Servicio de Domingo'`, `'CXV'`,
+  `'Evento'`, `'Conferencia'`, `'Martes'`. **"Martes" no mide voluntarios ni
+  niñez**: los gráficos que dependen de eso no aplican a esos registros.
+- `auditorio` se guarda **neto de voluntarios**: el formulario pide el total y
+  resta los voluntarios al guardar.
+- Columnas de la planilla: Online, **Total c/ Online** (auditorio + online) y
+  Observaciones. `/audiencia-servicios` es de ancho completo
+  (`isFullWidthPage` en `Estructura.tsx`).
+- Detalle en `/audiencia-servicios/detalles/:id`.
+- ⚠️ El formulario (`/new`) recibe el registro a editar por
+  **`location.state`**, no por un id en la URL: si se recarga o se abre en otra
+  pestaña, pierde los datos.
+
+---
+
+## 34. HOME, NIÑEZ Y PUNTO DE INFORMACIÓN
+
+### Home
+- Hero con `CarruselHero` (`theme="soft"`). Los videos usan `playWithRetry`:
+  si el primer `play()` falla, reintenta en `canplay`.
+- **Banner "Origen Música":** `home_musica_banner_slides`, editado desde
+  `/panel-admin` (Música). Lectura pública, escritura solo `SUPER_ADMIN`.
+  Cada slide abre su `target_url` en pestaña nueva; la URL no se muestra.
+- `Estructura.tsx`: `isDashboard` (`/`, `/gcx`, `/ninez`) pone la navbar
+  transparente sobre el hero; `isFullWidthPage` saca el `max-w-7xl`.
+
+### Niñez
+`/ninez` y `/admin-ninez/configuracion`. `ninez_banner_slides`,
+`is_ninez_staff()`.
+
+### Punto de Información
+- **Requiere sesión.** A quien no tiene roles internos le muestra la vista
+  pública (`InicioPublico.tsx`); el resto ve el panel interno (dashboard,
+  anuncios, eventos, bautismos, presentación de niños, inventario,
+  movimientos, préstamos, configuración).
+- Banner propio: `punto_info_banner_slides`, editado desde
+  `PanelAdministrador.tsx` (`SUPER_ADMIN`, `ADMIN_PUNTO`, `ENCARGADO_PUNTO`).
+- Problema conocido en la vista pública: el link de un anuncio solo se abre a
+  través del QR, que no sirve en el celular; y los eventos no muestran su
+  imagen ni su ubicación aunque las tienen. Hay un rediseño en curso.
+
+---
+
+## 35. EMAILS
+
+- **Resend: 100 emails por día**, compartidos por todas las funciones.
+  Registrar qué salió y qué no, y dejar reenviar.
+- **HTML de email, no de web:** maquetado con tablas, estilos en línea, ancho
+  máximo 600 px, sin JavaScript, fuentes del sistema, botones hechos con tablas.
+- **Modo oscuro de Gmail:** poner el fondo en el atributo `bgcolor` **y** en el
+  `style` de cada `<table>` y `<td>`, y las meta `color-scheme` y
+  `supported-color-schemes`.
+- **Imágenes importantes (un QR) incrustadas con CID** (`content_id` en el
+  adjunto, `cid:` en el HTML): se ven aunque el cliente bloquee las imágenes
+  remotas, y no quedan en un bucket público. Usar el envío individual de
+  Resend. QR con `margin: 4` y fondo blanco propio.
+- **Respaldo en texto** de todo lo importante (un código corto debajo del QR).
+- **Escapar todo lo que viene del usuario** antes de meterlo en el HTML.
+- Los links llevan `/#/`.
+- `email-notifier` (`emailTemplates.ts`) tiene las plantillas de "grupo nuevo"
+  y "postulación a anfitrión": hoy sin botón ni link directo, y la de
+  postulación no muestra si la persona completó "Crecer" y el curso de líderes
+  (`leader_applications.completed_hiciste_crecer`, `completed_leader_course`).
+
+---
+
+## 36. DISEÑO CON CLAUDE DESIGN
+
+1. El diseño se hace en Claude Design y se exporta a `design-claude/` como
+   `*.dc.html`.
+2. Al implementar, **el `.dc` es la fuente de verdad de lo visual**, pero:
+   - **Los números del diseño son maqueta** (mostraba 17 categorías y un 57%
+     que no existían). Los datos salen del servicio.
+   - **La lógica existente se preserva.** No pegar el código del diseño encima
+     de una pantalla que ya funciona.
+   - Si el diseño pide algo que el esquema no tiene, **no fabricarlo**: decirlo
+     y adaptar.
+3. **Pedirle pantallas de a una o dos.** Cuando se le piden muchas juntas, hace
+   una y se olvida del resto.
+4. En los prompts aclarar que **el menú lateral global no se toca**.
+5. Para emails, pedir explícitamente HTML de email (sección 35).
+6. **Lo que se pega en Claude Design queda en `design-claude/uploads/` y se
+   publica.** No pegar capturas con datos reales.
+
+---
+
+## 37. VERIFICACIÓN Y PRUEBAS
+
+**Un cambio no está listo porque compila.**
+
+- **Dry run** de los reemplazos: confirmar que cada patrón matchea el conteo
+  esperado antes de escribir, y abortar sin tocar nada si alguno falla.
+- **`tsc --noEmit`** contra el baseline: hoy **105 líneas**, incluidos los
+  errores de tipos de Deno de las Edge Functions. Lo que importa es que no haya
+  errores **nuevos**.
+- **`git diff` filtrado**: en un rediseño, solo deberían cambiar `className`.
+- **Verificar contra la base**, no contra lo que dice el prompt. Si un número no
+  coincide, investigar antes de seguir.
+- **SQL dentro de `BEGIN ... ROLLBACK`**, nunca `COMMIT` en pruebas.
+- **Datos de prueba con apellido "PRUEBA"**, borrados al terminar. Reportar el
+  estado final de producción **con la consulta**, no de memoria.
+- **Emails de prueba solo a la casilla de Ignacio** (preguntarle cuál) y
+  contados: la cuota es compartida.
+- **Si se apaga un trigger** para cargar volumen, volver a prenderlo y
+  verificarlo (`tgenabled = 'O'`). Un trigger de email apagado no da ningún
+  error: simplemente nadie recibe nada.
+- Lo que solo se prueba con un dispositivo (cámara, Gmail en modo oscuro,
+  Outlook) va en un **checklist para Ignacio**.
+- Puede haber **ediciones en paralelo** de Ignacio en el mismo archivo: leer el
+  estado actual antes de tocar, y no pisar lo que no es del prompt.
+
+---
+
+## 38. DEUDA TÉCNICA Y PENDIENTES CONOCIDOS
+
+### Seguridad
+| Pendiente | Riesgo |
+|---|---|
+| `send-dianino-tickets` invocable sin autenticación | Cualquiera puede quemar la cuota diaria y mandar emails a familias |
+| Comprobantes de Tribal Wars en el bucket público `images` | Nombre, CBU y monto detrás de una URL pública |
+| `influos_attendees`: la sección 17 la da por cerrada, pero `sql/influos_public_select_policy.sql` crea un `SELECT` para `anon` | **Confirmar con `pg_policies`.** Son teléfonos de menores |
+| `get_registrations_by_partner_email` y `upsert_couple_registration` | Existe `sql/fix_partner_email_rpc.sql`: verificar que esté aplicado |
+| `/punto-de-informacion/*/nuevo` sin guard de rol | Verificar que la página o el RLS frenen a quien no corresponde |
+| 7 FK con `ON DELETE NO ACTION`: `audit_logs.changed_by`, `dianino_tickets.checked_in_by`, `group_dropout_requests.host_id` y `.target_user_id`, `group_registrations.partner_user_id`, `service_statistics.created_by` | No se puede dar de baja a esos usuarios; con `partner_user_id`, **`admin_delete_user` falla** para quien figura como pareja |
+| `.gitignore` | Agregar `test_*.cjs`, `test_*.mjs`, `*.backup_*`, `design-claude/uploads/` |
+| Protección de contraseñas filtradas | Toggle manual en el dashboard de Supabase |
+| `pg_net` y `pg_trgm` en el schema `public` | Moverlos se prueba primero en una rama |
+| `PASTOR` ve los grupos ocultos | Decidir si se acota (sección 24) |
+
+### Código
+- `npm uninstall matter-js @types/matter-js`
+- Archivos huérfanos: `pages/auth/IniciarSesion.tsx`,
+  `pages/punto-informacion/welcome/Bienvenida.tsx`, los `*-IgnacioPC.tsx`,
+  `Pastores.tsx.backup_ui_*`, y los modales huérfanos de la sección 22
+- Conviven 4 versiones de `manage_group_registration`; **solo `v3`** tiene la
+  corrección de seguridad, la derivación y el contador sin doble conteo
+- `groups_status_check` sin `'finished'` vs la re-apertura (sección 19)
+- Dos generadores de `.ics`
+- `EscanerDiaNino.tsx` sin migrar a `useEscanerQR`
+- El formulario de Audiencia edita por `location.state`
+- `Grupos.tsx` mezcla catálogo y panel admin; el panel GCX está duplicado
+- `uploadBase64Image` sube al bucket público
+- `getGroups()` embebe `group_registrations`, que sin sesión vuelve vacío
+- `groups.location` es texto libre (no permite buscar por cercanía)
+- 3 grupos con `co_host_id = host_id`
+- Comprobantes huérfanos en `nocturna-comprobantes` (subidos en inscripciones
+  abandonadas); limpiarlos requiere una tarea del lado del servidor
+
+### Operativo
+- `prode-sync-results` falla cada 5 minutos (`404` en el login de la API)
+- Nocturna: datos de pago, teléfono y texto de la puerta antes de abrir
+- El plan de Resend: 100 emails por día
+
+---
+
+*Última actualización: Octubre 2026 — Versión 6.0*
+
+*Cambios v6.0: corrección del router (`HashRouter`, no `BrowserRouter`);
+sección 8 reescrita (estilo del login; el neo-brutalismo pasa a legacy);
+rutas reales extraídas de `App.tsx` (~30 nuevas) y regla de orden de rutas
+con parámetro; roles `ENCARGADO_NINEZ` y `ACREDITACION`; `users.roles` es
+`text[]`; patrones nuevos (7.8–7.15); tablas, buckets y comportamientos de la
+base (11); seguridad reescrita con las lecciones de la auditoría (12);
+modalidad híbrida, derivación, baja directa y funciones nuevas de GCX (19, 22);
+deploy y aviso de versión (27); eventos, Nocturna y escáner (28–30); Reportes
+GCX (31); Bienvenida, Audiencia, Home, Niñez y Punto de Información (32–34);
+emails (35); flujo con Claude Design (36); estándar de verificación (37); y
+la lista de deuda técnica y pendientes (38).*
+
+*Cambios v5.0: Trivia Origen (20), migración de Gestión de Grupos y Panel de
+Anfitrión a páginas propias (21-22), wizard de parejas (23), bloqueo de cupos y
+ocultar grupos (24), coordinador multi-rol y `ENCARGADO_EVENTOS` (25), login
+seguro con Google OAuth (26).*
 
 *Repositorio: github.com/sistemasorigen/origen-app-1*

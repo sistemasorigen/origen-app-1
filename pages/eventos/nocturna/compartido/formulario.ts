@@ -1,5 +1,5 @@
 import { NocturnaJovenPayload, NocturnaPayload, NocturnaRestriccion, NocturnaRetiro, NocturnaTribu } from '../../../../types';
-import { aplicarRetiroFamiliar, calcularEdad, edadEnElEvento, edadHabilitada, esMayorDeEdad } from '../../../../src/utils/nocturna';
+import { aplicarRetiroFamiliar, avisoFueraDeEdad, calcularEdad, edadHabilitada, esMayorDeEdad } from '../../../../src/utils/nocturna';
 
 /**
  * El modelo del formulario de Nocturna, compartido entre la inscripción
@@ -131,9 +131,9 @@ export const faltanDelChico = (c: ChicoForm): string[] => {
 export const chicoFueraDeEdad = (c: ChicoForm): boolean =>
     !!c.nac && calcularEdad(c.nac) !== null && !edadHabilitada(c.nac);
 
-/** La edad que va a tener en el evento, para poder decírselo con el número. */
-export const edadDelChicoEnElEvento = (c: ChicoForm): number | null =>
-    c.nac ? edadEnElEvento(c.nac) : null;
+/** Por qué no entra, con el dato que lo deja afuera. null si entra. */
+export const avisoDeEdadDelChico = (c: ChicoForm, nombre: string): string | null =>
+    c.nac ? avisoFueraDeEdad(c.nac, nombre) : null;
 
 export const adultoEsMenorDeEdad = (a: AdultoForm): boolean =>
     !!a.nac && calcularEdad(a.nac) !== null && !esMayorDeEdad(a.nac);

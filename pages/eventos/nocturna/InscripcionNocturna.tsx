@@ -7,17 +7,17 @@ import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { useBarraDeAppOculta } from '../../../contexts/BarraDeApp';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
-import { calcularEdad, EDAD_MAXIMA, EDAD_MINIMA } from '../../../src/utils/nocturna';
+import { calcularEdad, QUIENES_ENTRAN } from '../../../src/utils/nocturna';
 import {
     ADULTO_VACIO,
     AdultoForm,
     adultoCompleto,
     adultoEsMenorDeEdad,
     armarPayloadNocturna,
+    avisoDeEdadDelChico,
     ChicoForm,
     chicoFueraDeEdad,
     chicosCompletos,
-    edadDelChicoEnElEvento,
     enLista,
     faltanDelChico,
     OTRO_VACIO,
@@ -1297,7 +1297,7 @@ const InscripcionNocturna: React.FC = () => {
                             explica por qué rompe el centrado. */}
                         <div className="mt-5 rounded-[20px]" style={{ background: PANEL, padding: '16px 18px' }}>
                             <p style={{ ...fuente(500, '13.5px', '1.6'), color: 'rgba(0,0,0,.66)', margin: 0 }}>
-                                <strong style={{ fontWeight: 600, color: INK }}>Es para adolescentes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.</strong>{' '}
+                                <strong style={{ fontWeight: 600, color: INK }}>Es para {QUIENES_ENTRAN}.</strong>{' '}
                                 La completa un adulto responsable: vas a necesitar el DNI de cada adolescente y el comprobante de la transferencia.
                             </p>
                         </div>
@@ -1430,7 +1430,7 @@ const InscripcionNocturna: React.FC = () => {
                         <Bajada>
                             {agregando
                                 ? 'Se agregan a la inscripción que ya tenés, sin tocar lo que está cargado.'
-                                : `Podés anotar a varios en esta misma inscripción. Nocturna es para adolescentes de ${EDAD_MINIMA} a ${EDAD_MAXIMA} años.`}
+                                : `Podés anotar a varios en esta misma inscripción. Nocturna es para ${QUIENES_ENTRAN}.`}
                         </Bajada>
 
                         {agregando && yaAnotados.length > 0 && (
@@ -1451,11 +1451,12 @@ const InscripcionNocturna: React.FC = () => {
                                 const falt = faltan(c);
                                 const nombreCompleto = `${c.nombre} ${c.apellido}`.trim();
                                 const edad = calcularEdad(c.nac);
-                                // La regla del evento: 13 a 18, medidos el día de
-                                // Nocturna. Se mira aparte de `falt` porque no es un
-                                // dato que falte sino uno que no entra.
+                                // La regla del evento: nacidos hasta el 1/6/2014 y
+                                // 18 años como máximo el día de Nocturna. Se mira
+                                // aparte de `falt` porque no es un dato que falte
+                                // sino uno que no entra.
                                 const fueraDeEdad = chicoFueraDeEdad(c);
-                                const edadEnNocturna = edadDelChicoEnElEvento(c);
+                                const avisoDeEdad = avisoDeEdadDelChico(c, c.nombre.trim() || 'Este adolescente');
                                 const trabado = falt.length > 0 || fueraDeEdad;
                                 const alerta = trabado && (intento || !esteAbierto);
                                 return (
@@ -1549,18 +1550,16 @@ const InscripcionNocturna: React.FC = () => {
                                                         {edad === null ? 'Edad —' : `${edad} años`}
                                                     </span>
                                                 </div>
-                                                {/* El número que importa no es el de hoy sino el
-                                                    del día del evento, y por eso el mensaje lo
-                                                    dice con todas las letras: si no, alguien que
-                                                    ve "12 años" y cumple la semana que viene no
-                                                    entiende por qué no lo deja. */}
+                                                {/* El aviso dice el dato que lo deja afuera —la
+                                                    fecha de nacimiento, o la edad que va a tener
+                                                    el día del evento—: si sólo dijera la regla,
+                                                    quien cargó mal el año no se daría cuenta. */}
                                                 {fueraDeEdad && (
                                                     <p
                                                         className="rounded-[14px]"
                                                         style={{ ...fuente(500, '13px', '1.55'), color: AMBAR_INK, background: AMBAR, padding: '10px 12px', margin: '10px 0 0' }}
                                                     >
-                                                        Nocturna es para adolescentes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.{' '}
-                                                        {c.nombre.trim() || 'Este adolescente'} va a tener {edadEnNocturna} el día del evento.
+                                                        {avisoDeEdad}
                                                     </p>
                                                 )}
                                                 <p style={{ ...fuente(600, '13px'), color: 'rgba(0,0,0,.62)', margin: '18px 0 8px' }}>Tribu</p>

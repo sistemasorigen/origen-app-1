@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Check, ChevronLeft, Loader2 } from 'lucide-react';
 import { supabaseService } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
-import { calcularEdad, EDAD_MAXIMA, EDAD_MINIMA } from '../../../src/utils/nocturna';
+import { calcularEdad } from '../../../src/utils/nocturna';
 import { NocturnaAltaResultado, NocturnaConfig, NocturnaEdicionResultado, User } from '../../../types';
 import {
     ADULTO_VACIO,
@@ -12,11 +12,11 @@ import {
     adultoCompleto,
     adultoEsMenorDeEdad,
     armarPayloadNocturna,
+    avisoDeEdadDelChico,
     ChicoForm,
     chicoFueraDeEdad,
     chicosCompletos,
     RESTRICCIONES,
-    edadDelChicoEnElEvento,
     faltanDelChico,
     OTRO_VACIO,
     OtroForm,
@@ -642,8 +642,7 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                                                     className="rounded-[12px]"
                                                     style={{ ...fuente(500, '12.5px', '1.5'), color: AMBAR_INK, background: AMBAR, padding: '8px 10px', margin: '8px 0 0' }}
                                                 >
-                                                    Nocturna es para adolescentes de {EDAD_MINIMA} a {EDAD_MAXIMA} años.{' '}
-                                                    {c.nombre.trim() || `El adolescente ${i + 1}`} va a tener {edadDelChicoEnElEvento(c)} el día del evento.
+                                                    {avisoDeEdadDelChico(c, c.nombre.trim() || `El adolescente ${i + 1}`)}
                                                 </p>
                                             )}
                                         </div>
