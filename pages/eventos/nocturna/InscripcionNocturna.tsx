@@ -1451,7 +1451,7 @@ const InscripcionNocturna: React.FC = () => {
                                 const falt = faltan(c);
                                 const nombreCompleto = `${c.nombre} ${c.apellido}`.trim();
                                 const edad = calcularEdad(c.nac);
-                                // La regla del evento: nacidos hasta el 1/6/2014 y
+                                // La regla del evento: nacidos hasta el 30/6/2014 y
                                 // 18 años como máximo el día de Nocturna. Se mira
                                 // aparte de `falt` porque no es un dato que falte
                                 // sino uno que no entra.

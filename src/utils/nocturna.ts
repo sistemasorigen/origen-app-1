@@ -60,21 +60,26 @@ export const calcularEdad = (fechaNacimiento: string, hoy: Date = new Date()): n
 export const FECHA_DEL_EVENTO = { anio: 2026, mes: 10, dia: 30 };
 
 /**
- * Quién entra (comunicado oficial del 2026-10-05): nacidos hasta el 1 de
- * junio de 2014 inclusive, con 18 años como máximo el día del evento.
+ * Quién entra (definido el 2026-10-05): los nacidos HASTA el
+ * 30/06/2014 inclusive, con 18 años como máximo el día del evento. Del
+ * 01/07/2014 en adelante, no.
  *
  * Las dos puntas se miden distinto, y a propósito. La de abajo es una FECHA
- * DE NACIMIENTO, no una edad: entra quien nació hasta el 1/6/2014 aunque esa
- * noche tenga 12. La de arriba sí es una edad, la que va a tener esa noche.
+ * DE NACIMIENTO, no una edad: entra quien nació el 30/6/2014 o antes, aunque
+ * esa noche tenga 12. La de arriba sí es una edad, la que va a tener esa noche.
+ *
+ * Ese mismo día hubo idas y vueltas con el 1/6/2014. Si alguien vuelve a
+ * plantear "desde" o "a partir de" una fecha, conviene confirmarlo con dos
+ * chicos de ejemplo: "más grande" es "nacido ANTES", y se presta a confusión.
  *
  * Las dos están también en sql/nocturna_fecha_de_corte.sql: si cambian, se
  * cambian en los dos lados.
  */
-export const NACIDOS_HASTA = { anio: 2014, mes: 6, dia: 1 };
+export const NACIMIENTO_DEL_MAS_CHICO = { anio: 2014, mes: 6, dia: 30 };
 export const EDAD_MAXIMA = 18;
 
 /** La regla dicha para una familia: "Es para …", "Nocturna es para …". */
-export const QUIENES_ENTRAN = 'adolescentes nacidos hasta el 1 de junio de 2014, con 18 años como máximo';
+export const QUIENES_ENTRAN = 'adolescentes nacidos hasta el 30 de junio de 2014, con 18 años como máximo';
 
 /** La edad que va a tener esa noche. `null` si la fecha no es válida. */
 export const edadEnElEvento = (fechaNacimiento: string): number | null =>
@@ -99,7 +104,7 @@ export const motivoFueraDeEdad = (
     // Se compara como número y no como texto: '2014-7-1' es una fecha válida
     // para calcularEdad y, como texto, quedaría antes de '2014-06-01'.
     const [y, m, d] = fechaNacimiento.slice(0, 10).split('-').map(Number);
-    const corte = NACIDOS_HASTA.anio * 10000 + NACIDOS_HASTA.mes * 100 + NACIDOS_HASTA.dia;
+    const corte = NACIMIENTO_DEL_MAS_CHICO.anio * 10000 + NACIMIENTO_DEL_MAS_CHICO.mes * 100 + NACIMIENTO_DEL_MAS_CHICO.dia;
     if (y * 10000 + m * 100 + d > corte) return { motivo: 'nacio_despues' };
 
     if (edad > EDAD_MAXIMA) return { motivo: 'mas_de_18', edad };
@@ -122,7 +127,7 @@ export const avisoFueraDeEdad = (fechaNacimiento: string, nombre: string): strin
     if (!fuera) return null;
     if (fuera.motivo === 'nacio_despues') {
         const [y, m, d] = fechaNacimiento.slice(0, 10).split('-');
-        return `Nocturna es para adolescentes nacidos hasta el 1 de junio de 2014. ${nombre} nació el ${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}.`;
+        return `Nocturna es para adolescentes nacidos hasta el 30 de junio de 2014. ${nombre} nació el ${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}.`;
     }
     return `Nocturna es hasta los ${EDAD_MAXIMA} años. ${nombre} va a tener ${fuera.edad} el día del evento.`;
 };

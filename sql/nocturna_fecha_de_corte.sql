@@ -1,14 +1,14 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- NOCTURNA — quién entra: nacidos hasta el 1/6/2014, 18 años como máximo
+-- NOCTURNA — quién entra: nacidos hasta el 30/06/2014, 18 años como máximo
 -- 2026-10-05
 --
--- Comunicado oficial: el filtro es la fecha de nacimiento hasta el 1 de junio
--- de 2014 inclusive, con un tope de 18 años. Reemplaza la regla de "13 a 18
--- años" de sql/nocturna_edad.sql. (El primer aviso decía 30 de junio; se
--- corrigió el mismo día.)
+-- Definido el 2026-10-05: pueden inscribirse los nacidos HASTA el 30/06/2014
+-- inclusive; del 01/07/2014 en adelante, no. Y 18 años como máximo el día del
+-- evento. Reemplaza la regla de "13 a 18 años" de sql/nocturna_edad.sql.
+-- (Ese día se probó también con el 1/6/2014 y se volvió al 30/6.)
 --
--- Abajo cambia: ya no es "13 años el día del evento" sino "nacido hasta el
--- 1/6/2014". Entran también los de 12 nacidos hasta esa fecha.
+-- Abajo cambia: ya no es "13 años el día del evento" sino "nacido el
+-- 30/6/2014 o antes". Entran también los de 12 nacidos hasta esa fecha.
 -- Arriba no cambia: 18 años como máximo, medidos el día del evento.
 --
 -- La regla nueva es más amplia que la anterior: ninguna inscripción que ya
@@ -37,11 +37,11 @@ DECLARE
     -- mueve, se cambia en los dos lados.
     v_fecha_evento CONSTANT DATE := DATE '2026-10-30';
 
-    -- Quién entra (comunicado oficial del 2026-10-05): nacidos hasta el 1 de
-    -- junio de 2014 inclusive, y con 18 años como máximo el día del evento. La fecha
-    -- está también en src/utils/nocturna.ts, igual que la del evento.
-    v_nacidos_hasta CONSTANT DATE    := DATE '2014-06-01';
-    v_edad_maxima   CONSTANT INTEGER := 18;
+    -- Quién entra (definido el 2026-10-05): nacidos hasta el 30/06/2014
+    -- inclusive, con 18 años como máximo el día del evento. La fecha está
+    -- también en src/utils/nocturna.ts, igual que la del evento.
+    v_nacimiento_mas_chico CONSTANT DATE    := DATE '2014-06-30';
+    v_edad_maxima          CONSTANT INTEGER := 18;
 
     v_adulto  JSONB;
     v_jovenes JSONB;
@@ -123,10 +123,10 @@ BEGIN
         -- Las dos puntas de la regla se miden distinto, y a propósito.
         --
         -- La de abajo es una FECHA DE NACIMIENTO, no una edad: entra quien
-        -- nació hasta el 1 de junio de 2014 aunque esa noche tenga 12.
-        IF v_nac > v_nacidos_hasta THEN
+        -- nació el 30/6/2014 o antes, aunque esa noche tenga 12.
+        IF v_nac > v_nacimiento_mas_chico THEN
             RETURN format(
-                'Nocturna es para adolescentes nacidos hasta el 1 de junio de 2014. %s nació el %s.',
+                'Nocturna es para adolescentes nacidos hasta el 30 de junio de 2014. %s nació el %s.',
                 btrim(v_j->>'nombre'), to_char(v_nac, 'DD/MM/YYYY'));
         END IF;
 
