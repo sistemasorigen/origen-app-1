@@ -583,13 +583,21 @@ const InscripcionNocturna: React.FC = () => {
 
     const hayPie = typeof pantalla === 'number' && pantalla >= 1 && pantalla <= 7;
 
-    // Para el resumen del final: "Celíaco: Lucas" o vacío si no hay nada.
-    const textoRestricciones = (() => {
-        const con = chicos.filter(c => c.restriccion !== 'ninguna');
-        if (con.length === 0) return '';
-        const etiqueta = RESTRICCIONES.find(r => r.valor === con[0].restriccion)?.corto || '';
-        return `${etiqueta}: ${enLista(con.map(c => c.nombre.trim() || 'un adolescente'))}`;
-    })();
+    // Para el resumen del final: "Celíaco: Lucas", o "Celíaco: Lucas ·
+    // Diabetes: Bruno" si hay de las dos. Vacío si no hay nada.
+    //
+    // Agrupado por restricción y no por chico: antes se tomaba la del primero
+    // y se le colgaban todos los nombres, así que con dos restricciones
+    // distintas el resumen decía que el diabético era celíaco.
+    const textoRestricciones = RESTRICCIONES
+        .filter(r => r.valor !== 'ninguna')
+        .map(r => {
+            const quienes = chicos.filter(c => c.restriccion === r.valor);
+            if (quienes.length === 0) return '';
+            return `${r.corto}: ${enLista(quienes.map(c => c.nombre.trim() || 'un adolescente'))}`;
+        })
+        .filter(Boolean)
+        .join(' · ');
 
     /**
      * Los que ya están anotados, en gris y con candado.
@@ -743,18 +751,31 @@ const InscripcionNocturna: React.FC = () => {
     };
 
     /**
-     * La respuesta de la familia sobre comida.
+     * Qué restricción se está marcando.
      *
-     * Cambiar de respuesta limpia lo marcado antes: si venía "celíaco: Celia"
-     * y ahora dicen "diabetes", Celia no puede quedar marcada por arrastre.
-     * Con un solo adolescente no hay a quién elegir, así que se marca solo.
+     * La restricción es de cada adolescente, no de la familia: en una casa
+     * puede haber un celíaco y un diabético, y la base lo guarda por chico.
+     * Estos tres botones eligen CUÁL se está marcando, y abajo se marca a
+     * quiénes; cambiar de botón no toca lo que ya se marcó.
+     *
+     * Hasta el 2026-10-06 sí lo tocaba: elegir "diabetes" devolvía a
+     * "ninguna" a todos los celíacos ya marcados. La familia no se enteraba
+     * —el nombre seguía ahí, pero bajo la otra respuesta— y a la cocina le
+     * llegaba una restricción de menos.
+     *
+     * "Ninguna" sigue siendo la respuesta de toda la familia: borra lo
+     * marcado, porque es decir que nadie tiene nada.
+     *
+     * Con un solo adolescente no hay a quién elegir, así que se marca solo y
+     * cambiar de respuesta le cambia la suya.
      */
     const elegirRestriccion = (valor: NocturnaRestriccion) => {
         setRestriccion(valor);
-        setChicos(cs => cs.map(c => ({
-            ...c,
-            restriccion: valor !== 'ninguna' && cs.length === 1 ? valor : 'ninguna',
-        })));
+        if (valor === 'ninguna') {
+            setChicos(cs => cs.map(c => ({ ...c, restriccion: 'ninguna' })));
+            return;
+        }
+        setChicos(cs => (cs.length === 1 ? cs.map(c => ({ ...c, restriccion: valor })) : cs));
     };
 
     const alternarRestriccionDe = (id: string) => {
@@ -1815,6 +1836,17 @@ const InscripcionNocturna: React.FC = () => {
                                                 <span className="min-w-0 truncate" style={{ ...fuente(600, '15px') }}>
                                                     {nombreChico || 'Sin nombre'}
                                                 </span>
+                                                {/* La otra restricción, si la tiene. Sin esto, al
+                                                    cambiar de respuesta el chico aparece sin marcar
+                                                    y lo suyo queda cargado sin que nadie lo vea. */}
+                                                {!marcado && c.restriccion !== 'ninguna' && (
+                                                    <span
+                                                        className="flex-none ml-auto"
+                                                        style={{ ...fuente(600, '12.5px'), color: 'rgba(0,0,0,.5)' }}
+                                                    >
+                                                        {RESTRICCIONES.find(r => r.valor === c.restriccion)?.corto}
+                                                    </span>
+                                                )}
                                             </button>
                                         );
                                     })}
