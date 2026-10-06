@@ -96,6 +96,33 @@ En cada dispositivo y en cada pantalla, incluidos los diálogos, el modo
 
 Los hallazgos de cada prueba quedan en `hallazgos/*.json` (fuera de `resultados/`, que Playwright vacía en cada corrida).
 
+## Borradores de la versión anterior (`borradores.spec.ts`)
+
+Una familia que está a mitad de la inscripción el día que se publica. Se
+toman los borradores que dejó en `sessionStorage` la versión anterior al
+rediseño —los grabados en `golden/`, uno por paso de cada escenario: 47— y se
+abre la versión actual con cada uno. Tiene que retomar en el mismo paso, con
+lo cargado a la vista, y sin descartar ni reescribir el borrador. Si alguna vez
+cambia la forma del borrador, esto falla: `VERSION_BORRADOR` sigue en 3.
+
+## Rendimiento (`rendimiento.spec.ts`)
+
+Sólo en `android-lento` (CPU ×4). Mide, en cada transición, las tareas largas
+y los cuadros que tardan más de 50 ms, y deja los números en
+`resultados-rendimiento.json`. No falla: es para el reporte.
+
+## Contra el diseño (`herramientas/`)
+
+```bash
+node tests/nocturna-golden/herramientas/capturar-diseno.mjs   # capturas del .dc → capturas-diseno/
+python tests/nocturna-golden/herramientas/comparar.py         # lado a lado → comparacion/
+```
+
+`comparar.py` necesita Pillow y las capturas de `calidad` de `iphone-14` y
+`desktop-1440`.
+
+`TEXTOS.md` tiene cada texto que cambió con el rediseño, antes y después.
+
 ## Dispositivos
 
 | Proyecto | Motor | Pantalla |

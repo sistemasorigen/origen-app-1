@@ -1,6 +1,9 @@
 .dist/
-resultados/
-reporte/
-hallazgos/
-capturas/
+capturas-diseno/
 capturas-referencia/
+capturas/
+comparacion/
+hallazgos/
+reporte/
+resultados-rendimiento.json
+resultados/

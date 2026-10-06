@@ -44,7 +44,11 @@ const preparar = async (page: Page, info: TestInfo, opciones: Opciones = {}) => 
 
 /** Mira la pantalla actual: captura, scroll horizontal y axe. */
 const revisar = async (page: Page, info: TestInfo, nombre: string, todos: Hallazgos[]) => {
-    await page.waitForTimeout(400); // que terminen las transiciones de entrada
+    // Arriba de todo: con la página scrolleada, la captura de página completa
+    // dibuja la cabecera pegajosa encima del contenido.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    // Que terminen las entradas: las letras del título tardan hasta ~1,3 s.
+    await page.waitForTimeout(1600);
     await page.screenshot({ path: capturasDir(info) + `${nombre}.png`, fullPage: true });
 
     const sobra = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -143,6 +147,24 @@ test('diálogo de inscripción existente: las dos caras', async ({ page }, info)
     await page.getByRole('button', { name: 'Sumar a alguien más', exact: true }).click();
     await revisar(page, info, '12-modo-sumar-chicos', todos);
 
+    await cerrar(info, todos, errores);
+});
+
+test('la tarjeta de un adolescente: abierta, y fuera de edad', async ({ page }, info) => {
+    const todos: Hallazgos[] = [];
+    const errores = await preparar(page, info);
+    await F.abrir(page);
+    await F.entrarSinSesion(page);
+    await F.llenarAdulto(page, ADULTO);
+    await F.seguir(page);
+    await page.getByRole('button', { name: /^agregar un adolescente$/i }).click();
+    await page.getByLabel('Nombre del adolescente').fill('Lucas');
+    await page.getByLabel('Apellido del adolescente').fill('Golden');
+    await page.getByRole('button', { name: /^garra$/i }).click();
+    await revisar(page, info, '02c-tarjeta-abierta', todos);
+    await page.getByLabel('DNI del adolescente').fill('50111009');
+    await page.getByLabel('Fecha de nacimiento del adolescente').fill('2014-07-01');
+    await revisar(page, info, '02d-fuera-de-edad', todos);
     await cerrar(info, todos, errores);
 });
 

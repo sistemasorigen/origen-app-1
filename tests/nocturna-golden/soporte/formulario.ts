@@ -26,8 +26,15 @@ export interface Chico { nombre: string; apellido: string; dni: string; nac: str
 const boton = (page: Page, nombre: string | RegExp) =>
     page.getByRole('button', { name: nombre, exact: typeof nombre === 'string' });
 
-/** El botón del pie que avanza: "Continuar" en el paso 1, "Siguiente" en el medio, "Listo" en el pago. */
-export const botonSeguir = (page: Page) => page.getByRole('button', { name: /^(Continuar|Siguiente|Listo)$/ });
+/** Un texto exacto, sin importar mayúsculas: el rediseño las pone por CSS. */
+const escapar = (texto: string) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const exacto = (texto: string) => new RegExp(`^${escapar(texto)}$`, 'i');
+
+/** Los botones de la portada: sin sesión, o "Continuar como <nombre>" con sesión. */
+const ENTRADA = /^(entrar sin sesión|continuar como .+|continuar con la inscripción)$/i;
+
+/** El botón del pie que avanza: "Siguiente" del paso 1 al 6, "Listo" en el pago. */
+export const botonSeguir = (page: Page) => page.getByRole('button', { name: /^(siguiente|listo)$/i });
 
 // ── En qué pantalla está ───────────────────────────────────────────────────
 
@@ -48,8 +55,7 @@ export const pantallaActual = async (page: Page): Promise<Pantalla> => {
         const b = JSON.parse(borrador);
         return (Number(b.paso) || '?') as Pantalla;
     }
-    const entrada = await page.getByRole('button', { name: /^(Entrar a la inscripción sin sesión|Continuar con la inscripción)$/ })
-        .first().isVisible().catch(() => false);
+    const entrada = await page.getByRole('button', { name: ENTRADA }).first().isVisible().catch(() => false);
     return entrada ? 0 : '?';
 };
 
@@ -57,12 +63,11 @@ export const pantallaActual = async (page: Page): Promise<Pantalla> => {
 
 export const abrir = async (page: Page) => {
     await page.goto(RUTA);
-    await expect(page.getByRole('button', { name: /^(Entrar a la inscripción sin sesión|Continuar con la inscripción)$/ }).first())
-        .toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: ENTRADA }).first()).toBeVisible({ timeout: 20_000 });
 };
 
-export const entrarSinSesion = (page: Page) => boton(page, 'Entrar a la inscripción sin sesión').click();
-export const entrarConSesion = (page: Page) => boton(page, 'Continuar con la inscripción').click();
+export const entrarSinSesion = (page: Page) => boton(page, /^entrar sin sesión$/i).click();
+export const entrarConSesion = (page: Page) => boton(page, /^(continuar como .+|continuar con la inscripción)$/i).click();
 
 export const llenarAdulto = async (page: Page, a: Partial<Adulto>) => {
     if (a.nombre !== undefined) await page.getByPlaceholder('Tu nombre').fill(a.nombre);
@@ -77,13 +82,13 @@ export const seguir = async (page: Page) => {
 };
 
 export const agregarChico = async (page: Page, c: Chico) => {
-    await page.getByRole('button', { name: /^(Agregar un adolescente|Agregar otro adolescente|Sumar a alguien más)$/ }).first().click();
+    await page.getByRole('button', { name: /^((agregar|sumar) (un|otro) adolescente|sumar a alguien más)$/i }).first().click();
     await page.getByLabel('Nombre del adolescente').last().fill(c.nombre);
     await page.getByLabel('Apellido del adolescente').last().fill(c.apellido);
     await page.getByLabel('DNI del adolescente').last().fill(c.dni);
     await page.getByLabel('Fecha de nacimiento del adolescente').last().fill(c.nac);
-    await boton(page, c.tribu).last().click();
-    await boton(page, `Listo, guardar a ${c.nombre}`).click();
+    await boton(page, exacto(c.tribu)).last().click();
+    await boton(page, exacto(`Listo, guardar a ${c.nombre}`)).click();
 };
 
 export type Retiro = { tipo: 'solos' } | { tipo: 'yo' } | { tipo: 'otro'; nombre: string; apellido: string; dni: string; telefono: string };

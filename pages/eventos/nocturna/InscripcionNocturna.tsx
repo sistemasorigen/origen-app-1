@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { Check, ChevronLeft, Loader2, Lock, Plus } from 'lucide-react';
+import { Check, Loader2, Lock, Plus } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
-import { useBarraDeAppOculta } from '../../../contexts/BarraDeApp';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
 import { calcularEdad, QUIENES_ENTRAN } from '../../../src/utils/nocturna';
@@ -18,6 +17,7 @@ import {
     ChicoForm,
     chicoFueraDeEdad,
     chicosCompletos,
+    DNI_MINIMO,
     enLista,
     faltanDelChico,
     OTRO_VACIO,
@@ -31,6 +31,27 @@ import {
     TRIBUS,
     VERSION_DECLARACIONES,
 } from './compartido/formulario';
+import {
+    anillo,
+    arch,
+    BotonNoc,
+    BotonPulsera,
+    Calma,
+    Confeti,
+    Corchetes,
+    EnlaceNoc,
+    Esquinas,
+    ESTILOS_NOCTURNA,
+    Fondo,
+    LIMA,
+    NEGRO,
+    Pie,
+    precargarFuentes,
+    ROSA,
+    TituloLetras,
+    Tramo,
+    Progreso,
+} from './estilo';
 import {
     NocturnaAltaResultado,
     NocturnaChicoDelGrupo,
@@ -55,7 +76,7 @@ import {
 // El fondo de la pantalla. Está acá y no suelto en el JSX porque lo usan
 // dos cosas: el marco de la página y el <body>, que tiene que quedar del
 // mismo color (ver el efecto de más abajo).
-const FONDO = '#e9e7e3';
+const FONDO = ROSA;
 
 // ── Datos del evento y del pago ───────────────────────────────────────────
 // La cuenta es de Mercado Pago, así que el número es un CVU y no un CBU. Se
@@ -75,34 +96,18 @@ const DATOS_DE_PAGO = {
 // TODO: teléfono de contacto real.
 const TELEFONO_CONTACTO = '11 5566 7788';
 
-// `donde` hoy no se dibuja en ninguna pantalla, pero queda porque es el dato
-// del evento y se va a necesitar el día que haya una pantalla de "qué es
-// Nocturna".
+// Los datos del evento, como los dice el diseño: cortos, con barras, para
+// que entren en una línea y se lean de un vistazo. La regla de quién puede ir
+// NO está acá: es QUIENES_ENTRAN, en src/utils/nocturna.ts, y se muestra tal
+// cual (los textos de las reglas no los cambia el diseño).
 const EVENTO = {
-    // La fecha. Las horas van pegadas —"11pm", no "11 pm"— justamente
-    // para que no se puedan partir entre dos renglones: es el dato que la
-    // gente viene a buscar.
-    cuando: 'Viernes 30 de octubre a\u00a0las 11pm hasta las 6am',
-    // La invitación: lo que es Nocturna en una línea.
-    propuesta: 'Una noche para pasarla increíble y definir quién es la mejor tribu',
-    donde: 'Av. Eva Perón 3932.',
+    fecha: 'Viernes 30.10 // 11 PM - 6 AM',
+    lugar: 'Av. Eva Perón 3932',
+    /** El encabezado del talón de la entrada. */
+    talon: 'Nocturna // vie 30.10 // 11 PM - 6 AM',
 };
 
-/**
- * La foto de apertura.
- *
- * Es la misma del login a propósito: son chicos de la edad de los que van a
- * Nocturna, y usar la foto que la gente ya vio al entrar a la app hace que
- * esta pantalla se lea como parte de Origen y no como un formulario suelto
- * de un tercero — que es la duda razonable de un padre al que le piden el
- * DNI de su hijo.
- *
- * Es de día y el evento es de noche: el velo oscuro de abajo la corre hacia
- * la noche sin disimular lo que es. Cuando haya una foto de una Nocturna
- * real, se cambia acá y no hace falta tocar nada más.
- */
-const IMAGEN_HERO = '/auth-bg.jpg';
-const LOGO = '/origen-logo.png';
+const ARBOL = '/nocturna/origen-arbol.png';
 
 // La app usa HashRouter: para navegar alcanza la ruta pelada, pero un link
 // que se copia y se pega en WhatsApp necesita el '#'.
@@ -175,26 +180,8 @@ const ROJO = '#b42318';
  * escriben en el DOM y no pintan nada.
  */
 const ESTILOS = `
-    #nocturna-inscripcion {
-        color-scheme: light;
-        /* Columna de alto completo: sin esto, en los pasos cortos el pie
-           sticky se queda a mitad de pantalla con fondo debajo. dvh porque
-           en iOS 100vh incluye la barra del navegador.
-
-           Menos los 64 px de la navbar de la app, que ahora va arriba: sin
-           restarlos la página mide una pantalla ENTERA debajo de la barra y
-           aparece un scroll de 64 px que no lleva a ningún lado. */
-        min-height: calc(100vh - 64px);
-        min-height: calc(100dvh - 64px);
-    }
-    /* La portada va sin la barra de la app, así que recupera esos 64 px. */
-    #nocturna-inscripcion.sin-barra {
-        min-height: 100vh;
-        min-height: 100dvh;
-        display: flex;
-        flex-direction: column;
-    }
-    #nocturna-inscripcion > main { flex: 1 0 auto; }
+    /* Los campos de los pasos que todavía no tienen el diseño nuevo (1, 3 a
+       7). El alto de la página y el resto viven en estilo/estilos.ts. */
     #nocturna-inscripcion .campo {
         width: 100%;
         height: 54px;
@@ -313,12 +300,22 @@ const Bajada: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <p style={{ ...fuente(500, '14.5px', '1.55'), color: 'rgba(0,0,0,.6)', margin: '8px 0 0' }}>{children}</p>
 );
 
-const Marco: React.FC<{ children: React.ReactNode; sinBarra?: boolean }> = ({ children, sinBarra }) => (
-    <div id="nocturna-inscripcion" className={sinBarra ? 'sin-barra' : undefined} style={{ background: FONDO }}>
-        <style>{ESTILOS}</style>
-        {children}
-    </div>
-);
+const Marco: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    precargarFuentes();
+    return (
+        <div id="nocturna-inscripcion">
+            <style>{ESTILOS_NOCTURNA + ESTILOS}</style>
+            {children}
+        </div>
+    );
+};
+
+/**
+ * Lo que la pantalla le muestra a la persona como "lo que sigue" o "lo que
+ * falta" es sólo texto: se arma con el mismo estado y las mismas reglas que
+ * deciden si puede seguir (compartido/formulario.ts), nunca con otras.
+ */
+const listaFaltantes = (pares: [boolean, string][]) => pares.filter(([falta]) => falta).map(([, nombre]) => nombre);
 
 // ── Pantalla ──────────────────────────────────────────────────────────────
 
@@ -934,31 +931,8 @@ const InscripcionNocturna: React.FC = () => {
         }
     };
 
-    /**
-     * La portada va sin la barra de la app: abre con la foto a sangre y el
-     * logo encima, y la barra sería un segundo logo centrado 30 px más
-     * arriba. Los seis pasos del formulario sí la llevan.
-     *
-     * Va ACÁ y no más abajo aunque sólo importe para la portada: abajo quedan
-     * tres `return` tempranos —cargando, error de config, inscripciones
-     * cerradas— y un hook después de un return condicional se llama en unos
-     * renders y en otros no. React cuenta los hooks por orden, así que al
-     * pasar de "cargando" a la portada la cantidad cambiaba y tiraba
-     * "Rendered more hooks than during the previous render".
-     *
-     * Con las inscripciones cerradas no se notaba, porque el componente
-     * salía antes siempre y el hook nunca llegaba a correr. Se habría roto
-     * el día que se abrieran.
-     *
-     * Por eso la condición mira también el estado de carga: en las tres
-     * pantallas de reemplazo no hay foto ni logo, así que ahí la barra sí va.
-     */
-    const portadaConFoto = !cargando
-        && !errorConfig
-        && !!config
-        && config.inscripcionesAbiertas
-        && pantalla === 0;
-    useBarraDeAppOculta(portadaConFoto);
+    // La portada ya no se muestra sin la barra de la app: en el diseño nuevo
+    // la barra está en todas las pantallas, también en la primera.
 
     // ── Pantallas que reemplazan todo ─────────────────────────────────────
     if (cargando) {
@@ -1073,324 +1047,194 @@ const InscripcionNocturna: React.FC = () => {
             : retiroQuien === 'otro' ? `Lo retira ${`${otro.nombre} ${otro.apellido}`.trim()}`
                 : '—';
 
-    const pendienteTexto = pantalla === 1
-        ? 'Completá todos tus datos para seguir.'
-        : pantalla === 2
-            ? cantidad === 0 ? 'Agregá al menos un adolescente.'
-                : incompletos.length === 1 ? `A ${incompletos[0].nombre.trim() || 'un adolescente'} le faltan datos.`
-                    : `Hay ${incompletos.length} adolescentes con datos incompletos.`
-            : pantalla === 3 ? 'Elegí cómo se retiran.'
-                : pantalla === 4 ? 'Elegí una opción.'
-                    : pantalla === 5 ? 'Elegí una opción. Cualquiera te deja seguir.'
-                        : pantalla === 6
-                            ? (restriccion === null ? 'Elegí una opción.' : 'Marcá quién tiene esa restricción.')
-                            : pantalla === 7 ? 'Subí el comprobante para terminar.' : '';
+    // ── Lo que dice el pie ────────────────────────────────────────────────
+    // Sólo texto: si puede seguir lo deciden puedeSeguir y las reglas de
+    // compartido/formulario.ts. Esto le cuenta a la persona qué le falta.
+    const loLos = varios ? 'los' : 'lo';
+    const faltaTexto = ((): string => {
+        if (pantalla === 1) {
+            const f = listaFaltantes([
+                [!adulto.nombre.trim(), 'nombre'],
+                [!adulto.apellido.trim(), 'apellido'],
+                [adulto.dni.trim().length < DNI_MINIMO, 'DNI'],
+                [!adulto.email.trim(), 'email'],
+                [!adulto.nac || calcularEdad(adulto.nac) === null, 'fecha de nacimiento'],
+            ]);
+            return f.length ? `Falta: ${f.join(', ')}.` : 'Revisá tus datos.';
+        }
+        if (pantalla === 2) {
+            if (cantidad === 0) {
+                return agregando ? 'Sumá al menos un adolescente nuevo para seguir.' : 'Agregá al menos un adolescente para seguir.';
+            }
+            if (incompletos.length === 1) {
+                return `A ${incompletos[0].nombre.trim() || 'un adolescente'} le falta: ${faltan(incompletos[0]).join(', ')}.`;
+            }
+            if (incompletos.length > 1) return `Hay ${incompletos.length} adolescentes con datos incompletos.`;
+            const fuera = chicos.filter(chicoFueraDeEdad);
+            return fuera.length === 1
+                ? `${fuera[0].nombre.trim() || 'Un adolescente'} no entra en la edad de Nocturna.`
+                : `Hay ${fuera.length} adolescentes que no entran en la edad de Nocturna.`;
+        }
+        if (pantalla === 3) {
+            if (retiro === null) return 'Elegí Sí o No.';
+            if (!retiroQuien) return `Elegí quién ${loLos} retira.`;
+            const f = listaFaltantes([
+                [!otro.nombre.trim(), 'nombre'],
+                [!otro.apellido.trim(), 'apellido'],
+                [!otro.dni.trim(), 'DNI'],
+                [!otro.telefono.trim(), 'teléfono'],
+            ]);
+            return f.length ? `Faltan datos de quien ${loLos} retira: ${f.join(', ')}.` : `Revisá los datos de quien ${loLos} retira.`;
+        }
+        if (pantalla === 4) return 'Elegí Autorizo o No autorizo.';
+        if (pantalla === 5) return 'Elegí una de las dos respuestas. Cualquiera te deja seguir.';
+        if (pantalla === 6) return restriccion === null ? 'Elegí una opción.' : 'Marcá quién tiene esa restricción.';
+        if (pantalla === 7) return subiendo ? 'Esperá a que termine de subir el comprobante.' : 'Falta subir el comprobante.';
+        return '';
+    })();
+    const mostrarFalta = intento && !puedeSeguir && !(pantalla === 1 && adultoEsMenor);
 
-    const etiquetaSeguir = pantalla === 1 ? 'Continuar' : pantalla === 7 ? 'Listo' : 'Siguiente';
+    const conRestriccion = chicos.filter(c => c.restriccion !== 'ninguna').length;
+    const [pieTitulo, pieNota] = ((): [string, string] => {
+        switch (pantalla) {
+            case 1: return ['Adulto responsable', ok1 ? nombreAdulto : 'Faltan datos'];
+            case 2: return [
+                plata(total),
+                cantidad
+                    ? `${cantidad} ${agregando ? (cantidad === 1 ? 'nuevo' : 'nuevos') : (cantidad === 1 ? 'adolescente' : 'adolescentes')} × ${plata(precio)}`
+                    : agregando ? 'Sumá al menos uno nuevo' : 'Agregá al menos un adolescente',
+            ];
+            case 3: return ['Retiro 6 AM', ok3 ? retiroTexto : 'Falta responder'];
+            case 4: return ['Autorización', autoriza === true ? 'Autorizado' : 'Falta responder'];
+            case 5: return ['Fotos y videos', fotos === true ? 'Aceptado' : fotos === false ? 'No aceptado // podés seguir' : 'Falta responder'];
+            case 6: return [
+                'Comida',
+                conRestriccion
+                    ? `${conRestriccion} ${conRestriccion === 1 ? 'con restricción' : 'con restricciones'}`
+                    : restriccion === 'ninguna' ? 'Ninguna restricción' : 'Falta responder',
+            ];
+            case 7: return [plata(total), comprobante ? 'Comprobante listo' : 'Falta el comprobante'];
+            default: return ['', ''];
+        }
+    })();
+    const ocupado = enviando || buscandoGrupo;
+    const etiquetaSeguir = enviando ? 'Guardando…' : buscandoGrupo ? 'Revisando…' : pantalla === 7 ? 'Listo' : 'Siguiente';
+
+    // ── El fondo ──────────────────────────────────────────────────────────
+    // Cuánto se enfoca la palabra (de 0 a 8), y cuándo baja el volumen: en lo
+    // que hay que leer con calma (la autorización sin responder, las fotos,
+    // la comida) y en las salidas.
+    const etapa = pantalla === 'noAut' ? 4 : pantalla;
+    const calma: Calma = pantalla === 'noAut' || (pantalla === 1 && adultoEsMenor)
+        ? 'muy'
+        : (pantalla === 4 && autoriza !== true) || (pantalla === 5 && fotos === null) || pantalla === 6
+            ? 'baja'
+            : 'no';
+
+    // La barra de pasos. Sumando chicos no hay pantalla de fotos, así que el
+    // tramo del medio tiene uno menos (ver pasoMostrado, más arriba).
+    const tramos: Tramo[] = [
+        { nombre: 'Datos', pasos: [1, 2] },
+        { nombre: 'Información', pasos: agregando ? [3, 4, 5] : [3, 4, 5, 6] },
+        { nombre: 'Pago', pasos: [ultimoPaso] },
+    ];
+    // Volver existe en los pasos 1 a 6 y en la salida sin autorización, como
+    // antes. En el pago no: ahí la barra está, pero sin volver, igual que en
+    // la versión anterior (que no mostraba ninguna barra en ese paso).
+    const conVolver = pantalla === 'noAut' || (typeof pantalla === 'number' && pantalla >= 1 && pantalla <= 6);
+    const conTramos = typeof pantalla === 'number' && pantalla >= 1 && pantalla <= 7;
+
+    const nombreDe = (c: { nombre: string; apellido: string }, i: number) =>
+        `${c.nombre} ${c.apellido}`.trim() || `Adolescente ${i + 1}`;
+    const iniciales = (nombre: string) => nombre.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
     return (
-        <Marco sinBarra={portadaConFoto}>
-            {/* La barra de pasos. No va en la apertura: ahí no hay paso al que
-                volver ni progreso que mostrar.
+        <Marco>
+            <Fondo etapa={etapa} nitida={pantalla === 8} calma={calma} portada={pantalla === 0} />
+            <Esquinas aQuien={QUIENES_ENTRAN} fecha={EVENTO.fecha} lugar={EVENTO.lugar} calma={calma} />
 
-                `top-16` y no `top-0` porque la navbar de la app mide 64 px y
-                está pegajosa en z-30; con top-0 esta barra se metía debajo de
-                aquella al scrollear en vez de apoyarse encima. */}
-            {pantalla !== 7 && pantalla !== 0 && (
-                <header className="sticky top-16 z-20" style={{ background: '#e9e7e3' }}>
-                    <div className="mx-auto px-[18px] lg:px-10 pt-3.5 pb-2" style={{ maxWidth: 596 }}>
-                        <div className="flex items-center gap-2.5 min-h-[44px]">
-                            {/* Sin ternario: el encabezado ya no se dibuja en la
-                                apertura, asi que desde aca siempre hay un paso
-                                anterior al que volver. */}
-                            <button
-                                type="button"
-                                onClick={atras}
-                                aria-label="Volver al paso anterior"
-                                className="w-11 h-11 rounded-full border-0 flex items-center justify-center flex-none cursor-pointer"
-                                style={{ background: CAMPO }}
-                            >
-                                <ChevronLeft className="w-[17px] h-[17px]" style={{ color: INK }} strokeWidth={2.3} />
-                            </button>
-                            {/* El medio va vacío: de decir dónde está parada la
-                                persona ya se ocupan la navbar de arriba —con el
-                                logo— y la barra de pasos de abajo. Repetir
-                                "Nocturna" entre las dos era una tercera etiqueta
-                                para lo mismo. Queda el espacio, que es lo que
-                                mantiene el botón a la izquierda y el contador a
-                                la derecha. */}
-                            <span className="flex-1" />
-                            <span className="w-11 text-right flex-none" style={{ ...fuente(600, '12.5px'), color: 'rgba(0,0,0,.55)' }}>
-                                {hayPie ? `${pasoMostrado} de ${ultimoPaso}` : ''}
-                            </span>
-                        </div>
-                        {hayPie && (
-                            <div className="grid gap-2 mt-3.5" style={{ gridTemplateColumns: '2fr 3fr 1fr' }}>
-                                {([
-                                    ['1 · Datos', 1, 2],
-                                    ['2 · Información', 3, agregando ? 5 : 6],
-                                    ['3 · Pago', ultimoPaso, ultimoPaso],
-                                ] as [string, number, number][]).map(([label, ini, fin]) => {
-                                    const p = pasoMostrado as number;
-                                    const tot = fin - ini + 1;
-                                    const hechos = Math.max(0, Math.min(tot, p - ini + 1));
-                                    const actual = p >= ini && p <= fin;
-                                    return (
-                                        <div key={label} className="min-w-0">
-                                            <div className="h-1 rounded-full overflow-hidden" style={{ background: '#e8e7e4' }}>
-                                                <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${(hechos / tot) * 100}%`, background: INK }} />
-                                            </div>
-                                            <p className="truncate" style={{ ...fuente(600, '12px'), color: actual ? INK : p > fin ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.4)', margin: '7px 0 0' }}>
-                                                {label}
-                                            </p>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+            <div className={`noc-contenido${hayPie ? ' noc-con-pie' : ''}`}>
+                <div className="noc-cabecera">
+                    <div className="noc-fila-marca">
+                        <p className="noc-marca">Nocturna</p>
+                        <p className="noc-a-quien">{QUIENES_ENTRAN}</p>
                     </div>
-                </header>
-            )}
+                    {(conVolver || conTramos) && (
+                        <div className="noc-columna noc-progreso">
+                            <Progreso
+                                tramos={conTramos ? tramos : []}
+                                actual={typeof pasoMostrado === 'number' ? pasoMostrado : 0}
+                                onVolver={conVolver ? atras : undefined}
+                            />
+                        </div>
+                    )}
+                </div>
 
-            {/* El hueco de abajo lo deja el propio contenido: con el pie fijo,
-                sin este margen los últimos campos quedan tapados por la barra
-                y no hay forma de llegar a ellos. 104 px es el alto de la barra
-                (botón de 54 + sus paddings) más aire. */}
-            <main
-                className="mx-auto px-[18px] lg:px-10"
-                style={{
-                    maxWidth: 596,
-                    paddingBottom: hayPie ? 'calc(104px + env(safe-area-inset-bottom))' : 40,
-                }}
-            >
+                <main className={`noc-columna${pantalla === 8 ? ' ancha' : ''}`}>
+                    {/* Una pantalla nueva entra desde abajo. La key hace que la
+                        animación vuelva a correr en cada cambio de paso. */}
+                    <div
+                        key={String(pantalla)}
+                        className={`noc-cuerpo${pantalla === 0 ? ' portada' : ''}`}
+                        style={{ animation: 'nocEntrada .5s cubic-bezier(.2,.8,.2,1)' }}
+                    >
 
-                {/* Paso 0 — cómo entrar */}
+                {/* Paso 0 — la bienvenida */}
                 {pantalla === 0 && (
                     <div>
-                        {/* La banda sangra hasta los bordes de la columna: los
-                            márgenes negativos son los mismos que el padding de
-                            <main>, así que en el teléfono llega al borde de la
-                            pantalla y en escritorio al ancho de la columna.
-
-                            Acá vivió un rato el solape redondeado del login —la
-                            hoja montando 28 px sobre la foto— y no funcionó: en
-                            el login la hoja es BLANCA sobre la imagen y el corte
-                            se ve; acá la hoja y la página son el mismo greige, así
-                            que el solape no se leía y el logo quedaba flotando en
-                            un hueco debajo de una foto oscura. El parecido con el
-                            login lo sostienen la foto, el logo y la tipografía, no
-                            un recurso que esta paleta no puede mostrar. */}
-                        <div className="relative -mx-[18px] lg:-mx-10 h-[190px] lg:h-[230px] overflow-hidden rounded-b-3xl">
-                            <img
-                                src={IMAGEN_HERO}
-                                alt=""
-                                aria-hidden="true"
-                                className="absolute inset-0 w-full h-full object-cover"
-                                /* La foto es vertical y las caras están arriba del
-                                   centro; centrada quedaban cortadas al mentón. */
-                                style={{ objectPosition: '50% 28%' }}
-                            />
-
-                            {/* Dos velos, uno por punta, y el medio limpio.
-                                El de arriba es fuerte a propósito: justo debajo del
-                                logo cae la pared BLANCA del fondo de la foto, así que
-                                un velo suave dejaba el logo blanco sobre gris claro,
-                                ilegible. Baja hasta el 60 % porque el logo, en 56 px,
-                                llega hasta el 40 % de la banda: sobre todo ese tramo
-                                va .88 -> .55.
-                                El de abajo es apenas un apoyo: desde que el texto
-                                bajó de la foto no tiene que sostener nada, sólo
-                                cerrar la imagen para que no termine de golpe contra
-                                el borde redondeado. Con la banda en 190 px las caras
-                                caen entre el 55 % y el 90 %, donde el velo de arriba
-                                ya está por debajo de .22 y el de abajo casi no pesa:
-                                se ven limpias. */}
-                            <div
-                                className="absolute inset-0"
-                                style={{
-                                    background:
-                                        'linear-gradient(to bottom, rgba(10,10,10,.88) 0%, rgba(10,10,10,.78) 26%, rgba(10,10,10,.48) 44%, rgba(10,10,10,.10) 60%, rgba(10,10,10,0) 72%),'
-                                        + 'linear-gradient(to top, rgba(10,10,10,.42) 0%, rgba(10,10,10,.12) 30%, rgba(10,10,10,0) 52%)',
-                                }}
-                            />
-
-                            {/* El logo arriba del todo y al medio, en blanco.
-                                Acá la barra de la app no está, así que este es
-                                el único lugar donde aparece la marca: es lo
-                                primero que ve un padre al que después le van a
-                                pedir el documento de su hijo. */}
-                            <img
-                                src={LOGO}
-                                alt="Origen"
-                                className="absolute left-1/2 -translate-x-1/2 h-14 w-auto object-contain invert"
-                                style={{ top: 20 }}
-                            />
+                        <div className="noc-arbol-marco">
+                            <img src={ARBOL} alt="Origen" className="noc-arbol" width={300} height={307} />
                         </div>
-
-                        {/* La bienvenida, centrada entera.
-                            ─────────────────────────────────────────────────────
-                            Acá había cuatro alineaciones apiladas —título
-                            centrado, fecha y texto a la izquierda, botones a lo
-                            ancho, notas centradas— y eso es lo que hacía que la
-                            sección se viera desarmada. Ahora el bloque de arriba
-                            es una unidad centrada y el de abajo, la zona de
-                            acción, va a lo ancho. Dos alineaciones, no cuatro.
-
-                            Los tres niveles se separan por peso, cuerpo y color,
-                            con una sola familia: el saludo, el dato duro y la
-                            invitación. La fecha va en tinta plena porque es la
-                            única información con la que alguien decide acá —si
-                            puede o no esa noche— y queda pegada al título para
-                            que se lean juntos, con más aire recién antes de la
-                            invitación, que es tono y no dato. */}
-                        <div className="mt-7 text-center">
-                            {/* Tres cosas distintas, en este orden: el saludo, el
-                                dato que decide si podés venir, y el tono.
-
-                                El título puede ser grande porque ahora es corto:
-                                entra en dos renglones y deja el nombre del evento
-                                solo en el segundo. Ese corte, y el tamaño, son todo
-                                el énfasis que lleva: no hace falta pintar
-                                "Nocturna" de otro color para que se note.
-
-                                `textWrap: balance` reparte las palabras entre los
-                                renglones en vez de dejar uno largo y uno corto: en
-                                texto centrado ese desbalance es lo primero que se
-                                ve. Donde no está soportado, se ignora. */}
-                            <h1
-                                style={{
-                                    ...fuente(700, 'inherit', '1.1'),
-                                    fontSize: 'clamp(30px, 8vw, 38px)',
-                                    color: INK,
-                                    letterSpacing: '-.03em',
-                                    textWrap: 'balance',
-                                    margin: 0,
-                                }}
-                            >
-                                ¡Bienvenidos a Nocturna!
-                            </h1>
-                            <p
-                                style={{
-                                    ...fuente(600, '16.5px', '1.4'),
-                                    color: INK,
-                                    textWrap: 'balance',
-                                    margin: '14px auto 0',
-                                    maxWidth: 380,
-                                }}
-                            >
-                                {EVENTO.cuando}
-                            </p>
-                            <p
-                                style={{
-                                    ...fuente(500, '15px', '1.6'),
-                                    color: 'rgba(0,0,0,.58)',
-                                    textWrap: 'balance',
-                                    margin: '18px auto 0',
-                                    maxWidth: 360,
-                                }}
-                            >
-                                {EVENTO.propuesta}
-                            </p>
-                        </div>
-
-                        {/* La zona de acción. El salto de 32 px la separa de la
-                            bienvenida; adentro, todo va junto. */}
-                        <div className="flex flex-col gap-2.5 mt-8">
-                            {user ? (
-                                // Con sesión no hay nada que elegir: una sola
-                                // forma de seguir. La portada igual se muestra
-                                // —es donde dice qué es Nocturna, cuándo es y
-                                // qué hay que tener a mano antes de empezar—.
-                                <Boton onClick={() => irA(1)}>Continuar con la inscripción</Boton>
-                            ) : (
-                                <>
-                                    <Boton onClick={() => irAutenticarse(false)}>Continuar iniciando sesión</Boton>
-                                    <Boton variante="suave" onClick={() => irA(1)}>Entrar a la inscripción sin sesión</Boton>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Debajo de los botones: no habla de cómo entrar, habla de
-                            lo que hay que tener a mano para completar el
-                            formulario. El texto va a la izquierda —son tres
-                            renglones y centrados se leen peor— y es el único
-                            bloque alineado así, por eso lleva recuadro: la caja
-                            explica por qué rompe el centrado. */}
-                        <div className="mt-5 rounded-[20px]" style={{ background: PANEL, padding: '16px 18px' }}>
-                            <p style={{ ...fuente(500, '13.5px', '1.6'), color: 'rgba(0,0,0,.66)', margin: 0 }}>
-                                <strong style={{ fontWeight: 600, color: INK }}>Es para {QUIENES_ENTRAN}.</strong>{' '}
-                                La completa un adulto responsable: vas a necesitar el DNI de cada adolescente y el comprobante de la transferencia.
-                            </p>
-                        </div>
-
-                        {/* Las dos notas de cuenta eran dos párrafos chicos y
-                            centrados, uno arriba del otro: leídos juntos parecían
-                            letra chica. Son el mismo tema, así que van en una. */}
-                        <p
-                            className="text-center"
-                            style={{
-                                ...fuente(500, '13px', '1.65'),
-                                color: 'rgba(0,0,0,.58)',
-                                textWrap: 'balance',
-                                margin: '20px auto 0',
-                                maxWidth: 400,
-                            }}
-                        >
-                            {user ? (
-                                // Con sesión, lo único que falta decir es con
-                                // qué cuenta se está entrando: en un celular
-                                // prestado puede no ser la propia, y se entera
-                                // recién al ver sus datos en el paso 1.
-                                <>
-                                    Entrás como{' '}
-                                    <strong style={{ fontWeight: 600, color: INK }}>{user.name || user.email}</strong>
-                                    {' '}y tus datos se completan solos.{' '}
-                                    <button
-                                        type="button"
-                                        onClick={() => setModalSalir(true)}
-                                        className="border-0 bg-transparent cursor-pointer p-0 underline"
-                                        style={{ ...fuente(600, '13px'), color: INK, textUnderlineOffset: 3 }}
-                                    >
-                                        Usar otra cuenta
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    Si ya tenés cuenta, iniciá sesión y tus datos se completan solos.{' '}
-                                    ¿No tenés?{' '}
-                                    <button
-                                        type="button"
-                                        onClick={() => irAutenticarse(true)}
-                                        className="border-0 bg-transparent cursor-pointer p-0 underline"
-                                        style={{ ...fuente(600, '13px'), color: INK, textUnderlineOffset: 3 }}
-                                    >
-                                        Registrate en la app
-                                    </button>
-                                </>
-                            )}
+                        <TituloLetras texto="¡Bienvenidos a Nocturna!" centrado portada style={{ marginTop: 16 }} />
+                        {/* La fecha y el lugar. En pantallas anchas están en las
+                            esquinas y acá no se repiten. */}
+                        <p className="noc-sin-esquinas" style={{ margin: '12px 0 0', textAlign: 'center', ...arch(800, '14px', '1.3'), letterSpacing: '-.025em', textTransform: 'uppercase' }}>
+                            {EVENTO.fecha}
+                            <br />
+                            <Corchetes>{EVENTO.lugar}</Corchetes>
                         </p>
 
-                        {/* La salida a la app. La portada no tiene navbar —la foto
-                            ocupa ese lugar—, así que sin esto la única forma de
-                            volver era el botón atrás del navegador, y a quien
-                            entró desde un link de WhatsApp ni siquiera eso lo
-                            lleva a Origen.
-
-                            Va al pie, angosto y centrado: es una salida, no una
-                            tercera forma de entrar, y no tiene que competir con
-                            el botón negro. "Inicio" con mayúscula porque es el
-                            nombre de esa sección en el menú de la app. */}
-                        <div className="flex justify-center mt-7">
-                            <button
-                                type="button"
-                                onClick={() => navigate('/')}
-                                className="inline-flex items-center gap-1.5 h-12 rounded-full border-0 cursor-pointer"
-                                style={{ ...fuente(600, '14.5px'), color: INK, background: CAMPO, padding: '0 20px 0 14px' }}
-                            >
-                                <ChevronLeft className="w-[17px] h-[17px]" style={{ color: INK }} strokeWidth={2.3} />
-                                Volver al Inicio
-                            </button>
+                        <div style={{ marginTop: 22, background: LIMA, borderRadius: 30, boxShadow: anillo(), padding: 20 }}>
+                            {user ? (
+                                <>
+                                    <p style={{ margin: 0, ...arch(800, '11px'), letterSpacing: '.04em', textTransform: 'uppercase' }}>Entraste como</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+                                        <span
+                                            aria-hidden="true"
+                                            style={{ width: 50, height: 50, borderRadius: 999, background: NEGRO, color: LIMA, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', ...arch(900, '17px'), letterSpacing: '-.04em' }}
+                                        >
+                                            {iniciales(user.name || user.email || '')}
+                                        </span>
+                                        <div style={{ minWidth: 0 }}>
+                                            <p style={{ margin: 0, ...arch(800, '18px'), letterSpacing: '-.03em', overflowWrap: 'anywhere' }}>{user.name || user.email}</p>
+                                            {user.name && (
+                                                <p style={{ margin: '2px 0 0', ...arch(500, '14px'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <BotonNoc onClick={() => irA(1)} style={{ marginTop: 18 }}>
+                                        {cuenta?.nombre ? `Continuar como ${cuenta.nombre}` : 'Continuar con la inscripción'}
+                                    </BotonNoc>
+                                    <p style={{ margin: '10px 0 0', textAlign: 'center' }}>
+                                        <EnlaceNoc onClick={() => setModalSalir(true)}>Usar otra cuenta</EnlaceNoc>
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <BotonNoc onClick={() => irAutenticarse(false)}>Continuar iniciando sesión</BotonNoc>
+                                    <BotonNoc variante="contorno" onClick={() => irA(1)} style={{ marginTop: 10 }}>Entrar sin sesión</BotonNoc>
+                                    <p style={{ margin: '14px 4px 0', textAlign: 'center', ...arch(500, '14px', '1.5') }}>
+                                        Si ya tenés cuenta, conviene iniciar sesión: tus datos se completan solos.
+                                    </p>
+                                    <p style={{ margin: '10px 0 0', textAlign: 'center' }}>
+                                        <EnlaceNoc onClick={() => irAutenticarse(true)}>Registrarme en la app</EnlaceNoc>
+                                    </p>
+                                </>
+                            )}
                         </div>
+                        <p style={{ margin: '16px 0 0', textAlign: 'center' }}>
+                            <EnlaceNoc onClick={() => navigate('/')}>Volver al inicio</EnlaceNoc>
+                        </p>
                     </div>
                 )}
 
@@ -1444,29 +1288,59 @@ const InscripcionNocturna: React.FC = () => {
                     </div>
                 )}
 
+
                 {/* Paso 2 — los adolescentes */}
                 {pantalla === 2 && (
-                    <div className="pt-4">
-                        <Titulo>{agregando ? '¿A quién sumás?' : '¿A quién vas a anotar?'}</Titulo>
-                        <Bajada>
+                    <div>
+                        <TituloLetras texto={agregando ? '¿A quién sumás?' : '¿A quién vas a anotar?'} />
+                        <p style={{ margin: '10px 0 0', ...arch(600, '15px', '1.45') }}>
                             {agregando
-                                ? 'Se agregan a la inscripción que ya tenés, sin tocar lo que está cargado.'
-                                : `Podés anotar a varios en esta misma inscripción. Nocturna es para ${QUIENES_ENTRAN}.`}
-                        </Bajada>
+                                ? 'Los que ya estaban quedan como están. Sumá abajo a quien falte.'
+                                : 'Podés anotar a varios adolescentes en esta misma inscripción.'}
+                        </p>
 
-                        {agregando && yaAnotados.length > 0 && (
-                            <div className="mt-5">
-                                <p style={{ ...fuente(600, '13px'), color: 'rgba(0,0,0,.55)', margin: '0 2px 8px' }}>
-                                    {yaAnotados.length === 1 ? 'Ya está anotado' : 'Ya están anotados'}
-                                </p>
-                                {listaDeChicos(yaAnotados)}
-                                <p style={{ ...fuente(500, '12.5px', '1.55'), color: 'rgba(0,0,0,.5)', margin: '8px 2px 0' }}>
-                                    Desde acá no se editan. Si hay algo para corregir, escribinos al {TELEFONO_CONTACTO} y lo cambiamos nosotros.
-                                </p>
-                            </div>
-                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
+                            {/* Los que ya están en la entrada: sin edición, sobre el
+                                rosa. Sólo se sabe de ellos lo que la base deja ver
+                                (nombre, tribu y el DNI tapado), no la edad. */}
+                            {agregando && yaAnotados.length > 0 && (
+                                <>
+                                    <p style={{ margin: '0 0 -2px 4px', ...arch(900, '13px'), letterSpacing: '-.01em', textTransform: 'uppercase' }}>
+                                        <Corchetes>Ya en tu entrada</Corchetes>
+                                    </p>
+                                    {yaAnotados.map((c, i) => {
+                                        const nombre = `${c.nombre} ${c.apellido}`.trim();
+                                        return (
+                                            <div
+                                                key={`${c.nombre}-${c.dni}-${i}`}
+                                                style={{ borderRadius: 26, boxShadow: anillo(), padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}
+                                            >
+                                                <span aria-hidden="true" style={{ width: 50, height: 50, borderRadius: 999, background: NEGRO, color: ROSA, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', ...arch(900, '16px'), letterSpacing: '-.04em' }}>
+                                                    {iniciales(nombre)}
+                                                </span>
+                                                <span style={{ flex: 1, minWidth: 0 }}>
+                                                    <span style={{ display: 'block', ...arch(800, '17px'), letterSpacing: '-.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombre}</span>
+                                                    <span style={{ display: 'block', marginTop: 3, ...arch(700, '13px'), textTransform: 'uppercase' }}>
+                                                        {c.tribu} // DNI {c.dni}
+                                                    </span>
+                                                </span>
+                                                <span style={{ flex: 'none', height: 30, padding: '0 11px', borderRadius: 999, boxShadow: anillo(2), display: 'flex', alignItems: 'center', ...arch(900, '11px'), textTransform: 'uppercase' }}>
+                                                    Ya anotado
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                    <p style={{ margin: '0 4px', ...arch(600, '13px', '1.5') }}>
+                                        Desde acá no se editan. Si hay algo para corregir, escribinos al {TELEFONO_CONTACTO} y lo cambiamos nosotros.
+                                    </p>
+                                    {cantidad > 0 && (
+                                        <p style={{ margin: '10px 0 -2px 4px', ...arch(900, '13px'), letterSpacing: '-.01em', textTransform: 'uppercase' }}>
+                                            <Corchetes>Sumando ahora</Corchetes>
+                                        </p>
+                                    )}
+                                </>
+                            )}
 
-                        <div className="flex flex-col gap-2.5 mt-5">
                             {chicos.map((c, i) => {
                                 const esteAbierto = abierto === c.id;
                                 const falt = faltan(c);
@@ -1483,163 +1357,156 @@ const InscripcionNocturna: React.FC = () => {
                                 return (
                                     <div
                                         key={c.id}
-                                        className="rounded-[22px]"
                                         style={{
-                                            background: esteAbierto ? '#fff' : PANEL,
-                                            boxShadow: esteAbierto
-                                                ? `0 0 0 1.5px ${INK} inset`
-                                                : alerta ? '0 0 0 1.5px #f0d9b4 inset' : 'none',
+                                            borderRadius: 26,
+                                            background: LIMA,
+                                            boxShadow: `${anillo(esteAbierto ? 3 : 2.5)}${alerta ? `, 0 0 0 4px ${NEGRO}` : ''}`,
                                         }}
                                     >
                                         {!esteAbierto ? (
                                             <button
                                                 type="button"
                                                 onClick={() => setAbierto(c.id)}
-                                                className="w-full border-0 bg-transparent flex items-center gap-3 cursor-pointer text-left"
-                                                style={{ padding: 16 }}
+                                                aria-label={`${falt.length ? 'Completar' : 'Editar'} a ${nombreDe(c, i)}`}
+                                                className="noc-boton"
+                                                style={{ width: '100%', border: 0, background: 'transparent', padding: 14, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', color: NEGRO }}
                                             >
                                                 <span
-                                                    className="w-[46px] h-[46px] rounded-full flex items-center justify-center flex-none"
+                                                    aria-hidden="true"
                                                     style={{
-                                                        ...fuente(600, '14px'),
-                                                        background: falt.length ? AMBAR : INK,
-                                                        color: falt.length ? AMBAR_INK : '#fff',
+                                                        width: 50, height: 50, borderRadius: 999, flex: 'none',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        boxShadow: anillo(),
+                                                        background: trabado ? LIMA : NEGRO,
+                                                        color: trabado ? NEGRO : LIMA,
+                                                        ...arch(900, '16px'), letterSpacing: '-.04em',
                                                     }}
                                                 >
-                                                    {nombreCompleto
-                                                        ? nombreCompleto.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
-                                                        : String(i + 1)}
+                                                    {nombreCompleto ? iniciales(nombreCompleto) : String(i + 1)}
                                                 </span>
-                                                <span className="flex-1 min-w-0">
-                                                    <span className="block truncate" style={{ ...fuente(600, '15.5px'), color: INK }}>
-                                                        {nombreCompleto || `Adolescente ${i + 1}`}
+                                                <span style={{ flex: 1, minWidth: 0 }}>
+                                                    <span style={{ display: 'block', ...arch(800, '17px'), letterSpacing: '-.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {nombreDe(c, i)}
                                                     </span>
-                                                    <span className="block" style={{ ...fuente(500, '13px'), color: falt.length ? AMBAR_INK : 'rgba(0,0,0,.6)', marginTop: 3 }}>
-                                                        {falt.length ? `Falta: ${falt.join(', ')}` : `${edad} años · ${c.tribu}`}
+                                                    <span style={{ display: 'block', marginTop: 3, ...arch(700, '13px'), letterSpacing: '-.01em', textTransform: 'uppercase' }}>
+                                                        {falt.length
+                                                            ? `Falta: ${falt.join(', ')}`
+                                                            : fueraDeEdad ? 'No entra en la edad de Nocturna' : `${edad} años // ${c.tribu}`}
                                                     </span>
                                                 </span>
-                                                <span
-                                                    className="h-[34px] px-3.5 rounded-full flex items-center flex-none"
-                                                    style={{ ...fuente(600, '12.5px'), background: '#fff', color: INK }}
-                                                >
-                                                    {falt.length ? 'Completar' : 'Editar'}
+                                                <span aria-hidden="true" style={{ flex: 'none', ...arch(800, '13px'), letterSpacing: '-.02em', textTransform: 'uppercase' }}>
+                                                    <Corchetes>{falt.length ? 'Completar' : fueraDeEdad ? 'Revisar' : 'Editar'}</Corchetes>
                                                 </span>
                                             </button>
                                         ) : (
                                             <div style={{ padding: '18px 16px 16px' }}>
-                                                <div className="flex items-center gap-2.5">
-                                                    <Rotulo className="flex-1">{`ADOLESCENTE ${i + 1} DE ${cantidad}`}</Rotulo>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                    <p style={{ margin: 0, flex: 1, ...arch(900, '13px'), letterSpacing: '-.01em', textTransform: 'uppercase' }}>
+                                                        {agregando ? `Nuevo ${i + 1} de ${cantidad}` : `Adolescente ${i + 1} de ${cantidad}`}
+                                                    </p>
                                                     <button
                                                         type="button"
                                                         onClick={() => quitarChico(c, i)}
-                                                        className="h-[34px] px-3 rounded-full border-0 bg-transparent cursor-pointer"
-                                                        style={{ ...fuente(600, '12.5px'), color: ROJO }}
+                                                        style={{ minHeight: 44, padding: '0 4px', border: 0, background: 'transparent', ...arch(800, '13px'), color: NEGRO, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
                                                     >
                                                         Quitar
                                                     </button>
                                                 </div>
                                                 <div className="grid gap-2 mt-2.5 grid-cols-1 lg:grid-cols-2">
-                                                    <input className="campo" value={c.nombre} placeholder="Nombre" aria-label="Nombre del adolescente" onChange={e => editarChico(c.id, 'nombre', e.target.value)} />
-                                                    <input className="campo" value={c.apellido} placeholder="Apellido" aria-label="Apellido del adolescente" onChange={e => editarChico(c.id, 'apellido', e.target.value)} />
+                                                    <input className="noc-campo" value={c.nombre} placeholder="Nombre" aria-label="Nombre del adolescente" autoComplete="off" onChange={e => editarChico(c.id, 'nombre', e.target.value)} />
+                                                    <input className="noc-campo" value={c.apellido} placeholder="Apellido" aria-label="Apellido del adolescente" autoComplete="off" onChange={e => editarChico(c.id, 'apellido', e.target.value)} />
                                                 </div>
                                                 <input
-                                                    className="campo mt-2"
+                                                    className="noc-campo"
+                                                    style={{ marginTop: 8 }}
                                                     value={c.dni}
                                                     placeholder="DNI"
                                                     inputMode="numeric"
+                                                    autoComplete="off"
                                                     aria-label="DNI del adolescente"
                                                     onChange={e => editarChico(c.id, 'dni', soloDigitos(e.target.value, 9))}
                                                 />
-                                                <p style={{ ...fuente(600, '13px'), color: 'rgba(0,0,0,.62)', margin: '18px 0 8px' }}>Fecha de nacimiento</p>
-                                                <div className="flex items-center gap-2.5">
+                                                <p style={{ margin: '18px 0 8px', ...arch(800, '12px'), letterSpacing: '.03em', textTransform: 'uppercase' }}>Fecha de nacimiento</p>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                     <input
-                                                        className="campo"
-                                                        style={{ flex: 1, minWidth: 0 }}
+                                                        className="noc-campo"
+                                                        style={{ flex: 1 }}
                                                         type="date"
                                                         value={c.nac}
                                                         aria-label="Fecha de nacimiento del adolescente"
                                                         onChange={e => editarChico(c.id, 'nac', e.target.value)}
                                                     />
                                                     <span
-                                                        className="h-[54px] px-4 rounded-2xl flex items-center whitespace-nowrap flex-none"
                                                         style={{
-                                                            ...fuente(600, '14.5px'),
-                                                            background: edad === null ? '#fafaf9' : fueraDeEdad ? AMBAR : INK,
-                                                            color: edad === null ? 'rgba(0,0,0,.4)' : fueraDeEdad ? AMBAR_INK : '#fff',
+                                                            height: 58, padding: '0 16px', borderRadius: 18, flex: 'none',
+                                                            display: 'flex', alignItems: 'center', whiteSpace: 'nowrap',
+                                                            ...arch(900, '16px'), letterSpacing: '-.03em', textTransform: 'uppercase',
+                                                            ...(edad === null || fueraDeEdad
+                                                                ? { background: 'transparent', color: NEGRO, boxShadow: anillo(2) }
+                                                                : { background: NEGRO, color: LIMA }),
                                                         }}
                                                     >
                                                         {edad === null ? 'Edad —' : `${edad} años`}
                                                     </span>
                                                 </div>
-                                                {/* El aviso dice el dato que lo deja afuera —la
-                                                    fecha de nacimiento, o la edad que va a tener
-                                                    el día del evento—: si sólo dijera la regla,
-                                                    quien cargó mal el año no se daría cuenta. */}
+                                                {/* Fuera de edad: el diseño no lo tiene. Va en negro,
+                                                    como todo lo que en esta pantalla hay que leer
+                                                    antes de seguir, y dice el dato que lo deja afuera
+                                                    —la fecha, o la edad que va a tener esa noche—: si
+                                                    sólo dijera la regla, quien cargó mal el año no se
+                                                    daría cuenta. */}
                                                 {fueraDeEdad && (
-                                                    <p
-                                                        className="rounded-[14px]"
-                                                        style={{ ...fuente(500, '13px', '1.55'), color: AMBAR_INK, background: AMBAR, padding: '10px 12px', margin: '10px 0 0' }}
-                                                    >
-                                                        {avisoDeEdad}
-                                                    </p>
+                                                    <div style={{ margin: '10px 0 0', borderRadius: 18, background: NEGRO, padding: '12px 14px' }}>
+                                                        <p style={{ margin: 0, ...arch(900, '12px'), letterSpacing: '.02em', color: LIMA, textTransform: 'uppercase' }}>
+                                                            <Corchetes>Fuera de edad</Corchetes>
+                                                        </p>
+                                                        <p style={{ margin: '6px 0 0', ...arch(700, '14px', '1.45'), color: LIMA }}>{avisoDeEdad}</p>
+                                                    </div>
                                                 )}
-                                                <p style={{ ...fuente(600, '13px'), color: 'rgba(0,0,0,.62)', margin: '18px 0 8px' }}>Tribu</p>
-                                                <div className="grid grid-cols-3 gap-1.5">
+                                                <p style={{ margin: '20px 0 10px', ...arch(800, '12px'), letterSpacing: '.03em', textTransform: 'uppercase' }}>Tribu · elegí su pulsera</p>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                                     {TRIBUS.map(t => (
-                                                        <button
-                                                            key={t}
-                                                            type="button"
-                                                            onClick={() => editarChico(c.id, 'tribu', t)}
-                                                            aria-pressed={c.tribu === t}
-                                                            className="h-12 rounded-full border-0 cursor-pointer"
-                                                            style={{
-                                                                ...fuente(600, '14px'),
-                                                                background: c.tribu === t ? INK : CAMPO,
-                                                                color: c.tribu === t ? '#fff' : INK,
-                                                            }}
-                                                        >
+                                                        <BotonPulsera key={t} elegida={c.tribu === t} onClick={() => editarChico(c.id, 'tribu', t)}>
                                                             {t}
-                                                        </button>
+                                                        </BotonPulsera>
                                                     ))}
                                                 </div>
-                                                <button
-                                                    type="button"
+                                                <BotonNoc
+                                                    variante={trabado ? 'contorno' : 'negro'}
                                                     onClick={() => { if (!trabado) setAbierto(null); }}
-                                                    className="w-full rounded-full border-0 mt-5"
-                                                    style={{
-                                                        minHeight: 54,
-                                                        padding: '0 18px',
-                                                        ...fuente(600, '15px'),
-                                                        background: trabado ? CAMPO : INK,
-                                                        color: trabado ? 'rgba(0,0,0,.55)' : '#fff',
-                                                        cursor: trabado ? 'default' : 'pointer',
-                                                    }}
+                                                    style={{ minHeight: 58, padding: '8px 18px', marginTop: 18, ...arch(800, '15px'), cursor: trabado ? 'default' : 'pointer' }}
                                                 >
                                                     {falt.length
                                                         ? `Falta: ${falt.join(', ')}`
                                                         : fueraDeEdad
                                                             ? 'No entra en la edad de Nocturna'
                                                             : `Listo, guardar a ${c.nombre.trim() || 'este adolescente'}`}
-                                                </button>
+                                                </BotonNoc>
                                             </div>
                                         )}
                                     </div>
                                 );
                             })}
                             {cantidad === 0 && (
-                                <div className="rounded-[22px] text-center" style={{ background: PANEL, padding: '28px 20px' }}>
-                                    <p style={{ ...fuente(600, '15px'), color: INK, margin: 0 }}>Todavía no anotaste a nadie</p>
-                                    <p style={{ ...fuente(500, '13.5px'), color: 'rgba(0,0,0,.6)', margin: '6px 0 0' }}>Agregá al primer adolescente para seguir.</p>
+                                <div style={{ borderRadius: 26, background: LIMA, boxShadow: anillo(), padding: '24px 20px', textAlign: 'center' }}>
+                                    <p style={{ margin: 0, ...arch(900, '18px'), letterSpacing: '-.04em', textTransform: 'uppercase' }}>Todavía no anotaste a nadie</p>
+                                    <p style={{ margin: '6px 0 0', ...arch(600, '14px') }}>
+                                        {agregando ? 'Sumá al primer adolescente nuevo para seguir.' : 'Agregá al primer adolescente para seguir.'}
+                                    </p>
                                 </div>
                             )}
                             <button
                                 type="button"
                                 onClick={agregarChico}
-                                className="h-[58px] rounded-[22px] bg-transparent flex items-center justify-center gap-2.5 cursor-pointer"
-                                style={{ border: '1.5px dashed #d9d8d4', ...fuente(600, '15px'), color: INK }}
+                                className="noc-boton"
+                                style={{ minHeight: 60, border: 0, borderRadius: 26, background: 'transparent', boxShadow: anillo(), ...arch(900, '16px'), letterSpacing: '-.03em', textTransform: 'uppercase', color: NEGRO, cursor: 'pointer' }}
                             >
-                                <Plus className="w-[17px] h-[17px]" strokeWidth={2.4} />
-                                {cantidad ? 'Agregar otro adolescente' : 'Agregar un adolescente'}
+                                <Corchetes>
+                                    <span aria-hidden="true">+ </span>
+                                    {agregando
+                                        ? (cantidad ? 'Sumar otro adolescente' : 'Sumar un adolescente')
+                                        : (cantidad ? 'Agregar otro adolescente' : 'Agregar un adolescente')}
+                                </Corchetes>
                             </button>
                         </div>
                     </div>
@@ -2047,75 +1914,98 @@ const InscripcionNocturna: React.FC = () => {
                     </div>
                 )}
 
-                {/* Paso 7 — confirmación */}
+
+                {/* Paso 8 — la entrada */}
                 {pantalla === 8 && resultado && (
-                    <div className="pt-8 pb-4">
-                        <div className="text-center">
-                            <div className="w-[60px] h-[60px] mx-auto rounded-full flex items-center justify-center" style={{ background: '#eaf6ee' }}>
-                                <Check className="w-[26px] h-[26px]" style={{ color: VERDE }} strokeWidth={2.6} />
-                            </div>
-                            <h1 style={{ ...fuente(600, '26px', '1.2'), color: INK, letterSpacing: '-.02em', margin: '18px 0 0' }}>
-                                {agregando ? 'Quedaron sumados' : 'Quedaron anotados'}
-                            </h1>
-                            <p style={{ ...fuente(500, '14.5px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px auto 0', maxWidth: 400 }}>
+                    <div style={{ position: 'relative' }}>
+                        <Confeti />
+                        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+                            <span aria-hidden="true" className="noc-sonrisa">:)</span>
+                            <TituloLetras
+                                texto={agregando ? '¡Ya están todos!' : '¡Quedaron anotados!'}
+                                centrado
+                                demora={450}
+                                style={{ marginTop: 8 }}
+                            />
+                            <p style={{ margin: '12px auto 0', maxWidth: 420, ...arch(600, '15px', '1.5') }}>
                                 {agregando
                                     ? 'Están en la misma inscripción que ya tenías. El QR y el código no cambiaron: si guardaste la entrada, esa misma sirve para todos.'
-                                    : `La entrada también te llega por email a ${adulto.email || 'tu correo'}. Puede demorar un rato, por eso te la dejamos acá.`}
+                                    : `Esta es la entrada de toda la familia. También te llega por email a ${adulto.email || 'tu correo'}: puede demorar, por eso te la dejamos acá.`}
                             </p>
                         </div>
-                        <div className="rounded-[24px] mt-5 flex flex-col items-center" style={{ background: PANEL, padding: 22 }}>
-                            <div ref={qrRef} className="rounded-[18px] bg-white" style={{ padding: 14 }}>
-                                <QRCodeSVG value={resultado.inscripcionId || ''} size={168} level="M" bgColor="#ffffff" fgColor={INK} />
-                            </div>
-                            <p style={{ ...fuente(600, '14px'), color: INK, margin: '14px 0 0' }}>Entrada · {resultado.codigoEntrada}</p>
-                            <p className="text-center" style={{ ...fuente(500, '12.5px', '1.5'), color: 'rgba(0,0,0,.6)', margin: '5px 0 0' }}>
-                                Guardala o sacale captura: es lo que se escanea en la puerta. Si el QR no se lee, el código alcanza.
-                            </p>
-                            <button
-                                type="button"
-                                onClick={guardarEntrada}
-                                className="h-12 rounded-full border-0 cursor-pointer mt-3.5"
-                                style={{ ...fuente(600, '14.5px'), background: INK, color: '#fff', paddingLeft: 22, paddingRight: 22 }}
-                            >
-                                Guardar la entrada
-                            </button>
-                        </div>
-                        <div className="mt-3.5">
-                            {([
-                                [varios ? 'Adolescentes' : 'Adolescente', enLista(chicos.map(c => `${c.nombre} ${c.apellido}`.trim() || 'Sin nombre'))],
-                                ['A nombre de', nombreAdulto || '—'],
-                                ['Retiro', retiroTexto],
-                                ...(textoRestricciones ? [['Comida', textoRestricciones] as [string, string]] : []),
-                                ['Pagado', plata(resultado.total ?? total)],
-                            ] as [string, string][]).map(([k, v]) => (
-                                <div key={k} className="flex justify-between gap-3.5" style={{ padding: '12px 4px', borderBottom: '1px solid #f0efec' }}>
-                                    <span style={{ ...fuente(500, '13.5px'), color: 'rgba(0,0,0,.6)' }}>{k}</span>
-                                    <span className="text-right" style={{ ...fuente(600, '13.5px'), color: INK }}>{v}</span>
+
+                        {/* La entrada. El QR va sobre blanco firme y sin nada
+                            encima: ni el confeti —que cae por detrás— ni una
+                            animación. Se escanea y se captura limpio desde que
+                            aparece. */}
+                        <div className="noc-entrada">
+                            <div style={{ background: '#ffffff', padding: 22, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <div
+                                    ref={qrRef}
+                                    role="img"
+                                    aria-label={`Código QR de la entrada ${resultado.codigoEntrada || ''}`.trim()}
+                                    style={{ width: '100%', maxWidth: 240, background: '#ffffff' }}
+                                >
+                                    <QRCodeSVG
+                                        value={resultado.inscripcionId || ''}
+                                        size={240}
+                                        level="M"
+                                        bgColor="#ffffff"
+                                        fgColor="#000000"
+                                        aria-hidden="true"
+                                        style={{ display: 'block', width: '100%', height: 'auto' }}
+                                    />
                                 </div>
-                            ))}
+                                <p style={{ margin: '16px 0 0', ...arch(800, '11px'), letterSpacing: '.06em', textTransform: 'uppercase' }}>Código de entrada</p>
+                                <p style={{ margin: '4px 0 0', ...arch(900, '30px'), letterSpacing: '.06em' }}>{resultado.codigoEntrada}</p>
+                                <p style={{ margin: '8px 0 0', maxWidth: 260, textAlign: 'center', ...arch(600, '13px', '1.45') }}>
+                                    Un solo QR para todos. En la puerta también sirve el nombre del adulto.
+                                </p>
+                            </div>
+                            <div className="noc-entrada-talon">
+                                <p style={{ margin: 0, ...arch(900, '13px'), letterSpacing: '-.01em', textTransform: 'uppercase' }}>
+                                    <Corchetes>{EVENTO.talon}</Corchetes>
+                                </p>
+                                <div style={{ marginTop: 12 }}>
+                                    {([
+                                        [varios ? 'Adolescentes' : 'Adolescente', enLista(chicos.map(c => `${c.nombre} ${c.apellido}`.trim() || 'Sin nombre'))],
+                                        ['A nombre de', nombreAdulto || '—'],
+                                        ['Retiro 6 AM', retiroTexto],
+                                        ...(textoRestricciones ? [['Comida', textoRestricciones] as [string, string]] : []),
+                                        ['Pagado', plata(resultado.total ?? total)],
+                                    ] as [string, string][]).map(([k, v]) => (
+                                        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 14, padding: '11px 0', borderTop: `2px solid ${NEGRO}` }}>
+                                            <span style={{ ...arch(700, '13.5px'), flex: 'none' }}>{k}</span>
+                                            <span style={{ ...arch(800, '14.5px', '1.35'), letterSpacing: '-.02em', textAlign: 'right' }}>{v}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <BotonNoc onClick={guardarEntrada} style={{ marginTop: 12 }}>Guardar la entrada</BotonNoc>
+                            </div>
                         </div>
-                        <div className="flex flex-col mt-5">
-                            <Boton variante="suave" onClick={() => navigate('/')}>Volver al inicio</Boton>
-                        </div>
+                        <p style={{ position: 'relative', zIndex: 1, margin: '16px 0 0', textAlign: 'center' }}>
+                            <EnlaceNoc onClick={() => navigate('/')}>Volver al inicio</EnlaceNoc>
+                        </p>
                     </div>
                 )}
-            </main>
+                    </div>
+                </main>
+            </div>
 
             {/* Deshacer el quitado de un adolescente */}
             {quitado && pantalla === 2 && (
-                <div className="fixed left-4 right-4 z-30 flex justify-center pointer-events-none" style={{ bottom: 104 }}>
+                <div className="noc-deshacer">
                     <div
-                        className="pointer-events-auto w-full rounded-[18px] flex items-center gap-3"
-                        style={{ maxWidth: 420, background: INK, padding: '10px 10px 10px 18px' }}
+                        style={{ pointerEvents: 'auto', width: '100%', maxWidth: 420, background: LIMA, borderRadius: 22, boxShadow: `0 0 0 2.5px ${NEGRO}`, padding: '10px 10px 10px 18px', display: 'flex', alignItems: 'center', gap: 12, animation: 'nocAviso .3s ease-out' }}
                     >
-                        <span className="flex-1 min-w-0" style={{ ...fuente(600, '13.5px'), color: '#fff' }}>
+                        <span style={{ flex: 1, minWidth: 0, ...arch(800, '14px'), letterSpacing: '-.02em', textTransform: 'uppercase' }}>
                             Quitaste a {quitado.chico.nombre.trim() || 'un adolescente'}
                         </span>
                         <button
                             type="button"
                             onClick={deshacerQuitar}
-                            className="h-[38px] px-4 rounded-full border-0 cursor-pointer flex-none"
-                            style={{ ...fuente(600, '13px'), background: '#fff', color: INK }}
+                            className="noc-boton noc-sobre-negro"
+                            style={{ height: 44, padding: '0 18px', border: 0, borderRadius: 999, background: NEGRO, color: LIMA, ...arch(800, '13.5px'), textTransform: 'uppercase', cursor: 'pointer', flex: 'none' }}
                         >
                             Deshacer
                         </button>
@@ -2123,58 +2013,17 @@ const InscripcionNocturna: React.FC = () => {
                 </div>
             )}
 
-            {/* Pie
-                ──────────────────────────────────────────────────────────
-                `fixed` y no `sticky`. Un elemento sticky se ancla sólo
-                mientras su contenedor está a la vista: al llegar al final de
-                la página el pie se despegaba y se iba con el scroll, que es
-                justo lo que no tiene que pasar con el precio y el botón de
-                seguir. Fijo a la ventana no se mueve nunca, y la zona que
-                scrollea queda entre la barra de progreso y esta barra. */}
             {hayPie && (
-                <div className="fixed bottom-0 left-0 right-0 z-20" style={{ background: '#fff', borderTop: '1px solid #efeeeb' }}>
-                    <div
-                        className="mx-auto px-[18px] lg:px-10 pt-3"
-                        style={{ maxWidth: 596, paddingBottom: 'calc(18px + env(safe-area-inset-bottom))' }}
-                    >
-                        <div className="flex items-center gap-3.5">
-                            {(pantalla === 2 || pantalla === 7) && (
-                                <div className="flex-1 min-w-0">
-                                    <p style={{ ...fuente(600, '17px'), color: INK, margin: 0 }}>{plata(total)}</p>
-                                    <p style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.58)', margin: '2px 0 0' }}>
-                                        {cantidad
-                                            ? `${cantidad} ${cantidad === 1 ? 'adolescente' : 'adolescentes'} × ${plata(precio)}`
-                                            : 'Agregá al menos un adolescente'}
-                                    </p>
-                                </div>
-                            )}
-                            <button
-                                type="button"
-                                onClick={seguir}
-                                disabled={enviando || buscandoGrupo}
-                                // Sin aria-disabled a propósito: el botón se ve
-                                // apagado pero responde, y al tocarlo dice qué
-                                // falta. Anunciarlo como deshabilitado sería
-                                // mentirle a quien usa lector de pantalla.
-                                aria-describedby={intento && !puedeSeguir ? 'noc-pendiente' : undefined}
-                                className={`h-[54px] rounded-full border-0 flex items-center justify-center gap-2 ${pantalla === 2 || pantalla === 7 ? 'flex-none' : 'flex-1'}`}
-                                style={{
-                                    padding: '0 30px',
-                                    ...fuente(600, '15.5px'),
-                                    background: puedeSeguir ? INK : '#c9c8c4',
-                                    color: '#fff',
-                                    cursor: enviando ? 'default' : 'pointer',
-                                }}
-                            >
-                                {(enviando || buscandoGrupo) && <Loader2 className="w-4 h-4 animate-spin" />}
-                                {enviando ? 'Guardando…' : buscandoGrupo ? 'Revisando…' : etiquetaSeguir}
-                            </button>
-                        </div>
-                        {intento && !puedeSeguir && !(pantalla === 1 && adultoEsMenor) && (
-                            <p id="noc-pendiente" role="status" style={{ ...fuente(500, '12.5px'), color: AMBAR_INK, margin: '10px 0 0' }}>{pendienteTexto}</p>
-                        )}
-                    </div>
-                </div>
+                <Pie
+                    titulo={pieTitulo}
+                    nota={pieNota}
+                    falta={mostrarFalta ? faltaTexto : undefined}
+                    etiqueta={etiquetaSeguir}
+                    corchetes={!ocupado}
+                    listo={puedeSeguir}
+                    ocupado={ocupado}
+                    onSeguir={seguir}
+                />
             )}
 
             {/* El aviso: con ese DNI ya hay una inscripción.
