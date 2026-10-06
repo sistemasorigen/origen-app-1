@@ -1,0 +1,161 @@
+{
+  "escenario": "7 · Mismo DNI, fecha que no coincide → cara B del diálogo",
+  "secuencia": [
+    0,
+    1
+  ],
+  "pasos": [
+    {
+      "accion": "abrir",
+      "pantalla": 0,
+      "sessionStorage": {}
+    },
+    {
+      "accion": "entrar sin sesión",
+      "pantalla": 1,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 1,
+          "adulto": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "email": "",
+            "nac": ""
+          },
+          "chicos": [],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "mismo DNI, otra fecha",
+      "pantalla": 1,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 1,
+          "adulto": {
+            "nombre": "Golden",
+            "apellido": "PRUEBA",
+            "dni": "95000777",
+            "email": "prueba@origen.test",
+            "nac": "1984-02-03"
+          },
+          "chicos": [],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "seguir (1→ aviso)",
+      "pantalla": 1,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 1,
+          "adulto": {
+            "nombre": "Golden",
+            "apellido": "PRUEBA",
+            "dni": "95000777",
+            "email": "prueba@origen.test",
+            "nac": "1984-02-03"
+          },
+          "chicos": [],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "revisar mis datos",
+      "pantalla": 1,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 1,
+          "adulto": {
+            "nombre": "Golden",
+            "apellido": "PRUEBA",
+            "dni": "95000777",
+            "email": "prueba@origen.test",
+            "nac": "1984-02-03"
+          },
+          "chicos": [],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    }
+  ],
+  "pedidos": [
+    {
+      "tipo": "config",
+      "metodo": "GET",
+      "ruta": "/rest/v1/nocturna_config",
+      "consulta": "?select=edicion,precio_entrada,inscripciones_abiertas&id=eq.1",
+      "cuerpo": null
+    },
+    {
+      "tipo": "buscar_grupo",
+      "metodo": "POST",
+      "ruta": "/rest/v1/rpc/nocturna_buscar_grupo",
+      "consulta": "",
+      "cuerpo": {
+        "p_dni": "95000777",
+        "p_fecha_nacimiento": "1984-02-03"
+      }
+    }
+  ]
+}

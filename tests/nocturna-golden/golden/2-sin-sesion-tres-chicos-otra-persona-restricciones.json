@@ -1,0 +1,1168 @@
+{
+  "escenario": "2 · Sin sesión, 3 chicos, los retira otra persona, no acepta fotos, celíaco + diabetes",
+  "secuencia": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "pasos": [
+    {
+      "accion": "abrir",
+      "pantalla": 0,
+      "sessionStorage": {}
+    },
+    {
+      "accion": "entrar sin sesión",
+      "pantalla": 1,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 1,
+          "adulto": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "email": "",
+            "nac": ""
+          },
+          "chicos": [],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "datos del adulto",
+      "pantalla": 1,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 1,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "seguir (1→2)",
+      "pantalla": 2,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 2,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "agregar a Martina",
+      "pantalla": 2,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 2,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "agregar a Bruno",
+      "pantalla": 2,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 2,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "agregar a Julia",
+      "pantalla": 2,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 2,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "seguir (2→3)",
+      "pantalla": 3,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 3,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": null,
+          "retiroQuien": null,
+          "otro": {
+            "nombre": "",
+            "apellido": "",
+            "dni": "",
+            "telefono": ""
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "retiro: otro",
+      "pantalla": 3,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 3,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "seguir (3→4)",
+      "pantalla": 4,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 4,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": null,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "autorizo",
+      "pantalla": 4,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 4,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": true,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "seguir (4→5)",
+      "pantalla": 5,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 5,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": true,
+          "fotos": null,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "no acepta fotos",
+      "pantalla": 5,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 5,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": true,
+          "fotos": false,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "seguir (5→6)",
+      "pantalla": 6,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 6,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": true,
+          "fotos": false,
+          "restriccion": null,
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "celíaco",
+      "pantalla": 6,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 6,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": true,
+          "fotos": false,
+          "restriccion": "celiaco",
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "marcar a Martina",
+      "pantalla": 6,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 6,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "celiaco"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": true,
+          "fotos": false,
+          "restriccion": "celiaco",
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "diabetes",
+      "pantalla": 6,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 6,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": true,
+          "fotos": false,
+          "restriccion": "diabetes",
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "marcar a Bruno",
+      "pantalla": 6,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 6,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "diabetes"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": true,
+          "fotos": false,
+          "restriccion": "diabetes",
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "seguir (6→7)",
+      "pantalla": 7,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 7,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "diabetes"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": true,
+          "fotos": false,
+          "restriccion": "diabetes",
+          "comprobante": null,
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "subir comprobante",
+      "pantalla": 7,
+      "sessionStorage": {
+        "nocturna.inscripcion.borrador": {
+          "v": 3,
+          "edicion": 2026,
+          "paso": 7,
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "nac": "1982-06-15"
+          },
+          "chicos": [
+            {
+              "id": "<uuid-1>",
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "nac": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna"
+            },
+            {
+              "id": "<uuid-2>",
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "nac": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "diabetes"
+            },
+            {
+              "id": "<uuid-3>",
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "nac": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna"
+            }
+          ],
+          "retiro": "no",
+          "retiroQuien": "otro",
+          "otro": {
+            "nombre": "Raúl",
+            "apellido": "Tercero",
+            "dni": "28999111",
+            "telefono": "1155550000"
+          },
+          "autoriza": true,
+          "fotos": false,
+          "restriccion": "diabetes",
+          "comprobante": {
+            "path": "2026/<uuid-4>.jpg",
+            "nombre": "comprobante.png"
+          },
+          "grupo": null
+        }
+      }
+    },
+    {
+      "accion": "listo (envío)",
+      "pantalla": 8,
+      "sessionStorage": {}
+    },
+    {
+      "accion": "entrada en pantalla",
+      "pantalla": 8,
+      "sessionStorage": {}
+    }
+  ],
+  "pedidos": [
+    {
+      "tipo": "config",
+      "metodo": "GET",
+      "ruta": "/rest/v1/nocturna_config",
+      "consulta": "?select=edicion,precio_entrada,inscripciones_abiertas&id=eq.1",
+      "cuerpo": null
+    },
+    {
+      "tipo": "buscar_grupo",
+      "metodo": "POST",
+      "ruta": "/rest/v1/rpc/nocturna_buscar_grupo",
+      "consulta": "",
+      "cuerpo": {
+        "p_dni": "30111222",
+        "p_fecha_nacimiento": "1982-06-15"
+      }
+    },
+    {
+      "tipo": "comprobante",
+      "metodo": "POST",
+      "ruta": "/storage/v1/object/nocturna-comprobantes/2026/<uuid-4>.jpg",
+      "consulta": "",
+      "cuerpo": {
+        "multipart": true,
+        "partes": [
+          {
+            "nombre": "cacheControl",
+            "tipo": "texto"
+          },
+          {
+            "nombre": "",
+            "tipo": "image/jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "tipo": "register_nocturna",
+      "metodo": "POST",
+      "ruta": "/rest/v1/rpc/register_nocturna",
+      "consulta": "",
+      "cuerpo": {
+        "p_payload": {
+          "adulto": {
+            "nombre": "Laura",
+            "apellido": "Golden",
+            "dni": "30111222",
+            "email": "laura.golden@example.com",
+            "fechaNacimiento": "1982-06-15"
+          },
+          "jovenes": [
+            {
+              "nombre": "Martina",
+              "apellido": "Golden",
+              "dni": "50111001",
+              "fechaNacimiento": "2011-04-10",
+              "tribu": "Trueno",
+              "restriccion": "ninguna",
+              "retiroTipo": "otra_persona",
+              "retiroNombre": "Raúl",
+              "retiroApellido": "Tercero",
+              "retiroDni": "28999111",
+              "retiroTelefono": "1155550000"
+            },
+            {
+              "nombre": "Bruno",
+              "apellido": "Golden",
+              "dni": "50111002",
+              "fechaNacimiento": "2013-09-21",
+              "tribu": "Garra",
+              "restriccion": "diabetes",
+              "retiroTipo": "otra_persona",
+              "retiroNombre": "Raúl",
+              "retiroApellido": "Tercero",
+              "retiroDni": "28999111",
+              "retiroTelefono": "1155550000"
+            },
+            {
+              "nombre": "Julia",
+              "apellido": "Golden",
+              "dni": "50111003",
+              "fechaNacimiento": "2009-12-02",
+              "tribu": "Sin tribu",
+              "restriccion": "ninguna",
+              "retiroTipo": "otra_persona",
+              "retiroNombre": "Raúl",
+              "retiroApellido": "Tercero",
+              "retiroDni": "28999111",
+              "retiroTelefono": "1155550000"
+            }
+          ],
+          "autorizaAsistencia": true,
+          "aceptaFotos": false,
+          "declaracionesVersion": "nocturna-2026-v1",
+          "comprobantePath": "2026/<uuid-4>.jpg"
+        }
+      }
+    }
+  ],
+  "notas": [
+    "HALLAZGO: el formulario actual no permite un chico celíaco y otro con diabetes en la misma inscripción.",
+    "Elegir una restricción resetea a todos los chicos a \"ninguna\" (elegirRestriccion). La base sí lo admite (restriccion es por chico).",
+    "Por eso el payload final lleva sólo a Bruno con diabetes y a Martina con \"ninguna\"."
+  ]
+}
