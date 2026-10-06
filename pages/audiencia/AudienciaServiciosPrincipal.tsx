@@ -6,9 +6,10 @@ import { supabaseService } from '../../services/supabaseService';
 import NeoModal from '../../components/ui/NeoModal';
 import { useScrollRecordado } from '../../src/utils/scrollRecordado';
 import {
-    MESES, aFecha, anioDe, buscarAnioAnterior, calcStats, fechaCorta, fechaNumerica,
+    aFecha, anioDe, buscarAnioAnterior, calcStats, fechaCorta, fechaNumerica,
     fmt, horarioDe,
 } from './datosDeAudiencia';
+import SelectorDeRango, { Rango, atajosDeRango, etiquetaDeRango, rangoDelAnio } from './SelectorDeRango';
 
 /**
  * La planilla de Audiencia de Servicios — design-claude/Audiencia de Servicios.
@@ -19,9 +20,10 @@ import {
  * si la pantalla existe para ver cómo viene la asistencia, esos números tienen
  * que estar a la vista al entrar.
  *
- * Los filtros arrancan en un año concreto y no en "todos": la comparación
- * contra el año anterior y la tendencia sólo tienen sentido dentro de un año,
- * y una lista que mezcla 2024 con 2026 no se puede leer de corrido.
+ * El período es un rango de fechas (SelectorDeRango) y arranca en el último
+ * año con datos, no en "todo": una lista que mezcla 2024 con 2026 no se puede
+ * leer de corrido. Antes eran dos selects, año y mes, y no había forma de
+ * mirar "las últimas seis semanas".
  *
  * El detalle de un servicio se fue a su propia página
  * (/audiencia-servicios/detalles/:id), donde antes eran dos modales sueltos.
@@ -32,7 +34,25 @@ interface Props { currentUser: User | null; }
 
 const CLAVE_SCROLL = 'audiencia.servicios';
 const TODOS = '';
-const ANIO_COMPLETO = '';
+
+/**
+ * El rango elegido sobrevive a ir al detalle de un servicio y volver.
+ *
+ * La pantalla ya recuerda dónde estaba el scroll (useScrollRecordado): si el
+ * rango volviera al año entero, ese scroll caería en otra fila. Va en
+ * sessionStorage y no en localStorage: mañana se arranca de nuevo por el año.
+ */
+const CLAVE_RANGO = 'audiencia.servicios.rango';
+const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+const leerRangoGuardado = (): Rango | null => {
+    try {
+        const r = JSON.parse(sessionStorage.getItem(CLAVE_RANGO) || 'null');
+        return r && FECHA_ISO.test(r.desde) && FECHA_ISO.test(r.hasta) && r.desde <= r.hasta ? r : null;
+    } catch {
+        return null;
+    }
+};
 
 // ─── Piezas chicas ────────────────────────────────────────────────────────
 
@@ -93,8 +113,7 @@ const AudienciaServiciosPrincipal: React.FC<Props> = () => {
     const [registros, setRegistros] = useState<any[]>([]);
     const [cargando, setCargando] = useState(true);
 
-    const [anio, setAnio] = useState('');
-    const [mes, setMes] = useState(ANIO_COMPLETO);
+    const [rango, setRango] = useState<Rango | null>(leerRangoGuardado);
     const [categoria, setCategoria] = useState(TODOS);
     const [horario, setHorario] = useState(TODOS);
     const [busqueda, setBusqueda] = useState('');
@@ -127,30 +146,47 @@ const AudienciaServiciosPrincipal: React.FC<Props> = () => {
         [registros]
     );
 
-    // El año arranca en el último con datos, no en el calendario: si todavía no
-    // se cargó nada de este año la pantalla abriría vacía sin explicar por qué.
+    // El período arranca en el último año con datos, no en el calendario: si
+    // todavía no se cargó nada de este año la pantalla abriría vacía sin
+    // explicar por qué.
+    const rangoInicial = useMemo(() => (anios.length > 0 ? rangoDelAnio(anios[0]) : null), [anios]);
     useEffect(() => {
-        if (!anio && anios.length > 0) setAnio(String(anios[0]));
-    }, [anio, anios]);
+        if (!rango && rangoInicial) setRango(rangoInicial);
+    }, [rango, rangoInicial]);
 
-    const delAnio = useMemo(
-        () => registros.filter(r => String(anioDe(r)) === anio),
-        [registros, anio]
-    );
+    useEffect(() => {
+        if (!rango) return;
+        try { sessionStorage.setItem(CLAVE_RANGO, JSON.stringify(rango)); } catch { /* sin storage, se pierde al volver */ }
+    }, [rango]);
 
-    const categorias = useMemo(
-        () => Array.from(new Set(delAnio.map(r => r.category).filter(Boolean))).sort(),
-        [delAnio]
-    );
-    const horarios = useMemo(
-        () => Array.from(new Set(delAnio.map(horarioDe).filter(Boolean))).sort(),
-        [delAnio]
-    );
+    const dentroDelRango = useCallback((r: any) => {
+        const f = String(r.service_date || '').slice(0, 10);
+        return !!rango && f >= rango.desde && f <= rango.hasta;
+    }, [rango]);
 
-    /** Todo menos el mes: es la base de la tendencia, que mira más atrás que el mes elegido. */
-    const sinMes = useMemo(() => {
+    const delRango = useMemo(() => registros.filter(dentroDelRango), [registros, dentroDelRango]);
+
+    // Las opciones salen del período, pero la elegida se queda aunque el rango
+    // nuevo no la tenga: si desapareciera del select, el filtro seguiría
+    // aplicado sin que se vea cuál es.
+    const categorias = useMemo(() => {
+        const s = new Set(delRango.map(r => r.category).filter(Boolean));
+        if (categoria !== TODOS) s.add(categoria);
+        return Array.from(s).sort();
+    }, [delRango, categoria]);
+    const horarios = useMemo(() => {
+        const s = new Set(delRango.map(horarioDe).filter(Boolean));
+        if (horario !== TODOS) s.add(horario);
+        return Array.from(s).sort();
+    }, [delRango, horario]);
+
+    /**
+     * Todo menos el rango: es la base de la tendencia, que mira más atrás que
+     * el período elegido, y de los puntos del calendario.
+     */
+    const base = useMemo(() => {
         const t = busqueda.trim().toLowerCase();
-        return delAnio.filter(r => {
+        return registros.filter(r => {
             if (categoria !== TODOS && (r.category || '') !== categoria) return false;
             if (horario !== TODOS && horarioDe(r) !== horario) return false;
             if (t) {
@@ -164,18 +200,27 @@ const AudienciaServiciosPrincipal: React.FC<Props> = () => {
             }
             return true;
         });
-    }, [delAnio, categoria, horario, busqueda]);
+    }, [registros, categoria, horario, busqueda]);
+
+    /** Los puntos del calendario: cuántos servicios hay cada día, con los mismos filtros. */
+    const serviciosPorDia = useMemo(() => {
+        const m = new Map<string, number>();
+        base.forEach(r => {
+            const f = String(r.service_date || '').slice(0, 10);
+            if (f) m.set(f, (m.get(f) || 0) + 1);
+        });
+        return m;
+    }, [base]);
+
+    const atajos = useMemo(() => atajosDeRango(anios), [anios]);
 
     const filas = useMemo(() => {
-        const conMes = mes === ANIO_COMPLETO
-            ? sinMes
-            : sinMes.filter(r => String(r.service_date || '').slice(5, 7) === mes);
         const signo = masViejoPrimero ? -1 : 1;
-        return [...conMes].sort((a, b) => {
+        return base.filter(dentroDelRango).sort((a, b) => {
             const d = (aFecha(b.service_date).getTime() - aFecha(a.service_date).getTime()) * signo;
             return d !== 0 ? d : horarioDe(a).localeCompare(horarioDe(b));
         });
-    }, [sinMes, mes, masViejoPrimero]);
+    }, [base, dentroDelRango, masViejoPrimero]);
 
     /**
      * Los servicios del período que sí tienen asistencia cargada.
@@ -195,22 +240,23 @@ const AudienciaServiciosPrincipal: React.FC<Props> = () => {
     /**
      * Los últimos doce servicios hasta el final del período elegido.
      *
-     * Se toman de `sinMes` a propósito: con un mes elegido el mes solo suele
-     * tener cuatro o cinco servicios, y una tendencia de cinco barras no
-     * muestra ninguna tendencia. Así se ve de dónde viene el mes que se está
-     * mirando, aunque las barras se pasen para atrás.
+     * Se toman de `base` a propósito: un mes solo suele tener cuatro o cinco
+     * servicios, y una tendencia de cinco barras no muestra ninguna tendencia.
+     * Así se ve de dónde viene el período que se está mirando, aunque las
+     * barras se pasen para atrás —incluso al año anterior, si el rango arranca
+     * en enero—.
      */
     const tendencia = useMemo(() => {
         if (conAsistencia.length === 0) return [];
         const corte = Math.max(...conAsistencia.map(r => aFecha(r.service_date).getTime()));
-        return [...sinMes]
+        return [...base]
             .filter(r => aFecha(r.service_date).getTime() <= corte && calcStats(r).totalFinalConOnline > 0)
             .sort((a, b) => {
                 const d = aFecha(a.service_date).getTime() - aFecha(b.service_date).getTime();
                 return d !== 0 ? d : horarioDe(a).localeCompare(horarioDe(b));
             })
             .slice(-12);
-    }, [sinMes, conAsistencia]);
+    }, [base, conAsistencia]);
 
     // Al cambiar de período la selección vieja puede no estar más entre las barras.
     const seleccionado = useMemo(() => {
@@ -256,8 +302,13 @@ const AudienciaServiciosPrincipal: React.FC<Props> = () => {
         '' as string
     );
 
-    const hayFiltros = mes !== ANIO_COMPLETO || categoria !== TODOS || horario !== TODOS || busqueda.trim() !== '';
-    const limpiar = () => { setMes(ANIO_COMPLETO); setCategoria(TODOS); setHorario(TODOS); setBusqueda(''); };
+    const rangoMovido = !!rango && !!rangoInicial
+        && (rango.desde !== rangoInicial.desde || rango.hasta !== rangoInicial.hasta);
+    const hayFiltros = rangoMovido || categoria !== TODOS || horario !== TODOS || busqueda.trim() !== '';
+    const limpiar = () => {
+        if (rangoInicial) setRango(rangoInicial);
+        setCategoria(TODOS); setHorario(TODOS); setBusqueda(''); setElegido(null);
+    };
 
     const borrar = async () => {
         if (!aBorrar) return;
@@ -274,9 +325,7 @@ const AudienciaServiciosPrincipal: React.FC<Props> = () => {
     const verDetalle = (r: any) => navigate(`/audiencia-servicios/detalles/${r.id}`);
     const editar = (r: any) => navigate('/audiencia-servicios/new', { state: { record: r } });
 
-    const titulo = mes === ANIO_COMPLETO
-        ? (anio ? `Todo ${anio}` : 'Servicios')
-        : `${MESES[Number(mes) - 1]} ${anio}`;
+    const titulo = rango ? etiquetaDeRango(rango) : 'Servicios';
 
     const botonRedondo = 'flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full bg-[#f2f2f0] text-[#0a0a0a] transition-colors hover:bg-[#e6e5e1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2';
     const th = 'px-3.5 pb-3 pt-[14px] text-left text-[10.5px] font-semibold uppercase tracking-[0.06em] text-black/[.52]';
@@ -317,22 +366,17 @@ const AudienciaServiciosPrincipal: React.FC<Props> = () => {
 
                     {!cargando && registros.length > 0 && (
                         <>
-                            <div className="mt-3.5 grid grid-cols-2 gap-2 md:grid-cols-[120px_170px_minmax(0,220px)_minmax(0,190px)]">
-                                <Filtro
-                                    etiqueta="Año"
-                                    value={anio}
-                                    onChange={v => { setAnio(v); setElegido(null); }}
-                                    options={anios.map(a => ({ label: String(a), value: String(a) }))}
-                                />
-                                <Filtro
-                                    etiqueta="Mes"
-                                    value={mes}
-                                    onChange={v => { setMes(v); setElegido(null); }}
-                                    options={[
-                                        { label: 'Todo el año', value: ANIO_COMPLETO },
-                                        ...MESES.map((m, i) => ({ label: m, value: String(i + 1).padStart(2, '0') })),
-                                    ]}
-                                />
+                            <div className="mt-3.5 grid grid-cols-2 gap-2 md:grid-cols-[minmax(0,290px)_minmax(0,220px)_minmax(0,190px)]">
+                                {rango && (
+                                    <div className="col-span-2 md:col-span-1">
+                                        <SelectorDeRango
+                                            valor={rango}
+                                            onCambiar={r => { setRango(r); setElegido(null); }}
+                                            serviciosPorDia={serviciosPorDia}
+                                            atajos={atajos}
+                                        />
+                                    </div>
+                                )}
                                 <Filtro
                                     etiqueta="Categoría"
                                     value={categoria}
@@ -428,14 +472,14 @@ const AudienciaServiciosPrincipal: React.FC<Props> = () => {
                         </div>
                         <p className="mt-[22px] text-[19px] font-semibold text-[#0a0a0a]">Ningún servicio con estos filtros</p>
                         <p className="mt-2.5 max-w-[380px] text-[13.5px] font-medium leading-[1.65] text-black/[.62]">
-                            Probá con otro horario o categoría, o mirá el año completo.
+                            Probá con otro rango de fechas, horario o categoría, o mirá el año completo.
                         </p>
                         <div className="mt-[22px] flex flex-wrap justify-center gap-2.5">
                             <button
                                 onClick={limpiar}
                                 className="h-12 rounded-full bg-[#0a0a0a] px-[22px] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#242424]"
                             >
-                                Ver todo {anio}
+                                Ver todo {anios[0]}
                             </button>
                             <button
                                 onClick={() => navigate('/audiencia-servicios/new')}
@@ -572,12 +616,15 @@ const AudienciaServiciosPrincipal: React.FC<Props> = () => {
                                     const act = calcStats(seleccionado);
                                     const ant = calcStats(comparable.registro);
                                     const max = Math.max(1, act.totalFinalConOnline, ant.totalFinalConOnline);
+                                    // El año sale del servicio y no del período: un rango
+                                    // puede cruzar de un año a otro.
+                                    const anioSel = anioDe(seleccionado);
                                     const d = ant.totalFinalConOnline > 0
                                         ? Math.round((act.totalFinalConOnline / ant.totalFinalConOnline - 1) * 100)
                                         : null;
                                     const barras = [
-                                        { r: seleccionado, s: act, etiqueta: `${fechaCorta(seleccionado.service_date)} ${anio}`, cAud: '#2563eb', cOn: '#a48ce8' },
-                                        { r: comparable.registro, s: ant, etiqueta: `${fechaCorta(comparable.registro.service_date)} ${Number(anio) - 1}`, cAud: '#9fb7ee', cOn: '#d2c6f3' },
+                                        { r: seleccionado, s: act, etiqueta: `${fechaCorta(seleccionado.service_date)} ${anioSel}`, cAud: '#2563eb', cOn: '#a48ce8' },
+                                        { r: comparable.registro, s: ant, etiqueta: `${fechaCorta(comparable.registro.service_date)} ${anioDe(comparable.registro)}`, cAud: '#9fb7ee', cOn: '#d2c6f3' },
                                     ];
                                     return (
                                         <>
@@ -589,7 +636,7 @@ const AudienciaServiciosPrincipal: React.FC<Props> = () => {
                                                     {d === null ? '—' : `${d > 0 ? '+' : ''}${d}%`}
                                                 </span>
                                                 <span className="text-[12.5px] font-medium text-[#6b7280]">
-                                                    {d !== null && d >= 0 ? 'más' : 'menos'} que en {Number(anio) - 1}
+                                                    {d !== null && d >= 0 ? 'más' : 'menos'} que en {anioSel - 1}
                                                 </span>
                                             </div>
                                             <div className="mt-4 flex flex-col gap-3">
