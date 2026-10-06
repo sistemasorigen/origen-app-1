@@ -15,13 +15,18 @@ const TituloLetras: React.FC<{
     demora?: number;
     centrado?: boolean;
     portada?: boolean;
+    /** Más chico: las preguntas largas (`chico`) y las salidas (`serio`). */
+    tam?: 'chico' | 'serio';
+    /** h2 cuando va dentro de una pantalla que ya tiene su h1. */
+    nivel?: 'h1' | 'h2';
     style?: React.CSSProperties;
-}> = ({ texto, demora = 80, centrado, portada, style }) => {
+}> = ({ texto, demora = 80, centrado, portada, tam, nivel = 'h1', style }) => {
     let i = 0;
+    const Etiqueta = nivel;
     return (
-        <h1
+        <Etiqueta
             aria-label={texto}
-            className={`noc-titulo${portada ? ' portada' : ''}`}
+            className={`noc-titulo${portada ? ' portada' : ''}${tam ? ` ${tam}` : ''}`}
             style={{ textAlign: centrado ? 'center' : 'left', ...style }}
         >
             {texto.split(' ').map((palabra, p) => (
@@ -45,7 +50,7 @@ const TituloLetras: React.FC<{
                     })}
                 </span>
             ))}
-        </h1>
+        </Etiqueta>
     );
 };
 

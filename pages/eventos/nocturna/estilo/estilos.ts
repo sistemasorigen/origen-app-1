@@ -159,6 +159,52 @@ ${ANIMACIONES_CSS}
     padding: 20px 22px 22px;
     border-top: 3px dashed ${NEGRO};
 }
+/* Lo que vino de la cuenta: borde punteado. Al editarlo vuelve al borde
+   lleno (la clase sale) y la etiqueta pasa a "editado". */
+#nocturna-inscripcion .noc-campo.de-la-cuenta {
+    border: 2px dashed ${NEGRO} !important;
+    box-shadow: none !important;
+}
+#nocturna-inscripcion .noc-campo.de-la-cuenta:focus { box-shadow: inset 0 0 0 2px ${NEGRO} !important; }
+/* La fecha que deja afuera al adulto (menor de 18). */
+#nocturna-inscripcion .noc-campo.alerta { box-shadow: inset 0 0 0 4px ${NEGRO} !important; }
+
+/* La palabra de fondo vuelve con un golpe al responder (ver Fondo.tsx). */
+#nocturna-inscripcion .noc-palabra-fundido.encendida { animation: nocEncendido 1s cubic-bezier(.2,.8,.2,1); }
+
+/* Dos columnas en escritorio, una en el teléfono. */
+#nocturna-inscripcion .noc-grilla { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+/* Siempre dos (Sí / No). */
+#nocturna-inscripcion .noc-grilla.fija { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Los títulos más chicos: la pregunta larga de la comida y las salidas. */
+#nocturna-inscripcion .noc-titulo.chico { font-size: 30px; }
+#nocturna-inscripcion .noc-titulo.serio { font-size: 34px; }
+
+/* El texto legal: más grande y con más aire que el resto, para leerlo. */
+#nocturna-inscripcion .noc-legal {
+    margin: 16px 0 0;
+    font: 600 17px/1.62 ${FUENTE};
+    text-wrap: pretty;
+}
+#nocturna-inscripcion .noc-total {
+    margin: 8px 0 0;
+    font: 900 54px/.95 ${FUENTE}; letter-spacing: -.055em;
+    color: ${LIMA}; overflow-wrap: anywhere;
+}
+/* La subida no informa cuánto lleva: la barra va y viene (nocEspera). */
+#nocturna-inscripcion .noc-espera {
+    position: relative; height: 14px; margin-top: 14px;
+    border-radius: 999px; overflow: hidden;
+    box-shadow: inset 0 0 0 2px ${NEGRO};
+}
+#nocturna-inscripcion .noc-espera > span {
+    position: absolute; top: 0; bottom: 0; left: 0; width: 40%;
+    border-radius: 999px; background: ${NEGRO};
+    animation: nocEspera 1.1s ease-in-out infinite;
+    will-change: transform;
+}
+
 #nocturna-inscripcion .noc-deshacer {
     position: fixed; left: 16px; right: 16px; z-index: 30;
     bottom: calc(104px + env(safe-area-inset-bottom));
@@ -190,6 +236,11 @@ ${ANIMACIONES_CSS}
     #nocturna-inscripcion .noc-cuerpo.portada { padding: 0 20px 60px; }
     #nocturna-inscripcion .noc-titulo { font-size: 54px; }
     #nocturna-inscripcion .noc-titulo.portada { font-size: 54px; }
+    #nocturna-inscripcion .noc-titulo.chico,
+    #nocturna-inscripcion .noc-titulo.serio { font-size: 46px; }
+    #nocturna-inscripcion .noc-grilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #nocturna-inscripcion .noc-legal { font-size: 18px; }
+    #nocturna-inscripcion .noc-total { font-size: 64px; }
     /* Centrado con márgenes y no con transform: el transform lo usa la regla
        del teclado de arriba (una tablet táctil también llega a este ancho). */
     #nocturna-inscripcion .noc-pie {

@@ -158,7 +158,7 @@ export const ESCENARIOS: Record<string, (page: Page, info: TestInfo) => Promise<
         await g.paso('continuar con la sesión', () => F.entrarConSesion(page));
         // Autocompletó "Mariela" / "Ramos Duarte": el apellido compuesto se
         // corrige a mano y se completa el DNI, que la cuenta no tiene.
-        await expect(page.getByPlaceholder('Tu nombre')).toHaveValue('Mariela');
+        await expect(F.campoAdulto(page, 'Nombre')).toHaveValue('Mariela');
         await g.paso('corregir apellido y DNI', () => F.llenarAdulto(page, { apellido: 'Ramos', dni: '27444555' }));
         await g.paso('seguir (1→2)', () => F.seguir(page));
         for (const c of CHICOS.slice(0, 2)) await g.paso(`agregar a ${c.nombre}`, () => F.agregarChico(page, { ...c, apellido: 'Ramos' }));
@@ -198,7 +198,7 @@ export const ESCENARIOS: Record<string, (page: Page, info: TestInfo) => Promise<
         await g.paso('retiro: solos', () => F.elegirRetiro(page, { tipo: 'solos' }));
         await g.paso('seguir (3→4)', () => F.seguir(page));
         await g.paso('no autorizo', () => F.autorizar(page, false));
-        await g.paso('salir de la inscripción', () => page.getByRole('button', { name: 'Salir de la inscripción', exact: true }).click());
+        await g.paso('salir de la inscripción', () => page.getByRole('button', { name: /^salir de la inscripción$/i }).click());
         return g.traza('5 · "No autorizo" → salida, no sale ningún pedido de inscripción');
     },
 
@@ -270,5 +270,71 @@ export const ESCENARIOS: Record<string, (page: Page, info: TestInfo) => Promise<
         const altas = g.registro.pedidos.filter(p => p.tipo === 'register_nocturna').length;
         expect(altas, 'un doble toque tiene que mandar UNA sola inscripción').toBe(1);
         return g.traza('9 · Doble toque en el botón final → un solo envío');
+    },
+};
+
+// ── Volver desde el pago (prompt 2) ───────────────────────────────────────
+
+/**
+ * Subir el comprobante, volver al paso anterior con [ VOLVER ], avanzar de
+ * nuevo y enviar. El comprobante tiene que seguir ahí sin volver a subirse.
+ */
+const terminarVolviendo = async (g: Grabadora) => {
+    const { page } = g;
+    await g.paso('subir comprobante', () => F.subirComprobante(page));
+    await g.paso('volver (7→ anterior)', () => F.volver(page).click());
+    await expect(page.getByRole('heading', { name: /restricción alimentaria/i })).toBeVisible();
+    await g.paso('seguir (→7 de nuevo)', () => F.seguir(page));
+    await expect(page.getByText('comprobante.png')).toBeVisible();
+    await g.paso('listo (envío)', () => F.seguir(page));
+    await expect(page.getByText(CODIGO_FALSO).first()).toBeVisible({ timeout: 20_000 });
+    await g.paso('entrada en pantalla', async () => {});
+};
+
+/**
+ * Escenarios que no tienen golden propio: la versión de referencia no tenía
+ * [ VOLVER ] en el pago, así que no hay con qué grabarlos. Se comparan con
+ * el escenario que hace el MISMO recorrido sin volver (`referencia`): los
+ * pedidos a la base tienen que ser idénticos, y la secuencia, la misma con
+ * el ida y vuelta 7 → 6 → 7 en el medio.
+ */
+export const ESCENARIOS_VOLVER: Record<string, { referencia: string; recorrer: (page: Page) => Promise<Traza> }> = {
+
+    '10-volver-desde-el-pago': {
+        referencia: '1-sin-sesion-un-chico-se-retira-solo',
+        recorrer: async page => {
+            const g = new Grabadora(page);
+            await g.iniciar();
+            await llegarAlPago(g, ADULTO, [CHICOS[0]], { tipo: 'solos' }, true);
+            await g.paso('sin restricción', () => F.restriccion(page, 'Ninguna'));
+            await g.paso('seguir (6→7)', () => F.seguir(page));
+            await terminarVolviendo(g);
+            return g.traza('10 · El escenario 1, volviendo del pago a la comida y avanzando de nuevo');
+        },
+    },
+
+    '10b-sumando-volver-desde-el-pago': {
+        referencia: '6-sumar-chicos-dni-y-fecha-coinciden',
+        recorrer: async page => {
+            const g = new Grabadora(page);
+            await g.iniciar({ buscarGrupo: c => (c?.p_fecha_nacimiento === ADULTO_EXISTENTE.nac ? BUSCAR_GRUPO.coincide : BUSCAR_GRUPO.noCoincide) });
+            await g.paso('abrir', () => F.abrir(page));
+            await g.paso('entrar sin sesión', () => F.entrarSinSesion(page));
+            await g.paso('datos de un adulto ya inscripto', () => F.llenarAdulto(page, ADULTO_EXISTENTE));
+            await g.paso('seguir (1→ aviso)', () => F.seguir(page));
+            await g.paso('sumar a alguien más', () => page.getByRole('button', { name: 'Sumar a alguien más', exact: true }).click());
+            await g.paso('agregar a Lola', () => F.agregarChico(page, { nombre: 'Lola', apellido: 'PRUEBA', dni: '95000779', nac: '2013-05-05', tribu: 'Garra' }));
+            for (let vuelta = 0; vuelta < 10; vuelta++) {
+                const p = await F.pantallaActual(page);
+                if (p === 7) break;
+                if (p === 3) await g.paso('retiro: lo retiro yo', () => F.elegirRetiro(page, { tipo: 'yo' }));
+                if (p === 4) await g.paso('autorizo', () => F.autorizar(page, true));
+                if (p === 5) await g.paso('acepta fotos', () => F.fotos(page, true));
+                if (p === 6) await g.paso('sin restricción', () => F.restriccion(page, 'Ninguna'));
+                await g.paso(`seguir (${p}→)`, () => F.seguir(page));
+            }
+            await terminarVolviendo(g);
+            return g.traza('10b · El escenario 6 (sumando), volviendo del pago: tiene que caer en la comida, no en las fotos');
+        },
     },
 };

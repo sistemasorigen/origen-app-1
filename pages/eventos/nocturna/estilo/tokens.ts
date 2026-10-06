@@ -4,7 +4,7 @@ import type React from 'react';
  * El lenguaje visual de Nocturna (design-claude/Nocturna - Inscripcion.dc.html).
  *
  * Tres colores y nada más: el rosa del flyer de fondo, el lima de las
- * tarjetas y las pulseras, y el negro de la tinta. Sin grises: un texto que
+ * tarjetas, y el negro de la tinta. Sin grises: un texto que
  * tiene que leerse menos se achica o se aligera, no se destiñe. Sobre el rosa
  * un negro al 60% no llega al contraste mínimo.
  */

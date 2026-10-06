@@ -17,6 +17,8 @@ interface Props {
     nota: string;
     /** Qué falta, si la persona ya intentó seguir. */
     falta?: string;
+    /** Un aviso arriba de todo: el error del envío en el pago. */
+    aviso?: React.ReactNode;
     etiqueta: string;
     /** Con corchetes ("[ SIGUIENTE ]") o sin ("GUARDANDO…"). */
     corchetes: boolean;
@@ -52,11 +54,12 @@ const useSinTeclado = () => {
     return pie;
 };
 
-const Pie: React.FC<Props> = ({ titulo, nota, falta, etiqueta, corchetes, listo, ocupado, onSeguir }) => {
+const Pie: React.FC<Props> = ({ titulo, nota, falta, aviso, etiqueta, corchetes, listo, ocupado, onSeguir }) => {
     const pie = useSinTeclado();
     return (
     <div ref={pie} className="noc-pie">
         <div className="noc-columna">
+            {aviso}
             {falta && (
                 <p id="noc-pendiente" role="status" style={{ margin: '0 0 10px', ...arch(700, '13.5px', '1.4'), color: LIMA }}>
                     {falta}

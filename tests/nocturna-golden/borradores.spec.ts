@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { CLAVE_BORRADOR, RUTA } from './soporte/formulario';
+import { campoAdulto, CLAVE_BORRADOR, RUTA } from './soporte/formulario';
 import { BUSCAR_GRUPO, instalarSupabaseFalso } from './soporte/supabase-falso';
 
 /**
@@ -24,13 +24,13 @@ const desnormalizar = (texto: string) => texto.replace(/<uuid-(\d+)>/g, (_, n) =
 
 /** Lo que tiene que verse en cada paso: su título. */
 const TITULO: Record<number, RegExp> = {
-    1: /tus datos/i,
+    1: /adulto responsable/i,
     2: /a quién (vas a anotar|sumás)/i,
     3: /se retiran? solos?/i,
     4: /autorización de asistencia/i,
     5: /fotos y video/i,
-    6: /comida/i,
-    7: /^pago$/i,
+    6: /restricción alimentaria/i,
+    7: /último paso/i,
 };
 
 interface Caso { escenario: string; paso: number; borrador: string; }
@@ -63,7 +63,7 @@ for (const c of casos) {
         await expect(page.getByRole('heading', { name: TITULO[b.paso] }).first()).toBeVisible({ timeout: 20_000 });
 
         // Con lo cargado a la vista.
-        if (b.paso === 1 && b.adulto.nombre) await expect(page.getByPlaceholder('Tu nombre')).toHaveValue(b.adulto.nombre);
+        if (b.paso === 1 && b.adulto.nombre) await expect(campoAdulto(page, 'Nombre')).toHaveValue(b.adulto.nombre);
         if (b.paso === 2) {
             for (const chico of b.chicos) {
                 if (chico.nombre) await expect(page.getByText(`${chico.nombre} ${chico.apellido}`.trim()).first()).toBeVisible();

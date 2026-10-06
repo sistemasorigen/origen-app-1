@@ -47,6 +47,15 @@ export interface Opciones {
     /** Si hay sesión iniciada, con este perfil. */
     perfil?: Perfil | null;
     config?: typeof CONFIG | null;
+    /**
+     * Retener la respuesta de la subida del comprobante o del alta hasta que
+     * la prueba resuelva la promesa: para mirar la pantalla a mitad de camino.
+     */
+    retener?: { comprobante?: Promise<unknown>; alta?: Promise<unknown> };
+    /** La subida del comprobante falla (el storage contesta 400). */
+    subidaFalla?: boolean;
+    /** El alta contesta que no, con este mensaje (como lo haría la base). */
+    rechazarAlta?: string;
 }
 
 export interface Pedido {
@@ -159,6 +168,12 @@ export const instalarSupabaseFalso = async (page: Page, opciones: Opciones = {})
             if (nombre === 'nocturna_buscar_grupo') {
                 return json(route, (opciones.buscarGrupo || (() => BUSCAR_GRUPO.noExiste))(cuerpo));
             }
+            if ((nombre === 'register_nocturna' || nombre === 'nocturna_agregar_jovenes') && opciones.retener?.alta) {
+                await opciones.retener.alta;
+            }
+            if (nombre === 'register_nocturna' && opciones.rechazarAlta) {
+                return json(route, { ok: false, error: opciones.rechazarAlta });
+            }
             if (nombre === 'register_nocturna') {
                 const n = cuerpo?.p_payload?.jovenes?.length || 0;
                 return json(route, { ok: true, inscripcion_id: INSCRIPCION_FALSA, codigo_entrada: CODIGO_FALSO, total: n * CONFIG.precio_entrada });
@@ -173,6 +188,8 @@ export const instalarSupabaseFalso = async (page: Page, opciones: Opciones = {})
         if (ruta.startsWith('/storage/v1/object/nocturna-comprobantes/')) {
             const tipo = req.headers()['content-type'] || '';
             anotar('comprobante', describirMultipart(req.postDataBuffer(), tipo));
+            if (opciones.retener?.comprobante) await opciones.retener.comprobante;
+            if (opciones.subidaFalla) return json(route, { statusCode: '400', error: 'falso', message: 'subida rechazada' }, 400);
             return json(route, { Key: ruta.replace('/storage/v1/object/', ''), Id: '22222222-2222-4222-8222-222222222222' });
         }
 

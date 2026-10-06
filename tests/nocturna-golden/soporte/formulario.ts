@@ -33,8 +33,14 @@ const exacto = (texto: string) => new RegExp(`^${escapar(texto)}$`, 'i');
 /** Los botones de la portada: sin sesión, o "Continuar como <nombre>" con sesión. */
 const ENTRADA = /^(entrar sin sesión|continuar como .+|continuar con la inscripción)$/i;
 
-/** El botón del pie que avanza: "Siguiente" del paso 1 al 6, "Listo" en el pago. */
-export const botonSeguir = (page: Page) => page.getByRole('button', { name: /^(siguiente|listo)$/i });
+/**
+ * El botón del pie que avanza: "Siguiente" del paso 1 al 6, "Listo" en el
+ * pago, y "Reintentar" en el pago después de un corte de conexión.
+ */
+export const botonSeguir = (page: Page) => page.getByRole('button', { name: /^(siguiente|listo|reintentar)$/i });
+
+/** Un campo del adulto (paso 1), por su etiqueta: "Nombre", "DNI"… */
+export const campoAdulto = (page: Page, etiqueta: string) => page.getByLabel(etiqueta, { exact: true });
 
 // ── En qué pantalla está ───────────────────────────────────────────────────
 
@@ -49,7 +55,7 @@ export const pantallaActual = async (page: Page): Promise<Pantalla> => {
     // Salió del formulario (por ejemplo, "Salir de la inscripción" lleva al inicio).
     if (!page.url().includes('nocturna-inscripcion')) return 'fuera';
     if (await page.getByText(CODIGO_FALSO, { exact: false }).first().isVisible().catch(() => false)) return 8;
-    if (await boton(page, 'Salir de la inscripción').isVisible().catch(() => false)) return 'noAut';
+    if (await boton(page, exacto('Salir de la inscripción')).isVisible().catch(() => false)) return 'noAut';
     const borrador = await page.evaluate(k => sessionStorage.getItem(k), CLAVE_BORRADOR);
     if (borrador) {
         const b = JSON.parse(borrador);
@@ -70,11 +76,11 @@ export const entrarSinSesion = (page: Page) => boton(page, /^entrar sin sesión$
 export const entrarConSesion = (page: Page) => boton(page, /^(continuar como .+|continuar con la inscripción)$/i).click();
 
 export const llenarAdulto = async (page: Page, a: Partial<Adulto>) => {
-    if (a.nombre !== undefined) await page.getByPlaceholder('Tu nombre').fill(a.nombre);
-    if (a.apellido !== undefined) await page.getByPlaceholder('Tu apellido').fill(a.apellido);
-    if (a.dni !== undefined) await page.getByPlaceholder('Sin puntos').fill(a.dni);
-    if (a.email !== undefined) await page.getByPlaceholder('Acá te llega la entrada').fill(a.email);
-    if (a.nac !== undefined) await page.getByLabel('Fecha de nacimiento', { exact: true }).fill(a.nac);
+    if (a.nombre !== undefined) await campoAdulto(page, 'Nombre').fill(a.nombre);
+    if (a.apellido !== undefined) await campoAdulto(page, 'Apellido').fill(a.apellido);
+    if (a.dni !== undefined) await campoAdulto(page, 'DNI').fill(a.dni);
+    if (a.email !== undefined) await campoAdulto(page, 'Email').fill(a.email);
+    if (a.nac !== undefined) await campoAdulto(page, 'Fecha de nacimiento').fill(a.nac);
 };
 
 export const seguir = async (page: Page) => {
@@ -95,27 +101,36 @@ export type Retiro = { tipo: 'solos' } | { tipo: 'yo' } | { tipo: 'otro'; nombre
 
 export const elegirRetiro = async (page: Page, r: Retiro) => {
     if (r.tipo === 'solos') {
-        await page.getByRole('button', { name: /^Sí, se retiran? solos?$/ }).click();
+        await boton(page, /^sí$/i).click();
         return;
     }
-    await boton(page, 'No').click();
+    await boton(page, /^no$/i).click();
     if (r.tipo === 'yo') {
-        await page.getByRole('button', { name: /^Lo retiro yo/ }).click();
+        await page.getByRole('button', { name: /^los? retiro yo$/i }).click();
         return;
     }
-    await page.getByRole('button', { name: /^Lo retirará otra persona/ }).click();
+    await page.getByRole('button', { name: /^los? retirará otra persona$/i }).click();
     await page.getByLabel('Nombre de quien retira').fill(r.nombre);
     await page.getByLabel('Apellido de quien retira').fill(r.apellido);
     await page.getByLabel('DNI de quien retira').fill(r.dni);
     await page.getByLabel('Teléfono de quien retira').fill(r.telefono);
 };
 
-export const autorizar = (page: Page, si: boolean) => boton(page, si ? 'Autorizo' : 'No autorizo').click();
-export const fotos = (page: Page, si: boolean) => boton(page, si ? 'Sí, acepto' : 'No acepto').click();
+// Cada respuesta lleva abajo su consecuencia ("Autorizo Pueden asistir"):
+// se busca por cómo empieza.
+export const autorizar = (page: Page, si: boolean) => boton(page, si ? /^autorizo\b/i : /^no autorizo\b/i).click();
+export const fotos = (page: Page, si: boolean) => boton(page, si ? /^sí, acepto\b/i : /^no acepto\b/i).click();
 
-export const restriccion = (page: Page, cual: 'Ninguna' | 'Celíaco' | 'Diabetes') => boton(page, cual).click();
-/** Marca o desmarca a un chico en la lista de la restricción elegida. */
-export const marcarRestriccion = (page: Page, nombreCompleto: string) => boton(page, nombreCompleto).click();
+export const restriccion = (page: Page, cual: 'Ninguna' | 'Celíaco' | 'Diabetes') => boton(page, exacto(cual)).click();
+/**
+ * Marca o desmarca a un chico en la lista de la restricción elegida. Si ya
+ * tiene la otra restricción, la fila la dice al lado del nombre.
+ */
+export const marcarRestriccion = (page: Page, nombreCompleto: string) =>
+    boton(page, new RegExp(`^${escapar(nombreCompleto)}( (diabetes|celíaco))?$`, 'i')).click();
+
+/** Volver al paso anterior, desde la barra de pasos. */
+export const volver = (page: Page) => page.getByRole('button', { name: 'Volver al paso anterior', exact: true });
 
 export const subirComprobante = async (page: Page) => {
     await page.locator('input[type="file"]').first().setInputFiles(COMPROBANTE);

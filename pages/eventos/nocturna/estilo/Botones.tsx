@@ -76,12 +76,14 @@ export const EnlaceNoc: React.FC<{
     onClick: () => void;
     children: React.ReactNode;
     tam?: string;
+    disabled?: boolean;
     style?: React.CSSProperties;
     'aria-label'?: string;
-}> = ({ onClick, children, tam = '14px', style, ...aria }) => (
+}> = ({ onClick, children, tam = '14px', disabled, style, ...aria }) => (
     <button
         type="button"
         onClick={onClick}
+        disabled={disabled}
         className="noc-enlace"
         style={{
             minHeight: 44,
@@ -92,7 +94,10 @@ export const EnlaceNoc: React.FC<{
             ...arch(800, tam),
             letterSpacing: '-.02em',
             textTransform: 'uppercase',
-            cursor: 'pointer',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            // Apagado mientras no responde (el pago, subiendo o guardando).
+            // Un control inactivo no tiene mínimo de contraste.
+            opacity: disabled ? 0.4 : 1,
             ...style,
         }}
         {...aria}
@@ -102,11 +107,14 @@ export const EnlaceNoc: React.FC<{
 );
 
 /**
- * La tribu se elige como una pulsera: un broche a la izquierda, el nombre y
- * tres agujeros. La elegida se pinta de negro y queda un poco torcida, como
- * recién puesta.
+ * La elección de la tribu: un círculo a la izquierda, el nombre y tres
+ * puntos, como en el diseño. La elegida se pinta de negro y queda un poco
+ * torcida.
+ *
+ * En el evento no se entregan pulseras: ningún texto lo dice. La forma es la
+ * del diseño y queda a decisión de Ignacio.
  */
-export const BotonPulsera: React.FC<{ elegida: boolean; onClick: () => void; children: string }> = ({
+export const BotonTribu: React.FC<{ elegida: boolean; onClick: () => void; children: string }> = ({
     elegida, onClick, children,
 }) => {
     const color = elegida ? LIMA : NEGRO;

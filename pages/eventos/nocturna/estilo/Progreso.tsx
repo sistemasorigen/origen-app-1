@@ -16,13 +16,16 @@ export interface Tramo {
 }
 
 /**
- * Sin `onVolver` no hay botón (el pago, como antes), y sin tramos queda sólo
- * el botón (la salida sin autorización).
+ * Sin `onVolver` no hay botón, y sin tramos queda sólo el botón (la salida
+ * sin autorización). `volverApagado`: está, pero no responde (el pago,
+ * mientras sube el comprobante o se guarda la inscripción).
  */
-const Progreso: React.FC<{ tramos: Tramo[]; actual: number; onVolver?: () => void }> = ({ tramos, actual, onVolver }) => (
+const Progreso: React.FC<{ tramos: Tramo[]; actual: number; onVolver?: () => void; volverApagado?: boolean }> = ({
+    tramos, actual, onVolver, volverApagado,
+}) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44 }}>
         {onVolver && (
-            <EnlaceNoc onClick={onVolver} aria-label="Volver al paso anterior" style={{ flex: 'none', padding: '0 4px' }}>
+            <EnlaceNoc onClick={onVolver} disabled={volverApagado} aria-label="Volver al paso anterior" style={{ flex: 'none', padding: '0 4px' }}>
                 Volver
             </EnlaceNoc>
         )}

@@ -23,6 +23,7 @@ export const ANIMACIONES_CSS = `
     80% { opacity: 1; }
     100% { transform: translate3d(var(--dx), var(--caida), 0) rotate(620deg); opacity: 0; }
 }
+@keyframes nocEncendido { 0% { transform: scale(.95); } 55% { transform: scale(1.04); } 100% { transform: none; } }
 /* La espera sin porcentaje: la subida no informa cuánto lleva, así que la
    barra va y viene en vez de llenarse. */
 @keyframes nocEspera { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
@@ -36,5 +37,8 @@ export const ANIMACIONES_CSS = `
         transition-duration: .01ms !important;
     }
     #nocturna-inscripcion .noc-confeti { display: none !important; }
+    /* La barra de espera queda quieta, a medio llenar: el texto de al lado
+       ya dice que está subiendo. */
+    #nocturna-inscripcion .noc-espera > span { animation: none !important; transform: none !important; width: 100%; opacity: .35; }
 }
 `;

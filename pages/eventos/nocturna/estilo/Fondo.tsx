@@ -27,9 +27,14 @@ interface Props {
     calma: Calma;
     /** La portada baja un poco la palabra, para que no pise el árbol. */
     portada: boolean;
+    /**
+     * Recién respondida la autorización o lo de las fotos: la palabra, que
+     * había bajado el volumen mientras se leía, vuelve con un golpe.
+     */
+    encendida?: boolean;
 }
 
-const Fondo: React.FC<Props> = ({ etapa, nitida, calma, portada }) => {
+const Fondo: React.FC<Props> = ({ etapa, nitida, calma, portada, encendida }) => {
     const cursor = useRef<HTMLDivElement>(null);
     const calmaRef = useRef(calma);
     calmaRef.current = calma;
@@ -62,7 +67,7 @@ const Fondo: React.FC<Props> = ({ etapa, nitida, calma, portada }) => {
     return (
         <div className="noc-fondo" aria-hidden="true">
             <div className={`noc-palabra${portada ? ' portada' : ''}`}>
-                <div className="noc-palabra-fundido" style={{ opacity: OPACIDAD_CALMA[calma] }}>
+                <div className={`noc-palabra-fundido${encendida ? ' encendida' : ''}`} style={{ opacity: OPACIDAD_CALMA[calma] }}>
                     <div ref={cursor} className="noc-palabra-cursor">
                         <div className="noc-palabra-escala" style={{ position: 'relative', transform: `scale(${escala})` }}>
                             <span className="noc-palabra-texto" style={{ filter: 'blur(var(--blur-a))' }}>NOCTURNA</span>
