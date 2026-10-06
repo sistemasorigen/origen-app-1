@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { Check, Loader2, Lock } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useBarraDeAppOculta } from '../../../contexts/BarraDeApp';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
@@ -340,6 +341,11 @@ const InscripcionNocturna: React.FC = () => {
     const qrRef = useRef<HTMLDivElement>(null);
 
     useBloqueoDeFondo(modalSalir || !!aviso);
+
+    // Sin la barra de la app en toda la inscripción: rompe la estética de
+    // Nocturna (decisión de Ignacio, 2026-10-06). La página arranca en el
+    // borde de arriba de la pantalla.
+    useBarraDeAppOculta();
 
     /**
      * El fondo, hasta el borde de la pantalla.
@@ -893,9 +899,6 @@ const InscripcionNocturna: React.FC = () => {
             // siendo una entrada válida: el texto de arriba ya lo dice.
         }
     };
-
-    // La portada ya no se muestra sin la barra de la app: en el diseño nuevo
-    // la barra está en todas las pantallas, también en la primera.
 
     // ── Pantallas que reemplazan todo ─────────────────────────────────────
     if (cargando) {

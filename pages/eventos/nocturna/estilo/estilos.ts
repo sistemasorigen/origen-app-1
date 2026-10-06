@@ -24,11 +24,11 @@ ${ANIMACIONES_CSS}
     color: ${NEGRO};
     font-family: ${FUENTE};
     -webkit-font-smoothing: antialiased;
-    /* La barra de la app mide 64 px y queda arriba: sin restarlos la página
-       mide una pantalla entera debajo de la barra y aparece un scroll que no
-       lleva a ningún lado. dvh, con vh de respaldo para iOS anterior al 15.4. */
-    min-height: calc(100vh - 64px);
-    min-height: calc(100dvh - 64px);
+    /* Sin la barra de la app (ver useBarraDeAppOculta en
+       InscripcionNocturna): la página ocupa la pantalla entera. dvh, con vh
+       de respaldo para iOS anterior al 15.4. */
+    min-height: 100vh;
+    min-height: 100dvh;
     /* El fondo es fijo y la palabra es más ancha que cualquier pantalla. */
     overflow-x: clip;
 }
@@ -43,18 +43,18 @@ ${ANIMACIONES_CSS}
 /* ── El fondo ─────────────────────────────────────────────────────────── */
 #nocturna-inscripcion .noc-fondo {
     position: fixed;
-    left: 0; right: 0; top: 64px; bottom: 0;
+    left: 0; right: 0; top: 0; bottom: 0;
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
 }
 #nocturna-inscripcion .noc-palabra {
     position: absolute; left: 0; right: 0;
-    top: 236px;
+    top: 300px;
     display: flex; justify-content: center;
     --blur-a: 22px; --blur-b: 8px;
 }
-#nocturna-inscripcion .noc-palabra.portada { top: 266px; }
+#nocturna-inscripcion .noc-palabra.portada { top: 330px; }
 #nocturna-inscripcion .noc-palabra-texto {
     display: block;
     font: 400 190px/0.86 ${FUENTE_PALABRA};
@@ -71,10 +71,10 @@ ${ANIMACIONES_CSS}
 #nocturna-inscripcion .noc-contenido { position: relative; z-index: 1; }
 
 /* Arriba, en el teléfono: "NOCTURNA", a quién está dirigida, y los pasos.
-   Queda pegado bajo la barra de la app mientras se scrollea, como en el
+   Queda pegado arriba de la pantalla mientras se scrollea, como en el
    diseño, donde esa franja no se mueve y lo que corre es lo de abajo. */
 #nocturna-inscripcion .noc-cabecera {
-    position: sticky; top: 64px; z-index: 20;
+    position: sticky; top: 0; z-index: 20;
     background: ${ROSA};
 }
 #nocturna-inscripcion .noc-fila-marca {
@@ -130,7 +130,7 @@ ${ANIMACIONES_CSS}
 /* Al enfocar un campo, el navegador lo trae a la vista dejando lugar para
    la cabecera de arriba y el pie de abajo. */
 #nocturna-inscripcion input, #nocturna-inscripcion select, #nocturna-inscripcion textarea {
-    scroll-margin-top: 190px;
+    scroll-margin-top: 130px;
     scroll-margin-bottom: 140px;
 }
 
@@ -226,7 +226,7 @@ ${ANIMACIONES_CSS}
 /* ── Escritorio ───────────────────────────────────────────────────────── */
 @media (min-width: ${ESCRITORIO}px) {
     #nocturna-inscripcion .noc-palabra,
-    #nocturna-inscripcion .noc-palabra.portada { top: 136px; --blur-a: 34px; --blur-b: 12px; }
+    #nocturna-inscripcion .noc-palabra.portada { top: 200px; --blur-a: 34px; --blur-b: 12px; }
     #nocturna-inscripcion .noc-palabra-texto { font-size: 330px; }
     #nocturna-inscripcion .noc-cabecera { position: static; background: transparent; }
     #nocturna-inscripcion .noc-columna { max-width: 520px; }
@@ -260,14 +260,14 @@ ${ANIMACIONES_CSS}
 @media (min-width: ${ESQUINAS}px) {
     #nocturna-inscripcion .noc-fila-marca,
     #nocturna-inscripcion .noc-sin-esquinas { display: none; }
-    #nocturna-inscripcion .noc-contenido { padding-top: 126px; }
+    #nocturna-inscripcion .noc-contenido { padding-top: 62px; }
     #nocturna-inscripcion .noc-esquina {
         display: block; position: fixed; z-index: 1; margin: 0;
         color: ${NEGRO}; transition: opacity 1.2s ease;
         font: 800 20px/1.15 ${FUENTE}; letter-spacing: -.035em; text-transform: uppercase;
     }
-    #nocturna-inscripcion .noc-esquina.marca { left: 48px; top: 96px; font: 900 64px/0.9 ${FUENTE}; letter-spacing: -.065em; }
-    #nocturna-inscripcion .noc-esquina.a-quien { right: 48px; top: 100px; max-width: 360px; text-align: right; }
+    #nocturna-inscripcion .noc-esquina.marca { left: 48px; top: 32px; font: 900 64px/0.9 ${FUENTE}; letter-spacing: -.065em; }
+    #nocturna-inscripcion .noc-esquina.a-quien { right: 48px; top: 36px; max-width: 360px; text-align: right; }
     #nocturna-inscripcion .noc-esquina.fecha { left: 48px; bottom: 40px; }
     #nocturna-inscripcion .noc-esquina.redes { right: 48px; bottom: 40px; text-align: right; }
 }
