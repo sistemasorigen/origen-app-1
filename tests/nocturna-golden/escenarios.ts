@@ -137,10 +137,8 @@ export const ESCENARIOS: Record<string, (page: Page, info: TestInfo) => Promise<
         const g = new Grabadora(page);
         await g.iniciar();
         await llegarAlPago(g, ADULTO, CHICOS, { tipo: 'otro', nombre: 'Raúl', apellido: 'Tercero', dni: '28999111', telefono: '1155550000' }, false);
-        // Se intenta lo que pide el escenario: Martina celíaca y Bruno con
-        // diabetes. Hoy el formulario tiene UNA restricción por familia: al
-        // cambiar de Celíaco a Diabetes, Martina vuelve a "ninguna". El golden
-        // graba ese comportamiento tal cual (ver notas).
+        // Martina celíaca y Bruno con diabetes. Cambiar de restricción no
+        // desmarca a quien ya estaba marcado con la otra (arreglado en 3d65205).
         await g.paso('celíaco', () => F.restriccion(page, 'Celíaco'));
         await g.paso('marcar a Martina', () => F.marcarRestriccion(page, 'Martina Golden'));
         await g.paso('diabetes', () => F.restriccion(page, 'Diabetes'));
@@ -148,9 +146,8 @@ export const ESCENARIOS: Record<string, (page: Page, info: TestInfo) => Promise<
         await g.paso('seguir (6→7)', () => F.seguir(page));
         await terminar(g);
         return g.traza('2 · Sin sesión, 3 chicos, los retira otra persona, no acepta fotos, celíaco + diabetes', [
-            'HALLAZGO: el formulario actual no permite un chico celíaco y otro con diabetes en la misma inscripción.',
-            'Elegir una restricción resetea a todos los chicos a "ninguna" (elegirRestriccion). La base sí lo admite (restriccion es por chico).',
-            'Por eso el payload final lleva sólo a Bruno con diabetes y a Martina con "ninguna".',
+            'Regrabado el 2026-10-06 después de integrar 3d65205: antes del arreglo, elegir la segunda restricción',
+            'devolvía a "ninguna" a los marcados con la primera, y el pedido salía sin la celiaquía de Martina.',
         ]);
     },
 

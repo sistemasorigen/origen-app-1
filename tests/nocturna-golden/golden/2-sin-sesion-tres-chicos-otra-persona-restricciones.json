@@ -829,7 +829,7 @@
               "dni": "50111001",
               "nac": "2011-04-10",
               "tribu": "Trueno",
-              "restriccion": "ninguna"
+              "restriccion": "celiaco"
             },
             {
               "id": "<uuid-2>",
@@ -889,7 +889,7 @@
               "dni": "50111001",
               "nac": "2011-04-10",
               "tribu": "Trueno",
-              "restriccion": "ninguna"
+              "restriccion": "celiaco"
             },
             {
               "id": "<uuid-2>",
@@ -949,7 +949,7 @@
               "dni": "50111001",
               "nac": "2011-04-10",
               "tribu": "Trueno",
-              "restriccion": "ninguna"
+              "restriccion": "celiaco"
             },
             {
               "id": "<uuid-2>",
@@ -1009,7 +1009,7 @@
               "dni": "50111001",
               "nac": "2011-04-10",
               "tribu": "Trueno",
-              "restriccion": "ninguna"
+              "restriccion": "celiaco"
             },
             {
               "id": "<uuid-2>",
@@ -1118,7 +1118,7 @@
               "dni": "50111001",
               "fechaNacimiento": "2011-04-10",
               "tribu": "Trueno",
-              "restriccion": "ninguna",
+              "restriccion": "celiaco",
               "retiroTipo": "otra_persona",
               "retiroNombre": "Raúl",
               "retiroApellido": "Tercero",
@@ -1161,8 +1161,7 @@
     }
   ],
   "notas": [
-    "HALLAZGO: el formulario actual no permite un chico celíaco y otro con diabetes en la misma inscripción.",
-    "Elegir una restricción resetea a todos los chicos a \"ninguna\" (elegirRestriccion). La base sí lo admite (restriccion es por chico).",
-    "Por eso el payload final lleva sólo a Bruno con diabetes y a Martina con \"ninguna\"."
+    "Regrabado el 2026-10-06 después de integrar 3d65205: antes del arreglo, elegir la segunda restricción",
+    "devolvía a \"ninguna\" a los marcados con la primera, y el pedido salía sin la celiaquía de Martina."
   ]
 }

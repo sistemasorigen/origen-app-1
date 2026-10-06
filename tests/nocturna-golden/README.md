@@ -50,8 +50,7 @@ que es el que se publica.
 | 8 | Recarga en el paso del pago → el borrador se restaura |
 | 9 | Doble toque en el botón final → un solo envío |
 
-(*) El formulario actual admite UNA restricción por familia: el golden graba
-que Martina queda en "ninguna" y Bruno en "diabetes". Ver las `notas` del JSON.
+(*) Regrabado después del arreglo 3d65205: Martina celíaca, Bruno con diabetes.
 
 De cada escenario se guarda:
 
