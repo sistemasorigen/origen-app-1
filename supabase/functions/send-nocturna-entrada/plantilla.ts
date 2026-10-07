@@ -83,7 +83,9 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 <!-- CABECERA -->
 <tr>
 <td class="nc-rosa" bgcolor="#E04497" style="background-color:#E04497; padding:0; font-size:0; line-height:0;">
+<div style="border-radius:25px 25px 0 0; overflow:hidden; font-size:0; line-height:0;">
 <img src="https://oqtumgalnozppqnnjjdb.supabase.co/storage/v1/object/public/images/email/nocturna/nocturna-cabecera.jpg" width="600" alt="NOCTURNA 2026 · Origen Iglesia" style="display:block; width:100%; max-width:600px; height:auto; border:0; border-radius:25px 25px 0 0; outline:none; text-decoration:none; background-color:#E04497; color:#000000; font-family:Arial,Helvetica,sans-serif; font-size:28px; font-weight:bold; line-height:1.2; text-align:center;">
+</div>
 </td>
 </tr>
 
