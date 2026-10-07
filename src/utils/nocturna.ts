@@ -150,18 +150,17 @@ export const estadoInscripcion = (
 ): NocturnaEstado => (insc.aprobadoAt ? 'Aprobado' : 'Inscripto');
 
 /**
- * Cuántos de la familia están acreditados, contando al adulto.
+ * Cuántos adolescentes de la familia están acreditados.
  *
- * Una familia de 3 chicos es "x/4": el adulto también entra, y también se
- * acredita.
+ * Una familia de 3 adolescentes es "x/3". El adulto no cuenta: desde el
+ * 2026-10-07 no se acredita —deja a los chicos y se va, y a las 6 AM vuelve
+ * quien figure en el retiro—.
  */
 export const contarAcreditados = (
-    insc: Pick<NocturnaInscripcion, 'adultoAcreditadoAt' | 'jovenes'>,
+    insc: Pick<NocturnaInscripcion, 'jovenes'>,
 ): { acreditados: number; total: number } => {
     const jovenes = insc.jovenes || [];
-    const acreditados =
-        (insc.adultoAcreditadoAt ? 1 : 0) + jovenes.filter(j => !!j.acreditadoAt).length;
-    return { acreditados, total: 1 + jovenes.length };
+    return { acreditados: jovenes.filter(j => !!j.acreditadoAt).length, total: jovenes.length };
 };
 
 /**

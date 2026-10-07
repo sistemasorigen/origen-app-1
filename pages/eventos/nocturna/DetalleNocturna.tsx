@@ -91,7 +91,6 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
     const [nombreAdmin, setNombreAdmin] = useState<string | null>(null);
 
     // Los tildes, en pantalla. Se escriben al guardar.
-    const [adultoMarcado, setAdultoMarcado] = useState(false);
     const [chicosMarcados, setChicosMarcados] = useState<Record<string, boolean>>({});
 
     const [confirmando, setConfirmando] = useState(false);
@@ -117,7 +116,6 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
         }
         const i = res.inscripcion;
         setInsc(i);
-        setAdultoMarcado(!!i.adultoAcreditadoAt);
         setChicosMarcados(Object.fromEntries((i.jovenes || []).map(j => [j.id, !!j.acreditadoAt])));
         if (i.cargadoPorAdmin) {
             const nombres = await supabaseService.nombresDeUsuarios([i.cargadoPorAdmin]);
@@ -140,16 +138,11 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
 
     const hayCambios = useMemo(() => {
         if (!insc) return false;
-        if (adultoMarcado !== !!insc.adultoAcreditadoAt) return true;
         return jovenes.some(j => !!chicosMarcados[j.id] !== !!j.acreditadoAt);
-    }, [insc, jovenes, adultoMarcado, chicosMarcados]);
+    }, [insc, jovenes, chicosMarcados]);
 
-    const marcados = (adultoMarcado ? 1 : 0) + jovenes.filter(j => chicosMarcados[j.id]).length;
-    const totalPersonas = jovenes.length + 1;
-    // La misma regla que la puerta: nadie, o el adulto y al menos un chico.
-    const estadoValido = marcados === 0
-        ? !adultoMarcado
-        : adultoMarcado && jovenes.some(j => chicosMarcados[j.id]);
+    const marcados = jovenes.filter(j => chicosMarcados[j.id]).length;
+    const totalPersonas = jovenes.length;
 
     // Un `beforeunload` para cerrar la pestaña, y un aviso propio para
     // navegar dentro de la app: el navegador no avisa de lo segundo.
@@ -177,9 +170,8 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
     };
 
     // ── Acciones ──────────────────────────────────────────────────────────
-    const alternar = (clave: 'adulto' | string) => {
+    const alternar = (clave: string) => {
         setErrorGuardar(null);
-        if (clave === 'adulto') { setAdultoMarcado(v => !v); return; }
         setChicosMarcados(m => ({ ...m, [clave]: !m[clave] }));
     };
 
@@ -193,9 +185,12 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
         // cambia al recargar—. Si en la base ya no es ese, alguien acreditó
         // mientras tanto y guardar borraría su trabajo: la base rechaza y
         // devuelve lo que hay de verdad.
-        const res = await supabaseService.setNocturnaAcreditacion(insc.id, adultoMarcado, ids, {
+        const res = await supabaseService.setNocturnaAcreditacion(insc.id, false, ids, {
             modo: 'exacto',
             visto: {
+                // Lo que la pantalla vio del adulto se sigue mandando tal cual:
+                // es parte de la foto con la que la base detecta el choque con
+                // otra pantalla, no algo que esta ficha quiera cambiar.
                 adulto: !!insc.adultoAcreditadoAt,
                 jovenes: jovenes.filter(j => j.acreditadoAt).map(j => j.id),
             },
@@ -449,11 +444,10 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                 }
                             >
                                 <p style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.6)', margin: '5px 0 0' }}>
-                                    Tocá a cada persona que entró. Para aprobar hace falta el adulto y al menos un adolescente.
+                                    Tocá a cada adolescente que entró. El adulto responsable no se acredita.
                                 </p>
                                 <div className="flex flex-col gap-2 mt-3.5">
-                                    {[{ id: 'adulto', nombre: nombreAdulto, rol: 'Adulto responsable', marcado: adultoMarcado, desde: insc.adultoAcreditadoAt },
-                                      ...jovenes.map(j => ({
+                                    {[...jovenes.map(j => ({
                                           id: j.id,
                                           nombre: `${j.nombre} ${j.apellido}`,
                                           rol: `${calcularEdad(j.fechaNacimiento) ?? '—'} años · ${j.tribu}`,
@@ -495,14 +489,8 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                     ))}
                                 </div>
 
-                                <p style={{ ...fuente(500, '12.5px'), color: estadoValido ? 'rgba(0,0,0,.58)' : AMBAR_INK, margin: '14px 2px 0' }}>
-                                    {!estadoValido
-                                        ? (marcados > 0 && !adultoMarcado
-                                            ? 'No se puede registrar a un adolescente sin el adulto responsable.'
-                                            : 'Marcá al menos un adolescente además del adulto.')
-                                        : hayCambios
-                                            ? 'Los cambios todavía no se guardaron.'
-                                            : 'Sin cambios para guardar.'}
+                                <p style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.58)', margin: '14px 2px 0' }}>
+                                    {hayCambios ? 'Los cambios todavía no se guardaron.' : 'Sin cambios para guardar.'}
                                 </p>
 
                                 {errorGuardar && (
@@ -519,14 +507,14 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                 <button
                                     type="button"
                                     onClick={() => setConfirmando(true)}
-                                    disabled={!hayCambios || !estadoValido}
+                                    disabled={!hayCambios}
                                     className="w-full border-0 rounded-full mt-3"
                                     style={{
                                         height: 54,
-                                        background: hayCambios && estadoValido ? INK : '#e6e5e1',
-                                        color: hayCambios && estadoValido ? '#fff' : 'rgba(0,0,0,.4)',
+                                        background: hayCambios ? INK : '#e6e5e1',
+                                        color: hayCambios ? '#fff' : 'rgba(0,0,0,.4)',
                                         ...fuente(600, '15px'),
-                                        cursor: hayCambios && estadoValido ? 'pointer' : 'not-allowed',
+                                        cursor: hayCambios ? 'pointer' : 'not-allowed',
                                     }}
                                 >
                                     Guardar cambios
@@ -721,8 +709,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                         </p>
 
                         <div className="rounded-[16px] mt-4" style={{ background: '#f7f7f5', padding: '4px 14px' }}>
-                            {[{ nombre: nombreAdulto, marcado: adultoMarcado, antes: !!insc.adultoAcreditadoAt },
-                              ...jovenes.map(j => ({ nombre: `${j.nombre} ${j.apellido}`, marcado: !!chicosMarcados[j.id], antes: !!j.acreditadoAt }))]
+                            {[...jovenes.map(j => ({ nombre: `${j.nombre} ${j.apellido}`, marcado: !!chicosMarcados[j.id], antes: !!j.acreditadoAt }))]
                                 .filter(p => p.marcado !== p.antes)
                                 .map(p => (
                                     <div key={p.nombre} className="flex justify-between gap-3" style={{ padding: '10px 0' }}>

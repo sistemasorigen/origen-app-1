@@ -42,7 +42,7 @@ interface InscAcred {
 }
 
 type Panel =
-    | { tipo: 'familia'; insc: InscAcred; jovenes: JovenAcred[]; adulto: boolean; chicos: Record<string, boolean> }
+    | { tipo: 'familia'; insc: InscAcred; jovenes: JovenAcred[]; chicos: Record<string, boolean> }
     | { tipo: 'aviso'; clase: 'otroEvento' | 'eliminada' | 'yaEntraron' | 'sinPermiso'; titulo: string; rotulo: string; texto: string; lista?: { nombre: string; hora: string }[] }
     | null;
 
@@ -196,17 +196,14 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
 
         // Todos adentro: puede ser alguien intentando pasar dos veces con la
         // misma entrada, y quien está en la puerta tiene que poder decidirlo.
-        const todos = !!insc.adulto_acreditado_at && jovenes.length > 0 && jovenes.every(j => j.acreditado_at);
+        const todos = jovenes.length > 0 && jovenes.every(j => j.acreditado_at);
         if (todos) {
             pitido(false);
             setPanel({
                 tipo: 'aviso', clase: 'yaEntraron', rotulo: 'ENTRADA YA USADA',
                 titulo: `La familia ${insc.adulto_apellido} ya entró completa`,
-                texto: `Este QR se usó para las ${jovenes.length + 1} personas. Si alguien intenta entrar de nuevo, pedile el DNI y consultá con un coordinador.`,
-                lista: [
-                    { nombre: `${insc.adulto_nombre} ${insc.adulto_apellido}`, hora: soloHora(insc.adulto_acreditado_at) },
-                    ...jovenes.map(j => ({ nombre: `${j.nombre} ${j.apellido}`, hora: soloHora(j.acreditado_at) })),
-                ],
+                texto: `Este QR ya se usó para ${jovenes.length === 1 ? 'el adolescente' : 'los ' + jovenes.length + ' adolescentes'}. Si alguien intenta entrar de nuevo, pedile el DNI y consultá con un coordinador.`,
+                lista: jovenes.map(j => ({ nombre: `${j.nombre} ${j.apellido}`, hora: soloHora(j.acreditado_at) })),
             });
             return;
         }
@@ -218,7 +215,6 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
             jovenes,
             // Lo ya acreditado arranca marcado: el estado que se manda es el
             // completo, no sólo lo nuevo.
-            adulto: !!insc.adulto_acreditado_at,
             chicos: Object.fromEntries(jovenes.map(j => [j.id, !!j.acreditado_at])),
         });
     }, []);
@@ -239,8 +235,9 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         (async () => {
             const res = await supabaseService.getNocturnaInscripciones();
             if (!res.ok) return;
+            // Sólo adolescentes: el adulto no se acredita.
             const n = res.inscripciones.reduce(
-                (a, i) => a + (i.adultoAcreditadoAt ? 1 : 0) + (i.jovenes || []).filter(j => j.acreditadoAt).length,
+                (a, i) => a + (i.jovenes || []).filter(j => j.acreditadoAt).length,
                 0,
             );
             setAdentro(n);
@@ -258,16 +255,12 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
 
     const cuentas = useMemo(() => {
         if (!familia) return null;
-        const total = familia.jovenes.length + 1;
-        const marcados = (familia.adulto ? 1 : 0) + familia.jovenes.filter(j => familia.chicos[j.id]).length;
-        const nuevos =
-            (familia.adulto && !familia.insc.adulto_acreditado_at ? 1 : 0)
-            + familia.jovenes.filter(j => familia.chicos[j.id] && !j.acreditado_at).length;
-        const vuelve = !!familia.insc.adulto_acreditado_at || familia.jovenes.some(j => j.acreditado_at);
-        const cumpleRegla = familia.adulto && familia.jovenes.some(j => familia.chicos[j.id]);
-        const faltanPorMarcar =
-            (!familia.insc.adulto_acreditado_at && !familia.adulto)
-            || familia.jovenes.some(j => !j.acreditado_at && !familia.chicos[j.id]);
+        const total = familia.jovenes.length;
+        const marcados = familia.jovenes.filter(j => familia.chicos[j.id]).length;
+        const nuevos = familia.jovenes.filter(j => familia.chicos[j.id] && !j.acreditado_at).length;
+        const vuelve = familia.jovenes.some(j => j.acreditado_at);
+        const cumpleRegla = marcados >= 1;
+        const faltanPorMarcar = familia.jovenes.some(j => !j.acreditado_at && !familia.chicos[j.id]);
         return { total, marcados, nuevos, vuelve, cumpleRegla, habilitado: cumpleRegla && nuevos > 0, faltanPorMarcar };
     }, [familia]);
 
@@ -284,15 +277,11 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         if (ultimoCodigoRef.current) ultimoCodigoRef.current.at = Date.now();
     };
 
-    const alternarPersona = (clave: 'adulto' | string) => {
+    const alternarPersona = (clave: string) => {
         setPanel(p => {
             if (p?.tipo !== 'familia') return p;
-            if (clave === 'adulto') {
-                // Quien ya entró no se desmarca desde acá: desacreditar es
-                // otra cosa y va en la ficha, no en la puerta a las 23.
-                if (p.insc.adulto_acreditado_at) return p;
-                return { ...p, adulto: !p.adulto };
-            }
+            // Quien ya entró no se desmarca desde acá: desacreditar es otra
+            // cosa y va en la ficha, no en la puerta a las 23.
             const joven = p.jovenes.find(j => j.id === clave);
             if (!joven || joven.acreditado_at) return p;
             return { ...p, chicos: { ...p.chicos, [clave]: !p.chicos[clave] } };
@@ -302,7 +291,6 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
     const marcarLosQueFaltan = () => {
         setPanel(p => (p?.tipo !== 'familia' ? p : {
             ...p,
-            adulto: true,
             chicos: Object.fromEntries(p.jovenes.map(j => [j.id, true])),
         }));
     };
@@ -321,8 +309,9 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         // Se sigue mandando el estado completo que ve la pantalla: en este
         // modo, marcar de nuevo a alguien que ya entró no cambia nada.
         const ids = familia.jovenes.filter(j => familia.chicos[j.id]).map(j => j.id);
+        // El adulto va siempre en false: desde el 2026-10-07 no se acredita.
         const res = await supabaseService.setNocturnaAcreditacion(
-            familia.insc.id, familia.adulto, ids, { modo: 'sumar' },
+            familia.insc.id, false, ids, { modo: 'sumar' },
         );
 
         if (!res.ok) {
@@ -689,6 +678,13 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                         <h2 style={{ ...fuente(600, '22px', '1.2'), color: INK, letterSpacing: '-.02em', margin: '4px 0 0' }}>
                                             Familia {familia.insc.adulto_apellido}
                                         </h2>
+                                        {/* El adulto no se acredita, pero sigue a la
+                                            vista: es con su apellido que se busca la
+                                            entrada, y es a quien hay que llamar si
+                                            algo no cierra. */}
+                                        <p style={{ ...fuente(500, '13px', '1.4'), color: 'rgba(0,0,0,.6)', margin: '2px 0 0' }}>
+                                            A cargo: {familia.insc.adulto_nombre} {familia.insc.adulto_apellido}
+                                        </p>
                                     </div>
                                     <button
                                         type="button"
@@ -713,13 +709,6 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                 )}
 
                                 <div className="flex flex-col gap-2 mt-3.5">
-                                    <Persona
-                                        nombre={`${familia.insc.adulto_nombre} ${familia.insc.adulto_apellido}`}
-                                        sub="Adulto responsable"
-                                        marcado={familia.adulto}
-                                        yaEntro={soloHora(familia.insc.adulto_acreditado_at) || null}
-                                        onClick={() => alternarPersona('adulto')}
-                                    />
                                     {familia.jovenes.map(j => (
                                         <Persona
                                             key={j.id}
@@ -752,11 +741,7 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                         ? (cuentas.vuelve
                                             ? `Se suma${cuentas.nuevos > 1 ? 'n' : ''} ${cuentas.nuevos}. Quedan ${cuentas.marcados}/${cuentas.total} adentro.`
                                             : `Entran ${cuentas.marcados} de ${cuentas.total}.`)
-                                        : !familia.adulto
-                                            ? 'Falta marcar al adulto responsable'
-                                            : !familia.jovenes.some(j => familia.chicos[j.id])
-                                                ? 'Falta marcar al menos un adolescente'
-                                                : 'Marcá a quien acaba de llegar'}
+                                        : 'Marcá a quien acaba de llegar'}
                                 </p>
 
                                 {errorConfirmar && (
