@@ -136,9 +136,9 @@ test('diálogo de inscripción existente: las dos caras', async ({ page }, info)
 
     await F.llenarAdulto(page, { ...EXISTENTE, nac: '1984-02-03' });
     await F.seguir(page);
-    await expect(page.getByRole('button', { name: 'Revisar mis datos', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Revisar el DNI', exact: true })).toBeVisible();
     await revisar(page, info, '10-dialogo-cara-b', todos);
-    await page.getByRole('button', { name: 'Revisar mis datos', exact: true }).click();
+    await page.getByRole('button', { name: 'Revisar el DNI', exact: true }).click();
 
     await F.llenarAdulto(page, { nac: EXISTENTE.nac });
     await F.seguir(page);
@@ -183,7 +183,7 @@ test('sin conexión al cargar', async ({ page }, info) => {
     // La config no llega: es el estado "sin conexión" de la pantalla.
     await page.route('**/rest/v1/nocturna_config**', r => r.abort('internetdisconnected'));
     await page.goto(F.RUTA);
-    await expect(page.getByRole('button', { name: 'Probar de nuevo', exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Reintentar', exact: true })).toBeVisible({ timeout: 30_000 });
     await revisar(page, info, '21-sin-conexion', todos);
     // El fallo de red que provoca la prueba sí se ve en la consola: es esperado.
     await cerrar(info, todos, errores.filter(e => !/nocturna_config|Failed to load resource|ERR_INTERNET_DISCONNECTED|getNocturnaConfig|NetworkError|Load failed|fetch/i.test(e)));

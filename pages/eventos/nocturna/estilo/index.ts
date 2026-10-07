@@ -10,3 +10,4 @@ export { default as Progreso } from './Progreso';
 export type { Tramo } from './Progreso';
 export { default as Confeti } from './Confeti';
 export { default as Pie } from './Pie';
+export { default as Hoja } from './Hoja';

@@ -17,9 +17,17 @@ import React, { createContext, useContext, useEffect } from 'react';
  * Acá lo declara la pantalla que efectivamente montó el hero, así que el dato
  * siempre es el real.
  */
+/**
+ * `'siempre'`: la navbar no recupera su fondo al scrollear. Es para una
+ * pantalla que pone su propio fondo detrás de la barra (Nocturna: una franja
+ * del mismo rosa), donde el blanco translúcido del scroll quedaría como una
+ * franja lavada encima del color.
+ */
+export type HeroAsangre = boolean | 'siempre';
+
 interface HeroLayoutValue {
-    hasFullBleedHero: boolean;
-    setHasFullBleedHero: (active: boolean) => void;
+    hasFullBleedHero: HeroAsangre;
+    setHasFullBleedHero: (active: HeroAsangre) => void;
 }
 
 export const HeroLayoutContext = createContext<HeroLayoutValue>({
@@ -32,13 +40,13 @@ export const HeroLayoutContext = createContext<HeroLayoutValue>({
  * —cambio de ruta, o el mismo componente que pasa a una vista interna— el
  * flag se apaga solo y la navbar recupera su fondo.
  */
-export const useFullBleedHero = (active: boolean = true) => {
+export const useFullBleedHero = (active: boolean = true, siempreTransparente: boolean = false) => {
     const { setHasFullBleedHero } = useContext(HeroLayoutContext);
 
     useEffect(() => {
-        setHasFullBleedHero(active);
+        setHasFullBleedHero(active && siempreTransparente ? 'siempre' : active);
         return () => setHasFullBleedHero(false);
-    }, [active, setHasFullBleedHero]);
+    }, [active, siempreTransparente, setHasFullBleedHero]);
 };
 
 export const useHeroLayout = () => useContext(HeroLayoutContext);

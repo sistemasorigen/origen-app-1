@@ -1,6 +1,6 @@
 import { ANIMACIONES_CSS } from './animaciones';
 import { FUENTES_CSS } from './fuentes';
-import { ESCRITORIO, ESQUINAS, FUENTE, FUENTE_PALABRA, LIMA, NEGRO, ROSA } from './tokens';
+import { ESCRITORIO, ESQUINAS, FUENTE, FUENTE_PALABRA, LIMA, NEGRO, ROSA, anillo } from './tokens';
 
 /**
  * El CSS de la página, en un solo <style>.
@@ -24,9 +24,12 @@ ${ANIMACIONES_CSS}
     color: ${NEGRO};
     font-family: ${FUENTE};
     -webkit-font-smoothing: antialiased;
-    /* Sin la barra de la app (ver useBarraDeAppOculta en
-       InscripcionNocturna): la página ocupa la pantalla entera. dvh, con vh
-       de respaldo para iOS anterior al 15.4. */
+    /* La barra de la app (64 px) va transparente encima: el Layout sube la
+       página 64 px para que el rosa llegue al borde de arriba (ver
+       useFullBleedHero en InscripcionNocturna), y este padding deja el
+       contenido debajo de la barra. dvh, con vh de respaldo para iOS
+       anterior al 15.4. */
+    padding-top: 64px;
     min-height: 100vh;
     min-height: 100dvh;
     /* El fondo es fijo y la palabra es más ancha que cualquier pantalla. */
@@ -67,14 +70,23 @@ ${ANIMACIONES_CSS}
 #nocturna-inscripcion .noc-palabra-escala { transition: transform 1.4s cubic-bezier(.2,.7,.2,1); }
 #nocturna-inscripcion .noc-palabra-fundido { transition: opacity 1.4s ease; }
 
+/* Detrás de la barra transparente, una franja del mismo rosa: lo que se
+   scrollea pasa por debajo y no se ve atrás del logo. La barra queda encima
+   (z-index 30 del Layout). */
+#nocturna-inscripcion .noc-tapa-barra {
+    position: fixed; left: 0; right: 0; top: 0; height: 64px; z-index: 22;
+    background: ${ROSA};
+    pointer-events: none;
+}
+
 /* ── El contenido ─────────────────────────────────────────────────────── */
 #nocturna-inscripcion .noc-contenido { position: relative; z-index: 1; }
 
-/* Arriba, en el teléfono: "NOCTURNA", a quién está dirigida, y los pasos.
-   Queda pegado arriba de la pantalla mientras se scrollea, como en el
-   diseño, donde esa franja no se mueve y lo que corre es lo de abajo. */
+/* Arriba, en el teléfono: los pasos. Queda pegado debajo de la barra
+   mientras se scrollea, como en el diseño, donde esa franja no se mueve y lo
+   que corre es lo de abajo. */
 #nocturna-inscripcion .noc-cabecera {
-    position: sticky; top: 0; z-index: 20;
+    position: sticky; top: 64px; z-index: 20;
     background: ${ROSA};
 }
 #nocturna-inscripcion .noc-fila-marca {
@@ -130,7 +142,7 @@ ${ANIMACIONES_CSS}
 /* Al enfocar un campo, el navegador lo trae a la vista dejando lugar para
    la cabecera de arriba y el pie de abajo. */
 #nocturna-inscripcion input, #nocturna-inscripcion select, #nocturna-inscripcion textarea {
-    scroll-margin-top: 130px;
+    scroll-margin-top: 140px;
     scroll-margin-bottom: 140px;
 }
 
@@ -211,6 +223,69 @@ ${ANIMACIONES_CSS}
     display: flex; justify-content: center; pointer-events: none;
 }
 
+/* ── Los diálogos ─────────────────────────────────────────────────────── */
+/* Por encima del pie (25) y del deshacer (30): mientras hay un diálogo no se
+   toca nada de atrás. */
+#nocturna-inscripcion .noc-hoja-fondo {
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(0, 0, 0, .55);
+    display: flex; align-items: flex-end; justify-content: center;
+    animation: nocFundido .25s ease-out;
+}
+#nocturna-inscripcion .noc-hoja {
+    width: 100%; max-height: 100%; overflow: auto;
+    border-radius: 32px 32px 0 0;
+    padding: 24px 20px calc(30px + env(safe-area-inset-bottom));
+    animation: nocHoja .35s cubic-bezier(.2, .8, .2, 1);
+}
+
+/* Lo de adentro de un diálogo. Las medidas son las del diseño; el color lo
+   pone Hoja.tsx, que es el que sabe de qué tono es la noticia. */
+#nocturna-inscripcion .noc-dlg-titulo {
+    margin: 12px 0 0;
+    font: 900 30px/0.95 ${FUENTE};
+    letter-spacing: -.055em;
+    text-transform: uppercase;
+}
+#nocturna-inscripcion .noc-dlg-texto { margin: 14px 0 0; font: 600 15px/1.5 ${FUENTE}; }
+/* La línea de arriba separa la buena noticia de la letra chica. */
+#nocturna-inscripcion .noc-dlg-nota {
+    margin: 14px 0 0; padding-top: 12px;
+    border-top: 2px solid currentColor;
+    font: 600 14px/1.5 ${FUENTE};
+}
+#nocturna-inscripcion .noc-dlg-rotulo {
+    margin: 0; font: 900 13px ${FUENTE}; letter-spacing: -.01em; text-transform: uppercase;
+}
+#nocturna-inscripcion .noc-sonrisa-dlg {
+    display: inline-block;
+    font: 900 54px/1 ${FUENTE}; letter-spacing: -.04em;
+    animation: nocSonrisa .7s cubic-bezier(.2,.8,.2,1.3) .3s both;
+}
+
+/* ── Cargando, sin conexión y cerradas ────────────────────────────────── */
+#nocturna-inscripcion .noc-estado {
+    min-height: 72vh;
+    display: flex; flex-direction: column; align-items: stretch; justify-content: center;
+    text-align: center;
+}
+#nocturna-inscripcion .noc-cargando {
+    margin: 0; font: 900 44px/0.9 ${FUENTE}; letter-spacing: -.065em; text-transform: uppercase;
+}
+#nocturna-inscripcion .noc-cargando .letra { display: inline-block; }
+#nocturna-inscripcion .noc-estado-texto {
+    margin: 16px auto 0; max-width: 400px;
+    font: 700 17px/1.45 ${FUENTE}; letter-spacing: -.015em;
+}
+#nocturna-inscripcion .noc-estado-fecha {
+    margin: 14px 0 0; font: 800 14px/1.3 ${FUENTE}; letter-spacing: -.025em; text-transform: uppercase;
+}
+/* La caja lima de abajo: es la que sostiene la única salida que queda. */
+#nocturna-inscripcion .noc-estado-caja {
+    margin-top: 22px; border-radius: 30px; padding: 20px;
+    background: ${LIMA}; box-shadow: ${anillo(2.5)};
+}
+
 /* ── El pie ───────────────────────────────────────────────────────────── */
 #nocturna-inscripcion .noc-pie {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
@@ -256,11 +331,18 @@ ${ANIMACIONES_CSS}
     #nocturna-inscripcion .noc-entrada { grid-template-columns: 284px minmax(0, 1fr); }
     #nocturna-inscripcion .noc-entrada-talon { border-top: 0; border-left: 3px dashed ${NEGRO}; }
     #nocturna-inscripcion .noc-deshacer { bottom: 136px; }
+    /* En escritorio el diálogo deja de ser un cajón y se centra. */
+    #nocturna-inscripcion .noc-cargando { font-size: 72px; }
+    #nocturna-inscripcion .noc-hoja-fondo { align-items: center; padding: 24px; }
+    #nocturna-inscripcion .noc-hoja {
+        max-width: 480px;
+        border-radius: 32px;
+        padding: 26px 26px 24px;
+    }
 }
 @media (min-width: ${ESQUINAS}px) {
     #nocturna-inscripcion .noc-fila-marca,
     #nocturna-inscripcion .noc-sin-esquinas { display: none; }
-    #nocturna-inscripcion .noc-contenido { padding-top: 62px; }
     #nocturna-inscripcion .noc-esquina {
         display: block; position: fixed; z-index: 1; margin: 0;
         color: ${NEGRO}; transition: opacity 1.2s ease;

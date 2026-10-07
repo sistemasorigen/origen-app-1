@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { UserRole, AppConfig, User } from '../../types';
 import { db } from '../../services/dbService';
-import { HeroLayoutContext } from '../../contexts/HeroContext';
+import { HeroAsangre, HeroLayoutContext } from '../../contexts/HeroContext';
 import { BarraDeAppContext } from '../../contexts/BarraDeApp';
 
 import GlobalPlayer from './ReproductorGlobal';
@@ -55,7 +55,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     // `/punto-de-informacion` renderiza el home público (con hero) o los
     // paneles internos (fondo claro, sin hero) bajo el mismo pathname, y
     // cambia de uno a otro sin tocar la URL — ver contexts/HeroContext.tsx.
-    const [hasFullBleedHero, setHasFullBleedHero] = useState(false);
+    const [hasFullBleedHero, setHasFullBleedHero] = useState<HeroAsangre>(false);
     const heroLayout = useMemo(
         () => ({ hasFullBleedHero, setHasFullBleedHero }),
         [hasFullBleedHero]
@@ -69,7 +69,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
         () => ({ barraOculta, setBarraOculta }),
         [barraOculta]
     );
-    const isDashboard = location.pathname === '/' || location.pathname === '/gcx' || location.pathname === '/ninez' || hasFullBleedHero;
+    const isDashboard = location.pathname === '/' || location.pathname === '/gcx' || location.pathname === '/ninez' || !!hasFullBleedHero;
     // `/ninez` entra acá junto con isDashboard, no por separado: el -mt-16 que
     // monta el hero bajo la navbar sólo tiene sentido si el contenido va a
     // sangre. Con el padding del contenedor angosto el hero quedaría con
@@ -93,7 +93,9 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
         return () => window.removeEventListener('scroll', onScroll);
     }, [isDashboard]);
 
-    const isNavbarTransparent = isDashboard && !isScrolled;
+    // Con 'siempre' la pantalla pone su propio fondo detrás de la barra y la
+    // barra no lo tapa al scrollear (ver contexts/HeroContext.tsx).
+    const isNavbarTransparent = isDashboard && (!isScrolled || hasFullBleedHero === 'siempre');
 
     const handleLogoutAction = () => {
         onLogout?.();

@@ -114,43 +114,42 @@ export const EnlaceNoc: React.FC<{
  * En el evento no se entregan pulseras: ningún texto lo dice. La forma es la
  * del diseño y queda a decisión de Ignacio.
  */
+/**
+ * La tribu: una píldora que se da vuelta al elegirla.
+ *
+ * Antes tenía un punto grande a la izquierda y tres chicos a la derecha, y
+ * entre los dos la hacían leer como una pulsera de papel —la de entrar a un
+ * boliche—, que no es lo que se está eligiendo. Quedó la píldora con su
+ * borde, la inclinación y el chasquido: el lenguaje del diseño sin el objeto
+ * equivocado.
+ */
 export const BotonTribu: React.FC<{ elegida: boolean; onClick: () => void; children: string }> = ({
     elegida, onClick, children,
-}) => {
-    const color = elegida ? LIMA : NEGRO;
-    const punto = (tam: number): React.CSSProperties => ({ width: tam, height: tam, borderRadius: 999, flex: 'none', background: color });
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            aria-pressed={elegida}
-            className={`noc-boton${elegida ? ' noc-sobre-negro' : ''}`}
-            style={{
-                height: 60,
-                padding: '0 18px 0 12px',
-                border: 0,
-                borderRadius: 999,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                cursor: 'pointer',
-                color: elegida ? LIMA : NEGRO,
-                background: elegida ? NEGRO : ROSA,
-                boxShadow: anillo(),
-                transform: elegida ? 'rotate(-2deg)' : 'none',
-                transition: 'background .15s, color .15s',
-                animation: elegida ? 'nocChasquido .45s cubic-bezier(.2,.8,.2,1)' : undefined,
-            }}
-        >
-            <span aria-hidden="true" style={punto(36)} />
-            <span style={{ flex: 1, textAlign: 'left', ...arch(900, '19px'), letterSpacing: '-.05em', textTransform: 'uppercase' }}>
-                {children}
-            </span>
-            <span aria-hidden="true" style={{ display: 'flex', gap: 5, flex: 'none' }}>
-                <span style={punto(9)} />
-                <span style={punto(9)} />
-                <span style={punto(9)} />
-            </span>
-        </button>
-    );
-};
+}) => (
+    <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={elegida}
+        className={`noc-boton${elegida ? ' noc-sobre-negro' : ''}`}
+        style={{
+            height: 60,
+            padding: '0 18px',
+            border: 0,
+            borderRadius: 999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: elegida ? LIMA : NEGRO,
+            background: elegida ? NEGRO : ROSA,
+            boxShadow: anillo(),
+            transform: elegida ? 'rotate(-2deg)' : 'none',
+            transition: 'background .15s, color .15s',
+            animation: elegida ? 'nocChasquido .45s cubic-bezier(.2,.8,.2,1)' : undefined,
+        }}
+    >
+        <span style={{ ...arch(900, '19px'), letterSpacing: '-.05em', textTransform: 'uppercase' }}>
+            {children}
+        </span>
+    </button>
+);

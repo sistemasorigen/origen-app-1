@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { Check, Loader2, Lock } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useBarraDeAppOculta } from '../../../contexts/BarraDeApp';
+import { useFullBleedHero } from '../../../contexts/HeroContext';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
@@ -33,18 +33,17 @@ import {
     VERSION_DECLARACIONES,
 } from './compartido/formulario';
 import {
-    anillo,
-    arch,
     BotonNoc,
     BotonTribu,
     Calma,
     Confeti,
     Corchetes,
+    ESTILOS_NOCTURNA,
     EnlaceNoc,
     Esquinas,
-    ESTILOS_NOCTURNA,
     Etiqueta,
     Fondo,
+    Hoja,
     LIMA,
     NEGRO,
     OpcionDoble,
@@ -52,11 +51,13 @@ import {
     OpcionPastilla,
     OpcionRadio,
     Pie,
-    precargarFuentes,
+    Progreso,
     ROSA,
     TituloLetras,
     Tramo,
-    Progreso,
+    anillo,
+    arch,
+    precargarFuentes,
 } from './estilo';
 import {
     NocturnaAltaResultado,
@@ -170,63 +171,6 @@ const chicoNuevo = (apellido = ''): ChicoForm => ({
     restriccion: 'ninguna',
 });
 
-// ── Estilo ────────────────────────────────────────────────────────────────
-// Lo de abajo es de lo que todavía no tiene el diseño nuevo: la carga, el
-// error de conexión, las inscripciones cerradas y los diálogos. Las
-// pantallas del formulario usan estilo/.
-const INK = '#0a0a0a';
-const CAMPO = '#f4f4f2';
-const PANEL = '#f7f7f5';
-
-const fuente = (peso: number, tam: string, alto?: string): React.CSSProperties => ({
-    font: `${peso} ${tam}${alto ? `/${alto}` : ''} Manrope, system-ui, sans-serif`,
-});
-
-// ── Piezas visuales ───────────────────────────────────────────────────────
-
-const Boton: React.FC<{
-    onClick?: () => void;
-    variante?: 'oscuro' | 'suave';
-    children: React.ReactNode;
-}> = ({ onClick, variante = 'oscuro', children }) => (
-    <button
-        type="button"
-        onClick={onClick}
-        className="h-14 rounded-full border-0 cursor-pointer transition-colors"
-        style={{
-            ...fuente(600, '16px'),
-            background: variante === 'oscuro' ? INK : CAMPO,
-            color: variante === 'oscuro' ? '#fff' : INK,
-        }}
-    >
-        {children}
-    </button>
-);
-
-/**
- * El margen viaja por prop y no por clase: el estilo inline de abajo le gana
- * a cualquier `mt-*` de Tailwind, así que pasarlo por className no pintaba
- * nada y el rótulo quedaba pegado a lo de arriba.
- */
-const Rotulo: React.FC<{ children: React.ReactNode; className?: string; margen?: string }> = ({
-    children,
-    className = '',
-    margen = '0',
-}) => (
-    <p className={className} style={{ ...fuente(600, '12px'), letterSpacing: '.07em', color: 'rgba(0,0,0,.55)', margin: margen }}>
-        {children}
-    </p>
-);
-
-const Titulo: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <h1
-        className="text-[26px] lg:text-[30px]"
-        style={{ ...fuente(600, 'inherit', '1.2'), color: INK, letterSpacing: '-.02em', margin: 0 }}
-    >
-        {children}
-    </h1>
-);
-
 const Marco: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     precargarFuentes();
     return (
@@ -236,6 +180,37 @@ const Marco: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
     );
 };
+
+/**
+ * El marco de las pantallas que reemplazan todo: cargando, sin conexión y
+ * cerradas.
+ *
+ * Es el mismo esqueleto que el formulario —fondo, palabra, marca y columna—
+ * pero sin barra de pasos ni pie, porque en estas tres no hay a dónde
+ * seguir. Sin esto quedaban como una pantalla de error cualquiera, en blanco
+ * y con otra tipografía, justo cuando conviene que se note que sigue siendo
+ * el mismo lugar.
+ */
+const Estado: React.FC<{ calma: Calma; nitida?: boolean; children: React.ReactNode }> = ({
+    calma, nitida = false, children,
+}) => (
+    <Marco>
+        <Fondo etapa={0} nitida={nitida} calma={calma} portada={false} />
+        <Esquinas fecha={EVENTO.fecha} lugar={EVENTO.lugar} />
+        {/* Sin cabecera: la marca ahora vive en la barra de la app, que en
+            estas pantallas se ve igual que en el resto. */}
+        <div className="noc-tapa-barra" aria-hidden="true" />
+        <div className="noc-contenido">
+            <main className="noc-columna">
+                <div className="noc-cuerpo" style={{ animation: 'nocEntrada .5s cubic-bezier(.2,.8,.2,1)' }}>
+                    {/* Centrado a lo alto: sin pie ni barra de pasos, el
+                        contenido pegado arriba dejaba medio celular vacío. */}
+                    <div className="noc-estado">{children}</div>
+                </div>
+            </main>
+        </div>
+    </Marco>
+);
 
 /**
  * Copiar sin navigator.clipboard: el método viejo, con un campo de texto
@@ -342,10 +317,11 @@ const InscripcionNocturna: React.FC = () => {
 
     useBloqueoDeFondo(modalSalir || !!aviso);
 
-    // Sin la barra de la app en toda la inscripción: rompe la estética de
-    // Nocturna (decisión de Ignacio, 2026-10-06). La página arranca en el
-    // borde de arriba de la pantalla.
-    useBarraDeAppOculta();
+    // La barra de la app, transparente sobre el rosa y con el logo en blanco,
+    // también al scrollear: detrás va una franja del mismo rosa
+    // (.noc-tapa-barra) que tapa lo que pasa por debajo. El Layout sube la
+    // página 64 px para que el rosa llegue al borde de arriba.
+    useFullBleedHero(true, true);
 
     /**
      * El fondo, hasta el borde de la pantalla.
@@ -556,34 +532,6 @@ const InscripcionNocturna: React.FC = () => {
         .filter(Boolean)
         .join(' · ');
 
-    /**
-     * Los que ya están anotados, en gris y con candado.
-     *
-     * Se dibuja igual en la hoja de aviso y en el paso de los chicos: es el
-     * mismo dato y tiene que leerse como el mismo dato. El candado no es
-     * decoración — es la única señal de que esas filas no se tocan.
-     */
-    const listaDeChicos = (cs: NocturnaChicoDelGrupo[]) => (
-        <div className="rounded-[20px]" style={{ background: PANEL, padding: '2px 16px' }}>
-            {cs.map((c, i) => (
-                <div
-                    key={`${c.nombre}-${c.dni}-${i}`}
-                    className="flex items-center gap-3"
-                    style={{ padding: '13px 0', borderTop: i === 0 ? 'none' : '1px solid #ecebe8' }}
-                >
-                    <Lock className="w-[15px] h-[15px] flex-none" style={{ color: 'rgba(0,0,0,.42)' }} strokeWidth={2.2} />
-                    <span className="min-w-0 flex-1">
-                        <span className="block truncate" style={{ ...fuente(600, '14.5px'), color: 'rgba(0,0,0,.72)' }}>
-                            {`${c.nombre} ${c.apellido}`.trim()}
-                        </span>
-                        <span className="block" style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.5)', marginTop: 1 }}>
-                            {c.tribu} · DNI {c.dni}
-                        </span>
-                    </span>
-                </div>
-            ))}
-        </div>
-    );
 
     /**
      * Sumando chicos, la pantalla de las fotos no se muestra.
@@ -901,51 +849,74 @@ const InscripcionNocturna: React.FC = () => {
     };
 
     // ── Pantallas que reemplazan todo ─────────────────────────────────────
+    // Cargando, sin conexión y cerradas. Van adentro del mismo marco que el
+    // resto —fondo, palabra y marca— y no en una pantalla aparte: son
+    // Nocturna, no un error genérico del navegador.
     if (cargando) {
         return (
-            <Marco>
-                <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6">
-                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: INK }} />
-                    <p style={{ ...fuente(500, '14px'), color: 'rgba(0,0,0,.6)', margin: 0 }}>Abriendo la inscripción…</p>
+            <Estado calma="baja">
+                <div aria-busy="true" aria-label="Cargando Nocturna">
+                    <p className="noc-cargando" aria-hidden="true">
+                        {'Nocturna'.split('').map((l, i) => (
+                            <span
+                                key={i}
+                                className="letra"
+                                style={{ opacity: 0, animation: `nocLetra .5s cubic-bezier(.2,.8,.2,1.2) ${80 + i * 28}ms forwards` }}
+                            >
+                                {l}
+                            </span>
+                        ))}
+                    </p>
+                    <p className="noc-dlg-rotulo" style={{ marginTop: 18, textAlign: 'center' }}>
+                        <Corchetes>Preparando la noche</Corchetes>
+                    </p>
                 </div>
-            </Marco>
+            </Estado>
         );
     }
 
     if (errorConfig || !config) {
         return (
-            <Marco>
-                <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-                    <Titulo>No pudimos cargar la inscripción</Titulo>
-                    <p style={{ ...fuente(500, '14.5px', '1.65'), color: 'rgba(0,0,0,.64)', margin: '12px 0 0', maxWidth: 380 }}>
-                        Es un problema de conexión con nuestros servidores, no de tus datos. Probá de nuevo en un rato.
+            <Estado calma="muy">
+                <div style={{ textAlign: 'center' }}>
+                    <p className="noc-dlg-rotulo" style={{ margin: '0 0 18px' }}><Corchetes>Sin señal</Corchetes></p>
+                    <TituloLetras texto="No pudimos cargar Nocturna" centrado tam="serio" />
+                    {/* El precio sale de la config, que es justo lo que no
+                        llegó: antes que mostrar uno vacío o en cero no se
+                        muestra ninguno, y se dice por qué. */}
+                    <p className="noc-estado-texto">
+                        Revisá tu conexión y probá de nuevo. Hasta poder confirmar el precio no te mostramos nada para pagar.
                     </p>
-                    <div className="flex flex-col gap-2.5 mt-7 w-full" style={{ maxWidth: 360 }}>
-                        <Boton onClick={() => window.location.reload()}>Probar de nuevo</Boton>
-                        <Boton variante="suave" onClick={() => navigate('/')}>Volver al inicio</Boton>
-                    </div>
                 </div>
-            </Marco>
+                <div className="noc-estado-caja">
+                    <BotonNoc corchetes onClick={() => window.location.reload()}>Reintentar</BotonNoc>
+                    <BotonNoc variante="contorno" onClick={() => navigate('/')} style={{ marginTop: 10 }}>
+                        Volver al inicio
+                    </BotonNoc>
+                </div>
+            </Estado>
         );
     }
 
     if (!config.inscripcionesAbiertas && pantalla !== 7) {
         return (
-            <Marco>
-                <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-                    <Rotulo>INSCRIPCIÓN</Rotulo>
-                    <h1 className="text-[32px] lg:text-[38px]" style={{ ...fuente(600, 'inherit', '1.1'), color: INK, letterSpacing: '-.03em', margin: '10px 0 0' }}>
-                        Nocturna
-                    </h1>
-                    <p style={{ ...fuente(600, '17px'), color: INK, margin: '20px 0 0' }}>Las inscripciones están cerradas</p>
-                    <p style={{ ...fuente(500, '14.5px', '1.65'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0', maxWidth: 380 }}>
-                        Por ahora no estamos tomando inscripciones. Si ya te anotaste, tu entrada sigue valiendo.
-                    </p>
-                    <div className="mt-7 w-full flex flex-col" style={{ maxWidth: 360 }}>
-                        <Boton variante="suave" onClick={() => navigate('/')}>Volver al inicio</Boton>
+            <Estado calma="baja" nitida>
+                <div style={{ textAlign: 'center' }}>
+                    <div className="noc-arbol-marco">
+                        <img src={ARBOL} alt="" aria-hidden="true" className="noc-arbol" />
                     </div>
+                    <TituloLetras texto="Por ahora no estamos tomando inscripciones" centrado tam="serio" style={{ marginTop: 14 }} />
+                    <p className="noc-estado-texto">Si ya te anotaste, tu entrada sigue valiendo.</p>
+                    <p className="noc-estado-fecha noc-sin-esquinas">
+                        {EVENTO.fecha}
+                        <br />
+                        <Corchetes>{EVENTO.lugar}</Corchetes>
+                    </p>
                 </div>
-            </Marco>
+                <div className="noc-estado-caja">
+                    <BotonNoc corchetes onClick={() => navigate('/')}>Volver al inicio</BotonNoc>
+                </div>
+            </Estado>
         );
     }
 
@@ -1140,14 +1111,11 @@ const InscripcionNocturna: React.FC = () => {
                 portada={pantalla === 0}
                 encendida={(pantalla === 4 && autoriza === true) || (pantalla === 5 && fotos !== null)}
             />
-            <Esquinas aQuien={QUIENES_ENTRAN} fecha={EVENTO.fecha} lugar={EVENTO.lugar} calma={calma} />
+            <Esquinas fecha={EVENTO.fecha} lugar={EVENTO.lugar} />
+            <div className="noc-tapa-barra" aria-hidden="true" />
 
             <div className={`noc-contenido${hayPie ? ' noc-con-pie' : ''}`}>
                 <div className="noc-cabecera">
-                    <div className="noc-fila-marca">
-                        <p className="noc-marca">Nocturna</p>
-                        <p className="noc-a-quien">{QUIENES_ENTRAN}</p>
-                    </div>
                     {(conVolver || conTramos) && (
                         <div className="noc-columna noc-progreso">
                             <Progreso
@@ -1221,6 +1189,12 @@ const InscripcionNocturna: React.FC = () => {
                                     </p>
                                 </>
                             )}
+                            {/* A quién está dirigida: la regla del evento, tal cual
+                                (QUIENES_ENTRAN). Cierra la tarjeta, debajo de las
+                                acciones, separada como una fila del talón. */}
+                            <p style={{ margin: '14px 0 0', paddingTop: 14, borderTop: `2px solid ${NEGRO}`, textAlign: 'center', ...arch(800, '13px', '1.35'), letterSpacing: '-.01em', textTransform: 'uppercase', textWrap: 'balance' }}>
+                                {QUIENES_ENTRAN}
+                            </p>
                         </div>
                         <p style={{ margin: '16px 0 0', textAlign: 'center' }}>
                             <EnlaceNoc onClick={() => navigate('/')}>Volver al inicio</EnlaceNoc>
@@ -2046,81 +2020,78 @@ const InscripcionNocturna: React.FC = () => {
                 />
             )}
 
-            {/* El aviso: con ese DNI ya hay una inscripción.
-                ────────────────────────────────────────────────────────────
+            {/* ── Con ese DNI ya hay una inscripción ──────────────────
+                Dos caras muy distintas a propósito. Si además coincide la
+                fecha de nacimiento sabemos que es suya: es una buena noticia
+                y se puede resolver acá mismo, así que va en lima. Si sólo
+                coincide el DNI no sabemos quién es: es un tope, y va en
+                negro para que no se confunda con la otra.
+
                 Aparece al salir del paso de sus datos y no al final, que es
                 donde aparecía antes: para entonces ya transfirió. */}
             {aviso && (
-                <div
-                    className="fixed inset-0 z-40 flex justify-center items-end lg:items-center"
-                    style={{ background: 'rgba(10,10,10,.42)', padding: 12 }}
-                    role="dialog"
-                    aria-modal="true"
-                >
-                    <div className="w-full rounded-[26px]" style={{ maxWidth: 440, background: '#fff', padding: '24px 22px 20px' }}>
-                        {aviso.verificado ? (
-                            <>
-                                <p style={{ ...fuente(600, '19px', '1.3'), color: INK, margin: 0 }}>
-                                    Ya tenés una inscripción
-                                </p>
-                                <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0' }}>
-                                    Con tu DNI ya {(aviso.chicos?.length ?? 0) === 1 ? 'hay un adolescente anotado' : `hay ${aviso.chicos?.length ?? 0} adolescentes anotados`} para Nocturna. No hace falta hacer otra: podés sumar a quien falte acá mismo y queda todo en la misma entrada.
-                                </p>
-
-                                <div className="mt-4">{listaDeChicos(aviso.chicos ?? [])}</div>
-
-                                <p style={{ ...fuente(500, '12.5px', '1.55'), color: 'rgba(0,0,0,.5)', margin: '10px 2px 0' }}>
-                                    A ellos no los vas a poder editar desde acá. Si hay algo para corregir, escribinos al {TELEFONO_CONTACTO}.
-                                </p>
-
-                                <div className="flex flex-col gap-2 mt-5">
-                                    <Boton onClick={sumarAEsteGrupo}>Sumar a alguien más</Boton>
-                                    <Boton variante="suave" onClick={() => setAviso(null)}>Revisar mis datos</Boton>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                {/* Sin la fecha de nacimiento no se muestra NADA de
-                                    esa inscripción: son chicos, y el DNI de un
-                                    desconocido no puede ser la llave para verlos. */}
-                                <p style={{ ...fuente(600, '19px', '1.3'), color: INK, margin: 0 }}>
-                                    Ya hay una inscripción con ese DNI
-                                </p>
-                                <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0' }}>
-                                    Si es tuya, revisá la fecha de nacimiento: tiene que ser la misma que cargaste cuando te inscribiste. Si no es tuya, fijate que el DNI esté bien escrito.
-                                </p>
-                                <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '12px 0 0' }}>
-                                    Si sigue sin andar, escribinos al {TELEFONO_CONTACTO} y lo vemos.
-                                </p>
-                                <div className="flex flex-col gap-2 mt-5">
-                                    <Boton onClick={() => setAviso(null)}>Revisar mis datos</Boton>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
+                aviso.verificado ? (
+                    <Hoja tituloId="noc-dlg-ya">
+                        <span className="noc-sonrisa-dlg" aria-hidden="true">:)</span>
+                        <h2 id="noc-dlg-ya" className="noc-dlg-titulo">Ya tenés una inscripción</h2>
+                        <p className="noc-dlg-texto">
+                            Con tu DNI ya{' '}
+                            <strong style={{ fontWeight: 900 }}>
+                                {(aviso.chicos?.length ?? 0) === 1
+                                    ? 'hay un adolescente anotado'
+                                    : `hay ${aviso.chicos?.length ?? 0} adolescentes anotados`}
+                            </strong>{' '}
+                            para Nocturna. No hace falta hacer otra: podés sumar a quien falte acá mismo y queda todo en la misma entrada.
+                        </p>
+                        {/* Los nombres no se muestran: alcanza con cuántos son
+                            para entender que la inscripción es suya, y es la
+                            información mínima que resuelve la decisión. */}
+                        <p className="noc-dlg-nota">
+                            A ellos no los vas a poder editar desde acá. Si hay algo para corregir, escribinos al{' '}
+                            <strong style={{ fontWeight: 900 }}>{TELEFONO_CONTACTO}</strong>.
+                        </p>
+                        <BotonNoc onClick={sumarAEsteGrupo} style={{ marginTop: 18 }}>Sumar a alguien más</BotonNoc>
+                        <p style={{ margin: '8px 0 0', textAlign: 'center' }}>
+                            <EnlaceNoc onClick={() => setAviso(null)}>Ahora no</EnlaceNoc>
+                        </p>
+                    </Hoja>
+                ) : (
+                    <Hoja tono="negro" tituloId="noc-dlg-dni">
+                        {/* Sin la fecha de nacimiento no se muestra NADA de esa
+                            inscripción: son chicos, y el DNI de un desconocido
+                            no puede ser la llave para verlos. */}
+                        <p className="noc-dlg-rotulo"><Corchetes>Ese DNI ya se usó</Corchetes></p>
+                        <h2 id="noc-dlg-dni" className="noc-dlg-titulo">Ya hay una inscripción con ese DNI</h2>
+                        <p className="noc-dlg-texto">
+                            Por seguridad no mostramos nada de esa inscripción. Si escribiste mal el DNI, corregilo. Si está bien, escribinos al{' '}
+                            <strong style={{ fontWeight: 900 }}>{TELEFONO_CONTACTO}</strong> y lo resolvemos.
+                        </p>
+                        <p className="noc-dlg-texto">
+                            Si es tuya, revisá la fecha de nacimiento: tiene que ser la misma que cargaste cuando te inscribiste.
+                        </p>
+                        <BotonNoc variante="lima" corchetes onClick={() => setAviso(null)} style={{ marginTop: 20 }}>
+                            Revisar el DNI
+                        </BotonNoc>
+                    </Hoja>
+                )
             )}
 
             {/* Cambiar de cuenta, desde la portada */}
             {modalSalir && (
-                <div
-                    className="fixed inset-0 z-40 flex justify-center items-end lg:items-center"
-                    style={{ background: 'rgba(10,10,10,.42)', padding: 12 }}
-                    role="dialog"
-                    aria-modal="true"
-                >
-                    <div className="w-full rounded-[26px]" style={{ maxWidth: 420, background: '#fff', padding: '24px 22px 20px' }}>
-                        <p style={{ ...fuente(600, '19px', '1.3'), color: INK, margin: 0 }}>¿Usar otra cuenta?</p>
-                        <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0' }}>
-                            Se cierra la sesión{cuenta?.nombre ? ` de ${cuenta.nombre}` : ''} en este dispositivo. Lo que hayas cargado de esta inscripción se borra.
-                        </p>
-                        <div className="flex flex-col gap-2 mt-5">
-                            <Boton onClick={() => setModalSalir(false)}>Seguir con esta cuenta</Boton>
-                            <Boton variante="suave" onClick={cerrarSesionYVolver}>Cerrar sesión</Boton>
-                        </div>
-                    </div>
-                </div>
+                <Hoja tituloId="noc-dlg-salir">
+                    <h2 id="noc-dlg-salir" className="noc-dlg-titulo">Si volvés, se cierra tu sesión</h2>
+                    <p className="noc-dlg-texto">
+                        Y se borra de este celular todo lo que cargaste en la inscripción. Lo hacemos porque son datos de menores y el celular puede ser compartido.
+                    </p>
+                    <BotonNoc corchetes onClick={() => setModalSalir(false)} style={{ marginTop: 20 }}>
+                        Quedarme acá
+                    </BotonNoc>
+                    <BotonNoc variante="contorno" onClick={cerrarSesionYVolver} style={{ marginTop: 10 }}>
+                        Cerrar sesión y volver
+                    </BotonNoc>
+                </Hoja>
             )}
+
         </Marco>
     );
 };

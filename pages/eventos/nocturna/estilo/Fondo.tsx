@@ -91,30 +91,25 @@ const Fondo: React.FC<Props> = ({ etapa, nitida, calma, portada, encendida }) =>
 export default Fondo;
 
 /**
- * Las cuatro esquinas del escritorio. Por debajo de 1200 px no se ven: ahí
- * la marca y a quién está dirigida van en la fila de arriba (ver
- * InscripcionNocturna), y la fecha, en la portada.
+ * Las esquinas de abajo del escritorio: la fecha y el lugar, y las redes.
+ * Por debajo de 1200 px no se ven (la fecha va en la portada).
+ *
+ * Las de arriba —NOCTURNA y a quién está dirigida— se fueron: arriba va la
+ * barra de la app, transparente, y la regla de edad está en la portada,
+ * debajo de las acciones. `aQuien` y `calma` se aceptan y no se usan, para
+ * no romper a quien todavía las pase.
  */
-export const Esquinas: React.FC<{ aQuien: string; fecha: string; lugar: string; calma: Calma }> = ({
-    aQuien, fecha, lugar, calma,
-}) => {
-    // Sólo la marca baja el volumen en los pasos serios. El resto es texto que
-    // se lee: al 45% sobre el rosa no llega al contraste mínimo.
-    const opacity = calma === 'no' ? 1 : 0.45;
-    return (
-        <>
-            <p className="noc-esquina marca" style={{ opacity }} aria-hidden="true">Nocturna</p>
-            <p className="noc-esquina a-quien">{aQuien}</p>
-            <p className="noc-esquina fecha">
-                {fecha}
-                <br />
-                <span aria-hidden="true">[ </span>{lugar}<span aria-hidden="true"> ]</span>
-            </p>
-            <p className="noc-esquina redes">
-                @influos.ogn
-                <br />
-                @origeniglesia
-            </p>
-        </>
-    );
-};
+export const Esquinas: React.FC<{ aQuien?: string; fecha: string; lugar: string; calma?: Calma }> = ({ fecha, lugar }) => (
+    <>
+        <p className="noc-esquina fecha">
+            {fecha}
+            <br />
+            <span aria-hidden="true">[ </span>{lugar}<span aria-hidden="true"> ]</span>
+        </p>
+        <p className="noc-esquina redes">
+            @influos.ogn
+            <br />
+            @origeniglesia
+        </p>
+    </>
+);

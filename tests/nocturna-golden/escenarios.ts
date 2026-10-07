@@ -234,9 +234,9 @@ export const ESCENARIOS: Record<string, (page: Page, info: TestInfo) => Promise<
         await g.paso('entrar sin sesión', () => F.entrarSinSesion(page));
         await g.paso('mismo DNI, otra fecha', () => F.llenarAdulto(page, { ...ADULTO_EXISTENTE, nac: '1984-02-03' }));
         await g.paso('seguir (1→ aviso)', () => F.seguir(page));
-        await expect(page.getByRole('button', { name: 'Revisar mis datos', exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Revisar el DNI', exact: true })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Sumar a alguien más', exact: true })).toHaveCount(0);
-        await g.paso('revisar mis datos', () => page.getByRole('button', { name: 'Revisar mis datos', exact: true }).click());
+        await g.paso('revisar el DNI', () => page.getByRole('button', { name: 'Revisar el DNI', exact: true }).click());
         return g.traza('7 · Mismo DNI, fecha que no coincide → cara B del diálogo');
     },
 

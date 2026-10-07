@@ -18,6 +18,8 @@ export const ANIMACIONES_CSS = `
 @keyframes nocChasquido { 0% { transform: rotate(-9deg) scale(1.1); } 60% { transform: rotate(1deg) scale(.98); } 100% { transform: rotate(-2deg) scale(1); } }
 @keyframes nocSonrisa { 0% { transform: scale(0) rotate(-30deg); } 70% { transform: scale(1.15) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
 @keyframes nocAviso { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes nocFundido { from { opacity: 0; } to { opacity: 1; } }
+@keyframes nocHoja { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
 @keyframes nocConfeti {
     0% { transform: translate3d(0, -40px, 0) rotate(0); opacity: 1; }
     80% { opacity: 1; }
