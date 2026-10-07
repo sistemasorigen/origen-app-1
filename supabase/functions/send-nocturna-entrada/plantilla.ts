@@ -31,7 +31,7 @@
 
 export const PLANTILLA_ENTRADA = String.raw`
 <!DOCTYPE html>
-<html lang="es" style="background-color:#E04497;" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<html lang="es" style="background-color:#ffffff;" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -44,7 +44,7 @@ export const PLANTILLA_ENTRADA = String.raw`
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 <style>
 :root{color-scheme:light only;supported-color-schemes:light only}
-html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;background-color:#E04497!important;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;background-color:#ffffff!important;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
 a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important}
 @media (prefers-color-scheme:dark){
 .nc-rosa{background-color:#E04497!important}
@@ -62,27 +62,28 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 [data-ogsc] .nc-tl{color:#DBE479!important}
 @media screen and (max-width:620px){
 .nc-pad{padding-left:16px!important;padding-right:16px!important}
+.nc-marco{padding:8px!important}
 .nc-h1{font-size:44px!important}
 .nc-cod{font-size:34px!important;letter-spacing:3px!important}
 }
 </style>
 </head>
-<body class="nc-rosa" bgcolor="#E04497" style="margin:0; padding:0; background-color:#E04497;">
-<div class="nc-rosa" style="background-color:#E04497; margin:0; padding:0; width:100%;">
+<body class="nc-blanco" bgcolor="#ffffff" style="margin:0; padding:0; background-color:#ffffff;">
+<div class="nc-blanco" style="background-color:#ffffff; margin:0; padding:0; width:100%;">
 
 <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#E04497; opacity:0;">Tu entrada para Nocturna: un solo QR para toda la familia. Viernes 30.10, de 11 PM a 6 AM, en Av. Eva Perón 3932.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;</div>
 
-<table role="presentation" class="nc-rosa" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#E04497" style="background-color:#E04497;">
+<table role="presentation" class="nc-blanco" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color:#ffffff;">
 <tr>
-<td class="nc-rosa" align="center" bgcolor="#E04497" style="background-color:#E04497; padding:0;">
+<td class="nc-blanco nc-marco" align="center" bgcolor="#ffffff" style="background-color:#ffffff; padding:14px;">
 
 <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->
-<table role="presentation" class="nc-rosa" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#E04497" style="max-width:600px; width:100%; background-color:#E04497;">
+<table role="presentation" class="nc-rosa" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#E04497" style="max-width:600px; width:100%; background-color:#E04497; border:3px solid #000000; border-radius:28px;">
 
 <!-- CABECERA -->
 <tr>
 <td class="nc-rosa" bgcolor="#E04497" style="background-color:#E04497; padding:0; font-size:0; line-height:0;">
-<img src="https://oqtumgalnozppqnnjjdb.supabase.co/storage/v1/object/public/images/email/nocturna/nocturna-cabecera.jpg" width="600" alt="NOCTURNA 2026 · Origen Iglesia" style="display:block; width:100%; max-width:600px; height:auto; border:0; outline:none; text-decoration:none; background-color:#E04497; color:#000000; font-family:Arial,Helvetica,sans-serif; font-size:28px; font-weight:bold; line-height:1.2; text-align:center;">
+<img src="https://oqtumgalnozppqnnjjdb.supabase.co/storage/v1/object/public/images/email/nocturna/nocturna-cabecera.jpg" width="600" alt="NOCTURNA 2026 · Origen Iglesia" style="display:block; width:100%; max-width:600px; height:auto; border:0; border-radius:25px 25px 0 0; outline:none; text-decoration:none; background-color:#E04497; color:#000000; font-family:Arial,Helvetica,sans-serif; font-size:28px; font-weight:bold; line-height:1.2; text-align:center;">
 </td>
 </tr>
 
@@ -202,7 +203,7 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 
 <!-- PIE -->
 <tr>
-<td class="nc-rosa nc-pad" bgcolor="#E04497" align="center" style="background-color:#E04497; padding:30px 28px 40px 28px;">
+<td class="nc-rosa nc-pad" bgcolor="#E04497" align="center" style="background-color:#E04497; padding:30px 28px 40px 28px; border-radius:0 0 25px 25px;">
 <p class="nc-tn" style="margin:0; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:13px; line-height:1.5; font-weight:bold; color:#000000;">ORIGEN IGLESIA // AV. EVA PERÓN 3932</p>
 <p class="nc-tn" style="margin:6px 0 0 0; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:13px; line-height:1.5; font-weight:bold; color:#000000;"><a class="nc-tn" href="https://instagram.com/influos.ogn" style="color:#000000; text-decoration:underline;">@INFLUOS.OGN</a> &nbsp;//&nbsp; <a class="nc-tn" href="https://instagram.com/origeniglesia" style="color:#000000; text-decoration:underline;">@ORIGENIGLESIA</a></p>
 </td>
