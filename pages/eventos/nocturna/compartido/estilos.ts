@@ -25,6 +25,13 @@ export const AMBAR = '#fdf3e3';
 export const AMBAR_INK = '#7a4f10';
 export const AMBAR_BORDE = '#e8b96a';
 
+/**
+ * El rosa de Nocturna, el mismo de la inscripción (estilo/tokens.ts). En el
+ * panel se usa para destacar: el retiro de las 6 AM lleva este anillo en vez
+ * del negro, que pesaba como un error.
+ */
+export const ROSA = '#E04497';
+
 export const ROJO = '#b42318';
 export const ROJO_FONDO = '#fdecea';
 

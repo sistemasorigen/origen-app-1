@@ -20,6 +20,7 @@ import {
     fuente,
     INK,
     ROJO,
+    ROSA,
     VERDE,
     VERDE_FONDO,
 } from './compartido/estilos';
@@ -253,7 +254,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
         ({ titulo, extra, destacada, children }) => (
             <div
                 className="rounded-[22px]"
-                style={{ background: CARTA, padding: 20, boxShadow: destacada ? `0 0 0 2px ${INK} inset` : 'none' }}
+                style={{ background: CARTA, padding: 20, boxShadow: destacada ? `0 0 0 2px ${ROSA} inset` : 'none' }}
             >
                 {(titulo || extra) && (
                     <div className="flex items-baseline justify-between gap-2.5">

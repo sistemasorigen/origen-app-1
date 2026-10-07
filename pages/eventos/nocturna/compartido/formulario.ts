@@ -81,7 +81,10 @@ export interface ChicoForm {
 export const RESTRICCIONES: { valor: NocturnaRestriccion; etiqueta: string; corto: string }[] = [
     { valor: 'ninguna',  etiqueta: 'Ninguna',  corto: '—' },
     { valor: 'diabetes', etiqueta: 'Diabetes', corto: 'Diabetes' },
-    { valor: 'celiaco',  etiqueta: 'Celíaco',  corto: 'Celíaco' },
+    // La etiqueta dice la condición, no la persona: "Celiaquía", como
+    // "Diabetes". El valor guardado sigue siendo 'celiaco', que es lo que
+    // valida la base (nocturna_jovenes_restriccion_valida).
+    { valor: 'celiaco',  etiqueta: 'Celiaquía', corto: 'Celiaquía' },
 ];
 
 export const etiquetaRestriccion = (r: NocturnaRestriccion | undefined): string =>
