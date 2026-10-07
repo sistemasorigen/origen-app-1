@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}.tl::-webkit-scrollbar{display:none}</style></helmet>
+
+<section id="t1" style="padding:40px 44px 48px">
+  <div style="display:flex; align-items:baseline; gap:10px"><a href="#t1" style="font:600 10px ui-monospace,Menlo,monospace; padding:3px 7px; background:#1a1a1a; color:#fff; border-radius:4px; text-decoration:none">1</a><span style="font:600 14px Manrope,system-ui,sans-serif; color:#1a1a1a">Punto de Información · tres conceptos, mobile</span></div>
+  <p style="max-width:760px; margin:8px 0 26px; font:400 13px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">Los tres parten de lo mismo: un anuncio dura y un evento ocurre. Cambia qué hace el diseño con eso. Mismos datos en los tres, hoy es domingo 4 de octubre. Los tres son navegables.</p>
+
+  <div style="display:flex; flex-wrap:wrap; gap:36px; align-items:flex-start">
+
+    <div id="1a" style="display:flex; flex-direction:column; gap:10px; width:390px">
+      <div style="display:flex; align-items:baseline; gap:8px"><a href="#1a" style="font:600 10.5px ui-monospace,Menlo,monospace; padding:3px 7px; background:rgba(0,0,0,.08); color:#1a1a1a; border-radius:5px; text-decoration:none">1a</a><span style="font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Distancia</span></div>
+      <p style="margin:0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">La página se lee como el tiempo se siente: lo de hoy es enorme, lo del mes que viene es chico. Los eventos llevan un punto porque ocurren; los anuncios, una mecha que se consume hasta que vencen.</p>
+
+      <div style="width:390px; height:820px; background:#fff; border-radius:30px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:auto">
+        <div style="height:120px; background:repeating-linear-gradient(135deg,#ecebe8 0 12px,#e4e3df 12px 24px); display:flex; align-items:center; justify-content:center"><span style="font:500 10.5px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.55)">banner actual</span></div>
+        <div style="padding:22px 20px 34px">
+          <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Punto de Información · domingo 4 de octubre</p>
+          <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="6">
+            <div style="margin-top:{{ g.top }}">
+              <p style="margin:0; font:600 {{ g.size }}/0.95 Manrope,system-ui,sans-serif; color:{{ g.ink }}; letter-spacing:{{ g.track }}">{{ g.label }}</p>
+              <div style="display:flex; flex-direction:column; gap:{{ g.gap }}; margin-top:{{ g.labelGap }}">
+                <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="1">
+                  <div>
+                    <sc-if value="{{ it.conImg }}" hint-placeholder-val="{{ false }}">
+                      <div style="height:150px; border-radius:22px; margin-bottom:14px; background:repeating-linear-gradient(135deg,#ecebe8 0 10px,#e3e2de 10px 20px); display:flex; align-items:center; justify-content:center"><span style="font:500 10.5px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.5)">portada del evento</span></div>
+                    </sc-if>
+                    <div style="display:flex; align-items:center; gap:8px">
+                      <sc-if value="{{ it.esEvento }}" hint-placeholder-val="{{ true }}"><span style="width:9px; height:9px; border-radius:999px; background:{{ it.color }}; flex:none"></span></sc-if>
+                      <sc-if value="{{ it.esAnuncio }}" hint-placeholder-val="{{ false }}"><span style="width:18px; height:3px; border-radius:999px; background:#0a0a0a; flex:none"></span></sc-if>
+                      <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)">{{ it.meta }}</span>
+                    </div>
+                    <p style="margin:6px 0 0; font:600 {{ it.titSize }}/1.22 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">{{ it.titulo }}</p>
+                    <sc-if value="{{ it.hayDonde }}" hint-placeholder-val="{{ false }}"><p style="margin:5px 0 0; font:500 14px Manrope,system-ui,sans-serif; color:{{ it.dondeInk }}">{{ it.donde }}</p></sc-if>
+                    <sc-if value="{{ it.esAnuncio }}" hint-placeholder-val="{{ false }}">
+                      <div style="height:4px; border-radius:999px; background:#efeeeb; margin-top:10px; overflow:hidden"><div style="width:{{ it.mecha }}; height:100%; border-radius:999px; background:{{ it.mechaColor }}"></div></div>
+                    </sc-if>
+                    <sc-if value="{{ it.verDesc }}" hint-placeholder-val="{{ false }}"><p style="margin:10px 0 0; font:500 14px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">{{ it.desc }}</p></sc-if>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap">
+                      <sc-if value="{{ it.hayLink }}" hint-placeholder-val="{{ true }}"><button onClick="{{ it.abrir }}" style="{{ it.btn }}">{{ it.linkLabel }} ↗</button></sc-if>
+                      <sc-if value="{{ it.hayQr }}" hint-placeholder-val="{{ false }}"><button onClick="{{ it.qr }}" style="height:{{ it.btnH }}; padding:0 14px; border:0; border-radius:999px; background:#f2f2f0; font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">QR</button></sc-if>
+                      <button onClick="{{ it.toggle }}" style="height:{{ it.btnH }}; padding:0 4px; border:0; background:transparent; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); text-decoration:underline; text-underline-offset:3px; cursor:pointer">{{ it.leer }}</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div id="1b" style="display:flex; flex-direction:column; gap:10px; width:390px">
+      <div style="display:flex; align-items:baseline; gap:8px"><a href="#1b" style="font:600 10.5px ui-monospace,Menlo,monospace; padding:3px 7px; background:rgba(0,0,0,.08); color:#1a1a1a; border-radius:5px; text-decoration:none">1b</a><span style="font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">Historias</span><span style="height:22px; padding:0 9px; border-radius:999px; background:#0a0a0a; color:#fff; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center">arriesgado</span></div>
+      <p style="margin:0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Una cosa por pantalla, en orden de urgencia, con un toque para pasar. Se ve todo en diez segundos sin elegir nada. El riesgo: buscar un dato puntual obliga a pasar, por eso existe "Ver todo".</p>
+
+      <div style="position:relative; width:390px; height:820px; background:#0a0a0a; border-radius:30px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:hidden; display:flex; flex-direction:column">
+        <div style="height:120px; flex:none; background:repeating-linear-gradient(135deg,#ecebe8 0 12px,#e4e3df 12px 24px); display:flex; align-items:center; justify-content:center"><span style="font:500 10.5px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.55)">banner actual</span></div>
+        <div style="position:relative; flex:1; min-height:0; background:{{ hBg }}; overflow:hidden">
+          <div style="position:absolute; left:14px; right:14px; top:12px; display:flex; gap:4px; z-index:3">
+            <sc-for list="{{ hBarras }}" as="b" hint-placeholder-count="10"><span style="flex:1; height:3px; border-radius:999px; background:{{ b.bg }}"></span></sc-for>
+          </div>
+          <div style="position:absolute; left:14px; right:14px; top:24px; display:flex; align-items:center; gap:8px; z-index:3">
+            <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:{{ hSoft }}">{{ hPos }}</span>
+            <button onClick="{{ hIndice }}" style="margin-left:auto; height:34px; padding:0 14px; border:0; border-radius:999px; background:{{ hChipBg }}; color:{{ hInk }}; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer">Ver todo</button>
+          </div>
+
+          <sc-if value="{{ hFoto }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute; inset:0; background:repeating-linear-gradient(135deg,#2a2a2c 0 14px,#232325 14px 28px)"></div>
+            <span style="position:absolute; left:50%; top:30%; transform:translateX(-50%); font:500 10.5px ui-monospace,Menlo,monospace; color:rgba(255,255,255,.45)">portada del evento</span>
+            <div style="position:absolute; left:0; right:0; bottom:0; height:62%; background:linear-gradient(to top, rgba(10,10,10,.96) 55%, rgba(10,10,10,0))"></div>
+          </sc-if>
+
+          <button onClick="{{ hPrev }}" aria-label="Anterior" style="position:absolute; left:0; top:64px; bottom:150px; width:34%; border:0; background:transparent; cursor:w-resize; z-index:1"></button>
+          <button onClick="{{ hNext }}" aria-label="Siguiente" style="position:absolute; right:0; top:64px; bottom:150px; width:66%; border:0; background:transparent; cursor:e-resize; z-index:1"></button>
+
+          <div style="position:absolute; left:22px; right:22px; bottom:24px; z-index:2; pointer-events:none">
+            <span style="display:inline-flex; height:30px; padding:0 13px; border-radius:999px; background:{{ hChipBg }}; color:{{ hInk }}; font:600 13px Manrope,system-ui,sans-serif; align-items:center">{{ hCuando }}</span>
+            <p style="margin:14px 0 0; font:600 {{ hTitSize }}/1.05 Manrope,system-ui,sans-serif; color:{{ hInk }}; letter-spacing:-.03em">{{ hTitulo }}</p>
+            <p style="margin:12px 0 0; font:600 15px/1.45 Manrope,system-ui,sans-serif; color:{{ hInk }}">{{ hMeta }}</p>
+            <p style="margin:8px 0 0; font:500 14px/1.55 Manrope,system-ui,sans-serif; color:{{ hSoft }}">{{ hDesc }}</p>
+            <sc-if value="{{ hLink }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; gap:8px; margin-top:18px; pointer-events:auto">
+                <button onClick="{{ hAbrir }}" style="flex:1; height:56px; border:0; border-radius:999px; background:{{ hBtnBg }}; color:{{ hBtnInk }}; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer">{{ hLinkLabel }} ↗</button>
+                <button onClick="{{ hQr }}" style="height:56px; padding:0 18px; border:0; border-radius:999px; background:{{ hChipBg }}; color:{{ hInk }}; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">QR</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hFinal }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ hReiniciar }}" style="margin-top:18px; height:56px; width:100%; border:0; border-radius:999px; background:#fff; color:#0a0a0a; font:600 16px Manrope,system-ui,sans-serif; cursor:pointer; pointer-events:auto">Volver a empezar</button>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ hIndiceOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute; inset:0; background:#fff; z-index:5; overflow:auto; padding:18px 18px 24px">
+              <div style="display:flex; align-items:center"><p style="margin:0; flex:1; font:600 18px Manrope,system-ui,sans-serif; color:#0a0a0a">Todo, en orden</p><button onClick="{{ hIndice }}" style="height:38px; padding:0 14px; border:0; border-radius:999px; background:#f2f2f0; font:600 13px Manrope,system-ui,sans-serif; cursor:pointer">Cerrar</button></div>
+              <div style="display:flex; flex-direction:column; margin-top:10px">
+                <sc-for list="{{ hLista }}" as="l" hint-placeholder-count="9">
+                  <button onClick="{{ l.ir }}" style="border:0; background:transparent; padding:12px 0; border-bottom:1px solid #f0efec; display:flex; align-items:baseline; gap:12px; text-align:left; cursor:pointer">
+                    <span style="width:88px; flex:none; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ l.cuando }}</span>
+                    <span style="flex:1; font:600 15px/1.35 Manrope,system-ui,sans-serif; color:#0a0a0a">{{ l.titulo }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+
+    <div id="1c" style="display:flex; flex-direction:column; gap:10px; width:390px">
+      <div style="display:flex; align-items:baseline; gap:8px"><a href="#1c" style="font:600 10.5px ui-monospace,Menlo,monospace; padding:3px 7px; background:rgba(0,0,0,.08); color:#1a1a1a; border-radius:5px; text-decoration:none">1c</a><span style="font:600 15px Manrope,system-ui,sans-serif; color:#0a0a0a">La línea</span></div>
+      <p style="margin:0; font:500 12.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62)">Un solo eje de tiempo que se desliza de costado. Los anuncios son franjas que se estiran sobre los días que duran; los eventos son puntos. "Hoy" es una raya que separa lo que pasó. Tocar cualquier cosa la abre debajo.</p>
+
+      <div style="width:390px; height:820px; background:#fff; border-radius:30px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:auto">
+        <div style="height:120px; background:repeating-linear-gradient(135deg,#ecebe8 0 12px,#e4e3df 12px 24px); display:flex; align-items:center; justify-content:center"><span style="font:500 10.5px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.55)">banner actual</span></div>
+        <div style="padding:18px 20px 6px; display:flex; align-items:center; gap:14px">
+          <p style="margin:0; flex:1; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Punto de Información</p>
+          <span style="display:flex; align-items:center; gap:6px; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)"><span style="width:9px; height:9px; border-radius:999px; background:#0a0a0a"></span>ocurre</span>
+          <span style="display:flex; align-items:center; gap:6px; font:600 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6)"><span style="width:18px; height:8px; border-radius:999px; background:#d6d5d1"></span>dura</span>
+        </div>
+
+        <div ref="{{ tlRef }}" class="tl" style="overflow-x:auto; overflow-y:hidden; scrollbar-width:none">
+          <div style="position:relative; width:{{ tlW }}; height:{{ tlH }}">
+            <div style="position:absolute; left:0; top:0; bottom:0; width:{{ pasadoW }}; background:#f7f7f5"></div>
+            <sc-for list="{{ tlDias }}" as="d" hint-placeholder-count="40">
+              <div style="position:absolute; left:{{ d.x }}; top:0; width:34px; height:44px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom:6px">
+                <span style="font:600 10px Manrope,system-ui,sans-serif; color:{{ d.mesInk }}; height:13px">{{ d.mes }}</span>
+                <span style="font:600 13px Manrope,system-ui,sans-serif; color:{{ d.ink }}">{{ d.n }}</span>
+              </div>
+            </sc-for>
+            <div style="position:absolute; left:{{ hoyX }}; top:0; bottom:0; width:2px; background:#0a0a0a"></div>
+            <span style="position:absolute; left:{{ hoyLabelX }}; top:46px; height:24px; padding:0 9px; border-radius:999px; background:#0a0a0a; color:#fff; font:600 11px Manrope,system-ui,sans-serif; display:flex; align-items:center">HOY</span>
+            <sc-for list="{{ tlEventos }}" as="e" hint-placeholder-count="5">
+              <button onClick="{{ e.sel }}" style="{{ e.style }}">
+                <span style="{{ e.dot }}"></span>
+                <span style="font:600 13px Manrope,system-ui,sans-serif; color:#0a0a0a; white-space:nowrap">{{ e.label }}</span>
+              </button>
+            </sc-for>
+            <sc-for list="{{ tlAnuncios }}" as="a" hint-placeholder-count="5">
+              <button onClick="{{ a.sel }}" style="{{ a.style }}"><span style="position:sticky; left:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:300px">{{ a.label }}</span></button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="padding:6px 20px 0; display:flex; gap:6px">
+          <button onClick="{{ irHoy }}" style="height:34px; padding:0 13px; border:0; border-radius:999px; background:#f2f2f0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">Hoy</button>
+          <button onClick="{{ irNov }}" style="height:34px; padding:0 13px; border:0; border-radius:999px; background:#f2f2f0; font:600 12.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">Noviembre</button>
+          <span style="margin-left:auto; font:500 12px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.5); align-self:center">deslizá →</span>
+        </div>
+
+        <div style="margin:16px 14px 24px; border-radius:26px; background:{{ dBg }}; overflow:hidden">
+          <sc-if value="{{ dImg }}" hint-placeholder-val="{{ true }}"><div style="height:140px; background:repeating-linear-gradient(135deg,#ecebe8 0 10px,#e3e2de 10px 20px); display:flex; align-items:center; justify-content:center"><span style="font:500 10.5px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.5)">portada del evento</span></div></sc-if>
+          <div style="padding:18px 18px 20px">
+            <p style="margin:0; font:600 26px/1 Manrope,system-ui,sans-serif; color:{{ dInk }}; letter-spacing:-.025em">{{ dCuando }}</p>
+            <p style="margin:12px 0 0; font:600 21px/1.25 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.015em">{{ dTitulo }}</p>
+            <p style="margin:6px 0 0; font:600 14px/1.5 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">{{ dMeta }}</p>
+            <p style="margin:10px 0 0; font:500 14px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66)">{{ dDesc }}</p>
+            <sc-if value="{{ dLink }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; gap:8px; margin-top:16px">
+                <button onClick="{{ dAbrir }}" style="flex:1; height:52px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 15px Manrope,system-ui,sans-serif; cursor:pointer">{{ dLinkLabel }} ↗</button>
+                <button onClick="{{ dQr }}" style="height:52px; padding:0 18px; border:0; border-radius:999px; background:#fff; color:#0a0a0a; font:600 14px Manrope,system-ui,sans-serif; cursor:pointer">QR</button>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; left:50%; bottom:24px; transform:translateX(-50%); max-width:440px; width:calc(100% - 32px); background:#0a0a0a; border-radius:18px; padding:13px 16px; display:flex; align-items:center; gap:12px; z-index:20">
+      <span style="flex:1; font:600 13.5px/1.4 Manrope,system-ui,sans-serif; color:#fff">{{ toast }}</span>
+      <button onClick="{{ cerrarToast }}" style="border:0; background:transparent; font:600 13px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.7); cursor:pointer">OK</button>
+    </div>
+  </sc-if>
+  <p style="margin:30px 0 0; font:500 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Elegí uno (o una mezcla, por ejemplo <a href="#1a">1a</a> con el modo pantalla de <a href="#1b">1b</a>) y lo desarrollo completo con desktop, detalle y estados vacíos.</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  DSEM = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  // o = días desde hoy (dom 4 oct 2026)
+  ITEMS = [
+    { id: 'e1', t: 'e', titulo: 'Bautismos', o: 0, hora: '18 a 20 hs', donde: 'Auditorio principal', img: true, color: '#2563eb', link: 'Ver el servicio en vivo', desc: 'Doce personas se bautizan en el servicio de la tarde. Si venís a acompañar a alguien, llegá 15 minutos antes.' },
+    { id: 'a1', t: 'a', titulo: 'Últimos lugares en Grupos de Conexión', ini: -14, o: 1, link: 'Ver los grupos', desc: 'Elegí día, barrio y categoría de la temporada 3. Se anota en dos minutos desde la app.' },
+    { id: 'e2', t: 'e', titulo: 'Noche de alabanza', o: 2, hora: '20 hs', donde: 'Auditorio principal', img: false, color: '#7c4dd6', link: null, desc: 'Una noche entera de canciones y oración con la banda de los domingos.' },
+    { id: 'e3', t: 'e', titulo: 'Encuentro de matrimonios', o: 6, hora: '19:30 a 23 hs', donde: 'Salón Origen', img: true, color: '#c2410c', link: 'Anotarnos', desc: 'Cena, charla y tiempo para la pareja. Cuidado de niños gratis con inscripción previa. Cupo para 40 parejas.' },
+    { id: 'a2', t: 'a', titulo: 'Colecta de alimentos para el comedor', ini: -7, o: 7, link: null, desc: 'Traé alimentos no perecederos al Punto de Información, antes o después de cada servicio. Lo que más falta: leche en polvo, aceite, arroz y legumbres.' },
+    { id: 'a3', t: 'a', titulo: 'Inscripciones a Nocturna', ini: -3, o: 24, link: 'Inscribir a mis hijos', desc: 'La noche de adolescentes. La inscripción la hace un adulto responsable desde el celular.' },
+    { id: 'e4', t: 'e', titulo: 'Nocturna', o: 26, hora: '23 a 6 hs', donde: 'Av. Eva Perón 3932', img: true, color: '#0a0a0a', link: 'Inscribir a mis hijos', desc: 'Para adolescentes de 12 a 18 años. Termina el sábado a las 6 de la mañana.' },
+    { id: 'e5', t: 'e', titulo: 'Feria de emprendedores', o: 35, hora: '12 a 17 hs', donde: null, img: false, color: '#b45309', link: null, desc: 'Más de 30 emprendimientos de gente de la iglesia. Comida, ropa y regalos.' },
+    { id: 'a4', t: 'a', titulo: 'Horarios de los servicios', ini: -60, o: null, link: null, desc: 'Domingos a las 10 y a las 18 hs, con espacio para niños en los dos horarios.' },
+    { id: 'a5', t: 'a', titulo: 'Cuidado pastoral', ini: -60, o: null, link: 'Pedir una charla', desc: 'Si estás atravesando un momento difícil, pedí una charla con alguien del equipo pastoral. Es confidencial.' }
+  ];
+  state = { abiertos: { e1: true, a1: true }, h: 0, hIndice: false, sel: 'e1', toast: '' };
+  tlRef = React.createRef();
+  componentDidMount() { setTimeout(() => this.scrollA(0), 60); }
+  scrollA(o) { const el = this.tlRef.current; if (el) el.scrollTo({ left: Math.max(0, (o + 6) * 34 - 70), behavior: 'smooth' }); }
+
+  dt(o) { return new Date(2026, 9, 4 + o); }
+  corta(o) { const d = this.dt(o); return this.DSEM[d.getDay()] + ' ' + d.getDate() + ' ' + this.MES[d.getMonth()]; }
+  rel(o) { return o === 0 ? 'Hoy' : o === 1 ? 'Mañana' : o < 7 ? 'En ' + o + ' días' : o < 14 ? 'La semana que viene' : o < 28 ? 'Más adelante en octubre' : 'En noviembre'; }
+  abrir(l) { this.setState({ toast: 'Se abre el link: ' + l }); }
+  qr(t) { this.setState({ toast: 'Se abre el QR de "' + t + '" para mostrárselo a otro.' }); }
+
+  renderVals() {
+    const s = this.state;
+    const tog = id => this.setState(st => ({ abiertos: Object.assign({}, st.abiertos, { [id]: !st.abiertos[id] }) }));
+
+    const buckets = [
+      { k: 'Hoy', test: o => o === 0, size: '92px', tit: '30px', top: '18px', track: '-.05em' },
+      { k: 'Mañana', test: o => o === 1, size: '64px', tit: '25px', top: '44px', track: '-.045em' },
+      { k: null, test: o => o >= 2 && o < 7, size: '44px', tit: '21px', top: '42px', track: '-.04em' },
+      { k: 'La semana que viene', test: o => o >= 7 && o < 14, size: '32px', tit: '19px', top: '40px', track: '-.03em' },
+      { k: 'Más adelante en octubre', test: o => o >= 14 && o < 28, size: '25px', tit: '17px', top: '38px', track: '-.02em' },
+      { k: 'En noviembre', test: o => o >= 28, size: '20px', tit: '16px', top: '36px', track: '-.01em' },
+      { k: 'Siempre', test: o => o === null, size: '16px', tit: '15px', top: '36px', track: '0' }
+    ];
+    const grupos = [];
+    buckets.forEach((b, bi) => {
+      const items = this.ITEMS.filter(i => b.test(i.o));
+      if (!items.length) return;
+      const sub = b.k ? [{ label: b.k, items }] : [...new Set(items.map(i => i.o))].map(o => ({ label: 'En ' + o + ' días', items: items.filter(i => i.o === o) }));
+      sub.forEach(sg => {
+        const cerca = bi <= 1;
+        grupos.push({
+          label: sg.label, size: b.size, track: b.track, top: grupos.length ? b.top : '14px',
+          ink: bi === 6 ? 'rgba(0,0,0,.5)' : '#0a0a0a', gap: bi <= 2 ? '26px' : '20px', labelGap: bi <= 1 ? '18px' : '12px',
+          items: sg.items.map(i => {
+            const ev = i.t === 'e', open = !!s.abiertos[i.id];
+            const total = i.o === null ? 1 : i.o - i.ini, resto = i.o === null ? 1 : i.o / total;
+            const btnH = cerca ? '48px' : '38px';
+            return {
+              titulo: i.titulo, desc: i.desc, conImg: ev && i.img && bi === 0,
+              esEvento: ev, esAnuncio: !ev, color: i.color,
+              meta: ev ? (i.o === 0 ? 'Ocurre hoy' : this.corta(i.o)) + ' · ' + i.hora : (i.o === null ? 'Siempre vigente' : i.o === 1 ? 'Se termina mañana' : 'Se termina el ' + this.corta(i.o)),
+              hayDonde: ev, donde: ev ? (i.donde || 'Lugar a confirmar') : '', dondeInk: ev && i.donde ? 'rgba(0,0,0,.66)' : 'rgba(0,0,0,.45)',
+              titSize: b.tit,
+              mecha: Math.max(4, Math.round(resto * 100)) + '%', mechaColor: i.o !== null && i.o <= 1 ? '#c2410c' : '#0a0a0a',
+              verDesc: open, leer: open ? 'Menos' : 'Leer',
+              toggle: () => tog(i.id),
+              hayLink: !!i.link, hayQr: !!i.link && cerca, linkLabel: i.link || '', btnH,
+              btn: 'height:' + btnH + '; padding:0 ' + (cerca ? '20px' : '15px') + '; border:0; border-radius:999px; background:' + (cerca ? '#0a0a0a' : '#f2f2f0') + '; color:' + (cerca ? '#fff' : '#0a0a0a') + '; font:600 ' + (cerca ? '15px' : '13px') + ' Manrope,system-ui,sans-serif; cursor:pointer',
+              abrir: () => this.abrir(i.link), qr: () => this.qr(i.titulo)
+            };
+          })
+        });
+      });
+    });
+
+    // Historias
+    const orden = this.ITEMS.filter(i => i.o !== null);
+    const perm = this.ITEMS.filter(i => i.o === null);
+    const stories = orden.concat([{ id: 'perm', t: 'perm' }, { id: 'fin', t: 'fin' }]);
+    const idx = Math.min(s.h, stories.length - 1), st = stories[idx];
+    let h;
+    if (st.t === 'e') {
+      const foto = st.img;
+      h = { bg: foto ? '#0a0a0a' : st.color, foto, ink: '#fff', soft: 'rgba(255,255,255,.75)', chip: 'rgba(255,255,255,.18)',
+        cuando: st.o === 0 ? 'Hoy · ' + st.hora : this.rel(st.o) + ' · ' + this.corta(st.o), titulo: st.titulo,
+        tit: st.titulo.length > 16 ? '46px' : '64px', meta: (st.o === 0 ? '' : st.hora + ' · ') + (st.donde || 'Lugar a confirmar'), desc: st.desc,
+        link: !!st.link, linkLabel: st.link, btnBg: '#fff', btnInk: '#0a0a0a' };
+    } else if (st.t === 'a') {
+      const urg = st.o <= 1;
+      h = { bg: urg ? '#fdf3e3' : '#fff', foto: false, ink: '#0a0a0a', soft: 'rgba(0,0,0,.66)', chip: urg ? '#fff' : '#f2f2f0',
+        cuando: st.o === 1 ? 'Anuncio · se termina mañana' : 'Anuncio · hasta el ' + this.corta(st.o), titulo: st.titulo,
+        tit: '40px', meta: '', desc: st.desc, link: !!st.link, linkLabel: st.link, btnBg: '#0a0a0a', btnInk: '#fff' };
+    } else if (st.t === 'perm') {
+      h = { bg: '#f2f2f0', foto: false, ink: '#0a0a0a', soft: 'rgba(0,0,0,.66)', chip: '#fff', cuando: 'Siempre', titulo: 'Domingos 10 y 18 hs',
+        tit: '44px', meta: 'Y si necesitás hablar con alguien, el equipo pastoral está.', desc: perm[1].desc, link: true, linkLabel: perm[1].link, btnBg: '#0a0a0a', btnInk: '#fff' };
+    } else {
+      h = { bg: '#0a0a0a', foto: false, ink: '#fff', soft: 'rgba(255,255,255,.7)', chip: 'rgba(255,255,255,.16)', cuando: 'Listo', titulo: 'Eso es todo por hoy',
+        tit: '46px', meta: 'Nuevos anuncios cada domingo.', desc: '', link: false, linkLabel: '', btnBg: '#fff', btnInk: '#0a0a0a' };
+    }
+
+    // La línea
+    const X = o => (o + 6) * 34;
+    const MIN = -6, MAX = 42, W = (MAX - MIN + 1) * 34;
+    const tlDias = [];
+    for (let o = MIN; o <= MAX; o++) { const d = this.dt(o); tlDias.push({ x: X(o) + 'px', n: d.getDate(), mes: d.getDate() === 1 || o === MIN ? this.MES[d.getMonth()].toUpperCase() : '', mesInk: 'rgba(0,0,0,.55)', ink: o < 0 ? 'rgba(0,0,0,.35)' : (o === 0 ? '#0a0a0a' : 'rgba(0,0,0,.66)') }); }
+    const evs = this.ITEMS.filter(i => i.t === 'e');
+    const tlEventos = evs.map((e, k) => ({
+      label: e.titulo,
+      style: 'position:absolute; left:' + (X(e.o) + 10) + 'px; top:' + (82 + (k % 2) * 36) + 'px; height:30px; padding:0 10px 0 0; border:0; background:transparent; display:flex; align-items:center; gap:7px; cursor:pointer; transform:translateX(-7px)',
+      dot: 'width:' + (s.sel === e.id ? 16 : 13) + 'px; height:' + (s.sel === e.id ? 16 : 13) + 'px; border-radius:999px; background:' + e.color + '; box-shadow:' + (s.sel === e.id ? '0 0 0 4px #fff, 0 0 0 6px ' + e.color : '0 0 0 3px #fff') + '; flex:none',
+      sel: () => this.setState({ sel: e.id })
+    }));
+    const ans = this.ITEMS.filter(i => i.t === 'a');
+    const tlAnuncios = ans.map((a, k) => {
+      const ini = Math.max(MIN, a.ini), fin = a.o === null ? MAX + 1 : a.o + 1;
+      const on = s.sel === a.id, urg = a.o !== null && a.o <= 1;
+      return {
+        label: a.titulo + (a.o === null ? '  ·  siempre' : ''),
+        style: 'position:absolute; left:' + X(ini) + 'px; width:' + (X(fin) - X(ini)) + 'px; top:' + (168 + k * 38) + 'px; height:30px; padding:0 12px 0 ' + (Math.max(0, X(0) - X(ini)) + 12) + 'px; border:0; border-radius:' + (a.o === null ? '999px 0 0 999px' : '999px') + '; display:flex; align-items:center; justify-content:flex-start; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; ' +
+          (on ? 'background:#0a0a0a; color:#fff' : urg ? 'background:#f6d9b3; color:#5c3b0b' : 'background:#e7e6e2; color:#0a0a0a'),
+        sel: () => this.setState({ sel: a.id })
+      };
+    });
+    const d = this.ITEMS.find(i => i.id === s.sel);
+    const dEv = d.t === 'e';
+
+    return {
+      grupos,
+      hBg: h.bg, hFoto: h.foto, hInk: h.ink, hSoft: h.soft, hChipBg: h.chip,
+      hBarras: stories.map((x, i) => ({ bg: i <= idx ? h.ink : (h.ink === '#fff' ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.14)') })),
+      hPos: (idx + 1) + ' de ' + stories.length + (idx === 0 ? ' · tocá para pasar' : ''),
+      hCuando: h.cuando, hTitulo: h.titulo, hTitSize: h.tit, hMeta: h.meta, hDesc: h.desc,
+      hLink: h.link, hLinkLabel: h.linkLabel, hBtnBg: h.btnBg, hBtnInk: h.btnInk, hFinal: st.t === 'fin',
+      hNext: () => this.setState({ h: Math.min(stories.length - 1, idx + 1) }),
+      hPrev: () => this.setState({ h: Math.max(0, idx - 1) }),
+      hReiniciar: () => this.setState({ h: 0 }),
+      hAbrir: () => this.abrir(h.linkLabel), hQr: () => this.qr(h.titulo),
+      hIndice: () => this.setState({ hIndice: !s.hIndice }), hIndiceOpen: s.hIndice,
+      hLista: stories.slice(0, -1).map((x, i) => ({
+        cuando: x.t === 'perm' ? 'Siempre' : x.t === 'e' ? (x.o === 0 ? 'Hoy' : this.corta(x.o)) : 'Hasta ' + this.corta(x.o),
+        titulo: x.t === 'perm' ? 'Horarios y cuidado pastoral' : x.titulo,
+        ir: () => this.setState({ h: i, hIndice: false })
+      })),
+
+      tlRef: this.tlRef, tlW: W + 'px', tlH: (168 + ans.length * 38 + 10) + 'px',
+      pasadoW: X(0) + 'px', hoyX: (X(0) + 16) + 'px', hoyLabelX: (X(0) + 22) + 'px',
+      tlDias, tlEventos, tlAnuncios,
+      irHoy: () => this.scrollA(0), irNov: () => this.scrollA(28),
+      dBg: dEv ? '#f7f7f5' : (d.o !== null && d.o <= 1 ? '#fdf3e3' : '#f7f7f5'),
+      dImg: dEv && d.img,
+      dInk: dEv ? d.color : '#0a0a0a',
+      dCuando: dEv ? (d.o === 0 ? 'Hoy' : this.rel(d.o)) : (d.o === null ? 'Siempre vigente' : d.o === 1 ? 'Se termina mañana' : 'Hasta el ' + this.corta(d.o)),
+      dTitulo: d.titulo,
+      dMeta: dEv ? this.corta(d.o) + ' · ' + d.hora + ' · ' + (d.donde || 'Lugar a confirmar') : (d.o === null ? 'Anuncio permanente' : 'Anuncio · vigente desde hace ' + (-d.ini) + ' días'),
+      dDesc: d.desc, dLink: !!d.link, dLinkLabel: d.link || '',
+      dAbrir: () => this.abrir(d.link), dQr: () => this.qr(d.titulo),
+
+      hayToast: !!s.toast, toast: s.toast, cerrarToast: () => this.setState({ toast: '' })
+    };
+  }
+}
+</script>
+</body>
+</html>

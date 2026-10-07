@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#1a1a1a;font-family:Archivo,system-ui,sans-serif}a{color:#DBE479}a:hover{color:#fff}</style></helmet>
+
+<div style="max-width:1560px; margin:0 auto; padding:36px 28px 72px">
+  <p style="margin:0; font:800 12px Archivo,system-ui,sans-serif; letter-spacing:.08em; color:#DBE479">NOCTURNA // EMAIL DE LA ENTRADA</p>
+  <h1 style="margin:10px 0 0; font:900 40px/1 Archivo,system-ui,sans-serif; letter-spacing:-.05em; color:#fff">Tu entrada para Nocturna</h1>
+  <p style="margin:12px 0 0; max-width:760px; font:500 15px/1.6 Archivo,system-ui,sans-serif; color:rgba(255,255,255,.72)">Asunto: “Tu entrada para Nocturna”. Las seis vistas cargan el mismo HTML final, con datos de ejemplo en las variables. La cabecera es un recorte provisorio del flyer para poder ver el resultado.</p>
+
+  <p style="margin:36px 0 14px; font:800 12px Archivo,system-ui,sans-serif; letter-spacing:.08em; color:rgba(255,255,255,.6)">CELULAR</p>
+  <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start">
+    <sc-for list="{{ movil }}" as="v" hint-placeholder-count="4">
+      <div style="width:375px; flex:none">
+        <p style="margin:0 0 4px; font:800 14px Archivo,system-ui,sans-serif; color:#fff">{{ v.titulo }}</p>
+        <p style="margin:0 0 12px; min-height:40px; font:500 12.5px/1.5 Archivo,system-ui,sans-serif; color:rgba(255,255,255,.62)">{{ v.nota }}</p>
+        <div style="border-radius:28px; overflow:hidden; background:{{ v.chromeBg }}; box-shadow:0 8px 30px rgba(0,0,0,.4)">
+          <div style="padding:14px 16px 12px; border-bottom:1px solid {{ v.chromeLine }}">
+            <p style="margin:0; font:700 13px Archivo,system-ui,sans-serif; color:{{ v.chromeInk }}">Origen Iglesia</p>
+            <p style="margin:3px 0 0; font:600 12px Archivo,system-ui,sans-serif; color:{{ v.chromeSub }}">Tu entrada para Nocturna</p>
+          </div>
+          <iframe title="{{ v.titulo }}" srcDoc="{{ v.doc }}" onLoad="{{ v.onLoad }}" style="display:block; width:375px; height:{{ v.alto }}; border:0; background:#E04497"></iframe>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <p style="margin:44px 0 14px; font:800 12px Archivo,system-ui,sans-serif; letter-spacing:.08em; color:rgba(255,255,255,.6)">DESKTOP</p>
+  <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start">
+    <sc-for list="{{ escritorio }}" as="v" hint-placeholder-count="2">
+      <div style="width:720px; max-width:100%; flex:none">
+        <p style="margin:0 0 4px; font:800 14px Archivo,system-ui,sans-serif; color:#fff">{{ v.titulo }}</p>
+        <p style="margin:0 0 12px; min-height:40px; font:500 12.5px/1.5 Archivo,system-ui,sans-serif; color:rgba(255,255,255,.62)">{{ v.nota }}</p>
+        <div style="border-radius:14px; overflow:hidden; background:{{ v.chromeBg }}; box-shadow:0 8px 30px rgba(0,0,0,.4)">
+          <div style="padding:12px 18px; border-bottom:1px solid {{ v.chromeLine }}; display:flex; align-items:center; gap:12px">
+            <span style="font:700 13px Archivo,system-ui,sans-serif; color:{{ v.chromeInk }}">Tu entrada para Nocturna</span>
+            <span style="font:600 12px Archivo,system-ui,sans-serif; color:{{ v.chromeSub }}">Origen Iglesia</span>
+          </div>
+          <iframe title="{{ v.titulo }}" srcDoc="{{ v.doc }}" onLoad="{{ v.onLoad }}" style="display:block; width:100%; height:{{ v.alto }}; border:0; background:#E04497"></iframe>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:24px; margin-top:52px">
+    <div style="background:#DBE479; border-radius:24px; padding:24px">
+      <p style="margin:0; font:900 13px Archivo,system-ui,sans-serif; color:#000">[ DECISIONES ]</p>
+      <div style="display:flex; flex-direction:column; gap:14px; margin-top:16px">
+        <sc-for list="{{ decisiones }}" as="d" hint-placeholder-count="5">
+          <div style="border-top:2px solid #000; padding-top:12px">
+            <p style="margin:0; font:900 15px Archivo,system-ui,sans-serif; letter-spacing:-.02em; color:#000">{{ d.t }}</p>
+            <p style="margin:5px 0 0; font:600 13.5px/1.55 Archivo,system-ui,sans-serif; color:#000">{{ d.x }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="background:#E04497; border-radius:24px; padding:24px">
+      <p style="margin:0; font:900 13px Archivo,system-ui,sans-serif; color:#000">[ IMÁGENES A GENERAR ]</p>
+      <div style="display:flex; flex-direction:column; gap:14px; margin-top:16px">
+        <sc-for list="{{ imagenes }}" as="m" hint-placeholder-count="2">
+          <div style="border-top:2px solid #000; padding-top:12px">
+            <p style="margin:0; font:900 15px Archivo,system-ui,sans-serif; letter-spacing:-.02em; color:#000">{{ m.nombre }}</p>
+            <sc-for list="{{ m.filas }}" as="f" hint-placeholder-count="4">
+              <div style="display:grid; grid-template-columns:96px minmax(0,1fr); gap:10px; margin-top:7px">
+                <span style="font:800 12px Archivo,system-ui,sans-serif; color:#000">{{ f.k }}</span>
+                <span style="font:600 13px/1.5 Archivo,system-ui,sans-serif; color:#000; overflow-wrap:anywhere">{{ f.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:24px; background:#000; border-radius:24px; padding:22px 24px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)">
+    <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap">
+      <div style="flex:1; min-width:220px">
+        <p style="margin:0; font:900 13px Archivo,system-ui,sans-serif; color:#DBE479">[ HTML FINAL ]</p>
+        <p style="margin:6px 0 0; font:600 13px/1.5 Archivo,system-ui,sans-serif; color:rgba(255,255,255,.7)">{{ pesoTxt }} · archivo: Email - Entrada Nocturna v2.html</p>
+      </div>
+      <button onClick="{{ copiar }}" style="height:46px; padding:0 20px; border:0; border-radius:999px; background:#DBE479; color:#000; font:800 14px Archivo,system-ui,sans-serif; cursor:pointer">{{ copiarLabel }}</button>
+    </div>
+    <pre style="margin:16px 0 0; max-height:460px; overflow:auto; padding:16px; border-radius:14px; background:#111; color:#e8e8e8; font:12px/1.55 ui-monospace,Menlo,monospace; white-space:pre-wrap; overflow-wrap:anywhere">{{ codigo }}</pre>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { html: '', altos: {}, copiado: false };
+
+  componentDidMount() {
+    fetch('Email - Entrada Nocturna v2.html').then(r => r.text()).then(html => this.setState({ html })).catch(() => {});
+  }
+
+  variante(tipo) {
+    let h = this.state.html;
+    if (!h) return '';
+    const cab = new URL('assets/email/nocturna-cabecera.jpg', location.href).href;
+    const vars = { nombreAdulto: 'Mariela', codigoEntrada: 'NOC-R2M9', cantidadChicos: '3', palabraEntradas: 'entradas', totalPagado: '$120.000', qrUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=24&ecc=Q&data=NOC-R2M9' };
+    Object.keys(vars).forEach(k => { h = h.split('{{' + k + '}}').join(vars[k]); });
+    const bloquear = tipo === 'bloqueadas' || tipo === 'outlook';
+    h = h.split('https://app.origeniglesia.org/email/nocturna-cabecera.jpg').join(bloquear ? 'https://imagen-bloqueada.invalid/cabecera.jpg' : cab);
+    let extra = '<style>body::-webkit-scrollbar{display:none}html{scrollbar-width:none}</style>';
+    if (tipo === 'gmailOscuro') extra += '<style>html{filter:invert(1) hue-rotate(180deg)!important;background:#fff!important}img{filter:invert(1) hue-rotate(180deg)!important}</style>';
+    if (tipo === 'outlook') extra += '<style>*{border-radius:0!important;font-family:Calibri,Arial,sans-serif!important;letter-spacing:normal!important}</style>';
+    return h.replace('</head>', extra + '</head>');
+  }
+
+  medir(id) {
+    return e => {
+      try {
+        const d = e.target.contentDocument;
+        const alto = Math.ceil(d.documentElement.scrollHeight);
+        if (alto && this.state.altos[id] !== alto) this.setState(s => ({ altos: Object.assign({}, s.altos, { [id]: alto }) }));
+      } catch (err) {}
+    };
+  }
+
+  renderVals() {
+    const claro = { chromeBg: '#ffffff', chromeLine: '#e8e8e8', chromeInk: '#111', chromeSub: '#666' };
+    const oscuro = { chromeBg: '#1f1f1f', chromeLine: '#333', chromeInk: '#eee', chromeSub: '#999' };
+    const v = (id, tipo, titulo, nota, chrome) => Object.assign({ titulo, nota, doc: this.variante(tipo), onLoad: this.medir(id), alto: (this.state.altos[id] || 1600) + 'px' }, chrome);
+
+    const movil = [
+      v('m1', 'base', 'Gmail · claro', 'Cómo lo van a abrir en la puerta. El QR entra entero a 375 px.', claro),
+      v('m2', 'bloqueadas', 'Imágenes bloqueadas', 'La cabecera cae a su texto alternativo. El QR viene incrustado (cid:) y se ve igual.', claro),
+      v('m3', 'gmailOscuro', 'Gmail · modo oscuro', 'Simulación de la inversión forzada de Gmail en iPhone. El rosa y el lima se oscurecen y el texto se aclara. El QR sigue legible porque su margen blanco viene dentro de la imagen.', oscuro),
+      v('m4', 'base', 'Apple Mail · modo oscuro', 'El email declara color-scheme “light only” y repite los fondos dentro de prefers-color-scheme: Apple Mail lo deja rosa.', oscuro)
+    ];
+    const escritorio = [
+      v('d1', 'base', 'Gmail web · desktop', 'Columna de 600 px centrada sobre el rosa a todo el ancho.', claro),
+      v('d2', 'outlook', 'Outlook · Windows', 'Por defecto bloquea las imágenes externas: la cabecera cae al texto alternativo y el QR incrustado se ve igual. Ignora las esquinas redondeadas, así que todo queda en ángulo recto.', claro)
+    ];
+
+    const kb = this.state.html ? (new Blob([this.state.html]).size / 1024).toFixed(1).replace('.', ',') : '…';
+
+    return {
+      movil, escritorio,
+      pesoTxt: kb + ' KB (el corte de Gmail está en 102 KB)',
+      codigo: this.state.html || 'Cargando…',
+      copiar: () => {
+        try { navigator.clipboard.writeText(this.state.html); } catch (e) {}
+        this.setState({ copiado: true });
+        setTimeout(() => this.setState({ copiado: false }), 2000);
+      },
+      copiarLabel: this.state.copiado ? '¡COPIADO!' : '[ COPIAR EL HTML ]',
+      decisiones: [
+        { t: 'El rosa se mantiene en todos lados', x: 'No hay una versión oscura aparte. Apple Mail y Outlook.com respetan los colores gracias a las meta color-scheme, el bgcolor repetido en cada celda y las reglas de modo oscuro. Gmail en el celular invierte por su cuenta y no se puede impedir, así que el diseño no depende del color: los corchetes, las líneas negras y el orden alcanzan para leerlo.' },
+        { t: 'El QR protege su propio blanco', x: 'La caja blanca está como bgcolor, pero en Gmail invertido se oscurece. Por eso el PNG del QR tiene que traer el margen blanco dentro de la imagen: es lo único que Gmail no toca.' },
+        { t: 'NOCTURNA en texto, no en imagen', x: 'La palabra desenfocada vive en la cabecera. El NOCTURNA nítido va en Helvetica negrita apretada, para que se vea con las imágenes bloqueadas y no desaparezca sobre el fondo invertido.' },
+        { t: 'Sin GIF', x: 'Una cabecera animada de 1200×600 pesaría varias veces lo que pesa la estática, en un email que se abre con datos móviles en la puerta. Outlook igual mostraría el primer cuadro. La estática ya cuenta la noche.' },
+        { t: 'Sin el logo aparte', x: 'El árbol de la cabecera ya es la marca de Origen, y el pie dice Origen Iglesia en texto. Un logo negro sobre transparente se perdería en Gmail invertido.' },
+        { t: 'El código, en monoespaciada', x: 'Courier en negrita con espaciado ancho: cada carácter se distingue al leerlo en voz alta (NOC-R2M9).' }
+      ],
+      imagenes: [
+        { nombre: 'nocturna-cabecera.jpg', filas: [
+          { k: 'URL', v: 'https://app.origeniglesia.org/email/nocturna-cabecera.jpg' },
+          { k: 'Medidas', v: '1200 × 600 px, se muestra a 600 × 300. JPG, calidad 80, menos de 80 KB.' },
+          { k: 'Contenido', v: 'Recorte del flyer sin los textos de las esquinas: fondo rosa #E04497 plano, NOCTURNA lima desenfocada y el árbol negro al centro. Los bordes en rosa exacto, para que se funda con el fondo del email.' },
+          { k: 'Alt', v: 'NOCTURNA 2026 · Origen Iglesia' }
+        ] },
+        { nombre: 'QR de la entrada ({{qrUrl}}, incrustado)', filas: [
+          { k: 'Medidas', v: '600 × 600 px, se muestra a 300 × 300. PNG, negro puro sobre blanco puro.' },
+          { k: 'Contenido', v: 'El código de la inscripción, con corrección de errores Q y un margen blanco de 4 módulos dentro de la imagen.' },
+          { k: 'Alt', v: 'QR de la entrada {{codigoEntrada}}' }
+        ] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

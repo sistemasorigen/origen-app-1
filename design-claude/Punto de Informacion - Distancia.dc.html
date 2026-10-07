@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes pdi-pulso{0%{box-shadow:0 0 0 0 rgba(37,99,235,.45)}70%{box-shadow:0 0 0 10px rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}@keyframes pdi-sube{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}@keyframes pdi-lado{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}@keyframes pdi-avance{from{width:0}to{width:100%}}</style></helmet>
+
+<div style="min-height:100vh; padding:24px 20px 56px; display:flex; flex-direction:column; align-items:safe center; gap:12px">
+
+  <div style="display:flex; align-items:center; gap:12px; background:#fff; border-radius:22px; padding:8px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); flex-wrap:wrap; justify-content:center; max-width:1180px">
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ btnMobile }}">Mobile</button>
+      <button onClick="{{ verDesktop }}" style="{{ btnDesktop }}">Desktop</button>
+      <button onClick="{{ verTv }}" style="{{ btnTv }}">Pantalla del hall</button>
+    </div>
+    <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:rgba(0,0,0,.58)">DATOS</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px; flex-wrap:wrap">
+      <sc-for list="{{ estados }}" as="e" hint-placeholder-count="5"><button onClick="{{ e.ir }}" style="{{ e.style }}">{{ e.label }}</button></sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ esPagina }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative; flex:none; background:#fff; border-radius:30px; box-shadow:0 4px 20px rgba(0,0,0,.09); overflow:hidden; width:{{ frameW }}; height:{{ frameH }}">
+      <div style="height:100%; overflow:auto">
+        <div style="height:{{ bannerH }}; background:repeating-linear-gradient(135deg,#ecebe8 0 12px,#e4e3df 12px 24px); display:flex; align-items:center; justify-content:center"><span style="font:500 10.5px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.55)">banner actual · carrusel compartido con la home</span></div>
+
+        <div style="max-width:1200px; margin:0 auto; padding:{{ bodyPad }}">
+          <p style="margin:0; font:600 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">Punto de Información · {{ hoyLargo }}</p>
+
+          <div style="display:grid; grid-template-columns:{{ cols }}; gap:{{ colGap }}; align-items:start">
+            <sc-for list="{{ columnas }}" as="col" hint-placeholder-count="1">
+              <div style="{{ col.style }}">
+                <sc-for list="{{ col.grupos }}" as="g" hint-placeholder-count="5">
+                  <div style="margin-top:{{ g.top }}">
+                    <p style="margin:0; font:600 {{ g.size }}/0.95 Manrope,system-ui,sans-serif; color:{{ g.ink }}; letter-spacing:{{ g.track }}">{{ g.label }}</p>
+
+                    <sc-if value="{{ g.vacio }}" hint-placeholder-val="{{ false }}">
+                      <p style="margin:14px 0 0; font:600 {{ g.vacioSize }}/1.35 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.45); letter-spacing:-.01em">{{ g.vacioTxt }}</p>
+                    </sc-if>
+
+                    <div style="display:flex; flex-direction:column; gap:{{ g.gap }}; margin-top:{{ g.labelGap }}">
+                      <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="1">
+                        <div>
+                          <sc-if value="{{ it.conImg }}" hint-placeholder-val="{{ false }}">
+                            <button onClick="{{ it.ver }}" style="display:block; width:100%; height:{{ it.imgH }}; border:0; border-radius:24px; margin-bottom:16px; background:repeating-linear-gradient(135deg,#ecebe8 0 10px,#e3e2de 10px 20px); cursor:pointer"><span style="font:500 10.5px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.5)">portada del evento</span></button>
+                          </sc-if>
+                          <div style="display:flex; align-items:center; gap:9px">
+                            <sc-if value="{{ it.pulso }}" hint-placeholder-val="{{ false }}"><span style="width:10px; height:10px; border-radius:999px; background:{{ it.color }}; flex:none; animation:pdi-pulso 1.8s ease-out infinite"></span></sc-if>
+                            <sc-if value="{{ it.punto }}" hint-placeholder-val="{{ true }}"><span style="width:9px; height:9px; border-radius:999px; background:{{ it.color }}; flex:none"></span></sc-if>
+                            <sc-if value="{{ it.esAnuncio }}" hint-placeholder-val="{{ false }}"><span style="width:18px; height:3px; border-radius:999px; background:{{ it.rayaInk }}; flex:none"></span></sc-if>
+                            <span style="font:600 {{ it.metaSize }} Manrope,system-ui,sans-serif; color:{{ it.metaInk }}">{{ it.meta }}</span>
+                          </div>
+                          <button onClick="{{ it.ver }}" style="display:block; margin:7px 0 0; padding:0; border:0; background:transparent; text-align:left; cursor:pointer; font:600 {{ it.titSize }}/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.018em">{{ it.titulo }}</button>
+                          <sc-if value="{{ it.esEvento }}" hint-placeholder-val="{{ true }}"><p style="margin:6px 0 0; font:500 {{ it.subSize }}/1.45 Manrope,system-ui,sans-serif; color:{{ it.dondeInk }}">{{ it.donde }}</p></sc-if>
+                          <sc-if value="{{ it.esAnuncio }}" hint-placeholder-val="{{ false }}">
+                            <div style="height:4px; max-width:{{ it.mechaMax }}; border-radius:999px; background:#efeeeb; margin-top:11px; overflow:hidden"><div style="width:{{ it.mecha }}; height:100%; border-radius:999px; background:{{ it.mechaColor }}"></div></div>
+                          </sc-if>
+                          <sc-if value="{{ it.verDesc }}" hint-placeholder-val="{{ false }}">
+                            <p style="margin:10px 0 0; max-width:560px; font:500 {{ it.subSize }}/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.66); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden">{{ it.desc }}</p>
+                          </sc-if>
+                          <div style="display:flex; align-items:center; gap:8px; margin-top:13px; flex-wrap:wrap">
+                            <sc-if value="{{ it.hayLink }}" hint-placeholder-val="{{ true }}"><button onClick="{{ it.abrir }}" style="{{ it.btn }}">{{ it.linkLabel }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8M9 8h7v7"></path></svg></button></sc-if>
+                            <button onClick="{{ it.ver }}" style="height:{{ it.btnH }}; padding:0 4px; border:0; background:transparent; font:600 13.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); text-decoration:underline; text-underline-offset:3px; cursor:pointer">{{ it.verLabel }}</button>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+
+                    <sc-if value="{{ g.hayMas }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ g.mas }}" style="margin-top:16px; height:42px; padding:0 18px; border:0; border-radius:999px; background:#f2f2f0; font:600 13.5px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">{{ g.masLabel }}</button>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ nada }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:30px; max-width:520px; background:#f7f7f5; border-radius:24px; padding:22px">
+              <p style="margin:0; font:600 17px/1.35 Manrope,system-ui,sans-serif; color:#0a0a0a">Por ahora no hay anuncios ni eventos.</p>
+              <p style="margin:8px 0 0; font:500 14.5px/1.6 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">Los nuevos se publican los domingos, después de cada servicio. Los servicios son a las 10 y a las 18 hs.</p>
+            </div>
+          </sc-if>
+
+          <div style="margin-top:56px; padding-top:22px; border-top:1px solid #efeeeb; display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+            <span style="font:600 12px Manrope,system-ui,sans-serif; letter-spacing:.07em; color:rgba(0,0,0,.55); margin-right:6px">SEGUINOS</span>
+            <sc-for list="{{ redes }}" as="r" hint-placeholder-count="4"><button onClick="{{ r.abrir }}" style="height:40px; padding:0 16px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 13.5px Manrope,system-ui,sans-serif; cursor:pointer">{{ r.nombre }}</button></sc-for>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ hayDetalle }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ cerrar }}" style="position:absolute; inset:0; background:rgba(10,10,10,.38); display:flex; justify-content:flex-end; align-items:{{ detAlign }}">
+          <div onClick="{{ frenar }}" style="{{ detCard }}">
+            <div style="display:flex; align-items:center; gap:8px; padding:{{ detHeadPad }}">
+              <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ dTipo }}</span>
+              <button onClick="{{ cerrar }}" style="margin-left:auto; width:44px; height:44px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            </div>
+            <div style="flex:1; min-height:0; overflow:auto; padding:0 22px 26px">
+              <sc-if value="{{ dEsEvento }}" hint-placeholder-val="{{ true }}">
+                <div style="{{ dCover }}">
+                  <sc-if value="{{ dImg }}" hint-placeholder-val="{{ true }}"><span style="font:500 10.5px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.5)">portada del evento</span></sc-if>
+                  <sc-if value="{{ dSinImg }}" hint-placeholder-val="{{ false }}">
+                    <span style="display:flex; flex-direction:column">
+                      <span style="font:600 13px Manrope,system-ui,sans-serif; letter-spacing:.06em; color:{{ dColor }}">{{ dMesCorto }}</span>
+                      <span style="font:600 64px/0.9 Manrope,system-ui,sans-serif; color:{{ dColor }}; letter-spacing:-.04em">{{ dDia }}</span>
+                    </span>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <p style="margin:{{ dRelTop }} 0 0; font:600 46px/0.95 Manrope,system-ui,sans-serif; color:{{ dRelInk }}; letter-spacing:-.045em">{{ dRel }}</p>
+              <h2 style="margin:14px 0 0; font:600 26px/1.2 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.02em">{{ dTitulo }}</h2>
+
+              <sc-if value="{{ dEsEvento }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-top:16px">
+                  <sc-for list="{{ dFilas }}" as="f" hint-placeholder-count="3">
+                    <div style="display:flex; gap:14px; padding:12px 0; border-top:1px solid #f0efec">
+                      <span style="width:62px; flex:none; font:500 13.5px/1.45 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ f.k }}</span>
+                      <span style="flex:1; font:600 15px/1.45 Manrope,system-ui,sans-serif; color:{{ f.ink }}">{{ f.v }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ dEsAnuncio }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:18px">
+                  <div style="height:8px; border-radius:999px; background:#efeeeb; overflow:hidden; display:{{ dMechaDisplay }}"><div style="width:{{ dMecha }}; height:100%; border-radius:999px; background:{{ dMechaColor }}"></div></div>
+                  <div style="display:flex; justify-content:space-between; gap:12px; margin-top:9px">
+                    <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55)">{{ dDesde }}</span>
+                    <span style="font:600 12.5px Manrope,system-ui,sans-serif; color:{{ dHastaInk }}; text-align:right">{{ dHasta }}</span>
+                  </div>
+                </div>
+              </sc-if>
+
+              <p style="margin:18px 0 0; font:500 15.5px/1.65 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.72)">{{ dDesc }}</p>
+
+              <sc-if value="{{ dLink }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ dAbrir }}" style="width:100%; height:58px; margin-top:22px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font:600 16px Manrope,system-ui,sans-serif; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer">{{ dLinkLabel }}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8M9 8h7v7"></path></svg></button>
+                <button onClick="{{ toggleQr }}" style="width:100%; height:50px; margin-top:8px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font:600 14.5px Manrope,system-ui,sans-serif; cursor:pointer">{{ qrLabel }}</button>
+                <sc-if value="{{ qrAbierto }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:12px; background:#f7f7f5; border-radius:24px; padding:18px; display:flex; flex-direction:column; align-items:center">
+                    <div style="width:220px; height:220px; background:#fff; border-radius:18px; padding:14px">
+                      <div role="img" aria-label="QR" style="width:100%; height:100%; background-image:{{ qrBg }}; background-size:contain; background-repeat:no-repeat; background-position:center; image-rendering:pixelated"></div>
+                    </div>
+                    <p style="margin:12px 0 0; font:500 13px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.6); text-align:center">Para que lo escanee alguien que está con vos.<br />{{ dUrl }}</p>
+                  </div>
+                </sc-if>
+              </sc-if>
+              <sc-if value="{{ dSinLink }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:22px 0 0; padding:14px 16px; border-radius:18px; background:#f7f7f5; font:500 13.5px/1.55 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.64)">No hace falta anotarse. Si tenés dudas, preguntá en el Punto de Información del hall.</p>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; left:16px; right:16px; bottom:20px; display:flex; justify-content:center; pointer-events:none">
+          <div style="pointer-events:auto; max-width:420px; width:100%; background:#0a0a0a; border-radius:18px; padding:13px 16px; display:flex; align-items:center; gap:12px">
+            <span style="flex:1; font:600 13.5px/1.4 Manrope,system-ui,sans-serif; color:#fff; overflow-wrap:anywhere">{{ toast }}</span>
+            <button onClick="{{ cerrarToast }}" style="border:0; background:transparent; font:600 13px Manrope,system-ui,sans-serif; color:rgba(255,255,255,.7); cursor:pointer">OK</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ esTv }}" hint-placeholder-val="{{ false }}">
+    <div style="position:relative; flex:none; width:1280px; height:720px; background:#fff; border-radius:18px; box-shadow:0 4px 20px rgba(0,0,0,.12); overflow:hidden; display:flex; flex-direction:column">
+      <div style="flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 420px; gap:56px; padding:64px 72px 0; align-items:center">
+        <div style="min-width:0; max-height:100%; overflow:hidden">
+          <p style="margin:0; font:600 {{ tvRelSize }}/0.88 Manrope,system-ui,sans-serif; color:{{ tvRelInk }}; letter-spacing:-.055em">{{ tvRel }}</p>
+          <p style="margin:30px 0 0; font:600 {{ tvTitSize }}/1.08 Manrope,system-ui,sans-serif; color:#0a0a0a; letter-spacing:-.03em">{{ tvTitulo }}</p>
+          <p style="margin:20px 0 0; font:600 26px/1.35 Manrope,system-ui,sans-serif; color:rgba(0,0,0,.62); display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden">{{ tvMeta }}</p>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center">
+          <sc-if value="{{ tvHayQr }}" hint-placeholder-val="{{ true }}">
+            <div style="width:400px; height:400px; background:#fff; border-radius:30px; padding:26px; box-shadow:0 0 0 2px #0a0a0a inset">
+              <div role="img" aria-label="QR" style="width:100%; height:100%; background-image:{{ tvQrBg }}; background-size:contain; background-repeat:no-repeat; background-position:center; image-rendering:pixelated"></div>
+            </div>
+            <p style="margin:20px 0 0; font:600 24px Manrope,system-ui,sans-serif; color:#0a0a0a; text-align:center">{{ tvQrTxt }}</p>
+          </sc-if>
+          <sc-if value="{{ tvSinQr }}" hint-placeholder-val="{{ false }}">
+            <div style="width:400px; height:400px; border-radius:30px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; padding:40px; text-align:center">
+              <p style="margin:0; font:600 30px/1.3 Manrope,system-ui,sans-serif; color:#0a0a0a">Sin inscripción.<br />Vení directo.</p>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <div style="flex:none; padding:28px 72px 32px; display:flex; align-items:center; gap:24px">
+        <span style="font:600 20px Manrope,system-ui,sans-serif; color:rgba(0,0,0,.55); white-space:nowrap">Origen · Punto de Información</span>
+        <div style="flex:1; display:flex; gap:6px">
+          <sc-for list="{{ tvBarras }}" as="b" hint-placeholder-count="8">
+            <span style="flex:1; height:6px; border-radius:999px; background:#e6e5e1; overflow:hidden"><span style="display:block; height:100%; border-radius:999px; background:#0a0a0a; width:{{ b.w }}; animation:{{ b.anim }}"></span></span>
+          </sc-for>
+        </div>
+        <button onClick="{{ tvPausa }}" style="height:48px; padding:0 20px; border:0; border-radius:999px; background:#f2f2f0; font:600 16px Manrope,system-ui,sans-serif; color:#0a0a0a; cursor:pointer">{{ tvPausaLabel }}</button>
+        <button onClick="{{ tvSig }}" style="height:48px; padding:0 20px; border:0; border-radius:999px; background:#0a0a0a; font:600 16px Manrope,system-ui,sans-serif; color:#fff; cursor:pointer">Siguiente</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1340,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  HOY = new Date(2026, 9, 5);
+  DSEM = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  DSEML = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  MESL = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+  EVENTOS = [
+    { id: 'e1', titulo: 'Noche de oración', tipo: 'Encuentro', o: 0, ini: '20:00', fin: '21:30', donde: 'Capilla', img: true, color: '#2563eb', link: 'Ver la transmisión', url: 'origeniglesia.org/vivo', desc: 'Una hora y media para orar juntos por la iglesia y la ciudad. Si no podés venir, se transmite en vivo.' },
+    { id: 'e2', titulo: 'Noche de alabanza', tipo: 'Encuentro', o: 3, ini: '20:00', fin: null, donde: 'Auditorio principal', img: false, color: '#7c4dd6', link: null, desc: 'Una noche entera de canciones y oración con la banda de los domingos. Entrada libre.' },
+    { id: 'e3', titulo: 'Encuentro de matrimonios', tipo: 'Matrimonios', o: 5, ini: '19:30', fin: '23:00', donde: 'Salón Origen, Av. Eva Perón 3940', img: true, color: '#c2410c', link: 'Anotarnos', url: 'origeniglesia.org/matrimonios', desc: 'Cena, charla y tiempo para la pareja. Hay cuidado de niños gratis en el mismo edificio, con inscripción previa: indicá cuántos chicos van y qué edades tienen al anotarte, así armamos los grupos y conseguimos voluntarios suficientes. Cupo para 40 parejas.' },
+    { id: 'e4', titulo: 'Retiro de jóvenes', tipo: 'Jóvenes', o: 12, ini: null, fin: null, donde: 'Quinta Los Álamos, Pilar', img: true, color: '#16a34a', link: 'Inscribirme', url: 'origeniglesia.org/retiro', desc: 'Fin de semana completo para jóvenes de 18 a 30. El horario de salida lo confirmamos la semana anterior.' },
+    { id: 'e5', titulo: 'Nocturna', tipo: 'Adolescentes', o: 25, ini: '23:00', fin: '06:00', donde: 'Av. Eva Perón 3932', img: true, color: '#0a0a0a', link: 'Inscribir a mis hijos', url: 'origeniglesia.org/nocturna', desc: 'Para adolescentes de 12 a 18 años. Termina el sábado a las 6 de la mañana. La inscripción la completa un adulto responsable.' },
+    { id: 'e6', titulo: 'Feria de emprendedores', tipo: 'Comunidad', o: 34, ini: '12:00', fin: '17:00', donde: null, img: false, color: '#b45309', link: null, desc: 'Más de 30 emprendimientos de gente de la iglesia: comida, ropa y regalos.' }
+  ];
+  ANUNCIOS = [
+    { id: 'a1', titulo: 'Últimos lugares en Grupos de Conexión', desde: -15, o: 1, link: 'Ver los grupos', url: 'origeniglesia.org/grupos', desc: 'Elegí día, barrio y categoría de la temporada 3. Se anota en dos minutos desde la app.' },
+    { id: 'a2', titulo: 'Colecta de alimentos para el comedor', desde: -8, o: 6, link: null, desc: 'Hasta el domingo recibimos alimentos no perecederos en el Punto de Información, antes y después de cada servicio. Lo que más hace falta: leche en polvo, aceite, arroz, fideos y legumbres. Si tenés auto y podés llevar las donaciones al comedor el lunes a la mañana, avisanos en el mostrador: necesitamos cuatro personas.' },
+    { id: 'a3', titulo: 'Inscripciones a Nocturna', desde: -4, o: 23, link: 'Inscribir a mis hijos', url: 'origeniglesia.org/nocturna', desc: 'La noche de adolescentes del viernes 30. La inscripción la hace un adulto responsable desde el celular.' },
+    { id: 'a4', titulo: 'Charla previa a los bautismos de diciembre', desde: -4, o: 56, link: 'Anotarme a la charla', url: 'origeniglesia.org/bautismos', desc: 'Son dos encuentros, los sábados 14 y 21 de noviembre. Anotate antes del 30.' },
+    { id: 'p1', titulo: 'Horarios de los servicios', desde: -200, o: null, link: null, desc: 'Domingos a las 10 y a las 18 hs, con espacio para niños en los dos horarios.' },
+    { id: 'p2', titulo: 'Cuidado pastoral', desde: -200, o: null, link: 'Pedir una charla', url: 'origeniglesia.org/cuidado', desc: 'Si estás atravesando un momento difícil, pedí una charla con alguien del equipo pastoral. Es confidencial.' }
+  ];
+  EXTRA = [
+    { id: 'x1', titulo: 'Voluntarios para Bienvenida', desde: -10, o: 2, link: 'Quiero servir', url: 'origeniglesia.org/servir', desc: 'Buscamos personas para recibir a la gente en la puerta los domingos.' },
+    { id: 'x2', titulo: 'Curso Crecer, nueva edición', desde: -6, o: 9, link: 'Anotarme', url: 'origeniglesia.org/crecer', desc: 'Empieza el martes 20 de octubre. Seis encuentros.' },
+    { id: 'x3', titulo: 'Cambio de horario de la librería', desde: -3, o: 10, link: null, desc: 'Durante octubre abre solo los domingos.' },
+    { id: 'x4', titulo: 'Taller de finanzas familiares', desde: -2, o: 20, link: 'Ver las fechas', url: 'origeniglesia.org/finanzas', desc: 'Tres encuentros en noviembre para ordenar el presupuesto de casa.' },
+    { id: 'x5', titulo: 'Coro de niños', desde: -12, o: 40, link: null, desc: 'Ensayos los sábados a las 16 hs en la sala 2, de 6 a 11 años.' },
+    { id: 'x6', titulo: 'Objetos perdidos', desde: -200, o: null, link: null, desc: 'Lo que se encuentra en el auditorio queda un mes en el Punto de Información.' },
+    { id: 'x7', titulo: 'Ofrendas por transferencia', desde: -200, o: null, link: null, desc: 'Alias ORIGEN.OFRENDAS. Titular: Asociación Origen Iglesia.' }
+  ];
+
+  state = { vista: 'mobile', datos: 'normal', abierto: null, qr: false, mas: {}, toast: '', tv: 0, pausa: false };
+
+  componentDidMount() { this._iv = setInterval(() => { if (this.state.vista === 'tv' && !this.state.pausa) this.setState(s => ({ tv: s.tv + 1 })); }, 7000); }
+  componentWillUnmount() { clearInterval(this._iv); }
+
+  dt(o) { const d = new Date(this.HOY); d.setDate(d.getDate() + o); return d; }
+  corta(o) { const d = this.dt(o); return this.DSEM[d.getDay()] + ' ' + d.getDate() + ' ' + this.MES[d.getMonth()]; }
+  larga(o) { const d = this.dt(o); return this.DSEML[d.getDay()] + ' ' + d.getDate() + ' de ' + this.MESL[d.getMonth()]; }
+  hora(e) { return e.ini ? (e.fin ? e.ini + ' a ' + e.fin + ' hs' : e.ini + ' hs') : null; }
+  rel(o) { return o === null ? 'Siempre' : o === 0 ? 'Hoy' : o === 1 ? 'Mañana' : o < 7 ? 'En ' + o + ' días' : o < 14 ? 'La semana que viene' : 'El ' + this.corta(o); }
+  qrUrl(u) { return 'url("https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=0&data=' + encodeURIComponent('https://' + u) + '")'; }
+
+  datos() {
+    const d = this.state.datos;
+    const ev = (d === 'sinEventos' || d === 'nada') ? [] : this.EVENTOS;
+    let an = (d === 'sinAnuncios' || d === 'nada') ? [] : this.ANUNCIOS.concat(d === 'muchos' ? this.EXTRA : []);
+    return ev.map(e => Object.assign({ t: 'e' }, e)).concat(an.map(a => Object.assign({ t: 'a' }, a)));
+  }
+
+  renderVals() {
+    const s = this.state, desk = s.vista === 'desktop', tv = s.vista === 'tv';
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font:600 12.5px Manrope,system-ui,sans-serif; cursor:pointer; white-space:nowrap';
+    const todos = this.datos();
+    const abrir = (it) => this.setState({ toast: 'Se abre en otra pestaña: ' + it.url });
+    const finMes = new Date(this.HOY.getFullYear(), this.HOY.getMonth() + 1, 0).getDate() - this.HOY.getDate();
+    const finMesSig = finMes + new Date(this.HOY.getFullYear(), this.HOY.getMonth() + 2, 0).getDate();
+    const mesSig = this.MESL[(this.HOY.getMonth() + 1) % 12];
+
+    const M = desk
+      ? { hoy: ['150px', '40px'], man: ['92px', '30px'], dias: ['64px', '26px'], sem: ['46px', '22px'], mes: ['36px', '20px'], sig: ['28px', '18px'], mas: ['24px', '17px'], siem: ['20px', '16px'] }
+      : { hoy: ['96px', '31px'], man: ['66px', '25px'], dias: ['46px', '21px'], sem: ['34px', '19px'], mes: ['27px', '17px'], sig: ['22px', '16px'], mas: ['19px', '15px'], siem: ['16px', '15px'] };
+    const buckets = [
+      { k: 'hoy', label: 'Hoy', test: o => o === 0, sz: M.hoy, cerca: 2 },
+      { k: 'man', label: 'Mañana', test: o => o === 1, sz: M.man, cerca: 1 },
+      { k: 'dias', label: null, test: o => o >= 2 && o < 7, sz: M.dias, cerca: 0 },
+      { k: 'sem', label: 'La semana que viene', test: o => o >= 7 && o < 14, sz: M.sem, cerca: 0 },
+      { k: 'mes', label: 'Más adelante en ' + this.MESL[this.HOY.getMonth()], test: o => o >= 14 && o <= finMes, sz: M.mes, cerca: 0 },
+      { k: 'sig', label: 'En ' + mesSig, test: o => o > finMes && o <= finMesSig, sz: M.sig, cerca: 0 },
+      { k: 'mas', label: 'Más adelante', test: o => o > finMesSig, sz: M.mas, cerca: 0 },
+      { k: 'siem', label: 'Siempre', test: o => o === null, sz: M.siem, cerca: 0 }
+    ];
+    const LIM = 3;
+    const item = (i, b) => {
+      const ev = i.t === 'e', cerca = b.cerca > 0, hoy = i.o === 0;
+      const total = i.o === null ? 1 : i.o - i.desde, resto = i.o === null ? 1 : i.o / total;
+      const urg = !ev && i.o !== null && i.o <= 1;
+      const btnH = cerca ? '50px' : '40px';
+      const hr = ev ? this.hora(i) : null;
+      return {
+        titulo: i.titulo, desc: i.desc, color: i.color,
+        conImg: ev && i.img && b.k === 'hoy', imgH: desk ? '300px' : '170px',
+        esEvento: ev, esAnuncio: !ev, pulso: ev && hoy, punto: ev && !hoy,
+        meta: ev ? (hoy ? 'Ocurre hoy' : this.corta(i.o)) + ' · ' + (hr || 'horario a confirmar') : (i.o === null ? 'Siempre vigente' : i.o === 0 ? 'Se termina hoy' : i.o === 1 ? 'Se termina mañana' : 'Se termina el ' + this.corta(i.o)),
+        metaInk: urg ? '#a3460c' : 'rgba(0,0,0,.6)', metaSize: desk ? '13.5px' : '12.5px',
+        rayaInk: urg ? '#c2410c' : '#0a0a0a',
+        titSize: b.sz[1], subSize: desk ? '15px' : '14px',
+        donde: ev ? (i.donde || 'Lugar a confirmar') : '', dondeInk: ev && i.donde ? 'rgba(0,0,0,.66)' : 'rgba(0,0,0,.45)',
+        mecha: Math.max(4, Math.round(resto * 100)) + '%', mechaColor: urg ? '#c2410c' : '#0a0a0a', mechaMax: desk ? '320px' : '100%',
+        verDesc: cerca,
+        hayLink: !!i.link, linkLabel: i.link || '', btnH,
+        btn: 'height:' + btnH + '; padding:0 ' + (cerca ? '20px' : '15px') + '; border:0; border-radius:999px; background:' + (cerca ? '#0a0a0a' : '#f2f2f0') + '; color:' + (cerca ? '#fff' : '#0a0a0a') + '; font:600 ' + (cerca ? '15px' : '13.5px') + ' Manrope,system-ui,sans-serif; display:flex; align-items:center; gap:7px; cursor:pointer',
+        verLabel: i.desc.length > 90 && cerca ? 'Leer todo' : 'Detalles',
+        abrir: () => abrir(i), ver: () => this.setState({ abierto: i.id, qr: false })
+      };
+    };
+
+    const grupos = [];
+    buckets.forEach(b => {
+      const its = todos.filter(i => b.test(i.o)).sort((x, y) => (x.o - y.o) || (x.t === 'e' ? -1 : 1));
+      if (b.k === 'hoy' && !its.length && todos.length) {
+        const prox = todos.filter(i => i.o !== null && i.o > 0).sort((x, y) => x.o - y.o)[0];
+        grupos.push({ b, label: 'Hoy', vacio: true, vacioTxt: prox ? 'Nada programado. Lo próximo: ' + prox.titulo + ', ' + this.rel(prox.o).toLowerCase() + '.' : 'Nada programado.', items: [] });
+        return;
+      }
+      if (b.k === 'hoy' && !todos.length) { grupos.push({ b, label: 'Hoy', vacio: true, vacioTxt: 'Nada programado.', items: [] }); return; }
+      if (!its.length) return;
+      if (b.k === 'dias') [...new Set(its.map(i => i.o))].forEach(o => grupos.push({ b, label: 'En ' + o + ' días', items: its.filter(i => i.o === o) }));
+      else grupos.push({ b, label: b.label, items: its });
+    });
+    const out = grupos.map((g, gi) => {
+      const abiertoMas = !!s.mas[g.label];
+      const recorta = g.b.cerca === 0 && g.items.length > LIM + 1 && !abiertoMas;
+      const lista = recorta ? g.items.slice(0, LIM) : g.items;
+      return {
+        label: g.label, size: g.b.sz[0], track: g.b.k === 'hoy' ? '-.055em' : g.b.k === 'man' ? '-.05em' : '-.035em',
+        ink: g.b.k === 'siem' ? 'rgba(0,0,0,.5)' : '#0a0a0a',
+        vacio: !!g.vacio, vacioTxt: g.vacioTxt || '', vacioSize: desk ? '26px' : '20px',
+        gap: g.b.cerca ? '30px' : '22px', labelGap: g.b.cerca ? '20px' : '14px',
+        items: lista.map(i => item(i, g.b)),
+        hayMas: g.items.length > LIM + 1, masLabel: abiertoMas ? 'Mostrar menos' : 'Y ' + (g.items.length - LIM) + ' más',
+        mas: () => this.setState(st => ({ mas: Object.assign({}, st.mas, { [g.label]: !abiertoMas }) })),
+        k: g.b.k
+      };
+    });
+    const primeras = out.filter(g => g.k === 'hoy' || g.k === 'man');
+    const resto = out.filter(g => g.k !== 'hoy' && g.k !== 'man');
+    const tops = (arr, first) => arr.map((g, i) => Object.assign({}, g, { top: i === 0 ? first : (g.k === 'man' ? (desk ? '64px' : '48px') : (desk ? '52px' : '42px')) }));
+    const columnas = desk
+      ? [{ style: 'position:sticky; top:20px; min-width:0', grupos: tops(primeras, '18px') }, { style: 'min-width:0; padding-top:10px', grupos: tops(resto, '18px') }]
+      : [{ style: 'min-width:0', grupos: tops(out, '16px') }];
+
+    const d = todos.find(i => i.id === s.abierto);
+    let dv = { hayDetalle: false };
+    if (d) {
+      const ev = d.t === 'e';
+      const total = d.o === null ? 1 : d.o - d.desde, resto2 = d.o === null ? 1 : d.o / total;
+      const urg = !ev && d.o !== null && d.o <= 1;
+      dv = {
+        hayDetalle: true, dEsEvento: ev, dEsAnuncio: !ev,
+        dTipo: ev ? 'Evento · ' + d.tipo : 'Anuncio',
+        dImg: ev && d.img, dSinImg: ev && !d.img, dColor: d.color,
+        dCover: 'height:' + (desk ? '210px' : '190px') + '; border-radius:24px; display:flex; align-items:' + (d.img ? 'center' : 'flex-end') + '; justify-content:' + (d.img ? 'center' : 'flex-start') + '; padding:' + (d.img ? '0' : '0 20px 18px') + '; background:' + (d.img ? 'repeating-linear-gradient(135deg,#ecebe8 0 10px,#e3e2de 10px 20px)' : (d.color || '#0a0a0a') + '1f'),
+        dMesCorto: ev ? this.DSEM[this.dt(d.o).getDay()].toUpperCase() + ' · ' + this.MES[this.dt(d.o).getMonth()].toUpperCase() : '', dDia: ev ? this.dt(d.o).getDate() : '',
+        dRelTop: ev ? '22px' : '6px',
+        dRel: ev ? this.rel(d.o) : (d.o === null ? 'Siempre vigente' : d.o === 0 ? 'Se termina hoy' : d.o === 1 ? 'Se termina mañana' : 'Quedan ' + d.o + ' días'),
+        dRelInk: urg ? '#a3460c' : (ev && d.color !== '#0a0a0a' ? d.color : '#0a0a0a'),
+        dTitulo: d.titulo, dDesc: d.desc,
+        dFilas: ev ? [
+          { k: 'Cuándo', v: this.larga(d.o).replace(/^./, c => c.toUpperCase()), ink: '#0a0a0a' },
+          { k: 'Horario', v: this.hora(d) || 'A confirmar', ink: d.ini ? '#0a0a0a' : 'rgba(0,0,0,.5)' },
+          { k: 'Dónde', v: d.donde || 'A confirmar', ink: d.donde ? '#0a0a0a' : 'rgba(0,0,0,.5)' }
+        ] : [],
+        dMechaDisplay: d.o === null ? 'none' : 'block',
+        dMecha: Math.max(4, Math.round(resto2 * 100)) + '%', dMechaColor: urg ? '#c2410c' : '#0a0a0a',
+        dDesde: d.o === null ? 'Información permanente' : 'Publicado el ' + this.corta(d.desde),
+        dHasta: d.o === null ? '' : 'Hasta el ' + this.corta(d.o), dHastaInk: urg ? '#a3460c' : '#0a0a0a',
+        dLink: !!d.link, dSinLink: !d.link, dLinkLabel: d.link || '', dUrl: d.url || '',
+        dAbrir: () => abrir(d),
+        toggleQr: () => this.setState({ qr: !s.qr }), qrAbierto: s.qr, qrLabel: s.qr ? 'Ocultar el QR' : 'Mostrar el QR',
+        qrBg: d.url ? this.qrUrl(d.url) : 'none',
+        detAlign: desk ? 'stretch' : 'flex-end',
+        detCard: desk
+          ? 'width:500px; height:100%; background:#fff; display:flex; flex-direction:column; animation:pdi-lado .28s ease-out'
+          : 'width:100%; height:94%; background:#fff; border-radius:28px 28px 0 0; display:flex; flex-direction:column; animation:pdi-sube .28s ease-out',
+        detHeadPad: desk ? '18px 22px 10px' : '14px 18px 8px'
+      };
+    }
+
+    const tvItems = todos.filter(i => i.o !== null).sort((x, y) => x.o - y.o);
+    const tvi = tvItems.length ? tvItems[s.tv % tvItems.length] : null;
+    const tvIdx = tvItems.length ? s.tv % tvItems.length : 0;
+
+    return Object.assign({
+      verMobile: () => this.setState({ vista: 'mobile' }), verDesktop: () => this.setState({ vista: 'desktop' }), verTv: () => this.setState({ vista: 'tv', tv: 0, pausa: false }),
+      btnMobile: seg(s.vista === 'mobile'), btnDesktop: seg(desk), btnTv: seg(tv),
+      estados: [['normal', 'Normal'], ['muchos', '12 anuncios'], ['sinAnuncios', 'Sin anuncios'], ['sinEventos', 'Sin eventos'], ['nada', 'Nada publicado']].map(([k, l]) => ({ label: l, style: seg(s.datos === k), ir: () => this.setState({ datos: k, abierto: null, mas: {}, tv: 0 }) })),
+      esPagina: !tv, esTv: tv,
+      frameW: desk ? '1280px' : '390px', frameH: desk ? '880px' : '820px',
+      bannerH: desk ? '240px' : '120px', bodyPad: desk ? '30px 56px 40px' : '22px 20px 34px',
+      hoyLargo: this.larga(0),
+      cols: desk ? 'minmax(0,1.05fr) minmax(0,1fr)' : 'minmax(0,1fr)', colGap: desk ? '72px' : '0',
+      columnas, nada: s.datos === 'nada',
+      redes: ['Instagram', 'YouTube', 'Spotify', 'WhatsApp'].map(r => ({ nombre: r, abrir: () => this.setState({ toast: 'Se abre ' + r + ' de Origen.' }) })),
+      cerrar: () => this.setState({ abierto: null }), frenar: e => e.stopPropagation(),
+      hayToast: !!s.toast, toast: s.toast, cerrarToast: () => this.setState({ toast: '' }),
+
+      tvRel: tvi ? (tvi.t === 'e' ? this.rel(tvi.o) : (tvi.o <= 1 ? (tvi.o === 0 ? 'Último día' : 'Hasta mañana') : 'Hasta el ' + this.dt(tvi.o).getDate())) : 'Hoy',
+      tvRelInk: tvi && tvi.t === 'e' && tvi.color !== '#0a0a0a' ? tvi.color : (tvi && tvi.t === 'a' && tvi.o <= 1 ? '#a3460c' : '#0a0a0a'),
+      tvTitulo: tvi ? tvi.titulo : 'Domingos 10 y 18 hs',
+      tvTitSize: tvi && tvi.titulo.length > 24 ? '46px' : '56px',
+      tvRelSize: tvi && tvi.t === 'a' && tvi.o > 1 ? '120px' : '150px',
+      tvMeta: tvi ? (tvi.t === 'e' ? this.larga(tvi.o).replace(/^./, c => c.toUpperCase()) + ' · ' + (this.hora(tvi) || 'horario a confirmar') + ' · ' + (tvi.donde || 'lugar a confirmar') : (tvi.desc.length > 110 ? tvi.desc.slice(0, tvi.desc.indexOf('.') + 1 || 110) : tvi.desc)) : 'Los anuncios nuevos se publican los domingos.',
+      tvHayQr: !!(tvi && tvi.url), tvSinQr: !(tvi && tvi.url),
+      tvQrBg: tvi && tvi.url ? this.qrUrl(tvi.url) : 'none',
+      tvQrTxt: tvi && tvi.link ? 'Escaneá para ' + tvi.link.toLowerCase() : '',
+      tvBarras: tvItems.map((x, i) => ({ w: i < tvIdx ? '100%' : '0', anim: i === tvIdx && !s.pausa ? 'pdi-avance 7s linear forwards' : 'none' })),
+      tvPausa: () => this.setState({ pausa: !s.pausa }), tvPausaLabel: s.pausa ? 'Seguir' : 'Pausar',
+      tvSig: () => this.setState({ tv: s.tv + 1 })
+    }, dv);
+  }
+}
+</script>
+</body>
+</html>
