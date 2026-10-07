@@ -100,9 +100,6 @@ const DATOS_DE_PAGO = {
     cuit: '30-70705090-7',
 };
 
-// TODO: teléfono de contacto real.
-const TELEFONO_CONTACTO = '11 5566 7788';
-
 // Los datos del evento, como los dice el diseño: cortos, con barras, para
 // que entren en una línea y se lean de un vistazo. La regla de quién puede ir
 // NO está acá: es QUIENES_ENTRAN, en src/utils/nocturna.ts, y se muestra tal
@@ -1318,7 +1315,7 @@ const InscripcionNocturna: React.FC = () => {
                                         );
                                     })}
                                     <p style={{ margin: '0 4px', ...arch(600, '13px', '1.5') }}>
-                                        Desde acá no se editan. Si hay algo para corregir, escribinos al {TELEFONO_CONTACTO} y lo cambiamos nosotros.
+                                        Desde acá no se editan. Si hay algo mal, lo corregimos nosotros antes del evento.
                                     </p>
                                     {cantidad > 0 && (
                                         <p style={{ margin: '10px 0 -2px 4px', ...arch(900, '13px'), letterSpacing: '-.01em', textTransform: 'uppercase' }}>
@@ -1639,9 +1636,6 @@ const InscripcionNocturna: React.FC = () => {
                                 Salir de la inscripción
                             </BotonNoc>
                         </div>
-                        <p style={{ margin: '16px 0 0', textAlign: 'center', ...arch(600, '13.5px', '1.5') }}>
-                            ¿Dudas? Escribinos al {TELEFONO_CONTACTO}.
-                        </p>
                     </div>
                 )}
 
@@ -2056,8 +2050,7 @@ const InscripcionNocturna: React.FC = () => {
                             para entender que la inscripción es suya, y es la
                             información mínima que resuelve la decisión. */}
                         <p className="noc-dlg-nota">
-                            A ellos no los vas a poder editar desde acá. Si hay algo para corregir, escribinos al{' '}
-                            <strong style={{ fontWeight: 900 }}>{TELEFONO_CONTACTO}</strong>.
+                            A ellos no los vas a poder editar desde acá. Si hay algo mal, lo corregimos nosotros antes del evento.
                         </p>
                         <BotonNoc onClick={sumarAEsteGrupo} style={{ marginTop: 18 }}>Sumar a alguien más</BotonNoc>
                         <p style={{ margin: '8px 0 0', textAlign: 'center' }}>
@@ -2072,8 +2065,7 @@ const InscripcionNocturna: React.FC = () => {
                         <p className="noc-dlg-rotulo"><Corchetes>Ese DNI ya se usó</Corchetes></p>
                         <h2 id="noc-dlg-dni" className="noc-dlg-titulo">Ya hay una inscripción con ese DNI</h2>
                         <p className="noc-dlg-texto">
-                            Por seguridad no mostramos nada de esa inscripción. Si escribiste mal el DNI, corregilo. Si está bien, escribinos al{' '}
-                            <strong style={{ fontWeight: 900 }}>{TELEFONO_CONTACTO}</strong> y lo resolvemos.
+                            Por seguridad no mostramos nada de esa inscripción. Si escribiste mal el DNI, corregilo.
                         </p>
                         <p className="noc-dlg-texto">
                             Si es tuya, revisá la fecha de nacimiento: tiene que ser la misma que cargaste cuando te inscribiste.
