@@ -78,14 +78,12 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 <td class="nc-blanco nc-marco" align="center" bgcolor="#ffffff" style="background-color:#ffffff; padding:14px;">
 
 <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->
-<table role="presentation" class="nc-rosa" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#E04497" style="max-width:600px; width:100%; background-color:#E04497; border:3px solid #000000; border-radius:28px;">
+<table role="presentation" class="nc-rosa" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#E04497" style="max-width:600px; width:100%; background-color:#E04497; border:3px solid #000000;">
 
 <!-- CABECERA -->
 <tr>
 <td class="nc-rosa" bgcolor="#E04497" style="background-color:#E04497; padding:0; font-size:0; line-height:0;">
-<div style="border-radius:25px 25px 0 0; overflow:hidden; font-size:0; line-height:0;">
-<img src="https://oqtumgalnozppqnnjjdb.supabase.co/storage/v1/object/public/images/email/nocturna/nocturna-cabecera.jpg" width="600" alt="NOCTURNA 2026 · Origen Iglesia" style="display:block; width:100%; max-width:600px; height:auto; border:0; border-radius:25px 25px 0 0; outline:none; text-decoration:none; background-color:#E04497; color:#000000; font-family:Arial,Helvetica,sans-serif; font-size:28px; font-weight:bold; line-height:1.2; text-align:center;">
-</div>
+<img src="https://oqtumgalnozppqnnjjdb.supabase.co/storage/v1/object/public/images/email/nocturna/nocturna-cabecera.jpg" width="600" alt="NOCTURNA 2026 · Origen Iglesia" style="display:block; width:100%; max-width:600px; height:auto; border:0; outline:none; text-decoration:none; background-color:#E04497; color:#000000; font-family:Arial,Helvetica,sans-serif; font-size:28px; font-weight:bold; line-height:1.2; text-align:center;">
 </td>
 </tr>
 
@@ -205,7 +203,7 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 
 <!-- PIE -->
 <tr>
-<td class="nc-rosa nc-pad" bgcolor="#E04497" align="center" style="background-color:#E04497; padding:30px 28px 40px 28px; border-radius:0 0 25px 25px;">
+<td class="nc-rosa nc-pad" bgcolor="#E04497" align="center" style="background-color:#E04497; padding:30px 28px 40px 28px;">
 <p class="nc-tn" style="margin:0; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:13px; line-height:1.5; font-weight:bold; color:#000000;">ORIGEN IGLESIA // AV. EVA PERÓN 3932</p>
 <p class="nc-tn" style="margin:6px 0 0 0; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:13px; line-height:1.5; font-weight:bold; color:#000000;"><a class="nc-tn" href="https://instagram.com/influos.ogn" style="color:#000000; text-decoration:underline;">@INFLUOS.OGN</a> &nbsp;//&nbsp; <a class="nc-tn" href="https://instagram.com/origeniglesia" style="color:#000000; text-decoration:underline;">@ORIGENIGLESIA</a></p>
 </td>
