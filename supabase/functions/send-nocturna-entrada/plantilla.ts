@@ -31,7 +31,7 @@
 
 export const PLANTILLA_ENTRADA = String.raw`
 <!DOCTYPE html>
-<html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<html lang="es" style="background-color:#E04497;" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -44,7 +44,7 @@ export const PLANTILLA_ENTRADA = String.raw`
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 <style>
 :root{color-scheme:light only;supported-color-schemes:light only}
-body{margin:0!important;padding:0!important;width:100%!important;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;background-color:#E04497!important;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
 a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important}
 @media (prefers-color-scheme:dark){
 .nc-rosa{background-color:#E04497!important}
@@ -68,6 +68,7 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 </style>
 </head>
 <body class="nc-rosa" bgcolor="#E04497" style="margin:0; padding:0; background-color:#E04497;">
+<div class="nc-rosa" style="background-color:#E04497; margin:0; padding:0; width:100%;">
 
 <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#E04497; opacity:0;">Tu entrada para Nocturna: un solo QR para toda la familia. Viernes 30.10, de 11 PM a 6 AM, en Av. Eva Perón 3932.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;</div>
 
@@ -213,6 +214,7 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 </td>
 </tr>
 </table>
+</div>
 </body>
 </html>
 `;
