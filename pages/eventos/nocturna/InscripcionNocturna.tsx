@@ -1500,7 +1500,15 @@ const InscripcionNocturna: React.FC = () => {
                 {pantalla === 3 && (
                     <div>
                         <TituloLetras texto={varios ? '¿Se retiran solos?' : '¿Se retira solo?'} />
-                        <p style={{ margin: '10px 0 0', ...arch(600, '15px', '1.45') }}>Nocturna termina el sábado 31 a las 6 AM.</p>
+                        {/* Qué se está respondiendo con el Sí: el Sí / No de
+                            abajo es la respuesta a esta frase, no sólo a la
+                            pregunta del título. */}
+                        <p style={{ margin: '10px 0 0', ...arch(800, '16px', '1.4'), letterSpacing: '-.015em' }}>
+                            {varios
+                                ? 'Autorizo a mis hijos/as a retirarse solos'
+                                : 'Autorizo a mi hijo/a a retirarse solo'}
+                        </p>
+                        <p style={{ margin: '6px 0 0', ...arch(600, '15px', '1.45') }}>Nocturna termina el sábado 31 a las 6 AM.</p>
                         <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 14, padding: '12px 18px 12px 12px', borderRadius: 24, background: NEGRO }}>
                             <div aria-hidden="true" style={{ display: 'flex', flex: 'none', paddingLeft: 10 }}>
                                 {chicos.map((c, i) => (
