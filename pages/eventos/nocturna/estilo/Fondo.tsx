@@ -61,7 +61,9 @@ const Fondo: React.FC<Props> = ({ etapa, nitida, calma, portada, encendida }) =>
         };
     }, []);
 
-    const opB = nitida ? 1 : Math.min(1, etapa / 7);
+    // En la portada la capa menos desenfocada va casi entera: ahí la palabra
+    // tiene que leerse ("NOCTURNA"), no sólo insinuarse.
+    const opB = nitida ? 1 : portada ? 0.85 : Math.min(1, etapa / 7);
     const escala = nitida ? 1 : 1.18 - etapa * 0.02;
 
     return (

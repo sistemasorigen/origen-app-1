@@ -57,7 +57,16 @@ ${ANIMACIONES_CSS}
     display: flex; justify-content: center;
     --blur-a: 22px; --blur-b: 8px;
 }
-#nocturna-inscripcion .noc-palabra.portada { top: 330px; }
+/* En la portada la palabra va detrás del árbol, no del título, y se lee
+   entera: del ancho de la pantalla y con menos desenfoque (proporcional al
+   tamaño). El centro de la palabra queda a la altura del centro del árbol
+   (133 px): la caja mide .86 del tamaño de letra. */
+#nocturna-inscripcion .noc-palabra.portada {
+    --tam-portada: 16vw;
+    top: calc(133px - var(--tam-portada) * .43);
+    --blur-a: 8px; --blur-b: 3px;
+}
+#nocturna-inscripcion .noc-palabra.portada .noc-palabra-texto { font-size: var(--tam-portada); }
 #nocturna-inscripcion .noc-palabra-texto {
     display: block;
     font: 400 190px/0.86 ${FUENTE_PALABRA};
@@ -77,6 +86,12 @@ ${ANIMACIONES_CSS}
     position: fixed; left: 0; right: 0; top: 0; height: 64px; z-index: 22;
     background: ${ROSA};
     pointer-events: none;
+    /* Adentro va una copia del fondo (la palabra), fija igual que el
+       original: como las dos se miden contra la pantalla, coinciden al
+       píxel y la franja no se nota. contain: paint la recorta a estos 64 px
+       y hace que el fixed de adentro se mida contra la franja, que está en
+       el mismo lugar que la pantalla. */
+    contain: paint;
 }
 
 /* ── El contenido ─────────────────────────────────────────────────────── */
@@ -300,15 +315,21 @@ ${ANIMACIONES_CSS}
 
 /* ── Escritorio ───────────────────────────────────────────────────────── */
 @media (min-width: ${ESCRITORIO}px) {
-    #nocturna-inscripcion .noc-palabra,
-    #nocturna-inscripcion .noc-palabra.portada { top: 200px; --blur-a: 34px; --blur-b: 12px; }
+    #nocturna-inscripcion .noc-palabra { top: 200px; --blur-a: 34px; --blur-b: 12px; }
+    #nocturna-inscripcion .noc-palabra.portada {
+        --tam-portada: min(14.5vw, 330px);
+        top: calc(149px - var(--tam-portada) * .43);
+        --blur-a: 20px; --blur-b: 7px;
+    }
     #nocturna-inscripcion .noc-palabra-texto { font-size: 330px; }
     #nocturna-inscripcion .noc-cabecera { position: static; background: transparent; }
     #nocturna-inscripcion .noc-columna { max-width: 520px; }
     #nocturna-inscripcion .noc-columna.ancha { max-width: 620px; }
     #nocturna-inscripcion .noc-progreso { padding: 0 20px; }
     #nocturna-inscripcion .noc-cuerpo { padding: 18px 20px 24px; }
-    #nocturna-inscripcion .noc-cuerpo.portada { padding: 0 20px 60px; }
+    /* 16 px arriba: el árbol sube 8 px con el vaivén y no puede meterse
+       debajo de la barra. */
+    #nocturna-inscripcion .noc-cuerpo.portada { padding: 16px 20px 60px; }
     #nocturna-inscripcion .noc-titulo { font-size: 54px; }
     #nocturna-inscripcion .noc-titulo.portada { font-size: 54px; }
     #nocturna-inscripcion .noc-titulo.chico,

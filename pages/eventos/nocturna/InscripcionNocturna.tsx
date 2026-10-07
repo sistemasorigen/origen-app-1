@@ -199,7 +199,9 @@ const Estado: React.FC<{ calma: Calma; nitida?: boolean; children: React.ReactNo
         <Esquinas fecha={EVENTO.fecha} lugar={EVENTO.lugar} />
         {/* Sin cabecera: la marca ahora vive en la barra de la app, que en
             estas pantallas se ve igual que en el resto. */}
-        <div className="noc-tapa-barra" aria-hidden="true" />
+        <div className="noc-tapa-barra" aria-hidden="true">
+            <Fondo etapa={0} nitida={nitida} calma={calma} portada={false} />
+        </div>
         <div className="noc-contenido">
             <main className="noc-columna">
                 <div className="noc-cuerpo" style={{ animation: 'nocEntrada .5s cubic-bezier(.2,.8,.2,1)' }}>
@@ -1102,17 +1104,24 @@ const InscripcionNocturna: React.FC = () => {
         `${c.nombre} ${c.apellido}`.trim() || `Adolescente ${i + 1}`;
     const iniciales = (nombre: string) => nombre.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
+    const fondo = (
+        <Fondo
+            etapa={etapa}
+            nitida={pantalla === 8}
+            calma={calma}
+            portada={pantalla === 0}
+            encendida={(pantalla === 4 && autoriza === true) || (pantalla === 5 && fotos !== null)}
+        />
+    );
+
     return (
         <Marco>
-            <Fondo
-                etapa={etapa}
-                nitida={pantalla === 8}
-                calma={calma}
-                portada={pantalla === 0}
-                encendida={(pantalla === 4 && autoriza === true) || (pantalla === 5 && fotos !== null)}
-            />
+            {fondo}
             <Esquinas fecha={EVENTO.fecha} lugar={EVENTO.lugar} />
-            <div className="noc-tapa-barra" aria-hidden="true" />
+            {/* Detrás de la barra de la app: rosa y la misma palabra de fondo,
+                para que lo que se scrollea pase por debajo sin cortar la
+                palabra (ver .noc-tapa-barra). */}
+            <div className="noc-tapa-barra" aria-hidden="true">{fondo}</div>
 
             <div className={`noc-contenido${hayPie ? ' noc-con-pie' : ''}`}>
                 <div className="noc-cabecera">
