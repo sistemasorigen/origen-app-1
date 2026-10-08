@@ -9,6 +9,20 @@ import type React from 'react';
  * un negro al 60% no llega al contraste mínimo.
  */
 export const ROSA = '#E04497';
+/**
+ * Las dos vetas del fondo, medidas sobre el flyer
+ * (design-claude/uploads/nocturna_APP 1920x1080.jpg).
+ *
+ * Ahí el campo es un coral apagado (#E06E82, el 78% de la imagen) manchado
+ * de un rosa más magenta (#E272B3, el 13%): las manchas casi no son más
+ * claras —0,32 de luminancia contra 0,29— pero están 24° corridas de tono, y
+ * eso solo ya las hace leer como luz.
+ *
+ * Acá el campo es el rosa de la app, que ya es el magenta; las manchas van
+ * para el otro lado, al coral del flyer, y una veta honda da el gastado.
+ */
+export const ROSA_CLARO = '#FA93B8';
+export const ROSA_HONDO = '#B02C78';
 export const LIMA = '#DBE479';
 export const NEGRO = '#000000';
 export const BLANCO = '#ffffff';

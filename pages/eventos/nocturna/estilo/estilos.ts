@@ -1,6 +1,6 @@
 import { ANIMACIONES_CSS } from './animaciones';
 import { FUENTES_CSS } from './fuentes';
-import { ESCRITORIO, ESQUINAS, FUENTE, FUENTE_PALABRA, LIMA, NEGRO, ROSA, anillo } from './tokens';
+import { ESCRITORIO, ESQUINAS, FUENTE, FUENTE_PALABRA, LIMA, NEGRO, ROSA, ROSA_CLARO, ROSA_HONDO, anillo } from './tokens';
 
 /**
  * El CSS de la página, en un solo <style>.
@@ -13,6 +13,33 @@ import { ESCRITORIO, ESQUINAS, FUENTE, FUENTE_PALABRA, LIMA, NEGRO, ROSA, anillo
  * columna crece y el pie pasa a ser una píldora; a partir de ESQUINAS
  * (1200 px) aparecen las cuatro esquinas fijas del diseño de escritorio.
  */
+/**
+ * Las manchas del fondo, medidas sobre el flyer (ver ROSA_CLARO en tokens).
+ *
+ * Nueve manchas blandas, ninguna centrada y ninguna del tamaño de otra:
+ * apoyadas en los bordes y en una veta que cruza, que es como caen en el
+ * flyer. Seis aclaran hacia el coral y tres hunden hacia el magenta — sin
+ * las hondas se ve un degradé prolijo y no una pared gastada.
+ *
+ * Son degradados y no una imagen: se dibujan una sola vez, pesan cero bytes
+ * y no se pixelan en ninguna pantalla.
+ *
+ * Las usan tres capas —el fondo, la franja detrás de la barra y la cabecera
+ * pegajosa del teléfono—, y las tres las miden contra la pantalla
+ * (100vw × 100vh) para que no se vea dónde termina una y empieza la otra.
+ */
+const MANCHAS = `
+        radial-gradient(58% 44% at 4% 18%,  ${ROSA_CLARO}80 0%, ${ROSA_CLARO}38 42%, transparent 68%),
+        radial-gradient(38% 52% at 99% 32%, ${ROSA_CLARO}73 0%, ${ROSA_CLARO}2E 40%, transparent 66%),
+        radial-gradient(50% 34% at 12% 86%, ${ROSA_CLARO}6B 0%, ${ROSA_CLARO}29 44%, transparent 70%),
+        radial-gradient(22% 17% at 68% 56%, ${ROSA_CLARO}61 0%, transparent 62%),
+        radial-gradient(15% 11% at 33% 36%, ${ROSA_CLARO}54 0%, transparent 58%),
+        radial-gradient(19% 13% at 88% 71%, ${ROSA_CLARO}4A 0%, transparent 60%),
+        radial-gradient(44% 30% at 46% 1%,  ${ROSA_HONDO}57 0%, transparent 62%),
+        radial-gradient(40% 34% at 84% 99%, ${ROSA_HONDO}4D 0%, transparent 66%),
+        radial-gradient(26% 46% at 58% 24%, ${ROSA_HONDO}33 0%, transparent 64%);
+`;
+
 export const ESTILOS_NOCTURNA = `
 ${FUENTES_CSS}
 ${ANIMACIONES_CSS}
@@ -44,12 +71,38 @@ ${ANIMACIONES_CSS}
 #nocturna-inscripcion .noc-pie :focus-visible { outline-color: ${LIMA}; }
 
 /* ── El fondo ─────────────────────────────────────────────────────────── */
+/* El rosa no es plano: está manchado, como el flyer.
+   ─────────────────────────────────────────────────────────────────────────
+   Seis manchas blandas y de tamaños distintos, ninguna centrada y ninguna
+   del mismo tamaño que otra: apoyadas en los bordes y en una veta que cruza,
+   que es como caen en el flyer. Cuatro aclaran hacia el coral y dos hunden
+   hacia el magenta oscuro — sin las hondas se ve un degradé prolijo y no una
+   pared gastada.
+
+   Son degradados de CSS y no una imagen: se dibujan una sola vez sobre una
+   capa fija, pesan cero bytes y no se pixelan en ninguna pantalla. Nada de
+   esto se anima: el fondo ya tiene a la palabra moviéndose encima. */
 #nocturna-inscripcion .noc-fondo {
     position: fixed;
     left: 0; right: 0; top: 0; bottom: 0;
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
+    background-color: ${ROSA};
+    background-image: ${MANCHAS}
+    background-size: 100vw 100vh;
+    background-position: 0 0;
+}
+/* El grano del flyer: una sola textura chica repetida, bien tenue. Es lo que
+   hace que las manchas se lean como pintura y no como un degradé de CSS.
+   Va sobre las manchas y debajo de la palabra. */
+#nocturna-inscripcion .noc-fondo::after {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    opacity: .3;
+    mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 #nocturna-inscripcion .noc-palabra {
     position: absolute; left: 0; right: 0;
@@ -84,7 +137,10 @@ ${ANIMACIONES_CSS}
    (z-index 30 del Layout). */
 #nocturna-inscripcion .noc-tapa-barra {
     position: fixed; left: 0; right: 0; top: 0; height: 64px; z-index: 22;
-    background: ${ROSA};
+    background-color: ${ROSA};
+    background-image: ${MANCHAS}
+    background-size: 100vw 100vh;
+    background-position: 0 0;
     pointer-events: none;
     /* Adentro va una copia del fondo (la palabra), fija igual que el
        original: como las dos se miden contra la pantalla, coinciden al
@@ -102,7 +158,10 @@ ${ANIMACIONES_CSS}
    que corre es lo de abajo. */
 #nocturna-inscripcion .noc-cabecera {
     position: sticky; top: 64px; z-index: 20;
-    background: ${ROSA};
+    background-color: ${ROSA};
+    background-image: ${MANCHAS}
+    background-size: 100vw 100vh;
+    background-position: 0 -64px;
 }
 #nocturna-inscripcion .noc-fila-marca {
     display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
