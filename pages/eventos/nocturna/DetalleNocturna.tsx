@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Check, ChevronLeft, Loader2, Pencil } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
-import { calcularEdad, contarAcreditados, estadoInscripcion } from '../../../src/utils/nocturna';
+import { calcularEdad, contarAcreditados, contarEstados, estadoInscripcion } from '../../../src/utils/nocturna';
 import { NocturnaInscripcion, NocturnaJoven, User } from '../../../types';
 import { COLOR_TRIBU, enLista, etiquetaRestriccion, plata } from './compartido/formulario';
 import {
@@ -315,6 +315,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
 
     const aprobado = estadoInscripcion(insc) === 'Aprobado';
     const { acreditados } = contarAcreditados(insc);
+    const resumen = contarEstados(insc);
 
     return (
         <div id="nocturna-panel" className="min-h-screen flex flex-col" style={{ background: FONDO }}>
@@ -441,6 +442,12 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                 extra={
                                     <span style={{ ...fuente(600, '13px'), color: marcados === totalPersonas ? VERDE : 'rgba(0,0,0,.6)' }}>
                                         {marcados}/{totalPersonas}
+                                        {resumen.retirados > 0 && (
+                                            <span style={{ color: '#3730a3' }}> · {resumen.retirados} se {resumen.retirados > 1 ? 'retiraron' : 'retiró'}</span>
+                                        )}
+                                        {resumen.ausentes > 0 && (
+                                            <span style={{ color: ROJO }}> · {resumen.ausentes} no {resumen.ausentes > 1 ? 'vinieron' : 'vino'}</span>
+                                        )}
                                     </span>
                                 }
                             >
@@ -454,6 +461,8 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                           rol: `${calcularEdad(j.fechaNacimiento) ?? '—'} años · ${j.tribu}`,
                                           marcado: !!chicosMarcados[j.id],
                                           desde: j.acreditadoAt,
+                                          ausente: j.ausenteAt,
+                                          retirado: j.retiradoAt,
                                       }))].map(p => (
                                         <button
                                             key={p.id}
@@ -465,8 +474,8 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                                 minHeight: 62,
                                                 padding: '10px 14px',
                                                 borderRadius: 16,
-                                                background: p.marcado ? '#f0f9f3' : '#f7f7f5',
-                                                boxShadow: p.marcado ? '0 0 0 1.5px #bfe3cc inset' : 'none',
+                                                background: p.ausente ? '#fdecea' : p.marcado ? '#f0f9f3' : '#f7f7f5',
+                                                boxShadow: p.ausente ? '0 0 0 1.5px #f0c4bf inset' : p.marcado ? '0 0 0 1.5px #bfe3cc inset' : 'none',
                                             }}
                                         >
                                             <span
@@ -483,8 +492,15 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                                 <span className="block truncate" style={{ ...fuente(600, '15px'), color: INK }}>{p.nombre}</span>
                                                 <span className="block" style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.58)', marginTop: 2 }}>{p.rol}</span>
                                             </span>
-                                            <span className="flex-none" style={{ ...fuente(600, '12.5px'), color: p.desde ? VERDE : 'rgba(0,0,0,.45)' }}>
-                                                {p.desde ? `Entró ${hora(p.desde)}` : 'No ingresó'}
+                                            {/* El estado de verdad, no el tilde: el
+                                                tilde es lo que el staff está por
+                                                guardar, y esto es lo que pasó. */}
+                                            <span className="flex-none text-right" style={{ ...fuente(600, '12.5px'), color: p.retirado ? '#3730a3' : p.ausente ? ROJO : p.desde ? VERDE : 'rgba(0,0,0,.45)' }}>
+                                                {p.retirado
+                                                    ? <>Entró {hora(p.desde)}<br />Se retiró {hora(p.retirado)}</>
+                                                    : p.ausente ? 'No vino'
+                                                        : p.desde ? `Entró ${hora(p.desde)}`
+                                                            : 'No ingresó'}
                                             </span>
                                         </button>
                                     ))}

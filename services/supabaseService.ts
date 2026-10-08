@@ -9328,6 +9328,11 @@ export const supabaseService = {
         telefono: row.retiro_telefono || undefined,
       },
       acreditadoAt: row.acreditado_at,
+      // Las dos son nulas en todas las inscripciones anteriores al
+      // 2026-10-08, y `?? null` evita que una fila vieja —leída por una
+      // consulta que todavía no pide estas columnas— las deje en undefined.
+      ausenteAt: row.ausente_at ?? null,
+      retiradoAt: row.retirado_at ?? null,
     };
   },
 
@@ -9725,6 +9730,12 @@ export const supabaseService = {
        * `motivo: 'cambio'` en vez de pisar lo que hizo otro.
        */
       visto?: { adulto: boolean; jovenes: string[] };
+      /**
+       * Quiénes no vinieron. Si no viaja, la base no toca ninguna ausencia:
+       * así una versión vieja de la app, que no sabe que existen, no las
+       * borra sin querer.
+       */
+      ausentes?: string[];
     },
   ): Promise<{ ok: boolean; inscripcion?: any; jovenes?: any[]; motivo?: string; error?: string }> {
     try {
@@ -9735,6 +9746,7 @@ export const supabaseService = {
         p_modo: opciones?.modo || 'exacto',
         p_visto_adulto: opciones?.visto ? opciones.visto.adulto : null,
         p_visto_jovenes: opciones?.visto ? opciones.visto.jovenes : null,
+        p_ausentes: opciones?.ausentes ?? null,
       });
       if (error) throw error;
       // Cuando rechaza por choque, la base manda además el estado de verdad:
@@ -9750,6 +9762,36 @@ export const supabaseService = {
     } catch (err) {
       console.error('[Nocturna] setNocturnaAcreditacion:', err);
       return { ok: false, error: 'No pudimos registrar la acreditación. Probá de nuevo.' };
+    }
+  },
+
+  /**
+   * Registra que unos adolescentes se fueron del establecimiento.
+   *
+   * Va por su propia función de la base y no por la de acreditar: entrar y
+   * salir son dos momentos distintos de la noche, y un error de uno no tiene
+   * por qué poder deshacer el otro. Sólo suma —en la puerta a las 6 AM nadie
+   * "des-retira"—, y la base rechaza la salida de quien no entró.
+   */
+  async setNocturnaRetiro(
+    inscripcionId: string,
+    jovenIds: string[],
+  ): Promise<{ ok: boolean; inscripcion?: any; jovenes?: any[]; error?: string }> {
+    try {
+      const { data, error } = await supabase.rpc('set_nocturna_retiro', {
+        p_inscripcion_id: inscripcionId,
+        p_jovenes: jovenIds,
+      });
+      if (error) throw error;
+      return {
+        ok: data?.ok === true,
+        inscripcion: data?.inscripcion,
+        jovenes: data?.jovenes,
+        error: data?.error,
+      };
+    } catch (err) {
+      console.error('[Nocturna] setNocturnaRetiro:', err);
+      return { ok: false, error: 'No pudimos registrar la salida. Probá de nuevo.' };
     }
   },
 

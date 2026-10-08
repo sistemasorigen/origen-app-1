@@ -1,6 +1,7 @@
 import {
     NocturnaEstado,
     NocturnaInscripcion,
+    NocturnaJoven,
     NocturnaJovenPayload,
     NocturnaRetiro,
 } from '../../types';
@@ -161,6 +162,42 @@ export const contarAcreditados = (
 ): { acreditados: number; total: number } => {
     const jovenes = insc.jovenes || [];
     return { acreditados: jovenes.filter(j => !!j.acreditadoAt).length, total: jovenes.length };
+};
+
+/**
+ * En qué estado está un adolescente, de los cuatro que existen.
+ *
+ * El orden importa: retirado implica acreditado —no se puede salir de donde
+ * no se entró—, así que se pregunta primero por el final.
+ */
+export const estadoDelJoven = (
+    j: Pick<NocturnaJoven, 'acreditadoAt' | 'ausenteAt' | 'retiradoAt'>,
+): 'Retirado' | 'Acreditado' | 'Ausente' | 'Pendiente' => {
+    if (j.retiradoAt) return 'Retirado';
+    if (j.acreditadoAt) return 'Acreditado';
+    if (j.ausenteAt) return 'Ausente';
+    return 'Pendiente';
+};
+
+/**
+ * Cuántos se fueron, cuántos faltaron, y cuántos quedan adentro.
+ *
+ * `adentro` es lo que mira el escáner para saber si hay a quién retirar, y
+ * `pendientes` para saber si todavía hay algo que hacer en el ingreso.
+ */
+export const contarEstados = (
+    insc: Pick<NocturnaInscripcion, 'jovenes'>,
+): { total: number; acreditados: number; ausentes: number; retirados: number; adentro: number; pendientes: number } => {
+    const jovenes = insc.jovenes || [];
+    const porEstado = jovenes.map(estadoDelJoven);
+    return {
+        total: jovenes.length,
+        acreditados: porEstado.filter(e => e === 'Acreditado' || e === 'Retirado').length,
+        ausentes: porEstado.filter(e => e === 'Ausente').length,
+        retirados: porEstado.filter(e => e === 'Retirado').length,
+        adentro: porEstado.filter(e => e === 'Acreditado').length,
+        pendientes: porEstado.filter(e => e === 'Pendiente').length,
+    };
 };
 
 /**

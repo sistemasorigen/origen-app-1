@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Loader2, Pencil, Plus, QrCode, Search, Trash2, X } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { supabaseService } from '../../../services/supabaseService';
-import { contarAcreditados, estadoInscripcion } from '../../../src/utils/nocturna';
+import { contarEstados, estadoInscripcion } from '../../../src/utils/nocturna';
 import { NocturnaConfig, NocturnaInscripcion, User } from '../../../types';
 import { COLOR_TRIBU, etiquetaRestriccion, plata, sinTildes } from './compartido/formulario';
 import {
@@ -317,11 +317,21 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
 
     const Estado: React.FC<{ insc: NocturnaInscripcion }> = ({ insc }) => {
         const aprobado = estadoInscripcion(insc) === 'Aprobado';
-        const { acreditados, total } = contarAcreditados(insc);
+        const { acreditados, total, retirados } = contarEstados(insc);
         return (
-            <span style={estiloEstado(aprobado)}>
-                <span style={estiloPunto(aprobado)} />
-                {aprobado ? `Aprobado ${acreditados}/${total}` : 'Inscripto'}
+            /* El retiro va DEBAJO del estado y no al lado: es lo que pasó
+               después, y leerlo en ese orden es leer la noche en orden. */
+            <span className="inline-flex flex-col items-start gap-1">
+                <span style={estiloEstado(aprobado)}>
+                    <span style={estiloPunto(aprobado)} />
+                    {aprobado ? `Aprobado ${acreditados}/${total}` : 'Inscripto'}
+                </span>
+                {retirados > 0 && (
+                    <span style={{ ...estiloEstado(false), background: '#eef2ff', color: '#3730a3' }}>
+                        <span style={{ ...estiloPunto(false), background: '#6366f1' }} />
+                        Retirado {retirados}/{acreditados}
+                    </span>
+                )}
             </span>
         );
     };

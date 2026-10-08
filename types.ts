@@ -1820,6 +1820,10 @@ export interface NocturnaJoven {
     tribu: NocturnaTribu;
     retiro: NocturnaRetiro;
     acreditadoAt: string | null;
+    /** No vino. Excluyente con `acreditadoAt`: no se puede estar en los dos. */
+    ausenteAt: string | null;
+    /** Se fue del establecimiento. Sólo quien entró puede tenerlo. */
+    retiradoAt: string | null;
 
     /** Lo que no puede comer. 'ninguna' si no declaró nada. */
     restriccion: NocturnaRestriccion;
