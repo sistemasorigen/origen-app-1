@@ -108,7 +108,7 @@ import SystemLoginModal from './components/modals/ModalLoginSistema';
 import CompleteProfileModal from './components/modals/ModalCompletarPerfil';
 import AvisoConexion from './components/ui/AvisoConexion';
 import PantallaCargaApp from './components/ui/PantallaCargaApp';
-import { hayMediaPendiente, olvidarMedia, suscribirMedia } from './src/utils/mediaDeEntrada';
+import { hayMediaPendiente, olvidarMedia, reservarMedia, suscribirMedia } from './src/utils/mediaDeEntrada';
 import { User, UserRole, AppConfig } from './types';
 import { db } from './services/dbService';
 import { supabaseService } from './services/supabaseService';
@@ -165,6 +165,41 @@ const LoadingScreen: React.FC<{
         </div>
     );
 };
+
+/**
+ * ¿La primera pantalla de esta visita es el Inicio?
+ *
+ * Se lee del hash en el arranque, una sola vez, ANTES del primer dibujo:
+ * HashRouter todavía no existe cuando esto corre. El Inicio siempre hace
+ * esperar —la configuración y, con ella, el video del hero y el banner de
+ * música— así que en ese caso el velo se pone de entrada y la pantalla se
+ * arma detrás. En cualquier otra ruta el velo sigue decidiéndose como antes,
+ * con los 220 ms de gracia: entrar a /form o a /nocturna-inscripcion no tiene
+ * por qué pagar un velo que no hace falta.
+ */
+const entraAlInicio = (): boolean => {
+    try {
+        const ruta = window.location.hash.replace(/^#/, '').split('?')[0];
+        return ruta === '' || ruta === '/';
+    } catch {
+        return false;
+    }
+};
+
+// Y la reserva se toma acá, al importar el módulo: antes del primer render,
+// no en un efecto.
+//
+// El Home reserva al montarse, pero los efectos corren DESPUÉS de pintar, y
+// el cuadro del medio —el primero en el que el árbol ya está montado y nadie
+// reservó nada todavía— se pinta con la barra en 100 y el texto del final.
+// Un solo cuadro, pero el texto se funde en cada frase nueva, así que el
+// parpadeo se ve.
+//
+// Es la misma llave que usa el Home ('inicio'), y reservar dos veces no hace
+// nada: cuando el Home monta, la reserva ya está, y es él quien la libera
+// —con los medios listos, o al irse de la pantalla—. Si el Home nunca llega a
+// montarse, el tope de los 6 segundos la suelta igual.
+if (entraAlInicio()) reservarMedia('inicio');
 
 const AppContent: React.FC = () => {
     // Authentication State from Context (including isRecoveryMode)
@@ -291,7 +326,13 @@ const AppContent: React.FC = () => {
     // mientras la barra se completa, el velo se va y recién ahí se ve la app,
     // ya dibujada entera.
     const [faseEntrada, setFaseEntrada] = useState<'hidratando' | 'accesos' | 'saliendo' | 'lista'>('hidratando');
-    const [veloVisible, setVeloVisible] = useState(false);
+    // Quien cae en el Inicio entra con el velo ya puesto. Es el único caso que
+    // se sabe antes de dibujar: el Inicio tarda siempre, y a quien llega por
+    // primera vez le tarda más que a nadie —no tiene la configuración guardada
+    // ni el video en el caché del navegador—. Si esto esperara los 220 ms de
+    // gracia, el Inicio a medio armar alcanzaría a verse y recién después lo
+    // taparía el velo: un parpadeo peor que no tener velo.
+    const [veloVisible, setVeloVisible] = useState(entraAlInicio);
     // Los medios pesados de la pantalla que se está montando detrás. El Home
     // reserva al montarse y libera cuando el video del hero y el banner de
     // música ya se pueden ver; las demás pantallas no reservan nada y entran
@@ -321,10 +362,18 @@ const AppContent: React.FC = () => {
     // Recién iniciada la sesión el velo vuelve a ponerse: es el caso que más
     // importa: se viene de /auth, donde no había usuario ni velo, y detrás
     // faltan justo los roles con los que el menú se arma.
+    //
+    // `faseEntrada === 'lista'` es lo que distingue ese caso del arranque. En
+    // los dos el usuario aparece de la nada —uno porque se autenticó, el otro
+    // porque se hidrató la sesión guardada— pero sólo en el primero la entrada
+    // ya había terminado. Sin esta condición el arranque también reiniciaba, y
+    // apagaba por un cuadro el velo que ya estaba puesto. Se lee de la
+    // clausura a propósito: en el render donde `user.id` cambia, la fase es la
+    // de ese momento, que es justo la que hay que mirar.
     const usuarioPrevio = useRef<string | null>(null);
     useEffect(() => {
         const id = user?.id ?? null;
-        if (id && !usuarioPrevio.current) {
+        if (id && !usuarioPrevio.current && faseEntrada === 'lista') {
             setFaseEntrada('hidratando');
             setVeloVisible(false);
         }
@@ -333,12 +382,21 @@ const AppContent: React.FC = () => {
 
     useEffect(() => {
         if (faseEntrada === 'saliendo' || faseEntrada === 'lista') return;
-        // Sin sesión no hay accesos que preparar: las pantallas públicas
-        // entran derecho, sin velo ni barra.
-        if (!isLoadingSession && !user) { setFaseEntrada('lista'); return; }
+        // Antes, sin sesión se saltaba derecho a 'lista': "las pantallas
+        // públicas entran sin velo". Pero eso dejaba afuera justo a quien
+        // entra por primera vez —sin sesión que verificar, esto resolvía en
+        // decenas de milisegundos— y al Inicio le queda lo más pesado por
+        // delante: la configuración, el video del hero, el banner de música.
+        // Resultado: la visita que más importa era la única que veía la
+        // pantalla armándose sola.
+        //
+        // Ahora todos pasan por 'accesos' y quien decide es el registro de
+        // medios: la pantalla que tiene algo pesado lo reserva y el velo la
+        // espera; la que no reserva nada sigue entrando derecho, con o sin
+        // sesión (ver el efecto de más abajo y src/utils/mediaDeEntrada.ts).
         if (isLoadingSession || isLoadingProfile) { setFaseEntrada('hidratando'); return; }
         setFaseEntrada('accesos');
-    }, [isLoadingSession, isLoadingProfile, user, faseEntrada]);
+    }, [isLoadingSession, isLoadingProfile, faseEntrada]);
 
     // Con los roles ya en la mano se monta el árbol detrás del velo y se le
     // da un respiro para que el menú y la ruta se dibujen antes de destapar.
@@ -406,7 +464,12 @@ const AppContent: React.FC = () => {
                 // La barra no llega al 100 mientras falte algo: un 100% que
                 // se queda quieto se lee como colgado.
                 ? { objetivo: 90, etapa: 'Cargando el inicio…' }
-                : { objetivo: 100, etapa: 'Preparando tus accesos…' };
+                // Sin sesión no hay accesos que preparar: a quien entra por
+                // primera vez el velo ahora también lo acompaña, y no tiene
+                // sentido contarle de permisos que no tiene.
+                : user
+                    ? { objetivo: 100, etapa: 'Preparando tus accesos…' }
+                    : { objetivo: 100, etapa: 'Listo' };
 
     // La pantalla con el botón de reintentar se reserva para lo que de
     // verdad necesita una decisión: un error, o una espera que ya es
