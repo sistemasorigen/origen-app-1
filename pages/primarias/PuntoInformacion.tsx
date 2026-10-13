@@ -58,22 +58,22 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const [viewMode, setViewMode] = useState<'PUBLIC' | 'INTERNAL'>('PUBLIC');
     const [currentView, setCurrentView] = useState<ViewState>('PANEL');
 
-    // Deep linking
-    useEffect(() => {
-        const view = searchParams.get('view');
-        if (view) {
-            setCurrentView(view as ViewState);
-            if (currentUser && viewMode === 'PUBLIC') {
-                setViewMode('INTERNAL');
-            }
-        } else {
-            // Sin ?view= (ej: "Inicio" del menú) — volver al HOME público
-            // de Punto de Información, no dejar el panel interno congelado.
-            // PANEL es el Dashboard, así que resetear la vista Y el modo.
-            setViewMode('PUBLIC');
-            setCurrentView('PANEL');
-        }
-    }, [searchParams, currentUser]);
+    // La función abierta vive en la URL (?view=INVENTORY), no sólo acá adentro.
+    //
+    // Es lo que hace que volver a la app devuelva a la misma pantalla. El
+    // navegador del teléfono descarta la página cuando uno se va a otra app, y
+    // al volver la carga de nuevo desde cero: con la función sólo en memoria,
+    // esa recarga terminaba siempre en el menú del panel, estuviera donde
+    // estuviera la persona.
+    //
+    // `replace` a propósito: moverse entre funciones no es historial. Si se
+    // apilara, salir del panel con el botón de atrás del teléfono costaría un
+    // toque por cada función que se miró.
+    const irA = (vista: ViewState) => setSearchParams({ view: vista }, { replace: true });
+
+    // Sin ?view= la pantalla vuelve al Punto de Información público, que es lo
+    // que lee el efecto de abajo.
+    const salirDelPanel = () => setSearchParams({}, { replace: true });
 
     const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -95,6 +95,32 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         ))
     );
 
+    // Deep linking
+    //
+    // Va DESPUÉS de canEnterPanel a propósito: es quien decide si ese ?view=
+    // puede abrir el panel.
+    useEffect(() => {
+        const view = searchParams.get('view');
+        if (view) {
+            setCurrentView(view as ViewState);
+            // Sólo entra al panel quien puede entrar. Antes alcanzaba con tener
+            // sesión: cualquiera que llegara con un ?view= en la URL quedaba
+            // adentro, aunque el botón de "Panel" se lo negara.
+            if (canEnterPanel && viewMode === 'PUBLIC') {
+                setViewMode('INTERNAL');
+            }
+        } else {
+            // Sin ?view= (ej: "Inicio" del menú) — volver al HOME público
+            // de Punto de Información, no dejar el panel interno congelado.
+            // PANEL es el Dashboard, así que resetear la vista Y el modo.
+            setViewMode('PUBLIC');
+            setCurrentView('PANEL');
+        }
+        // canEnterPanel entra en la lista porque al arrancar la app el perfil
+        // —y con él los roles— llega después que la URL: sin esto, quien abre
+        // la app directamente en una función se quedaba afuera del panel.
+    }, [searchParams, currentUser, canEnterPanel]);
+
     const canAccessAdminPanel = !!authorizedUser && hasRole(authorizedUser, [
         UserRole.SUPER_ADMIN,
         UserRole.ADMIN_PUNTO,
@@ -104,6 +130,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const handleGoInternal = () => {
         if (canEnterPanel) {
             setViewMode('INTERNAL');
+            irA('PANEL');
         } else {
             setLoginModalOpen(true);
         }
@@ -111,6 +138,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
 
     const handleGoPublic = () => {
         setViewMode('PUBLIC');
+        salirDelPanel();
     };
 
     const handleLoginSuccess = async (email: string, pass: string) => {
@@ -124,6 +152,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         )) {
             setAuthorizedUser(user);
             setViewMode('INTERNAL');
+            irA('PANEL');
             return true;
         }
         return false;
@@ -141,6 +170,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             logoutTimer = setTimeout(() => {
                 setViewMode('PUBLIC');
                 setCurrentView('PANEL');
+                salirDelPanel();
             }, TIMEOUT_MS);
         };
 
@@ -218,7 +248,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             case 'ADMIN_PANEL': {
                 if (!canAccessAdminPanel) {
                     toast.error('No tienes permisos para acceder a Configuración');
-                    setTimeout(() => setCurrentView('PANEL'), 0);
+                    setTimeout(() => irA('PANEL'), 0);
                     return <Dashboard />;
                 }
                 return <AdminPanel />;
@@ -244,7 +274,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         if (visibleNav.length === 0) return;
         const base = navIndex >= 0 ? navIndex : 0;
         const next = (base + dir + visibleNav.length) % visibleNav.length;
-        setSearchParams({ view: visibleNav[next].id }, { replace: true });
+        irA(visibleNav[next].id);
     };
 
     return (
@@ -260,9 +290,9 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                         <MobileHeader
                             title={getViewTitle(currentView)}
                             isRoot={false}
-                            onBack={() => setCurrentView('PANEL')}
+                            onBack={() => irA('PANEL')}
                             currentView={currentView}
-                            onNavigate={setCurrentView}
+                            onNavigate={irA}
                             currentUser={authorizedUser}
                         />
                     </header>
@@ -270,7 +300,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
 
                 <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-slate-50">
                     {currentView === 'PANEL' ? (
-                        <InfoPointMenu onNavigate={setCurrentView} currentUser={authorizedUser} />
+                        <InfoPointMenu onNavigate={irA} currentUser={authorizedUser} />
                     ) : (
                         <div className="pb-20 px-4 pt-4">
                             {renderView()}
@@ -280,7 +310,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
 
                 <NeoSidebar
                     currentView={currentView}
-                    setView={setCurrentView}
+                    setView={irA}
                     settings={settings}
                     isOpen={isSidebarOpen}
                     onClose={() => setIsSidebarOpen(false)}
