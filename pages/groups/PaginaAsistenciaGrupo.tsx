@@ -244,7 +244,12 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
 
     // Esta fecha ya tiene su reunión guardada y no se está editando: no se
     // vuelve a tomar, se ofrece editarla.
-    const yaTomada = !editingDate && !!registroDeLaFecha;
+    //
+    // Mientras el panel de guardado está arriba, no: el historial se recarga
+    // con el tilde verde todavía en pantalla, y sin esto la lista de atrás se
+    // convertía en la tarjeta a la vista —el velo es traslúcido— justo antes
+    // de que la pantalla pase al historial.
+    const yaTomada = !editingDate && !!registroDeLaFecha && estadoGuardado === 'cerrado';
 
     // Se está moviendo una reunión a una fecha que ya tiene la suya. Mover ahí
     // la pisaría: antes el upsert lo hacía en silencio.
