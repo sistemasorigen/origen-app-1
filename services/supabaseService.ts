@@ -4,6 +4,7 @@ import { db } from './dbService';
 import { safeUUID } from './uuidUtils';
 import { comprimirImagen } from '../src/utils/nocturna';
 import { padronDeReunion } from '../src/utils/asistencia';
+import type { CompromisoGCX } from '../src/utils/gruposMismoDia';
 import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado, NocturnaGrupo, NocturnaAgregadoResultado, NocturnaComprobanteExtra } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
@@ -3087,6 +3088,113 @@ export const supabaseService = {
       return (data || []).map((row: any) => this._dbRowToGroup(row));
     } catch (error) {
       console.warn('[Groups by Host] Error, returning empty array');
+      return [];
+    }
+  },
+
+  /**
+   * En qué grupos ya está esta persona: para avisarle si se está por anotar en
+   * otro que cae el mismo día. Ver src/utils/gruposMismoDia.ts.
+   *
+   * Cuenta de tres maneras, porque las tres existen: inscripta como titular,
+   * como pareja (vinculada por id o reconocida por email, igual que
+   * useInscripcionesDelUsuario), y como anfitriona o co-anfitriona del grupo.
+   * Las rechazadas no cuentan.
+   *
+   * Nunca levanta: esto alimenta un aviso, y un aviso que no se puede calcular
+   * se omite — jamás puede frenar una inscripción.
+   */
+  async getCompromisosGCX(user: User): Promise<CompromisoGCX[]> {
+    if (!user?.id) return [];
+
+    try {
+      const [porId, porEmail, propios] = await Promise.all([
+        supabaseService.getUserRegistrations(user.id, user.email),
+        user.email ? supabaseService.getPartnerRegistrationsByEmail(user.email) : Promise.resolve([]),
+        // Trae también los de co-anfitrión: filtra por host_id o co_host_id.
+        supabaseService.getGroupsByHost(user.id),
+      ]);
+
+      // Las dos vueltas de inscripciones, sin repetir.
+      const inscripciones = [...porId];
+      porEmail.forEach(r => { if (!inscripciones.find(y => y.id === r.id)) inscripciones.push(r); });
+
+      const email = (user.email || '').toLowerCase().trim();
+      // Por grupo, el mejor estado de ESTA persona: aprobada gana sobre
+      // pendiente. El mismo criterio de titular o pareja del hook.
+      const estadoPorGrupo = new Map<string, 'APPROVED' | 'PENDING'>();
+      inscripciones.forEach(r => {
+        if (r.status !== 'APPROVED' && r.status !== 'PENDING') return;
+        const esTitular = r.userId === user.id;
+        const esPareja = r.partnerUserId === user.id
+          || !!(email && r.partnerData?.email && r.partnerData.email.toLowerCase().trim() === email);
+        if (!esTitular && !esPareja) return;
+        const groupId = r.groupId;
+        if (!groupId) return;
+        if (estadoPorGrupo.get(groupId) === 'APPROVED') return;
+        estadoPorGrupo.set(groupId, r.status);
+      });
+
+      const idsPropios = new Set(propios.map(g => g.id));
+      const idsFaltantes = [...estadoPorGrupo.keys()].filter(id => !idsPropios.has(id));
+
+      // Un solo pedido por los grupos de las inscripciones; los propios ya
+      // vinieron enteros de getGroupsByHost.
+      let deInscripciones: any[] = [];
+      if (idsFaltantes.length > 0) {
+        const { data, error } = await supabase
+          .from('groups')
+          .select('id, name, meeting_day, meeting_time, start_date, end_date, status, is_online, leader_name, leader_surname, co_host_first_name, co_host_last_name')
+          .in('id', idsFaltantes);
+        if (error) throw error;
+        deInscripciones = data || [];
+      }
+
+      const nombreAnfitriones = (titular: string, coAnfitrion: string) =>
+        [titular, coAnfitrion].filter(Boolean).join(' y ');
+
+      const compromisos: CompromisoGCX[] = [];
+
+      // Ser anfitrión gana sobre estar inscripto: es la relación más fuerte.
+      propios.forEach(g => {
+        const titular = [g.leaderName, g.leaderSurname].filter(Boolean).join(' ').trim();
+        const coAnfitrion = [g.coHostFirstName, g.coHostLastName].filter(Boolean).join(' ').trim();
+        compromisos.push({
+          groupId: g.id,
+          nombre: g.name || 'Grupo sin nombre',
+          dia: g.meetingDay || null,
+          hora: g.meetingTime || null,
+          inicio: g.startDate || null,
+          fin: g.endDate || null,
+          estadoGrupo: g.status || null,
+          online: !!g.isOnline,
+          anfitrion: nombreAnfitriones(titular, coAnfitrion),
+          dosAnfitriones: !!(titular && coAnfitrion),
+          relacion: 'ANFITRION',
+        });
+      });
+
+      deInscripciones.forEach((row: any) => {
+        const titular = [row.leader_name, row.leader_surname].filter(Boolean).join(' ').trim();
+        const coAnfitrion = [row.co_host_first_name, row.co_host_last_name].filter(Boolean).join(' ').trim();
+        compromisos.push({
+          groupId: row.id,
+          nombre: row.name || 'Grupo sin nombre',
+          dia: row.meeting_day || null,
+          hora: row.meeting_time || null,
+          inicio: row.start_date || null,
+          fin: row.end_date || null,
+          estadoGrupo: row.status || null,
+          online: !!row.is_online,
+          anfitrion: nombreAnfitriones(titular, coAnfitrion),
+          dosAnfitriones: !!(titular && coAnfitrion),
+          relacion: estadoPorGrupo.get(row.id) === 'APPROVED' ? 'APPROVED' : 'PENDING',
+        });
+      });
+
+      return compromisos;
+    } catch (error) {
+      console.error('[GCX] No se pudieron traer los compromisos de la persona:', error);
       return [];
     }
   },

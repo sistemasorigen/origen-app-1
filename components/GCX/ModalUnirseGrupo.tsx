@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import HojaInscripcion from './HojaInscripcion';
-import { X, Check, Clock, Users } from 'lucide-react';
+import { X, Check, Clock, Users, CalendarClock } from 'lucide-react';
 import { Group, User, GroupRegistration, GroupCategory, GroupTag } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
+import {
+    CompromisoGCX, diferenciaHoraria, gruposDelMismoDia, hoyArgentino, horaCorta,
+} from '../../src/utils/gruposMismoDia';
 
 /**
  * Inscripción a un grupo — design-claude/JoinFlow.
@@ -96,6 +99,13 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successView, setSuccessView] = useState(false);
+    // Los otros grupos de la persona que caen el mismo día que este. Se piden
+    // al abrir, en segundo plano, para que el botón final no espere a nadie.
+    const compromisosRef = useRef<Promise<CompromisoGCX[]> | null>(null);
+    const [choques, setChoques] = useState<CompromisoGCX[]>([]);
+    // El aviso sale una sola vez por apertura: si después hay que reintentar
+    // por un error de red, no se vuelve a interponer.
+    const [avisoVisto, setAvisoVisto] = useState(false);
     const [enviadaA, setEnviadaA] = useState('');
 
     useEffect(() => {
@@ -124,6 +134,14 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
         setError(null);
         setSuccessView(false);
         setPaso(1);
+        setChoques([]);
+        setAvisoVisto(false);
+
+        // Se pide acá, al abrir, y no al tocar el botón: así para cuando la
+        // persona terminó de completar los datos la respuesta ya está.
+        compromisosRef.current = (isOpen && currentUser)
+            ? supabaseService.getCompromisosGCX(currentUser)
+            : null;
     }, [isOpen, currentUser]);
 
     // ── Datos del grupo para la cabecera y el cierre ────────────────────────
@@ -367,10 +385,26 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
         }
     };
 
-    const onPrimario = () => {
+    const onPrimario = async () => {
         if (isSubmitting) return;
-        if (esUltimoPaso) handleSubmit();
-        else continuar();
+        if (!esUltimoPaso) { continuar(); return; }
+        // Ya lo vio y decidió seguir, o no hay a quién avisarle.
+        if (avisoVisto || !currentUser || !compromisosRef.current) { handleSubmit(); return; }
+
+        // El botón muestra su spinner mientras tanto. Si la consulta no llegó
+        // en 2 segundos se sigue sin aviso: es una ayuda, no un requisito.
+        setIsSubmitting(true);
+        const compromisos = await Promise.race([
+            compromisosRef.current,
+            new Promise<CompromisoGCX[]>(resolver => setTimeout(() => resolver([]), 2000)),
+        ]).catch(() => [] as CompromisoGCX[]);
+
+        const mismoDia = gruposDelMismoDia(group, compromisos, hoyArgentino());
+        if (mismoDia.length === 0) { handleSubmit(); return; }
+
+        setIsSubmitting(false);
+        setChoques(mismoDia);
+        setAvisoVisto(true);
     };
 
     const etiquetaPrimario = isSubmitting
@@ -442,6 +476,97 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                     >
                         Seguir mirando grupos
                     </button>
+                </div>
+            </HojaInscripcion>
+        );
+    }
+
+    // ── Aviso: ya tiene otro grupo ese día ──────────────────────────────────
+    //
+    // No bloquea nada. Llegar a los dos puede ser perfectamente posible, y
+    // quien sabe eso es la persona. Lo único que faltaba era que se enterara
+    // antes de mandar la solicitud, no después.
+    if (choques.length > 0) {
+        const diaDestino = (group.meetingDay || '').toLowerCase();
+        const horaDestino = horaCorta(group.meetingTime);
+        const varios = choques.length > 1;
+
+        return (
+            <HojaInscripcion isOpen={isOpen} onClose={onClose} labelledBy="insc-titulo-aviso">
+                <div className="insc-sube flex min-h-0 flex-1 flex-col gap-6 overflow-auto px-[26px] pb-[26px] pt-[34px]">
+                    <div className="flex flex-col gap-4">
+                        <span className="insc-sello flex h-[58px] w-[58px] items-center justify-center rounded-full bg-[#FEF3C7] text-[#B45309] dark:bg-[#2A2110] dark:text-[#F5C46B]">
+                            <CalendarClock className="h-6 w-6" strokeWidth={2.2} />
+                        </span>
+                        <div className="flex flex-col gap-2.5">
+                            <h2 id="insc-titulo-aviso" className="m-0 text-[27px] font-extrabold leading-[1.08] tracking-[-.035em] text-[#0A0A0A] text-balance dark:text-[#F7F7F8]">
+                                {varios ? `Ya tenés ${choques.length} grupos los ${diaDestino}` : `Ya tenés un grupo los ${diaDestino}`}
+                            </h2>
+                            <p className="m-0 text-[15px] font-semibold leading-[1.5] text-[#6F6F73] text-pretty dark:text-[#9C9CA1]">
+                                {group.name} también es los {diaDestino}{horaDestino ? ` a las ${horaDestino} hs` : ''}. Revisá si llegás a los dos.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2.5">
+                        {choques.map(c => {
+                            const hora = horaCorta(c.hora);
+                            const diferencia = diferenciaHoraria(c.hora, group.meetingTime);
+                            const dia = (c.dia || '').toLowerCase();
+                            const relacion = c.relacion === 'ANFITRION' ? 'Sos anfitrión'
+                                : c.relacion === 'APPROVED' ? 'Sos miembro'
+                                    : 'Solicitud pendiente';
+                            return (
+                                <div key={c.groupId} className="flex flex-col gap-2 rounded-[18px] bg-[#F7F7F8] px-[18px] py-4 dark:bg-[#212124]">
+                                    <div className="text-[16px] font-extrabold leading-[1.2] tracking-[-.015em] text-[#0A0A0A] dark:text-[#F7F7F8]">
+                                        {c.nombre}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-[13.5px] font-semibold text-[#6F6F73] first-letter:uppercase dark:text-[#9C9CA1]">
+                                            {dia}{hora ? ` · ${hora} hs` : ''}
+                                        </span>
+                                        {diferencia && (
+                                            <span className="rounded-full bg-[#FEF3C7] px-2.5 py-[3px] text-[12px] font-bold text-[#B45309] dark:bg-[#2A2110] dark:text-[#F5C46B]">
+                                                {diferencia}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {c.anfitrion && (
+                                        <div className="text-[13.5px] font-semibold text-[#6F6F73] dark:text-[#9C9CA1]">
+                                            {c.dosAnfitriones ? 'Anfitriones' : 'Anfitrión'}: {c.anfitrion}
+                                        </div>
+                                    )}
+                                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                                        <span className="rounded-full bg-white px-2.5 py-[3px] text-[12px] font-bold text-[#0A0A0A] dark:bg-[#2C2C30] dark:text-[#F7F7F8]">
+                                            {relacion}
+                                        </span>
+                                        {c.online && (
+                                            <span className="rounded-full bg-white px-2.5 py-[3px] text-[12px] font-bold text-[#6F6F73] dark:bg-[#2C2C30] dark:text-[#9C9CA1]">
+                                                Online
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex flex-col gap-2.5">
+                        <button
+                            type="button"
+                            onClick={() => { setChoques([]); handleSubmit(); }}
+                            className="w-full rounded-full bg-[#0A0A0A] px-5 py-[17px] text-[16.5px] font-bold text-white transition-opacity hover:opacity-[.88] dark:bg-[#F7F7F8] dark:text-[#0A0A0A]"
+                        >
+                            Inscribirme igual
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="w-full rounded-full bg-[#F4F4F5] px-5 py-[17px] text-[16.5px] font-bold text-[#0A0A0A] transition-colors hover:bg-[#EAEAEB] dark:bg-[#26262A] dark:text-[#F7F7F8] dark:hover:bg-[#303034]"
+                        >
+                            Volver a ver los GCX
+                        </button>
+                    </div>
                 </div>
             </HojaInscripcion>
         );
