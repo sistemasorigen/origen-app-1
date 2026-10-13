@@ -1159,8 +1159,11 @@ export async function getEventosGeneralPublic(): Promise<import('../types').Even
     .order('start_date', { ascending: true });
 
   if (error) {
+    // Se levanta en vez de devolver una lista vacía: "no hay eventos" y "no
+    // pude traer los eventos" son cosas distintas, y la pantalla tiene que
+    // poder decir cuál de las dos es.
     console.error('[getEventosGeneralPublic] Error:', error);
-    return [];
+    throw error;
   }
   return (data || []).map(mapEventoGeneralRow);
 }
@@ -3032,8 +3035,14 @@ export const supabaseService = {
 
       return (data || []).map((row: any) => this._dbRowToGroup(row));
     } catch (error) {
-      console.warn('[Groups] Using local fallback due to error');
-      return db.getGroups();
+      // El error sube. Antes acá había un "respaldo local" que leía
+      // localStorage('groups_local') — una clave que NADIE escribe en todo el
+      // proyecto: siempre devolvía []. Con eso, cualquier pedido fallido se
+      // convertía en "0 grupos disponibles", con la pantalla afirmando que no
+      // hay grupos en vez de admitir que no los pudo traer. Es lo que se vio
+      // en producción el 13/10: 45 grupos en la base y la pantalla en cero.
+      console.error('[Groups] Error fetching:', error);
+      throw error;
     }
   },
 
@@ -3053,8 +3062,10 @@ export const supabaseService = {
 
       return (data || []).map((row: any) => this._dbRowToGroup(row));
     } catch (error) {
-      console.warn('[Groups Admin] Using local fallback due to error');
-      return db.getGroups();
+      // Mismo respaldo fantasma que en getGroups: siempre vacío. Acá es peor,
+      // porque un admin que ve la lista en cero puede creer que se borraron.
+      console.error('[Groups Admin] Error fetching:', error);
+      throw error;
     }
   },
 

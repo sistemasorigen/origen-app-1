@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getEventosGeneralPublic } from '../../services/supabaseService';
 import { EventoGeneral } from '../../types';
-import { Calendar, Clock, CalendarDays, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, CalendarDays, ExternalLink, WifiOff } from 'lucide-react';
 
 const formatDate = (dateStr: string): string =>
     new Date(dateStr + 'T12:00:00')
@@ -72,16 +72,27 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => (
 const Eventos: React.FC = () => {
     const [events, setEvents] = useState<EventoGeneral[]>([]);
     const [loading, setLoading] = useState(true);
+    // "No hay eventos" y "no pude traerlos" se veían igual: las dos como una
+    // agenda vacía.
+    const [fallóLaCarga, setFallóLaCarga] = useState(false);
 
-    useEffect(() => {
+    const cargar = () => {
+        setLoading(true);
+        setFallóLaCarga(false);
         getEventosGeneralPublic()
             .then(data => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 setEvents(data.filter(e => new Date(e.startDate + 'T00:00:00') >= today));
             })
+            .catch(error => {
+                console.error('[Eventos] No se pudieron cargar:', error);
+                setFallóLaCarga(true);
+            })
             .finally(() => setLoading(false));
-    }, []);
+    };
+
+    useEffect(() => { cargar(); }, []);
 
     return (
         <div className="min-h-screen bg-white">
@@ -104,8 +115,30 @@ const Eventos: React.FC = () => {
                     </div>
                 )}
 
+                {/* No se pudieron traer */}
+                {!loading && fallóLaCarga && (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
+                            <WifiOff className="w-6 h-6 text-gray-300" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-500">
+                            No pudimos cargar los eventos
+                        </p>
+                        <p className="mt-1 text-sm text-gray-400">
+                            Revisá la conexión y probá de nuevo.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={cargar}
+                            className="mt-5 px-5 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors"
+                        >
+                            Reintentar
+                        </button>
+                    </div>
+                )}
+
                 {/* Vacío */}
-                {!loading && events.length === 0 && (
+                {!loading && !fallóLaCarga && events.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                         <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
                             <CalendarDays className="w-6 h-6 text-gray-300" />
@@ -117,7 +150,7 @@ const Eventos: React.FC = () => {
                 )}
 
                 {/* Todos los eventos — apilados en una sola lista */}
-                {!loading && events.length > 0 && (
+                {!loading && !fallóLaCarga && events.length > 0 && (
                     <div>
                         <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 mb-5">
                             Próximos eventos

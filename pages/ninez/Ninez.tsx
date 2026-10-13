@@ -59,6 +59,7 @@ const Ninez: React.FC<NinezProps> = ({ currentUser }) => {
                 today.setHours(0, 0, 0, 0);
                 setEvents(eventsData.filter(e => new Date(e.startDate + 'T00:00:00') >= today).slice(0, 4));
             })
+            .catch(e => console.error('[Niñez] No se pudo cargar la pantalla:', e))
             .finally(() => setLoading(false));
     }, []);
 

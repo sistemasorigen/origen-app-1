@@ -750,12 +750,20 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
-        getEventosGeneralPublic().then(setEventos);
+        // Las dos listas son secciones de la portada: si no llegan, la portada
+        // sigue en pie sin ellas. Lo que no puede quedar es el error suelto,
+        // ahora que los servicios lo levantan en vez de devolver una lista
+        // vacía inventada.
+        getEventosGeneralPublic()
+            .then(setEventos)
+            .catch(e => console.error('[Inicio] No se pudieron cargar los eventos:', e));
         getMusicaBannerSlides()
             .then(setMusicaSlides)
             .catch(() => { /* sin banner de música se sigue igual */ })
             .finally(() => setMusicaResuelta(true));
-        supabaseService.getGroups().then(setGroups);
+        supabaseService.getGroups()
+            .then(setGroups)
+            .catch(e => console.error('[Inicio] No se pudieron cargar los grupos:', e));
         supabaseService.getGroupCategories().then(setCategories);
         supabaseService.getGroupTags().then(setTags);
     }, []);

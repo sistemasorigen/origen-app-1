@@ -43,6 +43,9 @@ const PaginaDerivarMiembro: React.FC<{ currentUser: User }> = ({ currentUser }) 
             }
             setGroup(found);
             setDestinos(todos.filter(g => g.id !== groupId));
+        } catch (error) {
+            // Sin esto el error quedaba suelto: el try no tenía catch.
+            console.error('[Derivar] No se pudieron cargar los grupos:', error);
         } finally {
             setLoading(false);
         }

@@ -6,7 +6,7 @@ import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
-import { Search, Calendar, CalendarClock, MapPin, Users, X, ArrowRight, Clock, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock, Instagram, Facebook, Youtube, Music } from 'lucide-react';
+import { Search, Calendar, CalendarClock, MapPin, Users, X, ArrowRight, Clock, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock, Instagram, Facebook, Youtube, Music, WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
@@ -350,6 +350,9 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const [editingSeasons, setEditingSeasons] = useState<SeasonSettings | null>(null);
     const [isSavingSeasons, setIsSavingSeasons] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    // "No hay grupos" y "no pude traer los grupos" son cosas distintas, y hasta
+    // ahora se veían igual: la pantalla afirmaba que no había ninguno.
+    const [fallóLaCarga, setFallóLaCarga] = useState(false);
 
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
@@ -669,12 +672,13 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // Fetch groups for public view (only approved)
     const fetchGroups = async () => {
         setIsLoading(true);
+        setFallóLaCarga(false);
         try {
             const fetchedGroups = await supabaseService.getGroups();
             setGroups(fetchedGroups);
         } catch (error) {
             console.error("Error fetching groups:", error);
-            showToast("Error cargando grupos", 'error');
+            setFallóLaCarga(true);
         } finally {
             setIsLoading(false);
         }
@@ -1965,7 +1969,26 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                             </div>
                         )}
 
-                        {!isLoading && filteredGroups.length === 0 && (
+                        {!isLoading && fallóLaCarga && (
+                            <div className="text-center py-32 border-4 border-dashed" style={{ borderColor: '#000000' }}>
+                                <WifiOff className="w-16 h-16 mx-auto mb-4" strokeWidth={1} style={{ color: 'rgba(0,0,0,0.2)' }} />
+                                <p className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-2" style={{ color: 'rgba(0,0,0,0.4)' }}>
+                                    NO PUDIMOS CARGAR LOS GRUPOS
+                                </p>
+                                <p className="text-sm font-bold uppercase tracking-widest mb-6" style={{ color: 'rgba(0,0,0,0.2)' }}>
+                                    Revisá la conexión y probá de nuevo
+                                </p>
+                                <button
+                                    onClick={fetchGroups}
+                                    className="px-6 py-3 text-xs font-bold uppercase tracking-wide transition-all border-b-2 border-transparent hover:border-slate-900 dark:hover:border-white"
+                                    style={{ backgroundColor: '#ffffff', color: '#000000' }}
+                                >
+                                    REINTENTAR
+                                </button>
+                            </div>
+                        )}
+
+                        {!isLoading && !fallóLaCarga && filteredGroups.length === 0 && (
                             <div className="text-center py-32 border-4 border-dashed" style={{ borderColor: '#000000' }}>
                                 <Users className="w-16 h-16 mx-auto mb-4" strokeWidth={1} style={{ color: 'rgba(0,0,0,0.2)' }} />
                                 <p className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-2" style={{ color: 'rgba(0,0,0,0.4)' }}>
