@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useReducedMotion } from 'framer-motion';
 import { User, ModoReunion } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { Calendar, History, Save, Check, Loader2 } from 'lucide-react';
 import { T, btnPrimario, btnSecundario, rotulo, Encabezado, Vacio } from '../../components/GCX/patron';
+import PanelGuardado, { EstadoGuardado } from '../../components/GCX/PanelGuardado';
 import { NOMBRE_MODO_REUNION } from '../../src/utils/modalidad';
 import { estabaEnLaFecha, fechaDeIngreso, idsDeInscripcion } from '../../src/utils/asistencia';
 
@@ -92,15 +94,22 @@ const Tilde: React.FC<{ presente: boolean; chico?: boolean }> = ({ presente, chi
 const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const { groupId } = useParams<{ groupId: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
+    const sinMovimiento = useReducedMotion();
 
     const [group, setGroup] = useState<{ id: string; name: string; isHybrid?: boolean; registrations?: any[] } | null>(null);
     const [loadingGroup, setLoadingGroup] = useState(true);
 
     // `?vista=historial` la abre en lo que ya pasó. Lo usa el detalle de un
     // grupo terminado, donde la asistencia se consulta y no se carga.
+    //
+    // Se lee del router y NO de window.location.search. La app monta sobre
+    // HashRouter, así que la URL real es ".../#/mis-grupos/x/asistencia?vista=
+    // historial": el query vive DENTRO del hash y window.location.search viene
+    // vacío. Por eso el botón del grupo terminado abría en "Tomar asistencia".
     const [activeTab, setActiveTab] = useState<'new' | 'history'>(
-        () => new URLSearchParams(window.location.search).get('vista') === 'historial' ? 'history' : 'new'
+        () => new URLSearchParams(location.search).get('vista') === 'historial' ? 'history' : 'new'
     );
     const [selectedDate, setSelectedDate] = useState(hoyLocal);
 
@@ -115,9 +124,15 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     const [modoReunion, setModoReunion] = useState<ModoReunion | null>(null);
     const esHibrido = !!group?.isHybrid;
     const [history, setHistory] = useState<AttendanceRecord[]>([]);
-    const [saving, setSaving] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
-    const [saveSuccess, setSaveSuccess] = useState(false);
+    // Lo que pasa después de tocar Guardar: la espera, el tilde verde o el
+    // error. Mientras no está en 'cerrado', el botón no responde.
+    const [estadoGuardado, setEstadoGuardado] = useState<EstadoGuardado>('cerrado');
+    const [tituloGuardado, setTituloGuardado] = useState('Asistencia guardada');
+    const [detalleGuardado, setDetalleGuardado] = useState('');
+    // La reunión recién guardada, para encontrarla de un vistazo en el
+    // historial. Se apaga sola.
+    const [fechaResaltada, setFechaResaltada] = useState<string | null>(null);
     // Inscripciones de pareja abiertas para tildar por separado. Cerradas,
     // la fila se lee como una sola unidad con su contador "2 de 2".
     const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
@@ -228,10 +243,8 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     const hayAprobados = inscripciones.some((r: any) => String(r.status ?? '').toUpperCase() === 'APPROVED');
 
     // Esta fecha ya tiene su reunión guardada y no se está editando: no se
-    // vuelve a tomar, se ofrece editarla. `saveSuccess` la deja pasar unos
-    // segundos para que el botón alcance a decir "Guardado" antes de que la
-    // tarjeta ocupe la pantalla.
-    const yaTomada = !editingDate && !!registroDeLaFecha && !saveSuccess;
+    // vuelve a tomar, se ofrece editarla.
+    const yaTomada = !editingDate && !!registroDeLaFecha;
 
     // Se está moviendo una reunión a una fecha que ya tiene la suya. Mover ahí
     // la pisaría: antes el upsert lo hacía en silencio.
@@ -251,6 +264,30 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
             loadHistory();
         }
     }, [activeTab, loadHistory]);
+
+    // La pestaña queda en la URL, así recargar no devuelve a "Tomar
+    // asistencia" a quien estaba mirando el historial.
+    useEffect(() => {
+        const deseado = activeTab === 'history' ? '?vista=historial' : '';
+        if ((location.search || '') === deseado) return;
+        navigate({ search: deseado }, { replace: true });
+    }, [activeTab, location.search, navigate]);
+
+    // La reunión recién guardada: se la lleva a la vista y el verde se apaga
+    // solo. Es una señal de "es ésta", no un estado que haya que sacarse de
+    // encima.
+    const filaResaltadaRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!fechaResaltada) return;
+        const alLugar = window.setTimeout(() => {
+            filaResaltadaRef.current?.scrollIntoView({
+                block: 'center',
+                behavior: sinMovimiento ? 'auto' : 'smooth',
+            });
+        }, 80);
+        const apagar = window.setTimeout(() => setFechaResaltada(null), 1400);
+        return () => { window.clearTimeout(alLugar); window.clearTimeout(apagar); };
+    }, [fechaResaltada, sinMovimiento]);
 
     // Qué (grupo + fecha) ya se cargó en la lista de tildes.
     //
@@ -344,51 +381,82 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
 
     const handleSave = async () => {
         if (!group || faltaModo || destinoOcupado) return;
-        setSaving(true);
-        setSaveSuccess(false);
+        // Un segundo toque mientras se está guardando mandaría la reunión dos
+        // veces. Desde 'error' sí se puede volver a entrar: es el reintento.
+        if (estadoGuardado === 'guardando') return;
+
         // Alta o edición se deciden ACÁ, antes de que el guardado limpie
-        // editingDate: la notificación es sólo para la primera vez.
+        // editingDate: de eso dependen el título del panel y la notificación.
         const esAlta = !editingDate;
-        const resultado = await supabaseService.guardarAsistencia({
-            groupId: group.id,
-            fecha: selectedDate,
-            presentes: Array.from(selectedMembers),
-            fechaOriginal: editingDate ?? undefined,
-            modoReunion: esHibrido ? modoReunion ?? undefined : undefined,
-        });
-        setSaving(false);
+        const fechaGuardada = selectedDate;
+        const presentes = presentCount;
+        const padron = members.length;
+
+        setTituloGuardado(esAlta ? 'Asistencia guardada' : 'Cambios guardados');
+        setEstadoGuardado('guardando');
+
+        // La carga dura 600 ms como mínimo aunque la base conteste antes: un
+        // parpadeo no se lee como "se guardó", se lee como que no pasó nada.
+        const [resultado] = await Promise.all([
+            supabaseService.guardarAsistencia({
+                groupId: group.id,
+                fecha: fechaGuardada,
+                presentes: Array.from(selectedMembers),
+                fechaOriginal: editingDate ?? undefined,
+                modoReunion: esHibrido ? modoReunion ?? undefined : undefined,
+            }),
+            new Promise(resolver => setTimeout(resolver, 600)),
+        ]);
 
         if (!resultado.ok) {
-            // Alguien la guardó desde otro teléfono mientras tanto. Se trae el
-            // historial y la pantalla sola pasa a ofrecer editar la que ganó:
-            // no hace falta avisar nada que la pantalla no muestre.
-            //
             // Se pregunta con `in` y no por `resultado.ok`: este proyecto
             // compila sin strictNullChecks y ahí el booleano no alcanza para
             // que TypeScript sepa cuál de las dos formas tiene en la mano.
-            if ('motivo' in resultado && resultado.motivo === 'duplicado') await loadHistory();
+            const duplicado = 'motivo' in resultado && resultado.motivo === 'duplicado';
+            if (duplicado) {
+                // Alguien la guardó desde otro teléfono mientras tanto. Se
+                // cierra sin festejo y la pantalla sola pasa a ofrecer editar
+                // la que ganó: no hace falta avisar nada que no se vea.
+                setEstadoGuardado('cerrado');
+                await loadHistory();
+                return;
+            }
+            // El error se queda en el panel: no se navega y lo marcado sigue
+            // donde estaba, listo para reintentar.
+            setEstadoGuardado('error');
             return;
         }
 
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
+        setDetalleGuardado(`${presentes} de ${padron} presentes · ${fechaLarga(fechaGuardada)}`);
+        setEstadoGuardado('listo');
         // El registro ya vive en selectedDate: si se vuelve a guardar sin
         // salir de la pantalla, no hay nada más que mover.
         setEditingDate(null);
+        // Se trae el historial mientras el tilde está en pantalla, así la lista
+        // ya está armada cuando aparece.
         loadHistory();
 
         // Sólo al tomarla por primera vez. Corregir una reunión no es una
         // novedad que merezca su propia notificación.
         if (esAlta && user?.id) {
-            const formattedDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long' });
+            const formattedDate = new Date(fechaGuardada + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long' });
             await supabaseService.createAppNotification(
                 user.id,
                 '✅ Asistencia registrada',
-                `Registraste ${presentCount} presente(s) en ${group.name} el ${formattedDate}. ¡Seguí así!`,
+                `Registraste ${presentes} presente(s) en ${group.name} el ${formattedDate}. ¡Seguí así!`,
                 'ATTENDANCE',
-                '/mis-grupos'
+                // Al historial de ESTE grupo, no a la lista de grupos: desde la
+                // notificación se quiere ver la reunión, no buscarla.
+                `/mis-grupos/${group.id}/asistencia?vista=historial`
             );
         }
+
+        // El tilde se queda 900 ms —lo suficiente para verlo— y recién después
+        // la pantalla pasa al historial con la reunión resaltada.
+        await new Promise(resolver => setTimeout(resolver, 900));
+        setEstadoGuardado('cerrado');
+        setActiveTab('history');
+        setFechaResaltada(fechaGuardada);
     };
 
     const formatDate = (dateStr: string) => {
@@ -730,17 +798,15 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                 <button
                                     type="button"
                                     onClick={handleSave}
-                                    disabled={saving || faltaModo || destinoOcupado}
+                                    disabled={estadoGuardado !== 'cerrado' || faltaModo || destinoOcupado}
                                     className={`${btnPrimario} h-[60px] text-[17px] shadow-[0_6px_22px_rgba(0,0,0,.18)]`}
                                 >
-                                    {saving ? (
-                                        <><Loader2 className="w-5 h-5 animate-spin" /> Guardando…</>
-                                    ) : destinoOcupado ? (
+                                    {/* El resultado ya no vive acá: lo cuenta el panel
+                                        que sube al guardar. */}
+                                    {destinoOcupado ? (
                                         'Esa fecha ya está tomada'
                                     ) : faltaModo ? (
                                         'Elegí cómo fue la reunión'
-                                    ) : saveSuccess ? (
-                                        <><Check className="w-5 h-5" /> Guardado</>
                                     ) : (
                                         <><Save className="w-5 h-5" /> {editingDate ? 'Guardar cambios' : 'Guardar asistencia'}</>
                                     )}
@@ -766,7 +832,10 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                             {history.map((record, i) => (
                                 <React.Fragment key={record.id}>
                                     {i > 0 && <div className="h-px bg-black/[.06] dark:bg-white/[.08] mx-4" />}
-                                    <div className="flex items-center gap-3.5 h-[70px] px-4">
+                                    <div
+                                        ref={record.date === fechaResaltada ? filaResaltadaRef : undefined}
+                                        className={`flex items-center gap-3.5 h-[70px] px-4 transition-colors duration-[600ms] ${record.date === fechaResaltada ? 'bg-[#16a34a]/[.14]' : 'bg-transparent'}`}
+                                    >
                                         <div className={`w-[42px] h-[42px] shrink-0 rounded-full ${T.chip} flex items-center justify-center`}>
                                             <Calendar className="w-[18px] h-[18px] text-black/50 dark:text-white/50" strokeWidth={2} />
                                         </div>
@@ -798,6 +867,16 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                     )}
                 </div>
             )}
+
+            {/* Lo que pasa después de tocar Guardar. Va fuera de las dos
+                pestañas: la secuencia termina cambiando de pestaña. */}
+            <PanelGuardado
+                estado={estadoGuardado}
+                titulo={tituloGuardado}
+                detalle={detalleGuardado}
+                onReintentar={handleSave}
+                onCerrar={() => setEstadoGuardado('cerrado')}
+            />
         </div>
     );
 };
