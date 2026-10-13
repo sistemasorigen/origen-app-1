@@ -605,6 +605,10 @@ export interface GroupRegistration {
     userId?: string;
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
     createdAt?: string; // Added for CoordinatorDashboard
+    // Cuándo quedó aprobada. La pone la base (sql/asistencia_padron.sql) y es
+    // lo que decide en qué reuniones cuenta esta persona. null o ausente = ya
+    // estaba desde siempre. Ver src/utils/asistencia.ts.
+    approvedAt?: string | null;
     // Couples registration: partner data stored in same row
     partnerData?: {
         firstName: string;

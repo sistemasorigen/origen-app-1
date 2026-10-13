@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Calendar, History, Save, Check, Loader2 } from 'lucide-react';
 import { T, btnPrimario, btnSecundario, rotulo, Encabezado, Vacio } from '../../components/GCX/patron';
 import { NOMBRE_MODO_REUNION } from '../../src/utils/modalidad';
+import { estabaEnLaFecha, fechaDeIngreso, idsDeInscripcion } from '../../src/utils/asistencia';
 
 interface Member {
     id: string;
@@ -18,6 +19,9 @@ interface AttendanceRecord {
     date: string;
     count: number;
     presentMembers: string[];
+    // La foto del padrón de ese día. null en las reuniones anteriores a que
+    // existiera la columna: ahí manda la regla de la fecha de ingreso.
+    expectedMembers: string[] | null;
     modoReunion: ModoReunion | null;
 }
 
@@ -136,11 +140,45 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
 
     useEffect(() => { fetchGroup(); }, [fetchGroup]);
 
+    const inscripciones: any[] = group?.registrations || [];
+
+    // La reunión guardada de la fecha que se está mirando, si ya existe.
+    const registroDeLaFecha = history.find(r => r.date === selectedDate) || null;
+
+    // Mover una reunión de fecha es el único caso en que la planilla no la
+    // manda la fecha elegida: lo que viaja es la lista que el anfitrión tiene
+    // tildada, y nadie tildado puede desaparecer de la vista.
+    const moviendoFecha = !!editingDate && editingDate !== selectedDate;
+
+    // Quiénes aparecen en la planilla de ESTA fecha.
+    //
+    //   · Reunión ya guardada → manda su foto. Se muestran también las
+    //     inscripciones que después cambiaron de estado: lo que pasó esa noche
+    //     no se reescribe.
+    //   · Fecha nueva → quienes ya estaban en el grupo esa fecha.
+    //
+    // Quien figura en la foto pero ya no tiene inscripción —una baja, que
+    // BORRA la fila— no se puede mostrar: no hay de dónde sacar su nombre. Su
+    // id igual se conserva al guardar, más abajo.
+    const visibles: any[] = inscripciones.filter((r: any) => {
+        if (moviendoFecha) {
+            return estabaEnLaFecha(r, selectedDate)
+                || idsDeInscripcion(r).some(id => selectedMembers.has(id));
+        }
+        if (registroDeLaFecha?.expectedMembers) {
+            const foto = new Set([
+                ...registroDeLaFecha.expectedMembers,
+                ...registroDeLaFecha.presentMembers,
+            ]);
+            return idsDeInscripcion(r).some(id => foto.has(id));
+        }
+        return estabaEnLaFecha(r, selectedDate);
+    });
+
     // Extract members — una fila de registro puede
     // representar 2 personas (pareja). Se expande
     // cada fila a 1 o 2 entradas de Member.
-    const members: Member[] = (group?.registrations || [])
-        .filter((r: any) => r.status === 'APPROVED')
+    const members: Member[] = visibles
         .flatMap((r: any) => {
             const titular: Member = {
                 id: r.id,
@@ -160,17 +198,34 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     // Las mismas personas, pero agrupadas por inscripción: el diseño muestra
     // la pareja como UNA fila. Los ids no cambian, así que selectedMembers y
     // saveAttendance siguen viendo exactamente lo de antes.
-    const filas: { regId: string; personas: Member[] }[] = (group?.registrations || [])
-        .filter((r: any) => r.status === 'APPROVED')
+    const filas: { regId: string; personas: Member[] }[] = visibles
         .map((r: any) => {
             const propias = members.filter(m => m.id === r.id || m.id === `${r.id}-partner`);
             return { regId: r.id, personas: propias };
         })
         .filter(f => f.personas.length > 0);
 
-    const presentCount = selectedMembers.size;
+    // Los contadores miran sólo lo que se ve. selectedMembers puede tener de
+    // más —presentes de gente que después se dio de baja— y contarlos daría
+    // más presentes que miembros, o un 120%.
+    const presentCount = members.filter(m => selectedMembers.has(m.id)).length;
     const absentCount = members.length - presentCount;
     const presentPct = members.length > 0 ? Math.round((presentCount / members.length) * 100) : 0;
+
+    // Quiénes quedaron afuera de esta fecha por haberse sumado después. Se
+    // cuenta en personas, igual que "Miembros · N".
+    const idsVisibles = new Set(members.map(m => m.id));
+    const sumadosDespues = inscripciones.reduce((n: number, r: any) => {
+        if (String(r.status ?? '').toUpperCase() !== 'APPROVED') return n;
+        if (idsVisibles.has(r.id)) return n;
+        const ingreso = fechaDeIngreso(r);
+        if (ingreso === null || ingreso <= selectedDate) return n;
+        return n + idsDeInscripcion(r).length;
+    }, 0);
+
+    // ¿El grupo tiene miembros, aunque ninguno corresponda a esta fecha? Para
+    // distinguir "todavía no hay nadie" de "nadie había entrado todavía".
+    const hayAprobados = inscripciones.some((r: any) => String(r.status ?? '').toUpperCase() === 'APPROVED');
 
     const loadHistory = useCallback(async () => {
         if (!groupId) return [];
@@ -234,8 +289,20 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
         setSelectedMembers(newSet);
     };
 
-    const selectAll = () => setSelectedMembers(new Set(members.map(m => m.id)));
-    const deselectAll = () => setSelectedMembers(new Set());
+    // Los dos tocan sólo lo visible: los ids que no están en la planilla
+    // —presentes de alguien que después se dio de baja— se guardaron una vez y
+    // se siguen guardando. Un "marcar todos" de hoy no puede borrar a quien
+    // estuvo en esa reunión.
+    const selectAll = () => setSelectedMembers(prev => {
+        const s = new Set(prev);
+        members.forEach(m => s.add(m.id));
+        return s;
+    });
+    const deselectAll = () => setSelectedMembers(prev => {
+        const s = new Set(prev);
+        members.forEach(m => s.delete(m.id));
+        return s;
+    });
 
     // Un híbrido no guarda sin saber cómo fue la reunión: el botón lo dice.
     const faltaModo = esHibrido && !modoReunion;
@@ -411,11 +478,22 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                     <div className="max-w-[430px] lg:max-w-[900px] mx-auto px-4 pt-2 pb-[132px]">
                         {members.length === 0 ? (
                             <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px]">
-                                <Vacio
-                                    titulo="Todavía no hay miembros"
-                                    detalle="Cuando alguien se sume al grupo vas a poder tomarle asistencia."
-                                    accion={{ texto: 'Volver al grupo', onClick: () => navigate(`/mis-grupos/${groupId}`) }}
-                                />
+                                {hayAprobados ? (
+                                    // El grupo tiene gente, pero toda entró después de esta
+                                    // fecha. No es una pantalla vacía: es una reunión a la
+                                    // que todavía no iba nadie.
+                                    <Vacio
+                                        titulo="Todavía no había nadie"
+                                        detalle={`Nadie del grupo había ingresado todavía el ${formatDate(selectedDate)}.`}
+                                        accion={{ texto: 'Volver al grupo', onClick: () => navigate(`/mis-grupos/${groupId}`) }}
+                                    />
+                                ) : (
+                                    <Vacio
+                                        titulo="Todavía no hay miembros"
+                                        detalle="Cuando alguien se sume al grupo vas a poder tomarle asistencia."
+                                        accion={{ texto: 'Volver al grupo', onClick: () => navigate(`/mis-grupos/${groupId}`) }}
+                                    />
+                                )}
                             </div>
                         ) : (
                             <>
@@ -429,6 +507,16 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                         {presentCount === members.length ? 'Desmarcar todos' : 'Marcar todos presentes'}
                                     </button>
                                 </div>
+
+                                {/* Por qué la lista es más corta de lo que el anfitrión
+                                    espera. Sin esta línea parecería que faltan personas. */}
+                                {sumadosDespues > 0 && (
+                                    <p className="px-1.5 -mt-1 pb-2.5 text-[12.5px] font-medium text-black/45 dark:text-white/45">
+                                        {sumadosDespues === 1
+                                            ? `1 persona se sumó después del ${formatDate(selectedDate)} y no figura.`
+                                            : `${sumadosDespues} personas se sumaron después del ${formatDate(selectedDate)} y no figuran.`}
+                                    </p>
+                                )}
 
                                 <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] overflow-hidden">
                                     {filas.map((fila, i) => {

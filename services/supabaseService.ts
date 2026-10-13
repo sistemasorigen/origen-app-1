@@ -2964,7 +2964,10 @@ export const supabaseService = {
         // Couples registration fields
         partnerData: r.partner_data || null,
         partnerUserId: r.partner_user_id || null,
-        transferFromGroupId: r.transfer_from_group_id || undefined
+        transferFromGroupId: r.transfer_from_group_id || undefined,
+        // Con qué fecha entró al grupo: es lo que decide en qué reuniones
+        // cuenta. Ver src/utils/asistencia.ts.
+        approvedAt: r.approved_at ?? null
       }))
     };
   },
@@ -3795,7 +3798,8 @@ export const supabaseService = {
         userId: row.user_id,
         partnerUserId: row.partner_user_id,
         transferFromGroupId: row.transfer_from_group_id || undefined,
-        partnerData: row.partner_data
+        partnerData: row.partner_data,
+        approvedAt: row.approved_at ?? null
       }));
     } catch (error) {
       console.error('[Groups] Fetch registrations exception:', error);
@@ -3828,7 +3832,8 @@ export const supabaseService = {
             userId: row.user_id,
             partnerUserId: row.partner_user_id,
             transferFromGroupId: row.transfer_from_group_id || undefined,
-            partnerData: row.partner_data
+            partnerData: row.partner_data,
+            approvedAt: row.approved_at ?? null
           }));
         }
         if (rpcError) console.warn('[Groups] RPC failed (function might not exist yet), falling back to query:', rpcError.message);
@@ -3877,7 +3882,8 @@ export const supabaseService = {
         userId: row.user_id,
         partnerUserId: row.partner_user_id,
         transferFromGroupId: row.transfer_from_group_id || undefined,
-        partnerData: row.partner_data
+        partnerData: row.partner_data,
+        approvedAt: row.approved_at ?? null
       }));
     } catch (err) {
       console.error("Exception fetching user registrations:", err);
@@ -3916,7 +3922,8 @@ export const supabaseService = {
         userId: row.user_id,
         partnerUserId: row.partner_user_id,
         transferFromGroupId: row.transfer_from_group_id || undefined,
-        partnerData: row.partner_data
+        partnerData: row.partner_data,
+        approvedAt: row.approved_at ?? null
       }));
     } catch (err) {
       console.error("Exception fetching partner registrations by email:", err);
@@ -5517,7 +5524,7 @@ export const supabaseService = {
   /**
    * Get attendance history for a group
    */
-  async getAttendanceHistory(groupId: string): Promise<{ id: string; date: string; count: number; presentMembers: string[]; modoReunion: ModoReunion | null }[]> {
+  async getAttendanceHistory(groupId: string): Promise<{ id: string; date: string; count: number; presentMembers: string[]; expectedMembers: string[] | null; modoReunion: ModoReunion | null }[]> {
     try {
       // '*' y no la lista: nombrar meeting_mode haría fallar el historial
       // entero mientras el SQL de la modalidad híbrida no se haya corrido.
@@ -5537,6 +5544,11 @@ export const supabaseService = {
         date: row.date,
         count: Array.isArray(row.present_members) ? row.present_members.length : 0,
         presentMembers: row.present_members || [],
+        // La foto del padrón de ese día: quiénes estaban en el grupo esa
+        // fecha. null mientras la fila sea anterior a sql/asistencia_padron.sql
+        // o la columna no exista todavía — quien la lee decide qué hacer sin
+        // esa foto. Ver src/utils/asistencia.ts.
+        expectedMembers: Array.isArray(row.expected_members) ? row.expected_members : null,
         modoReunion: row.meeting_mode === 'presencial' || row.meeting_mode === 'online' ? row.meeting_mode : null,
       }));
     } catch (error) {
