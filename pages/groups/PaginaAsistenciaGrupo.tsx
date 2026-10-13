@@ -227,6 +227,16 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     // distinguir "todavía no hay nadie" de "nadie había entrado todavía".
     const hayAprobados = inscripciones.some((r: any) => String(r.status ?? '').toUpperCase() === 'APPROVED');
 
+    // Esta fecha ya tiene su reunión guardada y no se está editando: no se
+    // vuelve a tomar, se ofrece editarla. `saveSuccess` la deja pasar unos
+    // segundos para que el botón alcance a decir "Guardado" antes de que la
+    // tarjeta ocupe la pantalla.
+    const yaTomada = !editingDate && !!registroDeLaFecha && !saveSuccess;
+
+    // Se está moviendo una reunión a una fecha que ya tiene la suya. Mover ahí
+    // la pisaría: antes el upsert lo hacía en silencio.
+    const destinoOcupado = moviendoFecha && !!registroDeLaFecha;
+
     const loadHistory = useCallback(async () => {
         if (!groupId) return [];
         setLoadingHistory(true);
@@ -261,8 +271,20 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                 }
             }
             if (record) {
-                setSelectedMembers(new Set(record.presentMembers));
-                setModoReunion(record.modoReunion);
+                // Sólo se hidrata la reunión que se está editando.
+                //
+                // En un alta nueva no: esa fecha ya tiene su reunión, y lo que
+                // se ofrece es editarla, no volver a tomarla. Cargar los
+                // tildes acá era lo que hacía que "Guardar asistencia" pisara
+                // lo guardado creyendo que era una carga nueva.
+                //
+                // Mientras se mueve una reunión a otra fecha tampoco: la lista
+                // que viaja es la que el anfitrión tiene tildada, no la del
+                // destino.
+                if (editingDate === selectedDate) {
+                    setSelectedMembers(new Set(record.presentMembers));
+                    setModoReunion(record.modoReunion);
+                }
             } else if (!editingDate) {
                 // En modo edición la lista viaja con el registro que se está
                 // moviendo: limpiarla acá haría que mover la asistencia del 19
@@ -307,35 +329,65 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     // Un híbrido no guarda sin saber cómo fue la reunión: el botón lo dice.
     const faltaModo = esHibrido && !modoReunion;
 
+    // Abre el calendario nativo. Lo usan la píldora de la fecha y el botón
+    // "Elegir otra fecha" de la tarjeta.
+    const abrirSelectorDeFecha = () => {
+        const input = document.getElementById(`attendance-date-${group?.id}`) as HTMLInputElement | null;
+        if (!input) return;
+        if ('showPicker' in HTMLInputElement.prototype) {
+            try { input.showPicker(); } catch (e) { input.click(); }
+        } else {
+            input.focus();
+            input.click();
+        }
+    };
+
     const handleSave = async () => {
-        if (!group || faltaModo) return;
+        if (!group || faltaModo || destinoOcupado) return;
         setSaving(true);
         setSaveSuccess(false);
-        const success = await supabaseService.saveAttendance(
-            group.id,
-            selectedDate,
-            Array.from(selectedMembers),
-            editingDate ?? undefined,
-            esHibrido ? modoReunion ?? undefined : undefined
-        );
+        // Alta o edición se deciden ACÁ, antes de que el guardado limpie
+        // editingDate: la notificación es sólo para la primera vez.
+        const esAlta = !editingDate;
+        const resultado = await supabaseService.guardarAsistencia({
+            groupId: group.id,
+            fecha: selectedDate,
+            presentes: Array.from(selectedMembers),
+            fechaOriginal: editingDate ?? undefined,
+            modoReunion: esHibrido ? modoReunion ?? undefined : undefined,
+        });
         setSaving(false);
-        if (success) {
-            setSaveSuccess(true);
-            setTimeout(() => setSaveSuccess(false), 3000);
-            // El registro ya vive en selectedDate: si se vuelve a guardar sin
-            // salir de la pantalla, no hay nada más que mover.
-            setEditingDate(null);
-            loadHistory();
-            if (user?.id) {
-                const formattedDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long' });
-                await supabaseService.createAppNotification(
-                    user.id,
-                    '✅ Asistencia registrada',
-                    `Registraste ${selectedMembers.size} presente(s) en ${group.name} el ${formattedDate}. ¡Seguí así!`,
-                    'ATTENDANCE',
-                    '/mis-grupos'
-                );
-            }
+
+        if (!resultado.ok) {
+            // Alguien la guardó desde otro teléfono mientras tanto. Se trae el
+            // historial y la pantalla sola pasa a ofrecer editar la que ganó:
+            // no hace falta avisar nada que la pantalla no muestre.
+            //
+            // Se pregunta con `in` y no por `resultado.ok`: este proyecto
+            // compila sin strictNullChecks y ahí el booleano no alcanza para
+            // que TypeScript sepa cuál de las dos formas tiene en la mano.
+            if ('motivo' in resultado && resultado.motivo === 'duplicado') await loadHistory();
+            return;
+        }
+
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+        // El registro ya vive en selectedDate: si se vuelve a guardar sin
+        // salir de la pantalla, no hay nada más que mover.
+        setEditingDate(null);
+        loadHistory();
+
+        // Sólo al tomarla por primera vez. Corregir una reunión no es una
+        // novedad que merezca su propia notificación.
+        if (esAlta && user?.id) {
+            const formattedDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long' });
+            await supabaseService.createAppNotification(
+                user.id,
+                '✅ Asistencia registrada',
+                `Registraste ${presentCount} presente(s) en ${group.name} el ${formattedDate}. ¡Seguí así!`,
+                'ATTENDANCE',
+                '/mis-grupos'
+            );
         }
     };
 
@@ -369,17 +421,7 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                             rótulo y el botón pasa a "Guardar cambios". */}
                         <div
                             className={`relative flex-1 min-w-0 h-[52px] rounded-full ${T.interna} flex items-center gap-2 px-[15px] cursor-pointer`}
-                            onClick={() => {
-                                const input = document.getElementById(`attendance-date-${group.id}`) as HTMLInputElement;
-                                if (input) {
-                                    if ('showPicker' in HTMLInputElement.prototype) {
-                                        try { input.showPicker(); } catch (e) { input.click(); }
-                                    } else {
-                                        input.focus();
-                                        input.click();
-                                    }
-                                }
-                            }}
+                            onClick={abrirSelectorDeFecha}
                         >
                             <Calendar className="w-[17px] h-[17px] shrink-0" strokeWidth={2} />
                             <span className="flex-1 min-w-0 text-[14.5px] font-semibold truncate first-letter:uppercase">{fechaPildora(selectedDate)}</span>
@@ -415,10 +457,28 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                         </button>
                     </div>
 
-                    {editingDate && editingDate !== selectedDate && (
-                        <p className="mt-2.5 px-1 text-[12.5px] font-medium text-black/55 dark:text-white/55">
-                            Al guardar, la asistencia del {formatDate(editingDate)} se mueve al {formatDate(selectedDate)}.
-                        </p>
+                    {moviendoFecha && (
+                        destinoOcupado ? (
+                            // Mover acá pisaría la reunión que esa fecha ya tiene.
+                            // Antes el upsert lo hacía sin decir nada.
+                            <p className="mt-2.5 px-1 text-[12.5px] font-medium text-black/55 dark:text-white/55">
+                                El {formatDate(selectedDate)} ya tiene su propia asistencia. Elegí otra fecha o editá esa.{' '}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        hydratedKeyRef.current = null;
+                                        setEditingDate(selectedDate);
+                                    }}
+                                    className="font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity"
+                                >
+                                    Editar la del {formatDate(selectedDate)}
+                                </button>
+                            </p>
+                        ) : (
+                            <p className="mt-2.5 px-1 text-[12.5px] font-medium text-black/55 dark:text-white/55">
+                                Al guardar, la asistencia del {formatDate(editingDate!)} se mueve al {formatDate(selectedDate)}.
+                            </p>
+                        )
                     )}
 
                     {/* Híbrido: antes de tildar, cómo fue esta reunión. Va en
@@ -452,7 +512,7 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                 <>
                     {/* Resumen en vivo, pegado bajo el encabezado: se actualiza
                         mientras se tilda, sin bajar a buscarlo. */}
-                    {members.length > 0 && (
+                    {members.length > 0 && !yaTomada && (
                         <div className="sticky top-0 z-20 px-4 pt-3 pb-1 bg-gradient-to-b from-[#f6f6f4] from-[78%] to-transparent dark:from-[#111110]">
                             <div className="max-w-[430px] lg:max-w-[900px] mx-auto bg-[#0a0a0a] dark:bg-white rounded-[24px] px-[18px] py-4">
                                 <div className="flex items-end justify-between">
@@ -476,7 +536,39 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                     )}
 
                     <div className="max-w-[430px] lg:max-w-[900px] mx-auto px-4 pt-2 pb-[132px]">
-                        {members.length === 0 ? (
+                        {yaTomada ? (
+                            /* Esta fecha ya tiene su reunión. No se vuelve a tomar
+                               —eso la pisaba— y se ofrece editarla. Como la fecha
+                               por defecto es hoy, quien ya cargó hoy aterriza acá. */
+                            <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] px-6 pt-[46px] pb-10 flex flex-col items-center text-center">
+                                <div className="w-[64px] h-[64px] rounded-full bg-[#f2f2f0] dark:bg-[#2a2a28] flex items-center justify-center">
+                                    <Check className="w-[29px] h-[29px]" strokeWidth={2.6} />
+                                </div>
+                                <p className="mt-[22px] text-[19px] font-semibold tracking-[-.01em] first-letter:uppercase">
+                                    Ya tomaste asistencia el {fechaLarga(selectedDate)}
+                                </p>
+                                <p className="mt-2 text-[14.5px] font-medium text-black/50 dark:text-white/50">
+                                    {registroDeLaFecha!.count} de {registroDeLaFecha!.expectedMembers?.length ?? members.length} presentes
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        hydratedKeyRef.current = null;
+                                        setEditingDate(selectedDate);
+                                    }}
+                                    className={`${btnPrimario} mt-[26px] h-[54px] text-[16px]`}
+                                >
+                                    Editar esa asistencia
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={abrirSelectorDeFecha}
+                                    className={`${btnSecundario} mt-2.5 w-full h-[54px] text-[16px]`}
+                                >
+                                    Elegir otra fecha
+                                </button>
+                            </div>
+                        ) : members.length === 0 ? (
                             <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px]">
                                 {hayAprobados ? (
                                     // El grupo tiene gente, pero toda entró después de esta
@@ -632,17 +724,19 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
 
                     {/* Guardar anclado abajo: se toma asistencia parado, con la
                         lista scrolleada. */}
-                    {members.length > 0 && (
+                    {members.length > 0 && !yaTomada && (
                         <div className="fixed left-0 right-0 bottom-0 px-4 pt-3.5 pb-5 bg-gradient-to-t from-[#f6f6f4] from-[62%] to-transparent dark:from-[#111110]">
                             <div className="max-w-[430px] lg:max-w-[900px] mx-auto">
                                 <button
                                     type="button"
                                     onClick={handleSave}
-                                    disabled={saving || faltaModo}
+                                    disabled={saving || faltaModo || destinoOcupado}
                                     className={`${btnPrimario} h-[60px] text-[17px] shadow-[0_6px_22px_rgba(0,0,0,.18)]`}
                                 >
                                     {saving ? (
                                         <><Loader2 className="w-5 h-5 animate-spin" /> Guardando…</>
+                                    ) : destinoOcupado ? (
+                                        'Esa fecha ya está tomada'
                                     ) : faltaModo ? (
                                         'Elegí cómo fue la reunión'
                                     ) : saveSuccess ? (

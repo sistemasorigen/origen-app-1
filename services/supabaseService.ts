@@ -5522,6 +5522,98 @@ export const supabaseService = {
   },
 
   /**
+   * Guarda la asistencia de una reunión sin pisar otra.
+   *
+   * La diferencia con saveAttendance es el upsert: aquél resuelve el choque
+   * por (group_id, date) sobreescribiendo, y así una fecha que ya tenía su
+   * reunión se perdía sin que nadie se enterara — al tomarla de nuevo creyendo
+   * que era nueva, al mover una edición a un día ocupado, o cuando el
+   * anfitrión y el co-anfitrión cargaban a la vez desde dos teléfonos.
+   *
+   * Acá el choque se devuelve como 'duplicado' y la pantalla ofrece editar la
+   * que ya está. El UNIQUE(group_id, date) de la base es el que decide, así
+   * que no hay ventana entre consultar y guardar.
+   *
+   * saveAttendance queda como estaba: lo sigue usando ModalAsistencia.
+   *
+   * `expected_members` no se manda nunca: lo pone el trigger de la base, que
+   * es el único que sabe quién estaba aprobado esa fecha.
+   */
+  async guardarAsistencia(opciones: {
+    groupId: string;
+    fecha: string;
+    presentes: string[];
+    /** La fecha que tenía la reunión al abrirla con "Editar". */
+    fechaOriginal?: string;
+    modoReunion?: ModoReunion;
+  }): Promise<{ ok: true } | { ok: false; motivo: 'duplicado' | 'error' }> {
+    const { groupId, fecha, presentes, fechaOriginal, modoReunion } = opciones;
+    // meeting_mode sólo se nombra si hay algo que guardar: así la asistencia
+    // se sigue guardando aunque el SQL de la modalidad híbrida no esté corrido.
+    const fila = {
+      group_id: groupId,
+      date: fecha,
+      present_members: presentes,
+      ...(modoReunion ? { meeting_mode: modoReunion } : {}),
+    };
+
+    try {
+      // Editar sin mover la fecha: se actualiza la fila que ya está. Un UPDATE
+      // y no un upsert, para que si esa reunión ya no existe —la borró otro—
+      // se note en vez de crearla de nuevo.
+      if (fechaOriginal && fechaOriginal === fecha) {
+        const { data, error } = await supabase
+          .from('group_attendance')
+          .update(fila)
+          .eq('group_id', groupId)
+          .eq('date', fecha)
+          .select('id');
+
+        if (error) {
+          console.error('[Asistencia] Error al editar la reunión:', error);
+          return { ok: false, motivo: 'error' };
+        }
+        if (!data || data.length === 0) {
+          console.error('[Asistencia] La reunión que se editaba ya no existe:', groupId, fecha);
+          return { ok: false, motivo: 'error' };
+        }
+        return { ok: true };
+      }
+
+      // Alta nueva, o edición que mueve la fecha: las dos INSERTAN. Si la
+      // fecha ya está tomada, la base lo rechaza con 23505 y acá no se borra
+      // nada: la reunión original se queda donde está.
+      const { error } = await supabase.from('group_attendance').insert(fila);
+
+      if (error) {
+        if ((error as any).code === '23505') return { ok: false, motivo: 'duplicado' };
+        console.error('[Asistencia] Error al guardar la reunión:', error);
+        return { ok: false, motivo: 'error' };
+      }
+
+      // Recién con la fila nueva adentro se borra la vieja. Si este borrado
+      // fallara, el peor caso son dos filas —molesto— y nunca una reunión
+      // perdida, así que se informa y se da por guardado.
+      if (fechaOriginal && fechaOriginal !== fecha) {
+        const { error: errorBorrado } = await supabase
+          .from('group_attendance')
+          .delete()
+          .eq('group_id', groupId)
+          .eq('date', fechaOriginal);
+
+        if (errorBorrado) {
+          console.error('[Asistencia] La reunión quedó en las dos fechas:', errorBorrado);
+        }
+      }
+
+      return { ok: true };
+    } catch (error) {
+      console.error('[Asistencia] Excepción al guardar la reunión:', error);
+      return { ok: false, motivo: 'error' };
+    }
+  },
+
+  /**
    * Get attendance history for a group
    */
   async getAttendanceHistory(groupId: string): Promise<{ id: string; date: string; count: number; presentMembers: string[]; expectedMembers: string[] | null; modoReunion: ModoReunion | null }[]> {
