@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import HojaInscripcion from './HojaInscripcion';
-import { X, Check, Clock, Users, CalendarClock } from 'lucide-react';
+import { X, Check, Clock, Users, CalendarClock, CalendarDays } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Group, User, GroupRegistration, GroupCategory, GroupTag } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
 import {
@@ -98,6 +99,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
     const [checkingPartner, setCheckingPartner] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
     const [successView, setSuccessView] = useState(false);
     // Los otros grupos de la persona que caen el mismo día que este. Se piden
     // al abrir, en segundo plano, para que el botón final no espere a nadie.
@@ -385,6 +387,14 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
         }
     };
 
+    // Cerrar primero y navegar después: la hoja fija el body mientras está
+    // abierta (useBloqueoDeFondo), y cambiar de pantalla sin soltarlo deja el
+    // calendario trabado.
+    const verMiCalendario = () => {
+        onClose();
+        navigate('/gcx/calendario');
+    };
+
     const onPrimario = async () => {
         if (isSubmitting) return;
         if (!esUltimoPaso) { continuar(); return; }
@@ -429,10 +439,10 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                         </span>
                         <div className="flex flex-col gap-2.5">
                             <h2 id="insc-titulo-exito" className="m-0 text-[27px] font-extrabold leading-[1.08] tracking-[-.035em] text-[#0A0A0A] text-balance dark:text-[#F7F7F8]">
-                                Tu solicitud llegó a {anfitriones}
+                                ¡Listo! Te inscribiste en {group.name}
                             </h2>
                             <p className="m-0 text-[15px] font-semibold leading-[1.5] text-[#6F6F73] text-pretty dark:text-[#9C9CA1]">
-                                Todavía no estás anotado: el grupo confirma el lugar.
+                                {anfitriones} {verbo('confirma', 'confirman')} tu lugar. Te avisamos por email y en la app.
                             </p>
                         </div>
                     </div>
@@ -469,13 +479,32 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="w-full rounded-full bg-[#0A0A0A] px-5 py-[17px] text-[16.5px] font-bold text-white transition-opacity hover:opacity-[.88] dark:bg-[#F7F7F8] dark:text-[#0A0A0A]"
-                    >
-                        Seguir mirando grupos
-                    </button>
+                    {/* Dónde queda esto a partir de ahora. La inscripción deja
+                        de ser un trámite que terminó y pasa a ser una reunión en
+                        la semana de la persona. */}
+                    <div className="flex items-start gap-3 rounded-[18px] bg-[#F7F7F8] px-[18px] py-4 dark:bg-[#212124]">
+                        <CalendarDays className="mt-[2px] h-[18px] w-[18px] flex-none text-[#6F6F73] dark:text-[#9C9CA1]" strokeWidth={2.2} />
+                        <p className="m-0 text-[13.5px] font-semibold leading-[1.45] text-[#6F6F73] dark:text-[#9C9CA1]">
+                            Ya está en tu calendario: {(group.meetingDay || '').toLowerCase()}{group.meetingTime ? ` ${horaCorta(group.meetingTime)} hs` : ''}, como solicitud pendiente. Cuando te aprueben, queda confirmado.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col gap-2.5">
+                        <button
+                            type="button"
+                            onClick={verMiCalendario}
+                            className="w-full rounded-full bg-[#0A0A0A] px-5 py-[17px] text-[16.5px] font-bold text-white transition-opacity hover:opacity-[.88] dark:bg-[#F7F7F8] dark:text-[#0A0A0A]"
+                        >
+                            Ver mi calendario
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="w-full rounded-full bg-[#F4F4F5] px-5 py-[17px] text-[16.5px] font-bold text-[#0A0A0A] transition-colors hover:bg-[#EAEAEB] dark:bg-[#26262A] dark:text-[#F7F7F8] dark:hover:bg-[#303034]"
+                        >
+                            Seguir mirando grupos
+                        </button>
+                    </div>
                 </div>
             </HojaInscripcion>
         );

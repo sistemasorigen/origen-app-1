@@ -182,14 +182,16 @@ const GoogleGSvg: React.FC = () => (
 );
 
 // ── Detalle de un grupo (modal) ────────────────────────
-const GroupCard: React.FC<{ group: Group; asHost: boolean }> = ({ group, asHost }) => (
+const GroupCard: React.FC<{ group: Group; asHost: boolean; pendiente?: boolean }> = ({ group, asHost, pendiente }) => (
     <div className="space-y-4">
-        <span className={`${PILL} ${asHost
-            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
-            : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400'
+        <span className={`${PILL} ${pendiente
+            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400'
+            : asHost
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
+                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400'
             }`}>
             <Users className="w-3 h-3 shrink-0" aria-hidden="true" />
-            {asHost ? 'Anfitrión' : 'Participante'}
+            {pendiente ? 'Esperando aprobación' : asHost ? 'Anfitrión' : 'Participante'}
         </span>
 
         <p className="text-lg font-bold tracking-[-0.01em] leading-tight text-slate-900 dark:text-white">
@@ -230,6 +232,9 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
     const [weekStart, setWeekStart]                   = useState<Date>(getWeekStart(new Date()));
     const [hostGroups, setHostGroups]                 = useState<Group[]>([]);
     const [participantGroups, setParticipantGroups]   = useState<Group[]>([]);
+    // Los grupos donde la solicitud todavía está esperando respuesta. Se ven,
+    // marcados: están en la semana de la persona aunque no estén confirmados.
+    const [pendientes, setPendientes]                 = useState<Set<string>>(new Set());
     const [loading, setLoading]                       = useState(true);
     const [seasonLabel, setSeasonLabel]               = useState<string | null>(null);
     // El rango se guarda además del rótulo porque hace falta para decidir si un
@@ -262,21 +267,46 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
                 const hosted = await supabaseService.getGroupsByHost(currentUser.id);
                 setHostGroups(filterBySeason(hosted.filter(g => g.status === 'approved'), range));
 
-                const regs = await supabaseService.getUserRegistrations(currentUser.id, currentUser.email);
-                const approvedIds = regs
-                    .filter(r => r.status === 'APPROVED')
-                    .map(r => r.groupId)
-                    .filter((id): id is string => !!id);
+                // Dos vueltas, como en el resto de la app: la propia y la de
+                // pareja por email, que es la que reconoce al acompañante que
+                // todavía no quedó vinculado por id. Sin la segunda, media
+                // pareja tenía el calendario vacío.
+                const propias = await supabaseService.getUserRegistrations(currentUser.id, currentUser.email);
+                const dePareja = currentUser.email
+                    ? await supabaseService.getPartnerRegistrationsByEmail(currentUser.email)
+                    : [];
+                const regs = [...propias];
+                dePareja.forEach(r => { if (!regs.find(y => y.id === r.id)) regs.push(r); });
 
-                if (approvedIds.length > 0) {
+                const email = (currentUser.email || '').toLowerCase().trim();
+                // Las pendientes también entran: recién inscripta, la solicitud
+                // está en PENDING, y un calendario vacío después de anotarse se
+                // lee como que la inscripción no quedó.
+                const estadoPorGrupo = new Map<string, 'APPROVED' | 'PENDING'>();
+                regs.forEach(r => {
+                    if (r.status !== 'APPROVED' && r.status !== 'PENDING') return;
+                    const esTitular = r.userId === currentUser.id;
+                    const esPareja = r.partnerUserId === currentUser.id
+                        || !!(email && r.partnerData?.email && r.partnerData.email.toLowerCase().trim() === email);
+                    if (!esTitular && !esPareja) return;
+                    if (!r.groupId) return;
+                    if (estadoPorGrupo.get(r.groupId) === 'APPROVED') return;
+                    estadoPorGrupo.set(r.groupId, r.status);
+                });
+
+                const ids = [...estadoPorGrupo.keys()];
+                if (ids.length > 0) {
                     const { data } = await supabase
                         .from('groups')
                         .select('*, registrations:group_registrations(*)')
-                        .in('id', approvedIds)
+                        .in('id', ids)
                         .eq('status', 'approved');
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const all = (data || []).map((row: any) => supabaseService._dbRowToGroup(row));
                     setParticipantGroups(filterBySeason(all, range));
+                    setPendientes(new Set(
+                        all.filter((g: Group) => estadoPorGrupo.get(g.id) === 'PENDING').map((g: Group) => g.id)
+                    ));
                 }
             } catch (err: unknown) {
                 console.error('[CalendarioGCX]', err);
@@ -367,10 +397,14 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
     // y los mismos botones, separados solo por el rol; ahora el rol es una
     // píldora dentro de la fila. Si alguien es anfitrión y además está
     // inscripto, el grupo entra una vez y manda el rol de anfitrión.
+    //
+    // Las solicitudes pendientes no se agendan: todavía no hay lugar
+    // confirmado, y una reunión en el calendario del teléfono —que después hay
+    // que ir a borrar a mano si no la aprueban— promete algo que no está.
     const todosLosGrupos: { group: Group; asHost: boolean }[] = [
         ...hostGroups.map(g => ({ group: g, asHost: true })),
         ...participantGroups
-            .filter(g => !hostGroups.some(h => h.id === g.id))
+            .filter(g => !hostGroups.some(h => h.id === g.id) && !pendientes.has(g.id))
             .map(g => ({ group: g, asHost: false })),
     ];
     const agendables = todosLosGrupos.filter(({ group }) => !fueraDeTemporada(group));
@@ -549,13 +583,17 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
                         <div className={`${CARD} overflow-hidden`}>
                             {reunionesVisibles.map(({ group, asHost, date }, i) => {
                                 const hoy = esHoy(date);
+                                // Apagada, no escondida: la reunión está en la semana
+                                // igual. Apenas lo suficiente para que se note que
+                                // todavía no está confirmada.
+                                const esPendiente = !asHost && pendientes.has(group.id);
                                 return (
                                     <button
                                         key={`${group.id}-${date.toISOString()}`}
                                         type="button"
                                         onClick={() => setGrupoDetalle({ group, asHost, date })}
                                         className={`w-full flex items-center gap-3.5 px-4 py-3.5 text-left transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-900/30 dark:focus-visible:ring-white/30 ${i > 0 ? 'border-t border-slate-100 dark:border-zinc-800' : ''
-                                            }`}
+                                            } ${esPendiente ? 'opacity-75' : ''}`}
                                     >
                                         {/* Chip de fecha — el objeto que da carácter a
                                             la lista. En verde cuando es hoy, y ahí dice
@@ -580,11 +618,17 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
                                             <span className={`block ${BODY} leading-snug truncate mt-1`}>
                                                 {group.meetingTime || 'Sin horario'}
                                                 {' · '}
-                                                <span className={asHost
-                                                    ? 'font-semibold text-emerald-700 dark:text-emerald-400'
-                                                    : 'font-semibold text-indigo-600 dark:text-indigo-400'
+                                                <span className={esPendiente
+                                                    ? 'font-semibold text-amber-700 dark:text-amber-400'
+                                                    : asHost
+                                                        ? 'font-semibold text-emerald-700 dark:text-emerald-400'
+                                                        : 'font-semibold text-indigo-600 dark:text-indigo-400'
                                                 }>
-                                                    {asHost ? 'Anfitrión' : 'Participante'}
+                                                    {/* "Pendiente" y no "Esperando aprobación": al lado de
+                                                        la hora, en un teléfono, el texto largo se corta con
+                                                        puntos suspensivos. El completo está en la ficha,
+                                                        que es donde hay lugar. */}
+                                                    {esPendiente ? 'Pendiente' : asHost ? 'Anfitrión' : 'Participante'}
                                                 </span>
                                             </span>
                                         </span>
@@ -635,7 +679,7 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
                     maxWidth="max-w-md"
                 >
                     {grupoDetalle && (
-                        <GroupCard group={grupoDetalle.group} asHost={grupoDetalle.asHost} />
+                        <GroupCard group={grupoDetalle.group} asHost={grupoDetalle.asHost} pendiente={pendientes.has(grupoDetalle.group.id)} />
                     )}
                 </NeoModal>
 
