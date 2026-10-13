@@ -45,12 +45,15 @@ interface BaseReportesGCX {
     // Lo mismo, separado por cómo fue la reunión. Sólo las reuniones de los
     // grupos híbridos tienen modo: las demás no entran en ninguno de los dos.
     presentesPorModo: Record<ModoReunion, Set<string>>;
-    // Cuántas reuniones cargó cada grupo y a cuántas fue cada persona (por
-    // idAsistencia), en total y por modo. Alimentan los tramos de
-    // frecuencia de "Asistencia de personas".
+    // Cuántas reuniones cargó cada grupo, en total y por modo. Ya NO es el
+    // denominador de los tramos de frecuencia —ese papel pasó a
+    // posiblesPorPersona, acá abajo—: queda como el dato de cuánto cargó el
+    // grupo, que es otra cosa.
     reunionesPorGrupo: Map<string, number>;
-    vecesPresente: Map<string, number>;
     reunionesPorGrupoPorModo: Record<ModoReunion, Map<string, number>>;
+    // A cuántas reuniones fue cada persona (por idAsistencia), en total y por
+    // modo. Es el numerador de los tramos de "Asistencia de personas".
+    vecesPresente: Map<string, number>;
     vecesPorModo: Record<ModoReunion, Map<string, number>>;
     // A cuántas reuniones le TOCABA ir a cada persona (por idAsistencia): las
     // que tienen su id en el padrón. Es el denominador de "fue a todas".
