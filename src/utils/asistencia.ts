@@ -53,3 +53,38 @@ export const idsDeInscripcion = (reg: any): string[] => {
     const pareja = reg?.partnerData ?? reg?.partner_data ?? null;
     return pareja ? [id, `${id}-partner`] : [id];
 };
+
+/**
+ * El padrón de una reunión: a quiénes les tocaba estar.
+ *
+ * Es el denominador de todo porcentaje de asistencia de la app. Manda la foto
+ * que la base congeló esa noche (`expected_members`), que es la única que
+ * sobrevive a una baja —la baja BORRA la inscripción— y la única que no se
+ * mueve cuando el grupo crece.
+ *
+ * El respaldo sólo corre si esa reunión no tiene foto, que hoy son las
+ * anteriores a sql/asistencia_padron.sql: se reconstruye con quienes estaban
+ * aprobados esa fecha, más los presentes, para que el porcentaje nunca pase
+ * del 100%.
+ */
+export const padronDeReunion = (
+    fila: any,
+    inscripcionesDelGrupo: any[],
+): Set<string> => {
+    const presentes: string[] = (fila?.present_members ?? fila?.presentMembers ?? []).map(String);
+    const foto = fila?.expected_members ?? fila?.expectedMembers ?? null;
+
+    if (Array.isArray(foto)) return new Set<string>(foto.map(String));
+
+    const fecha = String(fila?.date ?? fila?.fecha ?? '');
+    const padron = new Set<string>(presentes);
+    (inscripcionesDelGrupo || []).forEach(r => {
+        if (!estabaEnLaFecha(r, fecha)) return;
+        idsDeInscripcion(r).forEach(id => padron.add(id));
+    });
+    return padron;
+};
+
+/** ¿A esta persona le tocaba esa reunión? */
+export const leTocaba = (idAsistencia: string, padron: Set<string>): boolean =>
+    padron.has(String(idAsistencia));

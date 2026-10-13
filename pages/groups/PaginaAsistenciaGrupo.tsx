@@ -8,7 +8,7 @@ import { Calendar, History, Save, Check, Loader2 } from 'lucide-react';
 import { T, btnPrimario, btnSecundario, rotulo, Encabezado, Vacio } from '../../components/GCX/patron';
 import PanelGuardado, { EstadoGuardado } from '../../components/GCX/PanelGuardado';
 import { NOMBRE_MODO_REUNION } from '../../src/utils/modalidad';
-import { estabaEnLaFecha, fechaDeIngreso, idsDeInscripcion } from '../../src/utils/asistencia';
+import { estabaEnLaFecha, fechaDeIngreso, idsDeInscripcion, padronDeReunion } from '../../src/utils/asistencia';
 
 interface Member {
     id: string;
@@ -841,8 +841,15 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-[15.5px] font-semibold truncate first-letter:uppercase">{fechaLarga(record.date)}</p>
+                                            {/* Contra el padrón de ESA fecha: "8 presentes" no dice
+                                                nada sin saber de cuántos. */}
                                             <p className="mt-0.5 text-[12.5px] font-medium text-black/45 dark:text-white/45">
-                                                {record.count} {record.count === 1 ? 'presente' : 'presentes'}
+                                                {(() => {
+                                                    const padron = record.expectedMembers?.length
+                                                        ?? padronDeReunion({ ...record, date: record.date }, inscripciones).size;
+                                                    const pct = padron > 0 ? Math.round((record.count / padron) * 100) : 0;
+                                                    return `${record.count} de ${padron} presentes · ${pct}%`;
+                                                })()}
                                                 {record.modoReunion && ` · ${NOMBRE_MODO_REUNION[record.modoReunion]}`}
                                             </p>
                                         </div>
