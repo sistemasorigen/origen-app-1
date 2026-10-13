@@ -279,8 +279,15 @@ export interface GrupoConDatos {
      */
     personas: string[];
     capacidad: number;
-    /** Reuniones con asistencia cargada, de la más nueva a la más vieja. */
-    reportes: { fecha: string; presentes: number; ids: string[] }[];
+    /**
+     * Reuniones con asistencia cargada, de la más nueva a la más vieja.
+     *
+     * `padron` son los ids a los que les tocaba estar ESA fecha: el
+     * denominador de todo porcentaje. Sale de la foto que la base congela en
+     * cada reunión (ver src/utils/asistencia.ts), así que no se mueve cuando
+     * el grupo crece ni cuando alguien se da de baja.
+     */
+    reportes: { fecha: string; presentes: number; ids: string[]; padron: string[] }[];
     /** Presentes por reunión. 0 si nunca reportó. */
     promedio: number;
     reporta: boolean;

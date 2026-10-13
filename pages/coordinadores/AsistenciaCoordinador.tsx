@@ -79,27 +79,31 @@ const AsistenciaCoordinador: React.FC<Props> = ({ datos, promedioIglesia, onAbri
             // inscripciones, incluso las que después se dieron de baja: la
             // asistencia se cargó cuando esa persona estaba en el grupo.
             const nombrePorId = new Map<string, string>();
-            const actuales: { id: string; nombre: string }[] = [];
 
             (d.grupo.registrations || []).forEach(r => {
                 const nombre = `${r.firstName || ''} ${r.lastName || ''}`.trim() || 'Sin nombre';
                 nombrePorId.set(String(r.id), nombre);
-                if (r.status !== 'REJECTED') actuales.push({ id: String(r.id), nombre });
 
                 if (r.partnerData) {
                     const pareja = `${r.partnerData.firstName || ''} ${r.partnerData.lastName || ''}`.trim() || 'Su pareja';
                     nombrePorId.set(`${r.id}-partner`, pareja);
-                    if (r.status !== 'REJECTED') actuales.push({ id: `${r.id}-partner`, nombre: pareja });
                 }
             });
 
             return d.reportes.map(r => {
-                const presentes = r.ids
-                    .map(id => nombrePorId.get(String(id)))
-                    .filter((n): n is string => !!n);
+                // Los ausentes salen del padrón de ESA reunión menos los
+                // presentes, no de las inscripciones de hoy. Antes se contaba
+                // a los PENDING —que no son del grupo todavía— y a quienes
+                // entraron después, que no faltaron a nada.
+                //
+                // Quien está en el padrón y ya no tiene inscripción es una
+                // baja: su fila la borró el sistema y no queda nombre que
+                // mostrar, pero esa noche le tocaba estar y cuenta igual.
                 const idsPresentes = new Set(r.ids.map(String));
-                const ausentes = actuales.filter(p => !idsPresentes.has(p.id)).map(p => p.nombre);
-                const total = presentes.length + ausentes.length;
+                const nombreDe = (id: string) => nombrePorId.get(String(id)) || 'Persona dada de baja';
+                const presentes = r.padron.filter(id => idsPresentes.has(String(id))).map(nombreDe);
+                const ausentes = r.padron.filter(id => !idsPresentes.has(String(id))).map(nombreDe);
+                const total = r.padron.length;
 
                 return {
                     clave: `${d.grupo.id}-${r.fecha}`,

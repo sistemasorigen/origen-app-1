@@ -12,6 +12,7 @@ import {
     coordinatorVariantToCategory,
 } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
+import { padronDeReunion } from '../../src/utils/asistencia';
 import { db } from '../../services/dbService';
 import { hasRole } from '../../services/authUtils';
 import {
@@ -245,10 +246,13 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
 
     // ── Lectura de cada grupo ─────────
     const datos: GrupoConDatos[] = useMemo(() => {
-        const porGrupo = new Map<string, { fecha: string; presentes: number; ids: string[] }[]>();
+        // Las filas crudas: el padrón de cada reunión se arma más abajo, donde
+        // está el grupo —hace falta su gente para el respaldo de las reuniones
+        // viejas, las que no tienen la foto guardada—.
+        const porGrupo = new Map<string, typeof asistencias>();
         asistencias.forEach(a => {
             const lista = porGrupo.get(a.groupId) || [];
-            lista.push({ fecha: a.date, presentes: a.presentMembers.length, ids: a.presentMembers });
+            lista.push(a);
             porGrupo.set(a.groupId, lista);
         });
 
@@ -264,7 +268,14 @@ const Coordinadores: React.FC<CoordinatorsProps> = ({ currentUser }) => {
         return grupos
             .filter(g => temporadaPorGrupo.get(g.id) === clave)
             .map(grupo => {
-                const reportes = (porGrupo.get(grupo.id) || []).sort((a, b) => b.fecha.localeCompare(a.fecha));
+                const reportes = (porGrupo.get(grupo.id) || [])
+                    .map(a => ({
+                        fecha: a.date,
+                        presentes: a.presentMembers.length,
+                        ids: a.presentMembers,
+                        padron: Array.from(padronDeReunion(a, grupo.registrations || [])),
+                    }))
+                    .sort((a, b) => b.fecha.localeCompare(a.fecha));
                 const presentes = reportes.reduce((s, r) => s + r.presentes, 0);
                 return {
                     grupo,

@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 import { db } from './dbService';
 import { safeUUID } from './uuidUtils';
 import { comprimirImagen } from '../src/utils/nocturna';
+import { padronDeReunion } from '../src/utils/asistencia';
 import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado, NocturnaGrupo, NocturnaAgregadoResultado, NocturnaComprobanteExtra } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
@@ -51,6 +52,13 @@ interface BaseReportesGCX {
     vecesPresente: Map<string, number>;
     reunionesPorGrupoPorModo: Record<ModoReunion, Map<string, number>>;
     vecesPorModo: Record<ModoReunion, Map<string, number>>;
+    // A cuántas reuniones le TOCABA ir a cada persona (por idAsistencia): las
+    // que tienen su id en el padrón. Es el denominador de "fue a todas".
+    // Antes se usaba reunionesPorGrupo —todas las del grupo— y quien entró en
+    // la semana 6 arrastraba cinco faltas que no eran suyas: no podía estar
+    // nunca en "Fue a todas".
+    posiblesPorPersona: Map<string, number>;
+    posiblesPorPersonaPorModo: Record<ModoReunion, Map<string, number>>;
     usuarios: Map<string, UsuarioReporte>;
     categorias: GroupCategory[];
     // Cuántas personas hubo presentes en CADA reunión cargada de la
@@ -2964,7 +2972,10 @@ export const supabaseService = {
         // Couples registration fields
         partnerData: r.partner_data || null,
         partnerUserId: r.partner_user_id || null,
-        transferFromGroupId: r.transfer_from_group_id || undefined
+        transferFromGroupId: r.transfer_from_group_id || undefined,
+        // Con qué fecha entró al grupo: es lo que decide en qué reuniones
+        // cuenta. Ver src/utils/asistencia.ts.
+        approvedAt: r.approved_at ?? null
       }))
     };
   },
@@ -3795,7 +3806,8 @@ export const supabaseService = {
         userId: row.user_id,
         partnerUserId: row.partner_user_id,
         transferFromGroupId: row.transfer_from_group_id || undefined,
-        partnerData: row.partner_data
+        partnerData: row.partner_data,
+        approvedAt: row.approved_at ?? null
       }));
     } catch (error) {
       console.error('[Groups] Fetch registrations exception:', error);
@@ -3828,7 +3840,8 @@ export const supabaseService = {
             userId: row.user_id,
             partnerUserId: row.partner_user_id,
             transferFromGroupId: row.transfer_from_group_id || undefined,
-            partnerData: row.partner_data
+            partnerData: row.partner_data,
+            approvedAt: row.approved_at ?? null
           }));
         }
         if (rpcError) console.warn('[Groups] RPC failed (function might not exist yet), falling back to query:', rpcError.message);
@@ -3877,7 +3890,8 @@ export const supabaseService = {
         userId: row.user_id,
         partnerUserId: row.partner_user_id,
         transferFromGroupId: row.transfer_from_group_id || undefined,
-        partnerData: row.partner_data
+        partnerData: row.partner_data,
+        approvedAt: row.approved_at ?? null
       }));
     } catch (err) {
       console.error("Exception fetching user registrations:", err);
@@ -3916,7 +3930,8 @@ export const supabaseService = {
         userId: row.user_id,
         partnerUserId: row.partner_user_id,
         transferFromGroupId: row.transfer_from_group_id || undefined,
-        partnerData: row.partner_data
+        partnerData: row.partner_data,
+        approvedAt: row.approved_at ?? null
       }));
     } catch (err) {
       console.error("Exception fetching partner registrations by email:", err);
@@ -5515,9 +5530,101 @@ export const supabaseService = {
   },
 
   /**
+   * Guarda la asistencia de una reunión sin pisar otra.
+   *
+   * La diferencia con saveAttendance es el upsert: aquél resuelve el choque
+   * por (group_id, date) sobreescribiendo, y así una fecha que ya tenía su
+   * reunión se perdía sin que nadie se enterara — al tomarla de nuevo creyendo
+   * que era nueva, al mover una edición a un día ocupado, o cuando el
+   * anfitrión y el co-anfitrión cargaban a la vez desde dos teléfonos.
+   *
+   * Acá el choque se devuelve como 'duplicado' y la pantalla ofrece editar la
+   * que ya está. El UNIQUE(group_id, date) de la base es el que decide, así
+   * que no hay ventana entre consultar y guardar.
+   *
+   * saveAttendance queda como estaba: lo sigue usando ModalAsistencia.
+   *
+   * `expected_members` no se manda nunca: lo pone el trigger de la base, que
+   * es el único que sabe quién estaba aprobado esa fecha.
+   */
+  async guardarAsistencia(opciones: {
+    groupId: string;
+    fecha: string;
+    presentes: string[];
+    /** La fecha que tenía la reunión al abrirla con "Editar". */
+    fechaOriginal?: string;
+    modoReunion?: ModoReunion;
+  }): Promise<{ ok: true } | { ok: false; motivo: 'duplicado' | 'error' }> {
+    const { groupId, fecha, presentes, fechaOriginal, modoReunion } = opciones;
+    // meeting_mode sólo se nombra si hay algo que guardar: así la asistencia
+    // se sigue guardando aunque el SQL de la modalidad híbrida no esté corrido.
+    const fila = {
+      group_id: groupId,
+      date: fecha,
+      present_members: presentes,
+      ...(modoReunion ? { meeting_mode: modoReunion } : {}),
+    };
+
+    try {
+      // Editar sin mover la fecha: se actualiza la fila que ya está. Un UPDATE
+      // y no un upsert, para que si esa reunión ya no existe —la borró otro—
+      // se note en vez de crearla de nuevo.
+      if (fechaOriginal && fechaOriginal === fecha) {
+        const { data, error } = await supabase
+          .from('group_attendance')
+          .update(fila)
+          .eq('group_id', groupId)
+          .eq('date', fecha)
+          .select('id');
+
+        if (error) {
+          console.error('[Asistencia] Error al editar la reunión:', error);
+          return { ok: false, motivo: 'error' };
+        }
+        if (!data || data.length === 0) {
+          console.error('[Asistencia] La reunión que se editaba ya no existe:', groupId, fecha);
+          return { ok: false, motivo: 'error' };
+        }
+        return { ok: true };
+      }
+
+      // Alta nueva, o edición que mueve la fecha: las dos INSERTAN. Si la
+      // fecha ya está tomada, la base lo rechaza con 23505 y acá no se borra
+      // nada: la reunión original se queda donde está.
+      const { error } = await supabase.from('group_attendance').insert(fila);
+
+      if (error) {
+        if ((error as any).code === '23505') return { ok: false, motivo: 'duplicado' };
+        console.error('[Asistencia] Error al guardar la reunión:', error);
+        return { ok: false, motivo: 'error' };
+      }
+
+      // Recién con la fila nueva adentro se borra la vieja. Si este borrado
+      // fallara, el peor caso son dos filas —molesto— y nunca una reunión
+      // perdida, así que se informa y se da por guardado.
+      if (fechaOriginal && fechaOriginal !== fecha) {
+        const { error: errorBorrado } = await supabase
+          .from('group_attendance')
+          .delete()
+          .eq('group_id', groupId)
+          .eq('date', fechaOriginal);
+
+        if (errorBorrado) {
+          console.error('[Asistencia] La reunión quedó en las dos fechas:', errorBorrado);
+        }
+      }
+
+      return { ok: true };
+    } catch (error) {
+      console.error('[Asistencia] Excepción al guardar la reunión:', error);
+      return { ok: false, motivo: 'error' };
+    }
+  },
+
+  /**
    * Get attendance history for a group
    */
-  async getAttendanceHistory(groupId: string): Promise<{ id: string; date: string; count: number; presentMembers: string[]; modoReunion: ModoReunion | null }[]> {
+  async getAttendanceHistory(groupId: string): Promise<{ id: string; date: string; count: number; presentMembers: string[]; expectedMembers: string[] | null; modoReunion: ModoReunion | null }[]> {
     try {
       // '*' y no la lista: nombrar meeting_mode haría fallar el historial
       // entero mientras el SQL de la modalidad híbrida no se haya corrido.
@@ -5537,6 +5644,11 @@ export const supabaseService = {
         date: row.date,
         count: Array.isArray(row.present_members) ? row.present_members.length : 0,
         presentMembers: row.present_members || [],
+        // La foto del padrón de ese día: quiénes estaban en el grupo esa
+        // fecha. null mientras la fila sea anterior a sql/asistencia_padron.sql
+        // o la columna no exista todavía — quien la lee decide qué hacer sin
+        // esa foto. Ver src/utils/asistencia.ts.
+        expectedMembers: Array.isArray(row.expected_members) ? row.expected_members : null,
         modoReunion: row.meeting_mode === 'presencial' || row.meeting_mode === 'online' ? row.meeting_mode : null,
       }));
     } catch (error) {
@@ -5560,17 +5672,17 @@ export const supabaseService = {
    */
   async getAttendanceHistoryForGroups(
     groupIds: string[]
-  ): Promise<{ groupId: string; date: string; presentMembers: string[] }[]> {
+  ): Promise<{ groupId: string; date: string; presentMembers: string[]; expectedMembers: string[] | null }[]> {
     if (!groupIds.length) return [];
 
     const PAGE_SIZE = 1000;
-    const filas: { groupId: string; date: string; presentMembers: string[] }[] = [];
+    const filas: { groupId: string; date: string; presentMembers: string[]; expectedMembers: string[] | null }[] = [];
 
     try {
       for (let desde = 0; ; desde += PAGE_SIZE) {
         const { data, error } = await supabase
           .from('group_attendance')
-          .select('group_id, date, present_members')
+          .select('group_id, date, present_members, expected_members')
           .in('group_id', groupIds)
           .order('date', { ascending: false })
           .range(desde, desde + PAGE_SIZE - 1);
@@ -5583,7 +5695,10 @@ export const supabaseService = {
         (data || []).forEach((row: any) => filas.push({
           groupId: row.group_id,
           date: row.date,
-          presentMembers: Array.isArray(row.present_members) ? row.present_members : []
+          presentMembers: Array.isArray(row.present_members) ? row.present_members : [],
+          // El padrón de esa reunión: a quiénes les tocaba. null en las
+          // reuniones anteriores a sql/asistencia_padron.sql.
+          expectedMembers: Array.isArray(row.expected_members) ? row.expected_members : null
         }));
 
         if (!data || data.length < PAGE_SIZE) break;
@@ -6438,7 +6553,7 @@ export const supabaseService = {
         });
 
         if (grupos.length === 0) {
-          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), presentesPorModo: { presencial: new Set(), online: new Set() }, reunionesPorGrupo: new Map(), vecesPresente: new Map(), reunionesPorGrupoPorModo: { presencial: new Map(), online: new Map() }, vecesPorModo: { presencial: new Map(), online: new Map() }, usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [] };
+          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), presentesPorModo: { presencial: new Set(), online: new Set() }, reunionesPorGrupo: new Map(), vecesPresente: new Map(), reunionesPorGrupoPorModo: { presencial: new Map(), online: new Map() }, vecesPorModo: { presencial: new Map(), online: new Map() }, posiblesPorPersona: new Map(), posiblesPorPersonaPorModo: { presencial: new Map(), online: new Map() }, usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [] };
         }
 
         const idsGrupos = grupos.map((g: any) => g.id);
@@ -6447,7 +6562,10 @@ export const supabaseService = {
         const [resInscripciones, resAsistencias, categorias] = await Promise.all([
           supabase
             .from('group_registrations')
-            .select('id, group_id, user_id, status, partner_data, partner_user_id, email, first_name, last_name')
+            // approved_at: con qué fecha entró cada persona al grupo. Lo
+            // necesita el respaldo del padrón, para las reuniones viejas que
+            // no tienen su foto guardada.
+            .select('id, group_id, user_id, status, partner_data, partner_user_id, email, first_name, last_name, approved_at')
             .in('group_id', idsGrupos),
           // '*' por lo mismo que arriba: meeting_mode todavía puede no existir.
           supabase
@@ -6482,7 +6600,16 @@ export const supabaseService = {
         const vecesPresente = new Map<string, number>();
         const reunionesPorGrupoPorModo: Record<ModoReunion, Map<string, number>> = { presencial: new Map(), online: new Map() };
         const vecesPorModo: Record<ModoReunion, Map<string, number>> = { presencial: new Map(), online: new Map() };
+        const posiblesPorPersona = new Map<string, number>();
+        const posiblesPorPersonaPorModo: Record<ModoReunion, Map<string, number>> = { presencial: new Map(), online: new Map() };
         const sumarUno = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) || 0) + 1);
+        // Sólo lo usa el respaldo del padrón, para las reuniones viejas que no
+        // tienen su foto guardada.
+        const inscripcionesPorGrupo = new Map<string, any[]>();
+        inscripciones.forEach((r: any) => {
+          const lista = inscripcionesPorGrupo.get(r.group_id);
+          if (lista) lista.push(r); else inscripcionesPorGrupo.set(r.group_id, [r]);
+        });
         const presentesPorReunion: number[] = [];
         const reuniones: Array<{ groupId: string; fecha: string; presentes: number }> = [];
         (resAsistencias.data || []).forEach((a: any) => {
@@ -6492,10 +6619,16 @@ export const supabaseService = {
           const idsDeLaReunion = new Set<string>(presentes.map((id: unknown) => String(id)));
           idsDeLaReunion.forEach(id => { idsPresentes.add(id); sumarUno(vecesPresente, id); });
           sumarUno(reunionesPorGrupo, a.group_id);
+          // A quiénes les tocaba ESTA reunión. Una suma por persona, no por
+          // grupo: es lo que hace que quien entró tarde no arrastre las
+          // faltas de antes de entrar.
+          const padron = padronDeReunion(a, inscripcionesPorGrupo.get(a.group_id) || []);
+          padron.forEach(id => sumarUno(posiblesPorPersona, id));
           const modo: ModoReunion | null = a.meeting_mode === 'presencial' || a.meeting_mode === 'online' ? a.meeting_mode : null;
           if (modo) {
             idsDeLaReunion.forEach(id => { presentesPorModo[modo].add(id); sumarUno(vecesPorModo[modo], id); });
             sumarUno(reunionesPorGrupoPorModo[modo], a.group_id);
+            padron.forEach(id => sumarUno(posiblesPorPersonaPorModo[modo], id));
           }
           presentesPorReunion.push(presentes.length);
           // `date` es DATE en Postgres y llega como 'YYYY-MM-DD'. Una fila sin
@@ -6545,7 +6678,7 @@ export const supabaseService = {
           });
         }
 
-        return { grupos, inscripciones, gruposQueReportan, idsPresentes, presentesPorModo, reunionesPorGrupo, vecesPresente, reunionesPorGrupoPorModo, vecesPorModo, usuarios, categorias, presentesPorReunion, reuniones };
+        return { grupos, inscripciones, gruposQueReportan, idsPresentes, presentesPorModo, reunionesPorGrupo, vecesPresente, reunionesPorGrupoPorModo, vecesPorModo, posiblesPorPersona, posiblesPorPersonaPorModo, usuarios, categorias, presentesPorReunion, reuniones };
       } catch (err) {
         console.error('[ReportesGCX] Excepción cargando la base:', err);
         return null;
@@ -6616,7 +6749,7 @@ export const supabaseService = {
     // "sin datos" no cambia: es de los grupos que no cargaron nada.
     const presentes = filtros?.modoReunion ? base.presentesPorModo[filtros.modoReunion] : base.idsPresentes;
     const veces = filtros?.modoReunion ? base.vecesPorModo[filtros.modoReunion] : base.vecesPresente;
-    const reunionesDe = filtros?.modoReunion ? base.reunionesPorGrupoPorModo[filtros.modoReunion] : base.reunionesPorGrupo;
+    const posiblesDe = filtros?.modoReunion ? base.posiblesPorPersonaPorModo[filtros.modoReunion] : base.posiblesPorPersona;
 
     // Por persona, no por inscripción: quien está en dos grupos cuenta una
     // vez. Asistió si fue a alguna reunión de cualquiera de sus grupos; si
@@ -6636,7 +6769,10 @@ export const supabaseService = {
           persona.reporta = true;
           if (presentes.has(idAsistencia)) persona.asistio = true;
           persona.veces += veces.get(idAsistencia) || 0;
-          persona.posibles += reunionesDe.get(r.group_id) || 0;
+          // Las reuniones a las que le tocaba ir a ESTA persona, no las que
+          // cargó el grupo: quien entró en la semana 6 no debe las cinco
+          // anteriores.
+          persona.posibles += posiblesDe.get(idAsistencia) || 0;
         } else {
           persona.sinCargaAlguno = true;
         }
@@ -7171,11 +7307,11 @@ export const supabaseService = {
       const [resInscripciones, resAsistencias] = await Promise.all([
         supabase
           .from('group_registrations')
-          .select('id, first_name, last_name, email, phone, status, timestamp, partner_data, transfer_from_group_id')
+          .select('id, first_name, last_name, email, phone, status, timestamp, approved_at, partner_data, transfer_from_group_id')
           .eq('group_id', groupId),
         supabase
           .from('group_attendance')
-          .select('date, present_members')
+          .select('date, present_members, expected_members')
           .eq('group_id', groupId)
           .order('date', { ascending: true }),
       ]);
@@ -7195,15 +7331,11 @@ export const supabaseService = {
       );
       const filasAsistencia = resAsistencias.data || [];
 
-      // Ids válidos de personas de ESTE grupo (titular + pareja con el
-      // sufijo "-partner"), sin importar el status actual: una asistencia se
-      // carga sobre gente que en su momento estaba aprobada, y no vale la
-      // pena descartar una presencia real solo porque después se dio de baja.
-      const idsValidos = new Set<string>();
-      todasLasInscripciones.forEach((r: any) => {
-        idsValidos.add(String(r.id));
-        if (r.partner_data) idsValidos.add(`${r.id}-partner`);
-      });
+      // (Antes acá se armaba un set de ids "válidos" con las inscripciones
+      // vivas, para descartar presencias de gente que ya no está. Ahora ese
+      // papel lo cumple el padrón de cada reunión, que además conserva a
+      // quienes se dieron de baja: su fila ya no existe, pero la noche que
+      // vinieron sí.)
 
       // ── Anfitrión y co-anfitrión ─────────────────────────────────────
       const idsUsuarios = new Set<string>();
@@ -7277,18 +7409,25 @@ export const supabaseService = {
       };
 
       // ── Asistencia reunión a reunión ─────────────────────────────────
-      // "total" de cada reunión cuenta a quienes ya estaban inscriptos para
-      // esa fecha (por r.timestamp), no el padrón de hoy: un grupo que creció
-      // en junio no puede mostrar julio lleno en la reunión de marzo.
+      // El "total" de cada reunión es su padrón: a quiénes les tocaba estar
+      // ESA noche, según la foto que la base congeló (ver src/utils/asistencia).
+      //
+      // Antes se calculaba con r.timestamp, que es cuándo se anotó y no cuándo
+      // quedó aprobada, y sólo con las inscripciones vivas de hoy. Las dos
+      // cosas lo dejaban corto: en S2 2026 había 8 reuniones con más presentes
+      // que "total", o sea con un porcentaje arriba del 100%.
+      //
+      // Los presentes se cuentan contra ese mismo padrón, y no contra las
+      // inscripciones vivas: si no, quien vino y después se dio de baja
+      // desaparecía del numerador pero seguía en el denominador, que es el
+      // problema que todo esto viene a cerrar.
+      const padrones = new Map<string, Set<string>>();
       const reuniones: { fecha: string; presentes: number; total: number }[] = filasAsistencia.map((a: any) => {
+        const padron = padronDeReunion(a, aprobadas);
+        padrones.set(a.date, padron);
         const presentesRaw = Array.isArray(a.present_members) ? a.present_members.map(String) : [];
-        const presentesValidos = presentesRaw.filter((id: string) => idsValidos.has(id));
-        const totalEnEsaFecha = aprobadas.reduce((acc: number, r: any) => {
-          const yaEstabaInscripto = !r.timestamp || r.timestamp.slice(0, 10) <= a.date;
-          if (!yaEstabaInscripto) return acc;
-          return acc + (r.partner_data ? 2 : 1);
-        }, 0);
-        return { fecha: a.date, presentes: presentesValidos.length, total: totalEnEsaFecha };
+        const presentesDelPadron = presentesRaw.filter((id: string) => padron.has(id));
+        return { fecha: a.date, presentes: presentesDelPadron.length, total: padron.size };
       });
 
       const reportaAsistencia = reuniones.length > 0;
@@ -7306,13 +7445,21 @@ export const supabaseService = {
         const nombre = `${r.first_name || ''} ${r.last_name || ''}`.trim() || 'Sin nombre';
         const nombrePareja = pd ? `${pd.firstName || ''} ${pd.lastName || ''}`.trim() : undefined;
 
-        // Reuniones cargadas desde que ESTA persona se inscribió — alguien
-        // que entró en abril no puede deber las reuniones de marzo.
-        const reunionesDelPeriodo = filasAsistencia.filter(
-            (a: any) => !r.timestamp || a.date >= r.timestamp.slice(0, 10)
-        );
         const idTitular = String(r.id);
         const idPareja = `${r.id}-partner`;
+
+        // Las reuniones a las que le tocaba ir: las que tienen a esta
+        // inscripción en su padrón, por el titular o por la pareja. Alguien
+        // que entró en abril no puede deber las reuniones de marzo.
+        //
+        // Antes esto miraba r.timestamp, que es cuándo se anotó y no cuándo
+        // quedó aprobada; entre una fecha y la otra hay reuniones que no le
+        // tocaban y le contaban igual.
+        const reunionesDelPeriodo = filasAsistencia.filter((a: any) => {
+          const padron = padrones.get(a.date);
+          if (!padron) return false;
+          return padron.has(idTitular) || (!!pd && padron.has(idPareja));
+        });
         // "Asistió" = vino al menos uno de los dos de la pareja. La
         // inscripción es UNA sola fila y así se muestra en la tabla; el
         // detalle por persona vive en Constancia de los miembros, en la

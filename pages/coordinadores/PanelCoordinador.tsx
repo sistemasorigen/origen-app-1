@@ -69,6 +69,15 @@ const tortaDePersonas = (grupos: GrupoConDatos[]): TortaDeTramos => {
             vecesPorId.set(clave, (vecesPorId.get(clave) || 0) + 1);
         }));
 
+        // A cuántas reuniones le tocaba ir a cada uno. No son las que cargó el
+        // grupo: quien entró en la semana 6 no tiene en contra las cinco que
+        // no le tocaban, y así puede llegar a "A todas".
+        const posiblesPorId = new Map<string, number>();
+        d.reportes.forEach(r => r.padron.forEach(id => {
+            const clave = String(id);
+            posiblesPorId.set(clave, (posiblesPorId.get(clave) || 0) + 1);
+        }));
+
         (d.grupo.registrations || []).forEach(r => {
             // Sólo aprobadas, la misma base que el indicador "Inscriptos" y
             // que el tablero de reportes: así el total de esta torta y el de
@@ -79,7 +88,7 @@ const tortaDePersonas = (grupos: GrupoConDatos[]): TortaDeTramos => {
                 const acc = porPersona.get(clave) || { veces: 0, posibles: 0, sinCarga: false };
                 if (cargadas > 0) {
                     acc.veces += vecesPorId.get(id) || 0;
-                    acc.posibles += cargadas;
+                    acc.posibles += posiblesPorId.get(id) || 0;
                 } else {
                     acc.sinCarga = true;
                 }

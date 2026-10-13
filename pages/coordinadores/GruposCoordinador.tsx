@@ -229,12 +229,14 @@ const LineaDeAsistencia: React.FC<{ dato: GrupoConDatos; inscriptos: number }> =
  * que no sabemos: es la diferencia entre un cero y un dato que falta.
  */
 const AsistenciaDePersonas: React.FC<{
-    personas: { presentes: number }[];
+    personas: { presentes: number; reuniones: number }[];
     reuniones: number;
 }> = ({ personas, reuniones }) => {
     const torta = useMemo(() => armarTorta(personas.map(p => ({
         veces: p.presentes,
-        completo: reuniones > 0 && p.presentes >= reuniones,
+        // Contra las reuniones que le tocaban a cada uno, no contra las que
+        // cargó el grupo.
+        completo: p.reuniones > 0 && p.presentes >= p.reuniones,
     }))), [personas, reuniones]);
 
     if (torta.total === 0) return null;
@@ -476,8 +478,10 @@ const FichaGrupo: React.FC<{
     // Cada inscripción aprobada son una o dos personas. La asistencia se
     // cuenta por persona, con el mismo id que guarda group_attendance.
     const personas = useMemo(() => {
-        const reuniones = dato.reportes.length;
         const presentesDe = (id: string) => dato.reportes.filter(r => r.ids.includes(id)).length;
+        // Las reuniones que le tocaban a ESTA persona, no las que cargó el
+        // grupo: quien entró en junio no debe las de marzo.
+        const reunionesDe = (id: string) => dato.reportes.filter(r => r.padron.includes(id)).length;
 
         const lista: {
             claveFila: string;
@@ -500,7 +504,7 @@ const FichaGrupo: React.FC<{
                 esPareja: false,
                 pendiente,
                 presentes: presentesDe(String(r.id)),
-                reuniones,
+                reuniones: reunionesDe(String(r.id)),
             });
 
             if (r.partnerData) {
@@ -511,7 +515,7 @@ const FichaGrupo: React.FC<{
                     esPareja: true,
                     pendiente,
                     presentes: presentesDe(`${r.id}-partner`),
-                    reuniones,
+                    reuniones: reunionesDe(`${r.id}-partner`),
                 });
             }
         });
