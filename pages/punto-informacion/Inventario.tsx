@@ -1,157 +1,156 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
-import { AlertCircle, Trash2, Package, PlusCircle, Search } from 'lucide-react';
+import { InfoPointProduct, ProductType } from '../../types';
+import { Trash2, Plus, Search, Package } from 'lucide-react';
+
+/**
+ * El inventario del Punto.
+ *
+ * Es la percha vista desde el mostrador, y la pregunta es siempre la misma:
+ * ¿queda talle 2?, ¿qué se está por acabar? Por eso la lista va agrupada por
+ * remeras y buzos, del talle 1 al más alto, y lo único que grita es lo que
+ * está por terminarse.
+ *
+ * Antes eran dos pantallas distintas —una tabla en la compu y tarjetas altas
+ * con rótulos "PRECIO" y "STOCK" en el teléfono— y los talles salían en el
+ * orden en que venían de la base, así que el 10 podía caer entre el 1 y el 2.
+ */
+
+const CLASES = [ProductType.REMERA, ProductType.BUZO];
+
+/** Del talle 1 al más alto. El talle es texto: se compara como número. */
+const porTalle = (a: InfoPointProduct, b: InfoPointProduct) =>
+    (parseInt(a.size, 10) || 0) - (parseInt(b.size, 10) || 0);
+
+const precio = (valor: number) => `$${(valor ?? 0).toLocaleString('es-AR')}`;
+
+/**
+ * Cómo está un talle. Los tonos son los mismos con los que la app avisa
+ * cosas en todas partes: suaves, no alarmas.
+ */
+const estadoDe = (p: InfoPointProduct) => {
+    const stock = p.stock ?? 0;
+    if (stock <= 0) return { pastilla: 'bg-red-50 text-red-700', nota: 'Sin stock', notaColor: 'text-red-600' };
+    if (stock <= (p.minStock ?? 0)) return { pastilla: 'bg-amber-50 text-amber-700', nota: 'Quedan pocos', notaColor: 'text-amber-600' };
+    return { pastilla: 'bg-slate-100 text-slate-700', nota: '', notaColor: '' };
+};
 
 const Inventory: React.FC = () => {
     const navigate = useNavigate();
     const { products, deleteProduct } = useStore();
-    const [filterType, setFilterType] = useState('ALL');
 
-    const filtered = products.filter(p => {
-        if (filterType === 'ALL') return true;
-        return p.type === filterType;
-    });
+    // Remeras primero, buzos después, y adentro del 1 al más alto.
+    const grupos = useMemo(
+        () => CLASES
+            .map(clase => ({
+                clase,
+                items: products.filter(p => p.type === clase).sort(porTalle),
+            }))
+            .filter(g => g.items.length > 0),
+        [products],
+    );
 
-    const handleDelete = async (code: string, e: React.MouseEvent) => {
+    const borrar = async (p: InfoPointProduct, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        await deleteProduct(code);
+        if (!window.confirm(`¿Eliminar ${p.type} talle ${p.size} del inventario?`)) return;
+        await deleteProduct(p.code);
     };
 
     return (
-        <div className="space-y-6 animate-fadeIn pb-24 md:pb-0 p-1">
-            {/* Header Controls */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 px-1 md:px-0 pt-4 md:pt-0">
-                <div className="md:hidden w-full">
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Filtros</span>
+        <div className="animate-fadeIn">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-5 pt-5 pb-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 className="text-[22px] font-bold tracking-tight text-black leading-none">Inventario</h2>
+                        <p className="text-sm text-slate-500 mt-1.5">
+                            Lo que hay en el mostrador, talle por talle.
+                        </p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                        <button
+                            onClick={() => navigate('/punto-de-informacion?view=SEARCH')}
+                            className="flex-1 sm:flex-none px-4 sm:px-5 py-3.5 bg-slate-100 text-black font-semibold text-sm rounded-full hover:bg-slate-200 active:scale-[0.99] transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+                        >
+                            <Search className="w-4 h-4" />
+                            Buscar
+                        </button>
+                        <button
+                            onClick={() => navigate('/punto-de-informacion?view=NEW_PRODUCT')}
+                            className="flex-1 sm:flex-none px-4 sm:px-5 py-3.5 bg-black text-white font-semibold text-sm rounded-full hover:bg-neutral-800 active:scale-[0.99] transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Nuevo producto
+                        </button>
+                    </div>
                 </div>
 
-                {/* Filter */}
-                <select
-                    value={filterType}
-                    onChange={e => setFilterType(e.target.value)}
-                    className="w-full md:w-auto px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-bold outline-none focus:border-black shadow-sm transition-colors cursor-pointer"
-                >
-                    <option value="ALL">Todo el Inventario</option>
-                    <option value="Remeras">Remeras</option>
-                    <option value="Buzos">Buzos</option>
-                </select>
-
-                {/* Acciones — antes vivían como ítems sueltos
-                    del Menú Principal, ahora integradas acá */}
-                <div className="flex gap-2 w-full md:w-auto">
-                    <button
-                        onClick={() => navigate('/punto-de-informacion?view=SEARCH')}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 bg-white text-slate-600 text-xs font-bold uppercase tracking-widest rounded-lg shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
-                    >
-                        <Search className="w-4 h-4" />
-                        Buscar
-                    </button>
-                    <button
-                        onClick={() => navigate('/punto-de-informacion?view=NEW_PRODUCT')}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-black text-white text-xs font-bold uppercase tracking-widest rounded-lg shadow-sm hover:bg-slate-800 transition-colors"
-                    >
-                        <PlusCircle className="w-4 h-4" />
-                        Nuevo Producto
-                    </button>
-                </div>
-            </div>
-
-            {/* Desktop Table (Hidden on Mobile) */}
-            <div className="hidden md:block rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Producto</th>
-                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Talle</th>
-                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Stock</th>
-                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Precio</th>
-                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {filtered.map(p => {
-                            const lowStock = p.stock <= p.minStock;
-                            return (
-                                <tr key={p.code} className={`transition-colors hover:bg-slate-50/80 ${lowStock ? 'bg-red-50/30' : 'bg-white'}`}>
-                                    <td className="px-4 py-3 align-middle font-black text-sm text-slate-900 uppercase">{p.type}</td>
-                                    <td className="px-4 py-3 align-middle">
-                                        <span className="inline-block text-[10px] text-slate-500 font-bold uppercase tracking-wide bg-slate-100 px-1.5 py-px rounded border border-slate-200">
-                                            Talle {p.size}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3 align-middle">
-                                        <div className={`flex items-center gap-1.5 text-sm font-black tabular-nums ${lowStock ? 'text-red-600' : 'text-slate-900'}`}>
-                                            {lowStock && <AlertCircle className="w-4 h-4" />}
-                                            {p.stock}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 align-middle text-sm font-bold text-slate-700 tabular-nums">${p.price}</td>
-                                    <td className="px-4 py-3 align-middle text-right">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => handleDelete(p.code, e)}
-                                            className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors"
-                                            title="Eliminar producto"
-                                            aria-label={`Eliminar ${p.type} talle ${p.size}`}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* MOBILE FEED */}
-            <div className="md:hidden space-y-3 px-1">
-                {filtered.map(p => {
-                    const lowStock = p.stock <= p.minStock;
+                {grupos.map(({ clase, items }) => {
+                    const total = items.reduce((n, p) => n + (p.stock ?? 0), 0);
                     return (
-                        <div key={p.code} className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${lowStock ? 'border-red-200 bg-red-50/20' : 'border-slate-200'}`}>
-                            <div className="flex items-start justify-between gap-2">
-                                <div>
-                                    <h3 className="font-black text-base uppercase leading-tight text-slate-900">{p.type}</h3>
-                                    <span className="inline-block mt-1 text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase font-bold tracking-wide border border-slate-200">
-                                        Talle {p.size}
-                                    </span>
-                                </div>
-                                <button
-                                    onClick={(e) => handleDelete(p.code, e)}
-                                    className="shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors"
-                                    aria-label={`Eliminar ${p.type} talle ${p.size}`}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
+                        <section key={clase}>
+                            {/* La cabecera separa y además cuenta: de un vistazo,
+                                cuántas hay de cada cosa. */}
+                            <h3 className="sticky top-0 z-10 px-5 sm:px-6 py-2 bg-slate-50/95 backdrop-blur border-y border-slate-100 flex items-center justify-between gap-3 text-[13px] font-semibold text-slate-500">
+                                <span>{clase}</span>
+                                <span className="tabular-nums font-normal text-slate-400">{total} en total</span>
+                            </h3>
 
-                            <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-3">
-                                <div>
-                                    <p className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-0.5">Precio</p>
-                                    <p className="text-sm font-black text-slate-900 tabular-nums">${p.price}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-0.5">Stock</p>
-                                    <div className={`flex items-center gap-1 text-sm font-black tabular-nums ${lowStock ? 'text-red-600' : 'text-slate-900'}`}>
-                                        {lowStock && <AlertCircle className="w-3.5 h-3.5" />}
-                                        {p.stock}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                            <ul className="divide-y divide-slate-100">
+                                {items.map(p => {
+                                    const estado = estadoDe(p);
+                                    return (
+                                        <li key={p.code} className="px-5 sm:px-6 py-3 flex items-center gap-3 hover:bg-slate-50/60 transition-colors">
+                                            <div className="min-w-0 flex-1">
+                                                <h4 className="font-semibold text-[15px] text-black leading-tight">Talle {p.size}</h4>
+                                                <p className="flex items-center gap-2 mt-0.5 text-[13px] text-slate-400 tabular-nums">
+                                                    <span>{precio(p.price)}</span>
+                                                    {estado.nota && (
+                                                        <span className={`font-medium ${estado.notaColor}`}>{estado.nota}</span>
+                                                    )}
+                                                </p>
+                                            </div>
+
+                                            <span className={`shrink-0 min-w-[44px] text-center rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums ${estado.pastilla}`}>
+                                                {p.stock ?? 0}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                onClick={e => borrar(p, e)}
+                                                className="shrink-0 w-9 h-9 -mr-1.5 flex items-center justify-center rounded-full text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                aria-label={`Eliminar ${p.type} talle ${p.size}`}
+                                            >
+                                                <Trash2 className="w-4 h-4 pointer-events-none" />
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </section>
                     );
                 })}
-            </div>
 
-            {filtered.length === 0 && (
-                <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-                    <Package className="w-12 h-12 mx-auto text-slate-300 mb-4" />
-                    <p className="text-slate-500 font-bold text-sm uppercase tracking-wide">No se encontraron productos</p>
-                </div>
-            )}
+                {products.length === 0 && (
+                    <div className="flex flex-col items-center text-center px-6 py-16 border-t border-slate-100">
+                        <span className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                            <Package className="w-6 h-6 text-slate-400" />
+                        </span>
+                        <h3 className="text-lg font-bold tracking-tight text-black">El inventario está vacío</h3>
+                        <p className="text-sm text-slate-500 mt-1.5 mb-6 max-w-xs">
+                            Creá la primera remera o el primer buzo y después cargá cuántos hay.
+                        </p>
+                        <button
+                            onClick={() => navigate('/punto-de-informacion?view=NEW_PRODUCT')}
+                            className="px-5 py-3.5 bg-black text-white font-semibold text-sm rounded-full hover:bg-neutral-800 active:scale-[0.99] transition-all flex items-center gap-2"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Crear el primero
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
