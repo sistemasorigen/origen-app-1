@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useStore } from '../../store';
 import { InfoPointProduct, ProductType } from '../../types';
-import { Trash2, Plus, Search, Package } from 'lucide-react';
+import { Trash2, Plus, Search, Package, ChevronDown } from 'lucide-react';
 
 /**
  * El inventario del Punto.
@@ -15,6 +16,10 @@ import { Trash2, Plus, Search, Package } from 'lucide-react';
  * Antes eran dos pantallas distintas —una tabla en la compu y tarjetas altas
  * con rótulos "PRECIO" y "STOCK" en el teléfono— y los talles salían en el
  * orden en que venían de la base, así que el 10 podía caer entre el 1 y el 2.
+ *
+ * Los dos grupos arrancan cerrados: con veinte talles cargados, abrir la
+ * pantalla y ver dos barras —con cuántas hay de cada cosa— es más rápido que
+ * ver veinte filas y buscar. El que necesita el detalle, lo despliega.
  */
 
 const CLASES = [ProductType.REMERA, ProductType.BUZO];
@@ -39,6 +44,14 @@ const estadoDe = (p: InfoPointProduct) => {
 const Inventory: React.FC = () => {
     const navigate = useNavigate();
     const { products, deleteProduct } = useStore();
+    const sinMovimiento = useReducedMotion();
+    // Cerrados al entrar: adentro está el detalle, y el detalle se pide.
+    const [abiertos, setAbiertos] = useState<string[]>([]);
+
+    const alternar = (clase: string) =>
+        setAbiertos(previos => previos.includes(clase)
+            ? previos.filter(c => c !== clase)
+            : [...previos, clase]);
 
     // Remeras primero, buzos después, y adentro del 1 al más alto.
     const grupos = useMemo(
@@ -85,16 +98,41 @@ const Inventory: React.FC = () => {
 
                 {grupos.map(({ clase, items }) => {
                     const total = items.reduce((n, p) => n + (p.stock ?? 0), 0);
+                    const abierto = abiertos.includes(clase);
+                    const sinStock = items.filter(p => (p.stock ?? 0) <= (p.minStock ?? 0)).length;
                     return (
                         <section key={clase}>
-                            {/* La cabecera separa y además cuenta: de un vistazo,
-                                cuántas hay de cada cosa. */}
-                            <h3 className="sticky top-0 z-10 px-5 sm:px-6 py-2 bg-slate-50/95 backdrop-blur border-y border-slate-100 flex items-center justify-between gap-3 text-[13px] font-semibold text-slate-500">
-                                <span>{clase}</span>
-                                <span className="tabular-nums font-normal text-slate-400">{total} en total</span>
+                            {/* La barra separa, cuenta y abre: de un vistazo,
+                                cuántas hay de cada cosa y cuántas se están por
+                                acabar, sin desplegar nada. */}
+                            <h3 className="sticky top-0 z-10">
+                                <button
+                                    type="button"
+                                    onClick={() => alternar(clase)}
+                                    aria-expanded={abierto}
+                                    aria-controls={`talles-${clase}`}
+                                    className="w-full px-5 sm:px-6 py-3 bg-slate-50/95 backdrop-blur border-y border-slate-100 flex items-center gap-3 text-[13px] font-semibold text-slate-500 hover:text-black hover:bg-slate-100/95 transition-colors"
+                                >
+                                    <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition-transform duration-200 ${abierto ? 'rotate-180' : ''}`} />
+                                    <span className="flex-1 text-left text-black">{clase}</span>
+                                    {sinStock > 0 && !abierto && (
+                                        <span className="rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[11px] font-semibold tabular-nums">
+                                            {sinStock} por acabarse
+                                        </span>
+                                    )}
+                                    <span className="tabular-nums font-normal text-slate-400">{total} en total</span>
+                                </button>
                             </h3>
 
-                            <ul className="divide-y divide-slate-100">
+                            <AnimatePresence initial={false}>
+                            {abierto && (
+                            <motion.ul
+                                id={`talles-${clase}`}
+                                initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                                transition={{ duration: sinMovimiento ? 0 : 0.2, ease: 'easeOut' }}
+                                className="divide-y divide-slate-100 overflow-hidden">
                                 {items.map(p => {
                                     const estado = estadoDe(p);
                                     return (
@@ -124,7 +162,9 @@ const Inventory: React.FC = () => {
                                         </li>
                                     );
                                 })}
-                            </ul>
+                            </motion.ul>
+                            )}
+                            </AnimatePresence>
                         </section>
                     );
                 })}
