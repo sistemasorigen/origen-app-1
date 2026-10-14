@@ -363,6 +363,28 @@
       box-shadow: none;
     }
 
+    /* Formularios del Punto de Información. El override global de arriba le
+       pone a todo campo un borde slate-300 y su propio radio; acá los campos
+       son más altos, con borde slate-200 y esquinas rounded-xl, y el foco se
+       marca con el negro de la app en vez del azul del navegador. Scopeado
+       por id, que le gana al !important global por especificidad. */
+    #punto-formulario input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    #punto-formulario select,
+    #punto-formulario textarea {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 0.75rem;
+    }
+
+    #punto-formulario input:focus,
+    #punto-formulario select:focus,
+    #punto-formulario textarea:focus {
+      outline: none !important;
+      border-color: #0f172a !important;
+      box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+    }
+
     /* Tablero de /reportes/gcx — el override global de arriba le pone borde
        slate y radio 0.5rem a todo campo, y en esta pantalla eso se ve como
        un cuadro ajeno adentro de las tarjetas (el buscador de la tabla

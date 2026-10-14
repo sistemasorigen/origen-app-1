@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { AppProvider, useStore } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
+import { puedeEntrarAlPunto } from '../../services/authUtils';
 import { ProductType, INFO_POINT_SIZES } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
-import { ArrowLeft, Shirt, Loader2 } from 'lucide-react';
+import {
+    PantallaFormulario, Campo, ParDeCampos, BotonGuardar, Opciones, campo,
+} from '../../components/info-point/FormularioDelPunto';
+
+const VOLVER = '/punto-de-informacion?view=LOANS';
 
 const PaginaNuevoPrestamoContent: React.FC = () => {
     const navigate = useNavigate();
@@ -13,102 +19,107 @@ const PaginaNuevoPrestamoContent: React.FC = () => {
         lenderName: '',
         lenderSurname: '',
         itemType: ProductType.REMERA,
-        itemSize: '1'
+        itemSize: '1',
     });
-    const [isSaving, setIsSaving] = useState(false);
+    const [guardando, setGuardando] = useState(false);
 
-    const handleCreate = async (e: React.FormEvent) => {
+    const guardar = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSaving(true);
+        setGuardando(true);
         try {
             await addLoan({
                 id: safeUUID(),
                 ...form,
                 loanDate: new Date().toISOString(),
-                status: 'ACTIVE'
+                status: 'ACTIVE',
             });
-            showNotification('¡Préstamo registrado exitosamente!');
-            navigate('/punto-de-informacion?view=LOANS');
+            showNotification(`${form.itemType} talle ${form.itemSize} para ${form.lenderName}.`);
+            navigate(VOLVER);
         } catch (error) {
             console.error(error);
-            showNotification('Error al crear préstamo', 'error');
+            showNotification('No se pudo registrar el préstamo.', 'error');
         } finally {
-            setIsSaving(false);
+            setGuardando(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-            <div className="max-w-lg mx-auto">
-                <button
-                    onClick={() => navigate('/punto-de-informacion?view=LOANS')}
-                    className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-400 hover:text-black transition-colors mb-6"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    Préstamos
-                </button>
+        <PantallaFormulario
+            volverA={VOLVER}
+            volverTexto="Préstamos"
+            titulo="Prestar una prenda"
+            bajada="Queda anotada como no devuelta hasta que vuelva al mostrador."
+        >
+            <form onSubmit={guardar} className="space-y-4">
+                <ParDeCampos>
+                    <Campo etiqueta="Nombre" para="prestamo-nombre">
+                        <input
+                            id="prestamo-nombre" type="text" autoComplete="given-name" required
+                            placeholder="Marta"
+                            value={form.lenderName}
+                            onChange={e => setForm({ ...form, lenderName: e.target.value })}
+                            className={campo}
+                        />
+                    </Campo>
+                    <Campo etiqueta="Apellido" para="prestamo-apellido">
+                        <input
+                            id="prestamo-apellido" type="text" autoComplete="family-name" required
+                            placeholder="Suárez"
+                            value={form.lenderSurname}
+                            onChange={e => setForm({ ...form, lenderSurname: e.target.value })}
+                            className={campo}
+                        />
+                    </Campo>
+                </ParDeCampos>
 
-                <div className="bg-white p-6 md:p-8 border border-slate-200 rounded-lg shadow-sm">
-                    <h1 className="font-black text-xl mb-6 text-slate-900 uppercase tracking-tight flex items-center gap-2 border-b border-slate-200 pb-4">
-                        <Shirt className="w-6 h-6 text-slate-400" />
-                        Nuevo Préstamo
-                    </h1>
+                {/* Dos opciones: se tocan, no se despliegan. */}
+                <Campo etiqueta="Qué se lleva">
+                    <Opciones
+                        etiquetaGrupo="Remera o buzo"
+                        valor={form.itemType}
+                        opciones={Object.values(ProductType).map(t => ({ valor: t }))}
+                        onElegir={v => setForm({ ...form, itemType: v as ProductType })}
+                    />
+                </Campo>
 
-                    <form onSubmit={handleCreate} className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="prestamo-lenderName" className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">Nombre</label>
-                                <input id="prestamo-lenderName" type="text" autoComplete="given-name" placeholder="Nombre" required value={form.lenderName} onChange={e => setForm({ ...form, lenderName: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                            </div>
-                            <div>
-                                <label htmlFor="prestamo-lenderSurname" className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">Apellido</label>
-                                <input id="prestamo-lenderSurname" type="text" autoComplete="family-name" placeholder="Apellido" required value={form.lenderSurname} onChange={e => setForm({ ...form, lenderSurname: e.target.value })} className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                            </div>
-                        </div>
+                <Campo etiqueta="Talle" para="prestamo-talle">
+                    <select
+                        id="prestamo-talle"
+                        className={`${campo} cursor-pointer`}
+                        value={form.itemSize}
+                        onChange={e => setForm({ ...form, itemSize: e.target.value })}
+                    >
+                        {INFO_POINT_SIZES.map(s => <option key={s} value={s}>Talle {s}</option>)}
+                    </select>
+                </Campo>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">Prenda</label>
-                                <select
-                                    className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-bold text-slate-900 focus:border-black transition-colors cursor-pointer"
-                                    value={form.itemType}
-                                    onChange={e => setForm({ ...form, itemType: e.target.value as ProductType })}
-                                >
-                                    {Object.values(ProductType).map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">Talle</label>
-                                <select
-                                    className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none text-sm font-bold text-slate-900 focus:border-black transition-colors cursor-pointer"
-                                    value={form.itemSize}
-                                    onChange={e => setForm({ ...form, itemSize: e.target.value })}
-                                >
-                                    {INFO_POINT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={isSaving}
-                            className="w-full py-3 bg-black text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-slate-800 transition-colors mt-4 disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                            Prestado
-                        </button>
-                    </form>
+                <div className="pt-2">
+                    <BotonGuardar guardando={guardando}>Anotar el préstamo</BotonGuardar>
                 </div>
-            </div>
-        </div>
+            </form>
+        </PantallaFormulario>
     );
 };
 
-// useStore requiere el store del Punto de Info. Esta página vive
-// como ruta suelta (fuera de PuntoInformacion.tsx), así que provee
-// su propio AppProvider — mismo patrón que PuntoInformacion.
+// useStore pide el store del Punto, y esta ruta es suelta: trae el suyo.
+//
+// Y el mismo portero que las de movimientos: se llega por link, sin pasar por
+// el panel, así que el permiso del panel no la cubre. Mientras el perfil está
+// en camino no se decide nada: `user` todavía es null y rebotaría a quien sí
+// tiene permiso.
 const PaginaNuevoPrestamo: React.FC = () => {
-    const { user } = useAuth();
+    const { user, isLoadingSession, isLoadingProfile } = useAuth();
+
+    if (isLoadingSession || isLoadingProfile) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center gap-2 text-slate-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm font-medium">Cargando</span>
+            </div>
+        );
+    }
+    if (!puedeEntrarAlPunto(user)) return <Navigate to="/" replace />;
+
     return (
         <AppProvider currentUser={user}>
             <PaginaNuevoPrestamoContent />

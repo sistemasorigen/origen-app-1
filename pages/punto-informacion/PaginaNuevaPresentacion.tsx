@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { AppProvider, useStore } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
+import { puedeEntrarAlPunto } from '../../services/authUtils';
 import { PendingStatus } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
 import { formatDateForInput } from '../../services/dateUtils';
-import { ArrowLeft, Baby, Loader2 } from 'lucide-react';
+import {
+    PantallaFormulario, Campo, ParDeCampos, BotonGuardar, campo,
+} from '../../components/info-point/FormularioDelPunto';
+
+const VOLVER = '/punto-de-informacion?view=PRESENTATIONS';
 
 const PaginaNuevaPresentacionContent: React.FC = () => {
     const navigate = useNavigate();
@@ -18,159 +24,176 @@ const PaginaNuevaPresentacionContent: React.FC = () => {
         motherName: '', motherSurname: '',
         fatherName: '', fatherSurname: '',
         email: '', phone: '',
-        scheduledDate: formatDateForInput(new Date().toISOString())
+        scheduledDate: formatDateForInput(new Date().toISOString()),
     });
-    const [isSaving, setIsSaving] = useState(false);
+    const [guardando, setGuardando] = useState(false);
 
     useEffect(() => {
-        if (editId) {
-            const existing = presentations.find(p => p.id === editId);
-            if (existing) {
-                setForm({
-                    childName: existing.childName, childSurname: existing.childSurname,
-                    motherName: existing.motherName, motherSurname: existing.motherSurname,
-                    fatherName: existing.fatherName, fatherSurname: existing.fatherSurname,
-                    email: existing.email, phone: existing.phone,
-                    scheduledDate: formatDateForInput(existing.scheduledDate)
-                });
-            }
+        if (!editId) return;
+        const existente = presentations.find(p => p.id === editId);
+        if (existente) {
+            setForm({
+                childName: existente.childName, childSurname: existente.childSurname,
+                motherName: existente.motherName, motherSurname: existente.motherSurname,
+                fatherName: existente.fatherName, fatherSurname: existente.fatherSurname,
+                email: existente.email, phone: existente.phone,
+                scheduledDate: formatDateForInput(existente.scheduledDate),
+            });
         }
     }, [editId, presentations]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const guardar = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSaving(true);
+        setGuardando(true);
         try {
             if (editId) {
-                const existing = presentations.find(p => p.id === editId);
-                if (existing) {
-                    await updatePresentation({ ...existing, ...form });
-                    showNotification('¡Datos de presentación actualizados!');
+                const existente = presentations.find(p => p.id === editId);
+                if (existente) {
+                    await updatePresentation({ ...existente, ...form });
+                    showNotification('Datos actualizados.');
                 }
             } else {
                 await addPresentation({
                     id: safeUUID(),
                     ...form,
                     isPending: 1,
-                    status: PendingStatus.PENDING
+                    status: PendingStatus.PENDING,
                 });
-                showNotification('¡Presentación agendada exitosamente!');
+                showNotification(`${form.childName} quedó en la agenda.`);
             }
-            navigate('/punto-de-informacion?view=PRESENTATIONS');
+            navigate(VOLVER);
         } finally {
-            setIsSaving(false);
+            setGuardando(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-            <div className="max-w-lg mx-auto">
-                <button
-                    onClick={() => navigate('/punto-de-informacion?view=PRESENTATIONS')}
-                    className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-400 hover:text-black transition-colors mb-6"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    Presentaciones
-                </button>
-
-                <div className="bg-white p-6 md:p-8 border border-slate-200 rounded-lg shadow-sm">
-                    <h1 className="font-black text-xl mb-6 text-slate-900 uppercase tracking-tight flex items-center gap-2 border-b border-slate-200 pb-4">
-                        <Baby className="w-6 h-6 text-slate-400" />
-                        {editId ? 'Editar Presentación' : 'Nueva Presentación'}
-                    </h1>
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-1 border-b border-dashed border-slate-200 pb-3">
-                            <span className="text-xs font-bold text-slate-900 uppercase tracking-widest">Datos del Niño/a</span>
-                            <div className="grid grid-cols-2 gap-2 mt-1">
-                                <div>
-                                    <label htmlFor="pres-childName" className="sr-only">Nombre del niño/a</label>
-                                    <input id="pres-childName" type="text" autoComplete="off" placeholder="Nombre" required value={form.childName} onChange={e => setForm({ ...form, childName: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                </div>
-                                <div>
-                                    <label htmlFor="pres-childSurname" className="sr-only">Apellido del niño/a</label>
-                                    <input id="pres-childSurname" type="text" autoComplete="off" placeholder="Apellido" required value={form.childSurname} onChange={e => setForm({ ...form, childSurname: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Madre</span>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label htmlFor="pres-motherName" className="sr-only">Nombre de la madre</label>
-                                    <input id="pres-motherName" type="text" autoComplete="off" placeholder="Nombre" value={form.motherName} onChange={e => setForm({ ...form, motherName: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                </div>
-                                <div>
-                                    <label htmlFor="pres-motherSurname" className="sr-only">Apellido de la madre</label>
-                                    <input id="pres-motherSurname" type="text" autoComplete="off" placeholder="Apellido" value={form.motherSurname} onChange={e => setForm({ ...form, motherSurname: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Padre</span>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label htmlFor="pres-fatherName" className="sr-only">Nombre del padre</label>
-                                    <input id="pres-fatherName" type="text" autoComplete="off" placeholder="Nombre" value={form.fatherName} onChange={e => setForm({ ...form, fatherName: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                </div>
-                                <div>
-                                    <label htmlFor="pres-fatherSurname" className="sr-only">Apellido del padre</label>
-                                    <input id="pres-fatherSurname" type="text" autoComplete="off" placeholder="Apellido" value={form.fatherSurname} onChange={e => setForm({ ...form, fatherSurname: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <label htmlFor="pres-scheduledDate" className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Fecha Agendada</label>
+        <PantallaFormulario
+            volverA={VOLVER}
+            volverTexto="Presentaciones"
+            titulo={editId ? 'Editar la presentación' : 'Agendar una presentación'}
+            bajada={editId ? undefined : 'Queda en la agenda hasta que la marques como realizada.'}
+        >
+            <form onSubmit={guardar} className="space-y-6">
+                <div className="space-y-4">
+                    <ParDeCampos>
+                        <Campo etiqueta="Nombre del nene o la nena" para="pres-nombre">
                             <input
-                                id="pres-scheduledDate"
-                                type="date"
-                                required
-                                value={form.scheduledDate}
-                                onChange={e => setForm({ ...form, scheduledDate: e.target.value })}
-                                className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors"
+                                id="pres-nombre" type="text" required placeholder="Mía"
+                                value={form.childName}
+                                onChange={e => setForm({ ...form, childName: e.target.value })}
+                                className={campo}
                             />
-                        </div>
+                        </Campo>
+                        <Campo etiqueta="Apellido" para="pres-apellido">
+                            <input
+                                id="pres-apellido" type="text" required placeholder="Fernández"
+                                value={form.childSurname}
+                                onChange={e => setForm({ ...form, childSurname: e.target.value })}
+                                className={campo}
+                            />
+                        </Campo>
+                    </ParDeCampos>
 
-                        <div className="pt-2 space-y-2 border-t border-dashed border-slate-200">
-                            <div className="space-y-1 mt-2">
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Contacto</span>
-                                <div>
-                                    <label htmlFor="pres-email" className="sr-only">Email de contacto</label>
-                                    <input id="pres-email" type="email" autoComplete="email" placeholder="Email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors" />
-                                </div>
-                                <div>
-                                    <label htmlFor="pres-phone" className="sr-only">Teléfono de contacto</label>
-                                    <input id="pres-phone" type="tel" autoComplete="tel" placeholder="Teléfono" required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-black transition-colors mt-2" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-2 pt-4">
-                            <button
-                                type="submit"
-                                disabled={isSaving}
-                                className="flex-1 py-3 bg-black text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                {editId ? 'Guardar' : 'Agendar'}
-                            </button>
-                        </div>
-                    </form>
+                    <Campo etiqueta="Fecha" para="pres-fecha" ayuda="Se puede cambiar después.">
+                        <input
+                            id="pres-fecha" type="date" required
+                            value={form.scheduledDate}
+                            onChange={e => setForm({ ...form, scheduledDate: e.target.value })}
+                            className={campo}
+                        />
+                    </Campo>
                 </div>
-            </div>
-        </div>
+
+                {/* Los padres van juntos y aparte: es el bloque que se completa
+                    mirando a la familia, no al nene. */}
+                <div className="space-y-4 pt-5 border-t border-slate-100">
+                    <h2 className="text-[15px] font-semibold text-black">Los papás</h2>
+
+                    <ParDeCampos>
+                        <Campo etiqueta="Nombre de la mamá" para="pres-mama">
+                            <input
+                                id="pres-mama" type="text" placeholder="Ana"
+                                value={form.motherName}
+                                onChange={e => setForm({ ...form, motherName: e.target.value })}
+                                className={campo}
+                            />
+                        </Campo>
+                        <Campo etiqueta="Apellido" para="pres-mama-apellido">
+                            <input
+                                id="pres-mama-apellido" type="text" placeholder="Fernández"
+                                value={form.motherSurname}
+                                onChange={e => setForm({ ...form, motherSurname: e.target.value })}
+                                className={campo}
+                            />
+                        </Campo>
+                    </ParDeCampos>
+
+                    <ParDeCampos>
+                        <Campo etiqueta="Nombre del papá" para="pres-papa">
+                            <input
+                                id="pres-papa" type="text" placeholder="Luis"
+                                value={form.fatherName}
+                                onChange={e => setForm({ ...form, fatherName: e.target.value })}
+                                className={campo}
+                            />
+                        </Campo>
+                        <Campo etiqueta="Apellido" para="pres-papa-apellido">
+                            <input
+                                id="pres-papa-apellido" type="text" placeholder="Fernández"
+                                value={form.fatherSurname}
+                                onChange={e => setForm({ ...form, fatherSurname: e.target.value })}
+                                className={campo}
+                            />
+                        </Campo>
+                    </ParDeCampos>
+
+                    <Campo etiqueta="Teléfono" para="pres-telefono" ayuda="Para avisarles si cambia la fecha.">
+                        <input
+                            id="pres-telefono" type="tel" inputMode="tel" required placeholder="11 5555 0000"
+                            value={form.phone}
+                            onChange={e => setForm({ ...form, phone: e.target.value })}
+                            className={campo}
+                        />
+                    </Campo>
+
+                    <Campo etiqueta="Email" para="pres-email">
+                        <input
+                            id="pres-email" type="email" inputMode="email" required placeholder="nombre@email.com"
+                            value={form.email}
+                            onChange={e => setForm({ ...form, email: e.target.value })}
+                            className={campo}
+                        />
+                    </Campo>
+                </div>
+
+                <BotonGuardar guardando={guardando}>
+                    {editId ? 'Guardar los cambios' : 'Agendar la presentación'}
+                </BotonGuardar>
+            </form>
+        </PantallaFormulario>
     );
 };
 
-// Wrapper que provee el Store Context — mismo patrón
-// que PuntoInformacion.tsx usa para sus vistas
-// internas, ya que esta página es una ruta suelta
-// que no hereda ese Provider.
+// useStore pide el store del Punto, y esta ruta es suelta: trae el suyo.
+//
+// Y el mismo portero que las de movimientos: se llega por link, sin pasar por
+// el panel, así que el permiso del panel no la cubre. Mientras el perfil está
+// en camino no se decide nada: `user` todavía es null y rebotaría a quien sí
+// tiene permiso.
 const PaginaNuevaPresentacion: React.FC = () => {
-    const { user } = useAuth();
+    const { user, isLoadingSession, isLoadingProfile } = useAuth();
+
+    if (isLoadingSession || isLoadingProfile) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center gap-2 text-slate-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm font-medium">Cargando</span>
+            </div>
+        );
+    }
+    if (!puedeEntrarAlPunto(user)) return <Navigate to="/" replace />;
+
     return (
         <AppProvider currentUser={user}>
             <PaginaNuevaPresentacionContent />
