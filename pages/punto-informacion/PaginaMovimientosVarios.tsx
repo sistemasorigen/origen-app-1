@@ -54,25 +54,15 @@ const stockResultante = (stock: number, linea: Linea): number => {
     return linea.cantidad;
 };
 
-/**
- * Verde entra, rojo sale, ámbar corrige: los mismos tres colores que usan los
- * iconos del historial, para que signifiquen lo mismo en todo el módulo.
- */
-const COLORES: Record<string, { relleno: string; marco: string; texto: string }> = {
-    [MovementType.IN]: { relleno: 'bg-emerald-600', marco: 'border-emerald-500', texto: 'text-emerald-700' },
-    [MovementType.OUT]: { relleno: 'bg-red-600', marco: 'border-red-500', texto: 'text-red-700' },
-    [MovementType.ADJUST]: { relleno: 'bg-amber-500', marco: 'border-amber-500', texto: 'text-amber-700' },
-};
-
 const TIPOS = [MovementType.IN, MovementType.OUT, MovementType.ADJUST];
 const PAGOS: MedioDePago[] = ['Efectivo', 'Mercado Pago'];
 
 /**
  * El selector de acción: una sola píldora que se despliega.
  *
- * Cerrada dice que falta elegir; abierta muestra las tres acciones, cada una
- * con el punto de su color. Ya elegida, la píldora se llena con ese color, así
- * la lista entera se lee de un vistazo: verde entra, rojo sale, ámbar corrige.
+ * Cerrada dice que falta elegir; abierta muestra las tres acciones. Ya
+ * elegida, la píldora se llena de negro —lo mismo que marca elegido en todo el
+ * panel—, así se ve de un vistazo cuáles productos llevan algo cargado.
  *
  * Se despliega hacia abajo empujando la ficha, no flotando por encima: la
  * lista del teléfono recorta lo que se salga, y un menú flotante cerca del
@@ -88,7 +78,6 @@ const SelectorDeAccion: React.FC<{
     onQuitar: () => void;
 }> = ({ producto, tipo, agotado, abierto, onAbrir, onElegir, onQuitar }) => {
     const sinMovimiento = useReducedMotion();
-    const color = tipo ? COLORES[tipo] : null;
 
     return (
         <div onKeyDown={e => { if (e.key === 'Escape') onAbrir(false); }}>
@@ -97,8 +86,8 @@ const SelectorDeAccion: React.FC<{
                 aria-expanded={abierto}
                 aria-haspopup="true"
                 onClick={() => onAbrir(!abierto)}
-                className={`w-full h-12 px-4 flex items-center justify-between gap-2 rounded-xl border text-xs font-bold uppercase tracking-tight transition-colors ${color
-                    ? `${color.relleno} border-transparent text-white`
+                className={`w-full h-12 px-4 flex items-center justify-between gap-2 rounded-xl border text-xs font-bold uppercase tracking-tight transition-colors ${tipo
+                    ? 'bg-slate-900 border-slate-900 text-white'
                     : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300'
                     }`}
             >
@@ -135,7 +124,6 @@ const SelectorDeAccion: React.FC<{
                                             : 'text-slate-700 hover:bg-slate-50'
                                             }`}
                                     >
-                                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${COLORES[t].relleno} ${bloqueada ? 'opacity-25' : ''}`} />
                                         <span className="flex-1 truncate">{t}</span>
                                         {bloqueada && (
                                             <span className="shrink-0 text-[10px] font-medium normal-case tracking-normal text-slate-400">
@@ -257,7 +245,6 @@ const FilaProducto: React.FC<{
     const agotado = stock <= 0;
     const lim = linea ? limites(linea.tipo, stock) : null;
     const queda = linea ? stockResultante(stock, linea) : stock;
-    const color = linea ? COLORES[linea.tipo] : null;
     const esSalida = linea && linea.tipo === MovementType.OUT;
 
     // El signo lo pone el tipo, no el dedo: en una salida alcanza con teclear
@@ -276,7 +263,7 @@ const FilaProducto: React.FC<{
     return (
         <li
             aria-label={producto.name}
-            className={`p-4 bg-white transition-colors md:rounded-xl md:border ${color ? `${color.marco} md:border-2` : 'md:border-slate-200'}`}
+            className={`p-4 bg-white transition-colors md:rounded-xl md:border ${linea ? 'md:border-slate-400' : 'md:border-slate-200'}`}
         >
             <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2 min-w-0">
@@ -347,7 +334,7 @@ const FilaProducto: React.FC<{
                         {/* La consecuencia no es un dato más que cargar: va
                             chica, abajo y sin marco. */}
                         <p className="mt-2 text-center text-[11px] font-medium text-slate-400">
-                            Queda en <span className={`font-bold ${color ? color.texto : ''}`}>{queda}</span>
+                            Queda en <span className="font-bold text-slate-700">{queda}</span>
                             {linea.tipo === MovementType.ADJUST && queda === stock && ', igual que ahora'}
                         </p>
 
