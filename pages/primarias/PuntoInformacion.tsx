@@ -6,7 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppProvider, useStore } from '../../store';
 import { ViewState, User, UserRole } from '../../types';
-import { hasRole } from '../../services/authUtils';
+import { hasRole, puedeEntrarAlPunto } from '../../services/authUtils';
 import NeoSidebar from '../punto-informacion/NeoBarraLateral';
 import SystemLoginModal from '../../components/modals/ModalLoginSistema';
 import { db } from '../../services/dbService';
@@ -87,13 +87,8 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         }
     }, [currentUser]);
 
-    const canEnterPanel = !!authorizedUser && (
-        hasRole(authorizedUser, [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO]) ||
-        (hasRole(authorizedUser, UserRole.ANFITRION) && (
-            authorizedUser.linkedGroupId === 'PUNTO' ||
-            authorizedUser.volunteerRoles?.includes('PUNTO')
-        ))
-    );
+    // La misma regla que preguntan las páginas sueltas de movimientos.
+    const canEnterPanel = puedeEntrarAlPunto(authorizedUser);
 
     // Deep linking
     //

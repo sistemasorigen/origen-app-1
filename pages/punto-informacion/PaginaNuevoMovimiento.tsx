@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { AppProvider, useStore } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { MovementType, ProductType, INFO_POINT_SIZES } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
+import { puedeEntrarAlPunto } from '../../services/authUtils';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
 const PaginaNuevoMovimientoContent: React.FC = () => {
@@ -182,7 +183,22 @@ const PaginaNuevoMovimientoContent: React.FC = () => {
 // internas, ya que esta página es una ruta suelta
 // que no hereda ese Provider.
 const PaginaNuevoMovimiento: React.FC = () => {
-    const { user } = useAuth();
+    const { user, isLoadingSession, isLoadingProfile } = useAuth();
+
+    // Ruta suelta: se llega por link, sin pasar por el panel, así que el
+    // permiso del panel no la cubre y pregunta por su cuenta. Mientras el
+    // perfil está en camino no se decide nada: `user` todavía es null y
+    // rebotaría a quien sí tiene permiso.
+    if (isLoadingSession || isLoadingProfile) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center gap-2 text-slate-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm font-bold uppercase tracking-widest">Cargando</span>
+            </div>
+        );
+    }
+    if (!puedeEntrarAlPunto(user)) return <Navigate to="/" replace />;
+
     return (
         <AppProvider currentUser={user}>
             <PaginaNuevoMovimientoContent />

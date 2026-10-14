@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { AppProvider, useStore } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { MovementType, ProductType, InfoPointProduct, Movement } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
+import { puedeEntrarAlPunto } from '../../services/authUtils';
 import { ArrowLeft, Loader2, PackageOpen, Minus, Plus, Trash2, ChevronDown, Check } from 'lucide-react';
 
 /**
@@ -570,8 +571,23 @@ const MovimientosVariosContent: React.FC = () => {
 
 // Mismo envoltorio que PaginaNuevoMovimiento: esta ruta es suelta y no hereda
 // el Provider del panel.
+//
+// Y el mismo portero: se llega por link, sin pasar por el panel, así que el
+// permiso del panel no la cubre. Mientras el perfil está en camino no se
+// decide nada: `user` todavía es null y rebotaría a quien sí tiene permiso.
 const PaginaMovimientosVarios: React.FC = () => {
-    const { user } = useAuth();
+    const { user, isLoadingSession, isLoadingProfile } = useAuth();
+
+    if (isLoadingSession || isLoadingProfile) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center gap-2 text-slate-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm font-bold uppercase tracking-widest">Cargando</span>
+            </div>
+        );
+    }
+    if (!puedeEntrarAlPunto(user)) return <Navigate to="/" replace />;
+
     return (
         <AppProvider currentUser={user}>
             <MovimientosVariosContent />

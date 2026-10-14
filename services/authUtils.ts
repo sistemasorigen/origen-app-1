@@ -67,6 +67,29 @@ export function hasRole(
 }
 
 /**
+ * ¿Puede entrar al Punto de Información?
+ *
+ * Es la regla del panel: los cuatro roles del Punto, y los anfitriones sólo
+ * si además sirven ahí. Vive acá —y no adentro de la pantalla del panel—
+ * porque las páginas de movimientos son rutas sueltas: se entra por link,
+ * sin pasar por el panel, así que tienen que poder preguntar lo mismo.
+ */
+export function puedeEntrarAlPunto(user: User | null | undefined): boolean {
+    if (!user) return false;
+    if (hasRole(user, [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN_PUNTO,
+        UserRole.ENCARGADO_PUNTO,
+        UserRole.VOLUNTARIO_INFO,
+    ])) return true;
+
+    return hasRole(user, UserRole.ANFITRION) && (
+        user.linkedGroupId === 'PUNTO' ||
+        (user.volunteerRoles || []).includes('PUNTO')
+    );
+}
+
+/**
  * Check if user has ALL of the specified roles.
  * SUPER_ADMIN automatically passes.
  */
