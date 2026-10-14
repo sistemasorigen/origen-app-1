@@ -51,8 +51,7 @@ const NewProduct: React.FC = () => {
     return (
         <div id="punto-formulario" className="animate-fadeIn">
             <div className="w-full max-w-lg mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
-                <h2 className="text-[22px] font-bold tracking-tight text-black leading-none">Nuevo producto</h2>
-                <p className="text-sm text-slate-500 mt-1.5 mb-6">
+                <p className="text-sm text-slate-500 mb-6">
                     Un talle de remera o de buzo. El nombre y el código se arman solos.
                 </p>
 

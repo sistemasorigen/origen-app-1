@@ -21,16 +21,16 @@ export const TarjetaDelPunto: React.FC<{
     children: React.ReactNode;
 }> = ({ titulo, bajada, acciones, children }) => (
     <div className="animate-fadeIn">
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        {/* El nombre de la sección lo pone la cabecera del panel, arriba:
+            repetirlo acá adentro se leía como un error. Queda para el lector
+            de pantalla, que necesita saber de qué es esta región. */}
+        <section aria-label={titulo} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-5 pt-5 pb-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h2 className="text-[22px] font-bold tracking-tight text-black leading-none">{titulo}</h2>
-                    {bajada && <p className="text-sm text-slate-500 mt-1.5">{bajada}</p>}
-                </div>
+                {bajada ? <p className="text-sm text-slate-500">{bajada}</p> : <span />}
                 {acciones && <div className="flex gap-2 shrink-0">{acciones}</div>}
             </div>
             {children}
-        </div>
+        </section>
     </div>
 );
 

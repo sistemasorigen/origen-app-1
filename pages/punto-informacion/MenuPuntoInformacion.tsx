@@ -1,21 +1,39 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ViewState, UserRole, User as UserType } from '../../types';
-import { Package, CalendarRange, ArrowLeftRight, Baby, User, Settings, Layers, Tag, FileText, Megaphone } from 'lucide-react';
+import {
+    Package, CalendarRange, ArrowLeftRight, Baby, User, Settings,
+    Layers, Tag, FileText, Megaphone, ChevronRight,
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasRole } from '../../services/authUtils';
+
+/**
+ * La puerta del Punto de Información.
+ *
+ * Era una grilla de doce tarjetas con un icono y una palabra en mayúscula:
+ * entraban cuatro y media en la pantalla, y para saber qué había adentro de
+ * cada una había que entrar. Quien lo abre muchas veces es alguien que
+ * empieza hoy.
+ *
+ * Ahora es una lista, como el resto del módulo: cada función ocupa una línea,
+ * entran ocho de una, y abajo del nombre dice qué se hace ahí. El color del
+ * círculo no es decoración: es lo que después se reconoce de un vistazo, y
+ * por eso cada función tiene el suyo.
+ */
 
 interface InfoPointMenuProps {
     onNavigate: (view: ViewState) => void;
     currentUser?: UserType | null;
 }
 
-interface MenuItem {
+interface Funcion {
     id: string;
     label: string;
+    descripcion: string;
     icon: React.ElementType;
-    color: string;
+    fondo: string;
+    tinta: string;
     externalRoute?: string;
     roles?: UserRole[];
 }
@@ -23,92 +41,85 @@ interface MenuItem {
 const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: propUser }) => {
     const navigate = useNavigate();
     const { user: globalUser } = useAuth();
+    const usuario = propUser || globalUser;
 
-    const userToUse = propUser || globalUser;
-
-    const allMenuItems: MenuItem[] = [
-        { id: 'SUMMARY', label: 'Resumen', icon: Layers, color: 'bg-indigo-100' },
-        { id: 'ANNOUNCEMENTS', label: 'Anuncios', icon: Megaphone, color: 'bg-yellow-100' },
-        { id: 'INVENTORY', label: 'Inventario', icon: Package, color: 'bg-emerald-100' },
-        { id: 'MOVEMENTS', label: 'Movimientos', icon: ArrowLeftRight, color: 'bg-blue-100' },
-        { id: 'LOANS', label: 'Préstamos', icon: Tag, color: 'bg-orange-100' },
-        { id: 'EVENTS', label: 'Eventos', icon: CalendarRange, color: 'bg-amber-100' },
-        { id: 'BAPTISMS', label: 'Bautismos', icon: User, color: 'bg-cyan-100' },
-        { id: 'PRESENTATIONS', label: 'Presentaciones', icon: Baby, color: 'bg-purple-100' },
+    const todas: Funcion[] = [
+        { id: 'SUMMARY', label: 'Resumen', descripcion: 'Cómo viene el día', icon: Layers, fondo: 'bg-indigo-50', tinta: 'text-indigo-600' },
+        { id: 'MOVEMENTS', label: 'Movimientos', descripcion: 'Entradas, salidas y ajustes', icon: ArrowLeftRight, fondo: 'bg-sky-50', tinta: 'text-sky-600' },
+        { id: 'INVENTORY', label: 'Inventario', descripcion: 'Qué hay de cada talle', icon: Package, fondo: 'bg-emerald-50', tinta: 'text-emerald-600' },
+        { id: 'LOANS', label: 'Préstamos', descripcion: 'Qué salió y todavía no volvió', icon: Tag, fondo: 'bg-orange-50', tinta: 'text-orange-600' },
+        { id: 'ANNOUNCEMENTS', label: 'Anuncios', descripcion: 'Lo que se muestra en la app', icon: Megaphone, fondo: 'bg-amber-50', tinta: 'text-amber-600' },
+        { id: 'EVENTS', label: 'Eventos', descripcion: 'La agenda de lo que viene', icon: CalendarRange, fondo: 'bg-rose-50', tinta: 'text-rose-600' },
+        { id: 'BAPTISMS', label: 'Bautismos', descripcion: 'Quién se anotó y quién ya se bautizó', icon: User, fondo: 'bg-cyan-50', tinta: 'text-cyan-600' },
+        { id: 'PRESENTATIONS', label: 'Presentaciones', descripcion: 'Los chicos que se van a presentar', icon: Baby, fondo: 'bg-violet-50', tinta: 'text-violet-600' },
         {
             id: 'REPORTES',
             label: 'Reportes',
+            descripcion: 'Los números del Punto',
             icon: FileText,
-            color: 'bg-teal-100',
+            fondo: 'bg-teal-50',
+            tinta: 'text-teal-600',
             externalRoute: '/reportes',
             roles: [
                 UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO,
-                UserRole.REPORTES, UserRole.PASTOR, UserRole.ENCARGADO_GRUPOS, UserRole.ADMIN_GROUPS
-            ]
+                UserRole.REPORTES, UserRole.PASTOR, UserRole.ENCARGADO_GRUPOS, UserRole.ADMIN_GROUPS,
+            ],
         },
         {
             id: 'ADMIN_PANEL',
             label: 'Configuración',
+            descripcion: 'Ajustes del Punto',
             icon: Settings,
-            color: 'bg-gray-200',
-            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO]
+            fondo: 'bg-slate-100',
+            tinta: 'text-slate-600',
+            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO],
         },
     ];
 
-    // Filter menu items based on user permissions
-    const menuItems = allMenuItems.filter(item => {
-        // Public items (no roles defined) are visible to everyone
-        if (!item.roles || item.roles.length === 0) {
-            return true;
-        }
-
-        // Restricted items require user to be logged in
-        if (!userToUse) return false;
-
-        // Explicitly check for SUPER_ADMIN as a safeguard
-        if (userToUse.roles?.includes(UserRole.SUPER_ADMIN) || userToUse.role === UserRole.SUPER_ADMIN) {
-            return true;
-        }
-
-        // Use standard role check
-        return hasRole(userToUse, item.roles);
+    const visibles = todas.filter(item => {
+        if (!item.roles || item.roles.length === 0) return true;
+        if (!usuario) return false;
+        // SUPER_ADMIN entra a todo, por las dudas de que el rol venga sólo en roles[].
+        if (usuario.roles?.includes(UserRole.SUPER_ADMIN) || usuario.role === UserRole.SUPER_ADMIN) return true;
+        return hasRole(usuario, item.roles);
     });
 
-    const handleItemClick = (item: MenuItem) => {
-        if (item.externalRoute) {
-            navigate(item.externalRoute);
-        } else {
-            onNavigate(item.id as ViewState);
-        }
+    const abrir = (item: Funcion) => {
+        if (item.externalRoute) navigate(item.externalRoute);
+        else onNavigate(item.id as ViewState);
     };
 
     return (
-        <div className="space-y-6 pt-4 pb-20 overflow-x-hidden bg-slate-50 min-h-full">
-            <div className="px-4">
-                <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900 mb-1">Menú Principal</h2>
-                <p className="text-slate-500 text-sm font-medium">Selecciona una opción para gestionar</p>
+        <div className="bg-slate-50 min-h-full pt-5 pb-24">
+            <div className="px-4 mb-5">
+                <h2 className="text-[26px] font-bold tracking-tight text-black leading-none">Punto de Información</h2>
+                <p className="text-sm text-slate-500 mt-2">Elegí qué querés hacer.</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 px-4 pr-5">
-                {menuItems.map((item) => (
-                    <button
-                        key={item.id}
-                        id={`tour-infopoint-${item.id.toLowerCase()}`}
-                        onClick={() => handleItemClick(item)}
-                        className="flex flex-col items-center justify-center p-5 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-slate-300 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
-                    >
-                        <div className={`p-3 rounded-full ${item.color} mb-3`}>
-                            <item.icon className="w-6 h-6 text-slate-700" />
-                        </div>
-                        <span className="font-bold text-xs uppercase tracking-wide text-slate-700 text-center">
-                            {item.label}
-                        </span>
-                    </button>
-                ))}
+            <div className="px-4">
+                <ul className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden divide-y divide-slate-100">
+                    {visibles.map(item => (
+                        <li key={item.id}>
+                            <button
+                                id={`tour-infopoint-${item.id.toLowerCase()}`}
+                                onClick={() => abrir(item)}
+                                className="w-full px-4 py-3.5 flex items-center gap-3.5 text-left hover:bg-slate-50 active:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-inset"
+                            >
+                                <span className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center ${item.fondo} ${item.tinta}`}>
+                                    <item.icon className="w-5 h-5" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block font-semibold text-[15px] text-black leading-tight">{item.label}</span>
+                                    <span className="block text-[13px] text-slate-400 truncate mt-0.5">{item.descripcion}</span>
+                                </span>
+                                <ChevronRight className="shrink-0 w-4 h-4 text-slate-300" aria-hidden="true" />
+                            </button>
+                        </li>
+                    ))}
+                </ul>
             </div>
         </div>
     );
 };
 
 export default InfoPointMenu;
-

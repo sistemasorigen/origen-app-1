@@ -48,7 +48,7 @@ const DESKTOP_NAV: { id: ViewState; label: string; roles: UserRole[] }[] = [
     { id: 'INVENTORY', label: 'Inventario', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
     { id: 'MOVEMENTS', label: 'Movimientos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
 
-    { id: 'PRESENTATIONS', label: 'Presentación', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
+    { id: 'PRESENTATIONS', label: 'Presentaciones', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
     { id: 'LOANS', label: 'Préstamos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
 ];
 
@@ -330,7 +330,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                         </button>
 
                         <div className="flex flex-col items-center min-w-[16rem]">
-                            <h1 className="text-2xl lg:text-3xl font-black uppercase tracking-tight text-slate-900 text-center leading-none">
+                            <h1 className="text-2xl font-bold tracking-tight text-black text-center leading-none">
                                 {currentNavLabel}
                             </h1>
                         </div>

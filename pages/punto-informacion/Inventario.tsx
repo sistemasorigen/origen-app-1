@@ -62,12 +62,9 @@ const Inventory: React.FC = () => {
         <div className="animate-fadeIn">
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-5 pt-5 pb-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <h2 className="text-[22px] font-bold tracking-tight text-black leading-none">Inventario</h2>
-                        <p className="text-sm text-slate-500 mt-1.5">
-                            Lo que hay en el mostrador, talle por talle.
-                        </p>
-                    </div>
+                    <p className="text-sm text-slate-500">
+                        Lo que hay en el mostrador, talle por talle.
+                    </p>
                     <div className="flex gap-2 shrink-0">
                         <button
                             onClick={() => navigate('/punto-de-informacion?view=SEARCH')}
