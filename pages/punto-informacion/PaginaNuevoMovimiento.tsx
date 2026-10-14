@@ -18,6 +18,12 @@ const PaginaNuevoMovimientoContent: React.FC = () => {
     });
     const [isSaving, setIsSaving] = useState(false);
 
+    // Un "Ajuste" no suma ni resta: deja el stock EN ese número. Por eso el 0
+    // es un valor válido y necesario —"no queda ninguna"—, y hasta ahora el
+    // campo no lo aceptaba. En Entrada y Salida, en cambio, un 0 no movería
+    // nada: sólo dejaría un movimiento vacío en el historial.
+    const esAjuste = form.moveType === MovementType.ADJUST;
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -93,7 +99,14 @@ const PaginaNuevoMovimientoContent: React.FC = () => {
                                     <button
                                         key={type}
                                         type="button"
-                                        onClick={() => setForm({ ...form, moveType: type })}
+                                        onClick={() => setForm(f => ({
+                                            ...f,
+                                            moveType: type,
+                                            // Si venía de un ajuste en 0, Entrada y Salida piden al menos
+                                            // 1: se acomoda acá y no con un cartel del navegador recién al
+                                            // apretar Confirmar.
+                                            quantity: type !== MovementType.ADJUST && !(f.quantity > 0) ? 1 : f.quantity,
+                                        }))}
                                         className={`py-2.5 text-xs font-bold uppercase tracking-tight rounded-lg border transition-colors ${form.moveType === type
                                             ? 'bg-black text-white border-black'
                                             : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
@@ -108,12 +121,17 @@ const PaginaNuevoMovimientoContent: React.FC = () => {
                         <div>
                             <label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 block">Cantidad</label>
                             <input
-                                type="number" min="1"
+                                type="number" min={esAjuste ? 0 : 1}
                                 className="w-full p-3 bg-white border border-slate-300 rounded-lg outline-none font-black text-xl text-slate-900 focus:border-black transition-colors"
                                 value={form.quantity}
                                 onChange={e => setForm({ ...form, quantity: parseInt(e.target.value) })}
                                 required
                             />
+                            {esAjuste && (
+                                <p className="text-[11px] font-medium text-slate-500 mt-1.5">
+                                    El stock queda en este número. Poné 0 si no quedan.
+                                </p>
+                            )}
                         </div>
 
                         {form.moveType === MovementType.OUT && (
