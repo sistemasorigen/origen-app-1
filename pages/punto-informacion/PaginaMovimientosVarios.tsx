@@ -108,9 +108,9 @@ const Desplegable: React.FC<{
                 aria-expanded={abierto}
                 aria-haspopup="true"
                 onClick={() => onAbrir(!abierto)}
-                className={`w-full h-12 px-4 flex items-center justify-between gap-2 rounded-xl border bg-white text-xs font-bold uppercase tracking-tight transition-colors ${valor
-                    ? 'border-slate-300 text-slate-900'
-                    : 'border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300'
+                className={`w-full h-12 px-4 flex items-center justify-between gap-2 rounded-xl border bg-white text-sm font-semibold transition-colors ${valor
+                    ? 'border-slate-300 text-black'
+                    : 'border-slate-200 text-slate-400 hover:text-black hover:border-slate-300'
                     }`}
             >
                 <span className="truncate">{elegida ? (elegida.etiqueta || elegida.valor) : vacio}</span>
@@ -132,7 +132,7 @@ const Desplegable: React.FC<{
                             className="mt-1.5 rounded-xl border border-slate-200 bg-white overflow-hidden divide-y divide-slate-100"
                         >
                             {opciones.length === 0 && (
-                                <p className="px-4 py-3 text-[11px] font-medium text-slate-400">No queda nada para elegir.</p>
+                                <p className="px-4 py-3 text-sm text-slate-400">No queda nada para elegir.</p>
                             )}
                             {opciones.map(o => (
                                 <button
@@ -141,14 +141,14 @@ const Desplegable: React.FC<{
                                     disabled={o.bloqueada}
                                     aria-pressed={valor === o.valor}
                                     onClick={() => onElegir(o.valor)}
-                                    className={`w-full h-12 px-4 flex items-center gap-3 text-left text-xs font-bold uppercase tracking-tight transition-colors ${o.bloqueada
+                                    className={`w-full h-12 px-4 flex items-center gap-3 text-left text-sm font-semibold transition-colors ${o.bloqueada
                                         ? 'text-slate-300 cursor-not-allowed'
-                                        : 'text-slate-700 hover:bg-slate-50'
+                                        : 'text-black hover:bg-slate-50'
                                         }`}
                                 >
                                     <span className="flex-1 truncate">{o.etiqueta || o.valor}</span>
                                     {o.nota && (
-                                        <span className="shrink-0 text-[10px] font-medium normal-case tracking-normal text-slate-400">
+                                        <span className="shrink-0 text-xs font-medium text-slate-400">
                                             {o.nota}
                                         </span>
                                     )}
@@ -201,7 +201,7 @@ const SelectorDeProducto: React.FC<{
                 type="button"
                 aria-expanded={abiertoElCuadro}
                 onClick={() => { if (abiertoElCuadro) cerrarTodo(); else setAbiertoElCuadro(true); }}
-                className="w-full h-14 px-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-900 hover:bg-slate-50 transition-colors"
+                className="w-full h-14 px-5 flex items-center gap-2.5 text-[15px] font-semibold text-black hover:bg-slate-50 transition-colors"
             >
                 <Plus className={`w-4 h-4 shrink-0 transition-transform duration-200 ${abiertoElCuadro ? 'rotate-45' : ''}`} />
                 Seleccionar producto
@@ -246,7 +246,7 @@ const SelectorDeProducto: React.FC<{
                                 type="button"
                                 disabled={!listo}
                                 onClick={() => { if (elegido) { onAgregar(elegido.code); cerrarTodo(); } }}
-                                className="w-full h-12 bg-black text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-black"
+                                className="w-full h-12 bg-black text-white text-sm font-semibold rounded-full hover:bg-neutral-800 active:scale-[0.99] transition-all disabled:opacity-40 disabled:hover:bg-black disabled:active:scale-100"
                             >
                                 Confirmar
                             </button>
@@ -296,15 +296,14 @@ const FichaProducto: React.FC<{
         >
             <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2 min-w-0">
-                    <h3 className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{producto.type}</h3>
-                    <span className="shrink-0 text-[10px] text-slate-500 font-bold uppercase tracking-wide bg-slate-100 px-1.5 py-px rounded border border-slate-200">
+                    <h3 className="font-semibold text-[15px] text-black truncate">{producto.type}</h3>
+                    <span className="shrink-0 text-[11px] font-medium text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">
                         Talle {producto.size}
                     </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                    <p className="text-right">
-                        <span className="font-mono tabular-nums font-black text-base text-slate-900">{stock}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1.5">en stock</span>
+                    <p className="text-right text-[13px] text-slate-400 tabular-nums">
+                        <span className="font-semibold text-slate-600">{stock}</span> en stock
                     </p>
                     <button
                         type="button"
@@ -361,7 +360,7 @@ const FichaProducto: React.FC<{
                                 onChange={e => alEscribir(e.target.value)}
                                 onBlur={acomodar}
                                 aria-label={`Cantidad para ${producto.name}`}
-                                className="flex-1 min-w-0 h-full text-center font-mono tabular-nums text-2xl font-black"
+                                className="flex-1 min-w-0 h-full text-center tabular-nums text-2xl font-semibold"
                             />
                             <button
                                 type="button"
@@ -376,8 +375,8 @@ const FichaProducto: React.FC<{
 
                         {/* La consecuencia no es un dato más que cargar: va
                             chica, abajo y sin marco. */}
-                        <p className="mt-2 text-center text-[11px] font-medium text-slate-400">
-                            Queda en <span className="font-bold text-slate-700">{queda}</span>
+                        <p className="mt-2 text-center text-[13px] text-slate-400">
+                            Queda en <span className="font-semibold text-black">{queda}</span>
                             {linea.tipo === MovementType.ADJUST && queda === stock && ', igual que ahora'}
                         </p>
 
@@ -391,9 +390,9 @@ const FichaProducto: React.FC<{
                                         type="button"
                                         onClick={() => onPago(medio)}
                                         aria-pressed={(linea.pago || 'Efectivo') === medio}
-                                        className={`h-10 text-xs font-bold uppercase tracking-tight rounded-xl border transition-colors ${(linea.pago || 'Efectivo') === medio
-                                            ? 'bg-slate-900 border-slate-900 text-white'
-                                            : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900'
+                                        className={`h-11 text-sm font-semibold rounded-full border transition-colors ${(linea.pago || 'Efectivo') === medio
+                                            ? 'bg-black border-black text-white'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:text-black'
                                             }`}
                                     >
                                         {medio}
@@ -509,32 +508,32 @@ const MovimientosVariosContent: React.FC = () => {
             <div className="w-full max-w-4xl mx-auto p-4 md:p-8 pb-36">
                 <button
                     onClick={() => navigate('/punto-de-informacion?view=MOVEMENTS')}
-                    className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-400 hover:text-black transition-colors mb-6"
+                    className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black transition-colors mb-6"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Movimientos
                 </button>
 
-                <h1 className="font-black text-xl text-slate-900 uppercase tracking-tight">Nuevo movimiento</h1>
-                <p className="text-sm font-medium text-slate-500 mt-1.5 max-w-prose">
+                <h1 className="text-[26px] font-bold tracking-tight text-black leading-none">Nuevo movimiento</h1>
+                <p className="text-sm text-slate-500 leading-relaxed mt-2 max-w-prose">
                     Agregá los productos que se movieron y decí qué pasó con cada uno. Se guardan todos juntos.
                 </p>
 
                 {isLoading && !hayInventario && (
                     <div className="flex items-center justify-center gap-2 py-20 text-slate-400">
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        <span className="text-sm font-bold uppercase tracking-widest">Cargando inventario</span>
+                        <span className="text-sm font-medium">Cargando inventario</span>
                     </div>
                 )}
 
                 {!isLoading && !hayInventario && (
                     <div className="flex flex-col items-center justify-center text-center py-16 px-6 bg-white border border-dashed border-slate-300 rounded-xl mt-6">
                         <PackageOpen className="w-12 h-12 text-slate-300 mb-3" />
-                        <p className="text-sm font-bold uppercase tracking-widest text-slate-500">Todavía no hay productos</p>
-                        <p className="text-sm font-medium text-slate-500 mt-2 mb-5">Creá una remera o un buzo y después volvé a cargar el movimiento.</p>
+                        <h2 className="text-lg font-bold tracking-tight text-black">Todavía no hay productos</h2>
+                        <p className="text-sm text-slate-500 leading-relaxed mt-1.5 mb-6 max-w-xs">Creá una remera o un buzo y después volvé a cargar el movimiento.</p>
                         <button
                             onClick={() => navigate('/punto-de-informacion?view=NEW_PRODUCT')}
-                            className="px-5 py-3 bg-black text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-slate-800 transition-colors"
+                            className="px-5 py-3.5 bg-black text-white text-sm font-semibold rounded-full hover:bg-neutral-800 active:scale-[0.99] transition-all"
                         >
                             Crear producto
                         </button>
@@ -590,14 +589,14 @@ const MovimientosVariosContent: React.FC = () => {
                 <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)]">
                 <div className="w-full max-w-4xl mx-auto px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center gap-4">
                     <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black uppercase tracking-tight text-slate-900 leading-tight">
+                        <p className="text-[15px] font-bold tracking-tight text-black leading-tight">
                             {conAccion.length === 0 ? 'Ningún producto' : conAccion.length === 1 ? '1 producto' : `${conAccion.length} productos`}
                         </p>
                         {lineas.length > 0 && (
                             <button
                                 type="button"
                                 onClick={() => { setLineas([]); setAbierta(null); }}
-                                className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-red-600 transition-colors mt-0.5"
+                                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-400 hover:text-red-600 transition-colors mt-0.5"
                             >
                                 <Trash2 className="w-3 h-3" />
                                 Vaciar
@@ -608,7 +607,7 @@ const MovimientosVariosContent: React.FC = () => {
                         type="button"
                         onClick={guardar}
                         disabled={conAccion.length === 0 || guardando}
-                        className="shrink-0 px-6 py-3.5 bg-black text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-black flex items-center justify-center gap-2"
+                        className="shrink-0 px-6 py-3.5 bg-black text-white text-sm font-semibold rounded-full hover:bg-neutral-800 active:scale-[0.99] transition-all disabled:opacity-40 disabled:hover:bg-black disabled:active:scale-100 flex items-center justify-center gap-2"
                     >
                         {guardando && <Loader2 className="w-4 h-4 animate-spin" />}
                         Guardar
@@ -634,7 +633,7 @@ const PaginaMovimientosVarios: React.FC = () => {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center gap-2 text-slate-400">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm font-bold uppercase tracking-widest">Cargando</span>
+                <span className="text-sm font-medium">Cargando</span>
             </div>
         );
     }
