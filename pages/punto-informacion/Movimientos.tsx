@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { MovementType } from '../../types';
-import { ArrowUpRight, ArrowDownLeft, RefreshCw, Trash2, Plus, CreditCard, Layers } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, RefreshCw, Trash2, Plus, CreditCard } from 'lucide-react';
 
 const Movements: React.FC = () => {
     const navigate = useNavigate();
@@ -21,24 +21,15 @@ const Movements: React.FC = () => {
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
                 <div className="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                     <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500 leading-tight">Historial de movimientos</h2>
-                    <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto">
-                        {/* Dos caminos: uno para un talle suelto, otro para
-                            cuando se movieron varios de una vez. */}
-                        <button
-                            onClick={() => navigate('/punto-de-informacion/movimientos/varios')}
-                            className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white text-slate-600 border border-slate-200 font-bold uppercase text-[11px] tracking-widest rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shrink-0 whitespace-nowrap"
-                        >
-                            <Layers className="w-3.5 h-3.5" />
-                            Varios productos
-                        </button>
-                        <button
-                            onClick={() => navigate('/punto-de-informacion/movimientos/nuevo')}
-                            className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-black text-white font-bold uppercase text-[11px] tracking-widest rounded-lg hover:bg-slate-800 transition-colors shrink-0 whitespace-nowrap"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                            Nuevo movimiento
-                        </button>
-                    </div>
+                    {/* Un solo camino: agregar, descontar y corregir viven
+                        todos adentro de la misma carga. */}
+                    <button
+                        onClick={() => navigate('/punto-de-informacion/movimientos/varios')}
+                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-black text-white font-bold uppercase text-[11px] tracking-widest rounded-lg hover:bg-slate-800 transition-colors w-full sm:w-auto shrink-0 whitespace-nowrap"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Nuevo movimiento
+                    </button>
                 </div>
 
                 <div className="divide-y divide-slate-100">

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { AppProvider, useStore } from '../../store';
@@ -6,33 +7,33 @@ import { useAuth } from '../../contexts/AuthContext';
 import { MovementType, ProductType, InfoPointProduct, Movement } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
 import { puedeEntrarAlPunto } from '../../services/authUtils';
-import { ArrowLeft, Loader2, PackageOpen, Minus, Plus, Trash2, ChevronDown, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, PackageOpen, Minus, Plus, Trash2, ChevronDown, Check, X } from 'lucide-react';
 
 /**
- * Cargar varios movimientos de una vez.
+ * Nuevo movimiento: agregar, descontar o corregir el stock del Punto.
  *
  * Quien la usa está parado detrás del mostrador después de una reunión, con el
- * teléfono en una mano y una pila de remeras en la otra. Por eso la pantalla ES
- * el inventario: no se busca un producto y después se lo agrega a una lista
- * —dos pasos—, se recorre lo que hay y se toca lo que se movió. El mismo toque
- * que dice "esta cambió" dice también qué le pasó.
+ * teléfono en una mano y una pila de remeras en la otra. Arma la lista de lo
+ * que se movió —un talle por vez, como salen de la pila—, dice qué pasó con
+ * cada uno, y guarda todo junto.
  *
- * El alta de a uno (PaginaNuevoMovimiento) queda como está: sigue siendo el
- * camino corto cuando es un solo talle.
+ * La pantalla arranca vacía a propósito: antes mostraba el inventario entero y
+ * había que buscar la ficha entre veinte. Ahora entra sólo lo que se agrega.
  */
 
 type MedioDePago = 'Efectivo' | 'Mercado Pago';
 
-/** Lo que se le cargó a un producto en esta vuelta. */
+/** Un producto agregado a esta carga. Sin `tipo` = agregado pero sin acción. */
 interface Linea {
-    tipo: MovementType;
+    code: string;
+    tipo?: MovementType;
     cantidad: number;
     /** Sólo en las salidas: cada venta se cobra como se cobra. */
     pago?: MedioDePago;
 }
 
 /**
- * Los límites de cada tipo, que son la regla de la casa:
+ * Los límites de cada acción, que son la regla de la casa:
  *
  *   · Entrada suma: desde 1 para arriba.
  *   · Salida sólo descuenta: se escribe en negativo, desde -1 para abajo, y
@@ -57,29 +58,48 @@ const stockResultante = (stock: number, linea: Linea): number => {
 
 const TIPOS = [MovementType.IN, MovementType.OUT, MovementType.ADJUST];
 const PAGOS: MedioDePago[] = ['Efectivo', 'Mercado Pago'];
+const CLASES = [ProductType.REMERA, ProductType.BUZO];
 
 /**
- * El selector de acción: una sola píldora que se despliega.
+ * Remeras antes que buzos, y adentro de cada uno del talle 1 al más alto.
+ * El talle es texto en la base ('1'…'10'), así que se compara como número: si
+ * no, el 10 queda entre el 1 y el 2.
+ */
+const porTalle = (a: InfoPointProduct, b: InfoPointProduct) => {
+    const clase = CLASES.indexOf(a.type) - CLASES.indexOf(b.type);
+    if (clase !== 0) return clase;
+    return (parseInt(a.size, 10) || 0) - (parseInt(b.size, 10) || 0);
+};
+
+// ── Una píldora que se despliega ────────────────────────────────────────
+interface Opcion {
+    valor: string;
+    etiqueta?: string;
+    /** Aclaración chica a la derecha: el stock, o por qué no se puede. */
+    nota?: string;
+    bloqueada?: boolean;
+}
+
+/**
+ * Cerrada dice qué falta elegir; abierta muestra las opciones. Es siempre
+ * blanca: lo que cambia al elegir es el texto, que pasa de gris claro —una
+ * indicación, no un dato— a negro, igual que un campo cuando se completa.
  *
- * Cerrada dice que falta elegir; abierta muestra las tres acciones. La
- * píldora es siempre blanca: lo que cambia al elegir es el texto, que pasa de
- * gris claro —una indicación, no un dato— a negro, igual que un campo cuando
- * se completa.
- *
- * Se despliega hacia abajo empujando la ficha, no flotando por encima: la
+ * Se despliega hacia abajo empujando lo que sigue, no flotando por encima: la
  * lista del teléfono recorta lo que se salga, y un menú flotante cerca del
  * borde de la pantalla se va de cuadro.
  */
-const SelectorDeAccion: React.FC<{
-    producto: InfoPointProduct;
-    tipo: MovementType | null;
-    agotado: boolean;
+const Desplegable: React.FC<{
+    valor: string | null;
+    vacio: string;
+    opciones: Opcion[];
     abierto: boolean;
     onAbrir: (abierto: boolean) => void;
-    onElegir: (tipo: MovementType) => void;
-    onQuitar: () => void;
-}> = ({ producto, tipo, agotado, abierto, onAbrir, onElegir, onQuitar }) => {
+    onElegir: (valor: string) => void;
+    etiqueta: string;
+}> = ({ valor, vacio, opciones, abierto, onAbrir, onElegir, etiqueta }) => {
     const sinMovimiento = useReducedMotion();
+    const elegida = opciones.find(o => o.valor === valor);
 
     return (
         <div onKeyDown={e => { if (e.key === 'Escape') onAbrir(false); }}>
@@ -88,12 +108,12 @@ const SelectorDeAccion: React.FC<{
                 aria-expanded={abierto}
                 aria-haspopup="true"
                 onClick={() => onAbrir(!abierto)}
-                className={`w-full h-12 px-4 flex items-center justify-between gap-2 rounded-xl border bg-white text-xs font-bold uppercase tracking-tight transition-colors ${tipo
+                className={`w-full h-12 px-4 flex items-center justify-between gap-2 rounded-xl border bg-white text-xs font-bold uppercase tracking-tight transition-colors ${valor
                     ? 'border-slate-300 text-slate-900'
                     : 'border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300'
                     }`}
             >
-                <span className="truncate">{tipo || 'Seleccione una acción'}</span>
+                <span className="truncate">{elegida ? (elegida.etiqueta || elegida.valor) : vacio}</span>
                 <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${abierto ? 'rotate-180' : ''}`} />
             </button>
 
@@ -108,46 +128,33 @@ const SelectorDeAccion: React.FC<{
                     >
                         <div
                             role="group"
-                            aria-label={`Acciones para ${producto.name}`}
+                            aria-label={etiqueta}
                             className="mt-1.5 rounded-xl border border-slate-200 bg-white overflow-hidden divide-y divide-slate-100"
                         >
-                            {TIPOS.map(t => {
-                                const bloqueada = t === MovementType.OUT && agotado;
-                                const elegida = tipo === t;
-                                return (
-                                    <button
-                                        key={t}
-                                        type="button"
-                                        disabled={bloqueada}
-                                        aria-pressed={elegida}
-                                        onClick={() => onElegir(t)}
-                                        className={`w-full h-12 px-4 flex items-center gap-3 text-left text-xs font-bold uppercase tracking-tight transition-colors ${bloqueada
-                                            ? 'text-slate-300 cursor-not-allowed'
-                                            : 'text-slate-700 hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        <span className="flex-1 truncate">{t}</span>
-                                        {bloqueada && (
-                                            <span className="shrink-0 text-[10px] font-medium normal-case tracking-normal text-slate-400">
-                                                Sin stock para descontar
-                                            </span>
-                                        )}
-                                        {elegida && <Check className="w-4 h-4 shrink-0 text-slate-400" />}
-                                    </button>
-                                );
-                            })}
-
-                            {/* La salida de emergencia de un toque mal dado. */}
-                            {tipo && (
-                                <button
-                                    type="button"
-                                    onClick={onQuitar}
-                                    className="w-full h-12 px-4 flex items-center gap-3 text-left text-xs font-bold uppercase tracking-tight text-slate-400 hover:text-red-600 hover:bg-slate-50 transition-colors"
-                                >
-                                    <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                                    Quitar de la carga
-                                </button>
+                            {opciones.length === 0 && (
+                                <p className="px-4 py-3 text-[11px] font-medium text-slate-400">No queda nada para elegir.</p>
                             )}
+                            {opciones.map(o => (
+                                <button
+                                    key={o.valor}
+                                    type="button"
+                                    disabled={o.bloqueada}
+                                    aria-pressed={valor === o.valor}
+                                    onClick={() => onElegir(o.valor)}
+                                    className={`w-full h-12 px-4 flex items-center gap-3 text-left text-xs font-bold uppercase tracking-tight transition-colors ${o.bloqueada
+                                        ? 'text-slate-300 cursor-not-allowed'
+                                        : 'text-slate-700 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    <span className="flex-1 truncate">{o.etiqueta || o.valor}</span>
+                                    {o.nota && (
+                                        <span className="shrink-0 text-[10px] font-medium normal-case tracking-normal text-slate-400">
+                                            {o.nota}
+                                        </span>
+                                    )}
+                                    {valor === o.valor && <Check className="w-4 h-4 shrink-0 text-slate-400" />}
+                                </button>
+                            ))}
                         </div>
                     </motion.div>
                 )}
@@ -156,100 +163,120 @@ const SelectorDeAccion: React.FC<{
     );
 };
 
-interface Opcion {
-    valor: string;
-    /** Clases del bloque lleno cuando esta opción está elegida. */
-    relleno: string;
-    bloqueada?: boolean;
-}
-
+// ── Agregar un producto a la carga ──────────────────────────────────────
 /**
- * Una barra de estado: varias respuestas en una sola pieza, con la elegida
- * llena de color.
+ * Primero qué es —remera o buzo—, después el talle, y recién ahí se confirma.
  *
- * No son botones sueltos, a propósito. Tres botones dicen "tres cosas que
- * podés hacer"; una barra dice "una sola decisión, elegí cuál", que es lo que
- * de verdad es. Las separaciones van por debajo del relleno, así la barra se
- * lee como un objeto entero y no como botones pegados.
+ * Los talles que se ofrecen salen del inventario y descuentan lo que ya está
+ * en la carga: no se puede agregar dos veces el mismo, ni uno que no existe.
  */
-const BarraDeEstado: React.FC<{
-    opciones: Opcion[];
-    valor: string | null;
-    onElegir: (valor: string) => void;
-    /** Único por barra: es lo que hace que el relleno se deslice. */
-    idGrupo: string;
-    etiqueta: string;
-    compacta?: boolean;
-}> = ({ opciones, valor, onElegir, idGrupo, etiqueta, compacta }) => {
+const SelectorDeProducto: React.FC<{
+    productos: InfoPointProduct[];
+    yaEnLaCarga: string[];
+    abierta: string | null;
+    onAbrir: (clave: string | null) => void;
+    onAgregar: (code: string) => void;
+}> = ({ productos, yaEnLaCarga, abierta, onAbrir, onAgregar }) => {
     const sinMovimiento = useReducedMotion();
+    const [abiertoElCuadro, setAbiertoElCuadro] = useState(false);
+    const [clase, setClase] = useState<ProductType | null>(null);
+    const [talle, setTalle] = useState<string | null>(null);
+
+    const disponibles = productos.filter(p => !yaEnLaCarga.includes(p.code));
+    const clasesConProductos = CLASES.filter(c => disponibles.some(p => p.type === c));
+    const talles = disponibles.filter(p => p.type === clase).sort(porTalle);
+    const elegido = talles.find(p => p.size === talle);
+    const listo = !!clase && !!elegido;
+
+    const cerrarTodo = () => {
+        setAbiertoElCuadro(false);
+        setClase(null);
+        setTalle(null);
+        onAbrir(null);
+    };
 
     return (
-        <div
-            role="group"
-            aria-label={etiqueta}
-            className={`relative grid rounded-xl border border-slate-200 bg-slate-50 overflow-hidden ${compacta ? 'h-10' : 'h-12'}`}
-            style={{ gridTemplateColumns: `repeat(${opciones.length}, minmax(0, 1fr))` }}
-        >
-            {opciones.slice(1).map((o, i) => (
-                <span
-                    key={`sep-${o.valor}`}
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-2 w-px bg-slate-200"
-                    style={{ left: `${((i + 1) / opciones.length) * 100}%` }}
-                />
-            ))}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <button
+                type="button"
+                aria-expanded={abiertoElCuadro}
+                onClick={() => { if (abiertoElCuadro) cerrarTodo(); else setAbiertoElCuadro(true); }}
+                className="w-full h-14 px-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-900 hover:bg-slate-50 transition-colors"
+            >
+                <Plus className={`w-4 h-4 shrink-0 transition-transform duration-200 ${abiertoElCuadro ? 'rotate-45' : ''}`} />
+                Seleccionar producto
+            </button>
 
-            {opciones.map(o => {
-                const elegida = valor === o.valor;
-                return (
-                    <button
-                        key={o.valor}
-                        type="button"
-                        disabled={o.bloqueada}
-                        aria-pressed={elegida}
-                        onClick={() => onElegir(o.valor)}
-                        className={`relative h-full px-1 text-xs font-bold uppercase tracking-tight transition-colors ${elegida
-                            ? 'text-white'
-                            : o.bloqueada
-                                ? 'text-slate-300 cursor-not-allowed'
-                                : 'text-slate-500 hover:text-slate-900'
-                            }`}
+            <AnimatePresence initial={false}>
+                {abiertoElCuadro && (
+                    <motion.div
+                        initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                        transition={{ duration: sinMovimiento ? 0 : 0.18, ease: 'easeOut' }}
+                        className="overflow-hidden"
                     >
-                        {elegida && (
-                            <motion.span
-                                layoutId={`barra-${idGrupo}`}
-                                aria-hidden="true"
-                                className={`absolute inset-0 ${o.relleno}`}
-                                transition={sinMovimiento ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 42 }}
+                        <div className="p-4 space-y-3 border-t border-slate-100">
+                            <Desplegable
+                                etiqueta="Remeras o buzos"
+                                vacio="Remeras o buzos"
+                                valor={clase}
+                                opciones={clasesConProductos.map(c => ({ valor: c }))}
+                                abierto={abierta === 'nuevo-clase'}
+                                onAbrir={a => onAbrir(a ? 'nuevo-clase' : null)}
+                                onElegir={v => { setClase(v as ProductType); setTalle(null); onAbrir(null); }}
                             />
-                        )}
-                        <span className="relative z-10">{o.valor}</span>
-                    </button>
-                );
-            })}
+
+                            <Desplegable
+                                etiqueta="Talle"
+                                vacio="Talle"
+                                valor={talle}
+                                opciones={talles.map(p => ({
+                                    valor: p.size,
+                                    etiqueta: `Talle ${p.size}`,
+                                    nota: `${p.stock ?? 0} en stock`,
+                                }))}
+                                abierto={abierta === 'nuevo-talle'}
+                                onAbrir={a => onAbrir(a ? 'nuevo-talle' : null)}
+                                onElegir={v => { setTalle(v); onAbrir(null); }}
+                            />
+
+                            {/* No se habilita hasta que estén las dos cosas. */}
+                            <button
+                                type="button"
+                                disabled={!listo}
+                                onClick={() => { if (elegido) { onAgregar(elegido.code); cerrarTodo(); } }}
+                                className="w-full h-12 bg-black text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-black"
+                            >
+                                Confirmar
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
 
-// ── Una ficha del inventario ────────────────────────────────────────────
-const FilaProducto: React.FC<{
+// ── Una ficha de la carga ───────────────────────────────────────────────
+const FichaProducto: React.FC<{
     producto: InfoPointProduct;
-    linea?: Linea;
-    abierto: boolean;
-    onAbrir: (abierto: boolean) => void;
+    linea: Linea;
+    abierta: string | null;
+    onAbrir: (clave: string | null) => void;
     onTipo: (tipo: MovementType) => void;
     onCantidad: (cantidad: number) => void;
     onPago: (pago: MedioDePago) => void;
     onQuitar: () => void;
-}> = ({ producto, linea, abierto, onAbrir, onTipo, onCantidad, onPago, onQuitar }) => {
+}> = ({ producto, linea, abierta, onAbrir, onTipo, onCantidad, onPago, onQuitar }) => {
     const sinMovimiento = useReducedMotion();
     const stock = producto.stock ?? 0;
     const agotado = stock <= 0;
-    const lim = linea ? limites(linea.tipo, stock) : null;
-    const queda = linea ? stockResultante(stock, linea) : stock;
-    const esSalida = linea && linea.tipo === MovementType.OUT;
+    const lim = linea.tipo ? limites(linea.tipo, stock) : null;
+    const queda = linea.tipo ? stockResultante(stock, linea) : stock;
+    const esSalida = linea.tipo === MovementType.OUT;
 
-    // El signo lo pone el tipo, no el dedo: en una salida alcanza con teclear
+    // El signo lo pone la acción, no el dedo: en una salida alcanza con teclear
     // el número y sale en negativo solo.
     const alEscribir = (texto: string) => {
         const n = parseInt(texto.replace(/[^0-9]/g, ''), 10);
@@ -258,40 +285,54 @@ const FilaProducto: React.FC<{
     };
 
     const acomodar = () => {
-        if (!linea || !lim) return;
+        if (!lim) return;
         onCantidad(Math.min(lim.max, Math.max(lim.min, linea.cantidad)));
     };
 
     return (
         <li
             aria-label={producto.name}
-            className={`p-4 bg-white transition-colors md:rounded-xl md:border ${linea ? 'md:border-slate-400' : 'md:border-slate-200'}`}
+            className={`p-4 bg-white transition-colors md:rounded-xl md:border ${linea.tipo ? 'md:border-slate-400' : 'md:border-slate-200'}`}
         >
-            <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2 min-w-0">
                     <h3 className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{producto.type}</h3>
                     <span className="shrink-0 text-[10px] text-slate-500 font-bold uppercase tracking-wide bg-slate-100 px-1.5 py-px rounded border border-slate-200">
                         Talle {producto.size}
                     </span>
                 </div>
-                <p className="shrink-0 text-right">
-                    <span className="font-mono tabular-nums font-black text-base text-slate-900">{stock}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1.5">en stock</span>
-                </p>
+                <div className="flex items-center gap-1 shrink-0">
+                    <p className="text-right">
+                        <span className="font-mono tabular-nums font-black text-base text-slate-900">{stock}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1.5">en stock</span>
+                    </p>
+                    <button
+                        type="button"
+                        onClick={onQuitar}
+                        aria-label={`Quitar ${producto.name} de la carga`}
+                        className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
 
-            <SelectorDeAccion
-                producto={producto}
-                tipo={linea ? linea.tipo : null}
-                agotado={agotado}
-                abierto={abierto}
-                onAbrir={onAbrir}
-                onElegir={onTipo}
-                onQuitar={onQuitar}
+            <Desplegable
+                etiqueta={`Acciones para ${producto.name}`}
+                vacio="Seleccione una acción"
+                valor={linea.tipo || null}
+                opciones={TIPOS.map(t => ({
+                    valor: t,
+                    bloqueada: t === MovementType.OUT && agotado,
+                    nota: t === MovementType.OUT && agotado ? 'Sin stock para descontar' : undefined,
+                }))}
+                abierto={abierta === `accion-${producto.code}`}
+                onAbrir={a => onAbrir(a ? `accion-${producto.code}` : null)}
+                onElegir={v => onTipo(v as MovementType)}
             />
 
             <AnimatePresence initial={false}>
-                {linea && lim && (
+                {linea.tipo && lim && (
                     <motion.div
                         initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
@@ -343,15 +384,21 @@ const FilaProducto: React.FC<{
                         {/* Cada venta se cobra como se cobra: el medio de pago
                             viaja con la salida, no con la carga entera. */}
                         {esSalida && (
-                            <div className="mt-2">
-                                <BarraDeEstado
-                                    compacta
-                                    idGrupo={`${producto.code}-pago`}
-                                    etiqueta={`Cómo pagaron ${producto.name}`}
-                                    valor={linea.pago || 'Efectivo'}
-                                    onElegir={valor => onPago(valor as MedioDePago)}
-                                    opciones={PAGOS.map(p => ({ valor: p, relleno: 'bg-slate-900' }))}
-                                />
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                                {PAGOS.map(medio => (
+                                    <button
+                                        key={medio}
+                                        type="button"
+                                        onClick={() => onPago(medio)}
+                                        aria-pressed={(linea.pago || 'Efectivo') === medio}
+                                        className={`h-10 text-xs font-bold uppercase tracking-tight rounded-xl border transition-colors ${(linea.pago || 'Efectivo') === medio
+                                            ? 'bg-slate-900 border-slate-900 text-white'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900'
+                                            }`}
+                                    >
+                                        {medio}
+                                    </button>
+                                ))}
                             </div>
                         )}
                     </motion.div>
@@ -365,63 +412,60 @@ const FilaProducto: React.FC<{
 const MovimientosVariosContent: React.FC = () => {
     const navigate = useNavigate();
     const { products, addMovements, showNotification, isLoading } = useStore();
-    const [lineas, setLineas] = useState<Record<string, Linea>>({});
-    const [filtro, setFiltro] = useState<'ALL' | ProductType>('ALL');
+    const [lineas, setLineas] = useState<Linea[]>([]);
     const [guardando, setGuardando] = useState(false);
-    // Qué píldora está desplegada. Una sola a la vez: abrir otra cierra la
+    // Qué desplegable está abierto. Uno solo a la vez: abrir otro cierra el
     // anterior, que es lo que uno espera y evita una pantalla llena de menús.
     const [abierta, setAbierta] = useState<string | null>(null);
 
-    const visibles = useMemo(
-        () => products.filter(p => filtro === 'ALL' || p.type === filtro),
-        [products, filtro],
+    const porCodigo = useMemo(() => {
+        const mapa: Record<string, InfoPointProduct> = {};
+        products.forEach(p => { mapa[p.code] = p; });
+        return mapa;
+    }, [products]);
+
+    // Siempre del talle 1 al más alto, sin importar en qué orden se agregaron.
+    const enOrden = useMemo(
+        () => [...lineas].sort((a, b) => {
+            const pa = porCodigo[a.code];
+            const pb = porCodigo[b.code];
+            if (!pa || !pb) return 0;
+            return porTalle(pa, pb);
+        }),
+        [lineas, porCodigo],
     );
 
-    const elegidos = Object.keys(lineas).length;
+    const conAccion = lineas.filter(l => !!l.tipo);
 
-    const cambiarTipo = (p: InfoPointProduct, tipo: MovementType) => {
-        setLineas(prev => {
+    const cambiar = (code: string, cambio: Partial<Linea>) => {
+        setLineas(prev => prev.map(l => (l.code === code ? { ...l, ...cambio } : l)));
+    };
+
+    const elegirTipo = (code: string, tipo: MovementType) => {
+        const stock = porCodigo[code] ? (porCodigo[code].stock ?? 0) : 0;
+        setLineas(prev => prev.map(l => {
+            if (l.code !== code) return l;
             // Si ya era ésa, no se pisa la cantidad que venía cargada.
-            if (prev[p.code] && prev[p.code].tipo === tipo) return prev;
+            if (l.tipo === tipo) return l;
             return {
-                ...prev,
-                [p.code]: {
-                    tipo,
-                    cantidad: limites(tipo, p.stock ?? 0).inicial,
-                    // Casi siempre pagan en efectivo: queda elegido y se
-                    // cambia sólo cuando no fue así.
-                    pago: tipo === MovementType.OUT ? 'Efectivo' : undefined,
-                },
+                ...l,
+                tipo,
+                cantidad: limites(tipo, stock).inicial,
+                // Casi siempre pagan en efectivo: queda elegido y se cambia
+                // sólo cuando no fue así.
+                pago: tipo === MovementType.OUT ? 'Efectivo' : undefined,
             };
-        });
+        }));
         setAbierta(null);
-    };
-
-    const quitar = (code: string) => {
-        setLineas(prev => {
-            const copia = { ...prev };
-            delete copia[code];
-            return copia;
-        });
-        setAbierta(null);
-    };
-
-    const cambiarCantidad = (code: string, cantidad: number) => {
-        setLineas(prev => (prev[code] ? { ...prev, [code]: { ...prev[code], cantidad } } : prev));
-    };
-
-    const cambiarPago = (code: string, pago: MedioDePago) => {
-        setLineas(prev => (prev[code] ? { ...prev, [code]: { ...prev[code], pago } } : prev));
     };
 
     const guardar = async () => {
-        const movimientos: Movement[] = Object.keys(lineas).map(code => {
-            const p = products.find(x => x.code === code);
-            const linea = lineas[code];
+        const movimientos: Movement[] = conAccion.map(linea => {
+            const p = porCodigo[linea.code];
             return {
                 id: safeUUID(),
-                productCode: code,
-                productName: p ? p.name : code,
+                productCode: linea.code,
+                productName: p ? p.name : linea.code,
                 type: linea.tipo,
                 // En pantalla una salida se escribe en negativo, porque es lo
                 // que hace. En la base todas las cantidades son positivas y el
@@ -458,9 +502,11 @@ const MovimientosVariosContent: React.FC = () => {
         }
     };
 
+    const hayInventario = products.length > 0;
+
     return (
-        <div id="punto-lote" className="min-h-screen bg-slate-50 flex flex-col">
-            <div className="flex-1 w-full max-w-4xl mx-auto p-4 md:p-8">
+        <div id="punto-lote" className="min-h-screen bg-slate-50">
+            <div className="w-full max-w-4xl mx-auto p-4 md:p-8 pb-36">
                 <button
                     onClick={() => navigate('/punto-de-informacion?view=MOVEMENTS')}
                     className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-400 hover:text-black transition-colors mb-6"
@@ -469,38 +515,19 @@ const MovimientosVariosContent: React.FC = () => {
                     Movimientos
                 </button>
 
-                <h1 className="font-black text-xl text-slate-900 uppercase tracking-tight">Varios productos</h1>
+                <h1 className="font-black text-xl text-slate-900 uppercase tracking-tight">Nuevo movimiento</h1>
                 <p className="text-sm font-medium text-slate-500 mt-1.5 max-w-prose">
-                    Tocá qué pasó con cada talle que se movió. Se guardan todos juntos.
+                    Agregá los productos que se movieron y decí qué pasó con cada uno. Se guardan todos juntos.
                 </p>
 
-                {products.length > 0 && (
-                    <div className="flex gap-2 mt-6 mb-4">
-                        {([['ALL', 'Todo'], [ProductType.REMERA, 'Remeras'], [ProductType.BUZO, 'Buzos']] as const).map(([valor, etiqueta]) => (
-                            <button
-                                key={valor}
-                                type="button"
-                                onClick={() => setFiltro(valor as 'ALL' | ProductType)}
-                                aria-pressed={filtro === valor}
-                                className={`min-h-[40px] px-4 text-xs font-bold uppercase tracking-widest rounded-lg border transition-colors ${filtro === valor
-                                    ? 'bg-slate-900 text-white border-slate-900'
-                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
-                                    }`}
-                            >
-                                {etiqueta}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {isLoading && products.length === 0 && (
+                {isLoading && !hayInventario && (
                     <div className="flex items-center justify-center gap-2 py-20 text-slate-400">
                         <Loader2 className="w-5 h-5 animate-spin" />
                         <span className="text-sm font-bold uppercase tracking-widest">Cargando inventario</span>
                     </div>
                 )}
 
-                {!isLoading && products.length === 0 && (
+                {!isLoading && !hayInventario && (
                     <div className="flex flex-col items-center justify-center text-center py-16 px-6 bg-white border border-dashed border-slate-300 rounded-xl mt-6">
                         <PackageOpen className="w-12 h-12 text-slate-300 mb-3" />
                         <p className="text-sm font-bold uppercase tracking-widest text-slate-500">Todavía no hay productos</p>
@@ -514,39 +541,62 @@ const MovimientosVariosContent: React.FC = () => {
                     </div>
                 )}
 
+                {hayInventario && (
+                    <div className="mt-6">
+                        <SelectorDeProducto
+                            productos={products}
+                            yaEnLaCarga={lineas.map(l => l.code)}
+                            abierta={abierta}
+                            onAbrir={setAbierta}
+                            onAgregar={code => setLineas(prev => (
+                                prev.some(l => l.code === code) ? prev : [...prev, { code, cantidad: 1 }]
+                            ))}
+                        />
+                    </div>
+                )}
+
                 {/* En el teléfono es una lista corrida; en pantalla grande, dos
                     columnas de fichas. */}
-                {visibles.length > 0 && (
-                    <ul className="bg-white border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 shadow-sm md:bg-transparent md:border-0 md:rounded-none md:shadow-none md:overflow-visible md:divide-y-0 md:grid md:grid-cols-2 md:items-start md:gap-4">
-                        {visibles.map(p => (
-                            <FilaProducto
-                                key={p.code}
-                                producto={p}
-                                linea={lineas[p.code]}
-                                abierto={abierta === p.code}
-                                onAbrir={abrir => setAbierta(abrir ? p.code : null)}
-                                onTipo={tipo => cambiarTipo(p, tipo)}
-                                onCantidad={cantidad => cambiarCantidad(p.code, cantidad)}
-                                onPago={pago => cambiarPago(p.code, pago)}
-                                onQuitar={() => quitar(p.code)}
+                {enOrden.length > 0 && (
+                    <ul className="mt-4 bg-white border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 shadow-sm md:bg-transparent md:border-0 md:rounded-none md:shadow-none md:overflow-visible md:divide-y-0 md:grid md:grid-cols-2 md:items-start md:gap-4">
+                        {enOrden.map(linea => porCodigo[linea.code] && (
+                            <FichaProducto
+                                key={linea.code}
+                                producto={porCodigo[linea.code]}
+                                linea={linea}
+                                abierta={abierta}
+                                onAbrir={setAbierta}
+                                onTipo={tipo => elegirTipo(linea.code, tipo)}
+                                onCantidad={cantidad => cambiar(linea.code, { cantidad })}
+                                onPago={pago => cambiar(linea.code, { pago })}
+                                onQuitar={() => {
+                                    setLineas(prev => prev.filter(l => l.code !== linea.code));
+                                    setAbierta(null);
+                                }}
                             />
                         ))}
                     </ul>
                 )}
             </div>
 
-            {/* La barra queda al alcance del pulgar y no tapa la última ficha:
-                vive en el flujo, pegada abajo. */}
-            <div className="sticky bottom-0 bg-white border-t border-slate-200 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)]">
-                <div className="w-full max-w-4xl mx-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center gap-4">
+            {/* De borde a borde y pegada al piso, al alcance del pulgar.
+                Va por un portal al body y no adentro de la página: el
+                contenedor de la app entra con una animación que le deja un
+                transform puesto, y un transform convierte al ancestro en el
+                marco de referencia de todo `fixed` que tenga adentro. Media
+                página después, la barra aparecía a mitad de camino.
+                Afuera, nada puede moverla. */}
+            {createPortal(
+                <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)]">
+                <div className="w-full max-w-4xl mx-auto px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center gap-4">
                     <div className="min-w-0 flex-1">
                         <p className="text-sm font-black uppercase tracking-tight text-slate-900 leading-tight">
-                            {elegidos === 0 ? 'Ningún producto' : elegidos === 1 ? '1 producto' : `${elegidos} productos`}
+                            {conAccion.length === 0 ? 'Ningún producto' : conAccion.length === 1 ? '1 producto' : `${conAccion.length} productos`}
                         </p>
-                        {elegidos > 0 && (
+                        {lineas.length > 0 && (
                             <button
                                 type="button"
-                                onClick={() => { setLineas({}); setAbierta(null); }}
+                                onClick={() => { setLineas([]); setAbierta(null); }}
                                 className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-red-600 transition-colors mt-0.5"
                             >
                                 <Trash2 className="w-3 h-3" />
@@ -557,20 +607,22 @@ const MovimientosVariosContent: React.FC = () => {
                     <button
                         type="button"
                         onClick={guardar}
-                        disabled={elegidos === 0 || guardando}
+                        disabled={conAccion.length === 0 || guardando}
                         className="shrink-0 px-6 py-3.5 bg-black text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-black flex items-center justify-center gap-2"
                     >
                         {guardando && <Loader2 className="w-4 h-4 animate-spin" />}
                         Guardar
                     </button>
                 </div>
-            </div>
+                </div>,
+                document.body,
+            )}
         </div>
     );
 };
 
-// Mismo envoltorio que PaginaNuevoMovimiento: esta ruta es suelta y no hereda
-// el Provider del panel.
+// Mismo envoltorio que las otras páginas sueltas del Punto: no heredan el
+// Provider del panel.
 //
 // Y el mismo portero: se llega por link, sin pasar por el panel, así que el
 // permiso del panel no la cubre. Mientras el perfil está en camino no se
