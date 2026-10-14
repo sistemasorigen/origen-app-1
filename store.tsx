@@ -31,6 +31,8 @@ interface AppContextType {
     addProduct: (p: InfoPointProduct) => Promise<void>;
     deleteProduct: (code: string) => Promise<void>;
     addMovement: (m: Movement) => Promise<void>;
+    /** Varios de una vez. Devuelve si pudo, para poder decirlo. */
+    addMovements: (ms: Movement[]) => Promise<{ ok: true } | { ok: false; motivo: 'alta' | 'stock'; sinStock: string[] }>;
     deleteMovement: (id: string) => Promise<void>;
     addBaptism: (b: Baptism) => Promise<void>;
     updateBaptism: (b: Baptism) => Promise<void>;
@@ -171,6 +173,16 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
         await dbAPI.addMovement(m);
         logAction('Registrar Movimiento', `${m.type} de ${m.quantity}u. para ${m.productName}`);
         await refreshData();
+    };
+
+    const addMovements = async (ms: Movement[]) => {
+        const resultado = await dbAPI.addMovements(ms);
+        logAction(
+            'Registrar Movimientos',
+            `${ms.length} en una carga — ` + ms.map(m => `${m.type} ${m.quantity}u. ${m.productName}`).join(' · '),
+        );
+        await refreshData();
+        return resultado;
     };
 
     const deleteMovement = async (id: string) => {
@@ -336,7 +348,7 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
             products, movements, baptisms, presentations, loans, events, announcements, settings, isLoading, notification,
             refreshData, updateSettings, showNotification,
             addProduct, deleteProduct,
-            addMovement, deleteMovement,
+            addMovement, addMovements, deleteMovement,
             addBaptism, updateBaptism, deleteBaptism,
             addPresentation, updatePresentation, deletePresentation,
             addLoan, updateLoan, deleteLoan,

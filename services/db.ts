@@ -30,6 +30,10 @@ export const dbAPI = {
     await supabaseService.addInfoMovement(movement);
   },
 
+  async addMovements(movements: Movement[]) {
+    return await supabaseService.guardarMovimientosEnLote(movements);
+  },
+
   async deleteMovement(id: string): Promise<void> {
     await supabaseService.deleteInfoMovement(id);
   },

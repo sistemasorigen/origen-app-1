@@ -4593,6 +4593,71 @@ export const supabaseService = {
     }
   },
 
+  /**
+   * El stock que deja un movimiento. Es la misma cuenta que hace
+   * addInfoMovement, escrita una sola vez: Entrada suma, Salida resta y
+   * Ajuste FIJA el stock en ese número.
+   */
+  _stockDespuesDe(actual: number, m: Movement): number {
+    if (m.type === 'Entrada') return actual + m.quantity;
+    if (m.type === 'Salida') return Math.max(0, actual - m.quantity);
+    return m.quantity;
+  },
+
+  /**
+   * Varios movimientos de una vez: la pantalla de carga múltiple.
+   *
+   * No toca addInfoMovement, que es la del alta de a uno. Dos diferencias
+   * que importan:
+   *
+   *   · Los movimientos entran en UN solo insert. O quedan todos o no queda
+   *     ninguno: media carga guardada es peor que ninguna, porque después
+   *     nadie sabe cuál mitad entró.
+   *   · Si algo falla, lo devuelve. addInfoMovement se come el error y
+   *     quien carga se entera semanas más tarde, cuando el stock no cierra.
+   *
+   * Cada producto aparece una sola vez en la planilla, así que no hay dos
+   * líneas peleando por el mismo stock.
+   */
+  async guardarMovimientosEnLote(
+    movimientos: Movement[],
+  ): Promise<{ ok: true } | { ok: false; motivo: 'alta' | 'stock'; sinStock: string[] }> {
+    if (movimientos.length === 0) return { ok: true };
+
+    const { error } = await supabase.from('movements').insert(movimientos);
+    if (error) {
+      console.error('[Punto] No se pudieron guardar los movimientos:', error);
+      return { ok: false, motivo: 'alta', sinStock: [] };
+    }
+
+    // El stock se recalcula leyendo lo que hay, igual que el alta de a uno.
+    // Si acá falla uno, el movimiento ya quedó escrito: se nombra el producto
+    // para que quien carga vaya a mirarlo, en vez de dejarlo pasar.
+    const sinStock: string[] = [];
+    for (const m of movimientos) {
+      const { data: producto, error: errorLectura } = await supabase
+        .from('info_products')
+        .select('stock')
+        .eq('code', m.productCode)
+        .single();
+
+      if (errorLectura || !producto) { sinStock.push(m.productName); continue; }
+
+      const { error: errorEscritura } = await supabase
+        .from('info_products')
+        .update({ stock: this._stockDespuesDe(producto.stock, m) })
+        .eq('code', m.productCode);
+
+      if (errorEscritura) sinStock.push(m.productName);
+    }
+
+    if (sinStock.length > 0) {
+      console.error('[Punto] Movimientos guardados sin actualizar el stock de:', sinStock);
+      return { ok: false, motivo: 'stock', sinStock };
+    }
+    return { ok: true };
+  },
+
   async deleteInfoMovement(id: string): Promise<void> {
     const { error } = await supabase.from('movements').delete().eq('id', id);
     if (error) console.error('Error deleting movement:', error);
