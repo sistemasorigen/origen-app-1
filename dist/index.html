@@ -335,6 +335,35 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
     }
 
+    /* Punto de Información · carga de varios movimientos. El override global
+       de arriba le pone fondo blanco, borde slate y radio a todo campo; acá el
+       número vive ADENTRO del control de cantidad (- 6 +), así que el borde lo
+       dibuja el contenedor y el campo tiene que desaparecer. Scopeado por id,
+       que le gana al !important global por especificidad. */
+    #punto-lote input[type="number"] {
+      background-color: transparent !important;
+      color: #0f172a !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    /* Las flechitas nativas sobran: el control ya tiene sus botones, que
+       además saben hasta dónde se puede llegar. */
+    #punto-lote input[type="number"]::-webkit-outer-spin-button,
+    #punto-lote input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    #punto-lote input[type="number"]:focus {
+      outline: 2px solid #2563eb !important;
+      outline-offset: -2px;
+      border: 0 !important;
+      box-shadow: none;
+    }
+
     /* Tablero de /reportes/gcx — el override global de arriba le pone borde
        slate y radio 0.5rem a todo campo, y en esta pantalla eso se ve como
        un cuadro ajeno adentro de las tarjetas (el buscador de la tabla
@@ -1050,7 +1079,7 @@
         }
       })();
   </script>
-  <script type="module" crossorigin src="/assets/index-C7PChmbh.js"></script>
+  <script type="module" crossorigin src="/assets/index-CmSvOq5b.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-CVsVvX9w.css">
 </head>
 
