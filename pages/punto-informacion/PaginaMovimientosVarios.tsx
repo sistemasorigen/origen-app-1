@@ -20,10 +20,14 @@ import { ArrowLeft, Loader2, PackageOpen, Minus, Plus, Trash2 } from 'lucide-rea
  * camino corto cuando es un solo talle.
  */
 
+type MedioDePago = 'Efectivo' | 'Mercado Pago';
+
 /** Lo que se le cargó a un producto en esta vuelta. */
 interface Linea {
     tipo: MovementType;
     cantidad: number;
+    /** Sólo en las salidas: cada venta se cobra como se cobra. */
+    pago?: MedioDePago;
 }
 
 /**
@@ -54,39 +58,105 @@ const stockResultante = (stock: number, linea: Linea): number => {
  * Verde entra, rojo sale, ámbar corrige: los mismos tres colores que usan los
  * iconos del historial, para que signifiquen lo mismo en todo el módulo.
  */
-const COLORES: Record<string, { chip: string; marco: string; texto: string }> = {
-    [MovementType.IN]: {
-        chip: 'bg-emerald-600 text-white border-emerald-600',
-        marco: 'border-emerald-500',
-        texto: 'text-emerald-700',
-    },
-    [MovementType.OUT]: {
-        chip: 'bg-red-600 text-white border-red-600',
-        marco: 'border-red-500',
-        texto: 'text-red-700',
-    },
-    [MovementType.ADJUST]: {
-        chip: 'bg-amber-500 text-white border-amber-500',
-        marco: 'border-amber-500',
-        texto: 'text-amber-700',
-    },
+const COLORES: Record<string, { relleno: string; marco: string; texto: string }> = {
+    [MovementType.IN]: { relleno: 'bg-emerald-600', marco: 'border-emerald-500', texto: 'text-emerald-700' },
+    [MovementType.OUT]: { relleno: 'bg-red-600', marco: 'border-red-500', texto: 'text-red-700' },
+    [MovementType.ADJUST]: { relleno: 'bg-amber-500', marco: 'border-amber-500', texto: 'text-amber-700' },
 };
 
 const TIPOS = [MovementType.IN, MovementType.OUT, MovementType.ADJUST];
+const PAGOS: MedioDePago[] = ['Efectivo', 'Mercado Pago'];
 
-// ── Una fila del inventario ─────────────────────────────────────────────
+interface Opcion {
+    valor: string;
+    /** Clases del bloque lleno cuando esta opción está elegida. */
+    relleno: string;
+    bloqueada?: boolean;
+}
+
+/**
+ * Una barra de estado: varias respuestas en una sola pieza, con la elegida
+ * llena de color.
+ *
+ * No son botones sueltos, a propósito. Tres botones dicen "tres cosas que
+ * podés hacer"; una barra dice "una sola decisión, elegí cuál", que es lo que
+ * de verdad es. Las separaciones van por debajo del relleno, así la barra se
+ * lee como un objeto entero y no como botones pegados.
+ */
+const BarraDeEstado: React.FC<{
+    opciones: Opcion[];
+    valor: string | null;
+    onElegir: (valor: string) => void;
+    /** Único por barra: es lo que hace que el relleno se deslice. */
+    idGrupo: string;
+    etiqueta: string;
+    compacta?: boolean;
+}> = ({ opciones, valor, onElegir, idGrupo, etiqueta, compacta }) => {
+    const sinMovimiento = useReducedMotion();
+
+    return (
+        <div
+            role="group"
+            aria-label={etiqueta}
+            className={`relative grid rounded-xl border border-slate-200 bg-slate-50 overflow-hidden ${compacta ? 'h-10' : 'h-12'}`}
+            style={{ gridTemplateColumns: `repeat(${opciones.length}, minmax(0, 1fr))` }}
+        >
+            {opciones.slice(1).map((o, i) => (
+                <span
+                    key={`sep-${o.valor}`}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-y-2 w-px bg-slate-200"
+                    style={{ left: `${((i + 1) / opciones.length) * 100}%` }}
+                />
+            ))}
+
+            {opciones.map(o => {
+                const elegida = valor === o.valor;
+                return (
+                    <button
+                        key={o.valor}
+                        type="button"
+                        disabled={o.bloqueada}
+                        aria-pressed={elegida}
+                        onClick={() => onElegir(o.valor)}
+                        className={`relative h-full px-1 text-xs font-bold uppercase tracking-tight transition-colors ${elegida
+                            ? 'text-white'
+                            : o.bloqueada
+                                ? 'text-slate-300 cursor-not-allowed'
+                                : 'text-slate-500 hover:text-slate-900'
+                            }`}
+                    >
+                        {elegida && (
+                            <motion.span
+                                layoutId={`barra-${idGrupo}`}
+                                aria-hidden="true"
+                                className={`absolute inset-0 ${o.relleno}`}
+                                transition={sinMovimiento ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 42 }}
+                            />
+                        )}
+                        <span className="relative z-10">{o.valor}</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+};
+
+// ── Una ficha del inventario ────────────────────────────────────────────
 const FilaProducto: React.FC<{
     producto: InfoPointProduct;
     linea?: Linea;
     onTipo: (tipo: MovementType) => void;
     onCantidad: (cantidad: number) => void;
-}> = ({ producto, linea, onTipo, onCantidad }) => {
+    onPago: (pago: MedioDePago) => void;
+}> = ({ producto, linea, onTipo, onCantidad, onPago }) => {
     const sinMovimiento = useReducedMotion();
     const stock = producto.stock ?? 0;
     const agotado = stock <= 0;
     const lim = linea ? limites(linea.tipo, stock) : null;
     const queda = linea ? stockResultante(stock, linea) : stock;
     const color = linea ? COLORES[linea.tipo] : null;
+    const esSalida = linea && linea.tipo === MovementType.OUT;
 
     // El signo lo pone el tipo, no el dedo: en una salida alcanza con teclear
     // el número y sale en negativo solo.
@@ -106,7 +176,7 @@ const FilaProducto: React.FC<{
             aria-label={producto.name}
             className={`p-4 bg-white transition-colors md:rounded-xl md:border ${color ? `${color.marco} md:border-2` : 'md:border-slate-200'}`}
         >
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2 min-w-0">
                     <h3 className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{producto.type}</h3>
                     <span className="shrink-0 text-[10px] text-slate-500 font-bold uppercase tracking-wide bg-slate-100 px-1.5 py-px rounded border border-slate-200">
@@ -119,29 +189,17 @@ const FilaProducto: React.FC<{
                 </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mt-3">
-                {TIPOS.map(tipo => {
-                    const elegido = linea?.tipo === tipo;
-                    const bloqueado = tipo === MovementType.OUT && agotado;
-                    return (
-                        <button
-                            key={tipo}
-                            type="button"
-                            disabled={bloqueado}
-                            aria-pressed={elegido}
-                            onClick={() => onTipo(tipo)}
-                            className={`min-h-[44px] px-2 text-xs font-bold uppercase tracking-tight rounded-lg border transition-colors ${elegido
-                                ? COLORES[tipo].chip
-                                : bloqueado
-                                    ? 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed'
-                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
-                                }`}
-                        >
-                            {tipo}
-                        </button>
-                    );
-                })}
-            </div>
+            <BarraDeEstado
+                idGrupo={`${producto.code}-tipo`}
+                etiqueta={`Qué pasó con ${producto.name}`}
+                valor={linea ? linea.tipo : null}
+                onElegir={valor => onTipo(valor as MovementType)}
+                opciones={TIPOS.map(t => ({
+                    valor: t,
+                    relleno: COLORES[t].relleno,
+                    bloqueada: t === MovementType.OUT && agotado,
+                }))}
+            />
 
             {agotado && !linea && (
                 <p className="text-[11px] font-medium text-slate-400 mt-2">Sin stock: no hay nada para descontar.</p>
@@ -156,45 +214,61 @@ const FilaProducto: React.FC<{
                         transition={{ duration: sinMovimiento ? 0 : 0.18, ease: 'easeOut' }}
                         className="overflow-hidden"
                     >
-                        <div className="flex items-center gap-3 pt-3">
-                            <div className="flex items-stretch rounded-xl border border-slate-300 overflow-hidden shrink-0">
-                                <button
-                                    type="button"
-                                    onClick={() => onCantidad(Math.max(lim.min, linea.cantidad - 1))}
-                                    disabled={linea.cantidad <= lim.min}
-                                    aria-label={`Uno menos en ${producto.name}`}
-                                    className="w-11 h-12 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:text-slate-200 disabled:hover:bg-transparent transition-colors"
-                                >
-                                    <Minus className="w-4 h-4" />
-                                </button>
-                                <input
-                                    type="number"
-                                    inputMode="numeric"
-                                    value={linea.cantidad}
-                                    min={lim.min}
-                                    max={lim.max}
-                                    onChange={e => alEscribir(e.target.value)}
-                                    onBlur={acomodar}
-                                    aria-label={`Cantidad para ${producto.name}`}
-                                    className="w-16 text-center font-mono tabular-nums text-xl font-black"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => onCantidad(Math.min(lim.max, linea.cantidad + 1))}
-                                    disabled={linea.cantidad >= lim.max}
-                                    aria-label={`Uno más en ${producto.name}`}
-                                    className="w-11 h-12 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:text-slate-200 disabled:hover:bg-transparent transition-colors"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                </button>
-                            </div>
-                            <p className={`text-sm font-bold leading-tight ${color ? color.texto : ''}`}>
-                                Queda en {queda}
-                                {linea.tipo === MovementType.ADJUST && queda === stock && (
-                                    <span className="block text-[11px] font-medium text-slate-400">Igual que ahora</span>
-                                )}
-                            </p>
+                        {/* El contador ocupa todo el ancho: el número es lo que
+                            más se mira y lo que más se equivoca. */}
+                        <div className="flex items-stretch h-12 w-full mt-2 rounded-xl border border-slate-200 bg-white overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => onCantidad(Math.max(lim.min, linea.cantidad - 1))}
+                                disabled={linea.cantidad <= lim.min}
+                                aria-label={`Uno menos en ${producto.name}`}
+                                className="w-14 shrink-0 flex items-center justify-center border-r border-slate-200 text-slate-600 hover:bg-slate-50 disabled:text-slate-200 disabled:hover:bg-transparent transition-colors"
+                            >
+                                <Minus className="w-4 h-4" />
+                            </button>
+                            <input
+                                type="number"
+                                inputMode="numeric"
+                                value={linea.cantidad}
+                                min={lim.min}
+                                max={lim.max}
+                                onChange={e => alEscribir(e.target.value)}
+                                onBlur={acomodar}
+                                aria-label={`Cantidad para ${producto.name}`}
+                                className="flex-1 min-w-0 h-full text-center font-mono tabular-nums text-2xl font-black"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => onCantidad(Math.min(lim.max, linea.cantidad + 1))}
+                                disabled={linea.cantidad >= lim.max}
+                                aria-label={`Uno más en ${producto.name}`}
+                                className="w-14 shrink-0 flex items-center justify-center border-l border-slate-200 text-slate-600 hover:bg-slate-50 disabled:text-slate-200 disabled:hover:bg-transparent transition-colors"
+                            >
+                                <Plus className="w-4 h-4" />
+                            </button>
                         </div>
+
+                        {/* La consecuencia no es un dato más que cargar: va
+                            chica, abajo y sin marco. */}
+                        <p className="mt-2 text-center text-[11px] font-medium text-slate-400">
+                            Queda en <span className={`font-bold ${color ? color.texto : ''}`}>{queda}</span>
+                            {linea.tipo === MovementType.ADJUST && queda === stock && ', igual que ahora'}
+                        </p>
+
+                        {/* Cada venta se cobra como se cobra: el medio de pago
+                            viaja con la salida, no con la carga entera. */}
+                        {esSalida && (
+                            <div className="mt-2">
+                                <BarraDeEstado
+                                    compacta
+                                    idGrupo={`${producto.code}-pago`}
+                                    etiqueta={`Cómo pagaron ${producto.name}`}
+                                    valor={linea.pago || 'Efectivo'}
+                                    onElegir={valor => onPago(valor as MedioDePago)}
+                                    opciones={PAGOS.map(p => ({ valor: p, relleno: 'bg-slate-900' }))}
+                                />
+                            </div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -208,7 +282,6 @@ const MovimientosVariosContent: React.FC = () => {
     const { products, addMovements, showNotification, isLoading } = useStore();
     const [lineas, setLineas] = useState<Record<string, Linea>>({});
     const [filtro, setFiltro] = useState<'ALL' | ProductType>('ALL');
-    const [pago, setPago] = useState<'Efectivo' | 'Mercado Pago'>('Efectivo');
     const [guardando, setGuardando] = useState(false);
 
     const visibles = useMemo(
@@ -217,7 +290,6 @@ const MovimientosVariosContent: React.FC = () => {
     );
 
     const elegidos = Object.keys(lineas).length;
-    const haySalidas = Object.keys(lineas).some(code => lineas[code].tipo === MovementType.OUT);
 
     const cambiarTipo = (p: InfoPointProduct, tipo: MovementType) => {
         setLineas(prev => {
@@ -227,13 +299,23 @@ const MovimientosVariosContent: React.FC = () => {
                 delete copia[p.code];
                 return copia;
             }
-            copia[p.code] = { tipo, cantidad: limites(tipo, p.stock ?? 0).inicial };
+            copia[p.code] = {
+                tipo,
+                cantidad: limites(tipo, p.stock ?? 0).inicial,
+                // Casi siempre pagan en efectivo: queda elegido y se cambia
+                // sólo cuando no fue así.
+                pago: tipo === MovementType.OUT ? 'Efectivo' : undefined,
+            };
             return copia;
         });
     };
 
     const cambiarCantidad = (code: string, cantidad: number) => {
         setLineas(prev => (prev[code] ? { ...prev, [code]: { ...prev[code], cantidad } } : prev));
+    };
+
+    const cambiarPago = (code: string, pago: MedioDePago) => {
+        setLineas(prev => (prev[code] ? { ...prev, [code]: { ...prev[code], pago } } : prev));
     };
 
     const guardar = async () => {
@@ -251,7 +333,7 @@ const MovimientosVariosContent: React.FC = () => {
                 // y así las lee el historial.
                 quantity: Math.abs(linea.cantidad),
                 date: new Date().toISOString(),
-                paymentMethod: linea.tipo === MovementType.OUT ? pago : undefined,
+                paymentMethod: linea.tipo === MovementType.OUT ? (linea.pago || 'Efectivo') : undefined,
             };
         });
 
@@ -347,31 +429,10 @@ const MovimientosVariosContent: React.FC = () => {
                                 linea={lineas[p.code]}
                                 onTipo={tipo => cambiarTipo(p, tipo)}
                                 onCantidad={cantidad => cambiarCantidad(p.code, cantidad)}
+                                onPago={pago => cambiarPago(p.code, pago)}
                             />
                         ))}
                     </ul>
-                )}
-
-                {haySalidas && (
-                    <div className="mt-6 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">¿Cómo pagaron las salidas?</p>
-                        <div className="grid grid-cols-2 gap-2">
-                            {(['Efectivo', 'Mercado Pago'] as const).map(medio => (
-                                <button
-                                    key={medio}
-                                    type="button"
-                                    onClick={() => setPago(medio)}
-                                    aria-pressed={pago === medio}
-                                    className={`min-h-[44px] text-xs font-bold uppercase tracking-tight rounded-lg border transition-colors ${pago === medio
-                                        ? 'bg-black text-white border-black'
-                                        : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
-                                        }`}
-                                >
-                                    {medio}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
                 )}
             </div>
 
