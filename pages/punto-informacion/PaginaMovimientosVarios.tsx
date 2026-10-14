@@ -5,7 +5,7 @@ import { AppProvider, useStore } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { MovementType, ProductType, InfoPointProduct, Movement } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
-import { ArrowLeft, Loader2, PackageOpen, Minus, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, PackageOpen, Minus, Plus, Trash2, ChevronDown, Check } from 'lucide-react';
 
 /**
  * Cargar varios movimientos de una vez.
@@ -66,6 +66,105 @@ const COLORES: Record<string, { relleno: string; marco: string; texto: string }>
 
 const TIPOS = [MovementType.IN, MovementType.OUT, MovementType.ADJUST];
 const PAGOS: MedioDePago[] = ['Efectivo', 'Mercado Pago'];
+
+/**
+ * El selector de acción: una sola píldora que se despliega.
+ *
+ * Cerrada dice que falta elegir; abierta muestra las tres acciones, cada una
+ * con el punto de su color. Ya elegida, la píldora se llena con ese color, así
+ * la lista entera se lee de un vistazo: verde entra, rojo sale, ámbar corrige.
+ *
+ * Se despliega hacia abajo empujando la ficha, no flotando por encima: la
+ * lista del teléfono recorta lo que se salga, y un menú flotante cerca del
+ * borde de la pantalla se va de cuadro.
+ */
+const SelectorDeAccion: React.FC<{
+    producto: InfoPointProduct;
+    tipo: MovementType | null;
+    agotado: boolean;
+    abierto: boolean;
+    onAbrir: (abierto: boolean) => void;
+    onElegir: (tipo: MovementType) => void;
+    onQuitar: () => void;
+}> = ({ producto, tipo, agotado, abierto, onAbrir, onElegir, onQuitar }) => {
+    const sinMovimiento = useReducedMotion();
+    const color = tipo ? COLORES[tipo] : null;
+
+    return (
+        <div onKeyDown={e => { if (e.key === 'Escape') onAbrir(false); }}>
+            <button
+                type="button"
+                aria-expanded={abierto}
+                aria-haspopup="true"
+                onClick={() => onAbrir(!abierto)}
+                className={`w-full h-12 px-4 flex items-center justify-between gap-2 rounded-xl border text-xs font-bold uppercase tracking-tight transition-colors ${color
+                    ? `${color.relleno} border-transparent text-white`
+                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                    }`}
+            >
+                <span className="truncate">{tipo || 'Seleccione una acción'}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${abierto ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence initial={false}>
+                {abierto && (
+                    <motion.div
+                        initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                        transition={{ duration: sinMovimiento ? 0 : 0.18, ease: 'easeOut' }}
+                        className="overflow-hidden"
+                    >
+                        <div
+                            role="group"
+                            aria-label={`Acciones para ${producto.name}`}
+                            className="mt-1.5 rounded-xl border border-slate-200 bg-white overflow-hidden divide-y divide-slate-100"
+                        >
+                            {TIPOS.map(t => {
+                                const bloqueada = t === MovementType.OUT && agotado;
+                                const elegida = tipo === t;
+                                return (
+                                    <button
+                                        key={t}
+                                        type="button"
+                                        disabled={bloqueada}
+                                        aria-pressed={elegida}
+                                        onClick={() => onElegir(t)}
+                                        className={`w-full h-12 px-4 flex items-center gap-3 text-left text-xs font-bold uppercase tracking-tight transition-colors ${bloqueada
+                                            ? 'text-slate-300 cursor-not-allowed'
+                                            : 'text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${COLORES[t].relleno} ${bloqueada ? 'opacity-25' : ''}`} />
+                                        <span className="flex-1 truncate">{t}</span>
+                                        {bloqueada && (
+                                            <span className="shrink-0 text-[10px] font-medium normal-case tracking-normal text-slate-400">
+                                                Sin stock para descontar
+                                            </span>
+                                        )}
+                                        {elegida && <Check className="w-4 h-4 shrink-0 text-slate-400" />}
+                                    </button>
+                                );
+                            })}
+
+                            {/* La salida de emergencia de un toque mal dado. */}
+                            {tipo && (
+                                <button
+                                    type="button"
+                                    onClick={onQuitar}
+                                    className="w-full h-12 px-4 flex items-center gap-3 text-left text-xs font-bold uppercase tracking-tight text-slate-400 hover:text-red-600 hover:bg-slate-50 transition-colors"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                                    Quitar de la carga
+                                </button>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
 
 interface Opcion {
     valor: string;
@@ -146,10 +245,13 @@ const BarraDeEstado: React.FC<{
 const FilaProducto: React.FC<{
     producto: InfoPointProduct;
     linea?: Linea;
+    abierto: boolean;
+    onAbrir: (abierto: boolean) => void;
     onTipo: (tipo: MovementType) => void;
     onCantidad: (cantidad: number) => void;
     onPago: (pago: MedioDePago) => void;
-}> = ({ producto, linea, onTipo, onCantidad, onPago }) => {
+    onQuitar: () => void;
+}> = ({ producto, linea, abierto, onAbrir, onTipo, onCantidad, onPago, onQuitar }) => {
     const sinMovimiento = useReducedMotion();
     const stock = producto.stock ?? 0;
     const agotado = stock <= 0;
@@ -189,21 +291,15 @@ const FilaProducto: React.FC<{
                 </p>
             </div>
 
-            <BarraDeEstado
-                idGrupo={`${producto.code}-tipo`}
-                etiqueta={`Qué pasó con ${producto.name}`}
-                valor={linea ? linea.tipo : null}
-                onElegir={valor => onTipo(valor as MovementType)}
-                opciones={TIPOS.map(t => ({
-                    valor: t,
-                    relleno: COLORES[t].relleno,
-                    bloqueada: t === MovementType.OUT && agotado,
-                }))}
+            <SelectorDeAccion
+                producto={producto}
+                tipo={linea ? linea.tipo : null}
+                agotado={agotado}
+                abierto={abierto}
+                onAbrir={onAbrir}
+                onElegir={onTipo}
+                onQuitar={onQuitar}
             />
-
-            {agotado && !linea && (
-                <p className="text-[11px] font-medium text-slate-400 mt-2">Sin stock: no hay nada para descontar.</p>
-            )}
 
             <AnimatePresence initial={false}>
                 {linea && lim && (
@@ -283,6 +379,9 @@ const MovimientosVariosContent: React.FC = () => {
     const [lineas, setLineas] = useState<Record<string, Linea>>({});
     const [filtro, setFiltro] = useState<'ALL' | ProductType>('ALL');
     const [guardando, setGuardando] = useState(false);
+    // Qué píldora está desplegada. Una sola a la vez: abrir otra cierra la
+    // anterior, que es lo que uno espera y evita una pantalla llena de menús.
+    const [abierta, setAbierta] = useState<string | null>(null);
 
     const visibles = useMemo(
         () => products.filter(p => filtro === 'ALL' || p.type === filtro),
@@ -293,21 +392,29 @@ const MovimientosVariosContent: React.FC = () => {
 
     const cambiarTipo = (p: InfoPointProduct, tipo: MovementType) => {
         setLineas(prev => {
-            const copia = { ...prev };
-            // Tocar de nuevo el mismo tipo saca al producto de la carga.
-            if (copia[p.code] && copia[p.code].tipo === tipo) {
-                delete copia[p.code];
-                return copia;
-            }
-            copia[p.code] = {
-                tipo,
-                cantidad: limites(tipo, p.stock ?? 0).inicial,
-                // Casi siempre pagan en efectivo: queda elegido y se cambia
-                // sólo cuando no fue así.
-                pago: tipo === MovementType.OUT ? 'Efectivo' : undefined,
+            // Si ya era ésa, no se pisa la cantidad que venía cargada.
+            if (prev[p.code] && prev[p.code].tipo === tipo) return prev;
+            return {
+                ...prev,
+                [p.code]: {
+                    tipo,
+                    cantidad: limites(tipo, p.stock ?? 0).inicial,
+                    // Casi siempre pagan en efectivo: queda elegido y se
+                    // cambia sólo cuando no fue así.
+                    pago: tipo === MovementType.OUT ? 'Efectivo' : undefined,
+                },
             };
+        });
+        setAbierta(null);
+    };
+
+    const quitar = (code: string) => {
+        setLineas(prev => {
+            const copia = { ...prev };
+            delete copia[code];
             return copia;
         });
+        setAbierta(null);
     };
 
     const cambiarCantidad = (code: string, cantidad: number) => {
@@ -427,9 +534,12 @@ const MovimientosVariosContent: React.FC = () => {
                                 key={p.code}
                                 producto={p}
                                 linea={lineas[p.code]}
+                                abierto={abierta === p.code}
+                                onAbrir={abrir => setAbierta(abrir ? p.code : null)}
                                 onTipo={tipo => cambiarTipo(p, tipo)}
                                 onCantidad={cantidad => cambiarCantidad(p.code, cantidad)}
                                 onPago={pago => cambiarPago(p.code, pago)}
+                                onQuitar={() => quitar(p.code)}
                             />
                         ))}
                     </ul>
@@ -447,7 +557,7 @@ const MovimientosVariosContent: React.FC = () => {
                         {elegidos > 0 && (
                             <button
                                 type="button"
-                                onClick={() => setLineas({})}
+                                onClick={() => { setLineas({}); setAbierta(null); }}
                                 className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-red-600 transition-colors mt-0.5"
                             >
                                 <Trash2 className="w-3 h-3" />
