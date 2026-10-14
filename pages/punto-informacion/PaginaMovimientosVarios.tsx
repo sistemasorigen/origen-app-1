@@ -60,9 +60,10 @@ const PAGOS: MedioDePago[] = ['Efectivo', 'Mercado Pago'];
 /**
  * El selector de acción: una sola píldora que se despliega.
  *
- * Cerrada dice que falta elegir; abierta muestra las tres acciones. Ya
- * elegida, la píldora se llena de negro —lo mismo que marca elegido en todo el
- * panel—, así se ve de un vistazo cuáles productos llevan algo cargado.
+ * Cerrada dice que falta elegir; abierta muestra las tres acciones. La
+ * píldora es siempre blanca: lo que cambia al elegir es el texto, que pasa de
+ * gris claro —una indicación, no un dato— a negro, igual que un campo cuando
+ * se completa.
  *
  * Se despliega hacia abajo empujando la ficha, no flotando por encima: la
  * lista del teléfono recorta lo que se salga, y un menú flotante cerca del
@@ -86,9 +87,9 @@ const SelectorDeAccion: React.FC<{
                 aria-expanded={abierto}
                 aria-haspopup="true"
                 onClick={() => onAbrir(!abierto)}
-                className={`w-full h-12 px-4 flex items-center justify-between gap-2 rounded-xl border text-xs font-bold uppercase tracking-tight transition-colors ${tipo
-                    ? 'bg-slate-900 border-slate-900 text-white'
-                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                className={`w-full h-12 px-4 flex items-center justify-between gap-2 rounded-xl border bg-white text-xs font-bold uppercase tracking-tight transition-colors ${tipo
+                    ? 'border-slate-300 text-slate-900'
+                    : 'border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300'
                     }`}
             >
                 <span className="truncate">{tipo || 'Seleccione una acción'}</span>
