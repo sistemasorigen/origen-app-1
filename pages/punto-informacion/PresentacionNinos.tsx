@@ -1,90 +1,143 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { PendingStatus, ChildPresentation } from '../../types';
-import { Baby, CheckSquare, Trash2, Edit2, Plus, CalendarDays, CheckCircle2 } from 'lucide-react';
+import { Baby, Check, Trash2, Pencil, Plus, Undo2 } from 'lucide-react';
+import {
+    TarjetaDelPunto, CabeceraGrupo, ListaDeFilas, Fila,
+    BotonCircular, BotonPrincipal, Pastilla, EstadoVacio, fechaCorta,
+} from '../../components/info-point/ListaDelPunto';
 
+/**
+ * Las presentaciones de niños.
+ *
+ * Arriba las que faltan, con la fecha agendada a la vista —que es el dato que
+ * se busca—, y abajo las que ya se hicieron. El nombre de los padres va en la
+ * línea de abajo: es lo que permite reconocer a la familia cuando llega.
+ */
 const ChildPresentations: React.FC = () => {
     const navigate = useNavigate();
     const { presentations, updatePresentation, deletePresentation, showNotification } = useStore();
 
-    const toggleStatus = async (p: ChildPresentation, status: PendingStatus) => {
-        const updateData: any = { ...p, status, isPending: status === PendingStatus.PENDING ? 1 : 0 };
-        if (status === PendingStatus.COMPLETED) {
-            updateData.completionDate = new Date().toISOString();
-        }
-        await updatePresentation(updateData);
-        showNotification('Estado actualizado correctamente.');
+    const { pendientes, hechas } = useMemo(() => ({
+        // Las agendadas primero, por fecha; las que todavía no tienen fecha, al final.
+        pendientes: presentations.filter(p => p.isPending).sort((a, b) => {
+            if (!a.scheduledDate) return 1;
+            if (!b.scheduledDate) return -1;
+            return new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime();
+        }),
+        hechas: presentations.filter(p => !p.isPending),
+    }), [presentations]);
+
+    const padres = (p: ChildPresentation) => {
+        const mama = [p.motherName, p.motherSurname].filter(Boolean).join(' ');
+        const papa = [p.fatherName, p.fatherSurname].filter(Boolean).join(' ');
+        const ambos = [mama, papa].filter(Boolean);
+        return ambos.length ? `Hijo de ${ambos.join(' y ')}` : (p.phone || '');
     };
 
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
+    const cambiarEstado = async (p: ChildPresentation, status: PendingStatus) => {
+        const datos: any = { ...p, status, isPending: status === PendingStatus.PENDING ? 1 : 0 };
+        datos.completionDate = status === PendingStatus.COMPLETED ? new Date().toISOString() : undefined;
+        await updatePresentation(datos);
+        showNotification(status === PendingStatus.COMPLETED ? 'Presentación marcada como realizada.' : 'Volvió a la agenda.');
+    };
+
+    const borrar = async (p: ChildPresentation, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!window.confirm('¿Eliminar este registro de presentación? Esta acción no se puede deshacer.')) return;
-        await deletePresentation(id);
+        if (!window.confirm(`¿Eliminar la presentación de ${p.childName} ${p.childSurname}? No se puede deshacer.`)) return;
+        await deletePresentation(p.id);
         showNotification('Registro eliminado.');
     };
 
     return (
-        <div className="animate-fadeIn p-1">
-            <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-3">
-                <h2 className="font-black text-xl text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                    <Baby className="w-5 h-5 text-slate-400" />
-                    Agenda de presentaciones
-                </h2>
-                <button
-                    onClick={() => navigate('/punto-de-informacion/presentacion-ninos/nuevo')}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-black text-white font-bold uppercase text-xs tracking-widest rounded-lg hover:bg-slate-800 transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
+        <TarjetaDelPunto
+            titulo="Presentaciones"
+            bajada="Los chicos que se van a presentar y los que ya se presentaron."
+            acciones={
+                <BotonPrincipal icono={Plus} onClick={() => navigate('/punto-de-informacion/presentacion-ninos/nuevo')}>
                     Nueva presentación
-                </button>
-            </div>
+                </BotonPrincipal>
+            }
+        >
+            {pendientes.length > 0 && (
+                <section>
+                    <CabeceraGrupo cuenta={`${pendientes.length} en agenda`}>Por hacer</CabeceraGrupo>
+                    <ListaDeFilas>
+                        {pendientes.map(p => (
+                            <Fila key={p.id}>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="font-semibold text-[15px] text-black truncate leading-tight">{p.childName} {p.childSurname}</h4>
+                                    <p className="text-[13px] text-slate-400 truncate mt-0.5">{padres(p)}</p>
+                                </div>
+                                {p.scheduledDate
+                                    ? <Pastilla tono="aviso">{fechaCorta(p.scheduledDate)}</Pastilla>
+                                    : <Pastilla>Sin fecha</Pastilla>}
+                                <BotonCircular
+                                    icono={Check}
+                                    tono="listo"
+                                    etiqueta={`Marcar la presentación de ${p.childName} ${p.childSurname} como realizada`}
+                                    onClick={() => cambiarEstado(p, PendingStatus.COMPLETED)}
+                                />
+                                <BotonCircular
+                                    icono={Pencil}
+                                    etiqueta={`Editar ${p.childName} ${p.childSurname}`}
+                                    onClick={() => navigate(`/punto-de-informacion/presentacion-ninos/nuevo?id=${p.id}`)}
+                                />
+                                <BotonCircular
+                                    icono={Trash2}
+                                    tono="peligro"
+                                    etiqueta={`Eliminar ${p.childName} ${p.childSurname}`}
+                                    onClick={e => borrar(p, e)}
+                                />
+                            </Fila>
+                        ))}
+                    </ListaDeFilas>
+                </section>
+            )}
 
-            <div className="space-y-3">
-                {presentations.map(p => (
-                    <div key={p.id} className={`p-5 border border-slate-200 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm gap-4 transition-shadow hover:shadow-md ${p.isPending ? 'bg-white' : 'bg-slate-50'}`}>
-                        <div>
-                            <h4 className="font-black text-xl text-slate-900 uppercase tracking-tight mb-1">{p.childName} {p.childSurname}</h4>
-                            <div className="text-sm font-medium text-slate-600 space-y-1 pl-2 border-l-2 border-slate-200">
-                                <p>Mamá: {p.motherName} {p.motherSurname}</p>
-                                <p>Papá: {p.fatherName} {p.fatherSurname}</p>
-                                <p className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full inline-block">{p.email} • {p.phone}</p>
-                            </div>
-                            {p.isPending && p.scheduledDate && (
-                                <div className="flex items-center gap-3 mt-3">
-                                    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200 px-2 py-1 rounded-full"><CalendarDays className="w-3 h-3" /> Agendado: {new Date(p.scheduledDate).toLocaleDateString()}</span>
+            {hechas.length > 0 && (
+                <section>
+                    <CabeceraGrupo cuenta={`${hechas.length} en total`}>Ya se presentaron</CabeceraGrupo>
+                    <ListaDeFilas>
+                        {hechas.map(p => (
+                            <Fila key={p.id}>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="font-semibold text-[15px] text-black truncate leading-tight">{p.childName} {p.childSurname}</h4>
+                                    <p className="text-[13px] text-slate-400 truncate mt-0.5">
+                                        {p.completionDate ? `El ${fechaCorta(p.completionDate)}` : p.status}
+                                    </p>
                                 </div>
-                            )}
-                            {p.completionDate && (
-                                <div className="flex items-center gap-3 mt-3">
-                                    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-full"><CheckCircle2 className="w-3 h-3" /> Realizado: {new Date(p.completionDate).toLocaleDateString()}</span>
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex gap-1.5 items-center self-end sm:self-center">
-                            {p.isPending ? (
-                                <>
-                                    <button onClick={() => toggleStatus(p, PendingStatus.COMPLETED)} className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors" title="Marcar realizado" aria-label={`Marcar presentación de ${p.childName} ${p.childSurname} como realizada`}><CheckSquare className="w-5 h-5" /></button>
-                                    <button onClick={() => navigate(`/punto-de-informacion/presentacion-ninos/nuevo?id=${p.id}`)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-black hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors" title="Editar" aria-label={`Editar ${p.childName} ${p.childSurname}`}><Edit2 className="w-5 h-5" /></button>
-                                    <button type="button" onClick={(e) => handleDelete(p.id, e)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors" aria-label={`Eliminar ${p.childName} ${p.childSurname}`}><Trash2 className="w-5 h-5 pointer-events-none" /></button>
-                                </>
-                            ) : (
-                                <>
-                                    <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-full border ${p.status === PendingStatus.COMPLETED ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{p.status}</span>
-                                    <button type="button" onClick={(e) => handleDelete(p.id, e)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" aria-label={`Eliminar ${p.childName} ${p.childSurname}`}><Trash2 className="w-4 h-4 pointer-events-none" /></button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                ))}
-                {presentations.length === 0 && (
-                    <div className="p-12 text-center border border-dashed border-slate-200 rounded-lg bg-white">
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No hay presentaciones agendadas</p>
-                    </div>
-                )}
-            </div>
-        </div>
+                                {p.status === PendingStatus.CANCELLED
+                                    ? <Pastilla tono="mala">Cancelada</Pastilla>
+                                    : <Pastilla tono="buena">Listo</Pastilla>}
+                                <BotonCircular
+                                    icono={Undo2}
+                                    etiqueta={`Devolver la presentación de ${p.childName} ${p.childSurname} a la agenda`}
+                                    onClick={() => cambiarEstado(p, PendingStatus.PENDING)}
+                                />
+                                <BotonCircular
+                                    icono={Trash2}
+                                    tono="peligro"
+                                    etiqueta={`Eliminar ${p.childName} ${p.childSurname}`}
+                                    onClick={e => borrar(p, e)}
+                                />
+                            </Fila>
+                        ))}
+                    </ListaDeFilas>
+                </section>
+            )}
+
+            {presentations.length === 0 && (
+                <EstadoVacio
+                    icono={Baby}
+                    titulo="No hay presentaciones agendadas"
+                    texto="Cuando una familia quiera presentar a su hijo, anotala acá con la fecha."
+                    accion={{ texto: 'Agendar la primera', icono: Plus, onClick: () => navigate('/punto-de-informacion/presentacion-ninos/nuevo') }}
+                />
+            )}
+        </TarjetaDelPunto>
     );
 };
 

@@ -1,82 +1,131 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { PendingStatus, Baptism } from '../../types';
-import { Droplets, CheckSquare, Trash2, Edit2, Plus } from 'lucide-react';
+import { Droplets, Check, Trash2, Pencil, Plus, Undo2 } from 'lucide-react';
+import {
+    TarjetaDelPunto, CabeceraGrupo, ListaDeFilas, Fila,
+    BotonCircular, BotonPrincipal, Pastilla, EstadoVacio, fechaCorta,
+} from '../../components/info-point/ListaDelPunto';
 
+/**
+ * Los bautismos anotados.
+ *
+ * La pregunta del mostrador es quién falta, así que arriba van los que
+ * esperan y abajo los que ya se bautizaron. Antes era una sola lista donde
+ * los realizados se mezclaban con los pendientes y había que leer la chapita
+ * de cada uno para saber cuál era cuál.
+ */
 const Baptisms: React.FC = () => {
     const navigate = useNavigate();
     const { baptisms, updateBaptism, deleteBaptism, showNotification } = useStore();
 
-    const toggleStatus = async (b: Baptism, status: PendingStatus) => {
-        const updateData: any = { ...b, status, isPending: status === PendingStatus.PENDING ? 1 : 0 };
-        if (status === PendingStatus.COMPLETED) {
-            updateData.completionDate = new Date().toISOString();
-        }
-        await updateBaptism(updateData);
-        showNotification('Estado actualizado correctamente.');
+    const { pendientes, hechos } = useMemo(() => ({
+        pendientes: baptisms.filter(b => b.isPending),
+        hechos: baptisms.filter(b => !b.isPending),
+    }), [baptisms]);
+
+    const cambiarEstado = async (b: Baptism, status: PendingStatus) => {
+        const datos: any = { ...b, status, isPending: status === PendingStatus.PENDING ? 1 : 0 };
+        datos.completionDate = status === PendingStatus.COMPLETED ? new Date().toISOString() : undefined;
+        await updateBaptism(datos);
+        showNotification(status === PendingStatus.COMPLETED ? 'Bautismo marcado como realizado.' : 'Volvió a la lista de espera.');
     };
 
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
+    const borrar = async (b: Baptism, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!window.confirm('¿Eliminar este registro de bautismo? Esta acción no se puede deshacer.')) return;
-        await deleteBaptism(id);
+        if (!window.confirm(`¿Eliminar el registro de ${b.firstName} ${b.lastName}? No se puede deshacer.`)) return;
+        await deleteBaptism(b.id);
         showNotification('Registro eliminado.');
     };
 
     return (
-        <div className="animate-fadeIn p-1">
-            <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-3">
-                <h2 className="font-black text-xl text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                    <Droplets className="w-5 h-5 text-slate-400" />
-                    Lista de bautismos
-                </h2>
-                <button
-                    onClick={() => navigate('/punto-de-informacion/bautismos/nuevo')}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-black text-white font-bold uppercase text-xs tracking-widest rounded-lg hover:bg-slate-800 transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
+        <TarjetaDelPunto
+            titulo="Bautismos"
+            bajada="Quién se anotó y quién ya se bautizó."
+            acciones={
+                <BotonPrincipal icono={Plus} onClick={() => navigate('/punto-de-informacion/bautismos/nuevo')}>
                     Nuevo bautismo
-                </button>
-            </div>
+                </BotonPrincipal>
+            }
+        >
+            {pendientes.length > 0 && (
+                <section>
+                    <CabeceraGrupo cuenta={`${pendientes.length} esperando`}>En espera</CabeceraGrupo>
+                    <ListaDeFilas>
+                        {pendientes.map(b => (
+                            <Fila key={b.id}>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="font-semibold text-[15px] text-black truncate leading-tight">{b.firstName} {b.lastName}</h4>
+                                    <p className="text-[13px] text-slate-400 truncate mt-0.5">
+                                        Se anotó el {fechaCorta(b.registrationDate)}{b.phone ? ` · ${b.phone}` : ''}
+                                    </p>
+                                </div>
+                                <BotonCircular
+                                    icono={Check}
+                                    tono="listo"
+                                    etiqueta={`Marcar el bautismo de ${b.firstName} ${b.lastName} como realizado`}
+                                    onClick={() => cambiarEstado(b, PendingStatus.COMPLETED)}
+                                />
+                                <BotonCircular
+                                    icono={Pencil}
+                                    etiqueta={`Editar ${b.firstName} ${b.lastName}`}
+                                    onClick={() => navigate(`/punto-de-informacion/bautismos/nuevo?id=${b.id}`)}
+                                />
+                                <BotonCircular
+                                    icono={Trash2}
+                                    tono="peligro"
+                                    etiqueta={`Eliminar ${b.firstName} ${b.lastName}`}
+                                    onClick={e => borrar(b, e)}
+                                />
+                            </Fila>
+                        ))}
+                    </ListaDeFilas>
+                </section>
+            )}
 
-            <div className="space-y-3">
-                {baptisms.map(b => (
-                    <div key={b.id} className={`p-5 border border-slate-200 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm gap-4 transition-shadow hover:shadow-md ${b.isPending ? 'bg-white' : 'bg-slate-50'}`}>
-                        <div>
-                            <h4 className="font-black text-lg text-slate-900 uppercase tracking-tight">{b.firstName} {b.lastName}</h4>
-                            <p className="text-sm font-medium text-slate-600">{b.email} • {b.phone}</p>
-                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                <span className="text-[10px] font-bold uppercase bg-slate-100 text-slate-600 px-2 py-1 rounded-full">Anotado: {new Date(b.registrationDate).toLocaleDateString()}</span>
-                                {b.completionDate && (
-                                    <span className="text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-full">Realizado: {new Date(b.completionDate).toLocaleDateString()}</span>
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex gap-1.5 items-center w-full md:w-auto justify-end">
-                            {b.isPending ? (
-                                <>
-                                    <button onClick={() => toggleStatus(b, PendingStatus.COMPLETED)} className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors" title="Marcar realizado" aria-label={`Marcar bautismo de ${b.firstName} ${b.lastName} como realizado`}><CheckSquare className="w-5 h-5" /></button>
-                                    <button onClick={() => navigate(`/punto-de-informacion/bautismos/nuevo?id=${b.id}`)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-black hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors" title="Editar" aria-label={`Editar ${b.firstName} ${b.lastName}`}><Edit2 className="w-5 h-5" /></button>
-                                    <button type="button" onClick={(e) => handleDelete(b.id, e)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors" aria-label={`Eliminar ${b.firstName} ${b.lastName}`}><Trash2 className="w-5 h-5 pointer-events-none" /></button>
-                                </>
-                            ) : (
-                                <>
-                                    <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-full border ${b.status === PendingStatus.COMPLETED ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{b.status}</span>
-                                    <button type="button" onClick={(e) => handleDelete(b.id, e)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" aria-label={`Eliminar ${b.firstName} ${b.lastName}`}><Trash2 className="w-4 h-4 pointer-events-none" /></button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                ))}
-                {baptisms.length === 0 && (
-                    <div className="p-12 text-center border border-dashed border-slate-200 rounded-lg bg-white">
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No hay registros</p>
-                    </div>
-                )}
-            </div>
-        </div>
+            {hechos.length > 0 && (
+                <section>
+                    <CabeceraGrupo cuenta={`${hechos.length} en total`}>Ya se bautizaron</CabeceraGrupo>
+                    <ListaDeFilas>
+                        {hechos.map(b => (
+                            <Fila key={b.id}>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="font-semibold text-[15px] text-black truncate leading-tight">{b.firstName} {b.lastName}</h4>
+                                    <p className="text-[13px] text-slate-400 truncate mt-0.5">
+                                        {b.completionDate ? `El ${fechaCorta(b.completionDate)}` : b.status}
+                                    </p>
+                                </div>
+                                {b.status === PendingStatus.CANCELLED
+                                    ? <Pastilla tono="mala">Cancelado</Pastilla>
+                                    : <Pastilla tono="buena">Listo</Pastilla>}
+                                <BotonCircular
+                                    icono={Undo2}
+                                    etiqueta={`Devolver a ${b.firstName} ${b.lastName} a la lista de espera`}
+                                    onClick={() => cambiarEstado(b, PendingStatus.PENDING)}
+                                />
+                                <BotonCircular
+                                    icono={Trash2}
+                                    tono="peligro"
+                                    etiqueta={`Eliminar ${b.firstName} ${b.lastName}`}
+                                    onClick={e => borrar(b, e)}
+                                />
+                            </Fila>
+                        ))}
+                    </ListaDeFilas>
+                </section>
+            )}
+
+            {baptisms.length === 0 && (
+                <EstadoVacio
+                    icono={Droplets}
+                    titulo="Todavía no hay nadie anotado"
+                    texto="Cuando alguien quiera bautizarse, anotalo acá y queda en la lista de espera."
+                    accion={{ texto: 'Anotar el primero', icono: Plus, onClick: () => navigate('/punto-de-informacion/bautismos/nuevo') }}
+                />
+            )}
+        </TarjetaDelPunto>
     );
 };
 

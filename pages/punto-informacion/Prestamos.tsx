@@ -1,119 +1,143 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { Loan } from '../../types';
-import { Shirt, CheckCircle, Trash2, Clock, Plus } from 'lucide-react';
+import { Shirt, Trash2, Plus, Undo2 } from 'lucide-react';
+import {
+    TarjetaDelPunto, CabeceraGrupo, ListaDeFilas, Fila,
+    BotonCircular, BotonPrincipal, Pastilla, EstadoVacio, fechaCorta,
+} from '../../components/info-point/ListaDelPunto';
+
+/**
+ * Lo que se prestó.
+ *
+ * La pregunta es siempre la misma: qué salió y no volvió. Por eso arriba van
+ * los que faltan devolver —con los días que llevan afuera, que es lo que
+ * decide si hay que ir a buscarlo— y abajo los que ya volvieron.
+ */
+
+/** "Hoy", "Ayer", "Hace 5 días". */
+const hace = (iso: string) => {
+    const dia = 86400000;
+    const desde = new Date(iso);
+    if (Number.isNaN(desde.getTime())) return '';
+    const dias = Math.floor((Date.now() - desde.getTime()) / dia);
+    if (dias <= 0) return 'Hoy';
+    if (dias === 1) return 'Ayer';
+    return `Hace ${dias} días`;
+};
 
 const Loans: React.FC = () => {
     const navigate = useNavigate();
     const { loans, updateLoan, deleteLoan, showNotification } = useStore();
 
-    const handleReturn = async (loan: Loan) => {
+    const { afuera, devueltos } = useMemo(() => ({
+        // El que más tiempo lleva afuera, primero.
+        afuera: loans.filter(l => l.status === 'ACTIVE')
+            .sort((a, b) => new Date(a.loanDate).getTime() - new Date(b.loanDate).getTime()),
+        devueltos: loans.filter(l => l.status === 'RETURNED')
+            .sort((a, b) => new Date(b.returnDate || b.loanDate).getTime() - new Date(a.returnDate || a.loanDate).getTime()),
+    }), [loans]);
+
+    const devolver = async (l: Loan) => {
         try {
-            await updateLoan({
-                ...loan,
-                status: 'RETURNED',
-                returnDate: new Date().toISOString()
-            });
-            showNotification('Devolución registrada correctamente.');
+            await updateLoan({ ...l, status: 'RETURNED', returnDate: new Date().toISOString() });
+            showNotification('Devolución registrada.');
         } catch (error) {
-            console.error("Error updating loan:", error);
-            showNotification('Error al registrar devolución', 'error');
+            console.error('Error updating loan:', error);
+            showNotification('No se pudo registrar la devolución.', 'error');
         }
     };
 
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
+    const borrar = async (l: Loan, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!window.confirm('¿Eliminar este registro de préstamo? Esta acción no se puede deshacer.')) return;
-        await deleteLoan(id);
+        if (!window.confirm(`¿Eliminar el préstamo de ${l.lenderName} ${l.lenderSurname}? No se puede deshacer.`)) return;
+        await deleteLoan(l.id);
         showNotification('Registro eliminado.');
     };
 
-    const activeLoans = loans.filter(l => l.status === 'ACTIVE');
-    const returnedLoans = loans.filter(l => l.status === 'RETURNED');
-
     return (
-        <div className="animate-fadeIn p-1 space-y-8">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <h2 className="font-black text-xl text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                    <Shirt className="w-5 h-5 text-slate-400" />
-                    Préstamos activos
-                </h2>
-                <button
-                    onClick={() => navigate('/punto-de-informacion/prestamos/nuevo')}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-black text-white font-bold uppercase text-xs tracking-widest rounded-lg hover:bg-slate-800 transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
+        <TarjetaDelPunto
+            titulo="Préstamos"
+            bajada="Qué salió del mostrador y todavía no volvió."
+            acciones={
+                <BotonPrincipal icono={Plus} onClick={() => navigate('/punto-de-informacion/prestamos/nuevo')}>
                     Nuevo préstamo
-                </button>
-            </div>
+                </BotonPrincipal>
+            }
+        >
+            {afuera.length > 0 && (
+                <section>
+                    <CabeceraGrupo cuenta={`${afuera.length} sin devolver`}>Afuera</CabeceraGrupo>
+                    <ListaDeFilas>
+                        {afuera.map(l => (
+                            <Fila key={l.id}>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="font-semibold text-[15px] text-black truncate leading-tight">{l.lenderName} {l.lenderSurname}</h4>
+                                    <p className="text-[13px] text-slate-400 truncate mt-0.5">
+                                        {l.itemType} talle {l.itemSize} · {hace(l.loanDate)}
+                                    </p>
+                                </div>
+                                {/* La acción del día tiene nombre, no icono. */}
+                                <button
+                                    type="button"
+                                    onClick={e => { e.preventDefault(); devolver(l); }}
+                                    className="shrink-0 px-3.5 h-10 rounded-full bg-emerald-50 text-emerald-700 text-[13px] font-semibold hover:bg-emerald-100 transition-colors"
+                                >
+                                    Devolver
+                                </button>
+                                <BotonCircular
+                                    icono={Trash2}
+                                    tono="peligro"
+                                    etiqueta={`Eliminar el préstamo de ${l.lenderName} ${l.lenderSurname}`}
+                                    onClick={e => borrar(l, e)}
+                                />
+                            </Fila>
+                        ))}
+                    </ListaDeFilas>
+                </section>
+            )}
 
-            <div className="space-y-3">
-                {activeLoans.map(l => (
-                    <div key={l.id} className="bg-white p-5 border border-slate-200 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm hover:shadow-md transition-shadow">
-                        <div>
-                            <h4 className="font-black text-lg text-slate-900 uppercase tracking-tight">{l.lenderName} {l.lenderSurname}</h4>
-                            <p className="text-sm font-medium text-slate-600 uppercase tracking-wide border-l-2 border-slate-200 pl-2 mt-1">{l.itemType} Talle {l.itemSize}</p>
-                            <p className="text-xs text-slate-600 bg-slate-100 font-bold uppercase inline-block px-2 py-0.5 rounded-full mt-2">Prestado: {new Date(l.loanDate).toLocaleDateString()} {new Date(l.loanDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                        </div>
-                        <div className="flex gap-2 items-center mt-3 sm:mt-0 w-full sm:w-auto justify-end">
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    handleReturn(l);
-                                }}
-                                className="px-4 min-h-[44px] bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-bold text-xs uppercase hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center gap-2 transition-colors"
-                            >
-                                <CheckCircle className="w-4 h-4" /> Devolver
-                            </button>
-                            <button
-                                type="button"
-                                onClick={(e) => handleDelete(l.id, e)}
-                                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors"
-                                title="Eliminar"
-                                aria-label={`Eliminar préstamo de ${l.lenderName} ${l.lenderSurname}`}
-                            >
-                                <Trash2 className="w-4 h-4 pointer-events-none" />
-                            </button>
-                        </div>
-                    </div>
-                ))}
-                {activeLoans.length === 0 && (
-                    <div className="p-12 text-center border border-dashed border-slate-200 rounded-lg bg-white">
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No hay préstamos activos</p>
-                    </div>
-                )}
-            </div>
+            {devueltos.length > 0 && (
+                <section>
+                    <CabeceraGrupo cuenta={`${devueltos.length} en total`}>Devueltos</CabeceraGrupo>
+                    <ListaDeFilas>
+                        {devueltos.map(l => (
+                            <Fila key={l.id}>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="font-semibold text-[15px] text-black truncate leading-tight">{l.lenderName} {l.lenderSurname}</h4>
+                                    <p className="text-[13px] text-slate-400 truncate mt-0.5">{l.itemType} talle {l.itemSize}</p>
+                                </div>
+                                <Pastilla tono="buena">
+                                    {l.returnDate ? fechaCorta(l.returnDate) : 'Devuelto'}
+                                </Pastilla>
+                                <BotonCircular
+                                    icono={Undo2}
+                                    etiqueta={`Marcar el préstamo de ${l.lenderName} ${l.lenderSurname} como no devuelto`}
+                                    onClick={() => updateLoan({ ...l, status: 'ACTIVE', returnDate: undefined })}
+                                />
+                                <BotonCircular
+                                    icono={Trash2}
+                                    tono="peligro"
+                                    etiqueta={`Eliminar el préstamo de ${l.lenderName} ${l.lenderSurname}`}
+                                    onClick={e => borrar(l, e)}
+                                />
+                            </Fila>
+                        ))}
+                    </ListaDeFilas>
+                </section>
+            )}
 
-            <div>
-                <h2 className="font-black text-base text-slate-500 uppercase tracking-tight mb-4">Historial de devoluciones</h2>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {returnedLoans.slice().reverse().map(l => (
-                        <div key={l.id} className="bg-white p-3 flex justify-between items-center border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                            <div>
-                                <span className="font-bold text-sm uppercase text-slate-700">{l.lenderName} {l.lenderSurname}</span>
-                                <span className="text-xs font-medium text-slate-400 ml-2 border-l-2 border-slate-200 pl-2">{l.itemType} {l.itemSize}</span>
-                                {l.returnDate && (
-                                    <div className="text-[10px] text-emerald-700 font-bold uppercase flex items-center gap-1 mt-1">
-                                        <Clock className="w-3 h-3" /> Devuelto: {new Date(l.returnDate).toLocaleDateString()}
-                                    </div>
-                                )}
-                            </div>
-                            <button
-                                onClick={(e) => handleDelete(l.id, e)}
-                                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                                aria-label={`Eliminar préstamo de ${l.lenderName} ${l.lenderSurname}`}
-                            >
-                                <Trash2 className="w-4 h-4 pointer-events-none" />
-                            </button>
-                        </div>
-                    ))}
-                    {returnedLoans.length === 0 && <p className="text-xs font-bold text-slate-300 uppercase">Sin historial</p>}
-                </div>
-            </div>
-        </div>
+            {loans.length === 0 && (
+                <EstadoVacio
+                    icono={Shirt}
+                    titulo="No hay nada prestado"
+                    texto="Cuando prestes una remera o un buzo, anotalo acá para saber quién lo tiene."
+                    accion={{ texto: 'Anotar el primero', icono: Plus, onClick: () => navigate('/punto-de-informacion/prestamos/nuevo') }}
+                />
+            )}
+        </TarjetaDelPunto>
     );
 };
 

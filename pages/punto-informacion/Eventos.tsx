@@ -1,41 +1,116 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
+import { AppEvent } from '../../types';
 import ModalCompartirQR from '../../components/modals/ModalCompartirQR';
-import { QrCode, Trash2, Calendar, ExternalLink, Plus, Clock, Edit2 } from 'lucide-react';
+import { QrCode, Trash2, Pencil, Plus, CalendarDays, Link2 } from 'lucide-react';
+import {
+    TarjetaDelPunto, CabeceraGrupo, ListaDeFilas, Fila,
+    BotonCircular, BotonPrincipal, EstadoVacio,
+} from '../../components/info-point/ListaDelPunto';
+
+/**
+ * La agenda de eventos.
+ *
+ * Lo que se pregunta acá es qué viene, así que lo próximo va arriba y en
+ * orden de cercanía; lo que ya pasó queda abajo, del más reciente al más
+ * viejo. Antes estaba todo junto y ordenado al revés, con el evento más
+ * nuevo primero aunque hubiera sido el mes pasado.
+ *
+ * Cada fila abre con la fecha en bloque, como la hoja de un almanaque: es el
+ * dato por el que se busca y el que ordena la lista.
+ */
+
+const ZONA_ARG = 'America/Argentina/Buenos_Aires';
+
+/** El día de hoy en hora de acá, como 'YYYY-MM-DD'. */
+const hoyArgentino = () => new Date().toLocaleDateString('en-CA', { timeZone: ZONA_ARG });
+
+const diaYMes = (fecha: string) => {
+    const d = new Date(`${fecha}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return { dia: '--', mes: '' };
+    return {
+        dia: d.toLocaleDateString('es-AR', { day: 'numeric' }),
+        mes: d.toLocaleDateString('es-AR', { month: 'short' }).replace('.', ''),
+    };
+};
 
 const Events: React.FC = () => {
     const navigate = useNavigate();
     const { events, deleteEvent, showNotification } = useStore();
-    const [qrModal, setQrModal] = useState<{ open: boolean, title: string, url: string, link: string }>({ open: false, title: '', url: '', link: '' });
+    const [qrModal, setQrModal] = useState<{ open: boolean; title: string; url: string; link: string }>({ open: false, title: '', url: '', link: '' });
 
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
+    const { proximos, pasados } = useMemo(() => {
+        const hoy = hoyArgentino();
+        return {
+            proximos: events.filter(e => e.date >= hoy).sort((a, b) => a.date.localeCompare(b.date)),
+            pasados: events.filter(e => e.date < hoy).sort((a, b) => b.date.localeCompare(a.date)),
+        };
+    }, [events]);
+
+    const borrar = async (ev: AppEvent, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        await deleteEvent(id);
+        if (!window.confirm(`¿Eliminar el evento "${ev.name}"? No se puede deshacer.`)) return;
+        await deleteEvent(ev.id);
         showNotification('Evento eliminado.');
     };
 
-    const sortedEvents = [...events].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    const getSafeQrUrl = (url: string | undefined, name: string, link: string | undefined) => {
-        const fallbackText = link || name || 'https://origen.church';
-        const defaultRender = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(fallbackText)}`;
-
-        if (!url) return defaultRender;
-
+    // El QR viejo lo generaba otro servicio que ya no responde: se reconstruye
+    // con el texto que tenía adentro.
+    const urlDelQr = (url: string | undefined, nombre: string, link: string | undefined) => {
+        const texto = link || nombre || 'https://origen.church';
+        const porDefecto = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(texto)}`;
+        if (!url) return porDefecto;
         if (url.includes('quickchart.io')) {
-            const match = url.match(/[?&]text=([^&]+)/);
-            if (match && match[1]) {
-                return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${match[1]}`;
-            }
-            return defaultRender;
+            const m = url.match(/[?&]text=([^&]+)/);
+            return m && m[1] ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${m[1]}` : porDefecto;
         }
         return url;
     };
 
+    const filaDeEvento = (ev: AppEvent, pasado: boolean) => {
+        const { dia, mes } = diaYMes(ev.date);
+        return (
+            <Fila key={ev.id}>
+                <span className={`shrink-0 w-11 h-11 rounded-xl flex flex-col items-center justify-center leading-none ${pasado ? 'bg-slate-50 text-slate-400' : 'bg-slate-100 text-black'}`}>
+                    <span className="text-base font-bold tabular-nums">{dia}</span>
+                    <span className="text-[10px] font-medium text-slate-400 mt-0.5">{mes}</span>
+                </span>
+
+                <div className="min-w-0 flex-1">
+                    <h4 className="font-semibold text-[15px] text-black leading-tight line-clamp-2">{ev.name}</h4>
+                    <p className="flex items-center gap-1.5 text-[13px] text-slate-400 truncate mt-0.5">
+                        {(ev.startTime || ev.endTime) && (
+                            <span className="tabular-nums">{ev.startTime || '--:--'}{ev.endTime ? ` a ${ev.endTime}` : ''}</span>
+                        )}
+                        {ev.link && <Link2 className="w-3.5 h-3.5 shrink-0" aria-label="Tiene link" />}
+                        {!ev.startTime && !ev.endTime && !ev.link && ev.location && <span className="truncate">{ev.location}</span>}
+                    </p>
+                </div>
+
+                <BotonCircular
+                    icono={QrCode}
+                    etiqueta={`Ver el código QR de ${ev.name}`}
+                    onClick={() => setQrModal({ open: true, title: ev.name, url: urlDelQr(ev.qrCodeUrl, ev.name, ev.link), link: ev.link || window.location.href })}
+                />
+                <BotonCircular
+                    icono={Pencil}
+                    etiqueta={`Editar ${ev.name}`}
+                    onClick={() => navigate(`/punto-de-informacion/eventos/nuevo?id=${ev.id}`)}
+                />
+                <BotonCircular
+                    icono={Trash2}
+                    tono="peligro"
+                    etiqueta={`Eliminar ${ev.name}`}
+                    onClick={e => borrar(ev, e)}
+                />
+            </Fila>
+        );
+    };
+
     return (
-        <div className="space-y-8 animate-fadeIn p-1">
+        <>
             <ModalCompartirQR
                 isOpen={qrModal.open}
                 onClose={() => setQrModal({ ...qrModal, open: false })}
@@ -44,91 +119,39 @@ const Events: React.FC = () => {
                 link={qrModal.link}
             />
 
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <h3 className="font-black text-xl uppercase tracking-tight text-slate-900">Agenda de eventos</h3>
-                <button
-                    onClick={() => navigate('/punto-de-informacion/eventos/nuevo')}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-black text-white font-bold uppercase text-xs tracking-widest rounded-lg hover:bg-slate-800 transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
-                    Crear evento
-                </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {sortedEvents.map(ev => (
-                    <div
-                        key={ev.id}
-                        className="bg-white p-5 border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-slate-300 transition-all group flex items-start gap-4 relative"
-                    >
-                        <button
-                            type="button"
-                            onClick={() => setQrModal({ open: true, title: ev.name, url: getSafeQrUrl(ev.qrCodeUrl, ev.name, ev.link), link: ev.link || window.location.href })}
-                            aria-label={`Ver código QR de ${ev.name}`}
-                            className="w-24 h-24 bg-white border border-slate-200 rounded-lg flex-shrink-0 p-1 hover:border-slate-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-                        >
-                            <img src={getSafeQrUrl(ev.qrCodeUrl, ev.name, ev.link)} alt="" className="w-full h-full object-contain pointer-events-none" />
-                        </button>
-
-                        <div className="flex-1 min-w-0">
-                            <h4 className="font-black text-slate-900 uppercase tracking-tight text-lg leading-tight mb-2 line-clamp-2">{ev.name}</h4>
-
-                            <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                                    <Calendar className="w-4 h-4 text-slate-400" />
-                                    <span>{new Date(ev.date + 'T00:00:00').toLocaleDateString()}</span>
-                                </div>
-                                {(ev.startTime || ev.endTime) && (
-                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 inline-flex self-start px-2 py-0.5 rounded-full">
-                                        <Clock className="w-3 h-3" />
-                                        <span>{ev.startTime || '--:--'} - {ev.endTime || '--:--'}</span>
-                                    </div>
-                                )}
-                                {ev.description && (
-                                    <p className="text-xs font-medium text-slate-500 mt-2 line-clamp-2 border-l-2 border-slate-200 pl-2">{ev.description}</p>
-                                )}
-                            </div>
-
-                            <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
-                                <div>
-                                    {ev.link && (
-                                        <div className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-[#118f46] hover:text-slate-900 transition-colors">
-                                            <ExternalLink className="w-3 h-3" /> Link externo
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex gap-1 shrink-0">
-                                    <button
-                                        type="button"
-                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/punto-de-informacion/eventos/nuevo?id=${ev.id}`); }}
-                                        className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-colors shadow-sm"
-                                        title="Editar"
-                                        aria-label={`Editar ${ev.name}`}
-                                    >
-                                        <Edit2 className="w-4 h-4 pointer-events-none" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => handleDelete(ev.id, e)}
-                                        className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors shadow-sm"
-                                        title="Eliminar"
-                                        aria-label={`Eliminar ${ev.name}`}
-                                    >
-                                        <Trash2 className="w-4 h-4 pointer-events-none" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-                {sortedEvents.length === 0 && (
-                    <div className="col-span-full py-12 text-center border border-dashed border-slate-200 rounded-lg bg-white">
-                        <QrCode className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No hay eventos cargados</p>
-                    </div>
+            <TarjetaDelPunto
+                titulo="Eventos"
+                bajada="Lo que viene, y lo que ya pasó."
+                acciones={
+                    <BotonPrincipal icono={Plus} onClick={() => navigate('/punto-de-informacion/eventos/nuevo')}>
+                        Crear evento
+                    </BotonPrincipal>
+                }
+            >
+                {proximos.length > 0 && (
+                    <section>
+                        <CabeceraGrupo cuenta={`${proximos.length} en agenda`}>Próximos</CabeceraGrupo>
+                        <ListaDeFilas>{proximos.map(ev => filaDeEvento(ev, false))}</ListaDeFilas>
+                    </section>
                 )}
-            </div>
-        </div>
+
+                {pasados.length > 0 && (
+                    <section>
+                        <CabeceraGrupo cuenta={`${pasados.length} en total`}>Ya pasaron</CabeceraGrupo>
+                        <ListaDeFilas>{pasados.map(ev => filaDeEvento(ev, true))}</ListaDeFilas>
+                    </section>
+                )}
+
+                {events.length === 0 && (
+                    <EstadoVacio
+                        icono={CalendarDays}
+                        titulo="No hay eventos cargados"
+                        texto="Creá el primero y la gente va a poder verlo desde la app y desde su QR."
+                        accion={{ texto: 'Crear el primero', icono: Plus, onClick: () => navigate('/punto-de-informacion/eventos/nuevo') }}
+                    />
+                )}
+            </TarjetaDelPunto>
+        </>
     );
 };
 
