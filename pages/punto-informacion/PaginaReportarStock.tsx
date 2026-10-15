@@ -381,7 +381,7 @@ const ReportarStockContent: React.FC = () => {
         <div id="punto-lote" className="min-h-screen bg-slate-50">
             <div className="w-full max-w-4xl mx-auto p-4 md:p-8 pb-36">
                 <button
-                    onClick={() => navigate('/punto-de-informacion')}
+                    onClick={() => navigate('/punto-de-informacion?view=PANEL')}
                     className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black transition-colors mb-6"
                 >
                     <ArrowLeft className="w-4 h-4" />
