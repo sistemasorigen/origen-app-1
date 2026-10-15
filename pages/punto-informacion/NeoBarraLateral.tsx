@@ -48,7 +48,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
         { id: 'PRESENTATIONS', label: 'Presentaciones', icon: Baby, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'EVENTS', label: 'Eventos', icon: CalendarDays, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
         { id: 'ADMIN_PANEL', label: 'Configuración', icon: Settings, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
-        { id: 'REPORTS', label: 'Reportes', icon: FileText, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
+        { id: 'REPORTS', label: 'Reportes', icon: FileText, roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.REPORTES] },
     ];
 
     // Filter items based on role
@@ -125,7 +125,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                                 id={`tour-infopoint-${item.id.toLowerCase()}-sidebar`}
                                 onClick={() => {
                                     if (item.id === 'REPORTS') {
-                                        navigate('/reportes');
+                                        navigate('/reportes/puntoinfo');
                                     } else {
                                         setView(item.id as ViewState);
                                     }
