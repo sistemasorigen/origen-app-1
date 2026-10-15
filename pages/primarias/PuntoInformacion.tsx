@@ -2,8 +2,8 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 import { AppProvider, useStore } from '../../store';
 import { ViewState, User, UserRole } from '../../types';
 import { hasRole, puedeEntrarAlPunto } from '../../services/authUtils';
@@ -14,7 +14,6 @@ import { useToast } from '../punto-informacion/context/ContextoToast';
 
 // Sub Views
 import PublicHome from '../punto-informacion/InicioPublico';
-import Dashboard from '../punto-informacion/PanelPrincipal';
 import Inventory from '../punto-informacion/Inventario';
 import NewProduct from '../punto-informacion/NuevoProducto';
 import Movements from '../punto-informacion/Movimientos';
@@ -33,29 +32,10 @@ interface InfoPointProps {
     currentUser: User | null;
 }
 
-// Orden y roles de las funciones del panel para la navegación por flechas
-// (solo desktop). MISMO ORDEN que el menú lateral (MenuDeslizable): Dashboard
-// primero y el resto alfabético. "Reportes" se excluye a propósito: navega
-// fuera del panel (/reportes), no es una vista interna por la que "desplazarse".
-const DESKTOP_NAV: { id: ViewState; label: string; roles: UserRole[] }[] = [
-    // Usa SUMMARY (no PANEL) para que la URL ?view=SUMMARY coincida con el ítem
-    // "Dashboard" del menú lateral y quede marcado. Ambos renderizan el Dashboard.
-    { id: 'SUMMARY', label: 'Dashboard', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-    { id: 'ANNOUNCEMENTS', label: 'Anuncios', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
-    { id: 'BAPTISMS', label: 'Bautismos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-
-    { id: 'ADMIN_PANEL', label: 'Configuración', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
-    { id: 'EVENTS', label: 'Eventos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
-    { id: 'INVENTORY', label: 'Inventario', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
-    { id: 'MOVEMENTS', label: 'Movimientos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-
-    { id: 'PRESENTATIONS', label: 'Presentaciones', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-    { id: 'LOANS', label: 'Préstamos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-];
-
 const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const { settings, isLoading, notification } = useStore();
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'PUBLIC' | 'INTERNAL'>('PUBLIC');
     const [currentView, setCurrentView] = useState<ViewState>('PANEL');
 
@@ -108,7 +88,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         } else {
             // Sin ?view= (ej: "Inicio" del menú) — volver al HOME público
             // de Punto de Información, no dejar el panel interno congelado.
-            // PANEL es el Dashboard, así que resetear la vista Y el modo.
+            // PANEL es el menú del panel, así que se resetean la vista Y el modo.
             setViewMode('PUBLIC');
             setCurrentView('PANEL');
         }
@@ -221,8 +201,8 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     // --- VIEW MAPPING ---
     const getViewTitle = (view: ViewState): string => {
         switch (view) {
-            case 'PANEL': return 'Punto de Info';
-            case 'SUMMARY': return 'Resumen';
+            case 'PANEL':
+            case 'SUMMARY': return 'Punto de Información';
             case 'INVENTORY': return 'Inventario';
             case 'NEW_PRODUCT': return 'Nuevo Producto';
             case 'MOVEMENTS': return 'Movimientos';
@@ -239,8 +219,11 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
 
     const renderView = () => {
         switch (currentView) {
-            case 'PANEL': return <Dashboard />;
-            case 'SUMMARY': return <Dashboard />;
+            // El menú de funciones es la puerta del panel. SUMMARY sigue
+            // acá porque quedó en links viejos y en favoritos: abre el menú,
+            // no el tablero que se retiró.
+            case 'PANEL':
+            case 'SUMMARY': return <InfoPointMenu onNavigate={irA} currentUser={authorizedUser} />;
             case 'SEARCH': return <Search />;
             case 'INVENTORY': return <Inventory />;
             case 'NEW_PRODUCT': return <NewProduct />;
@@ -254,33 +237,18 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 if (!canAccessAdminPanel) {
                     toast.error('No tienes permisos para acceder a Configuración');
                     setTimeout(() => irA('PANEL'), 0);
-                    return <Dashboard />;
+                    return <InfoPointMenu onNavigate={irA} currentUser={authorizedUser} />;
                 }
                 return <AdminPanel />;
             }
-            default: return <Dashboard />;
+            // Cualquier ?view= que no exista abre el menú, que es de donde
+            // sale todo lo demás.
+            default: return <InfoPointMenu onNavigate={irA} currentUser={authorizedUser} />;
         }
     };
 
-    // --- NAVEGACIÓN POR FLECHAS (solo desktop) ---
-    // Funciones visibles según el rol, en el orden definido.
-    const visibleNav = DESKTOP_NAV.filter(item => !!authorizedUser && hasRole(authorizedUser, item.roles));
-    // PANEL y SUMMARY renderizan el mismo Dashboard; al entrar al panel la vista
-    // arranca en PANEL, así que lo tratamos como SUMMARY para ubicar el índice.
-    const normalizedView = currentView === 'PANEL' ? 'SUMMARY' : currentView;
-    const navIndex = visibleNav.findIndex(item => item.id === normalizedView);
-    // Título centrado: usa el label del menú; si la vista no está en la lista
-    // cae al título genérico.
-    const currentNavLabel = navIndex >= 0 ? visibleNav[navIndex].label : getViewTitle(currentView);
-    // Se desplaza de forma circular actualizando la URL (?view=XXX). El efecto de
-    // deep-linking sincroniza currentView, y el menú lateral marca el ítem activo
-    // por coincidencia exacta de URL. Se usa replace para no llenar el historial.
-    const goToNav = (dir: -1 | 1) => {
-        if (visibleNav.length === 0) return;
-        const base = navIndex >= 0 ? navIndex : 0;
-        const next = (base + dir + visibleNav.length) % visibleNav.length;
-        irA(visibleNav[next].id);
-    };
+    /** ¿Lo que se está mostrando es el menú de funciones? */
+    const esElMenu = currentView === 'PANEL' || currentView === 'SUMMARY';
 
     return (
         <div className="flex flex-col md:flex-row h-screen md:h-[calc(100vh-64px)] bg-slate-50 overflow-hidden relative">
@@ -290,7 +258,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 {/* Header solo en sub-vistas (back + título + dropdown).
                     En la raíz del panel (PANEL) no hay barra: el toggle
                     Web/Panel se eliminó. */}
-                {currentView !== 'PANEL' && (
+                {!esElMenu && (
                     <header className="flex-none z-40 bg-white border-b border-slate-200 select-none overflow-hidden" style={{ touchAction: 'none' }}>
                         <MobileHeader
                             title={getViewTitle(currentView)}
@@ -304,8 +272,8 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 )}
 
                 <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-slate-50">
-                    {currentView === 'PANEL' ? (
-                        <InfoPointMenu onNavigate={irA} currentUser={authorizedUser} />
+                    {esElMenu ? (
+                        renderView()
                     ) : (
                         <div className="pb-20 px-4 pt-4">
                             {renderView()}
@@ -326,36 +294,34 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             {/* --- DESKTOP LAYOUT --- */}
             <div className="hidden md:flex flex-col flex-1 h-full overflow-hidden relative">
 
-                {/* Cabecera de navegación: nombre de la vista centrado con
-                    flechas a los costados para desplazarse entre funciones.
-                    Reemplaza al menú lateral (exclusivo de desktop). */}
-                <header className="flex-none border-b border-slate-200 bg-white">
-                    <div className="flex items-center justify-center gap-6 px-8 py-5">
-                        <button
-                            onClick={() => goToNav(-1)}
-                            aria-label="Función anterior"
-                            className="flex items-center justify-center w-11 h-11 border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-                        >
-                            <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
-                        </button>
-
-                        <div className="flex flex-col items-center min-w-[16rem]">
-                            <h1 className="text-2xl font-bold tracking-tight text-black text-center leading-none">
-                                {currentNavLabel}
+                {/* La cabecera del panel en la compu: dónde estás y cómo
+                    volver al menú. Antes eran dos flechas que iban a la
+                    función anterior y a la siguiente, en un orden que sólo
+                    conocía el código: para llegar a Préstamos había que pasar
+                    por las otras seis. Ahora se elige en el menú, que es una
+                    lista con los nombres a la vista.
+                    En el menú no hay cabecera: esa pantalla trae su título. */}
+                {!esElMenu && (
+                    <header className="flex-none border-b border-slate-200 bg-white">
+                        <div className="flex items-center gap-4 px-8 py-5">
+                            <button
+                                type="button"
+                                onClick={() => irA('PANEL')}
+                                className="shrink-0 inline-flex items-center gap-1.5 h-10 px-3 -ml-3 rounded-full text-sm font-semibold text-slate-500 hover:text-black hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                Punto de Información
+                            </button>
+                            <h1 className="flex-1 text-2xl font-bold tracking-tight text-black text-center leading-none">
+                                {getViewTitle(currentView)}
                             </h1>
+                            {/* Espaciador: mantiene el título centrado. */}
+                            <div className="shrink-0 w-[196px]" aria-hidden="true" />
                         </div>
+                    </header>
+                )}
 
-                        <button
-                            onClick={() => goToNav(1)}
-                            aria-label="Función siguiente"
-                            className="flex items-center justify-center w-11 h-11 border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-                        >
-                            <ChevronRight className="w-6 h-6" strokeWidth={2.5} />
-                        </button>
-                    </div>
-                </header>
-
-                <main className="flex-1 overflow-y-auto p-8 relative bg-slate-50">
+                <main className={`flex-1 overflow-y-auto relative bg-slate-50 ${esElMenu ? '' : 'p-8'}`}>
                     {renderView()}
 
                     {/* Global Notification Toast */}

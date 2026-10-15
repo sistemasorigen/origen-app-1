@@ -17,6 +17,7 @@ import {
     X,
     FileText,
     Megaphone,
+    ClipboardCheck,
     PanelLeftClose,
     PanelLeftOpen,
 } from 'lucide-react';
@@ -37,6 +38,7 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
 
     // Menu Configuration based on Role requirements:
     const allMenuItems = [
+        { id: 'REPORTAR', label: 'Reportar', icon: ClipboardCheck, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'PANEL', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'ANNOUNCEMENTS', label: 'Anuncios', icon: Megaphone, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
 
@@ -126,6 +128,9 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
                                 onClick={() => {
                                     if (item.id === 'REPORTS') {
                                         navigate('/reportes/puntoinfo');
+                                    } else if (item.id === 'REPORTAR') {
+                                        // Vive fuera del panel, como los reportes.
+                                        navigate('/punto-de-informacion/reportar');
                                     } else {
                                         setView(item.id as ViewState);
                                     }

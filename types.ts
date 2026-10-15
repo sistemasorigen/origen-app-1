@@ -223,6 +223,14 @@ export interface Movement {
     date: string; // ISO String
     paymentMethod?: 'Efectivo' | 'Mercado Pago'; // Payment method for OUT movements
     // Notes removed as per request
+
+    /** Quién lo cargó, copiado en el momento. Lo pone un trigger de la base. */
+    createdBy?: string | null;
+    createdByName?: string | null;
+    /** El stock que había justo antes. NULL en los movimientos viejos. */
+    previousStock?: number | null;
+    /** El reporte de stock que lo generó. NULL si se cargó a mano. */
+    reportId?: string | null;
 }
 
 export enum PendingStatus {
@@ -453,6 +461,9 @@ export type ViewState =
     | 'EVENTS'
     | 'SEARCH'
     | 'SUMMARY'
+    // Vive en su propia ruta (/punto-de-informacion/reportar), pero el panel
+    // la nombra para poder llevarte hasta ahí.
+    | 'REPORTAR'
     | 'WELCOME'
     | 'REPORTES'
     | 'ADMIN_PANEL'

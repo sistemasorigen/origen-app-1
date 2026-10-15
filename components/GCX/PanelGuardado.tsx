@@ -28,6 +28,8 @@ interface Props {
     titulo: string;
     /** "12 de 15 presentes · miércoles, 9 de septiembre". */
     detalle?: string;
+    /** Lo que dice mientras guarda. El Punto guarda otras cosas. */
+    textoGuardando?: string;
     mensajeError?: string;
     onReintentar: () => void;
     onCerrar: () => void;
@@ -42,6 +44,7 @@ const TILDE = 'M5 12.5l4.6 4.5L19 7.5';
 
 const PanelGuardado: React.FC<Props> = ({
     estado, titulo, detalle, mensajeError, onReintentar, onCerrar,
+    textoGuardando = 'Guardando la asistencia…',
 }) => {
     const abierto = estado !== 'cerrado';
     const sinMovimiento = useReducedMotion();
@@ -64,7 +67,7 @@ const PanelGuardado: React.FC<Props> = ({
         return () => document.removeEventListener('keydown', onKey);
     }, [abierto, estado, onCerrar]);
 
-    const anuncio = estado === 'guardando' ? 'Guardando la asistencia…'
+    const anuncio = estado === 'guardando' ? textoGuardando
         : estado === 'listo' ? `${titulo}. ${detalle ?? ''}`
             : estado === 'error' ? `No se pudo guardar. ${mensajeError ?? ''}`
                 : '';
@@ -104,7 +107,7 @@ const PanelGuardado: React.FC<Props> = ({
 
                             {estado === 'guardando' && (
                                 <p className="mt-[22px] text-[17px] font-semibold tracking-[-.01em]">
-                                    Guardando la asistencia…
+                                    {textoGuardando}
                                 </p>
                             )}
 

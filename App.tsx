@@ -10,6 +10,7 @@ import PaginaNuevoPrestamo from './pages/punto-informacion/PaginaNuevoPrestamo';
 import PaginaNuevaPresentacion from './pages/punto-informacion/PaginaNuevaPresentacion';
 import PaginaNuevoMovimiento from './pages/punto-informacion/PaginaNuevoMovimiento';
 import PaginaMovimientosVarios from './pages/punto-informacion/PaginaMovimientosVarios';
+import PaginaReportarStock from './pages/punto-informacion/PaginaReportarStock';
 import PaginaNuevoEvento from './pages/punto-informacion/PaginaNuevoEvento';
 import PaginaNuevoAnuncio from './pages/punto-informacion/PaginaNuevoAnuncio';
 import Groups from './pages/groups/Grupos';
@@ -707,6 +708,7 @@ const AppContent: React.FC = () => {
                                 <Route path="/punto-de-informacion/presentacion-ninos/nuevo" element={<PaginaNuevaPresentacion />} />
                                 <Route path="/punto-de-informacion/movimientos/nuevo" element={<PaginaNuevoMovimiento />} />
                                 <Route path="/punto-de-informacion/movimientos/varios" element={<PaginaMovimientosVarios />} />
+                                <Route path="/punto-de-informacion/reportar" element={<PaginaReportarStock />} />
                                 <Route path="/punto-de-informacion/eventos/nuevo" element={<PaginaNuevoEvento />} />
                                 <Route path="/punto-de-informacion/anuncios/nuevo" element={<PaginaNuevoAnuncio />} />
                                 <Route path="/panel-admin" element={
