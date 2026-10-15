@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { AppProvider, useStore } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { MovementType, ProductType, InfoPointProduct, Movement } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
 import { puedeEntrarAlPunto } from '../../services/authUtils';
+import SinAcceso from '../../components/auth/SinAcceso';
 import { ArrowLeft, Loader2, PackageOpen, Minus, Plus, Trash2, ChevronDown, Check, X } from 'lucide-react';
 
 /**
@@ -637,7 +638,7 @@ const PaginaMovimientosVarios: React.FC = () => {
             </div>
         );
     }
-    if (!puedeEntrarAlPunto(user)) return <Navigate to="/" replace />;
+    if (!puedeEntrarAlPunto(user)) return <SinAcceso />;
 
     return (
         <AppProvider currentUser={user}>

@@ -115,6 +115,7 @@ import PantallaCargaApp from './components/ui/PantallaCargaApp';
 import { hayMediaPendiente, olvidarMedia, reservarMedia, suscribirMedia } from './src/utils/mediaDeEntrada';
 import { User, UserRole, AppConfig } from './types';
 import { db } from './services/dbService';
+import SinAcceso, { guardarDestino } from './components/auth/SinAcceso';
 import { supabaseService } from './services/supabaseService';
 import { hasRole } from './services/authUtils';
 import { AudioProvider } from './contexts/AudioContext';
@@ -298,13 +299,10 @@ const AppContent: React.FC = () => {
     };
 
     const handleLogin = () => {
-        // sessionStorage sobrevive el redirect completo
-        // del login con Google (location.state se pierde
-        // en ese flujo porque el browser recarga la página)
-        sessionStorage.setItem(
-            'post_login_redirect',
-            `${location.pathname}${location.search || ''}`
-        );
+        // El mismo par de pasos que hace SinAcceso cuando no hay sesión:
+        // el destino va por sessionStorage (sobrevive el recargado del login
+        // con Google) y por state.from (el login con email).
+        guardarDestino(location);
         navigate('/auth', { state: { from: location } });
     };
 
@@ -556,7 +554,7 @@ const AppContent: React.FC = () => {
                     UserRole.ACREDITACION,
                 ]))
                     ? <AcreditarNocturna currentUser={user} />
-                    : <Navigate to="/" />
+                    : <SinAcceso />
             } />
             {/* Con Layout aunque sea pública: la navbar de siempre arriba,
                 pegajosa, con el logo centrado en su tamaño real.
@@ -671,17 +669,19 @@ const AppContent: React.FC = () => {
                     >
                         <Ninez currentUser={user} />
                     </Layout>
-                    : <Navigate to="/" />
+                    : <SinAcceso />
             } />
 
             {/* ── RUTAS PROTEGIDAS CON LAYOUT ──────── */}
             <Route path="*" element={
                 !user
-                    ? <Navigate
-                        to="/auth"
-                        state={{ from: location }}
-                        replace
-                      />
+                    // Al login, anotando a dónde quería entrar. Lo hace
+                    // SinAcceso y no un <Navigate> suelto para que el destino
+                    // salga por los dos caminos: el state de react-router (que
+                    // sobrevive un reload porque vive en el history) y
+                    // sessionStorage, que es el único que aguanta el login con
+                    // Google, donde el navegador recarga en otra URL.
+                    ? <SinAcceso />
                     : (
                         <Layout
                             userRole={user?.role || null}
@@ -712,7 +712,7 @@ const AppContent: React.FC = () => {
                                 <Route path="/panel-admin" element={
                                     isSuperAdmin(user)
                                         ? <Admin currentUser={user} onConfigUpdate={refreshConfig} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/store" element={<Store currentUser={user} />} />
                                 <Route path="/alabanza" element={<Alabanza currentUser={user} onLoginRequest={handleLogin} />} />
@@ -727,7 +727,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_GROUPS
                                     ]))
                                         ? <Pastores currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 {/* Tablero nuevo de GCX. Convive con /reportes, que sigue
                                     siendo Pastores.tsx: mismo guard de 7 roles, copiado tal cual. */}
@@ -742,7 +742,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_GROUPS
                                     ]))
                                         ? <ReportesGCX currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 {/* ⚠️ ANTES de :groupId a propósito — si no, "comp-temp" se
                                     interpreta como un id de grupo. React Router 7 rankea los
@@ -761,7 +761,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_GROUPS
                                     ]))
                                         ? <CompararTemporadas currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 {/* Tablero del Punto de Información. Convive con /reportes
                                     (Pastores.tsx), igual que el de GCX. Los cinco roles son
@@ -776,7 +776,7 @@ const AppContent: React.FC = () => {
                                         UserRole.REPORTES
                                     ]))
                                         ? <ReportesPuntoInfo />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/reportes/puntoinfo/bautismos-detalles" element={
                                     (user && hasRole(user, [
@@ -787,7 +787,7 @@ const AppContent: React.FC = () => {
                                         UserRole.REPORTES
                                     ]))
                                         ? <ReportesPuntoInfoBautismos />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/reportes/puntoinfo/presentacion-detalles" element={
                                     (user && hasRole(user, [
@@ -798,7 +798,7 @@ const AppContent: React.FC = () => {
                                         UserRole.REPORTES
                                     ]))
                                         ? <ReportesPuntoInfoPresentaciones />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/reportes/gcx/:groupId" element={
                                     (user && hasRole(user, [
@@ -811,7 +811,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_GROUPS
                                     ]))
                                         ? <DetalleGrupoReporte />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/bienvenida" element={
                                     (user && hasRole(user, [
@@ -820,7 +820,7 @@ const AppContent: React.FC = () => {
                                         UserRole.VOLUNTARIO_BIENVENIDA
                                     ]))
                                         ? <Bienvenida />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/bienvenida/v/:id" element={
                                     (user && hasRole(user, [
@@ -829,7 +829,7 @@ const AppContent: React.FC = () => {
                                         UserRole.VOLUNTARIO_BIENVENIDA
                                     ]))
                                         ? <DetalleIngresante />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/bienvenida/nuevo" element={
                                     (user && hasRole(user, [
@@ -838,7 +838,7 @@ const AppContent: React.FC = () => {
                                         UserRole.VOLUNTARIO_BIENVENIDA
                                     ]))
                                         ? <NuevoIngresante />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/influos" element={
                                     (user && hasRole(user, [
@@ -847,7 +847,7 @@ const AppContent: React.FC = () => {
                                         UserRole.PASTOR
                                     ]))
                                         ? <InfluosPage />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos" element={
                                     (user && hasRole(user, [
@@ -857,7 +857,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <HostDashboard currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/crear-grupo" element={
                                     (user && hasRole(user, [
@@ -867,7 +867,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaCrearGrupo currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/:groupId" element={
                                     (user && hasRole(user, [
@@ -877,7 +877,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <DetalleGrupoAnfitrion currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/:groupId/asistencia" element={
                                     (user && hasRole(user, [
@@ -887,7 +887,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaAsistenciaGrupo currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/:groupId/bajas" element={
                                     (user && hasRole(user, [
@@ -897,7 +897,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaBajaGrupo currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/:groupId/derivar" element={
                                     (user && hasRole(user, [
@@ -907,7 +907,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaDerivarMiembro currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/:groupId/inscriptos" element={
                                     (user && hasRole(user, [
@@ -917,7 +917,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaInscriptosGrupo currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/:groupId/solicitudes" element={
                                     (user && hasRole(user, [
@@ -927,7 +927,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaSolicitudesGrupo currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/:groupId/transferir" element={
                                     (user && hasRole(user, [
@@ -937,7 +937,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaTransferirGrupo currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/:groupId/editar-grupo" element={
                                     (user && hasRole(user, [
@@ -947,7 +947,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaEditarGrupo currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/:groupId/reabrir-grupo" element={
                                     (user && hasRole(user, [
@@ -957,7 +957,7 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaReabrirGrupo currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/mis-grupos/:groupId/inscribir" element={
                                     (user && hasRole(user, [
@@ -967,10 +967,10 @@ const AppContent: React.FC = () => {
                                         UserRole.SUPER_ADMIN
                                     ]))
                                         ? <PaginaInscribirParticipante currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/gcx/calendario" element={
-                                    user ? <CalendarioGCX currentUser={user} /> : <Navigate to="/" />
+                                    user ? <CalendarioGCX currentUser={user} /> : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/gestion-de-grupos" element={
                                     (user && hasRole(user, [
@@ -979,7 +979,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <GestionDeGrupos />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/gestion-de-grupos/bajas" element={
                                     (user && hasRole(user, [
@@ -988,7 +988,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <BajasGrupos />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/gestion-de-grupos/agregar-grupo" element={
                                     (user && hasRole(user, [
@@ -997,7 +997,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <AgregarMiembroGrupo />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/gestion-de-grupos/crear-grupo" element={
                                     (user && hasRole(user, [
@@ -1006,7 +1006,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <CrearGrupoAdmin />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/gestion-de-grupos/editar-grupo/:groupId" element={
                                     (user && hasRole(user, [
@@ -1015,7 +1015,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <EditarGrupoAdmin />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/gestion-de-grupos/reabrir-grupo/:groupId" element={
                                     (user && hasRole(user, [
@@ -1024,7 +1024,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <ReabrirGrupoAdmin />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/gestion-de-grupos/inscriptos/:groupId" element={
                                     (user && hasRole(user, [
@@ -1033,7 +1033,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <InscriptosGrupo />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/gestion-de-grupos/detalles/:groupId" element={
                                     (user && hasRole(user, [
@@ -1042,7 +1042,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <DetalleGrupoAdmin />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/gestion-de-anfitriones" element={
                                     (user && hasRole(user, [
@@ -1051,7 +1051,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_GRUPOS,
                                     ]))
                                         ? <GestionDeAnfitriones />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/gestion-de-coordinadores" element={
                                     (user && hasRole(user, [
@@ -1059,7 +1059,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_GROUPS,
                                     ]))
                                         ? <GestionDeCoordinadores />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/categorias" element={
                                     (user && hasRole(user, [
@@ -1067,7 +1067,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_GROUPS,
                                     ]))
                                         ? <Categorias />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/etiquetas" element={
                                     (user && hasRole(user, [
@@ -1075,7 +1075,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_GROUPS,
                                     ]))
                                         ? <Etiquetas />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/configuracion" element={
                                     (user && hasRole(user, [
@@ -1083,7 +1083,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_GROUPS,
                                     ]))
                                         ? <Configuracion />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admingcx/temporadas" element={
                                     (user && hasRole(user, [
@@ -1091,12 +1091,12 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_GROUPS,
                                     ]))
                                         ? <Temporadas />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/coordinators" element={
                                     (user && hasRole(user, [UserRole.COORDINATOR, UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS]))
                                         ? <Coordinators currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 {/* Tutoriales desactivado. La ruta se mantiene y redirige a
                                     inicio en vez de borrarse, para que un link viejo o un
@@ -1111,7 +1111,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_CUIDADO_PASTORAL
                                     ]))
                                         ? <PastoralCareDashboard currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/audiencia-servicios/new" element={
                                     (user && hasRole(user, [
@@ -1120,7 +1120,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_CUIDADO_PASTORAL
                                     ]))
                                         ? <PastoralCareForm currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 {/* El detalle de un servicio vive en su propia dirección para
                                     poder compartirla y volver atrás; antes era un modal. */}
@@ -1131,7 +1131,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_CUIDADO_PASTORAL
                                     ]))
                                         ? <AudienciaServicioDetalle currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/prode" element={<Prode />} />
                                 <Route path="/prode/ranking" element={<ProdeRanking />} />
@@ -1143,7 +1143,7 @@ const AppContent: React.FC = () => {
                                         UserRole.PRODE
                                     ]))
                                         ? <AdminProde />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
 
                                 <Route path="/panel-eventos" element={
@@ -1159,7 +1159,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <PanelEventos currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/admin/diadelpadre" element={
                                     (user && hasRole(user, [
@@ -1168,7 +1168,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <AdminDPadre currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/admin/diadelnino" element={
                                     (user && hasRole(user, [
@@ -1179,7 +1179,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <AdminDiaNino currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 {/* Nocturna. Los 4 roles son los mismos que mira
                                     is_nocturna_staff() en la base: si acá y allá no
@@ -1193,7 +1193,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <AdminNocturna currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/panel-eventos/nocturna/nueva" element={
                                     (user && hasRole(user, [
@@ -1203,7 +1203,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <CrearInscripcionNocturna currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 {/* La ficha y su edición van DESPUÉS de /nueva y de
                                     /acreditar (esta última vive arriba, fuera del
@@ -1218,7 +1218,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <CrearInscripcionNocturna currentUser={user} modoEdicion />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/panel-eventos/nocturna/:id" element={
                                     (user && hasRole(user, [
@@ -1228,7 +1228,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <DetalleNocturna currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/admin/tribal-wars" element={
                                     (user && hasRole(user, [
@@ -1238,7 +1238,7 @@ const AppContent: React.FC = () => {
                                         UserRole.INFLUOS,
                                     ]))
                                         ? <AdminInfluosDia currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 {/* Guard de SUPER_ADMIN + ENCARGADO_EVENTOS — sin PASTOR, decisión explícita */}
                                 <Route path="/eventos/admin/general/crear-evento" element={
@@ -1247,7 +1247,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <CrearEventoGeneral />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/admin/general" element={
                                     (user && hasRole(user, [
@@ -1255,7 +1255,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <AdminEventosGeneral currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/admin/tribal-wars/nueva" element={
                                     (user && hasRole(user, [
@@ -1265,7 +1265,7 @@ const AppContent: React.FC = () => {
                                         UserRole.INFLUOS,
                                     ]))
                                         ? <NuevaInfluosDia />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/admin/diadelnino/nueva" element={
                                     (user && hasRole(user, [
@@ -1276,7 +1276,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <NuevaDiaNino />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/admin/diadelnino/escaner" element={
                                     (user && hasRole(user, [
@@ -1287,7 +1287,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <EscanerDiaNino />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/admin/diadelnino/escaner/:ticketId" element={
                                     (user && hasRole(user, [
@@ -1298,7 +1298,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <AcreditarEscaneoDiaNino />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/admin/diadelnino/:sessionId" element={
                                     (user && hasRole(user, [
@@ -1309,22 +1309,22 @@ const AppContent: React.FC = () => {
                                         UserRole.ACREDITACION,
                                     ]))
                                         ? <DetalleDiaNino />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/puntuacion" element={
                                     (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.EVENTOS, UserRole.ENCARGADO_EVENTOS]))
                                         ? <Puntuacion zona="trivia" currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/futboltenis" element={
                                     (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.EVENTOS, UserRole.ENCARGADO_EVENTOS]))
                                         ? <Puntuacion zona="futbol" currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/eventos/dpadre/:id" element={
                                     (user && hasRole(user, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.EVENTOS, UserRole.ENCARGADO_EVENTOS]))
                                         ? <DetalleFamilia currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/admin-ninez/configuracion" element={
                                     (user && hasRole(user, [
@@ -1333,7 +1333,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_NINEZ,
                                     ]))
                                         ? <ConfiguracionNinez />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/trivia/admin" element={
                                     (user && hasRole(user, [
@@ -1342,7 +1342,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <AdminTrivia currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/trivia/admin/nuevo" element={
                                     (user && hasRole(user, [
@@ -1351,7 +1351,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <CrearJuego currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/trivia/admin/:id" element={
                                     (user && hasRole(user, [
@@ -1360,7 +1360,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <TriviaControl currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/trivia/historial" element={
                                     (user && hasRole(user, [
@@ -1369,7 +1369,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <TriviaHistorial currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/trivia/historial/:id" element={
                                     (user && hasRole(user, [
@@ -1378,7 +1378,7 @@ const AppContent: React.FC = () => {
                                         UserRole.ENCARGADO_EVENTOS,
                                     ]))
                                         ? <TriviaPlanilla currentUser={user} />
-                                        : <Navigate to="/" />
+                                        : <SinAcceso />
                                 } />
                                 <Route path="/notificaciones" element={<Notifications />} />
                                 <Route path="/perfil" element={<ProfilePage />} />

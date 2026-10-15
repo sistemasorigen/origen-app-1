@@ -25,6 +25,7 @@ import ChildPresentations from '../punto-informacion/PresentacionNinos';
 import Search from '../punto-informacion/Busqueda';
 import AdminPanel from '../punto-informacion/PanelAdministrador';
 import MobileHeader from '../punto-informacion/EncabezadoMovil';
+import SinAcceso from '../../components/auth/SinAcceso';
 import InfoPointMenu from '../punto-informacion/MenuPuntoInformacion';
 import Announcements from '../punto-informacion/Anuncios';
 
@@ -187,6 +188,15 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 Cargando sistema...
             </div>
         );
+    }
+
+    // Un ?view= en la URL es el panel, no la portada pública: es el link que
+    // alguien pasa por WhatsApp ("fijate los anuncios"). A quien no puede
+    // entrar no se le devuelve la portada con esa URL puesta —que se lee como
+    // que el link está roto—: sin sesión va al login y vuelve acá después, y
+    // con sesión sin el rol se le avisa.
+    if (searchParams.get('view') && !canEnterPanel) {
+        return <SinAcceso />;
     }
 
     if (viewMode === 'PUBLIC') {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppProvider, useStore } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { puedeEntrarAlPunto } from '../../services/authUtils';
+import SinAcceso from '../../components/auth/SinAcceso';
 import { PendingStatus } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
 import { formatDateForInput } from '../../services/dateUtils';
@@ -192,7 +193,7 @@ const PaginaNuevaPresentacion: React.FC = () => {
             </div>
         );
     }
-    if (!puedeEntrarAlPunto(user)) return <Navigate to="/" replace />;
+    if (!puedeEntrarAlPunto(user)) return <SinAcceso />;
 
     return (
         <AppProvider currentUser={user}>

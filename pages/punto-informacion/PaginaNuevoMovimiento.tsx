@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AppProvider, useStore } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { MovementType, ProductType, INFO_POINT_SIZES } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
 import { puedeEntrarAlPunto } from '../../services/authUtils';
+import SinAcceso from '../../components/auth/SinAcceso';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
 const PaginaNuevoMovimientoContent: React.FC = () => {
@@ -197,7 +198,7 @@ const PaginaNuevoMovimiento: React.FC = () => {
             </div>
         );
     }
-    if (!puedeEntrarAlPunto(user)) return <Navigate to="/" replace />;
+    if (!puedeEntrarAlPunto(user)) return <SinAcceso />;
 
     return (
         <AppProvider currentUser={user}>
