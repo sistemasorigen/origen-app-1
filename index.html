@@ -377,6 +377,19 @@
       border-radius: 0.75rem;
     }
 
+    /* Las flechitas nativas de los campos numéricos (precio, stock) no las
+       usa nadie con el pulgar y ensucian el campo: el número se escribe. */
+    #punto-formulario input[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    #punto-formulario input[type="number"]::-webkit-outer-spin-button,
+    #punto-formulario input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
     #punto-formulario input:focus,
     #punto-formulario select:focus,
     #punto-formulario textarea:focus {
