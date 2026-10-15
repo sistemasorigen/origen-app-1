@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#dfe3e8;font-family:system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}button{font-family:inherit}a{color:inherit;text-decoration:none}a:hover{color:inherit}.nv-x::-webkit-scrollbar{display:none}@keyframes nvShim{0%{background-position:-500px 0}100%{background-position:500px 0}}@keyframes nvIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes nvFade{from{opacity:0}to{opacity:1}}@keyframes nvDrawer{from{transform:translateX(-100%)}to{transform:none}}@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:16px">
+
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:22px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.08); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:#64748b">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f1f5f9; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:#64748b">TEMA</span>
+    <div style="display:flex; gap:3px; background:#f1f5f9; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:#64748b">ESTADO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f1f5f9; border-radius:18px; padding:3px">
+      <sc-for list="{{ estados }}" as="e" hint-placeholder-count="5"><button onClick="{{ e.ir }}" style="{{ e.style }}">{{ e.label }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; justify-content:center">
+
+  <div ref="{{ frameRef }}" style="position:relative; flex:none; overflow:hidden; background:{{ t.page }}; box-shadow:0 8px 30px rgba(15,23,42,.18); width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}">
+    <div ref="{{ scrollRef }}" class="nv-x" style="position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none">
+
+      <sc-if value="{{ cargando }}" hint-placeholder-val="{{ false }}">
+        <div style="height:{{ bannerH }}; {{ t.skDark }}"></div>
+      </sc-if>
+
+      <sc-if value="{{ noCargando }}" hint-placeholder-val="{{ true }}">
+        <section aria-roledescription="carrusel" aria-label="Destacados" onPointerDown="{{ swDown }}" onPointerUp="{{ swUp }}" style="position:relative; height:{{ bannerH }}; overflow:hidden; background:#0b1220; touch-action:pan-y; user-select:none">
+          <sc-for list="{{ slides }}" as="sl" hint-placeholder-count="3">
+            <div aria-hidden="{{ sl.oculto }}" style="position:absolute; inset:0; opacity:{{ sl.op }}; transition:opacity .6s ease">
+              <div style="position:absolute; inset:0; background:{{ sl.bg }}"></div>
+              <span style="position:absolute; right:18px; top:{{ etiquetaTop }}; font:500 10.5px ui-monospace,Menlo,monospace; letter-spacing:.06em; color:rgba(255,255,255,.45)">{{ sl.media }}</span>
+              <div style="position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,rgba(0,0,0,0) 28%,rgba(0,0,0,0) 45%,rgba(0,0,0,.72) 100%)"></div>
+              <div style="position:absolute; left:0; right:0; bottom:0; padding:{{ slidePad }}">
+                <div style="max-width:1280px; margin:0 auto">
+                  <p style="margin:0; font-size:11px; font-weight:600; letter-spacing:.12em; color:rgba(255,255,255,.75)">{{ sl.eyebrow }}</p>
+                  <h1 style="margin:10px 0 0; max-width:640px; font-size:{{ slideH }}; line-height:1.02; font-weight:700; letter-spacing:-.03em; text-transform:uppercase; color:#fff; text-wrap:balance">{{ sl.titulo }}</h1>
+                  <p style="margin:12px 0 0; max-width:520px; font-size:15px; line-height:1.5; color:rgba(255,255,255,.85)">{{ sl.bajada }}</p>
+                  <button onClick="{{ sl.ir }}" style="margin-top:20px; height:48px; padding:0 22px; border:0; border-radius:12px; background:#fff; color:#0f172a; font-size:14.5px; font-weight:600; cursor:pointer" style-active="transform:scale(.98)">{{ sl.cta }}</button>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+          <div style="position:absolute; left:0; right:0; bottom:{{ dotsBottom }}; display:flex; justify-content:center; gap:4px">
+            <sc-for list="{{ dots }}" as="d" hint-placeholder-count="3">
+              <button onClick="{{ d.ir }}" aria-label="{{ d.label }}" style="width:28px; height:28px; border:0; padding:0; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="{{ d.style }}"></span></button>
+            </sc-for>
+          </div>
+        </section>
+      </sc-if>
+
+      <header style="position:absolute; left:0; right:0; top:0; z-index:5">
+        <div style="max-width:1280px; margin:0 auto; padding:{{ navPad }}; display:flex; align-items:center; gap:14px">
+          <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ abrirMenu }}" aria-label="Abrir el menú" style="width:44px; height:44px; margin-left:-8px; border:0; border-radius:12px; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+          </sc-if>
+          <span style="font-size:17px; font-weight:700; letter-spacing:.14em; color:#fff">ORIGEN</span>
+          <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+            <nav style="display:flex; gap:26px; margin-left:28px">
+              <sc-for list="{{ navLinks }}" as="n" hint-placeholder-count="5"><span style="{{ n.style }}">{{ n.t }}</span></sc-for>
+            </nav>
+          </sc-if>
+          <div style="margin-left:auto">
+            <button onClick="{{ sesionBtn }}" style="height:40px; padding:0 16px; border:1px solid rgba(255,255,255,.4); border-radius:12px; background:rgba(255,255,255,.08); color:#fff; font-size:13px; font-weight:600; cursor:pointer">{{ sesionTxt }}</button>
+          </div>
+        </div>
+      </header>
+
+      <main style="max-width:1280px; margin:0 auto; padding:{{ mainPad }}">
+
+        <sc-if value="{{ cargando }}" hint-placeholder-val="{{ false }}">
+          <div aria-busy="true">
+            <div style="{{ t.sk }}; width:70px; height:11px"></div>
+            <div style="{{ t.sk }}; width:190px; height:20px; margin-top:10px"></div>
+            <div style="{{ t.sk }}; width:300px; max-width:100%; height:13px; margin-top:12px"></div>
+            <div style="display:grid; grid-template-columns:{{ linkCols }}; gap:16px; margin-top:22px">
+              <sc-for list="{{ sk3 }}" as="x" hint-placeholder-count="3">
+                <div style="{{ t.card }}; padding:18px">
+                  <div style="{{ t.sk }}; width:96px; height:24px; border-radius:999px"></div>
+                  <div style="{{ t.sk }}; width:85%; height:18px; margin-top:16px"></div>
+                  <div style="{{ t.sk }}; width:100%; height:13px; margin-top:12px"></div>
+                  <div style="{{ t.sk }}; width:65%; height:13px; margin-top:8px"></div>
+                  <div style="{{ t.sk }}; width:100%; height:46px; margin-top:20px; border-radius:12px"></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="{{ t.sk }}; width:170px; height:20px; margin-top:52px"></div>
+            <div style="display:flex; gap:14px; margin-top:18px; overflow:hidden">
+              <sc-for list="{{ sk3 }}" as="x" hint-placeholder-count="3"><div style="{{ t.sk }}; flex:none; width:{{ musW }}; aspect-ratio:16/9; border-radius:16px"></div></sc-for>
+            </div>
+            <div style="{{ t.sk }}; width:200px; height:20px; margin-top:52px"></div>
+            <div style="display:flex; gap:14px; margin-top:18px; overflow:hidden">
+              <sc-for list="{{ sk3 }}" as="x" hint-placeholder-count="3"><div style="{{ t.sk }}; flex:none; width:{{ grupoW }}; height:300px; border-radius:16px"></div></sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ noCargando }}" hint-placeholder-val="{{ true }}">
+
+          <sc-if value="{{ hayLinks }}" hint-placeholder-val="{{ true }}">
+            <section aria-labelledby="nv-titulo">
+              <p style="margin:0; font-size:11px; font-weight:600; letter-spacing:.12em; color:{{ t.sub }}">ORIGEN</p>
+              <h2 id="nv-titulo" style="margin:8px 0 0; font-size:{{ h2 }}; line-height:1.05; font-weight:700; letter-spacing:-.02em; color:{{ t.ink }}">NOVEDADES</h2>
+              <p style="margin:8px 0 0; font-size:14px; line-height:1.5; color:{{ t.sub }}">Lo que está pasando en Origen, en un solo lugar.</p>
+              <div style="display:grid; grid-template-columns:{{ linkCols }}; gap:16px; margin-top:22px; align-items:start">
+                <sc-for list="{{ links }}" as="l" hint-placeholder-count="5">
+                  <div onClick="{{ l.ir }}" role="link" tabindex="0" aria-label="{{ l.aria }}" style="{{ t.card }}; padding:18px; display:flex; flex-direction:column; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; animation:nvIn .35s ease both" style-hover="{{ t.cardHover }}" style-active="transform:scale(.99)">
+                    <div style="display:flex; flex-wrap:wrap; gap:6px">
+                      <span style="{{ l.pill }}">
+                        <sc-if value="{{ l.esOrigen }}" hint-placeholder-val="{{ true }}"><span style="width:14px; height:14px; border-radius:4px; background:currentColor; display:flex; align-items:center; justify-content:center"><span style="width:5px; height:5px; border-radius:999px; background:{{ t.card0 }}"></span></span></sc-if>
+                        <sc-if value="{{ l.esExterno }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"></path></svg></sc-if>
+                        {{ l.tipo }}
+                      </span>
+                      <sc-if value="{{ l.vence }}" hint-placeholder-val="{{ false }}"><span style="{{ t.pillAmber }}">{{ l.venceTxt }}</span></sc-if>
+                    </div>
+                    <p style="margin:14px 0 0; font-size:17.5px; line-height:1.3; font-weight:700; letter-spacing:-.01em; color:{{ t.ink }}; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden">{{ l.titulo }}</p>
+                    <sc-if value="{{ l.hayDesc }}" hint-placeholder-val="{{ true }}">
+                      <p style="margin:6px 0 0; font-size:14px; line-height:1.5; color:{{ t.sub }}; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden">{{ l.desc }}</p>
+                    </sc-if>
+                    <span style="{{ t.btnPrim }}; margin-top:18px; width:100%">
+                      Ir al enlace
+                      <sc-if value="{{ l.esOrigen }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></sc-if>
+                      <sc-if value="{{ l.esExterno }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 01-1 1H6a1 1 0 01-1-1V7a1 1 0 011-1h4"></path></svg></sc-if>
+                    </span>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+          </sc-if>
+
+          <sc-if value="{{ hayBanners }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ carruselesBanner }}" as="cb" hint-placeholder-count="2">
+              <section onMouseEnter="{{ cb.enter }}" onMouseLeave="{{ cb.leave }}" style="margin-top:{{ secGap }}">
+                <h2 style="margin:0; font-size:{{ h2 }}; line-height:1.05; font-weight:700; letter-spacing:-.02em; color:{{ t.ink }}">{{ cb.titulo }}</h2>
+                <p style="margin:8px 0 0; max-width:640px; font-size:14px; line-height:1.5; color:{{ t.sub }}">{{ cb.bajada }}</p>
+                <div style="position:relative; margin-top:18px">
+                  <div ref="{{ cb.ref }}" class="nv-x" style="display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; margin:0 {{ bleed }}; padding:0 {{ bleedPad }} 4px">
+                    <sc-for list="{{ cb.items }}" as="it" hint-placeholder-count="4">
+                      <button onClick="{{ it.ir }}" aria-label="{{ it.titulo }}" style="flex:none; width:{{ cb.w }}; scroll-snap-align:start; border:0; padding:0; background:transparent; text-align:left; cursor:pointer" style-active="transform:scale(.99)">
+                        <div style="position:relative; aspect-ratio:{{ cb.ratio }}; border-radius:16px; overflow:hidden; background:{{ it.bg }}; border:1px solid {{ t.line }}">
+                          <span style="position:absolute; left:14px; top:12px; font:500 10.5px ui-monospace,Menlo,monospace; letter-spacing:.05em; color:{{ it.labelInk }}">{{ it.media }}</span>
+                          <div style="position:absolute; left:0; right:0; bottom:0; padding:28px 16px 14px; background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.6))">
+                            <p style="margin:0; font-size:15px; font-weight:700; letter-spacing:-.01em; color:#fff">{{ it.titulo }}</p>
+                            <p style="margin:3px 0 0; font-size:12.5px; color:rgba(255,255,255,.82)">{{ it.sub }}</p>
+                          </div>
+                        </div>
+                      </button>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ cb.flechas }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ cb.prev }}" aria-label="Anterior" style="{{ t.arrow }}; left:-18px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+                    <button onClick="{{ cb.next }}" aria-label="Siguiente" style="{{ t.arrow }}; right:-18px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+                  </sc-if>
+                </div>
+              </section>
+            </sc-for>
+          </sc-if>
+
+          <section onMouseEnter="{{ gruEnter }}" onMouseLeave="{{ gruLeave }}" style="margin-top:{{ secGap }}">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px">
+              <h2 style="margin:0; font-size:{{ h2 }}; line-height:1.05; font-weight:700; letter-spacing:-.02em; color:{{ t.ink }}">GRUPOS PARA VOS</h2>
+              <button onClick="{{ verGrupos }}" style="flex:none; min-height:44px; margin:-12px -8px -12px 0; padding:0 8px; border:0; background:transparent; font-size:11px; font-weight:600; letter-spacing:.08em; color:{{ t.faint }}; cursor:pointer" style-hover="{{ t.verTodosHover }}">VER TODOS &gt;</button>
+            </div>
+            <p style="margin:8px 0 0; font-size:14px; line-height:1.5; color:{{ t.sub }}">{{ grupoBajada }}</p>
+            <div style="position:relative; margin-top:18px">
+              <div ref="{{ gruRef }}" class="nv-x" style="display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; margin:0 {{ bleed }}; padding:0 {{ bleedPad }} 4px">
+                <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="6">
+                  <div style="{{ t.card }}; flex:none; width:{{ grupoW }}; scroll-snap-align:start; overflow:hidden; display:flex; flex-direction:column">
+                    <div style="position:relative; aspect-ratio:16/10; background:{{ g.bg }}">
+                      <span style="position:absolute; left:12px; bottom:10px; font:500 10.5px ui-monospace,Menlo,monospace; letter-spacing:.05em; color:{{ t.faint }}">{{ g.media }}</span>
+                    </div>
+                    <div style="padding:14px 16px 16px; display:flex; flex-direction:column; flex:1">
+                      <p style="margin:0; font-size:11px; font-weight:600; letter-spacing:.12em; color:#059669">{{ g.cat }}</p>
+                      <p style="margin:6px 0 0; font-size:16px; line-height:1.3; font-weight:700; color:{{ t.ink }}">{{ g.nombre }}</p>
+                      <p style="margin:6px 0 0; font-size:13px; line-height:1.45; color:{{ t.sub }}">{{ g.cuando }}</p>
+                      <p style="margin:2px 0 0; font-size:13px; line-height:1.45; color:{{ t.sub }}">{{ g.donde }}</p>
+                      <p style="margin:10px 0 0; font-size:12.5px; font-weight:600; color:{{ t.ink2 }}">{{ g.lugares }}</p>
+                      <button onClick="{{ g.unirme }}" style="{{ g.btn }}; margin-top:14px" style-hover="{{ g.btnHover }}" style-active="transform:scale(.98)">{{ g.btnTxt }}</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ gruFlechas }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ gruPrev }}" aria-label="Anterior" style="{{ t.arrow }}; left:-18px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+                <button onClick="{{ gruNext }}" aria-label="Siguiente" style="{{ t.arrow }}; right:-18px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+              </sc-if>
+            </div>
+          </section>
+        </sc-if>
+      </main>
+
+      <footer style="margin-top:{{ secGap }}; background:{{ t.footer }}; border-top:1px solid {{ t.line }}">
+        <div style="max-width:1280px; margin:0 auto; padding:{{ footPad }}">
+          <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:24px">
+            <div style="min-width:0; flex:1 1 280px">
+              <p style="margin:0; font-size:{{ footH }}; line-height:1.1; font-weight:300; letter-spacing:-.02em; color:{{ t.ink }}">¿Querés conocernos?</p>
+              <p style="margin:10px 0 0; font-size:14px; line-height:1.5; color:{{ t.sub }}">Seguinos en nuestras redes y sé parte de la comunidad.</p>
+            </div>
+            <div style="display:flex; gap:10px">
+              <sc-for list="{{ redes }}" as="r" hint-placeholder-count="4">
+                <a href="#" aria-label="{{ r.n }}" onClick="{{ r.ir }}" style="{{ t.redBtn }}" style-hover="{{ t.redHover }}">
+                  <sc-if value="{{ r.ig }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="17" height="17" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"></circle></svg></sc-if>
+                  <sc-if value="{{ r.fb }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 21v-7.5H16l.5-3h-3V8.6c0-.9.3-1.6 1.6-1.6h1.6V4.3c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.3H8v3h2.5V21h3z"></path></svg></sc-if>
+                  <sc-if value="{{ r.yt }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2a2.5 2.5 0 00-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.5 2.5 0 002.4 7.2 26 26 0 002 12a26 26 0 00.4 4.8 2.5 2.5 0 001.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 001.8-1.8A26 26 0 0022 12a26 26 0 00-.4-4.8zM10 15V9l5.2 3L10 15z"></path></svg></sc-if>
+                  <sc-if value="{{ r.sp }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M7.5 9.5c3-1 6.5-.7 9 .8M8 12.6c2.5-.7 5.2-.4 7.2.8M8.6 15.5c1.9-.5 3.9-.3 5.5.6"></path></svg></sc-if>
+                </a>
+              </sc-for>
+            </div>
+          </div>
+          <p style="margin:28px 0 0; padding-top:18px; border-top:1px solid {{ t.line }}; font-size:12.5px; color:{{ t.faint }}">© 2026 Sistema Origen — Todos los derechos reservados</p>
+        </div>
+      </footer>
+    </div>
+
+    <sc-if value="{{ menuAbierto }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cerrarMenu }}" style="position:absolute; inset:0; z-index:40; background:rgba(2,6,23,.5); animation:nvFade .2s ease">
+        <div onClick="{{ stop }}" role="dialog" aria-label="Menú" style="position:absolute; left:0; top:0; bottom:0; width:300px; max-width:86%; overflow-y:auto; background:{{ t.drawer }}; animation:nvDrawer .25s cubic-bezier(.2,.8,.2,1)">
+          <div style="padding:18px 16px 10px; display:flex; align-items:center; justify-content:space-between">
+            <span style="font-size:16px; font-weight:700; letter-spacing:.14em; color:{{ t.ink }}">ORIGEN</span>
+            <button onClick="{{ cerrarMenu }}" aria-label="Cerrar el menú" style="width:44px; height:44px; border:0; border-radius:12px; background:transparent; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+          <div style="padding:4px 10px 20px; display:flex; flex-direction:column; gap:2px">
+            <sc-for list="{{ menuItems }}" as="m" hint-placeholder-count="7">
+              <div onClick="{{ m.ir }}" style="{{ m.style }}">
+                <span style="width:22px; display:flex; justify-content:center">
+                  <sc-if value="{{ m.esNov }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h3l6 4V6L7 10H4z"></path><path d="M17 9a4 4 0 010 6"></path></svg></sc-if>
+                  <sc-if value="{{ m.noNov }}" hint-placeholder-val="{{ true }}"><span style="width:7px; height:7px; border-radius:999px; background:currentColor; opacity:.45"></span></sc-if>
+                </span>
+                <span style="flex:1">{{ m.t }}</span>
+                <sc-if value="{{ m.esNov }}" hint-placeholder-val="{{ false }}"><span style="{{ t.pillOrigen }}">Nuevo</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayPrueba }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:45; background:{{ t.page }}; display:flex; flex-direction:column; animation:nvFade .2s ease">
+        <div style="padding:{{ pruebaPad }}; border-bottom:1px solid {{ t.line }}; display:flex; align-items:center; gap:10px; background:{{ t.footer }}">
+          <button onClick="{{ cerrarPrueba }}" style="{{ t.btnSoft }}; height:44px; padding:0 14px" style-hover="{{ t.softHover }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>Volver a Novedades</button>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 24px">
+          <p style="margin:0; font-size:11px; font-weight:600; letter-spacing:.12em; color:{{ t.sub }}">PANTALLA DE PRUEBA</p>
+          <p style="margin:10px 0 0; font-size:24px; line-height:1.1; font-weight:700; letter-spacing:-.02em; text-transform:uppercase; color:{{ t.ink }}">{{ pruebaTitulo }}</p>
+          <p style="margin:12px 0 0; max-width:340px; font-size:14px; line-height:1.55; color:{{ t.sub }}">{{ pruebaTxt }}</p>
+          <p style="margin:16px 0 0; font:500 12px ui-monospace,Menlo,monospace; color:{{ t.faint }}">{{ pruebaRuta }}</p>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position:absolute; left:50%; bottom:22px; z-index:50; transform:translateX(-50%); width:max-content; max-width:calc(100% - 32px); padding:13px 16px; border-radius:14px; background:{{ t.toast }}; color:{{ t.toastInk }}; box-shadow:0 10px 30px rgba(2,6,23,.3); display:flex; align-items:center; gap:10px; font-size:13.5px; font-weight:600; animation:nvIn .2s ease">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 01-1 1H6a1 1 0 01-1-1V7a1 1 0 011-1h4"></path></svg>
+        <span>{{ toastTxt }}</span>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="flex:none; width:320px; max-width:100%">
+    <p style="margin:0 0 4px; font-size:11px; font-weight:700; letter-spacing:.1em; color:#475569">CÓMO SE LLEGA</p>
+    <p style="margin:0 0 12px; font-size:13px; line-height:1.5; color:#475569">El menú lateral de la app suma “Novedades”, visible con sesión y sin sesión.</p>
+    <div style="border-radius:22px; overflow:hidden; background:{{ t.drawer }}; box-shadow:0 8px 30px rgba(15,23,42,.18)">
+      <div style="padding:18px 16px 10px; display:flex; align-items:center; justify-content:space-between">
+        <span style="font-size:16px; font-weight:700; letter-spacing:.14em; color:{{ t.ink }}">ORIGEN</span>
+      </div>
+      <div style="padding:4px 10px 18px; display:flex; flex-direction:column; gap:2px">
+        <sc-for list="{{ menuItems }}" as="m" hint-placeholder-count="7">
+          <div onClick="{{ m.ir }}" style="{{ m.style }}">
+            <span style="width:22px; display:flex; justify-content:center">
+              <sc-if value="{{ m.esNov }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h3l6 4V6L7 10H4z"></path><path d="M17 9a4 4 0 010 6"></path></svg></sc-if>
+              <sc-if value="{{ m.noNov }}" hint-placeholder-val="{{ true }}"><span style="width:7px; height:7px; border-radius:999px; background:currentColor; opacity:.45"></span></sc-if>
+            </span>
+            <span style="flex:1">{{ m.t }}</span>
+            <sc-if value="{{ m.esNov }}" hint-placeholder-val="{{ false }}"><span style="{{ t.pillOrigen }}">Nuevo</span></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1820,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  state = { device: 'm', dark: false, estado: 'todo', slide: 0, menu: false, prueba: null, toast: null, hov: null, unidos: {} };
+  frameRef = React.createRef(); scrollRef = React.createRef();
+  musRef = React.createRef(); youRef = React.createRef(); gruRef = React.createRef();
+  swX = null; timer = null; toastT = null;
+
+  componentDidMount() {
+    let reduce = false;
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    if (!reduce) this.timer = setInterval(() => { if (!this.state.prueba && !this.state.menu) this.setState(s => ({ slide: (s.slide + 1) % 3 })); }, 6000);
+  }
+  componentWillUnmount() { clearInterval(this.timer); clearTimeout(this.toastT); }
+
+  aviso(txt) { clearTimeout(this.toastT); this.setState({ toast: txt }); this.toastT = setTimeout(() => this.setState({ toast: null }), 2600); }
+  mover(ref, dir) { const el = ref.current; if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' }); }
+  abrir(destino) {
+    if (destino.ext) { this.aviso('Abre ' + destino.dom + ' en otra pestaña'); return; }
+    this.setState({ prueba: destino, menu: false });
+    if (this.scrollRef.current) this.scrollRef.current.scrollTop = 0;
+  }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'pc', dk = s.dark;
+    const sinSesion = s.estado === 'sinSesion', cargando = s.estado === 'cargando';
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0f172a' : 'transparent') + '; color:' + (on ? '#fff' : '#475569') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+
+    const C = dk
+      ? { page: '#09090b', card0: '#18181b', line: '#27272a', ink: '#ffffff', ink2: '#e4e4e7', sub: '#a1a1aa', faint: '#71717a', footer: '#18181b', drawer: '#18181b' }
+      : { page: '#f8fafc', card0: '#ffffff', line: '#e2e8f0', ink: '#0f172a', ink2: '#334155', sub: '#64748b', faint: '#94a3b8', footer: '#ffffff', drawer: '#ffffff' };
+    const pill = (bg, fg) => 'display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; background:' + bg + '; color:' + fg;
+    const t = Object.assign({}, C, {
+      card: 'background:' + C.card0 + '; border:1px solid ' + C.line + '; border-radius:16px; box-shadow:' + (dk ? 'none' : '0 1px 2px rgba(15,23,42,.04)'),
+      cardHover: 'box-shadow:' + (dk ? '0 0 0 1px #3f3f46' : '0 6px 20px rgba(15,23,42,.08)') + '; transform:translateY(-1px)',
+      btnPrim: 'height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14.5px; font-weight:600; background:' + (dk ? '#ffffff' : '#0f172a') + '; color:' + (dk ? '#0f172a' : '#ffffff'),
+      btnSoft: 'border:1px solid ' + (dk ? '#3f3f46' : '#e2e8f0') + '; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; font-weight:600; cursor:pointer; transition:background .15s, color .15s; background:' + (dk ? '#18181b' : '#ffffff') + '; color:' + (dk ? '#d4d4d8' : '#475569'),
+      softHover: 'background:' + (dk ? '#ffffff' : '#0f172a') + '; color:' + (dk ? '#0f172a' : '#ffffff') + '; border-color:' + (dk ? '#ffffff' : '#0f172a'),
+      pillOrigen: pill(dk ? 'rgba(16,185,129,.14)' : '#ecfdf5', dk ? '#6ee7b7' : '#047857'),
+      pillExt: pill(dk ? '#27272a' : '#f1f5f9', dk ? '#d4d4d8' : '#475569'),
+      pillAmber: pill(dk ? 'rgba(245,158,11,.14)' : '#fffbeb', dk ? '#fcd34d' : '#b45309'),
+      sk: 'background:' + (dk ? 'linear-gradient(90deg,#18181b 0,#27272a 50%,#18181b 100%)' : 'linear-gradient(90deg,#e9eef4 0,#f4f7fa 50%,#e9eef4 100%)') + '; background-size:1000px 100%; animation:nvShim 1.4s linear infinite; border-radius:8px',
+      skDark: 'background:linear-gradient(90deg,#111827 0,#1f2937 50%,#111827 100%); background-size:1000px 100%; animation:nvShim 1.4s linear infinite',
+      arrow: 'position:absolute; top:50%; transform:translateY(-50%); width:40px; height:40px; border-radius:999px; border:1px solid ' + C.line + '; background:' + C.card0 + '; color:' + C.ink + '; box-shadow:0 4px 14px rgba(15,23,42,.14); display:flex; align-items:center; justify-content:center; cursor:pointer; animation:nvFade .15s ease',
+      verTodosHover: 'color:' + C.ink,
+      redBtn: 'width:46px; height:46px; border-radius:14px; border:1px solid ' + C.line + '; display:flex; align-items:center; justify-content:center; color:' + (dk ? '#d4d4d8' : '#475569') + '; background:' + C.card0 + '; transition:background .15s, color .15s',
+      redHover: 'background:' + (dk ? '#ffffff' : '#0f172a') + '; color:' + (dk ? '#0f172a' : '#ffffff'),
+      toast: dk ? '#ffffff' : '#0f172a', toastInk: dk ? '#0f172a' : '#ffffff'
+    });
+    const stripes = (a, b) => 'repeating-linear-gradient(135deg,' + a + ' 0 12px,' + b + ' 12px 24px)';
+    const ph = dk ? stripes('#1c1c20', '#222227') : stripes('#e9edf2', '#e1e6ec');
+
+    const slidesData = [
+      { eyebrow: 'DOMINGO 19 · 10 Y 18 HS', titulo: 'Serie: Raíces', bajada: 'Cuatro domingos para volver a lo que nos sostiene.', cta: 'Ver la serie', bg: stripes('#1b2433', '#202b3d'), media: 'video del slide 1', d: { titulo: 'Serie: Raíces', ruta: '/eventos/raices' } },
+      { eyebrow: 'NOCTURNA 2026', titulo: 'Una noche para adolescentes', bajada: 'Viernes 30.10, de 11 PM a 6 AM. Inscripción abierta.', cta: 'Anotarlos', bg: stripes('#2a1b28', '#331f31'), media: 'imagen del slide 2', d: { titulo: 'Nocturna', ruta: '/nocturna' } },
+      { eyebrow: 'GRUPOS DE CONEXIÓN', titulo: 'Encontrá tu grupo', bajada: 'Más de 70 grupos se juntan en casas durante la semana.', cta: 'Ver grupos', bg: stripes('#17262a', '#1b2e33'), media: 'imagen del slide 3', d: { titulo: 'Grupos de Conexión', ruta: '/grupos' } }
+    ];
+    const slides = slidesData.map((x, i) => Object.assign({}, x, { op: i === s.slide ? 1 : 0, oculto: i === s.slide ? 'false' : 'true', ir: () => this.abrir(x.d) }));
+    const dots = slidesData.map((x, i) => ({ label: 'Ir al slide ' + (i + 1), ir: () => this.setState({ slide: i }), style: 'display:block; height:6px; border-radius:999px; transition:width .3s ease; background:' + (i === s.slide ? '#fff' : 'rgba(255,255,255,.45)') + '; width:' + (i === s.slide ? '22px' : '6px') }));
+
+    const linksData = [
+      { titulo: 'Contanos tu testimonio', desc: '¿Qué hizo Dios en tu GCX esta temporada? Tomate dos minutos.', ext: true, dom: 'forms.gle' },
+      { titulo: 'Nocturna: inscripción abierta', desc: 'Una noche para adolescentes. Anotalos acá.', ext: false, ruta: '/nocturna' },
+      { titulo: 'Calendario de GCX', desc: 'Todas tus reuniones de la semana en un lugar.', ext: false, ruta: '/grupos/calendario' },
+      { titulo: 'Sumate a servir', desc: 'Hay lugar en Punto de Información y en Niñez.', ext: true, dom: 'forms.gle' },
+      { titulo: 'Retiro de jóvenes — dejanos tus datos', desc: '', ext: true, dom: 'tally.so', vence: 3 }
+    ];
+    const links = s.estado === 'sinLinks' ? [] : linksData.map(l => ({
+      titulo: l.titulo, desc: l.desc, hayDesc: !!l.desc,
+      esOrigen: !l.ext, esExterno: l.ext, tipo: l.ext ? 'Link externo' : 'En Origen',
+      pill: l.ext ? t.pillExt : t.pillOrigen,
+      vence: !!l.vence, venceTxt: 'Cierra en ' + l.vence + ' días',
+      aria: l.titulo + (l.ext ? ', abre en otra pestaña' : ''),
+      ir: () => this.abrir(Object.assign({ titulo: l.titulo }, l))
+    }));
+
+    const banner = (titulo, sub, media, bgA, bgB) => ({ titulo, sub, media, bg: stripes(bgA, bgB), labelInk: 'rgba(255,255,255,.5)' });
+    const musItems = [banner('Fuego en mí', 'Nuevo single · 3:58', 'portada del single', '#1f2937', '#273244'), banner('Raíces (en vivo)', 'Álbum · 9 canciones', 'portada del álbum', '#2b2232', '#33293b'), banner('Aquí estás', 'Video oficial', 'miniatura del video', '#1d2b2a', '#233533'), banner('Canción de cuna', 'Sesión acústica', 'miniatura del video', '#2a2620', '#332e27')];
+    const youItems = [banner('Raíces', 'Plan de 7 días', 'portada del plan', '#1f2937', '#273244'), banner('Ansiedad y fe', 'Plan de 5 días', 'portada del plan', '#24203a', '#2b2645'), banner('Empezar de nuevo', 'Plan de 10 días', 'portada del plan', '#1d2b2a', '#233533'), banner('Familia', 'Plan de 6 días', 'portada del plan', '#2a2620', '#332e27')];
+    const mk = (key, ref, titulo, bajada, items, w, ratio, sitio) => ({
+      titulo, bajada, ref, w, ratio,
+      items: items.map(it => Object.assign({}, it, { ir: () => this.aviso('Abre ' + sitio + ' en otra pestaña') })),
+      flechas: desk && s.hov === key,
+      enter: () => { if (desk) this.setState({ hov: key }); }, leave: () => { if (desk) this.setState({ hov: null }); },
+      prev: () => this.mover(ref, -1), next: () => this.mover(ref, 1)
+    });
+    const carruselesBanner = s.estado === 'sinBanners' ? [] : [
+      mk('mus', this.musRef, 'ORIGEN MÚSICA', '¡Acá encontrarás nuestras canciones más recientes de Origen Música! Clickeá la canción para conocer más.', musItems, desk ? '400px' : '300px', '16/9', 'Spotify'),
+      mk('you', this.youRef, 'ORIGEN EN YOUVERS', '¡Acá podrás encontrar todos los devocionales de Origen Iglesia!', youItems, desk ? '300px' : '240px', '4/5', 'YouVersion')
+    ];
+
+    const gruposData = [
+      ['LA FEMME', 'Mujeres que leen juntas', 'Martes 20:00', 'Caballito', 3],
+      ['LA FEMME', 'Mamás de la mañana', 'Jueves 9:30', 'Online', 5],
+      ['CURRÍCULA', 'Crecer · Nivel 1', 'Miércoles 20:30', 'Almagro', 4],
+      ['FINANZAS', 'Finanzas con propósito', 'Lunes 21:00', 'Online', 8],
+      ['LA FEMME', 'Emprendedoras', 'Sábado 10:00', 'Villa Crespo', 2],
+      ['CURRÍCULA', 'Liderar en casa', 'Viernes 20:00', 'Palermo', 6]
+    ];
+    const grupos = gruposData.map((g, i) => {
+      const unido = !!s.unidos[i];
+      return {
+        cat: g[0], nombre: g[1], cuando: g[2], donde: g[3], lugares: g[4] === 1 ? 'Queda 1 lugar' : 'Quedan ' + g[4] + ' lugares',
+        bg: ph, media: 'foto del grupo',
+        btnTxt: unido ? 'Solicitud enviada' : 'Unirme',
+        btn: unido ? t.btnSoft + '; height:46px; width:100%; cursor:default' : t.btnSoft + '; height:46px; width:100%',
+        btnHover: unido ? '' : t.softHover,
+        unirme: () => {
+          if (unido) return;
+          if (sinSesion) { this.abrir({ titulo: 'Iniciar sesión', ruta: '/login?volver=/novedades', txt: 'Para unirte a un grupo necesitás tu cuenta. Después de iniciar sesión volvés a Novedades.' }); return; }
+          this.setState(st => ({ unidos: Object.assign({}, st.unidos, { [i]: true }) }));
+          this.aviso('Solicitud enviada a ' + g[1]);
+        }
+      };
+    });
+
+    const navLinks = ['Inicio', 'Novedades', 'Grupos', 'Eventos', 'Música'].map(n => ({ t: n, style: 'font-size:14px; font-weight:600; color:' + (n === 'Novedades' ? '#fff' : 'rgba(255,255,255,.75)') + (n === 'Novedades' ? '; box-shadow:inset 0 -2px 0 #fff; padding-bottom:4px' : '') }));
+    const menuItems = ['Inicio', 'Novedades', 'Grupos de Conexión', 'Eventos', 'Punto de Información', 'Origen Música', sinSesion ? 'Iniciar sesión' : 'Mi perfil'].map(n => {
+      const nov = n === 'Novedades';
+      return {
+        t: n, esNov: nov, noNov: !nov,
+        ir: () => { if (nov) this.setState({ menu: false, prueba: null }); else this.abrir({ titulo: n, ruta: '/' + n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-') }); },
+        style: 'min-height:48px; padding:0 12px; border-radius:12px; display:flex; align-items:center; gap:12px; font-size:15px; font-weight:600; cursor:pointer; background:' + (nov ? (dk ? '#27272a' : '#f1f5f9') : 'transparent') + '; color:' + (nov ? C.ink : C.sub)
+      };
+    });
+
+    const estados = [['todo', 'Con todo'], ['sinLinks', 'Sin links'], ['sinBanners', 'Sin Música ni Youvers'], ['sinSesion', 'Sin sesión'], ['cargando', 'Cargando']].map(([k, label]) => ({ label, style: seg(s.estado === k), ir: () => this.setState({ estado: k, prueba: null, unidos: {} }) }));
+    const pr = s.prueba;
+
+    return {
+      t, estados,
+      verMobile: () => this.setState({ device: 'm', hov: null }), verPC: () => this.setState({ device: 'pc', menu: false }),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(!desk), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      frameRef: this.frameRef, scrollRef: this.scrollRef, gruRef: this.gruRef,
+      frameW: desk ? '1440px' : '390px', frameH: desk ? '900px' : '844px', frameR: desk ? '14px' : '36px',
+      isMobile: !desk, isDesktop: desk,
+      cargando, noCargando: !cargando,
+      bannerH: desk ? '620px' : '540px', etiquetaTop: desk ? '96px' : '76px',
+      slidePad: desk ? '0 40px 76px' : '0 16px 64px', slideH: desk ? '60px' : '38px', dotsBottom: desk ? '26px' : '20px',
+      slides, dots,
+      swDown: e => { this.swX = e.clientX; },
+      swUp: e => { if (this.swX == null) return; const dx = e.clientX - this.swX; this.swX = null; if (Math.abs(dx) > 50) this.setState(st => ({ slide: (st.slide + (dx < 0 ? 1 : 2)) % 3 })); },
+      navPad: desk ? '22px 40px' : '14px 16px', navLinks,
+      sesionTxt: sinSesion ? 'Iniciar sesión' : 'Mi perfil',
+      sesionBtn: () => this.abrir(sinSesion ? { titulo: 'Iniciar sesión', ruta: '/login?volver=/novedades' } : { titulo: 'Mi perfil', ruta: '/perfil' }),
+      abrirMenu: () => this.setState({ menu: true }), cerrarMenu: () => this.setState({ menu: false }), menuAbierto: s.menu, menuItems,
+      stop: e => e.stopPropagation(),
+      mainPad: desk ? '56px 40px 0' : '36px 16px 0',
+      h2: desk ? '20px' : '18px', secGap: desk ? '64px' : '48px',
+      linkCols: 'repeat(auto-fill,minmax(' + (desk ? '340px' : '280px') + ',1fr))',
+      sk3: [1, 2, 3], musW: desk ? '400px' : '300px', grupoW: desk ? '300px' : '264px',
+      hayLinks: links.length > 0, links,
+      hayBanners: carruselesBanner.length > 0, carruselesBanner,
+      bleed: desk ? '0' : '-16px', bleedPad: desk ? '0' : '16px',
+      grupoBajada: sinSesion ? 'Grupos con lugar disponible esta semana.' : 'Como participás de grupos de La FEMME, esto te puede interesar.',
+      grupos, verGrupos: () => this.abrir({ titulo: 'Grupos de Conexión', ruta: '/grupos' }),
+      gruFlechas: desk && s.hov === 'gru',
+      gruEnter: () => { if (desk) this.setState({ hov: 'gru' }); }, gruLeave: () => { if (desk) this.setState({ hov: null }); },
+      gruPrev: () => this.mover(this.gruRef, -1), gruNext: () => this.mover(this.gruRef, 1),
+      footPad: desk ? '44px 40px 32px' : '36px 16px 28px', footH: desk ? '40px' : '30px',
+      redes: ['Instagram', 'Facebook', 'YouTube', 'Spotify'].map((n, i) => ({ n, ig: i === 0, fb: i === 1, yt: i === 2, sp: i === 3, ir: e => { e.preventDefault(); this.aviso('Abre ' + n + ' en otra pestaña'); } })),
+      hayPrueba: !!pr, cerrarPrueba: () => this.setState({ prueba: null }),
+      pruebaPad: desk ? '14px 40px' : '12px 16px',
+      pruebaTitulo: pr ? pr.titulo : '', pruebaRuta: pr ? pr.ruta || '' : '',
+      pruebaTxt: pr && pr.txt ? pr.txt : 'Así abre un link “En Origen”: en la misma pestaña, dentro de la app.',
+      hayToast: !!s.toast, toastTxt: s.toast || ''
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -35,6 +35,28 @@ interface LayoutProps {
     sinNavegacion?: boolean;
 }
 
+/**
+ * Las pantallas que SIEMPRE abren con un hero a sangre. Son tres cosas
+ * juntas: la navbar arranca transparente, el logo se invierte a blanco y el
+ * contenido sube 64px para meterse abajo de la barra.
+ *
+ * Una pantalla que lo decide según lo que está mostrando —el mismo pathname
+ * con hero o sin él— no se anota acá: lo pide con useFullBleedHero(), ver
+ * contexts/HeroContext.tsx. Una que siempre abre con hero sí, y entonces
+ * también tiene que estar en RUTAS_A_TODO_ANCHO: sin eso el contenedor
+ * angosto le pone márgenes al hero y lo que iba a sangre queda flotando.
+ */
+const RUTAS_CON_HERO = ['/', '/gcx', '/ninez'];
+
+/** Las que manejan su propio ancho, sin el marco de 7xl con padding. */
+const RUTAS_A_TODO_ANCHO = ['/', '/store', '/gcx', '/ninez', '/alabanza', '/prode', '/nocturna-inscripcion'];
+
+/** Lo mismo, pero para familias enteras de rutas. */
+const COMIENZOS_A_TODO_ANCHO = ['/punto-de-informacion', '/coordinators', '/audiencia-servicios'];
+
+const estaEnLaLista = (pathname: string, exactas: string[], comienzos: string[] = []) =>
+    exactas.includes(pathname) || comienzos.some(c => pathname.startsWith(c));
+
 const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogout, onToggleTheme, sinNavegacion = false }) => {
     useAttendanceReminder();
     const location = useLocation();
@@ -69,14 +91,14 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
         () => ({ barraOculta, setBarraOculta }),
         [barraOculta]
     );
-    const isDashboard = location.pathname === '/' || location.pathname === '/gcx' || location.pathname === '/ninez' || !!hasFullBleedHero;
+    const isDashboard = estaEnLaLista(location.pathname, RUTAS_CON_HERO) || !!hasFullBleedHero;
     // `/ninez` entra acá junto con isDashboard, no por separado: el -mt-16 que
     // monta el hero bajo la navbar sólo tiene sentido si el contenido va a
     // sangre. Con el padding del contenedor angosto el hero quedaría con
     // márgenes laterales y 32px de blanco arriba, y el logo invertido a blanco
     // caería sobre ese blanco. Ninez.tsx ya limita su propio contenido con un
     // max-w-4xl interno, así que no necesita el de acá.
-    const isFullWidthPage = location.pathname === '/' || location.pathname === '/store' || location.pathname === '/gcx' || location.pathname === '/ninez' || location.pathname.startsWith('/punto-de-informacion') || location.pathname === '/alabanza' || location.pathname === '/prode' || location.pathname.startsWith('/coordinators') || location.pathname.startsWith('/audiencia-servicios') || location.pathname === '/nocturna-inscripcion';
+    const isFullWidthPage = estaEnLaLista(location.pathname, RUTAS_A_TODO_ANCHO, COMIENZOS_A_TODO_ANCHO);
 
     // En el dashboard la navbar arranca sin fondo, montada sobre el hero.
     // Al scrollear recupera el fondo: si no, quedaría flotando transparente

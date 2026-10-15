@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif}button,input,textarea{font-family:inherit}input:focus,textarea:focus{outline:none}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes alUp{from{transform:translateY(100%)}to{transform:none}}@keyframes alFade{from{opacity:0}to{opacity:1}}@keyframes alPop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:999px; padding:6px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07)">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.58)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.58)">LISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ conLinks }}" style="{{ bCon }}">Con links</button>
+      <button onClick="{{ vaciar }}" style="{{ bVacia }}">Vacía</button>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; background:#f6f6f4; box-shadow:0 4px 20px rgba(0,0,0,.09); width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}">
+    <div style="position:absolute; inset:0; overflow-y:auto; overflow-x:hidden">
+      <div style="max-width:1080px; margin:0 auto; padding:{{ pad }}">
+        <p style="margin:0; font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">PANEL DE ADMINISTRACIÓN</p>
+        <h1 style="margin:6px 0 0; font-size:{{ h1 }}; font-weight:600; letter-spacing:-.02em; color:#0a0a0a">Configuración de la app</h1>
+
+        <div style="display:flex; gap:7px; overflow-x:auto; margin-top:16px; padding-bottom:2px">
+          <sc-for list="{{ subs }}" as="sb" hint-placeholder-count="5"><button onClick="{{ sb.ir }}" style="{{ sb.style }}">{{ sb.t }}</button></sc-for>
+        </div>
+
+        <div style="background:#fff; border-radius:20px; margin-top:14px; overflow:hidden">
+          <div style="padding:{{ headPad }}; display:flex; flex-wrap:wrap; align-items:flex-start; gap:12px 16px">
+            <div style="flex:1 1 240px; min-width:0">
+              <p style="margin:0; font-size:16px; font-weight:600; color:#0a0a0a">Links de Novedades · {{ n }}</p>
+              <p style="margin:6px 0 0; font-size:12.5px; line-height:1.55; color:rgba(0,0,0,.62)">Se muestran en /novedades en este orden.</p>
+              <a href="Novedades.dc.html" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:5px; min-height:32px; margin-top:4px; font-size:12.5px; font-weight:600; color:#0a0a0a; text-decoration:underline; text-underline-offset:3px">Ver la página ↗</a>
+            </div>
+            <button onClick="{{ nuevo }}" style="{{ nuevoBtn }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Nuevo link</button>
+          </div>
+
+          <sc-if value="{{ hayLinks }}" hint-placeholder-val="{{ true }}">
+            <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid; grid-template-columns:36px minmax(0,1fr) 150px 64px 92px; gap:14px; padding:10px 22px; background:#fafaf8; border-top:1px solid #f0efec; border-bottom:1px solid #f0efec">
+                <span></span><span style="{{ th }}">LINK</span><span style="{{ th }}">ESTADO</span><span style="{{ th }}">VISIBLE</span><span></span>
+              </div>
+            </sc-if>
+            <sc-for list="{{ filas }}" as="f" hint-placeholder-count="5">
+              <div draggable="{{ f.draggable }}" onDragStart="{{ f.dragStart }}" onDragOver="{{ f.dragOver }}" onDrop="{{ f.drop }}" onDragEnd="{{ f.dragEnd }}" style="{{ f.row }}">
+                <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+                  <span aria-label="Arrastrar para reordenar" title="Arrastrar para reordenar" style="width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:rgba(0,0,0,.4); cursor:grab"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg></span>
+                </sc-if>
+                <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex; flex-direction:column; gap:4px; flex:none">
+                    <button onClick="{{ f.subir }}" disabled="{{ f.esPrimero }}" aria-label="Subir" style="{{ f.upStyle }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"></path></svg></button>
+                    <button onClick="{{ f.bajar }}" disabled="{{ f.esUltimo }}" aria-label="Bajar" style="{{ f.downStyle }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+                  </div>
+                </sc-if>
+                <div style="min-width:0; flex:1">
+                  <p style="margin:0; font-size:14px; line-height:1.35; font-weight:600; color:{{ f.ink }}; text-decoration:{{ f.tachado }}">{{ f.titulo }}</p>
+                  <p style="margin:3px 0 0; font-size:12.5px; color:rgba(0,0,0,.6); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ f.destino }}</p>
+                  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap">
+                      <span style="{{ f.pill }}">{{ f.estado }}</span>
+                      <button onClick="{{ f.editar }}" style="height:44px; padding:0 16px; margin-left:auto; border:0; border-radius:999px; background:#f2f2f0; font-size:13px; font-weight:600; color:#0a0a0a; cursor:pointer">Editar</button>
+                    </div>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}"><span style="{{ f.pill }}; justify-self:start">{{ f.estado }}</span></sc-if>
+                <button onClick="{{ f.toggle }}" role="switch" aria-checked="{{ f.on }}" aria-label="{{ f.switchLabel }}" style="flex:none; width:52px; height:44px; padding:0; border:0; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer">
+                  <span style="{{ f.track }}"><span style="{{ f.knob }}"></span></span>
+                </button>
+                <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ f.editar }}" style="height:38px; padding:0 16px; border:0; border-radius:999px; background:#f2f2f0; font-size:13px; font-weight:600; color:#0a0a0a; cursor:pointer" style-hover="background:#0a0a0a; color:#fff">Editar</button>
+                </sc-if>
+              </div>
+            </sc-for>
+            <p style="margin:0; padding:13px 22px; border-top:1px solid #f0efec; font-size:12px; line-height:1.55; color:rgba(0,0,0,.6)">{{ pieTxt }}</p>
+          </sc-if>
+
+          <sc-if value="{{ sinLinks }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:0 20px 22px; padding:44px 22px; border-radius:16px; background:#f7f7f5; display:flex; flex-direction:column; align-items:center; text-align:center">
+              <div style="width:56px; height:56px; border-radius:999px; background:#ecebe7; display:flex; align-items:center; justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"></path></svg></div>
+              <p style="margin:16px 0 0; max-width:320px; font-size:14.5px; line-height:1.55; font-weight:600; color:#0a0a0a">Todavía no hay links. Creá el primero y va a aparecer en Novedades.</p>
+              <button onClick="{{ nuevo }}" style="height:48px; padding:0 22px; margin-top:18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14px; font-weight:600; cursor:pointer">Crear el primer link</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ editando }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cancelar }}" style="{{ ovWrap }}">
+        <div ref="{{ sheetRef }}" onClick="{{ stop }}" role="dialog" aria-modal="true" aria-label="{{ edTitulo }}" style="{{ ovBox }}">
+          <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+            <div onPointerDown="{{ dragStart }}" onPointerMove="{{ dragMove }}" onPointerUp="{{ dragEndSheet }}" onPointerCancel="{{ dragEndSheet }}" style="padding:10px 20px 4px; touch-action:none; cursor:grab"><div style="width:40px; height:5px; border-radius:999px; background:#d6d4cf; margin:0 auto"></div></div>
+          </sc-if>
+          <div style="padding:{{ edPad }}">
+            <div style="display:flex; align-items:center; gap:12px">
+              <p style="margin:0; flex:1; font-size:19px; font-weight:600; letter-spacing:-.01em; color:#0a0a0a">{{ edTitulo }}</p>
+              <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ cancelar }}" aria-label="Cerrar" style="width:36px; height:36px; border:0; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ confirmando }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:18px; padding:20px; border-radius:16px; background:#fdf1ef">
+                <p style="margin:0; font-size:15px; line-height:1.45; font-weight:600; color:#0a0a0a">{{ confirmTxt }}</p>
+                <p style="margin:6px 0 0; font-size:13px; color:rgba(0,0,0,.62)">Deja de verse en Novedades al instante.</p>
+                <div style="{{ botonesWrap }}; margin-top:16px">
+                  <button onClick="{{ noBorrar }}" style="{{ btnSec }}">Cancelar</button>
+                  <button onClick="{{ siBorrar }}" style="{{ btnDanger }}">Borrar link</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ noConfirmando }}" hint-placeholder-val="{{ true }}">
+              <div style="display:grid; grid-template-columns:{{ edCols }}; gap:22px; margin-top:16px; align-items:start">
+                <div style="min-width:0">
+                  <label style="display:block">
+                    <span style="{{ lbl }}">Título</span>
+                    <div style="{{ tituloBox }}"><input type="text" value="{{ fTitulo }}" maxLength="60" onChange="{{ onTitulo }}" onBlur="{{ tocarTitulo }}" placeholder="Ej.: Contanos tu testimonio" style="width:100%; height:100%; border:0; background:transparent; font-size:15px; color:#0a0a0a" /></div>
+                  </label>
+                  <div style="display:flex; justify-content:space-between; gap:10px; margin-top:6px">
+                    <span style="font-size:12px; font-weight:600; color:#b42318">{{ errTitulo }}</span>
+                    <span style="font-size:12px; color:rgba(0,0,0,.55)">{{ cTitulo }}/60</span>
+                  </div>
+
+                  <label style="display:block; margin-top:14px">
+                    <span style="{{ lbl }}">Descripción <span style="font-weight:500; color:rgba(0,0,0,.55)">· opcional</span></span>
+                    <div style="{{ campo }}; height:auto; padding:10px 14px"><textarea value="{{ fDesc }}" maxLength="140" rows="3" onChange="{{ onDesc }}" placeholder="Una línea que diga de qué se trata." style="width:100%; border:0; background:transparent; resize:none; font-size:14.5px; line-height:1.5; color:#0a0a0a"></textarea></div>
+                  </label>
+                  <p style="margin:6px 0 0; text-align:right; font-size:12px; color:rgba(0,0,0,.55)">{{ cDesc }}/140</p>
+
+                  <p style="{{ lbl }}; margin-top:14px">¿A dónde lleva?</p>
+                  <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px">
+                    <button onClick="{{ tipoOrigen }}" aria-pressed="{{ esOrigen }}" style="{{ opOrigen }}"><span style="font-size:14px; font-weight:600">Una función de Origen</span><span style="font-size:12px; font-weight:500; opacity:.7">Abre dentro de la app</span></button>
+                    <button onClick="{{ tipoExterno }}" aria-pressed="{{ esExterno }}" style="{{ opExterno }}"><span style="font-size:14px; font-weight:600">Un link externo</span><span style="font-size:12px; font-weight:500; opacity:.7">Abre en otra pestaña</span></button>
+                  </div>
+
+                  <sc-if value="{{ esOrigen }}" hint-placeholder-val="{{ true }}">
+                    <div role="radiogroup" style="margin-top:10px; border:1px solid #ecebe7; border-radius:16px; overflow:hidden">
+                      <sc-for list="{{ funciones }}" as="fn" hint-placeholder-count="7">
+                        <button role="radio" aria-checked="{{ fn.sel }}" onClick="{{ fn.ir }}" style="{{ fn.style }}">
+                          <span style="{{ fn.radio }}"><span style="{{ fn.dot }}"></span></span>
+                          <span style="flex:1; text-align:left">{{ fn.t }}</span>
+                        </button>
+                      </sc-for>
+                    </div>
+                    <sc-if value="{{ esOtraRuta }}" hint-placeholder-val="{{ false }}">
+                      <div style="{{ rutaBox }}; margin-top:10px"><input type="text" value="{{ fRuta }}" onChange="{{ onRuta }}" onBlur="{{ tocarRuta }}" placeholder="/ruta/de/la/app" aria-label="Ruta de la app" style="width:100%; height:100%; border:0; background:transparent; font:500 14.5px ui-monospace,Menlo,monospace; color:#0a0a0a" /></div>
+                      <p style="margin:6px 0 0; font-size:12px; font-weight:600; color:{{ rutaAyudaInk }}">{{ rutaAyuda }}</p>
+                    </sc-if>
+                  </sc-if>
+
+                  <sc-if value="{{ esExterno }}" hint-placeholder-val="{{ false }}">
+                    <div style="{{ urlBox }}; margin-top:10px"><input type="url" value="{{ fUrl }}" onChange="{{ onUrl }}" onBlur="{{ tocarUrl }}" placeholder="https://" aria-label="URL del link" style="width:100%; height:100%; border:0; background:transparent; font-size:14.5px; color:#0a0a0a" /></div>
+                    <p style="margin:6px 0 0; font-size:12px; font-weight:600; color:{{ urlAyudaInk }}">{{ urlAyuda }}</p>
+                  </sc-if>
+
+                  <label style="display:block; margin-top:16px">
+                    <span style="{{ lbl }}">Vence <span style="font-weight:500; color:rgba(0,0,0,.55)">· opcional</span></span>
+                    <div style="{{ campo }}; display:flex; align-items:center; gap:8px; padding-right:6px">
+                      <input type="date" value="{{ fVence }}" min="2026-10-15" onChange="{{ onVence }}" style="flex:1; min-width:0; height:100%; border:0; background:transparent; font-size:14.5px; color:#0a0a0a" />
+                      <sc-if value="{{ hayVence }}" hint-placeholder-val="{{ false }}"><button onClick="{{ sinVence }}" style="height:36px; padding:0 12px; border:0; border-radius:999px; background:#f2f2f0; font-size:12.5px; font-weight:600; color:#0a0a0a; cursor:pointer">Quitar</button></sc-if>
+                    </div>
+                  </label>
+                  <p style="margin:6px 0 0; font-size:12px; color:rgba(0,0,0,.6)">El día siguiente deja de mostrarse solo.</p>
+
+                  <div style="display:flex; align-items:center; gap:12px; margin-top:16px; padding:6px 6px 6px 14px; border-radius:14px; background:#f7f7f5">
+                    <div style="flex:1; min-width:0"><p style="margin:0; font-size:14px; font-weight:600; color:#0a0a0a">Visible</p><p style="margin:2px 0 0; font-size:12px; color:rgba(0,0,0,.6)">{{ visTxt }}</p></div>
+                    <button onClick="{{ toggleVis }}" role="switch" aria-checked="{{ fVisible }}" aria-label="Visible" style="width:52px; height:44px; border:0; padding:0; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer"><span style="{{ visTrack }}"><span style="{{ visKnob }}"></span></span></button>
+                  </div>
+                </div>
+
+                <div style="min-width:0">
+                  <p style="{{ lbl }}">Vista previa en Novedades</p>
+                  <div style="background:#f8fafc; border-radius:18px; padding:16px; font-family:system-ui,-apple-system,'Segoe UI',Inter,sans-serif">
+                    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:18px; box-shadow:0 1px 2px rgba(15,23,42,.04)">
+                      <div style="display:flex; flex-wrap:wrap; gap:6px">
+                        <span style="{{ pvPill }}">{{ pvTipo }}</span>
+                        <sc-if value="{{ pvVence }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex; align-items:center; height:26px; padding:0 10px; border-radius:999px; font-size:12px; font-weight:600; background:#fffbeb; color:#b45309">{{ pvVenceTxt }}</span></sc-if>
+                      </div>
+                      <p style="margin:14px 0 0; font-size:17.5px; line-height:1.3; font-weight:700; letter-spacing:-.01em; color:{{ pvTituloInk }}; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere">{{ pvTitulo }}</p>
+                      <sc-if value="{{ pvHayDesc }}" hint-placeholder-val="{{ false }}"><p style="margin:6px 0 0; font-size:14px; line-height:1.5; color:#64748b; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere">{{ fDesc }}</p></sc-if>
+                      <span style="margin-top:18px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14.5px; font-weight:600; background:#0f172a; color:#fff">Ir al enlace {{ pvFlecha }}</span>
+                    </div>
+                    <sc-if value="{{ pvOculto }}" hint-placeholder-val="{{ false }}"><p style="margin:10px 2px 0; font-size:12px; font-weight:600; color:#64748b">Oculto: no se va a ver hasta que lo prendas.</p></sc-if>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:22px; padding-top:16px; border-top:1px solid #f0efec">
+                <sc-if value="{{ esEdicion }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ pedirBorrar }}" style="height:44px; padding:0 14px; border:0; border-radius:999px; background:transparent; color:#b42318; font-size:13.5px; font-weight:600; cursor:pointer" style-hover="background:#fdf1ef">Borrar link</button>
+                </sc-if>
+                <div style="{{ botonesWrap }}; margin-left:auto">
+                  <button onClick="{{ cancelar }}" style="{{ btnSec }}">Cancelar</button>
+                  <button onClick="{{ guardar }}" disabled="{{ noValido }}" style="{{ btnGuardar }}">Guardar</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position:absolute; left:50%; bottom:22px; z-index:60; transform:translateX(-50%); width:max-content; max-width:calc(100% - 32px); padding:12px 18px; border-radius:999px; background:#0a0a0a; color:#fff; font-size:13.5px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.25); animation:alPop .2s ease">{{ toastTxt }}</div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1500,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  HOY = new Date(2026, 9, 15);
+  MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  FUNCIONES = [['cal', 'Calendario de GCX', '/grupos/calendario'], ['gcx', 'Grupos de Conexión', '/grupos'], ['eventos', 'Eventos', '/eventos'], ['punto', 'Punto de Información', '/punto-de-informacion'], ['nocturna', 'Nocturna (inscripción)', '/nocturna'], ['audiencia', 'Audiencia de Servicios', '/audiencia'], ['otra', 'Otra ruta de la app', '']];
+  INICIAL = [
+    { id: 1, titulo: 'Contanos tu testimonio', desc: '¿Qué hizo Dios en tu GCX esta temporada? Tomate dos minutos.', tipo: 'externo', url: 'https://forms.gle/gcx-testimonios', funcion: 'cal', ruta: '', vence: '', visible: true },
+    { id: 2, titulo: 'Nocturna: inscripción abierta', desc: 'Una noche para adolescentes. Anotalos acá.', tipo: 'origen', funcion: 'nocturna', ruta: '', url: '', vence: '2026-10-30', visible: true },
+    { id: 3, titulo: 'Calendario de GCX', desc: 'Todas tus reuniones de la semana en un lugar.', tipo: 'origen', funcion: 'cal', ruta: '', url: '', vence: '', visible: true },
+    { id: 4, titulo: 'Sumate a servir', desc: 'Hay lugar en Punto de Información y en Niñez.', tipo: 'externo', url: 'https://forms.gle/servir-origen', funcion: 'cal', ruta: '', vence: '', visible: true },
+    { id: 5, titulo: 'Retiro de jóvenes — dejanos tus datos', desc: '', tipo: 'externo', url: 'https://tally.so/r/retiro-jovenes', funcion: 'cal', ruta: '', vence: '2026-10-18', visible: true },
+    { id: 6, titulo: 'Bautismos de septiembre', desc: 'Anotate para el próximo bautismo.', tipo: 'origen', funcion: 'punto', ruta: '', url: '', vence: '2026-09-28', visible: true },
+    { id: 7, titulo: 'Encuesta de horarios', desc: '', tipo: 'externo', url: 'https://forms.gle/horarios-2026', funcion: 'cal', ruta: '', vence: '', visible: false }
+  ];
+  state = { device: 'pc', links: this.INICIAL.map(x => Object.assign({}, x)), form: null, touched: {}, confirm: false, dragId: null, overId: null, toast: null, nextId: 100 };
+  sheetRef = React.createRef(); dY = null; dDy = 0; tT = null;
+
+  componentWillUnmount() { clearTimeout(this.tT); }
+  aviso(txt) { clearTimeout(this.tT); this.setState({ toast: txt }); this.tT = setTimeout(() => this.setState({ toast: null }), 2200); }
+  parse(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+  dias(v) { const d = this.parse(v); return d ? Math.round((d - this.HOY) / 864e5) : null; }
+  urlOk(u) { try { const x = new URL(u); return x.protocol === 'https:' && /\.[a-z]{2,}$/i.test(x.hostname); } catch (e) { return false; } }
+  host(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } }
+  destino(l) {
+    if (l.tipo === 'externo') { try { const x = new URL(l.url); const p = x.pathname.length > 1 ? '/…' : ''; return x.hostname.replace(/^www\./, '') + p; } catch (e) { return l.url || '—'; } }
+    const f = this.FUNCIONES.find(x => x[0] === l.funcion);
+    return 'En Origen · ' + (l.funcion === 'otra' ? (l.ruta || '/') : f ? f[1] : '—');
+  }
+  estadoDe(l) {
+    const d = this.dias(l.vence);
+    if (d != null && d < 0) return { t: 'Vencido', bg: '#f2f2f0', fg: 'rgba(0,0,0,.5)', tach: true };
+    if (!l.visible) return { t: 'Oculto', bg: '#f2f2f0', fg: 'rgba(0,0,0,.62)' };
+    if (d != null && d <= 7) { const f = this.parse(l.vence); return { t: 'Vence el ' + f.getDate() + ' ' + this.MES[f.getMonth()], bg: '#fbf0e2', fg: '#8a5a12' }; }
+    return { t: 'Visible', bg: '#e7f5ee', fg: '#0b7a53' };
+  }
+  mover(id, dir) {
+    this.setState(s => { const a = s.links.slice(), i = a.findIndex(x => x.id === id), j = i + dir; if (j < 0 || j >= a.length) return null; const x = a[i]; a[i] = a[j]; a[j] = x; return { links: a }; });
+  }
+  validar(f) {
+    const tituloOk = f.titulo.trim().length > 0;
+    let destinoOk = false;
+    if (f.tipo === 'externo') destinoOk = this.urlOk(f.url.trim());
+    else destinoOk = f.funcion !== 'otra' || /^\/[^\s]+$/.test(f.ruta.trim());
+    return { tituloOk, destinoOk, ok: tituloOk && destinoOk };
+  }
+  cerrar() { this.setState({ form: null, confirm: false, touched: {} }); }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'pc', f = s.form;
+    const seg = on => 'height:32px; padding:0 14px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const subBtn = on => 'flex:none; height:' + (desk ? 38 : 44) + 'px; padding:0 16px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : '#eceae6') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer';
+    const track = on => 'width:44px; height:26px; border-radius:999px; position:relative; transition:background .18s; background:' + (on ? '#0b7a53' : '#d6d4cf');
+    const knob = on => 'position:absolute; top:3px; left:' + (on ? '21px' : '3px') + '; width:20px; height:20px; border-radius:999px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:left .18s';
+    const arrow = dis => 'width:44px; height:44px; border:0; border-radius:12px; background:#f2f2f0; color:#0a0a0a; display:flex; align-items:center; justify-content:center; cursor:' + (dis ? 'default' : 'pointer') + '; opacity:' + (dis ? .35 : 1);
+
+    const n = s.links.length;
+    const filas = s.links.map((l, i) => {
+      const e = this.estadoDe(l), over = s.overId === l.id && s.dragId !== l.id, arrastrando = s.dragId === l.id;
+      return {
+        titulo: l.titulo, destino: this.destino(l), estado: e.t, ink: e.tach ? 'rgba(0,0,0,.5)' : '#0a0a0a', tachado: e.tach ? 'line-through' : 'none',
+        pill: 'display:inline-flex; align-items:center; height:26px; padding:0 11px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; background:' + e.bg + '; color:' + e.fg + (e.tach ? '; text-decoration:line-through' : ''),
+        on: l.visible ? 'true' : 'false', switchLabel: (l.visible ? 'Ocultar ' : 'Mostrar ') + l.titulo,
+        track: track(l.visible), knob: knob(l.visible),
+        toggle: () => { this.setState(st => ({ links: st.links.map(x => x.id === l.id ? Object.assign({}, x, { visible: !x.visible }) : x) })); this.aviso(l.visible ? 'Oculto en Novedades' : 'Visible en Novedades'); },
+        editar: () => this.setState({ form: Object.assign({}, l), touched: {}, confirm: false }),
+        esPrimero: i === 0, esUltimo: i === n - 1, upStyle: arrow(i === 0), downStyle: arrow(i === n - 1),
+        subir: () => this.mover(l.id, -1), bajar: () => this.mover(l.id, 1),
+        draggable: desk ? 'true' : 'false',
+        dragStart: e2 => { if (!desk) return; try { e2.dataTransfer.effectAllowed = 'move'; e2.dataTransfer.setData('text/plain', String(l.id)); } catch (x) {} this.setState({ dragId: l.id }); },
+        dragOver: e2 => { if (!desk || s.dragId == null) return; e2.preventDefault(); if (s.overId !== l.id) this.setState({ overId: l.id }); },
+        drop: e2 => { e2.preventDefault(); this.setState(st => { if (st.dragId == null || st.dragId === l.id) return { dragId: null, overId: null }; const a = st.links.slice(), from = a.findIndex(x => x.id === st.dragId), to = a.findIndex(x => x.id === l.id); const [it] = a.splice(from, 1); a.splice(to, 0, it); return { links: a, dragId: null, overId: null }; }); },
+        dragEnd: () => this.setState({ dragId: null, overId: null }),
+        row: desk
+          ? 'display:grid; grid-template-columns:36px minmax(0,1fr) 150px 64px 92px; gap:14px; align-items:center; padding:12px 22px; border-bottom:1px solid #f4f3f1; background:' + (over ? '#f3f8f5' : '#fff') + '; box-shadow:' + (over ? 'inset 0 2px 0 #0b7a53' : 'none') + '; opacity:' + (arrastrando ? .45 : 1)
+          : 'display:flex; align-items:flex-start; gap:12px; padding:14px 14px 14px 12px; border-top:1px solid #f0efec'
+      };
+    });
+
+    let fv = {};
+    if (f) {
+      const v = this.validar(f), tc = s.touched;
+      const d = this.dias(f.vence);
+      const errT = (tc.titulo || tc.all) && !v.tituloOk;
+      const urlTrim = f.url.trim(), urlMal = f.tipo === 'externo' && urlTrim && (tc.url || tc.all) && !this.urlOk(urlTrim);
+      const urlFalta = f.tipo === 'externo' && !urlTrim && tc.all;
+      const rutaMal = f.tipo === 'origen' && f.funcion === 'otra' && (tc.ruta || tc.all) && !/^\/[^\s]+$/.test(f.ruta.trim());
+      const campo = err => 'height:48px; padding:0 14px; border-radius:14px; background:#f7f7f5; box-shadow:inset 0 0 0 1.5px ' + (err ? '#d64535' : 'transparent');
+      const op = on => 'min-height:72px; padding:12px 14px; border:0; border-radius:16px; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:3px; text-align:left; cursor:pointer; background:' + (on ? '#0a0a0a' : '#f2f2f0') + '; color:' + (on ? '#fff' : '#0a0a0a');
+      const fecha = this.parse(f.vence);
+      fv = {
+        edTitulo: f.id ? 'Editar link' : 'Nuevo link', esEdicion: !!f.id,
+        fTitulo: f.titulo, fDesc: f.desc, fRuta: f.ruta, fUrl: f.url, fVence: f.vence, fVisible: f.visible ? 'true' : 'false',
+        cTitulo: f.titulo.length, cDesc: f.desc.length,
+        errTitulo: errT ? 'El título es obligatorio.' : '',
+        tituloBox: campo(errT), campo: campo(false), urlBox: campo(urlMal || urlFalta), rutaBox: campo(rutaMal),
+        esOrigen: f.tipo === 'origen', esExterno: f.tipo === 'externo',
+        opOrigen: op(f.tipo === 'origen'), opExterno: op(f.tipo === 'externo'),
+        tipoOrigen: () => this.setState(st => ({ form: Object.assign({}, st.form, { tipo: 'origen' }) })),
+        tipoExterno: () => this.setState(st => ({ form: Object.assign({}, st.form, { tipo: 'externo' }) })),
+        funciones: this.FUNCIONES.map(([k, t2]) => {
+          const on = f.funcion === k;
+          return { t: t2, sel: on ? 'true' : 'false', ir: () => this.setState(st => ({ form: Object.assign({}, st.form, { funcion: k }) })),
+            style: 'width:100%; min-height:46px; padding:0 14px; border:0; border-top:1px solid #f2f1ee; display:flex; align-items:center; gap:12px; font-size:14px; font-weight:' + (on ? 600 : 500) + '; color:#0a0a0a; cursor:pointer; background:' + (on ? '#f3f8f5' : '#fff'),
+            radio: 'width:20px; height:20px; border-radius:999px; flex:none; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 2px ' + (on ? '#0b7a53' : '#cfcdc8'),
+            dot: 'width:10px; height:10px; border-radius:999px; background:' + (on ? '#0b7a53' : 'transparent') };
+        }),
+        esOtraRuta: f.funcion === 'otra',
+        rutaAyuda: rutaMal ? 'La ruta tiene que empezar con “/” y no llevar espacios.' : 'Por ejemplo: /eventos/raices',
+        rutaAyudaInk: rutaMal ? '#b42318' : 'rgba(0,0,0,.6)',
+        urlAyuda: urlMal ? 'Tiene que ser una dirección completa que empiece con https://' : urlFalta ? 'Falta la dirección del link.' : this.urlOk(urlTrim) ? 'Abre ' + this.host(urlTrim) + ' en otra pestaña' : 'Pegá la dirección completa, con https://',
+        urlAyudaInk: urlMal || urlFalta ? '#b42318' : 'rgba(0,0,0,.6)',
+        onTitulo: e => { const val = e.target.value.slice(0, 60); this.setState(st => ({ form: Object.assign({}, st.form, { titulo: val }) })); },
+        onDesc: e => { const val = e.target.value.slice(0, 140); this.setState(st => ({ form: Object.assign({}, st.form, { desc: val }) })); },
+        onRuta: e => { let val = e.target.value; if (val && val[0] !== '/') val = '/' + val; this.setState(st => ({ form: Object.assign({}, st.form, { ruta: val }) })); },
+        onUrl: e => { const val = e.target.value; this.setState(st => ({ form: Object.assign({}, st.form, { url: val }) })); },
+        onVence: e => { const val = e.target.value; this.setState(st => ({ form: Object.assign({}, st.form, { vence: val }) })); },
+        tocarTitulo: () => this.setState(st => ({ touched: Object.assign({}, st.touched, { titulo: true }) })),
+        tocarUrl: () => this.setState(st => ({ touched: Object.assign({}, st.touched, { url: true }) })),
+        tocarRuta: () => this.setState(st => ({ touched: Object.assign({}, st.touched, { ruta: true }) })),
+        hayVence: !!f.vence, sinVence: () => this.setState(st => ({ form: Object.assign({}, st.form, { vence: '' }) })),
+        visTrack: track(f.visible), visKnob: knob(f.visible),
+        visTxt: f.visible ? 'Aparece en Novedades al guardar.' : 'Se guarda, pero no se muestra.',
+        toggleVis: () => this.setState(st => ({ form: Object.assign({}, st.form, { visible: !st.form.visible }) })),
+        pvTipo: f.tipo === 'externo' ? '↗ Link externo' : 'En Origen',
+        pvPill: 'display:inline-flex; align-items:center; height:26px; padding:0 10px; border-radius:999px; font-size:12px; font-weight:600; background:' + (f.tipo === 'externo' ? '#f1f5f9' : '#ecfdf5') + '; color:' + (f.tipo === 'externo' ? '#475569' : '#047857'),
+        pvVence: d != null && d >= 0 && d <= 7, pvVenceTxt: d === 0 ? 'Cierra hoy' : d === 1 ? 'Cierra mañana' : 'Cierra en ' + d + ' días',
+        pvTitulo: f.titulo.trim() || 'Título del link', pvTituloInk: f.titulo.trim() ? '#0f172a' : '#94a3b8',
+        pvHayDesc: !!f.desc.trim(), pvFlecha: f.tipo === 'externo' ? '↗' : '→', pvOculto: !f.visible || (d != null && d < 0),
+        noValido: !v.ok,
+        btnGuardar: 'height:' + (desk ? 46 : 50) + 'px; padding:0 24px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14.5px; font-weight:600; cursor:' + (v.ok ? 'pointer' : 'not-allowed') + '; opacity:' + (v.ok ? 1 : .35),
+        guardar: () => {
+          const v2 = this.validar(this.state.form);
+          if (!v2.ok) { this.setState({ touched: { all: true } }); return; }
+          const nf = Object.assign({}, this.state.form, { titulo: this.state.form.titulo.trim(), desc: this.state.form.desc.trim(), url: this.state.form.url.trim(), ruta: this.state.form.ruta.trim() });
+          this.setState(st => nf.id ? { links: st.links.map(x => x.id === nf.id ? nf : x), form: null, touched: {} } : { links: [Object.assign({}, nf, { id: st.nextId })].concat(st.links), nextId: st.nextId + 1, form: null, touched: {} });
+          this.aviso(nf.id ? 'Cambios guardados' : 'Link creado: quedó primero en la lista');
+        },
+        pedirBorrar: () => this.setState({ confirm: true }),
+        confirmTxt: '¿Borrar «' + (f.titulo || 'este link') + '»? No se puede deshacer.',
+        noBorrar: () => this.setState({ confirm: false }),
+        siBorrar: () => { const id = f.id; this.setState(st => ({ links: st.links.filter(x => x.id !== id), form: null, confirm: false })); this.aviso('Link borrado'); }
+      };
+    }
+
+    const sheetWrap = 'position:absolute; inset:0; z-index:40; background:rgba(10,10,10,.45); display:flex; align-items:flex-end; animation:alFade .2s ease';
+
+    return Object.assign({
+      verMobile: () => this.setState({ device: 'm' }), verPC: () => this.setState({ device: 'pc' }),
+      bMobile: seg(!desk), bPC: seg(desk),
+      conLinks: () => this.setState({ links: this.INICIAL.map(x => Object.assign({}, x)), form: null }), vaciar: () => this.setState({ links: [], form: null }),
+      bCon: seg(n > 0), bVacia: seg(n === 0),
+      frameW: desk ? '1440px' : '390px', frameH: desk ? '900px' : '844px', frameR: desk ? '14px' : '36px',
+      pad: desk ? '34px 40px 56px' : '20px 14px 40px', h1: desk ? '26px' : '22px',
+      headPad: desk ? '20px 22px 16px' : '18px 16px 14px',
+      isDesktop: desk, isMobile: !desk,
+      subs: ['Identidad', 'Banners', 'Música', 'Pies', 'Links'].map(t2 => ({ t: t2, style: subBtn(t2 === 'Links'), ir: () => { if (t2 !== 'Links') this.aviso(t2 + ' queda fuera de este prototipo'); } })),
+      n, hayLinks: n > 0, sinLinks: n === 0, filas,
+      th: 'font-size:11px; font-weight:700; letter-spacing:.06em; color:rgba(0,0,0,.55)',
+      pieTxt: desk ? 'Arrastrá desde la manija para cambiar el orden. Los vencidos dejan de verse solos y quedan acá hasta que los borres.' : 'Usá las flechas para cambiar el orden. Los vencidos dejan de verse solos y quedan acá hasta que los borres.',
+      nuevoBtn: 'height:' + (desk ? 44 : 48) + 'px; padding:0 20px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; cursor:pointer; flex:none' + (desk ? '' : '; width:100%; justify-content:center'),
+      nuevo: () => this.setState({ form: { id: null, titulo: '', desc: '', tipo: 'origen', funcion: 'cal', ruta: '', url: '', vence: '', visible: true }, touched: {}, confirm: false }),
+      editando: !!f, confirmando: s.confirm, noConfirmando: !s.confirm,
+      ovWrap: desk ? 'position:absolute; inset:0; z-index:40; background:rgba(10,10,10,.45); display:flex; align-items:center; justify-content:center; padding:24px; animation:alFade .2s ease' : sheetWrap,
+      ovBox: desk ? 'width:560px; max-width:100%; max-height:100%; overflow-y:auto; background:#fff; border-radius:24px; box-shadow:0 24px 60px rgba(0,0,0,.25); animation:alPop .2s ease-out' : 'width:100%; max-height:92%; overflow-y:auto; background:#fff; border-radius:28px 28px 0 0; animation:alUp .28s cubic-bezier(.2,.8,.2,1)',
+      edPad: desk ? '22px 24px 22px' : '6px 18px 24px',
+      edCols: 'minmax(0,1fr)',
+      lbl: 'display:block; margin:0 0 7px; font-size:13px; font-weight:600; color:#0a0a0a',
+      botonesWrap: desk ? 'display:flex; gap:8px' : 'display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; width:100%',
+      btnSec: 'height:' + (desk ? 46 : 50) + 'px; padding:0 20px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; font-size:14.5px; font-weight:600; cursor:pointer',
+      btnDanger: 'height:' + (desk ? 46 : 50) + 'px; padding:0 20px; border:0; border-radius:999px; background:#b42318; color:#fff; font-size:14.5px; font-weight:600; cursor:pointer',
+      cancelar: () => this.cerrar(), stop: e => e.stopPropagation(),
+      sheetRef: this.sheetRef,
+      dragStart: e => { this.dY = e.clientY; this.dDy = 0; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) {} if (this.sheetRef.current) this.sheetRef.current.style.transition = 'none'; },
+      dragMove: e => { if (this.dY == null) return; const dy = Math.max(0, e.clientY - this.dY); this.dDy = dy; if (this.sheetRef.current) this.sheetRef.current.style.transform = 'translateY(' + dy + 'px)'; },
+      dragEndSheet: () => { if (this.dY == null) return; const dy = this.dDy; this.dY = null; const el = this.sheetRef.current; if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = ''; } if (dy > 90) this.cerrar(); },
+      hayToast: !!s.toast, toastTxt: s.toast || ''
+    }, fv);
+  }
+}
+</script>
+</body>
+</html>
