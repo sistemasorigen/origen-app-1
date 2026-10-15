@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { AppProvider, useStore } from '../../store';
 import { ViewState, User, UserRole } from '../../types';
 import { hasRole, puedeEntrarAlPunto } from '../../services/authUtils';
@@ -31,28 +31,6 @@ import Announcements from '../punto-informacion/Anuncios';
 interface InfoPointProps {
     currentUser: User | null;
 }
-
-// Orden y roles de las funciones del panel para la navegación por flechas
-// (solo desktop), en orden alfabético. "Reportes" se excluye a propósito:
-// navega fuera del panel (/reportes/puntoinfo), no es una vista interna por la
-// que "desplazarse". "Dashboard" tampoco está: el panel abre en su menú de
-// funciones —en la compu igual que en el teléfono— y los números del Punto
-// viven en Reportes.
-// `ruta` es para las funciones que viven FUERA del panel: la flecha lleva a
-// su pantalla en vez de cambiar de vista.
-const DESKTOP_NAV: { id: ViewState; label: string; roles: UserRole[]; ruta?: string }[] = [
-    { id: 'REPORTAR', label: 'Reportar', ruta: '/punto-de-informacion/reportar', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-    { id: 'ANNOUNCEMENTS', label: 'Anuncios', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
-    { id: 'BAPTISMS', label: 'Bautismos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-
-    { id: 'ADMIN_PANEL', label: 'Configuración', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
-    { id: 'EVENTS', label: 'Eventos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
-    { id: 'INVENTORY', label: 'Inventario', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
-    { id: 'MOVEMENTS', label: 'Movimientos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-
-    { id: 'PRESENTATIONS', label: 'Presentaciones', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-    { id: 'LOANS', label: 'Préstamos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-];
 
 const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const { settings, isLoading, notification } = useStore();
@@ -272,26 +250,6 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     /** ¿Lo que se está mostrando es el menú de funciones? */
     const esElMenu = currentView === 'PANEL' || currentView === 'SUMMARY';
 
-    // --- NAVEGACIÓN POR FLECHAS (solo desktop) ---
-    // Funciones visibles según el rol, en el orden definido.
-    const visibleNav = DESKTOP_NAV.filter(item => !!authorizedUser && hasRole(authorizedUser, item.roles));
-    // El menú no está en la lista de flechas: paradas en él, las flechas
-    // llevan a la primera función (navIndex === -1).
-    const navIndex = visibleNav.findIndex(item => item.id === currentView);
-    // Título centrado: usa el label del menú; si la vista no está en la lista
-    // cae al título genérico.
-    const currentNavLabel = navIndex >= 0 ? visibleNav[navIndex].label : getViewTitle(currentView);
-    // Se desplaza de forma circular actualizando la URL (?view=XXX). El efecto de
-    // deep-linking sincroniza currentView, y el menú lateral marca el ítem activo
-    // por coincidencia exacta de URL. Se usa replace para no llenar el historial.
-    const goToNav = (dir: -1 | 1) => {
-        if (visibleNav.length === 0) return;
-        const base = navIndex >= 0 ? navIndex : 0;
-        const siguiente = visibleNav[(base + dir + visibleNav.length) % visibleNav.length];
-        if (siguiente.ruta) navigate(siguiente.ruta);
-        else irA(siguiente.id);
-    };
-
     return (
         <div className="flex flex-col md:flex-row h-screen md:h-[calc(100vh-64px)] bg-slate-50 overflow-hidden relative">
 
@@ -336,34 +294,32 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             {/* --- DESKTOP LAYOUT --- */}
             <div className="hidden md:flex flex-col flex-1 h-full overflow-hidden relative">
 
-                {/* Cabecera de navegación: nombre de la vista centrado con
-                    flechas a los costados para desplazarse entre funciones.
-                    Reemplaza al menú lateral (exclusivo de desktop). */}
-                <header className="flex-none border-b border-slate-200 bg-white">
-                    <div className="flex items-center justify-center gap-6 px-8 py-5">
-                        <button
-                            onClick={() => goToNav(-1)}
-                            aria-label="Función anterior"
-                            className="flex items-center justify-center w-11 h-11 border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-                        >
-                            <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
-                        </button>
-
-                        <div className="flex flex-col items-center min-w-[16rem]">
-                            <h1 className="text-2xl font-bold tracking-tight text-black text-center leading-none">
-                                {currentNavLabel}
+                {/* La cabecera del panel en la compu: dónde estás y cómo
+                    volver al menú. Antes eran dos flechas que iban a la
+                    función anterior y a la siguiente, en un orden que sólo
+                    conocía el código: para llegar a Préstamos había que pasar
+                    por las otras seis. Ahora se elige en el menú, que es una
+                    lista con los nombres a la vista.
+                    En el menú no hay cabecera: esa pantalla trae su título. */}
+                {!esElMenu && (
+                    <header className="flex-none border-b border-slate-200 bg-white">
+                        <div className="flex items-center gap-4 px-8 py-5">
+                            <button
+                                type="button"
+                                onClick={() => irA('PANEL')}
+                                className="shrink-0 inline-flex items-center gap-1.5 h-10 px-3 -ml-3 rounded-full text-sm font-semibold text-slate-500 hover:text-black hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                Punto de Información
+                            </button>
+                            <h1 className="flex-1 text-2xl font-bold tracking-tight text-black text-center leading-none">
+                                {getViewTitle(currentView)}
                             </h1>
+                            {/* Espaciador: mantiene el título centrado. */}
+                            <div className="shrink-0 w-[196px]" aria-hidden="true" />
                         </div>
-
-                        <button
-                            onClick={() => goToNav(1)}
-                            aria-label="Función siguiente"
-                            className="flex items-center justify-center w-11 h-11 border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-                        >
-                            <ChevronRight className="w-6 h-6" strokeWidth={2.5} />
-                        </button>
-                    </div>
-                </header>
+                    </header>
+                )}
 
                 <main className={`flex-1 overflow-y-auto relative bg-slate-50 ${esElMenu ? '' : 'p-8'}`}>
                     {renderView()}

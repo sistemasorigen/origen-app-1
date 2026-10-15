@@ -144,14 +144,17 @@ const InfoPointMenu: React.FC<InfoPointMenuProps> = ({ onNavigate, currentUser: 
         </li>
     );
 
+    // El ancho se corta en pantalla grande: una lista de filas cortas
+    // estirada a 1200px deja el nombre pegado a la izquierda y la flecha
+    // perdida allá lejos a la derecha.
     return (
-        <div className="bg-slate-50 min-h-full pt-5 pb-24">
-            <div className="px-4 mb-5">
+        <div className="bg-slate-50 min-h-full pt-5 pb-24 md:pt-8">
+            <div className="px-4 mb-5 max-w-3xl md:mx-auto">
                 <h2 className="text-[26px] font-bold tracking-tight text-black leading-none">Punto de Información</h2>
                 <p className="text-sm text-slate-500 mt-2">Elegí qué querés hacer.</p>
             </div>
 
-            <div className="px-4 space-y-5">
+            <div className="px-4 space-y-5 max-w-3xl md:mx-auto">
                 <section aria-labelledby="punto-gestion">
                     <h3 id="punto-gestion" className="px-1 mb-2 text-[13px] font-semibold text-slate-500">
                         Gestión
