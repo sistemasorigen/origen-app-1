@@ -2,7 +2,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppProvider, useStore } from '../../store';
 import { ViewState, User, UserRole } from '../../types';
@@ -37,7 +37,10 @@ interface InfoPointProps {
 // (solo desktop). MISMO ORDEN que el menú lateral (MenuDeslizable): Dashboard
 // primero y el resto alfabético. "Reportes" se excluye a propósito: navega
 // fuera del panel (/reportes), no es una vista interna por la que "desplazarse".
-const DESKTOP_NAV: { id: ViewState; label: string; roles: UserRole[] }[] = [
+// `ruta` es para las funciones que viven FUERA del panel: la flecha lleva a
+// su pantalla en vez de cambiar de vista.
+const DESKTOP_NAV: { id: ViewState; label: string; roles: UserRole[]; ruta?: string }[] = [
+    { id: 'REPORTAR', label: 'Reportar', ruta: '/punto-de-informacion/reportar', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
     // Usa SUMMARY (no PANEL) para que la URL ?view=SUMMARY coincida con el ítem
     // "Dashboard" del menú lateral y quede marcado. Ambos renderizan el Dashboard.
     { id: 'SUMMARY', label: 'Dashboard', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
@@ -56,6 +59,7 @@ const DESKTOP_NAV: { id: ViewState; label: string; roles: UserRole[] }[] = [
 const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const { settings, isLoading, notification } = useStore();
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'PUBLIC' | 'INTERNAL'>('PUBLIC');
     const [currentView, setCurrentView] = useState<ViewState>('PANEL');
 
@@ -278,8 +282,9 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const goToNav = (dir: -1 | 1) => {
         if (visibleNav.length === 0) return;
         const base = navIndex >= 0 ? navIndex : 0;
-        const next = (base + dir + visibleNav.length) % visibleNav.length;
-        irA(visibleNav[next].id);
+        const siguiente = visibleNav[(base + dir + visibleNav.length) % visibleNav.length];
+        if (siguiente.ruta) navigate(siguiente.ruta);
+        else irA(siguiente.id);
     };
 
     return (

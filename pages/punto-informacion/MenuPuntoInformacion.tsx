@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ViewState, UserRole, User as UserType } from '../../types';
 import {
     Package, CalendarRange, ArrowLeftRight, Baby, User, Settings,
-    Tag, FileText, Megaphone, ChevronRight, ChevronDown,
+    Tag, FileText, Megaphone, ChevronRight, ChevronDown, ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasRole } from '../../services/authUtils';
@@ -47,6 +47,8 @@ interface Funcion {
 
 /** Lo del mostrador: entradas, salidas y a quién se anotó hoy. */
 const GESTION: Funcion[] = [
+    // Primero: es lo primero que se hace al llegar al stand.
+    { id: 'REPORTAR', label: 'Reportar', descripcion: 'Contá el stock y avisá cuánto hay', icon: ClipboardCheck, fondo: 'bg-indigo-50', tinta: 'text-indigo-600', externalRoute: '/punto-de-informacion/reportar' },
     { id: 'MOVEMENTS', label: 'Movimientos', descripcion: 'Entradas, salidas y ajustes', icon: ArrowLeftRight, fondo: 'bg-sky-50', tinta: 'text-sky-600' },
     { id: 'INVENTORY', label: 'Inventario', descripcion: 'Qué hay de cada talle', icon: Package, fondo: 'bg-emerald-50', tinta: 'text-emerald-600' },
     { id: 'LOANS', label: 'Préstamos', descripcion: 'Qué salió y todavía no volvió', icon: Tag, fondo: 'bg-orange-50', tinta: 'text-orange-600' },

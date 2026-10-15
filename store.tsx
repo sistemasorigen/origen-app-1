@@ -33,6 +33,8 @@ interface AppContextType {
     addMovement: (m: Movement) => Promise<void>;
     /** Varios de una vez. Devuelve si pudo, para poder decirlo. */
     addMovements: (ms: Movement[]) => Promise<{ ok: true } | { ok: false; motivo: 'alta' | 'stock'; sinStock: string[] }>;
+    /** Para lo que no pasa por el store, como el reporte de stock (va por una RPC). */
+    registrarEnBitacora: (accion: string, detalle: string) => void;
     deleteMovement: (id: string) => Promise<void>;
     addBaptism: (b: Baptism) => Promise<void>;
     updateBaptism: (b: Baptism) => Promise<void>;
@@ -174,6 +176,8 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
         logAction('Registrar Movimiento', `${m.type} de ${m.quantity}u. para ${m.productName}`);
         await refreshData();
     };
+
+    const registrarEnBitacora = (accion: string, detalle: string) => logAction(accion, detalle);
 
     const addMovements = async (ms: Movement[]) => {
         const resultado = await dbAPI.addMovements(ms);
@@ -348,7 +352,7 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
             products, movements, baptisms, presentations, loans, events, announcements, settings, isLoading, notification,
             refreshData, updateSettings, showNotification,
             addProduct, deleteProduct,
-            addMovement, addMovements, deleteMovement,
+            addMovement, addMovements, deleteMovement, registrarEnBitacora,
             addBaptism, updateBaptism, deleteBaptism,
             addPresentation, updatePresentation, deletePresentation,
             addLoan, updateLoan, deleteLoan,
