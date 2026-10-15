@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Layout from './components/layout/Estructura';
 import ErrorBoundary from './components/ui/LimiteError';
@@ -233,11 +233,17 @@ const AppContent: React.FC = () => {
     // Derived/Constant (could be from config)
     const showVolunteerAccess = true;
 
-    // Scroll to top on route change
-    useEffect(() => {
-        const path = window.location.hash; // Handle HashRouter explicitly if needed, but scrollTo works generally
+    // Al cambiar de pantalla, arriba de todo.
+    //
+    // Va en useLayoutEffect y no en useEffect: el navegador conserva el scroll
+    // entre rutas, así que la pantalla nueva nace a la altura a la que estaba
+    // la anterior (recortada a su alto). Con un efecto común eso se alcanza a
+    // pintar y recién después vuelve al tope: se ve el salto, y el evento de
+    // scroll que dispara deja la navbar creyendo que estás scrolleado —gris
+    // sobre el hero del inicio—. Antes de pintar, no hay salto ni evento.
+    useLayoutEffect(() => {
         window.scrollTo(0, 0);
-    }, [location.pathname]); // location is derived from useLocation hook logic from react-router
+    }, [location.pathname]);
 
     // Redirigir post-login con Google usando el destino guardado en sessionStorage.
     // IMPORTANTE: no consumir el destino guardado mientras needsProfileCompletion

@@ -81,7 +81,27 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     // En el dashboard la navbar arranca sin fondo, montada sobre el hero.
     // Al scrollear recupera el fondo: si no, quedaría flotando transparente
     // sobre las tarjetas y se perdería el menú (única navegación en mobile).
+    //
+    // El pathname está en las dependencias por algo: el Layout NO se vuelve a
+    // montar al cambiar de ruta (todas las rutas lo renderizan en el mismo
+    // lugar del árbol, así que React reusa la instancia), y entre dos
+    // pantallas que son las dos "dashboard" —de /gcx al inicio— este efecto
+    // no se volvía a correr. El "estás scrolleado" de la pantalla anterior
+    // viajaba a la nueva, y como la nueva abre arriba de todo no llegaba
+    // ningún evento de scroll que lo desmintiera: el inicio quedaba con la
+    // barra gris tapando el hero hasta que uno tocaba la pantalla.
     const [isScrolled, setIsScrolled] = useState(false);
+
+    // Al cambiar de pantalla se arranca arriba de todo —App.tsx sube la
+    // página antes de pintar—, así que el dato se corrige acá mismo, durante
+    // el render. Hacerlo en el efecto llega un cuadro tarde: la pantalla
+    // nueva alcanza a pintarse con la barra gris de la anterior.
+    const [rutaPrevia, setRutaPrevia] = useState(location.pathname);
+    if (rutaPrevia !== location.pathname) {
+        setRutaPrevia(location.pathname);
+        if (isScrolled) setIsScrolled(false);
+    }
+
     useEffect(() => {
         if (!isDashboard) {
             setIsScrolled(false);
@@ -91,7 +111,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
         onScroll();
         window.addEventListener('scroll', onScroll, { passive: true });
         return () => window.removeEventListener('scroll', onScroll);
-    }, [isDashboard]);
+    }, [isDashboard, location.pathname]);
 
     // Con 'siempre' la pantalla pone su propio fondo detrás de la barra y la
     // barra no lo tapa al scrollear (ver contexts/HeroContext.tsx).
