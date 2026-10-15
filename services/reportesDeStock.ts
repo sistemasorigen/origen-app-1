@@ -169,6 +169,41 @@ export const getReportesDeStock = async (rango: Rango): Promise<ReporteDeStock[]
     return ((data || []) as ReporteCrudo[]).map(mapearReporte);
 };
 
+/**
+ * Todos los ítems de varios reportes, para bajarlos juntos a Excel.
+ *
+ * Pide de a 1000 porque supabase-js corta ahí sin avisar, y un período con
+ * muchos reportes son veinte filas por reporte.
+ */
+export const getItemsDeReportes = async (
+    ids: string[],
+): Promise<Array<ItemDeReporte & { reportId: string }> | null> => {
+    if (ids.length === 0) return [];
+    const PAGINA = 1000;
+    const filas: Array<ItemDeReporte & { reportId: string }> = [];
+
+    for (let desde = 0; ; desde += PAGINA) {
+        const { data, error } = await supabase
+            .from('stock_report_items')
+            .select('*')
+            .in('reportId', ids)
+            .range(desde, desde + PAGINA - 1);
+        if (error) { aviso('getItemsDeReportes', error); return null; }
+        const lote = (data || []) as any[];
+        lote.forEach(i => filas.push({
+            reportId: i.reportId,
+            productCode: i.productCode,
+            productName: i.productName,
+            tipo: i.type,
+            talle: i.size,
+            antes: i.antes ?? 0,
+            contado: i.contado ?? 0,
+            diferencia: i.diferencia ?? 0,
+        }));
+        if (lote.length < PAGINA) return filas;
+    }
+};
+
 /** Un reporte con todo lo que se contó, ordenado como la pantalla lo muestra. */
 export const getDetalleReporteStock = async (id: string): Promise<DetalleDeReporte | null> => {
     const [cabecera, items] = await Promise.all([

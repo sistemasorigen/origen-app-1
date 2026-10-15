@@ -21,12 +21,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
     ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, LabelList,
 } from 'recharts';
-import { ChevronLeft, ArrowDown, ArrowUp, Pencil, Download, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ArrowDown, ArrowUp, Pencil, Download, AlertCircle, ClipboardCheck } from 'lucide-react';
 import {
     C, FUENTE, EjeCategoria, Tarjeta, Esqueleto,
 } from '../../components/Reportes/PiezasTablero';
 import SelectorDeRango, { Rango, atajosDeRango } from '../audiencia/SelectorDeRango';
 import { descargarExcel } from './exportacion';
+import ReportesDeStock from './ReportesDeStock';
+import HojaReporteStock from '../../components/Reportes/HojaReporteStock';
 import {
     getNovedades, getKpisPuntoInfo, getInventarioPuntoInfo, getPendientes, getDiasConMovimiento,
     fechaYHora, telParaLlamar,
@@ -91,6 +93,8 @@ const rangoDeLaUrl = (search: string): Rango => {
     return { desde: `${hoy.slice(0, 7)}-01`, hasta: hoy };
 };
 
+type Pestana = 'resumen' | 'stock';
+
 // ── Piezas chicas ───────────────────────────────────────────────────────
 
 const TituloSeccion: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
@@ -140,6 +144,8 @@ const ReportesPuntoInfo: React.FC = () => {
     const navigate = useNavigate();
     const { search } = useLocation();
     const rango = useMemo(() => rangoDeLaUrl(search), [search]);
+    /** La pestaña también vive en la URL: recargar o compartir la conserva. */
+    const pestana: Pestana = new URLSearchParams(search).get('pestana') === 'stock' ? 'stock' : 'resumen';
     const esMovil = useEsMovil();
 
     // De hoy, no del período: se piden una sola vez.
@@ -158,6 +164,8 @@ const ReportesPuntoInfo: React.FC = () => {
     const [modo, setModo] = useState<Record<ClaseDeProducto, 'stock' | 'periodo'>>({ Remeras: 'stock', Buzos: 'stock' });
     /** El tooltip que se abre al tocar una fila en el teléfono. */
     const [tocado, setTocado] = useState<{ clase: ClaseDeProducto; talle: number } | null>(null);
+    /** El reporte de stock que se está mirando, abierto desde Novedades. */
+    const [reporteAbierto, setReporteAbierto] = useState<string | null>(null);
 
     const pedirKpis = useCallback(async () => {
         setFallaKpis(false);
@@ -190,8 +198,12 @@ const ReportesPuntoInfo: React.FC = () => {
     useEffect(() => { pedirKpis(); }, [pedirKpis]);
     useEffect(() => { pedirPeriodo(); }, [pedirPeriodo]);
 
+    /** El período y la pestaña viajan juntos en la URL. */
+    const urlCon = (r: Rango, p: Pestana) =>
+        `?desde=${r.desde}&hasta=${r.hasta}${p === 'stock' ? '&pestana=stock' : ''}`;
+
     const cambiarRango = (r: Rango) => {
-        navigate({ search: `?desde=${r.desde}&hasta=${r.hasta}` }, { replace: true });
+        navigate({ search: urlCon(r, pestana) }, { replace: true });
         setTocado(null);
     };
 
@@ -562,7 +574,29 @@ const ReportesPuntoInfo: React.FC = () => {
                     </div>
                 </div>
 
-                {error ? (
+                {/* ── Las dos pestañas. El calendario de arriba vale para las dos. ── */}
+                <div role="tablist" aria-label="Qué mirar" className="grid grid-cols-2 gap-1.5 mt-4 md:flex md:w-auto">
+                    {([['resumen', 'Resumen'], ['stock', 'Reportes de stock']] as const).map(([clave, label]) => {
+                        const activa = pestana === clave;
+                        return (
+                            <button
+                                key={clave}
+                                type="button"
+                                role="tab"
+                                aria-selected={activa}
+                                onClick={() => navigate({ search: urlCon(rango, clave) }, { replace: true })}
+                                className="h-11 md:h-[38px] px-4 rounded-[10px] flex items-center justify-center text-[13px] font-semibold whitespace-nowrap"
+                                style={{ background: activa ? C.tinta : '#f1f2f4', color: activa ? '#fff' : C.medio }}
+                            >
+                                {label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {pestana === 'stock' ? (
+                    <ReportesDeStock rango={rango} esMovil={esMovil} />
+                ) : error ? (
                     <Tarjeta className="mt-6 px-6 py-11 flex flex-col items-center text-center">
                         <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: '#fdecea' }}>
                             <AlertCircle className="w-[22px] h-[22px]" style={{ color: '#b42318' }} />
@@ -591,21 +625,44 @@ const ReportesPuntoInfo: React.FC = () => {
                                 ) : novedades && novedades.length > 0 ? (
                                     novedades.map(n => {
                                         const esAjuste = n.tipo === 'Ajuste';
-                                        const Icono = n.tipo === 'Entrada' ? ArrowDown : n.tipo === 'Salida' ? ArrowUp : Pencil;
+                                        const esReporte = n.tipo === 'Reporte';
+                                        const Icono = esReporte ? ClipboardCheck
+                                            : n.tipo === 'Entrada' ? ArrowDown
+                                                : n.tipo === 'Salida' ? ArrowUp : Pencil;
+                                        // El reporte se toca y abre su ficha; los movimientos
+                                        // sueltos no tienen a dónde llevar.
+                                        const Fila = esReporte ? 'button' : 'div';
                                         return (
-                                            <div key={n.id} className="flex items-start gap-3 py-[11px]" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
+                                            <Fila
+                                                key={n.id}
+                                                {...(esReporte ? {
+                                                    type: 'button' as const,
+                                                    onClick: () => setReporteAbierto(n.reportId || null),
+                                                    'aria-label': `Ver el reporte de stock de ${n.cuando}`,
+                                                } : {})}
+                                                className={`w-full flex items-start gap-3 py-[11px] text-left ${esReporte ? 'cursor-pointer hover:bg-slate-50' : ''}`}
+                                                style={{ borderTop: `1px solid ${C.bordeSuave}` }}
+                                            >
                                                 <span className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center"
-                                                    style={{ background: esAjuste ? AMBAR_FONDO : '#f1f2f4', color: esAjuste ? AMBAR_TINTA : C.medio }}>
+                                                    style={esReporte
+                                                        ? { background: '#eaf0fc', color: '#1e3a8a' }
+                                                        : { background: esAjuste ? AMBAR_FONDO : '#f1f2f4', color: esAjuste ? AMBAR_TINTA : C.medio }}>
                                                     <Icono className="w-3.5 h-3.5" />
                                                 </span>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="m-0 text-[13.5px] leading-[1.45] font-medium" style={{ color: C.medio }}>{n.frase}</p>
+                                                    {n.detalle && (
+                                                        <p className="mt-0.5 m-0 text-[12px] tabular-nums" style={{ color: C.tenue }}>{n.detalle}</p>
+                                                    )}
                                                     {esAjuste && n.autor && (
                                                         <p className="mt-0.5 m-0 text-[12px]" style={{ color: C.tenue }}>Editado por {n.autor}</p>
                                                     )}
+                                                    {esReporte && n.autor && (
+                                                        <p className="mt-0.5 m-0 text-[12px]" style={{ color: C.tenue }}>Reportado por {n.autor}</p>
+                                                    )}
                                                 </div>
                                                 <span className="shrink-0 text-[12px] font-medium whitespace-nowrap pt-0.5" style={{ color: C.tenue }}>{n.cuando}</span>
-                                            </div>
+                                            </Fila>
                                         );
                                     })
                                 ) : (
@@ -704,6 +761,9 @@ const ReportesPuntoInfo: React.FC = () => {
                     </>
                 )}
             </div>
+
+            {/* La misma ficha que abre la planilla de la otra pestaña. */}
+            <HojaReporteStock reporteId={reporteAbierto} onCerrar={() => setReporteAbierto(null)} />
         </div>
     );
 };

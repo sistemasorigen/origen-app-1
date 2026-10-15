@@ -14,7 +14,6 @@ import { useToast } from '../punto-informacion/context/ContextoToast';
 
 // Sub Views
 import PublicHome from '../punto-informacion/InicioPublico';
-import Dashboard from '../punto-informacion/PanelPrincipal';
 import Inventory from '../punto-informacion/Inventario';
 import NewProduct from '../punto-informacion/NuevoProducto';
 import Movements from '../punto-informacion/Movimientos';
@@ -34,16 +33,15 @@ interface InfoPointProps {
 }
 
 // Orden y roles de las funciones del panel para la navegación por flechas
-// (solo desktop). MISMO ORDEN que el menú lateral (MenuDeslizable): Dashboard
-// primero y el resto alfabético. "Reportes" se excluye a propósito: navega
-// fuera del panel (/reportes), no es una vista interna por la que "desplazarse".
+// (solo desktop), en orden alfabético. "Reportes" se excluye a propósito:
+// navega fuera del panel (/reportes/puntoinfo), no es una vista interna por la
+// que "desplazarse". "Dashboard" tampoco está: el panel abre en su menú de
+// funciones —en la compu igual que en el teléfono— y los números del Punto
+// viven en Reportes.
 // `ruta` es para las funciones que viven FUERA del panel: la flecha lleva a
 // su pantalla en vez de cambiar de vista.
 const DESKTOP_NAV: { id: ViewState; label: string; roles: UserRole[]; ruta?: string }[] = [
     { id: 'REPORTAR', label: 'Reportar', ruta: '/punto-de-informacion/reportar', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-    // Usa SUMMARY (no PANEL) para que la URL ?view=SUMMARY coincida con el ítem
-    // "Dashboard" del menú lateral y quede marcado. Ambos renderizan el Dashboard.
-    { id: 'SUMMARY', label: 'Dashboard', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
     { id: 'ANNOUNCEMENTS', label: 'Anuncios', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
     { id: 'BAPTISMS', label: 'Bautismos', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
 
@@ -112,7 +110,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         } else {
             // Sin ?view= (ej: "Inicio" del menú) — volver al HOME público
             // de Punto de Información, no dejar el panel interno congelado.
-            // PANEL es el Dashboard, así que resetear la vista Y el modo.
+            // PANEL es el menú del panel, así que se resetean la vista Y el modo.
             setViewMode('PUBLIC');
             setCurrentView('PANEL');
         }
@@ -225,8 +223,8 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     // --- VIEW MAPPING ---
     const getViewTitle = (view: ViewState): string => {
         switch (view) {
-            case 'PANEL': return 'Punto de Info';
-            case 'SUMMARY': return 'Resumen';
+            case 'PANEL':
+            case 'SUMMARY': return 'Punto de Información';
             case 'INVENTORY': return 'Inventario';
             case 'NEW_PRODUCT': return 'Nuevo Producto';
             case 'MOVEMENTS': return 'Movimientos';
@@ -243,8 +241,11 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
 
     const renderView = () => {
         switch (currentView) {
-            case 'PANEL': return <Dashboard />;
-            case 'SUMMARY': return <Dashboard />;
+            // El menú de funciones es la puerta del panel. SUMMARY sigue
+            // acá porque quedó en links viejos y en favoritos: abre el menú,
+            // no el tablero que se retiró.
+            case 'PANEL':
+            case 'SUMMARY': return <InfoPointMenu onNavigate={irA} currentUser={authorizedUser} />;
             case 'SEARCH': return <Search />;
             case 'INVENTORY': return <Inventory />;
             case 'NEW_PRODUCT': return <NewProduct />;
@@ -258,21 +259,25 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 if (!canAccessAdminPanel) {
                     toast.error('No tienes permisos para acceder a Configuración');
                     setTimeout(() => irA('PANEL'), 0);
-                    return <Dashboard />;
+                    return <InfoPointMenu onNavigate={irA} currentUser={authorizedUser} />;
                 }
                 return <AdminPanel />;
             }
-            default: return <Dashboard />;
+            // Cualquier ?view= que no exista abre el menú, que es de donde
+            // sale todo lo demás.
+            default: return <InfoPointMenu onNavigate={irA} currentUser={authorizedUser} />;
         }
     };
+
+    /** ¿Lo que se está mostrando es el menú de funciones? */
+    const esElMenu = currentView === 'PANEL' || currentView === 'SUMMARY';
 
     // --- NAVEGACIÓN POR FLECHAS (solo desktop) ---
     // Funciones visibles según el rol, en el orden definido.
     const visibleNav = DESKTOP_NAV.filter(item => !!authorizedUser && hasRole(authorizedUser, item.roles));
-    // PANEL y SUMMARY renderizan el mismo Dashboard; al entrar al panel la vista
-    // arranca en PANEL, así que lo tratamos como SUMMARY para ubicar el índice.
-    const normalizedView = currentView === 'PANEL' ? 'SUMMARY' : currentView;
-    const navIndex = visibleNav.findIndex(item => item.id === normalizedView);
+    // El menú no está en la lista de flechas: paradas en él, las flechas
+    // llevan a la primera función (navIndex === -1).
+    const navIndex = visibleNav.findIndex(item => item.id === currentView);
     // Título centrado: usa el label del menú; si la vista no está en la lista
     // cae al título genérico.
     const currentNavLabel = navIndex >= 0 ? visibleNav[navIndex].label : getViewTitle(currentView);
@@ -295,7 +300,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 {/* Header solo en sub-vistas (back + título + dropdown).
                     En la raíz del panel (PANEL) no hay barra: el toggle
                     Web/Panel se eliminó. */}
-                {currentView !== 'PANEL' && (
+                {!esElMenu && (
                     <header className="flex-none z-40 bg-white border-b border-slate-200 select-none overflow-hidden" style={{ touchAction: 'none' }}>
                         <MobileHeader
                             title={getViewTitle(currentView)}
@@ -309,8 +314,8 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 )}
 
                 <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-slate-50">
-                    {currentView === 'PANEL' ? (
-                        <InfoPointMenu onNavigate={irA} currentUser={authorizedUser} />
+                    {esElMenu ? (
+                        renderView()
                     ) : (
                         <div className="pb-20 px-4 pt-4">
                             {renderView()}
@@ -360,7 +365,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-8 relative bg-slate-50">
+                <main className={`flex-1 overflow-y-auto relative bg-slate-50 ${esElMenu ? '' : 'p-8'}`}>
                     {renderView()}
 
                     {/* Global Notification Toast */}

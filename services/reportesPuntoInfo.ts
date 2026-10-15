@@ -30,19 +30,26 @@ export type ClaseDeProducto = 'Remeras' | 'Buzos';
 export type TipoDeSolicitud = 'bautismos' | 'presentaciones';
 export type EstadoDeSolicitud = 'Pendiente' | 'Realizado' | 'Cancelado';
 
+/** Un reporte de stock entra como una novedad sola, no como veinte ajustes. */
+export type TipoDeNovedad = TipoDeMovimiento | 'Reporte';
+
 export interface Novedad {
     id: string;
-    tipo: TipoDeMovimiento;
-    /** "Se ingresaron 12 remeras talle 2" */
+    tipo: TipoDeNovedad;
+    /** "Se ingresaron 12 remeras talle 2" · "Nuevo reporte de stock" */
     frase: string;
+    /** Sólo en los reportes: "+8 ingresos · −3 faltantes". */
+    detalle?: string;
     /** El timestamp tal como vino de la base. */
     fecha: string;
     /** "Hoy 18:40" · "Ayer 11:05" · "12 oct 20:15" */
     cuando: string;
-    /** Sólo en los ajustes, y sólo si el movimiento lo guardó. */
+    /** En los ajustes y en los reportes, si quedó guardado quién fue. */
     autor: string | null;
     producto: ClaseDeProducto | null;
     talle: number | null;
+    /** El reporte que la generó: la fila se puede tocar y abre su detalle. */
+    reportId?: string | null;
 }
 
 export interface KpisPuntoInfo {
@@ -212,6 +219,16 @@ interface MovimientoCrudo {
     date: string;
     createdByName?: string | null;
     previousStock?: number | null;
+    reportId?: string | null;
+}
+
+/** Lo que se pide de stock_reports para armar la novedad. */
+interface ReporteCrudoMinimo {
+    id: string;
+    created_at: string;
+    createdByName: string | null;
+    ingresos: number | null;
+    faltantes: number | null;
 }
 
 /**
@@ -346,12 +363,21 @@ interface ProductoCrudo {
 }
 
 /** Los 3 movimientos más recientes del período. */
+/**
+ * Cuántos movimientos se piden para quedarse con las 3 novedades.
+ *
+ * Un reporte de stock puede traer veinte ajustes y entrar como UNA novedad:
+ * si se pidieran sólo 3 movimientos, un reporte se comería la tarjeta entera
+ * y taparía lo que pasó después.
+ */
+const MOVIMIENTOS_PARA_NOVEDADES = 30;
+
 export const getNovedades = async (rango: Rango): Promise<Novedad[] | null> => {
     const { arranca, termina } = limitesDelRango(rango);
 
     const [movs, prods] = await Promise.all([
         supabase.from('movements').select('*').gte('date', arranca).lte('date', termina)
-            .order('date', { ascending: false }).limit(3),
+            .order('date', { ascending: false }).limit(MOVIMIENTOS_PARA_NOVEDADES),
         supabase.from('info_products').select('code, type, size'),
     ]);
 
@@ -362,13 +388,58 @@ export const getNovedades = async (rango: Rango): Promise<Novedad[] | null> => {
     // tipo de las filas: se nombra acá, una vez.
     const catalogo = (prods.data || []) as Pick<ProductoCrudo, 'code' | 'type' | 'size'>[];
     const porCodigo = new Map(catalogo.map(p => [p.code, p] as const));
+    const movimientos = (movs.data || []) as MovimientoCrudo[];
 
-    return ((movs.data || []) as MovimientoCrudo[]).map(m => {
+    // Los totales de los reportes salen de stock_reports, que es donde los
+    // dejó la RPC: son los de verdad y además traen el nombre de quien contó.
+    const idsDeReportes = Array.from(new Set(
+        movimientos.map(m => m.reportId).filter((x): x is string => !!x),
+    ));
+    const cabeceras = new Map<string, ReporteCrudoMinimo>();
+    if (idsDeReportes.length > 0) {
+        const { data, error } = await supabase
+            .from('stock_reports')
+            .select('id, created_at, createdByName, ingresos, faltantes')
+            .in('id', idsDeReportes);
+        if (error) { aviso('getNovedades(reportes)', error); return null; }
+        (data || []).forEach((r: any) => cabeceras.set(r.id, r));
+    }
+
+    const novedades: Novedad[] = [];
+    const yaPuesto = new Set<string>();
+
+    movimientos.forEach(m => {
+        // ── Un reporte entero, en una sola línea ──
+        if (m.reportId) {
+            if (yaPuesto.has(m.reportId)) return;
+            yaPuesto.add(m.reportId);
+            const r = cabeceras.get(m.reportId);
+            const ingresos = r ? (r.ingresos ?? 0) : 0;
+            const faltantes = r ? (r.faltantes ?? 0) : 0;
+            // La fecha del reporte, no la del movimiento que lo trajo: los
+            // movimientos de un reporte comparten el instante igual.
+            const fecha = r?.created_at || m.date;
+            novedades.push({
+                id: `reporte-${m.reportId}`,
+                tipo: 'Reporte',
+                frase: 'Nuevo reporte de stock',
+                detalle: `+${ingresos} ingresos · −${faltantes} faltantes`,
+                fecha,
+                cuando: cuandoTexto(fecha),
+                autor: (r?.createdByName) || m.createdByName || null,
+                producto: null,
+                talle: null,
+                reportId: m.reportId,
+            });
+            return;
+        }
+
+        // ── Un movimiento suelto, como siempre ──
         const p = m.productCode ? porCodigo.get(m.productCode) : null;
         const producto = (p?.type as ClaseDeProducto) || claseDe(m.productCode, m.productName);
         const talle = p?.size ? Number(p.size) : talleDe(m.productCode, m.productName);
         const tipo = m.type as TipoDeMovimiento;
-        return {
+        novedades.push({
             id: m.id,
             tipo,
             frase: fraseDeMovimiento(tipo, m.quantity, producto, talle, m.previousStock),
@@ -378,8 +449,11 @@ export const getNovedades = async (rango: Rango): Promise<Novedad[] | null> => {
             autor: tipo === 'Ajuste' ? (m.createdByName || null) : null,
             producto,
             talle,
-        };
+        });
     });
+
+    // Ya vienen del más nuevo al más viejo; agrupar no cambia ese orden.
+    return novedades.slice(0, 3);
 };
 
 /**

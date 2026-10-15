@@ -502,24 +502,15 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             icon: Info,
             path: '/punto-de-informacion',
             roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO],
+            // Una sola puerta, no once. Acá colgaba una copia de cada función
+            // del Punto —Anuncios, Bautismos, Inventario, Reportes…— que había
+            // que mantener al día a mano cada vez que el panel cambiaba. El
+            // panel ya tiene su propio menú, con las funciones agrupadas y los
+            // permisos de cada una: esto lleva ahí y listo.
             subItems: [
                 { label: 'Inicio', path: '/punto-de-informacion' },
                 { label: 'Administración', separator: true },
-                { label: 'Menú principal', path: '/punto-de-informacion?view=PANEL', mobileOnly: true },
-                { label: 'Dashboard', path: '/punto-de-informacion?view=SUMMARY' },
-                { label: 'Anuncios', path: '/punto-de-informacion?view=ANNOUNCEMENTS', activePaths: ['/punto-de-informacion/anuncios'] },
-                { label: 'Bautismos', path: '/punto-de-informacion?view=BAPTISMS', activePaths: ['/punto-de-informacion/bautismos'] },
-
-                { label: 'Configuración', path: '/punto-de-informacion?view=ADMIN_PANEL', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
-                { label: 'Eventos', path: '/punto-de-informacion?view=EVENTS', activePaths: ['/punto-de-informacion/eventos'] },
-                { label: 'Inventario', path: '/punto-de-informacion?view=INVENTORY' },
-                { label: 'Movimientos', path: '/punto-de-informacion?view=MOVEMENTS', activePaths: ['/punto-de-informacion/movimientos'] },
-
-                { label: 'Presentaciones', path: '/punto-de-informacion?view=PRESENTATIONS', activePaths: ['/punto-de-informacion/presentacion-ninos'] },
-                { label: 'Préstamos', path: '/punto-de-informacion?view=LOANS', activePaths: ['/punto-de-informacion/prestamos'] },
-                // El tablero del Punto, no /reportes (que es Pastores.tsx y sigue
-                // vivo para los roles de grupos).
-                { label: 'Reportes', path: '/reportes/puntoinfo', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
+                { label: 'Panel de administración', path: '/punto-de-informacion?view=PANEL' },
             ]
         },
         {
@@ -595,7 +586,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             );
 
         const visibleSubItems = item.subItems?.filter(sub => {
-            // "Menú principal" es exclusivo de mobile: ocultar en el sidebar desktop.
+            // Hay sub-ítems que sólo tienen sentido en el teléfono. Hoy no los
+            // usa nadie, pero el mecanismo queda: es una línea.
             if (sub.mobileOnly && isSidebar) return false;
             // Sin roles: público (separadores sin roles incluidos)
             if (!sub.roles || sub.roles.length === 0) return true;
