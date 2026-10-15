@@ -517,7 +517,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
                 { label: 'Presentaciones', path: '/punto-de-informacion?view=PRESENTATIONS', activePaths: ['/punto-de-informacion/presentacion-ninos'] },
                 { label: 'Préstamos', path: '/punto-de-informacion?view=LOANS', activePaths: ['/punto-de-informacion/prestamos'] },
-                { label: 'Reportes', path: '/reportes', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
+                // El tablero del Punto, no /reportes (que es Pastores.tsx y sigue
+                // vivo para los roles de grupos).
+                { label: 'Reportes', path: '/reportes/puntoinfo', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
             ]
         },
         {

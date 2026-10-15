@@ -19,6 +19,9 @@ import Store from './pages/primarias/Tienda';
 import Alabanza from './pages/primarias/Alabanza';
 import Pastores from './pages/audiencia/Pastores';
 import ReportesGCX from './pages/reportes/ReportesGCX';
+import ReportesPuntoInfo from './pages/reportes/ReportesPuntoInfo';
+import ReportesPuntoInfoBautismos from './pages/reportes/ReportesPuntoInfoBautismos';
+import ReportesPuntoInfoPresentaciones from './pages/reportes/ReportesPuntoInfoPresentaciones';
 import DetalleGrupoReporte from './pages/reportes/DetalleGrupoReporte';
 import CompararTemporadas from './pages/reportes/CompararTemporadas';
 import HostDashboard from './pages/groups/PanelAnfitrion';
@@ -752,6 +755,43 @@ const AppContent: React.FC = () => {
                                         UserRole.ADMIN_GROUPS
                                     ]))
                                         ? <CompararTemporadas currentUser={user} />
+                                        : <Navigate to="/" />
+                                } />
+                                {/* Tablero del Punto de Información. Convive con /reportes
+                                    (Pastores.tsx), igual que el de GCX. Los cinco roles son
+                                    los que miran este tablero: el Punto que lo carga, y
+                                    PASTOR y REPORTES que lo leen. */}
+                                <Route path="/reportes/puntoinfo" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ADMIN_PUNTO,
+                                        UserRole.ENCARGADO_PUNTO,
+                                        UserRole.REPORTES
+                                    ]))
+                                        ? <ReportesPuntoInfo />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/reportes/puntoinfo/bautismos-detalles" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ADMIN_PUNTO,
+                                        UserRole.ENCARGADO_PUNTO,
+                                        UserRole.REPORTES
+                                    ]))
+                                        ? <ReportesPuntoInfoBautismos />
+                                        : <Navigate to="/" />
+                                } />
+                                <Route path="/reportes/puntoinfo/presentacion-detalles" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ADMIN_PUNTO,
+                                        UserRole.ENCARGADO_PUNTO,
+                                        UserRole.REPORTES
+                                    ]))
+                                        ? <ReportesPuntoInfoPresentaciones />
                                         : <Navigate to="/" />
                                 } />
                                 <Route path="/reportes/gcx/:groupId" element={

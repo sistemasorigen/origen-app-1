@@ -65,10 +65,11 @@ const ADMINISTRACION: Funcion[] = [
         icon: FileText,
         fondo: 'bg-teal-50',
         tinta: 'text-teal-600',
-        externalRoute: '/reportes',
+        externalRoute: '/reportes/puntoinfo',
+        // Los mismos cinco que deja entrar la ruta en App.tsx.
         roles: [
-            UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO,
-            UserRole.REPORTES, UserRole.PASTOR, UserRole.ENCARGADO_GRUPOS, UserRole.ADMIN_GROUPS,
+            UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_PUNTO,
+            UserRole.ENCARGADO_PUNTO, UserRole.REPORTES,
         ],
     },
     {

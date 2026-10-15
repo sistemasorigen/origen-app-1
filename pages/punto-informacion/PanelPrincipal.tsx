@@ -22,10 +22,13 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
     const activeUser = currentUser || authUser;
 
     // Check if user can access Reports
+    // Los mismos cinco que deja entrar /reportes/puntoinfo en App.tsx.
     const canViewReports = activeUser && hasRole(activeUser, [
         UserRole.SUPER_ADMIN,
+        UserRole.PASTOR,
         UserRole.ADMIN_PUNTO,
-        UserRole.ENCARGADO_PUNTO
+        UserRole.ENCARGADO_PUNTO,
+        UserRole.REPORTES
     ]);
 
     // Stats Calculations
@@ -105,7 +108,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                 <div className="hidden md:flex justify-end">
                     <button
                         id="reports-btn"
-                        onClick={() => navigate('/reportes')}
+                        onClick={() => navigate('/reportes/puntoinfo')}
                         className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-lg shadow-sm font-bold uppercase tracking-widest text-xs hover:bg-slate-100 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                     >
                         <BarChart3 size={18} />
