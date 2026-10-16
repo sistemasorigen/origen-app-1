@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ExternalLink } from 'lucide-react';
 import {
     getLinksPublicos,
     abrirLink,
@@ -13,19 +13,18 @@ import {
  * "Enlaces Origen": la tira de links que carga un SUPER_ADMIN desde el panel
  * (Configuración de la app → Links).
  *
- * Va en el inicio, entre Origen en Youvers y Grupos para vos. Muestra de a
- * tres y pasa a los tres siguientes con las flechas de los costados, que dan
- * la vuelta al llegar al final: con dos páginas, ningún botón queda muerto.
+ * Va en el inicio, entre Origen en Youvers y Grupos para vos. Es un riel que
+ * se desliza con el dedo o con el trackpad, igual que el de los grupos: en
+ * la compu entran tres y en el teléfono una, con la siguiente asomando para
+ * que se note que hay más.
  *
- * En el teléfono las tres entran en un riel que se puede deslizar con el
- * dedo —igual que los grupos—, así la fila mide una tarjeta de alto y las
- * flechas quedan a los costados y no encima de nada.
+ * Cuando hay más de los que entran, las tarjetas se angostan unos píxeles
+ * para que la de al lado asome. Esa es toda la señal de "seguí": no hay
+ * flechas ni puntos.
  *
  * Si no hay links, o si no se pudieron traer, la sección no aparece y el
  * resto del inicio sigue igual.
  */
-
-const POR_PAGINA = 3;
 
 // ── La tarjeta ──────────────────────────────────────────────────────────
 
@@ -126,10 +125,18 @@ const Esqueleto: React.FC = () => (
 // ── La sección ──────────────────────────────────────────────────────────
 
 /** El riel del teléfono y la grilla de la compu, en un solo árbol. */
-const FILA = 'flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1 items-stretch sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible lg:grid-cols-3';
-const TARJETA = 'snap-start shrink-0 w-[85%] sm:w-auto';
+const FILA = 'flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1 items-stretch';
 
-const FLECHA = 'absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md flex items-center justify-center text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-700 active:scale-95 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-zinc-950';
+/**
+ * El ancho de una tarjeta. Las cuentas son las que hacen que entren justo:
+ * dos tarjetas y un espacio de 16px, o tres y dos espacios.
+ *
+ * Cuando hay más de las que entran se les restan 26px, y esos 26px son los
+ * que deja asomar a la siguiente. Sin eso, en la compu tres tarjetas llenan
+ * la fila exacta y nada dice que haya una cuarta.
+ */
+const JUSTAS = 'snap-start shrink-0 w-[85%] sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]';
+const CON_ASOMO = 'snap-start shrink-0 w-[85%] sm:w-[calc((100%-1rem)/2-26px)] lg:w-[calc((100%-2rem)/3-26px)]';
 
 const SeccionDeEnlaces: React.FC = () => {
     const navigate = useNavigate();
@@ -138,7 +145,6 @@ const SeccionDeEnlaces: React.FC = () => {
     // ven igual: la sección no aparece y el resto del inicio sigue.
     const [links, setLinks] = useState<LinkDeNovedad[] | null>(null);
     const [cargando, setCargando] = useState(true);
-    const [pagina, setPagina] = useState(0);
 
     useEffect(() => {
         getLinksPublicos()
@@ -150,10 +156,8 @@ const SeccionDeEnlaces: React.FC = () => {
     }, []);
 
     const lista = links || [];
-    const paginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
-    const actual = Math.min(pagina, paginas - 1);
-    const desde = actual * POR_PAGINA;
-    const visibles = lista.slice(desde, desde + POR_PAGINA);
+    // "Las que entran" son tres, que es lo que muestra la compu.
+    const TARJETA = lista.length > 3 ? CON_ASOMO : JUSTAS;
 
     // Mientras cargan, el lugar ya está tomado: si la sección apareciera de
     // golpe, el inicio daría un salto justo cuando se está por tocar algo.
@@ -164,7 +168,7 @@ const SeccionDeEnlaces: React.FC = () => {
                 <div className="mt-3 h-[13px] w-[280px] max-w-full rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
                 <div className={`${FILA} mt-4`}>
                     {[0, 1, 2].map(i => (
-                        <div key={i} className={TARJETA}><Esqueleto /></div>
+                        <div key={i} className={JUSTAS}><Esqueleto /></div>
                     ))}
                 </div>
             </div>
@@ -172,8 +176,6 @@ const SeccionDeEnlaces: React.FC = () => {
     }
 
     if (lista.length === 0) return null;
-
-    const ir = (paso: 1 | -1) => setPagina((actual + paso + paginas) % paginas);
 
     return (
         <div className="lg:col-span-3">
@@ -184,40 +186,12 @@ const SeccionDeEnlaces: React.FC = () => {
                 Lo que está pasando en Origen, en un solo lugar.
             </p>
 
-            <div className="relative">
-                <div className={FILA}>
-                    {visibles.map(l => (
-                        <div key={l.id} className={TARJETA}>
-                            <TarjetaDeLink link={l} onAbrir={() => abrirLink(l, navigate)} />
-                        </div>
-                    ))}
-                </div>
-
-                {paginas > 1 && (
-                    <>
-                        <button
-                            type="button"
-                            onClick={() => ir(-1)}
-                            aria-label="Ver los tres enlaces anteriores"
-                            className={`${FLECHA} -left-4 sm:-left-3`}
-                        >
-                            <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => ir(1)}
-                            aria-label="Ver los tres enlaces siguientes"
-                            className={`${FLECHA} -right-4 sm:-right-3`}
-                        >
-                            <ChevronRight className="w-4 h-4" />
-                        </button>
-
-                        {/* Para quien no ve la pantalla: que el cambio se oiga. */}
-                        <p aria-live="polite" className="sr-only">
-                            {`Enlaces ${desde + 1} a ${desde + visibles.length} de ${lista.length}`}
-                        </p>
-                    </>
-                )}
+            <div className={FILA}>
+                {lista.map(l => (
+                    <div key={l.id} className={TARJETA}>
+                        <TarjetaDeLink link={l} onAbrir={() => abrirLink(l, navigate)} />
+                    </div>
+                ))}
             </div>
         </div>
     );
