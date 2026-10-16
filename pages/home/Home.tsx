@@ -82,6 +82,47 @@ const formatEventDate = (dateStr: string): string =>
 // 16:00:07. Se recortan para mostrar "16:00".
 const formatEventTime = (time?: string): string => (time || '').slice(0, 5);
 
+/**
+ * El contador, en chico: el que va encima de la portada, arriba a la
+ * derecha. El grande —el de "EMPIEZA EN" con los números en Black— sigue
+ * viviendo en el panel, que es donde hay lugar para que respire.
+ */
+const ContadorChico: React.FC<{ partes: CountdownPart[] }> = ({ partes }) => (
+    <div data-contador className="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 backdrop-blur-sm">
+        {partes.map((p, i) => (
+            <React.Fragment key={p.short}>
+                {i > 0 && <span className="text-[11px] leading-none text-white/40">·</span>}
+                <span className="text-[13px] font-black leading-none tabular-nums text-white">
+                    {i === 0 ? p.value : pad(p.value)}
+                    <span className="ml-0.5 text-[10px] font-semibold text-white/75">{p.short}</span>
+                </span>
+            </React.Fragment>
+        ))}
+        <span className="sr-only">{countdownPhrase(partes)}</span>
+    </div>
+);
+
+/**
+ * El nombre y la fecha. Los mismos datos se dibujan encima de la portada
+ * (en el teléfono, cerrada) y en el panel blanco (en la compu, o al
+ * desplegar), así que viven acá: dos copias se desincronizan solas.
+ */
+const NombreYFecha: React.FC<{ nombre: string; fecha: string; sobreLaFoto: boolean }> = ({ nombre, fecha, sobreLaFoto }) => (
+    <>
+        <h3 className={`text-[17.5px] leading-[1.3] tracking-[-0.01em] sm:text-2xl sm:leading-tight sm:tracking-tight font-bold ${sobreLaFoto
+            ? 'text-white drop-shadow-[0_2px_6px_rgba(0,0,0,.5)]'
+            : 'text-slate-900 dark:text-white'}`}>
+            {nombre}
+        </h3>
+        <div className={`flex items-center gap-1.5 text-sm sm:text-base font-semibold ${sobreLaFoto
+            ? 'mt-1 text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,.5)]'
+            : 'text-slate-600 dark:text-zinc-300'}`}>
+            <Calendar className="w-4 h-4 shrink-0" />
+            {fecha}
+        </div>
+    </>
+);
+
 // Carrusel "Próximos eventos" — estructura lateral: portada a la izquierda,
 // texto + contador + CTA a la derecha. El marco (borde + sombra + radio) vive
 // en el viewport del carrusel, no en cada slide, para que la sombra no la
@@ -157,48 +198,76 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                         const diff = Math.max(0, target - now);
                         const cd = buildCountdown(diff);
                         const abierto = abiertoId === ev.id;
+                        // Cerrada y con portada, en el teléfono la tarjeta ES la
+                        // portada: el nombre, la fecha, el contador y el botón van
+                        // encima. En la compu la portada queda a la izquierda y el
+                        // panel al lado, que es donde entra cómoda.
+                        const encimaDeLaPortada = !!ev.imageUrl && !abierto;
                         return (
                             <div key={ev.id} data-evento={ev.id} className="w-full shrink-0">
                                 <div className="flex flex-col sm:flex-row">
-                                    {/* PORTADA — lo primero que se ve: arriba en el
-                                        teléfono y a la izquierda en la compu. El flyer es
-                                        arte que trae su propio texto (dirección, precios,
-                                        edades), así que se muestra ENTERO: `object-contain`
-                                        y el alto sale de su propia proporción. Nunca se
-                                        recorta. El max-h es sólo una red para formatos
-                                        extremos (tipo story 9:16). */}
+                                    {/* PORTADA — el flyer es arte que trae su propio
+                                        texto (dirección, precios, edades), así que se
+                                        muestra ENTERO: el alto sale de su propia
+                                        proporción (w-full h-auto) y nunca se recorta.
+                                        Eso vale para los dos estados: la caja de la
+                                        imagen es la misma abierta y cerrada. */}
                                     {ev.imageUrl && (
-                                        <div className="flex items-center justify-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-800 sm:shrink-0 sm:w-52 sm:border-b-0 sm:border-r md:w-56 lg:w-64">
+                                        <div className="relative aspect-square overflow-hidden bg-slate-900 sm:aspect-auto sm:flex sm:shrink-0 sm:w-52 sm:items-center sm:justify-center sm:overflow-visible sm:border-r sm:border-slate-200 sm:bg-slate-100 sm:dark:border-zinc-800 sm:dark:bg-zinc-800 md:w-56 lg:w-64">
+                                            {/* La caja es cuadrada en el teléfono y la imagen
+                                                entra entera adentro (object-contain): un flyer
+                                                cuadrado —el formato de la casa— la llena justo,
+                                                y uno de otra proporción deja banda en vez de
+                                                recortarse. Además, con todas las portadas del
+                                                mismo alto, el carrusel deja de estirar la
+                                                tarjeta más corta hasta la más larga. */}
                                             <img
                                                 src={ev.imageUrl}
                                                 alt={ev.name}
-                                                className="block w-full h-auto max-h-[70vh] sm:max-h-[380px] object-contain"
+                                                className="block w-full h-full object-contain sm:h-auto sm:max-h-[380px]"
                                             />
+
+                                            {/* TODO ENCIMA — sólo en el teléfono y con la
+                                                tarjeta cerrada. */}
+                                            {encimaDeLaPortada && (
+                                                <div className="sm:hidden">
+                                                    {/* Sin este velo, un título blanco sobre
+                                                        un flyer claro desaparece. Carga abajo,
+                                                        que es donde va el texto, y apenas
+                                                        arriba para el contador. */}
+                                                    <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-black/80" />
+
+                                                    {/* El contador, arriba a la derecha. */}
+                                                    <div className="absolute right-3 top-3">
+                                                        <ContadorChico partes={cd} />
+                                                    </div>
+
+                                                    {/* El nombre y la fecha, abajo a la
+                                                        izquierda; el botón abajo, al ancho de
+                                                        la portada. */}
+                                                    <div className="absolute inset-x-0 bottom-0 p-4">
+                                                        <NombreYFecha nombre={ev.name} fecha={formatEventDate(ev.startDate)} sobreLaFoto />
+                                                        <button
+                                                            onClick={() => setAbiertoId(ev.id)}
+                                                            aria-expanded={false}
+                                                            aria-controls={`evento-detalles-${ev.id}`}
+                                                            className="mt-3 w-full h-[46px] inline-flex items-center justify-center gap-2 rounded-xl bg-white text-slate-900 text-[14.5px] font-semibold active:scale-[0.98] transition-transform focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/40"
+                                                        >
+                                                            Ver detalles <ChevronDown className="w-4 h-4" strokeWidth={2.4} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
-                                    {/* PANEL — se parte en dos: información a la izquierda,
-                                        acción a la derecha. Separa lo que se lee de lo que se
-                                        toca, y evita que en desktop el CTA quede estirado a
-                                        900px por un texto de dos palabras. */}
-                                    <div className="flex-1 min-w-0 p-[18px] sm:p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-0 md:gap-6">
+                                    {/* PANEL — en la compu siempre; en el teléfono, sólo
+                                        cuando no hay portada o cuando la tarjeta está
+                                        desplegada. */}
+                                    <div className={`flex-1 min-w-0 p-[18px] sm:p-5 md:p-6 flex-col md:flex-row md:items-center gap-0 md:gap-6 ${encimaDeLaPortada ? 'hidden sm:flex' : 'flex'}`}>
 
                                         <div className="flex-1 min-w-0 flex flex-col gap-1.5 sm:gap-2">
-                                            {/* TÍTULO — Bold (700). Es el único 700 de la
-                                                card: antes compartía Semibold con la
-                                                etiqueta, el enlace, las unidades y el
-                                                botón, y el nombre del evento terminaba
-                                                pesando lo mismo que un "Ver más". */}
-                                            <h3 className="text-[17.5px] leading-[1.3] tracking-[-0.01em] sm:text-2xl sm:leading-tight sm:tracking-tight font-bold text-slate-900 dark:text-white">
-                                                {ev.name}
-                                            </h3>
-
-                                            {/* LA FECHA — cerrado, esto y el contador es todo
-                                                lo que se muestra: cuándo es y cuánto falta. */}
-                                            <div className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-slate-600 dark:text-zinc-300">
-                                                <Calendar className="w-4 h-4 shrink-0" />
-                                                {formatEventDate(ev.startDate)}
-                                            </div>
+                                            <NombreYFecha nombre={ev.name} fecha={formatEventDate(ev.startDate)} sobreLaFoto={false} />
 
                                             {/* EL RESTO — la hora y la descripción entera,
                                                 detrás de "Ver detalles".
@@ -242,14 +311,9 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
 
                                         {/* ACCIÓN — contador y botón comparten ancho y se leen
                                             como un bloque: uno mide la urgencia, el otro la
-                                            resuelve. */}
-                                        {/* En el teléfono va apilado bajo el texto, separado
-                                            por los mismos 18px que usan las tarjetas de
-                                            Enlaces Origen entre la bajada y su botón. Sin
-                                            filete: dos secciones seguidas con líneas y cajas
-                                            distintas se leen como dos apps. En desktop es una
-                                            columna aparte, así que la separación ya la da el
-                                            espacio. */}
+                                            resuelve. En el teléfono va apilado bajo el texto,
+                                            separado por los mismos 18px que usan las tarjetas
+                                            de Enlaces Origen entre la bajada y su botón. */}
                                         <div className="shrink-0 w-full md:w-52 lg:w-60 flex flex-col gap-4 pt-[18px] md:pt-0">
 
                                             {/* CONTADOR — el mismo reloj, sobre el papel.
