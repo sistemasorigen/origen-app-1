@@ -178,13 +178,31 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                         const diff = Math.max(0, target - now);
                         const cd = buildCountdown(diff);
                         const abierto = abiertoId === ev.id;
-                        // Cerrada y con portada, en el teléfono la tarjeta ES la
-                        // portada: el nombre, la fecha, el contador y el botón van
-                        // encima. En la compu la portada queda a la izquierda y el
-                        // panel al lado, que es donde entra cómoda.
-                        const encimaDeLaPortada = !!ev.imageUrl && !abierto;
+                        const alternar = () => setAbiertoId(abierto ? null : ev.id);
+                        const hayPortada = !!ev.imageUrl;
+                        // En el teléfono, sin portada no hay nada que desplegar: el
+                        // panel está siempre a la vista.
+                        const desplegado = abierto || !hayPortada;
                         return (
-                            <div key={ev.id} data-evento={ev.id} className="w-full shrink-0">
+                            <div
+                                key={ev.id}
+                                data-evento={ev.id}
+                                role="button"
+                                aria-expanded={abierto}
+                                aria-label={`${ev.name}, ${abierto ? 'ocultar' : 'ver'} los detalles`}
+                                tabIndex={0}
+                                onClick={alternar}
+                                onKeyDown={e => {
+                                    // Sólo cuando el foco está en la tarjeta: si está en
+                                    // el enlace de adentro, el Enter es de él.
+                                    if (e.target !== e.currentTarget) return;
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        alternar();
+                                    }
+                                }}
+                                className="w-full shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-900 dark:focus-visible:ring-white"
+                            >
                                 <div className="flex flex-col sm:flex-row">
                                     {/* PORTADA — el flyer es arte que trae su propio
                                         texto (dirección, precios, edades), así que se
@@ -207,10 +225,18 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                                 className="block w-full h-full object-contain sm:h-auto sm:max-h-[380px]"
                                             />
 
-                                            {/* TODO ENCIMA — sólo en el teléfono y con la
-                                                tarjeta cerrada. */}
-                                            {encimaDeLaPortada && (
-                                                <div className="sm:hidden">
+                                            {/* TODO ENCIMA — sólo en el teléfono. Al abrir no
+                                                desaparece de golpe: se desvanece y cae unos
+                                                píxeles, como si se hundiera en la hoja que
+                                                sale abajo. Al cerrar vuelve recién cuando el
+                                                panel ya se fue (delay), así no se ven dos
+                                                capas encimadas. */}
+                                            {hayPortada && (
+                                                <div
+                                                    data-afiche
+                                                    aria-hidden={abierto}
+                                                    className={`sm:hidden transition-opacity duration-200 ease-out motion-reduce:transition-none ${abierto ? 'opacity-0 pointer-events-none' : 'opacity-100 delay-150'}`}
+                                                >
                                                     {/* Sin este velo, un título blanco sobre
                                                         un flyer claro desaparece. Carga abajo,
                                                         que es donde va el texto, y se va a
@@ -221,26 +247,33 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                                     {/* El nombre y la fecha, abajo a la
                                                         izquierda; el botón abajo, al ancho de
                                                         la portada. */}
-                                                    <div className="absolute inset-x-0 bottom-0 p-4">
+                                                    <div className={`absolute inset-x-0 bottom-0 p-4 transition-transform duration-200 ease-out motion-reduce:transition-none ${abierto ? 'translate-y-2' : 'translate-y-0'}`}>
                                                         <NombreYFecha nombre={ev.name} fecha={formatEventDate(ev.startDate)} sobreLaFoto />
-                                                        <button
-                                                            onClick={() => setAbiertoId(ev.id)}
-                                                            aria-expanded={false}
-                                                            aria-controls={`evento-detalles-${ev.id}`}
-                                                            className="mt-3 w-full h-[46px] inline-flex items-center justify-center gap-2 rounded-xl bg-white text-slate-900 text-[14.5px] font-semibold active:scale-[0.98] transition-transform focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/40"
-                                                        >
+                                                        {/* El botón es la invitación; el que
+                                                            abre y cierra es el cartel entero. */}
+                                                        <span className="mt-3 w-full h-[46px] flex items-center justify-center gap-2 rounded-xl bg-white text-slate-900 text-[14.5px] font-semibold">
                                                             Ver detalles <ChevronDown className="w-4 h-4" strokeWidth={2.4} />
-                                                        </button>
+                                                        </span>
                                                     </div>
                                                 </div>
                                             )}
                                         </div>
                                     )}
 
-                                    {/* PANEL — en la compu siempre; en el teléfono, sólo
-                                        cuando no hay portada o cuando la tarjeta está
-                                        desplegada. */}
-                                    <div className={`flex-1 min-w-0 p-[18px] sm:p-5 md:p-6 flex-col md:flex-row md:items-center gap-0 md:gap-6 ${encimaDeLaPortada ? 'hidden sm:flex' : 'flex'}`}>
+                                    {/* PANEL — en la compu está siempre al lado de la
+                                        portada. En el teléfono sale de abajo del afiche: la
+                                        fila crece de 0fr a 1fr, que es la forma de animar un
+                                        alto que no se sabe de antemano sin medirlo con JS
+                                        —y, a diferencia de framer-motion, no se pelea con el
+                                        translateX del carrusel que envuelve a todo esto—.
+                                        Abrir es una invitación y dura un poco más; cerrar es
+                                        una decisión y va más rápido. */}
+                                    <div
+                                        data-panel
+                                        className={`grid sm:flex-1 sm:min-w-0 sm:grid-rows-[1fr] motion-reduce:transition-none transition-[grid-template-rows] ease-[cubic-bezier(0.16,1,0.3,1)] ${desplegado ? 'grid-rows-[1fr] duration-[380ms]' : 'grid-rows-[0fr] duration-300'}`}
+                                    >
+                                    <div className="overflow-hidden sm:overflow-visible">
+                                    <div className={`flex-1 min-w-0 p-[18px] sm:p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-0 md:gap-6 transition-opacity duration-200 motion-reduce:transition-none sm:opacity-100 sm:delay-0 ${desplegado ? 'opacity-100 delay-100' : 'opacity-0'}`}>
 
                                         <div className="flex-1 min-w-0 flex flex-col gap-1.5 sm:gap-2">
                                             <NombreYFecha nombre={ev.name} fecha={formatEventDate(ev.startDate)} sobreLaFoto={false} />
@@ -259,7 +292,12 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                                 // que permite animar el alto— pero no tiene que
                                                 // existir para un lector de pantalla.
                                                 aria-hidden={!abierto}
-                                                className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${abierto ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                                                // En el teléfono el que se mueve es el panel
+                                                // entero, así que esto cambia de golpe adentro
+                                                // de algo que todavía está plegado. En la compu
+                                                // el panel está siempre abierto y éste es el
+                                                // único que anima.
+                                                className={`grid transition-[grid-template-rows] duration-0 sm:duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${abierto ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
                                             >
                                                 <div className="overflow-hidden">
                                                     {ev.startTime && (
@@ -272,14 +310,6 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                                         <p className="pt-2 text-sm sm:text-base font-normal text-slate-500 dark:text-zinc-400 leading-relaxed">
                                                             {ev.description}
                                                         </p>
-                                                    )}
-                                                    {abierto && (
-                                                        <button
-                                                            onClick={() => setAbiertoId(null)}
-                                                            className="mt-2 text-sm font-semibold text-slate-700 dark:text-zinc-200 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 dark:focus-visible:ring-white/40"
-                                                        >
-                                                            Ver menos
-                                                        </button>
                                                     )}
                                                 </div>
                                             </div>
@@ -344,29 +374,33 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                                 tarjetas de Enlaces Origen: nadie se va de la
                                                 página sin haber podido leer de qué se trata. */}
                                             {!abierto ? (
-                                                <button
-                                                    onClick={() => setAbiertoId(ev.id)}
-                                                    aria-expanded={false}
-                                                    aria-controls={`evento-detalles-${ev.id}`}
-                                                    className={ctaClass}
-                                                >
+                                                <span className={`${ctaClass} cursor-pointer`}>
                                                     Ver detalles <ChevronDown className="w-4 h-4" />
-                                                </button>
+                                                </span>
                                             ) : ev.registrationLink ? (
                                                 <a
                                                     href={ev.registrationLink}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
+                                                    // Si el click subiera, la tarjeta se
+                                                    // cerraría en el mismo toque que abre
+                                                    // la pestaña.
+                                                    onClick={e => e.stopPropagation()}
                                                     className={ctaClass}
                                                 >
                                                     Ir al enlace <ExternalLink className="w-4 h-4" />
                                                 </a>
                                             ) : (
-                                                <button onClick={() => navigate('/eventos')} className={ctaClass}>
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); navigate('/eventos'); }}
+                                                    className={ctaClass}
+                                                >
                                                     Ir al enlace <ChevronRight className="w-4 h-4" />
                                                 </button>
                                             )}
                                         </div>
+                                    </div>
+                                    </div>
                                     </div>
                                 </div>
                             </div>
