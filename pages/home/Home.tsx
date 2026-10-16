@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, EventoGeneral } from '../../types';
 import { getEventosGeneralPublic } from '../../services/supabaseService';
 import {
     ChevronRight,
+    ChevronDown,
     Calendar,
     Clock,
     ExternalLink,
@@ -81,57 +82,6 @@ const formatEventDate = (dateStr: string): string =>
 // 16:00:07. Se recortan para mostrar "16:00".
 const formatEventTime = (time?: string): string => (time || '').slice(0, 5);
 
-// Descripción de un evento, recortada por defecto con "Ver más".
-//
-// El botón sólo aparece si el texto realmente no entra: se mide el recorte
-// (scrollHeight > clientHeight) en vez de contar caracteres, porque cuántas
-// líneas ocupa depende del ancho de la columna — al lado de la miniatura en
-// mobile son ~185px, en desktop el doble. Un "Ver más" debajo de una
-// descripción de seis palabras es ruido.
-const EventoDescripcion: React.FC<{
-    text: string;
-    expanded: boolean;
-    onToggle: () => void;
-}> = ({ text, expanded, onToggle }) => {
-    const ref = useRef<HTMLParagraphElement>(null);
-    const [isClamped, setIsClamped] = useState(false);
-
-    useEffect(() => {
-        // Sólo se mide recortado: expandido, scrollHeight y clientHeight
-        // coinciden y "Ver menos" desaparecería justo cuando hace falta.
-        if (expanded) return;
-        const el = ref.current;
-        if (!el) return;
-        const measure = () => setIsClamped(el.scrollHeight > el.clientHeight + 1);
-        measure();
-        // El recorte depende del ancho: rotar el teléfono o cruzar un
-        // breakpoint cambia la cantidad de líneas.
-        const observer = new ResizeObserver(measure);
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [text, expanded]);
-
-    return (
-        <div className="flex flex-col items-start gap-1">
-            <p
-                ref={ref}
-                className={`text-sm sm:text-base font-normal text-slate-500 dark:text-zinc-400 leading-relaxed ${expanded ? '' : 'line-clamp-2 sm:line-clamp-3'}`}
-            >
-                {text}
-            </p>
-            {(isClamped || expanded) && (
-                <button
-                    onClick={onToggle}
-                    aria-expanded={expanded}
-                    className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 transition-colors"
-                >
-                    {expanded ? 'Ver menos' : 'Ver más'}
-                </button>
-            )}
-        </div>
-    );
-};
-
 // Carrusel "Próximos eventos" — estructura lateral: portada a la izquierda,
 // texto + contador + CTA a la derecha. El marco (borde + sombra + radio) vive
 // en el viewport del carrusel, no en cada slide, para que la sombra no la
@@ -140,30 +90,30 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
     const navigate = useNavigate();
     const [index, setIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
-    // Una sola descripción expandida a la vez: sólo hay un evento visible.
-    const [expandedId, setExpandedId] = useState<string | null>(null);
+    // Un solo evento desplegado a la vez: sólo hay uno visible.
+    const [abiertoId, setAbiertoId] = useState<string | null>(null);
 
     useEffect(() => {
         setIndex(0);
     }, [eventos.length]);
 
-    // Al cambiar de evento la descripción vuelve a recortarse. Todos los
-    // slides comparten altura (son items de un mismo flex), así que un
-    // texto expandido que ya no se ve dejaría la card alta y vacía.
+    // Al cambiar de evento se vuelve a cerrar. Todos los slides comparten
+    // altura (son items de un mismo flex), así que uno desplegado que ya no
+    // se ve dejaría la card alta y vacía.
     useEffect(() => {
-        setExpandedId(null);
+        setAbiertoId(null);
     }, [index]);
 
     // Pausa el auto-avance mientras el puntero o el foco están dentro:
     // la card tiene un CTA, y que se deslice sola mientras alguien va a
-    // hacer click es hostil. Mismo criterio que HeroCarousel. Expandir una
-    // descripción también congela el carrusel: deslizarse mientras alguien
+    // hacer click es hostil. Mismo criterio que HeroCarousel. Desplegar los
+    // detalles también congela el carrusel: deslizarse mientras alguien
     // recién empieza a leer es peor todavía.
     useEffect(() => {
-        if (eventos.length <= 1 || isPaused || expandedId) return;
+        if (eventos.length <= 1 || isPaused || abiertoId) return;
         const id = setInterval(() => setIndex(i => (i + 1) % eventos.length), 5000);
         return () => clearInterval(id);
-    }, [eventos.length, isPaused, expandedId]);
+    }, [eventos.length, isPaused, abiertoId]);
 
     if (eventos.length === 0) return null;
 
@@ -201,21 +151,23 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                         const target = new Date(`${ev.startDate}T${ev.startTime || '00:00'}`).getTime();
                         const diff = Math.max(0, target - now);
                         const cd = buildCountdown(diff);
+                        const abierto = abiertoId === ev.id;
                         return (
-                            <div key={ev.id} className="w-full shrink-0">
+                            <div key={ev.id} data-evento={ev.id} className="w-full shrink-0">
                                 <div className="flex flex-col sm:flex-row">
-                                    {/* PORTADA (desktop) — el flyer es arte que trae su propio
-                                        texto (dirección, precios, edades), así que se muestra
-                                        entero: ocupa el ancho de la columna y su alto sale de
-                                        su propia proporción (w-full h-auto), nunca se recorta.
-                                        Sin fondo desenfocado. El max-h es sólo una red para
-                                        formatos extremos (tipo story 9:16). */}
+                                    {/* PORTADA — lo primero que se ve: arriba en el
+                                        teléfono y a la izquierda en la compu. El flyer es
+                                        arte que trae su propio texto (dirección, precios,
+                                        edades), así que se muestra ENTERO: `object-contain`
+                                        y el alto sale de su propia proporción. Nunca se
+                                        recorta. El max-h es sólo una red para formatos
+                                        extremos (tipo story 9:16). */}
                                     {ev.imageUrl && (
-                                        <div className="hidden sm:flex shrink-0 w-52 md:w-56 lg:w-64 items-center justify-center bg-slate-100 dark:bg-zinc-800 border-r border-slate-200 dark:border-zinc-800">
+                                        <div className="flex items-center justify-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-800 sm:shrink-0 sm:w-52 sm:border-b-0 sm:border-r md:w-56 lg:w-64">
                                             <img
                                                 src={ev.imageUrl}
                                                 alt={ev.name}
-                                                className="block w-full h-auto max-h-[380px] object-contain"
+                                                className="block w-full h-auto max-h-[70vh] sm:max-h-[380px] object-contain"
                                             />
                                         </div>
                                     )}
@@ -226,61 +178,64 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                         900px por un texto de dos palabras. */}
                                     <div className="flex-1 min-w-0 p-4 sm:p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
 
-                                        {/* INFORMACIÓN — en mobile arranca con una miniatura
-                                            del flyer al costado. A 170px el flyer no se leía:
-                                            su texto (precio, dirección, edad) quedaba hecho
-                                            puré y los bordes contra el fondo gris parecían
-                                            difuminados. Reducida a 96px la caja abraza la
-                                            imagen exacta (w-full + h-auto), sin fondo visible
-                                            ni recorte, y el resto de la card queda libre para
-                                            los datos que sí se leen. */}
-                                        <div className="flex-1 min-w-0 flex flex-row gap-3 sm:gap-0">
-                                            {ev.imageUrl && (
-                                                <div className="sm:hidden shrink-0 w-24 self-start rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800">
-                                                    <img src={ev.imageUrl} alt={ev.name} className="block w-full h-auto" />
-                                                </div>
-                                            )}
-                                            <div className="min-w-0 flex-1 flex flex-col gap-1.5 sm:gap-2">
-                                                {/* TÍTULO — Bold (700). Es el único 700 de la
-                                                    card: antes compartía Semibold con la
-                                                    etiqueta, el enlace, las unidades y el
-                                                    botón, y el nombre del evento terminaba
-                                                    pesando lo mismo que un "Ver más". */}
-                                                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
-                                                    {ev.name}
-                                                </h3>
-                                                {/* FECHA Y HORA — Semibold y más oscuras que la
-                                                    descripción. En una card de evento el "cuándo"
-                                                    es el segundo dato en importancia después del
-                                                    nombre; venía en gris claro y regular, o sea
-                                                    por debajo de un párrafo secundario.
+                                        <div className="flex-1 min-w-0 flex flex-col gap-1.5 sm:gap-2">
+                                            {/* TÍTULO — Bold (700). Es el único 700 de la
+                                                card: antes compartía Semibold con la
+                                                etiqueta, el enlace, las unidades y el
+                                                botón, y el nombre del evento terminaba
+                                                pesando lo mismo que un "Ver más". */}
+                                            <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                                                {ev.name}
+                                            </h3>
 
-                                                    En mobile van una debajo de la otra: al lado
-                                                    de la miniatura la columna es angosta y en
-                                                    fila se cortaban igual, pero sin alineación. */}
-                                                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-x-4 gap-y-1 text-sm sm:text-base font-semibold text-slate-600 dark:text-zinc-300">
-                                                    <span className="flex items-center gap-1.5">
-                                                        <Calendar className="w-4 h-4 shrink-0" />
-                                                        {formatEventDate(ev.startDate)}
-                                                    </span>
+                                            {/* LA FECHA — cerrado, esto y el contador es todo
+                                                lo que se muestra: cuándo es y cuánto falta. */}
+                                            <div className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-slate-600 dark:text-zinc-300">
+                                                <Calendar className="w-4 h-4 shrink-0" />
+                                                {formatEventDate(ev.startDate)}
+                                            </div>
+
+                                            {/* EL RESTO — la hora y la descripción entera,
+                                                detrás de "Ver detalles".
+
+                                                La apertura se anima con una grilla de 0fr a
+                                                1fr, que es la forma de animar un alto que no
+                                                se sabe de antemano sin medirlo con JS. El
+                                                overflow-hidden del hijo es lo que hace que el
+                                                contenido se recorte mientras crece. */}
+                                            <div
+                                                id={`evento-detalles-${ev.id}`}
+                                                // Cerrado el texto sigue en el documento —es lo
+                                                // que permite animar el alto— pero no tiene que
+                                                // existir para un lector de pantalla.
+                                                aria-hidden={!abierto}
+                                                className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${abierto ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                                            >
+                                                <div className="overflow-hidden">
                                                     {ev.startTime && (
-                                                        <span className="flex items-center gap-1.5">
+                                                        <div className="flex items-center gap-1.5 pt-1.5 text-sm sm:text-base font-semibold text-slate-600 dark:text-zinc-300">
                                                             <Clock className="w-4 h-4 shrink-0" />
                                                             {formatEventTime(ev.startTime)}{ev.endTime && ` – ${formatEventTime(ev.endTime)}`}
-                                                        </span>
+                                                        </div>
+                                                    )}
+                                                    {ev.description && (
+                                                        <p className="pt-2 text-sm sm:text-base font-normal text-slate-500 dark:text-zinc-400 leading-relaxed">
+                                                            {ev.description}
+                                                        </p>
+                                                    )}
+                                                    {abierto && (
+                                                        <button
+                                                            onClick={() => setAbiertoId(null)}
+                                                            className="mt-2 text-sm font-semibold text-slate-700 dark:text-zinc-200 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 dark:focus-visible:ring-white/40"
+                                                        >
+                                                            Ver menos
+                                                        </button>
                                                     )}
                                                 </div>
-                                                {ev.description && (
-                                                    <EventoDescripcion
-                                                        text={ev.description}
-                                                        expanded={expandedId === ev.id}
-                                                        onToggle={() => setExpandedId(cur => (cur === ev.id ? null : ev.id))}
-                                                    />
-                                                )}
                                             </div>
                                         </div>
 
-                                        {/* ACCIÓN — contador y CTA comparten ancho y se leen
+                                        {/* ACCIÓN — contador y botón comparten ancho y se leen
                                             como un bloque: uno mide la urgencia, el otro la
                                             resuelve. */}
                                         {/* La línea reemplaza a la placa: en mobile y tablet el
@@ -292,7 +247,7 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                         <div className="shrink-0 w-full md:w-52 lg:w-60 flex flex-col gap-4 border-t border-slate-100 dark:border-zinc-800 pt-4 md:border-t-0 md:pt-0">
 
                                             {/* CONTADOR — el mismo reloj, sobre el papel.
-                                                Contador y CTA no son la misma clase de cosa:
+                                                Contador y botón no son la misma clase de cosa:
                                                 uno se lee, el otro se toca. Con los dos en negro
                                                 el pie de la card eran dos bloques macizos y el
                                                 botón perdía su condición de único objeto que
@@ -338,18 +293,31 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                                 <span className="sr-only">{countdownPhrase(cd)}</span>
                                             </div>
 
-                                            {ev.registrationLink ? (
+                                            {/* Cerrado se ofrece leer; recién desplegado
+                                                aparece a dónde ir. Mismo trato que las
+                                                tarjetas de Enlaces Origen: nadie se va de la
+                                                página sin haber podido leer de qué se trata. */}
+                                            {!abierto ? (
+                                                <button
+                                                    onClick={() => setAbiertoId(ev.id)}
+                                                    aria-expanded={false}
+                                                    aria-controls={`evento-detalles-${ev.id}`}
+                                                    className={ctaClass}
+                                                >
+                                                    Ver detalles <ChevronDown className="w-4 h-4" />
+                                                </button>
+                                            ) : ev.registrationLink ? (
                                                 <a
                                                     href={ev.registrationLink}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className={ctaClass}
                                                 >
-                                                    Inscribite ahora <ExternalLink className="w-4 h-4" />
+                                                    Ir al enlace <ExternalLink className="w-4 h-4" />
                                                 </a>
                                             ) : (
                                                 <button onClick={() => navigate('/eventos')} className={ctaClass}>
-                                                    Ver el evento <ChevronRight className="w-4 h-4" />
+                                                    Ir al enlace <ChevronRight className="w-4 h-4" />
                                                 </button>
                                             )}
                                         </div>
