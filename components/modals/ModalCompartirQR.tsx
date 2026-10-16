@@ -30,7 +30,7 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
     const [isCopied, setIsCopied] = useState(false);
 
     // Bloquea el scroll de fondo mientras el modal está abierto — sin esto,
-    // en InicioPublico.tsx (página larga, con scroll) el usuario podía seguir
+    // en una página larga, con scroll, el usuario podía seguir
     // scrolleando el fondo detrás del modal.
     useEffect(() => {
         if (!isOpen) return;

@@ -73,10 +73,9 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     // scroll, igual que en el Dashboard.
     //
     // La lista de rutas cubre las pantallas que SIEMPRE abren con hero.
-    // `hasFullBleedHero` cubre a las que dependen de qué están mostrando:
-    // `/punto-de-informacion` renderiza el home público (con hero) o los
-    // paneles internos (fondo claro, sin hero) bajo el mismo pathname, y
-    // cambia de uno a otro sin tocar la URL — ver contexts/HeroContext.tsx.
+    // `hasFullBleedHero` cubre a las que lo deciden según lo que están
+    // mostrando, sin cambiar de URL: ahí el dato lo declara la pantalla que
+    // efectivamente montó el hero — ver contexts/HeroContext.tsx.
     const [hasFullBleedHero, setHasFullBleedHero] = useState<HeroAsangre>(false);
     const heroLayout = useMemo(
         () => ({ hasFullBleedHero, setHasFullBleedHero }),

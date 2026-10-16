@@ -5,7 +5,7 @@ import { InfluosAttendee } from '../../types';
 import { CheckCircle, XCircle, Loader2, Search, ArrowRight } from 'lucide-react';
 
 // --------------- ANIMATION STYLES ---------------
-// Pattern from pages/punto-informacion/InicioPublico.tsx — keyframes as inline <style>
+// Keyframes as inline <style>: la pantalla trae su propia animación.
 const ANIMATION_STYLES = `
     @keyframes revealTitle {
         0%   { opacity: 0; transform: translateY(40px) scale(0.95); }

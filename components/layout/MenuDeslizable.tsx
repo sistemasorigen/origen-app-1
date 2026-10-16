@@ -500,18 +500,20 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         {
             label: 'Punto de información',
             icon: Info,
-            path: '/punto-de-informacion',
-            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO],
-            // Una sola puerta, no once. Acá colgaba una copia de cada función
-            // del Punto —Anuncios, Bautismos, Inventario, Reportes…— que había
-            // que mantener al día a mano cada vez que el panel cambiaba. El
+            // Sin desplegable y sin paradas intermedias: un toque y estás en el
+            // panel. Acá colgaba una copia de cada función del Punto —Anuncios,
+            // Bautismos, Inventario, Reportes…— que había que mantener al día a
+            // mano cada vez que el panel cambiaba; después quedaron dos puertas,
+            // "Inicio" y "Panel de administración", para una sola pantalla. El
             // panel ya tiene su propio menú, con las funciones agrupadas y los
             // permisos de cada una: esto lleva ahí y listo.
-            subItems: [
-                { label: 'Inicio', path: '/punto-de-informacion' },
-                { label: 'Administración', separator: true },
-                { label: 'Panel de administración', path: '/punto-de-informacion?view=PANEL' },
-            ]
+            path: '/punto-de-informacion?view=PANEL',
+            // El ?view= es para navegar; para encenderse alcanza el pathname.
+            // Sin esto el ítem nunca quedaría activo —`location.pathname` no
+            // empieza con "/punto-de-informacion?view=PANEL"— y el menú abriría
+            // en el tope sin decir dónde estás. Mismo caso que Coordinadores.
+            activePaths: ['/punto-de-informacion'],
+            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO],
         },
         {
             label: 'Sistemas',

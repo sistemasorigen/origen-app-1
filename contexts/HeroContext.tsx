@@ -8,11 +8,10 @@ import React, { createContext, useContext, useEffect } from 'react';
  * arranca transparente, el logo se invierte a blanco, y el contenido sube
  * 64px para meterse debajo de la barra.
  *
- * Antes eso se decidía con una lista de rutas fija. Para `/punto-de-informacion`
- * esa lista no alcanza: la misma ruta renderiza el home público (con hero) o
- * los paneles internos (sin hero, fondo claro), y el modo interno se activa
- * sin cambiar la URL. Con una regla por pathname la navbar quedaría
- * transparente sobre un panel blanco y el logo blanco desaparecería.
+ * Antes eso se decidía con una lista de rutas fija, y para una pantalla que
+ * tiene hero en algunos de sus modos y no en otros esa lista no alcanza: el
+ * pathname no cambia, así que una regla por ruta dejaría la navbar
+ * transparente sobre un fondo claro y el logo blanco desaparecería.
  *
  * Acá lo declara la pantalla que efectivamente montó el hero, así que el dato
  * siempre es el real.

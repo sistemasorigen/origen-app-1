@@ -8,12 +8,9 @@ import { AppProvider, useStore } from '../../store';
 import { ViewState, User, UserRole } from '../../types';
 import { hasRole, puedeEntrarAlPunto } from '../../services/authUtils';
 import NeoSidebar from '../punto-informacion/NeoBarraLateral';
-import SystemLoginModal from '../../components/modals/ModalLoginSistema';
-import { db } from '../../services/dbService';
 import { useToast } from '../punto-informacion/context/ContextoToast';
 
 // Sub Views
-import PublicHome from '../punto-informacion/InicioPublico';
 import Inventory from '../punto-informacion/Inventario';
 import NewProduct from '../punto-informacion/NuevoProducto';
 import Movements from '../punto-informacion/Movimientos';
@@ -32,11 +29,18 @@ interface InfoPointProps {
     currentUser: User | null;
 }
 
+/**
+ * El Punto de Información: el panel y nada más.
+ *
+ * Tenía dos pantallas de entrada —un inicio con anuncios, eventos y agenda, y
+ * el panel de trabajo— y las dos pedían sesión, así que ese inicio no era una
+ * portada pública: era un rodeo para la misma gente que entra a cargar stock.
+ * Ahora /punto-de-informacion ES el panel.
+ */
 const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     const { settings, isLoading, notification } = useStore();
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
-    const [viewMode, setViewMode] = useState<'PUBLIC' | 'INTERNAL'>('PUBLIC');
     const [currentView, setCurrentView] = useState<ViewState>('PANEL');
 
     // La función abierta vive en la URL (?view=INVENTORY), no sólo acá adentro.
@@ -52,11 +56,6 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     // toque por cada función que se miró.
     const irA = (vista: ViewState) => setSearchParams({ view: vista }, { replace: true });
 
-    // Sin ?view= la pantalla vuelve al Punto de Información público, que es lo
-    // que lee el efecto de abajo.
-    const salirDelPanel = () => setSearchParams({}, { replace: true });
-
-    const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const toast = useToast();
 
@@ -71,31 +70,21 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     // La misma regla que preguntan las páginas sueltas de movimientos.
     const canEnterPanel = puedeEntrarAlPunto(authorizedUser);
 
-    // Deep linking
+    // Qué función está abierta, leído de la URL.
     //
-    // Va DESPUÉS de canEnterPanel a propósito: es quien decide si ese ?view=
-    // puede abrir el panel.
+    // Sin ?view= se escribe ?view=PANEL en lugar de mostrar otra cosa: así la
+    // URL dice siempre dónde está parado uno, el menú lateral puede encender
+    // el ítem correcto, y volver a la app después de que el teléfono descarte
+    // la página devuelve al mismo lugar. `replace` porque moverse entre
+    // funciones no es historial.
     useEffect(() => {
         const view = searchParams.get('view');
-        if (view) {
-            setCurrentView(view as ViewState);
-            // Sólo entra al panel quien puede entrar. Antes alcanzaba con tener
-            // sesión: cualquiera que llegara con un ?view= en la URL quedaba
-            // adentro, aunque el botón de "Panel" se lo negara.
-            if (canEnterPanel && viewMode === 'PUBLIC') {
-                setViewMode('INTERNAL');
-            }
-        } else {
-            // Sin ?view= (ej: "Inicio" del menú) — volver al HOME público
-            // de Punto de Información, no dejar el panel interno congelado.
-            // PANEL es el menú del panel, así que se resetean la vista Y el modo.
-            setViewMode('PUBLIC');
-            setCurrentView('PANEL');
+        if (!view) {
+            setSearchParams({ view: 'PANEL' }, { replace: true });
+            return;
         }
-        // canEnterPanel entra en la lista porque al arrancar la app el perfil
-        // —y con él los roles— llega después que la URL: sin esto, quien abre
-        // la app directamente en una función se quedaba afuera del panel.
-    }, [searchParams, currentUser, canEnterPanel]);
+        setCurrentView(view as ViewState);
+    }, [searchParams, setSearchParams]);
 
     const canAccessAdminPanel = !!authorizedUser && hasRole(authorizedUser, [
         UserRole.SUPER_ADMIN,
@@ -103,51 +92,21 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         UserRole.ENCARGADO_PUNTO
     ]);
 
-    const handleGoInternal = () => {
-        if (canEnterPanel) {
-            setViewMode('INTERNAL');
-            irA('PANEL');
-        } else {
-            setLoginModalOpen(true);
-        }
-    };
-
-    const handleGoPublic = () => {
-        setViewMode('PUBLIC');
-        salirDelPanel();
-    };
-
-    const handleLoginSuccess = async (email: string, pass: string) => {
-        const user = db.verifyCredentials(email, pass);
-        if (user && (
-            hasRole(user, [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO]) ||
-            (hasRole(user, UserRole.ANFITRION) && (
-                user.linkedGroupId === 'PUNTO' ||
-                user.volunteerRoles?.includes('PUNTO')
-            ))
-        )) {
-            setAuthorizedUser(user);
-            setViewMode('INTERNAL');
-            irA('PANEL');
-            return true;
-        }
-        return false;
-    };
-
-    // --- AUTO LOGOUT LOGIC (MOBILE 5 MIN) ---
+    /**
+     * El panel se cierra solo a los 5 minutos sin tocar nada.
+     *
+     * El Punto trabaja sobre un equipo compartido del stand. Antes esto
+     * devolvía al inicio del Punto; como ese inicio ya no existe, sale a la
+     * portada de la app, que es el equivalente: deja de haber un panel de
+     * gestión abierto en una pantalla que mira cualquiera.
+     */
     useEffect(() => {
-        if (viewMode !== 'INTERNAL') return;
-
         let logoutTimer: NodeJS.Timeout;
         const TIMEOUT_MS = 5 * 60 * 1000;
 
         const resetTimer = () => {
             clearTimeout(logoutTimer);
-            logoutTimer = setTimeout(() => {
-                setViewMode('PUBLIC');
-                setCurrentView('PANEL');
-                salirDelPanel();
-            }, TIMEOUT_MS);
+            logoutTimer = setTimeout(() => navigate('/'), TIMEOUT_MS);
         };
 
         const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
@@ -159,7 +118,7 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             clearTimeout(logoutTimer);
             events.forEach(event => document.removeEventListener(event, handleActivity, true));
         };
-    }, [viewMode]);
+    }, [navigate]);
 
     if (isLoading) {
         return (
@@ -170,32 +129,13 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         );
     }
 
-    // Un ?view= en la URL es el panel, no la portada pública: es el link que
-    // alguien pasa por WhatsApp ("fijate los anuncios"). A quien no puede
-    // entrar no se le devuelve la portada con esa URL puesta —que se lee como
-    // que el link está roto—: sin sesión va al login y vuelve acá después, y
-    // con sesión sin el rol se le avisa.
-    if (searchParams.get('view') && !canEnterPanel) {
+    // Toda la pantalla es el panel, así que el portero vale para toda la
+    // pantalla. A quien no puede entrar se le avisa: sin sesión App.tsx ya lo
+    // mandó al login con el destino anotado, y con sesión sin el rol esto le
+    // dice que el link no es para él, en vez de devolverle una portada que se
+    // lee como que está roto.
+    if (!canEnterPanel) {
         return <SinAcceso />;
-    }
-
-    if (viewMode === 'PUBLIC') {
-        return (
-            <>
-                <PublicHome
-                    viewMode={viewMode}
-                    onGoInternal={handleGoInternal}
-                    onGoPublic={handleGoPublic}
-                    canAccessPanel={canEnterPanel}
-                />
-                <SystemLoginModal
-                    isOpen={loginModalOpen}
-                    onClose={() => setLoginModalOpen(false)}
-                    systemName="Panel Voluntarios"
-                    onLogin={handleLoginSuccess}
-                />
-            </>
-        );
     }
 
     // --- VIEW MAPPING ---
