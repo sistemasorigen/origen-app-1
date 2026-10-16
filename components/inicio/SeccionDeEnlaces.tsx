@@ -194,12 +194,20 @@ export const TarjetaDeLink: React.FC<{
                         {link.titulo}
                     </p>
 
-                    {/* Sin descripción no queda hueco: el botón sube. Cerrada
-                        se muestra el principio; desplegada, entera. */}
-                    {link.descripcion && (
-                        <p className={`mt-1.5 mb-0 text-sm leading-[1.5] [overflow-wrap:anywhere] ${sobreLaFoto ? 'text-white/85' : 'text-slate-500 dark:text-zinc-400'} ${abierta ? '' : 'line-clamp-2'}`}>
+                    {/* La bajada aparece recién al desplegar. Cerrada, la
+                        tarjeta es el título y poco más: una bajada cortada a
+                        mitad de palabra sobre una foto no se lee, y encima
+                        tapa el arte. Entra con un poco de atraso para llegar
+                        a una superficie que ya existe, no junto con ella. */}
+                    {abierta && link.descripcion && (
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={sinMovimiento ? { duration: 0 } : { duration: 0.2, delay: 0.1 }}
+                            className="mt-1.5 mb-0 text-sm leading-[1.5] [overflow-wrap:anywhere] text-slate-500 dark:text-zinc-400"
+                        >
                             {link.descripcion}
-                        </p>
+                        </motion.p>
                     )}
                 </div>
 
