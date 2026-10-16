@@ -31,6 +31,12 @@ export interface LinkDeNovedad {
     descripcion: string | null;
     tipoDestino: TipoDeDestino;
     destino: string;
+    /** El fondo de la tarjeta. null = tarjeta blanca, con el texto solo. */
+    imagenUrl: string | null;
+    /** El encuadre de esa imagen, como en los banners: 0-100 % y 1 a 3. */
+    focalX: number;
+    focalY: number;
+    zoom: number;
     /** 'YYYY-MM-DD' o null. Último día en que se muestra. */
     vence: string | null;
     visible: boolean;
@@ -44,6 +50,10 @@ export interface LinkParaGuardar {
     descripcion?: string | null;
     tipoDestino: TipoDeDestino;
     destino: string;
+    imagenUrl?: string | null;
+    focalX?: number;
+    focalY?: number;
+    zoom?: number;
     vence?: string | null;
     visible?: boolean;
     orden?: number;
@@ -55,6 +65,10 @@ interface FilaCruda {
     descripcion: string | null;
     tipo_destino: string;
     destino: string;
+    imagen_url: string | null;
+    focal_x: number | null;
+    focal_y: number | null;
+    zoom: number | null;
     vence: string | null;
     visible: boolean;
     orden: number;
@@ -67,6 +81,11 @@ const mapear = (f: FilaCruda): LinkDeNovedad => ({
     descripcion: f.descripcion,
     tipoDestino: f.tipo_destino === 'externo' ? 'externo' : 'interno',
     destino: f.destino,
+    imagenUrl: f.imagen_url,
+    // La base los manda como texto cuando son numeric; el ?? no alcanza.
+    focalX: Number(f.focal_x ?? 50),
+    focalY: Number(f.focal_y ?? 50),
+    zoom: Number(f.zoom ?? 1),
     vence: f.vence,
     visible: f.visible,
     orden: f.orden,
@@ -78,6 +97,10 @@ const aFila = (l: LinkParaGuardar) => ({
     descripcion: l.descripcion ?? null,
     tipo_destino: l.tipoDestino,
     destino: l.destino,
+    imagen_url: l.imagenUrl ?? null,
+    focal_x: Math.round(l.focalX ?? 50),
+    focal_y: Math.round(l.focalY ?? 50),
+    zoom: l.zoom ?? 1,
     vence: l.vence ?? null,
     ...(l.visible === undefined ? {} : { visible: l.visible }),
     ...(l.orden === undefined ? {} : { orden: l.orden }),

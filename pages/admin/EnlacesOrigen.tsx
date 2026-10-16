@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useDragControls, useReducedMotion } from 'framer-motion';
 import { X, Plus, GripVertical, ChevronUp, ChevronDown, Link2 } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
+import ImageUpload from '../../components/media/SubidaImagen';
+import EncuadreMedia from '../../components/media/EncuadreMedia';
 import { PedidoConfirmacion, Rotulo } from './piezasAdmin';
 import { TarjetaDeLink } from '../../components/inicio/SeccionDeEnlaces';
 import {
@@ -98,6 +100,11 @@ interface Borrador {
     funcion: string;
     ruta: string;
     url: string;
+    /** El fondo de la tarjeta, con su encuadre. '' = sin imagen. */
+    imagenUrl: string;
+    focalX: number;
+    focalY: number;
+    zoom: number;
     vence: string;
     visible: boolean;
     orden: number;
@@ -105,8 +112,13 @@ interface Borrador {
 
 const VACIO: Borrador = {
     titulo: '', descripcion: '', tipo: 'interno',
-    funcion: FUNCIONES[0].id, ruta: '', url: '', vence: '', visible: true, orden: 0,
+    funcion: FUNCIONES[0].id, ruta: '', url: '',
+    imagenUrl: '', focalX: 50, focalY: 50, zoom: 1,
+    vence: '', visible: true, orden: 0,
 };
+
+/** La proporción de la tarjeta del inicio, para encuadrar contra lo real. */
+const MARCO = { ancho: 400, alto: 260 };
 
 const aBorrador = (l: LinkDeNovedad): Borrador => {
     const f = l.tipoDestino === 'interno' ? FUNCIONES.find(x => x.ruta && x.ruta === l.destino) : undefined;
@@ -118,6 +130,10 @@ const aBorrador = (l: LinkDeNovedad): Borrador => {
         funcion: f ? f.id : 'otra',
         ruta: l.tipoDestino === 'interno' && !f ? l.destino : '',
         url: l.tipoDestino === 'externo' ? l.destino : '',
+        imagenUrl: l.imagenUrl || '',
+        focalX: l.focalX ?? 50,
+        focalY: l.focalY ?? 50,
+        zoom: l.zoom ?? 1,
         vence: l.vence || '',
         visible: l.visible,
         orden: l.orden,
@@ -143,6 +159,10 @@ const comoSeVeria = (b: Borrador): LinkDeNovedad => ({
     descripcion: b.descripcion.trim() || null,
     tipoDestino: b.tipo,
     destino: destinoDe(b) || '/',
+    imagenUrl: b.imagenUrl || null,
+    focalX: b.focalX,
+    focalY: b.focalY,
+    zoom: b.zoom,
     vence: b.vence || null,
     visible: b.visible,
     orden: b.orden,
@@ -250,11 +270,18 @@ const EnlacesOrigen: React.FC<{
         if (!links) return;
         const previa = links;
         setLinks(links.map(x => (x.id === l.id ? { ...x, visible: !x.visible } : x)));
+        // Van TODOS los campos: el servicio arma la fila entera, así que lo
+        // que no se mande se guardaría en null. Sin esto, prender y apagar
+        // un enlace le borraba la imagen.
         const ok = await actualizarLink(l.id, {
             titulo: l.titulo,
             descripcion: l.descripcion,
             tipoDestino: l.tipoDestino,
             destino: l.destino,
+            imagenUrl: l.imagenUrl,
+            focalX: l.focalX,
+            focalY: l.focalY,
+            zoom: l.zoom,
             vence: l.vence,
             visible: !l.visible,
         });
@@ -274,6 +301,10 @@ const EnlacesOrigen: React.FC<{
             descripcion: b.descripcion.trim() || null,
             tipoDestino: b.tipo,
             destino: destinoDe(b),
+            imagenUrl: b.imagenUrl || null,
+            focalX: b.focalX,
+            focalY: b.focalY,
+            zoom: b.zoom,
             vence: b.vence || null,
             visible: b.visible,
         };
@@ -703,7 +734,54 @@ const EditorDeLink: React.FC<{
                                     </label>
                                     <p className="mt-1.5 text-right text-[12px] text-black/55">{b.descripcion.length}/140</p>
 
-                                    <p className={`${rotulo} mt-3.5`}>¿A dónde lleva?</p>
+                                    {/* ── La imagen de fondo ── */}
+                                    <p className={`${rotulo} mt-3.5`}>
+                                        Imagen de fondo <span className="font-medium normal-case tracking-normal text-black/55">· opcional</span>
+                                    </p>
+                                    {/* La key lo vuelve a montar cuando aparece o
+                                        desaparece la imagen: el recuadro de subida
+                                        lee `currentImage` una sola vez, al montarse, y
+                                        la hoja se abre un cuadro antes de que llegue el
+                                        borrador. Sin esto, editar un enlace que ya
+                                        tiene imagen mostraba el recuadro vacío. */}
+                                    <ImageUpload
+                                        key={b.imagenUrl ? 'con-imagen' : 'sin-imagen'}
+                                        currentImage={b.imagenUrl}
+                                        folder="enlaces"
+                                        // El recuadro también sabe quitarla: avisa con
+                                        // una url vacía, y ahí el encuadre vuelve al centro.
+                                        onImageUpload={url => setB(x => ({
+                                            ...x,
+                                            imagenUrl: url,
+                                            ...(url ? {} : { focalX: 50, focalY: 50, zoom: 1 }),
+                                        }))}
+                                        aspectRatio="wide"
+                                        className="caja-portada"
+                                    />
+                                    <p className="mt-1.5 text-[12px] text-black/60">
+                                        Ocupa toda la tarjeta y el texto va encima. Sin imagen, la tarjeta es blanca.
+                                    </p>
+
+                                    {b.imagenUrl && (
+                                        <>
+                                            {/* El marco es el de la tarjeta de verdad: lo que
+                                                se deja a la vista acá es lo que se va a ver en
+                                                el inicio. */}
+                                            <div className="mt-3">
+                                                <p className={rotulo}>Encuadre</p>
+                                                <EncuadreMedia
+                                                    mediaType="image"
+                                                    imageUrl={b.imagenUrl}
+                                                    frameWidth={MARCO.ancho}
+                                                    frameHeight={MARCO.alto}
+                                                    value={{ focalX: b.focalX, focalY: b.focalY, zoom: b.zoom }}
+                                                    onChange={marco => setB(x => ({ ...x, ...marco }))}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    <p className={`${rotulo} mt-4`}>¿A dónde lleva?</p>
                                     <div className="grid grid-cols-2 gap-2">
                                         {([['interno', 'Una función de Origen', 'Abre dentro de la app'],
                                         ['externo', 'Un link externo', 'Abre en otra pestaña']] as const).map(([tipo, titulo, bajada]) => {
