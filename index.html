@@ -63,6 +63,47 @@
   <link rel="icon" type="image/png" href="/favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Origen | App</title>
+
+  <!-- ═══ La tarjeta que se arma cuando alguien comparte el link ═══
+       WhatsApp, Instagram, Facebook y los buscadores leen esto y nada
+       más: ninguno ejecuta JavaScript, así que las etiquetas tienen que
+       estar escritas acá, en el HTML que llega del servidor. Que la app
+       sea una SPA con HashRouter juega a favor — todas las pantallas
+       viven en este mismo index.html, así que una sola tarjeta vale para
+       cualquier link que se comparta.
+
+       La imagen va con dirección absoluta y https a propósito: una ruta
+       relativa no le sirve a quien lee esto desde afuera del sitio. Mide
+       1200x630 (la proporción que esperan) y pesa poco más de 100 KB,
+       porque WhatsApp descarta las previews pesadas y muestra el link
+       pelado.
+
+       Ojo al cambiarla: WhatsApp guarda la tarjeta por URL durante días.
+       Para forzar que la vuelva a leer, compartir el link con algo
+       distinto al final (por ejemplo app.origeniglesia.org/?v=2). -->
+  <meta name="description"
+    content="La comunidad que te conecta. Grupos, eventos y todo lo de Origen Iglesia, en un solo lugar." />
+  <link rel="canonical" href="https://app.origeniglesia.org/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Origen Iglesia" />
+  <meta property="og:locale" content="es_AR" />
+  <meta property="og:url" content="https://app.origeniglesia.org/" />
+  <meta property="og:title" content="App Origen" />
+  <meta property="og:description"
+    content="La comunidad que te conecta. Grupos, eventos y todo lo de Origen Iglesia, en un solo lugar." />
+  <meta property="og:image" content="https://app.origeniglesia.org/og-origen.jpg" />
+  <meta property="og:image:secure_url" content="https://app.origeniglesia.org/og-origen.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Un grupo de jóvenes de Origen sacándose una selfie, con el texto App Origen." />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="App Origen" />
+  <meta name="twitter:description"
+    content="La comunidad que te conecta. Grupos, eventos y todo lo de Origen Iglesia, en un solo lugar." />
+  <meta name="twitter:image" content="https://app.origeniglesia.org/og-origen.jpg" />
   <script type="importmap">
     {
       "imports": {
