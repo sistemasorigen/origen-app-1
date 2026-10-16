@@ -83,26 +83,6 @@ const formatEventDate = (dateStr: string): string =>
 const formatEventTime = (time?: string): string => (time || '').slice(0, 5);
 
 /**
- * El contador, en chico: el que va encima de la portada, arriba a la
- * derecha. El grande —el de "EMPIEZA EN" con los números en Black— sigue
- * viviendo en el panel, que es donde hay lugar para que respire.
- */
-const ContadorChico: React.FC<{ partes: CountdownPart[] }> = ({ partes }) => (
-    <div data-contador className="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 backdrop-blur-sm">
-        {partes.map((p, i) => (
-            <React.Fragment key={p.short}>
-                {i > 0 && <span className="text-[11px] leading-none text-white/40">·</span>}
-                <span className="text-[13px] font-black leading-none tabular-nums text-white">
-                    {i === 0 ? p.value : pad(p.value)}
-                    <span className="ml-0.5 text-[10px] font-semibold text-white/75">{p.short}</span>
-                </span>
-            </React.Fragment>
-        ))}
-        <span className="sr-only">{countdownPhrase(partes)}</span>
-    </div>
-);
-
-/**
  * El nombre y la fecha. Los mismos datos se dibujan encima de la portada
  * (en el teléfono, cerrada) y en el panel blanco (en la compu, o al
  * desplegar), así que viven acá: dos copias se desincronizan solas.
@@ -233,14 +213,10 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                                 <div className="sm:hidden">
                                                     {/* Sin este velo, un título blanco sobre
                                                         un flyer claro desaparece. Carga abajo,
-                                                        que es donde va el texto, y apenas
-                                                        arriba para el contador. */}
-                                                    <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-black/80" />
-
-                                                    {/* El contador, arriba a la derecha. */}
-                                                    <div className="absolute right-3 top-3">
-                                                        <ContadorChico partes={cd} />
-                                                    </div>
+                                                        que es donde va el texto, y se va a
+                                                        transparente arriba para no ensuciar
+                                                        el arte. */}
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
 
                                                     {/* El nombre y la fecha, abajo a la
                                                         izquierda; el botón abajo, al ancho de
