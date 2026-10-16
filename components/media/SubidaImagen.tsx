@@ -17,8 +17,14 @@ interface ImageUploadProps {
     className?: string;
     /** Placeholder text */
     placeholder?: string;
-    /** Aspect ratio hint */
-    aspectRatio?: 'square' | 'wide' | 'auto';
+    /**
+     * La forma del recorte y de la caja. Importa más de lo que parece: lo
+     * que se recorta acá es lo que se sube, así que tiene que ser la forma
+     * en la que después se va a ver. Si acá se recorta 16:9 y la pantalla
+     * lo muestra en 4:3, se recorta dos veces y la segunda se come los
+     * costados.
+     */
+    aspectRatio?: 'square' | 'wide' | '4:3' | 'auto';
     /** Visual style variant */
     variant?: 'brutal' | 'minimal';
 }
@@ -117,6 +123,7 @@ const ImageUpload: React.FC<ImageUploadProps & { customUploadFn?: (file: File) =
     const aspectClasses = {
         square: 'aspect-square',
         wide: 'aspect-video',
+        '4:3': 'aspect-[4/3]',
         auto: 'min-h-[200px]'
     };
 

@@ -762,7 +762,11 @@ const EditorDeLink: React.FC<{
                                             imagenUrl: url,
                                             ...(url ? {} : { focalX: 50, focalY: 50, zoom: 1 }),
                                         }))}
-                                        aspectRatio="wide"
+                                        // 4:3, la forma de la tarjeta. El recuadro recorta el
+                                        // archivo al subirlo, así que si recortara con otra
+                                        // forma, la tarjeta volvería a recortar encima y se
+                                        // comería los costados de lo que se eligió.
+                                        aspectRatio="4:3"
                                         className="caja-portada"
                                     />
                                     <p className="mt-1.5 text-[12px] text-black/60">
