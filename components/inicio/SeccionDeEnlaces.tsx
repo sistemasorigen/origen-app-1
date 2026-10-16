@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { getMediaFrameStyle } from '../ui/CarruselHero';
-import { ArrowRight, ArrowUpRight, ExternalLink } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ChevronDown, ExternalLink } from 'lucide-react';
 import {
     getLinksPublicos,
     abrirLink,
@@ -45,6 +46,28 @@ const FORMA = 'aspect-[4/3] min-h-[232px]';
 
 
 /**
+ * Qué hace cada toque:
+ *
+ *   · la tarjeta entera —y su botón "Ver detalles"— la despliega;
+ *   · ya desplegada, abajo de todo aparece "Ir al enlace", que es lo único
+ *     que lleva afuera.
+ *
+ * Son dos pasos y no uno a propósito: la bajada no entra en una tarjeta
+ * cerrada, y mandar a alguien a un formulario sin que haya podido leer de
+ * qué se trata es pedirle que adivine.
+ *
+ * Un enlace SIN bajada no tiene nada que desplegar: ahí la tarjeta es un
+ * link y el botón dice "Ir al enlace" desde el principio.
+ *
+ * Al desplegarse, la tarjeta deja de tener la imagen de fondo y pasa a
+ * tenerla de portada, arriba, como la tarjeta de un grupo de GCX. No es un
+ * capricho: estirar una tarjeta con la imagen de fondo la deforma, y un
+ * texto largo sobre una foto se vuelve ilegible.
+ *
+ * La portada conserva la MISMA caja 4:3 que tenía cerrada, así que la imagen
+ * no se mueve ni cambia de recorte al abrir: lo único que viaja es el texto,
+ * que baja de estar encima a estar debajo.
+ *
  * También la usa el panel como vista previa mientras se carga un link
  * (pages/admin/EnlacesOrigen.tsx). Es la misma tarjeta, no una copia: lo que
  * se ve en el panel es literalmente lo que se va a publicar.
@@ -58,28 +81,74 @@ export const TarjetaDeLink: React.FC<{
     const esExterno = link.tipoDestino === 'externo';
     const cierra = textoDeVencimiento(link.vence);
     const conImagen = !!link.imagenUrl;
+    /**
+     * Sin bajada no hay nada que desplegar: la tarjeta va derecho al link.
+     * En la vista previa del panel también vale, aunque ahí no se pueda
+     * tocar: lo que se muestra tiene que decir lo mismo que va a decir
+     * publicada.
+     */
+    const hayDetalles = !!link.descripcion;
+
+    const [abierta, setAbierta] = useState(false);
+    const sinMovimiento = useReducedMotion();
+
+    const transicion = sinMovimiento
+        ? { duration: 0 }
+        : { duration: 0.32, ease: [0.16, 1, 0.3, 1] as const };
+
+    // Cerrada y con imagen, el texto va encima de la foto: blanco. En
+    // cualquier otro caso la tarjeta es blanca y el texto, oscuro.
+    const sobreLaFoto = conImagen && !abierta;
+
+    const alTocarLaTarjeta = () => {
+        if (vistaPrevia) return;
+        if (hayDetalles) setAbierta(a => !a);
+        else onAbrir();
+    };
+
+    const etiqueta = hayDetalles
+        ? `${link.titulo}, ${abierta ? 'ocultar' : 'ver'} los detalles`
+        : etiquetaDeLink(link);
 
     return (
-        <div
-            role={vistaPrevia ? undefined : 'link'}
+        <motion.div
+            layout={!vistaPrevia}
+            transition={transicion}
+            data-enlace
+            role={vistaPrevia ? undefined : hayDetalles ? 'button' : 'link'}
+            aria-expanded={hayDetalles ? abierta : undefined}
             tabIndex={vistaPrevia ? undefined : 0}
-            aria-label={vistaPrevia ? undefined : etiquetaDeLink(link)}
+            aria-label={vistaPrevia ? undefined : etiqueta}
             aria-hidden={vistaPrevia || undefined}
-            onClick={vistaPrevia ? undefined : onAbrir}
+            onClick={alTocarLaTarjeta}
             onKeyDown={vistaPrevia ? undefined : e => {
-                // Un div con role="link" no recibe el Enter del navegador:
-                // hay que atender las dos teclas a mano, como haría un <a>.
+                // Sólo cuando el foco está en la tarjeta: si está en el botón
+                // de adentro, el Enter es de él.
+                if (e.target !== e.currentTarget) return;
+                // Un div no recibe el Enter del navegador: hay que atender las
+                // dos teclas a mano, como haría un <a> o un <button>.
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    onAbrir();
+                    alTocarLaTarjeta();
                 }
             }}
-            className={`relative overflow-hidden ${FORMA} rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-none ${conImagen
-                ? 'bg-slate-900'
-                : 'bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800'} ${vistaPrevia ? '' : 'cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)] dark:hover:border-zinc-600 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-zinc-950'}`}
+            className={`relative overflow-hidden ${abierta ? '' : FORMA} rounded-2xl dark:shadow-none ${sobreLaFoto ? 'bg-slate-900' : 'bg-white dark:bg-zinc-900'} ${conImagen
+                // Con imagen NO lleva borde, ni siquiera transparente: un
+                // borde corre la portada un píxel para adentro al abrir, y
+                // entonces el recorte deja de ser el mismo. La sombra alcanza
+                // para despegarla del fondo.
+                ? (abierta ? 'shadow-[0_4px_16px_rgba(15,23,42,0.08)]' : 'shadow-[0_1px_2px_rgba(15,23,42,0.04)]')
+                : 'border border-slate-200 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${vistaPrevia ? '' : 'cursor-pointer hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)] dark:hover:border-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-zinc-950'}`}
         >
             {conImagen && (
-                <>
+                <motion.div
+                    layout={!vistaPrevia}
+                    transition={transicion}
+                    // Cerrada ocupa toda la tarjeta; abierta es la portada de
+                    // arriba. En las dos la caja es la misma 4:3, así que la
+                    // imagen no se mueve ni cambia de recorte.
+                    className={abierta ? 'relative w-full aspect-[4/3]' : 'absolute inset-0'}
+                >
                     {/* El encuadre sale de la misma función que dibuja los
                         banners de la home: lo que se eligió en el panel es
                         exactamente lo que se ve acá. */}
@@ -87,16 +156,24 @@ export const TarjetaDeLink: React.FC<{
                         src={link.imagenUrl as string}
                         alt=""
                         draggable={false}
-                        className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+                        className="w-full h-full object-cover pointer-events-none select-none"
                         style={getMediaFrameStyle(link)}
                     />
                     {/* Sin este velo, un título blanco sobre una foto clara
                         desaparece. Carga abajo, que es donde va el texto. */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/15" />
-                </>
+                    <motion.div
+                        className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/15"
+                        animate={{ opacity: abierta ? 0 : 1 }}
+                        transition={transicion}
+                    />
+                </motion.div>
             )}
 
-            <div className="relative flex flex-col h-full p-[18px]">
+            <motion.div
+                layout={!vistaPrevia}
+                transition={transicion}
+                className={`flex flex-col p-[18px] ${abierta ? 'relative' : 'absolute inset-0'}`}
+            >
                 <div className="flex flex-wrap gap-1.5">
                     <span className={`inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-full text-xs font-semibold whitespace-nowrap ${esExterno
                         ? 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300'
@@ -120,36 +197,56 @@ export const TarjetaDeLink: React.FC<{
                     )}
                 </div>
 
-                {/* Con imagen el texto se apoya abajo, sobre la parte oscura
-                    del velo; sin imagen arranca arriba, como siempre. */}
-                <div className={conImagen ? 'mt-auto' : 'mt-3.5'}>
-                    <p className={`mb-0 text-[17.5px] leading-[1.3] font-bold tracking-[-0.01em] line-clamp-2 [overflow-wrap:anywhere] ${conImagen ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.35)]' : 'text-slate-900 dark:text-white'}`}>
+                {/* Cerrada y con imagen, el texto se apoya abajo sobre la parte
+                    oscura del velo; en cualquier otro caso arranca arriba. */}
+                <div className={sobreLaFoto ? 'mt-auto' : 'mt-3.5'}>
+                    <p className={`mb-0 text-[17.5px] leading-[1.3] font-bold tracking-[-0.01em] line-clamp-2 [overflow-wrap:anywhere] ${sobreLaFoto ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.35)]' : 'text-slate-900 dark:text-white'}`}>
                         {link.titulo}
                     </p>
 
-                    {/* Sin descripción no queda hueco: el botón sube. */}
+                    {/* Sin descripción no queda hueco: el botón sube. Cerrada
+                        se muestra el principio; desplegada, entera. */}
                     {link.descripcion && (
-                        <p className={`mt-1.5 mb-0 text-sm leading-[1.5] [overflow-wrap:anywhere] ${conImagen ? 'text-white/85' : 'text-slate-500 dark:text-zinc-400'} line-clamp-2`}>
+                        <p className={`mt-1.5 mb-0 text-sm leading-[1.5] [overflow-wrap:anywhere] ${sobreLaFoto ? 'text-white/85' : 'text-slate-500 dark:text-zinc-400'} ${abierta ? '' : 'line-clamp-2'}`}>
                             {link.descripcion}
                         </p>
                     )}
                 </div>
 
                 {/* El envoltorio es el que empuja: el botón queda pegado al pie
-                    con 18px de aire, y así los "Ir al enlace" de la fila quedan
-                    a la misma altura aunque los textos midan distinto. */}
-                <span className={`block w-full pt-[18px] ${conImagen ? '' : 'mt-auto'}`}>
-                    <span className={`w-full h-[46px] rounded-xl flex items-center justify-center gap-2 text-[14.5px] font-semibold ${conImagen
-                        ? 'bg-white text-slate-900'
-                        : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'}`}>
-                        Ir al enlace
-                        {esExterno
-                            ? <ExternalLink className="w-[15px] h-[15px]" strokeWidth={2.2} />
-                            : <ArrowRight className="w-4 h-4" strokeWidth={2.2} />}
-                    </span>
+                    con 18px de aire, y así los botones de la fila quedan a la
+                    misma altura aunque los textos midan distinto. */}
+                <span className={`block w-full pt-[18px] ${sobreLaFoto ? '' : 'mt-auto'}`}>
+                    <button
+                        type="button"
+                        // Cerrada, el botón hace lo mismo que la tarjeta y el
+                        // click sube solo. Desplegada es el único que lleva
+                        // afuera, así que ahí sí frena el click: si subiera,
+                        // la tarjeta se cerraría en el mismo toque.
+                        onClick={abierta ? e => { e.stopPropagation(); onAbrir(); } : undefined}
+                        tabIndex={abierta ? 0 : -1}
+                        aria-hidden={abierta ? undefined : true}
+                        className={`w-full h-[46px] rounded-xl flex items-center justify-center gap-2 text-[14.5px] font-semibold ${sobreLaFoto
+                            ? 'bg-white text-slate-900'
+                            : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'}`}
+                    >
+                        {abierta || !hayDetalles ? (
+                            <>
+                                Ir al enlace
+                                {esExterno
+                                    ? <ExternalLink className="w-[15px] h-[15px]" strokeWidth={2.2} />
+                                    : <ArrowRight className="w-4 h-4" strokeWidth={2.2} />}
+                            </>
+                        ) : (
+                            <>
+                                Ver detalles
+                                <ChevronDown className="w-4 h-4" strokeWidth={2.4} />
+                            </>
+                        )}
+                    </button>
                 </span>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 };
 
@@ -168,7 +265,7 @@ const Esqueleto: React.FC = () => (
 // ── La sección ──────────────────────────────────────────────────────────
 
 /** El riel del teléfono y la grilla de la compu, en un solo árbol. */
-const FILA = 'flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1 items-stretch';
+const FILA = 'flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1 items-start';
 
 /**
  * El ancho de una tarjeta. Las cuentas son las que hacen que entren justo:
