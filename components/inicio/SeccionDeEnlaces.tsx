@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { getMediaFrameStyle } from '../ui/CarruselHero';
@@ -77,7 +77,15 @@ export const TarjetaDeLink: React.FC<{
     onAbrir: () => void;
     /** En el panel la tarjeta se mira, no se toca: ni foco ni clicks. */
     vistaPrevia?: boolean;
-}> = ({ link, onAbrir, vistaPrevia = false }) => {
+    /**
+     * Abierta o cerrada lo decide la sección, no la tarjeta. En el riel
+     * infinito cada enlace está dibujado tres veces: si cada copia llevara
+     * su propio estado, desplegar una y seguir deslizando mostraría la
+     * misma tarjeta cerrada un rato después.
+     */
+    abierta?: boolean;
+    onAlternar?: () => void;
+}> = ({ link, onAbrir, vistaPrevia = false, abierta = false, onAlternar }) => {
     const esExterno = link.tipoDestino === 'externo';
     const cierra = textoDeVencimiento(link.vence);
     const conImagen = !!link.imagenUrl;
@@ -89,7 +97,6 @@ export const TarjetaDeLink: React.FC<{
      */
     const hayDetalles = !!link.descripcion;
 
-    const [abierta, setAbierta] = useState(false);
     const sinMovimiento = useReducedMotion();
 
     const transicion = sinMovimiento
@@ -102,7 +109,7 @@ export const TarjetaDeLink: React.FC<{
 
     const alTocarLaTarjeta = () => {
         if (vistaPrevia) return;
-        if (hayDetalles) setAbierta(a => !a);
+        if (hayDetalles && onAlternar) onAlternar();
         else onAbrir();
     };
 
@@ -276,8 +283,21 @@ const FILA = 'flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb
 const JUSTAS = 'snap-start shrink-0 w-[90%] sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]';
 const CON_ASOMO = 'snap-start shrink-0 w-[90%] sm:w-[calc((100%-1rem)/2-26px)] lg:w-[calc((100%-2rem)/3-26px)]';
 
+/**
+ * Cuántas veces se dibuja la lista para que el riel no tenga punta. Son
+ * tres y no dos para poder arrancar en la del medio: así sobra una copia
+ * entera para cada lado y la vuelta se puede dar también hacia atrás, que
+ * con el scroll nativo —que frena en cero— de otra forma no se puede.
+ */
+const COPIAS = 3;
+
 const SeccionDeEnlaces: React.FC = () => {
     const navigate = useNavigate();
+    const rielRef = useRef<HTMLDivElement>(null);
+    /** Sólo tiene sentido dar la vuelta si lo que hay no entra en pantalla. */
+    const [enRonda, setEnRonda] = useState(false);
+    /** Abierta o cerrada: lo sabe la sección, porque cada enlace se dibuja tres veces. */
+    const [abiertoId, setAbiertoId] = useState<string | null>(null);
 
     // null = todavía no llegaron, o no se pudieron traer. Las dos cosas se
     // ven igual: la sección no aparece y el resto del inicio sigue.
@@ -296,6 +316,51 @@ const SeccionDeEnlaces: React.FC = () => {
     const lista = links || [];
     // "Las que entran" son tres, que es lo que muestra la compu.
     const TARJETA = lista.length > 3 ? CON_ASOMO : JUSTAS;
+
+    /**
+     * ¿Desborda? Se mide el ancho de UNA copia contra el del riel. Si todo
+     * entra —dos o tres enlaces en la compu—, no se repite nada: ver el
+     * mismo enlace dos veces al lado del otro es peor que no poder seguir.
+     */
+    useLayoutEffect(() => {
+        const el = rielRef.current;
+        if (!el) { setEnRonda(false); return; }
+        const medir = () => {
+            const unaCopia = el.scrollWidth / (enRonda ? COPIAS : 1);
+            setEnRonda(unaCopia > el.clientWidth + 8);
+        };
+        medir();
+        const observador = new ResizeObserver(medir);
+        observador.observe(el);
+        return () => observador.disconnect();
+    }, [lista.length, enRonda]);
+
+    /** Al entrar en ronda, el riel arranca en la copia del medio. */
+    useLayoutEffect(() => {
+        const el = rielRef.current;
+        if (!el || !enRonda) return;
+        el.scrollLeft = el.scrollWidth / COPIAS;
+    }, [enRonda, lista.length]);
+
+    /**
+     * El salto. Cuando el dedo se acerca a una punta, el riel se corre una
+     * copia entera: como lo que hay a los dos lados es idéntico, no se ve
+     * nada. Se hace cuando el deslizamiento FRENÓ, no durante: tocar
+     * scrollLeft a mitad de la inercia la corta en seco.
+     */
+    const volverAlMedio = () => {
+        const el = rielRef.current;
+        if (!el || !enRonda) return;
+        const unaCopia = el.scrollWidth / COPIAS;
+        if (el.scrollLeft > unaCopia * 1.75) el.scrollLeft -= unaCopia;
+        else if (el.scrollLeft < unaCopia * 0.25) el.scrollLeft += unaCopia;
+    };
+
+    const frenado = useRef<number | undefined>(undefined);
+    const alDeslizar = () => {
+        window.clearTimeout(frenado.current);
+        frenado.current = window.setTimeout(volverAlMedio, 140);
+    };
 
     // Mientras cargan, el lugar ya está tomado: si la sección apareciera de
     // golpe, el inicio daría un salto justo cuando se está por tocar algo.
@@ -324,12 +389,27 @@ const SeccionDeEnlaces: React.FC = () => {
                 Lo que está pasando en Origen, en un solo lugar.
             </p>
 
-            <div className={FILA}>
-                {lista.map(l => (
-                    <div key={l.id} className={TARJETA}>
-                        <TarjetaDeLink link={l} onAbrir={() => abrirLink(l, navigate)} />
-                    </div>
-                ))}
+            <div ref={rielRef} onScroll={alDeslizar} className={FILA}>
+                {Array.from({ length: enRonda ? COPIAS : 1 }).map((_, copia) =>
+                    lista.map(l => (
+                        <div
+                            key={`${copia}-${l.id}`}
+                            data-copia={copia}
+                            // Las copias son las mismas tarjetas repetidas: un
+                            // lector de pantalla tiene que leer la lista una
+                            // sola vez.
+                            aria-hidden={copia > 0 || undefined}
+                            className={TARJETA}
+                        >
+                            <TarjetaDeLink
+                                link={l}
+                                onAbrir={() => abrirLink(l, navigate)}
+                                abierta={abiertoId === l.id}
+                                onAlternar={() => setAbiertoId(a => (a === l.id ? null : l.id))}
+                            />
+                        </div>
+                    )),
+                )}
             </div>
         </div>
     );
