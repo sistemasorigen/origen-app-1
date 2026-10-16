@@ -44,12 +44,40 @@ export interface Novedad {
     fecha: string;
     /** "Hoy 18:40" · "Ayer 11:05" · "12 oct 20:15" */
     cuando: string;
-    /** En los ajustes y en los reportes, si quedó guardado quién fue. */
+    /**
+     * Quién lo hizo, con nombre y apellido, si quedó guardado.
+     *
+     * Lo copia un disparador de la base en cada alta. Los movimientos
+     * anteriores a ese disparador tienen null y no hay de dónde sacarlo:
+     * la pantalla dice que no quedó registrado y no inventa un nombre.
+     */
     autor: string | null;
     producto: ClaseDeProducto | null;
     talle: number | null;
     /** El reporte que la generó: la fila se puede tocar y abre su detalle. */
     reportId?: string | null;
+}
+
+/** Las cuentas del período que encabezan la lista completa de novedades. */
+export interface TotalesDeNovedades {
+    /** Filas de la lista: un reporte de stock cuenta UNA, no sus veinte ajustes. */
+    novedades: number;
+    /** Unidades que entraron, y en cuántos ingresos. */
+    unidadesIngresadas: number;
+    ingresos: number;
+    /** Unidades que salieron, y en cuántas ventas. */
+    unidadesVendidas: number;
+    ventas: number;
+    /** Correcciones a mano, sin contar las que vinieron de un reporte. */
+    ediciones: number;
+    /** Conteos del stand. */
+    reportes: number;
+}
+
+export interface NovedadesCompletas {
+    /** De la más nueva a la más vieja, como en el tablero. */
+    novedades: Novedad[];
+    totales: TotalesDeNovedades;
 }
 
 export interface KpisPuntoInfo {
@@ -362,7 +390,6 @@ interface ProductoCrudo {
     minStock: number | null;
 }
 
-/** Los 3 movimientos más recientes del período. */
 /**
  * Cuántos movimientos se piden para quedarse con las 3 novedades.
  *
@@ -372,39 +399,52 @@ interface ProductoCrudo {
  */
 const MOVIMIENTOS_PARA_NOVEDADES = 30;
 
-export const getNovedades = async (rango: Rango): Promise<Novedad[] | null> => {
-    const { arranca, termina } = limitesDelRango(rango);
-
-    const [movs, prods] = await Promise.all([
-        supabase.from('movements').select('*').gte('date', arranca).lte('date', termina)
-            .order('date', { ascending: false }).limit(MOVIMIENTOS_PARA_NOVEDADES),
-        supabase.from('info_products').select('code, type, size'),
-    ]);
-
-    if (movs.error) { aviso('getNovedades', movs.error); return null; }
-    if (prods.error) { aviso('getNovedades(productos)', prods.error); return null; }
-
-    // El Promise.all mezcla dos consultas distintas y TypeScript afloja el
-    // tipo de las filas: se nombra acá, una vez.
-    const catalogo = (prods.data || []) as Pick<ProductoCrudo, 'code' | 'type' | 'size'>[];
-    const porCodigo = new Map(catalogo.map(p => [p.code, p] as const));
-    const movimientos = (movs.data || []) as MovimientoCrudo[];
-
-    // Los totales de los reportes salen de stock_reports, que es donde los
-    // dejó la RPC: son los de verdad y además traen el nombre de quien contó.
-    const idsDeReportes = Array.from(new Set(
+/**
+ * Las cabeceras de los reportes que tocaron estos movimientos.
+ *
+ * Los totales de un reporte salen de stock_reports, que es donde los dejó la
+ * RPC: son los de verdad y además traen el nombre de quien contó.
+ *
+ * Devuelve null sólo si la consulta falló. Un mapa vacío es un período sin
+ * reportes, que es normal.
+ */
+const pedirCabeceras = async (
+    movimientos: MovimientoCrudo[],
+    donde: string,
+): Promise<Map<string, ReporteCrudoMinimo> | null> => {
+    const ids = Array.from(new Set(
         movimientos.map(m => m.reportId).filter((x): x is string => !!x),
     ));
     const cabeceras = new Map<string, ReporteCrudoMinimo>();
-    if (idsDeReportes.length > 0) {
+    if (ids.length === 0) return cabeceras;
+
+    // `.in()` con mil ids arma una URL que el servidor rechaza, así que va
+    // de a tandas.
+    const TANDA = 200;
+    for (let i = 0; i < ids.length; i += TANDA) {
         const { data, error } = await supabase
             .from('stock_reports')
             .select('id, created_at, createdByName, ingresos, faltantes')
-            .in('id', idsDeReportes);
-        if (error) { aviso('getNovedades(reportes)', error); return null; }
+            .in('id', ids.slice(i, i + TANDA));
+        if (error) { aviso(`${donde}(reportes)`, error); return null; }
         (data || []).forEach((r: any) => cabeceras.set(r.id, r));
     }
+    return cabeceras;
+};
 
+/**
+ * De movimientos crudos a las filas que se leen en pantalla.
+ *
+ * Lo usan las DOS pantallas —la tarjeta del tablero y la lista completa—
+ * para que la misma venta se lea con la misma frase en las dos. Es pura: no
+ * toca la base.
+ */
+const armarNovedades = (
+    movimientos: MovimientoCrudo[],
+    catalogo: Pick<ProductoCrudo, 'code' | 'type' | 'size'>[],
+    cabeceras: Map<string, ReporteCrudoMinimo>,
+): Novedad[] => {
+    const porCodigo = new Map(catalogo.map(p => [p.code, p] as const));
     const novedades: Novedad[] = [];
     const yaPuesto = new Set<string>();
 
@@ -445,15 +485,95 @@ export const getNovedades = async (rango: Rango): Promise<Novedad[] | null> => {
             frase: fraseDeMovimiento(tipo, m.quantity, producto, talle, m.previousStock),
             fecha: m.date,
             cuando: cuandoTexto(m.date),
-            // El diseño muestra el autor sólo en los ajustes.
-            autor: tipo === 'Ajuste' ? (m.createdByName || null) : null,
+            autor: m.createdByName || null,
             producto,
             talle,
         });
     });
 
     // Ya vienen del más nuevo al más viejo; agrupar no cambia ese orden.
-    return novedades.slice(0, 3);
+    return novedades;
+};
+
+export const getNovedades = async (rango: Rango): Promise<Novedad[] | null> => {
+    const { arranca, termina } = limitesDelRango(rango);
+
+    const [movs, prods] = await Promise.all([
+        supabase.from('movements').select('*').gte('date', arranca).lte('date', termina)
+            .order('date', { ascending: false }).limit(MOVIMIENTOS_PARA_NOVEDADES),
+        supabase.from('info_products').select('code, type, size'),
+    ]);
+
+    if (movs.error) { aviso('getNovedades', movs.error); return null; }
+    if (prods.error) { aviso('getNovedades(productos)', prods.error); return null; }
+
+    // El Promise.all mezcla dos consultas distintas y TypeScript afloja el
+    // tipo de las filas: se nombra acá, una vez.
+    const catalogo = (prods.data || []) as Pick<ProductoCrudo, 'code' | 'type' | 'size'>[];
+    const movimientos = (movs.data || []) as MovimientoCrudo[];
+
+    const cabeceras = await pedirCabeceras(movimientos, 'getNovedades');
+    if (!cabeceras) return null;
+
+    return armarNovedades(movimientos, catalogo, cabeceras).slice(0, 3);
+};
+
+/**
+ * TODAS las novedades del período, para /reportes/puntoinfo/novedades.
+ *
+ * Acá no hay límite de 30: la pantalla es justamente la lista entera. Los
+ * movimientos se piden de a mil porque PostgREST corta ahí sin avisar
+ * —HTTP 206 y error null—, y un período largo pasa ese techo sin problema.
+ *
+ * Los totales se cuentan sobre los movimientos y no sobre las filas: un
+ * reporte de stock es UNA fila pero puede traer veinte ajustes, y sumar esos
+ * ajustes como "ediciones a mano" diría algo que no pasó.
+ */
+export const getNovedadesCompletas = async (rango: Rango): Promise<NovedadesCompletas | null> => {
+    const { arranca, termina } = limitesDelRango(rango);
+
+    const PAGINA = 1000;
+    const movimientos: MovimientoCrudo[] = [];
+    for (let desde = 0; ; desde += PAGINA) {
+        const { data, error } = await supabase
+            .from('movements').select('*')
+            .gte('date', arranca).lte('date', termina)
+            .order('date', { ascending: false })
+            .range(desde, desde + PAGINA - 1);
+        if (error) { aviso('getNovedadesCompletas', error); return null; }
+        const lote = (data || []) as MovimientoCrudo[];
+        movimientos.push(...lote);
+        if (lote.length < PAGINA) break;
+    }
+
+    const prods = await supabase.from('info_products').select('code, type, size');
+    if (prods.error) { aviso('getNovedadesCompletas(productos)', prods.error); return null; }
+    const catalogo = (prods.data || []) as Pick<ProductoCrudo, 'code' | 'type' | 'size'>[];
+
+    const cabeceras = await pedirCabeceras(movimientos, 'getNovedadesCompletas');
+    if (!cabeceras) return null;
+
+    const novedades = armarNovedades(movimientos, catalogo, cabeceras);
+
+    // Los sueltos: lo que vino de un reporte ya está contado en su reporte.
+    const sueltos = movimientos.filter(m => !m.reportId);
+    const deTipo = (t: TipoDeMovimiento) => sueltos.filter(m => m.type === t);
+    const entradas = deTipo('Entrada');
+    const salidas = deTipo('Salida');
+    const unidades = (ms: MovimientoCrudo[]) => ms.reduce((n, m) => n + (m.quantity || 0), 0);
+
+    return {
+        novedades,
+        totales: {
+            novedades: novedades.length,
+            unidadesIngresadas: unidades(entradas),
+            ingresos: entradas.length,
+            unidadesVendidas: unidades(salidas),
+            ventas: salidas.length,
+            ediciones: deTipo('Ajuste').length,
+            reportes: novedades.filter(n => n.tipo === 'Reporte').length,
+        },
+    };
 };
 
 /**

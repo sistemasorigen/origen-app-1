@@ -616,60 +616,73 @@ const ReportesPuntoInfo: React.FC = () => {
                 ) : (
                     <>
                         {/* ── Novedades ── */}
-                        <Tarjeta className="px-5 pt-[18px] pb-3.5 mt-6">
-                            <p className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>Novedades</p>
-                            <p className="mt-1 m-0 text-[12.5px]" style={{ color: C.tenue }}>Los últimos 3 movimientos del período</p>
-                            <div className="mt-2.5">
-                                {cargandoPeriodo ? (
-                                    <div className="flex flex-col gap-2">{[0, 1, 2].map(i => <Esqueleto key={i} alto={38} />)}</div>
-                                ) : novedades && novedades.length > 0 ? (
-                                    novedades.map(n => {
-                                        const esAjuste = n.tipo === 'Ajuste';
-                                        const esReporte = n.tipo === 'Reporte';
-                                        const Icono = esReporte ? ClipboardCheck
-                                            : n.tipo === 'Entrada' ? ArrowDown
-                                                : n.tipo === 'Salida' ? ArrowUp : Pencil;
-                                        // El reporte se toca y abre su ficha; los movimientos
-                                        // sueltos no tienen a dónde llevar.
-                                        const Fila = esReporte ? 'button' : 'div';
-                                        return (
-                                            <Fila
-                                                key={n.id}
-                                                {...(esReporte ? {
-                                                    type: 'button' as const,
-                                                    onClick: () => setReporteAbierto(n.reportId || null),
-                                                    'aria-label': `Ver el reporte de stock de ${n.cuando}`,
-                                                } : {})}
-                                                className={`w-full flex items-start gap-3 py-[11px] text-left ${esReporte ? 'cursor-pointer hover:bg-slate-50' : ''}`}
-                                                style={{ borderTop: `1px solid ${C.bordeSuave}` }}
-                                            >
-                                                <span className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center"
-                                                    style={esReporte
-                                                        ? { background: '#eaf0fc', color: '#1e3a8a' }
-                                                        : { background: esAjuste ? AMBAR_FONDO : '#f1f2f4', color: esAjuste ? AMBAR_TINTA : C.medio }}>
-                                                    <Icono className="w-3.5 h-3.5" />
-                                                </span>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="m-0 text-[13.5px] leading-[1.45] font-medium" style={{ color: C.medio }}>{n.frase}</p>
-                                                    {n.detalle && (
-                                                        <p className="mt-0.5 m-0 text-[12px] tabular-nums" style={{ color: C.tenue }}>{n.detalle}</p>
-                                                    )}
-                                                    {esAjuste && n.autor && (
-                                                        <p className="mt-0.5 m-0 text-[12px]" style={{ color: C.tenue }}>Editado por {n.autor}</p>
-                                                    )}
-                                                    {esReporte && n.autor && (
-                                                        <p className="mt-0.5 m-0 text-[12px]" style={{ color: C.tenue }}>Reportado por {n.autor}</p>
-                                                    )}
-                                                </div>
-                                                <span className="shrink-0 text-[12px] font-medium whitespace-nowrap pt-0.5" style={{ color: C.tenue }}>{n.cuando}</span>
-                                            </Fila>
-                                        );
-                                    })
-                                ) : (
-                                    <div className="px-3.5 py-3 rounded-[10px] text-[13px]" style={{ background: C.fondo, color: C.apagado }}>
-                                        No hubo movimientos en este período.
-                                    </div>
-                                )}
+                        <Tarjeta className="mt-6 overflow-hidden">
+                            <div className="px-5 pt-[18px] pb-3.5">
+                                <p className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>Novedades</p>
+                                <p className="mt-1 m-0 text-[12.5px]" style={{ color: C.tenue }}>Los últimos 3 movimientos del período</p>
+                                <div className="mt-2.5">
+                                    {cargandoPeriodo ? (
+                                        <div className="flex flex-col gap-2">{[0, 1, 2].map(i => <Esqueleto key={i} alto={38} />)}</div>
+                                    ) : novedades && novedades.length > 0 ? (
+                                        novedades.map(n => {
+                                            const esAjuste = n.tipo === 'Ajuste';
+                                            const esReporte = n.tipo === 'Reporte';
+                                            const Icono = esReporte ? ClipboardCheck
+                                                : n.tipo === 'Entrada' ? ArrowDown
+                                                    : n.tipo === 'Salida' ? ArrowUp : Pencil;
+                                            // El reporte se toca y abre su ficha; los movimientos
+                                            // sueltos no tienen a dónde llevar.
+                                            const Fila = esReporte ? 'button' : 'div';
+                                            return (
+                                                <Fila
+                                                    key={n.id}
+                                                    {...(esReporte ? {
+                                                        type: 'button' as const,
+                                                        onClick: () => setReporteAbierto(n.reportId || null),
+                                                        'aria-label': `Ver el reporte de stock de ${n.cuando}`,
+                                                    } : {})}
+                                                    className={`w-full flex items-start gap-3 py-[11px] text-left ${esReporte ? 'cursor-pointer hover:bg-slate-50' : ''}`}
+                                                    style={{ borderTop: `1px solid ${C.bordeSuave}` }}
+                                                >
+                                                    <span className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center"
+                                                        style={esReporte
+                                                            ? { background: '#eaf0fc', color: '#1e3a8a' }
+                                                            : { background: esAjuste ? AMBAR_FONDO : '#f1f2f4', color: esAjuste ? AMBAR_TINTA : C.medio }}>
+                                                        <Icono className="w-3.5 h-3.5" />
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="m-0 text-[13.5px] leading-[1.45] font-medium" style={{ color: C.medio }}>{n.frase}</p>
+                                                        {n.detalle && (
+                                                            <p className="mt-0.5 m-0 text-[12px] tabular-nums" style={{ color: C.tenue }}>{n.detalle}</p>
+                                                        )}
+                                                        {/* Quién lo hizo. Un solo renglón para los
+                                                            cuatro tipos: el verbo ya lo dice la frase
+                                                            de arriba. */}
+                                                        <p className="mt-0.5 m-0 text-[12px]" style={{ color: C.tenue }}>
+                                                            {n.autor ? `Por ${n.autor}` : 'No quedó registrado quién lo hizo'}
+                                                        </p>
+                                                    </div>
+                                                    <span className="shrink-0 text-[12px] font-medium whitespace-nowrap pt-0.5" style={{ color: C.tenue }}>{n.cuando}</span>
+                                                </Fila>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="px-3.5 py-3 rounded-[10px] text-[13px]" style={{ background: C.fondo, color: C.apagado }}>
+                                            No hubo movimientos en este período.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* La misma tira que cierra las dos planillas de
+                                pendientes: desde el tablero se ven 3, y de acá
+                                sale el resto. */}
+                            <div className="px-3 pt-1 pb-1.5" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
+                                <button type="button" onClick={() => verDetalle('/reportes/puntoinfo/novedades')}
+                                    className="inline-flex items-center gap-1.5 min-h-[44px] px-2 text-[13.5px] font-semibold"
+                                    style={{ color: C.azul }}>
+                                    Ver más →
+                                </button>
                             </div>
                         </Tarjeta>
 

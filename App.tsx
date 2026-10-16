@@ -22,6 +22,7 @@ import Pastores from './pages/audiencia/Pastores';
 import ReportesGCX from './pages/reportes/ReportesGCX';
 import ReportesPuntoInfo from './pages/reportes/ReportesPuntoInfo';
 import ReportesPuntoInfoBautismos from './pages/reportes/ReportesPuntoInfoBautismos';
+import ReportesPuntoInfoNovedades from './pages/reportes/ReportesPuntoInfoNovedades';
 import ReportesPuntoInfoPresentaciones from './pages/reportes/ReportesPuntoInfoPresentaciones';
 import DetalleGrupoReporte from './pages/reportes/DetalleGrupoReporte';
 import CompararTemporadas from './pages/reportes/CompararTemporadas';
@@ -778,6 +779,19 @@ const AppContent: React.FC = () => {
                                         UserRole.REPORTES
                                     ]))
                                         ? <ReportesPuntoInfo />
+                                        : <SinAcceso />
+                                } />
+                                {/* La lista completa de novedades. Los mismos roles
+                                    que el tablero del que sale. */}
+                                <Route path="/reportes/puntoinfo/novedades" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ADMIN_PUNTO,
+                                        UserRole.ENCARGADO_PUNTO,
+                                        UserRole.REPORTES
+                                    ]))
+                                        ? <ReportesPuntoInfoNovedades />
                                         : <SinAcceso />
                                 } />
                                 <Route path="/reportes/puntoinfo/bautismos-detalles" element={
