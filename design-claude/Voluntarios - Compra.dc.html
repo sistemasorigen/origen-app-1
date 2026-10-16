@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button,input{font-family:inherit}input:focus{outline:none}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes vcIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}@keyframes vcLine{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}@keyframes vcRoll{from{opacity:0;transform:translateY(70%)}to{opacity:1;transform:none}}@keyframes vcFade{from{opacity:0}to{opacity:1}}@keyframes vcUp{from{transform:translateY(100%)}to{transform:none}}@keyframes vcSpin{to{transform:rotate(360deg)}}@keyframes vcPulse{0%,100%{opacity:1}50%{opacity:.55}}@keyframes vcCircle{from{stroke-dashoffset:151}to{stroke-dashoffset:0}}@keyframes vcCheck{from{stroke-dashoffset:36}to{stroke-dashoffset:0}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1180px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">FORZAR</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px">
+      <sc-for list="{{ forzar }}" as="fz" hint-placeholder-count="5"><button onClick="{{ fz.ir }}" aria-pressed="{{ fz.on }}" style="{{ fz.style }}">{{ fz.t }}</button></sc-for>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">SUBIDA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <sc-for list="{{ subidas }}" as="sb" hint-placeholder-count="3"><button onClick="{{ sb.ir }}" style="{{ sb.style }}">{{ sb.t }}</button></sc-for>
+    </div>
+    <button onClick="{{ ejemplo }}" style="height:32px; padding:0 14px; border:1px solid #e2e0db; border-radius:999px; background:#fff; color:#0a0a0a; font-size:12.5px; font-weight:600; cursor:pointer">Cargar pedido de ejemplo</button>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}; background:{{ bg }}; transition:background-color .4s ease; box-shadow:0 6px 28px rgba(0,0,0,.14); color:{{ t.ink }}">
+    <div ref="{{ scrollRef }}" style="position:absolute; inset:0; overflow-y:auto; overflow-x:hidden">
+
+      <sc-if value="{{ showSplash }}" hint-placeholder-val="{{ false }}">
+        <div style="min-height:100%; display:flex; flex-direction:column; justify-content:center; padding:{{ splashPad }}; animation:vcIn .35s ease both">
+          <div style="width:100%; max-width:420px; margin:0 auto">
+            <p style="{{ rot }}">ORIGEN · VOLUNTARIOS</p>
+            <h1 style="margin:12px 0 0; font-size:34px; line-height:1.08; font-weight:600; letter-spacing:-.03em; color:{{ t.ink }}">Remeras y buzos del equipo</h1>
+            <p style="margin:12px 0 0; font-size:16px; line-height:1.55; color:{{ t.m52 }}">Entrá con tu cuenta para comprar los tuyos.</p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:32px">
+              <button onClick="{{ entrar }}" style="height:58px; border:1px solid {{ t.line }}; border-radius:999px; background:{{ t.card }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; gap:12px; font-size:16.5px; font-weight:600; cursor:pointer" style-active="transform:scale(.98)">
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.5 5.5 0 01-2.4 3.62v3h3.87c2.27-2.09 3.58-5.17 3.58-8.81z"></path><path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.92l-3.87-3c-1.08.72-2.45 1.15-4.08 1.15-3.13 0-5.79-2.11-6.74-4.96H1.27v3.1A12 12 0 0012 24z"></path><path fill="#FBBC05" d="M5.26 14.27a7.2 7.2 0 010-4.54v-3.1H1.27a12 12 0 000 10.74l3.99-3.1z"></path><path fill="#EA4335" d="M12 4.77c1.76 0 3.35.61 4.6 1.8l3.43-3.43A11.5 11.5 0 0012 0 12 12 0 001.27 6.63l3.99 3.1C6.21 6.88 8.87 4.77 12 4.77z"></path></svg>
+                Continuar con Google
+              </button>
+              <button onClick="{{ entrar }}" style="height:58px; border:0; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:16.5px; font-weight:600; cursor:pointer" style-active="transform:scale(.98)">Entrar con email</button>
+            </div>
+            <p style="margin:18px 0 0; text-align:center; font-size:13.5px; color:{{ t.m52 }}">Después de entrar, volvés directo acá.</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showSkel }}" hint-placeholder-val="{{ false }}">
+        <div aria-busy="true" style="max-width:1040px; margin:0 auto; padding:{{ pad }}">
+          <div style="max-width:560px">
+            <p style="margin:0 0 16px; font-size:13.5px; font-weight:600; color:{{ t.m52 }}">Volviendo de iniciar sesión…</p>
+            <div style="display:flex; align-items:center; gap:14px">
+              <div style="{{ sk }}; width:44px; height:44px; border-radius:999px"></div>
+              <div style="flex:1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px"><div style="{{ sk }}; height:4px"></div><div style="{{ sk }}; height:4px"></div><div style="{{ sk }}; height:4px"></div></div>
+            </div>
+            <div style="{{ sk }}; width:150px; height:26px; margin-top:30px"></div>
+            <div style="background:{{ t.card }}; border-radius:26px; padding:20px; margin-top:18px">
+              <div style="display:flex; align-items:center; gap:14px"><div style="{{ sk }}; width:52px; height:52px; border-radius:999px"></div><div style="{{ sk }}; width:160px; height:16px"></div></div>
+              <div style="{{ sk }}; height:52px; margin-top:18px; border-radius:16px"></div>
+              <div style="{{ sk }}; height:52px; margin-top:8px; border-radius:16px"></div>
+              <div style="{{ sk }}; height:52px; margin-top:8px; border-radius:16px"></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ enPasos }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:1040px; margin:0 auto; padding:{{ pad }}">
+          <div style="display:grid; grid-template-columns:{{ cols }}; gap:48px; justify-content:center; align-items:start">
+            <div style="min-width:0">
+              <div style="display:flex; align-items:center; gap:14px">
+                <button onClick="{{ atras }}" aria-label="Volver" style="width:44px; height:44px; flex:none; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+                <div style="flex:1; min-width:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px" aria-label="{{ pasoAria }}">
+                  <sc-for list="{{ segs }}" as="sg" hint-placeholder-count="3">
+                    <div style="min-width:0"><div style="{{ sg.bar }}"></div><p style="{{ sg.lbl }}">{{ sg.t }}</p></div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <sc-if value="{{ p1 }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-top:28px; animation:vcIn .35s ease both">
+                  <h2 style="margin:0; font-size:26px; font-weight:600; letter-spacing:-.025em; color:{{ t.ink }}">Tus datos</h2>
+                  <div style="background:{{ t.card }}; border-radius:26px; padding:20px; margin-top:18px; box-shadow:{{ t.shadow }}">
+                    <div style="display:flex; align-items:center; gap:14px">
+                      <div style="width:52px; height:52px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:600; color:{{ t.ink }}">DF</div>
+                      <p style="margin:0; font-size:17px; font-weight:600; color:{{ t.ink }}">Daniela Ferreyra</p>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:18px">
+                      <div style="background:{{ t.surf }}; border-radius:16px; padding:12px 16px"><p style="{{ rot }}">NOMBRE</p><p style="margin:4px 0 0; font-size:16px; font-weight:600; color:{{ t.ink }}">Daniela</p></div>
+                      <div style="background:{{ t.surf }}; border-radius:16px; padding:12px 16px"><p style="{{ rot }}">APELLIDO</p><p style="margin:4px 0 0; font-size:16px; font-weight:600; color:{{ t.ink }}">Ferreyra</p></div>
+                      <sc-if value="{{ telInput }}" hint-placeholder-val="{{ false }}">
+                        <label style="display:block; background:{{ t.surf }}; border-radius:16px; padding:12px 16px; box-shadow:inset 0 0 0 2px {{ t.warn }}">
+                          <span style="{{ rot }}; display:block">TELÉFONO</span>
+                          <input type="tel" inputMode="tel" value="{{ tel }}" onChange="{{ onTel }}" placeholder="Agregá tu teléfono" style="width:100%; height:32px; margin-top:4px; border:0; background:transparent; font-size:16px; font-weight:600; color:{{ t.ink }}" />
+                        </label>
+                        <p style="margin:2px 4px 0; font-size:13px; font-weight:600; color:{{ t.ink }}">Tu cuenta no tiene teléfono. Lo necesitamos para avisarte.</p>
+                        <button onClick="{{ toggleGuardar }}" role="checkbox" aria-checked="{{ guardarAria }}" style="min-height:44px; padding:0 4px; border:0; background:transparent; display:flex; align-items:center; gap:12px; font-size:14px; font-weight:600; color:{{ t.ink }}; cursor:pointer; text-align:left">
+                          <span style="{{ checkBox }}"><sc-if value="{{ guardar }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if></span>
+                          Guardarlo también en mi perfil
+                        </button>
+                      </sc-if>
+                      <sc-if value="{{ telValor }}" hint-placeholder-val="{{ true }}">
+                        <div style="background:{{ t.surf }}; border-radius:16px; padding:12px 16px"><p style="{{ rot }}">TELÉFONO</p><p style="margin:4px 0 0; font-size:16px; font-weight:600; color:{{ t.ink }}">{{ telMostrar }}</p></div>
+                      </sc-if>
+                    </div>
+                  </div>
+                  <p style="margin:14px 4px 0; font-size:13.5px; line-height:1.55; color:{{ t.m52 }}">Son los datos de tu cuenta. Los usamos para avisarte cuando tu pedido esté listo.</p>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ p2 }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:28px; animation:vcIn .35s ease both">
+                  <h2 style="margin:0; font-size:26px; font-weight:600; letter-spacing:-.025em; color:{{ t.ink }}">Armá tu pedido</h2>
+
+                  <sc-if value="{{ hayErr }}" hint-placeholder-val="{{ false }}">
+                    <div role="alert" style="background:{{ t.card }}; border-radius:20px; padding:14px 16px; margin-top:16px">
+                      <p style="margin:0; font-size:14.5px; line-height:1.45; font-weight:600; color:{{ t.red }}">{{ agotadoMsg }}</p>
+                      <p style="margin:5px 0 0; font-size:13px; line-height:1.5; color:{{ t.m52 }}">Tu comprobante sigue cargado. Si el total cambia, te lo marcamos antes de pagar.</p>
+                    </div>
+                  </sc-if>
+
+                  <div style="background:{{ t.card }}; border-radius:26px; padding:20px; margin-top:18px; box-shadow:{{ t.shadow }}">
+                    <p style="{{ rot }}">PRODUCTO</p>
+                    <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:10px">
+                      <sc-for list="{{ prods }}" as="pr" hint-placeholder-count="2">
+                        <button onClick="{{ pr.ir }}" disabled="{{ pr.off }}" aria-pressed="{{ pr.selAria }}" style="{{ pr.style }}">
+                          <sc-if value="{{ pr.sel }}" hint-placeholder-val="{{ false }}"><span style="position:absolute; top:10px; right:10px; width:24px; height:24px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; display:flex; align-items:center; justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span></sc-if>
+                          <sc-if value="{{ pr.esRemera }}" hint-placeholder-val="{{ true }}"><svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M8.5 3.5L4 5.5 2.5 10l3 1 1-2V20.5h11V9l1 2 3-1L20 5.5l-4.5-2c-.6 1.6-2 2.5-3.5 2.5S9.1 5.1 8.5 3.5z"></path></svg></sc-if>
+                          <sc-if value="{{ pr.esBuzo }}" hint-placeholder-val="{{ false }}"><svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><path d="M8.5 4L4.5 6 2.5 15l3 .8 1-4.3V21h11v-9.5l1 4.3 3-.8-2-9-4-2"></path><path d="M8.5 4c.6-1.6 1.9-2.5 3.5-2.5S14.9 2.4 15.5 4c-.4 2.2-1.8 3.5-3.5 3.5S8.9 6.2 8.5 4z"></path><path d="M9 16.5h6"></path></svg></sc-if>
+                          <span style="font-size:16px; font-weight:600">{{ pr.nombre }}</span>
+                          <span style="font-size:13.5px; font-weight:500; color:{{ t.m52 }}">{{ pr.precio }}</span>
+                        </button>
+                      </sc-for>
+                    </div>
+
+                    <p style="{{ rot }}; margin-top:22px">TALLE</p>
+                    <sc-if value="{{ hayProd }}" hint-placeholder-val="{{ false }}">
+                      <div role="radiogroup" aria-label="Talle" style="display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin-top:10px">
+                        <sc-for list="{{ talles }}" as="tl" hint-placeholder-count="6"><button role="radio" aria-checked="{{ tl.selAria }}" onClick="{{ tl.ir }}" style="{{ tl.style }}">{{ tl.n }}</button></sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ noProd }}" hint-placeholder-val="{{ true }}">
+                      <div style="margin-top:10px; height:56px; border-radius:16px; background:{{ t.surf }}; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:500; color:{{ t.m52 }}">Primero elegí remera o buzo</div>
+                    </sc-if>
+
+                    <p style="{{ rot }}; margin-top:22px">CANTIDAD</p>
+                    <div style="display:flex; align-items:center; gap:14px; margin-top:10px">
+                      <button onClick="{{ cantMenos }}" disabled="{{ cantMenosOff }}" aria-label="Menos" style="{{ cantMenosStyle }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12"></path></svg></button>
+                      <span aria-live="polite" style="min-width:28px; text-align:center; font-size:20px; font-weight:600; color:{{ t.ink }}">{{ cant }}</span>
+                      <button onClick="{{ cantMas }}" disabled="{{ cantMasOff }}" aria-label="Más" style="{{ cantMasStyle }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"></path></svg></button>
+                    </div>
+
+                    <button onClick="{{ agregar }}" disabled="{{ agregarOff }}" style="{{ agregarStyle }}">{{ agregarTxt }}</button>
+                    <sc-if value="{{ aviso5 }}" hint-placeholder-val="{{ false }}"><p role="status" style="margin:10px 0 0; text-align:center; font-size:13.5px; font-weight:600; color:{{ t.ink }}">Hasta 5 por talle.</p></sc-if>
+                  </div>
+
+                  <p style="{{ rot }}; margin-top:28px">{{ pedidoRot }}</p>
+                  <div style="background:{{ t.card }}; border-radius:26px; margin-top:10px; overflow:hidden; box-shadow:{{ t.shadow }}">
+                    <sc-if value="{{ hayLineas }}" hint-placeholder-val="{{ false }}">
+                      <sc-for list="{{ lineas }}" as="l" hint-placeholder-count="2">
+                        <div style="{{ l.row }}">
+                          <div style="display:flex; align-items:center; gap:12px">
+                            <span style="width:44px; height:44px; flex:none; border-radius:14px; background:{{ t.surf }}; display:flex; align-items:center; justify-content:center; color:{{ t.ink }}">
+                              <sc-if value="{{ l.esRemera }}" hint-placeholder-val="{{ true }}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8.5 3.5L4 5.5 2.5 10l3 1 1-2V20.5h11V9l1 2 3-1L20 5.5l-4.5-2c-.6 1.6-2 2.5-3.5 2.5S9.1 5.1 8.5 3.5z"></path></svg></sc-if>
+                              <sc-if value="{{ l.esBuzo }}" hint-placeholder-val="{{ false }}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M8.5 4L4.5 6 2.5 15l3 .8 1-4.3V21h11v-9.5l1 4.3 3-.8-2-9-4-2"></path><path d="M8.5 4c.6-1.6 1.9-2.5 3.5-2.5S14.9 2.4 15.5 4c-.4 2.2-1.8 3.5-3.5 3.5S8.9 6.2 8.5 4z"></path></svg></sc-if>
+                            </span>
+                            <div style="flex:1; min-width:0">
+                              <p style="margin:0; font-size:15.5px; font-weight:600; color:{{ t.ink }}">{{ l.nombre }}</p>
+                              <sc-if value="{{ l.err }}" hint-placeholder-val="{{ false }}"><p style="margin:3px 0 0; font-size:13px; line-height:1.4; font-weight:600; color:{{ t.red }}">Se agotó mientras comprabas. Cambialo o quitalo.</p></sc-if>
+                            </div>
+                            <button onClick="{{ l.quitar }}" aria-label="{{ l.quitarAria }}" style="width:44px; height:44px; flex:none; border:0; border-radius:999px; background:transparent; color:{{ t.m52 }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"></path></svg></button>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:10px; margin-top:8px; padding-left:56px">
+                            <button onClick="{{ l.menos }}" disabled="{{ l.menosOff }}" aria-label="Uno menos" style="{{ l.menosStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12"></path></svg></button>
+                            <span style="min-width:22px; text-align:center; font-size:16px; font-weight:600; color:{{ t.ink }}">{{ l.cant }}</span>
+                            <button onClick="{{ l.mas }}" disabled="{{ l.masOff }}" aria-label="Uno más" style="{{ l.masStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"></path></svg></button>
+                            <span style="margin-left:auto; font-size:15.5px; font-weight:600; color:{{ t.ink }}">{{ l.sub }}</span>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </sc-if>
+                    <sc-if value="{{ sinLineas }}" hint-placeholder-val="{{ true }}">
+                      <div style="padding:30px 20px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center">
+                        <span style="width:56px; height:56px; border-radius:999px; background:{{ t.surf }}; display:flex; align-items:center; justify-content:center; color:{{ t.m38 }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M5 8h14l-1 12H6L5 8z"></path><path d="M9 8V6a3 3 0 016 0v2"></path></svg></span>
+                        <p style="margin:0; font-size:14.5px; font-weight:600; color:{{ t.m52 }}">Todavía no agregaste nada.</p>
+                      </div>
+                    </sc-if>
+                    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:16px 20px 18px; border-top:1px solid {{ t.line }}">
+                      <span style="font-size:15px; font-weight:600; color:{{ t.m52 }}">Total</span>
+                      <span style="color:{{ t.ink }}">{{ totalGrande }}</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ p3 }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:28px; animation:vcIn .35s ease both">
+                  <h2 style="margin:0; font-size:26px; font-weight:600; letter-spacing:-.025em; color:{{ t.ink }}">Pagá</h2>
+                  <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:20px">
+                    <span style="{{ rot }}">TRANSFERÍ</span>
+                    <span style="{{ montoStyle }}">{{ totalTxt }}</span>
+                    <span style="{{ rot }}">A</span>
+                  </div>
+                  <sc-if value="{{ montoCambio }}" hint-placeholder-val="{{ false }}">
+                    <p role="status" style="margin:8px 0 0; font-size:13.5px; line-height:1.5; font-weight:600; color:{{ t.ink }}">El total cambió por el producto agotado. Antes era {{ totalAntes }}: transferí el monto nuevo.</p>
+                  </sc-if>
+                  <div style="background:{{ t.card }}; border-radius:26px; padding:20px; margin-top:12px; box-shadow:{{ t.shadow }}">
+                    <div style="display:flex; align-items:center; gap:12px">
+                      <div style="flex:1; min-width:0"><p style="{{ rot }}">ALIAS</p><p style="margin:6px 0 0; font-size:{{ aliasSize }}; line-height:1.1; font-weight:600; letter-spacing:-.02em; color:{{ t.ink }}; overflow-wrap:anywhere">origen.iglesia</p></div>
+                      <button onClick="{{ copiarAlias }}" style="{{ copiarAliasStyle }}"><sc-if value="{{ aliasCopiado }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if>{{ aliasTxt }}</button>
+                    </div>
+                    <div style="height:1px; background:{{ t.line }}; margin:16px 0"></div>
+                    <p style="{{ rot }}">TITULAR</p>
+                    <p style="margin:5px 0 0; font-size:15px; font-weight:600; color:{{ t.ink }}">Asociación Civil Fuente de Vida</p>
+                    <div style="height:1px; background:{{ t.line }}; margin:16px 0"></div>
+                    <div style="display:flex; align-items:center; gap:12px">
+                      <div style="flex:1; min-width:0"><p style="{{ rot }}">CUIT</p><p style="margin:5px 0 0; font-size:15px; font-weight:600; color:{{ t.ink }}">30-70705090-6</p></div>
+                      <button onClick="{{ copiarCuit }}" style="{{ copiarCuitStyle }}"><sc-if value="{{ cuitCopiado }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if>{{ cuitTxt }}</button>
+                    </div>
+                  </div>
+                  <p style="margin:12px 4px 0; font-size:13.5px; line-height:1.55; color:{{ t.m52 }}">Una sola transferencia por el total del pedido. Guardá la captura del comprobante.</p>
+
+                  <p style="{{ rot }}; margin-top:26px">COMPROBANTE</p>
+                  <div style="margin-top:10px">
+                    <sc-if value="{{ compVacio }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ subir }}" style="{{ zona }}">
+                        <span style="width:48px; height:48px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5M7 10l5-5 5 5M5 19h14"></path></svg></span>
+                        <span style="font-size:15.5px; font-weight:600">Subir la captura del comprobante</span>
+                      </button>
+                    </sc-if>
+                    <sc-if value="{{ compSubiendo }}" hint-placeholder-val="{{ false }}">
+                      <div role="status" style="background:{{ t.card }}; border-radius:22px; padding:20px">
+                        <p style="margin:0; font-size:15px; font-weight:600; color:{{ t.ink }}">Subiendo el comprobante…</p>
+                        <div style="height:6px; border-radius:999px; background:{{ t.track }}; margin-top:14px; overflow:hidden"><div style="height:100%; width:{{ compW }}; border-radius:999px; background:{{ t.ink }}; transition:width 1.2s cubic-bezier(.3,.6,.3,1)"></div></div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ compListo }}" hint-placeholder-val="{{ false }}">
+                      <div style="background:{{ t.card }}; border-radius:22px; padding:14px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; animation:vcIn .3s ease both">
+                        <div style="position:relative; width:56px; height:72px; flex:none; border-radius:12px; background:{{ t.thumb }}">
+                          <span style="position:absolute; right:-6px; bottom:-6px; width:24px; height:24px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 3px {{ t.card }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>
+                        </div>
+                        <div style="flex:1 1 140px; min-width:0">
+                          <p style="margin:0; font-size:14.5px; font-weight:600; color:{{ t.ink }}; overflow-wrap:anywhere">comprobante-transferencia.jpg</p>
+                          <p style="margin:3px 0 0; font-size:13px; color:{{ t.m52 }}">Listo · 248 KB</p>
+                        </div>
+                        <div style="display:flex; gap:6px">
+                          <button onClick="{{ subir }}" style="{{ chipBtn }}">Cambiar</button>
+                          <button onClick="{{ quitarComp }}" style="{{ chipBtn }}">Quitar</button>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ compError }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ subir }}" style="{{ zona }}">
+                        <span role="alert" style="font-size:15px; line-height:1.45; font-weight:600; color:{{ t.red }}">{{ compErrTxt }}</span>
+                        <span style="{{ chipBtn }}; display:flex; align-items:center">Elegir otro archivo</span>
+                      </button>
+                    </sc-if>
+                    <p style="margin:8px 4px 0; font-size:13px; color:{{ t.m52 }}">Imagen o PDF · hasta 10 MB</p>
+                  </div>
+
+                  <sc-if value="{{ errConexion }}" hint-placeholder-val="{{ false }}">
+                    <div role="alert" style="background:{{ t.card }}; border-radius:20px; padding:16px; margin-top:18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+                      <div style="flex:1 1 200px; min-width:0">
+                        <p style="margin:0; font-size:14.5px; line-height:1.45; font-weight:600; color:{{ t.red }}">Sin conexión. Tu pedido no se envió todavía.</p>
+                        <p style="margin:4px 0 0; font-size:13px; color:{{ t.m52 }}">Tu comprobante sigue cargado.</p>
+                      </div>
+                      <button onClick="{{ confirmar }}" style="{{ chipBtn }}">Reintentar</button>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:28px">
+                  <sc-if value="{{ hayRazon }}" hint-placeholder-val="{{ false }}"><p style="margin:0 0 10px; text-align:center; font-size:13.5px; font-weight:600; color:{{ t.m52 }}">{{ razon }}</p></sc-if>
+                  <button onClick="{{ principal }}" disabled="{{ principalOff }}" style="{{ principalStyle }}"><sc-if value="{{ confirmando }}" hint-placeholder-val="{{ false }}"><span style="width:18px; height:18px; border-radius:999px; border:2.5px solid currentColor; border-right-color:transparent; animation:vcSpin .7s linear infinite"></span></sc-if>{{ principalTxt }}</button>
+                </div>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+              <aside style="position:sticky; top:24px; background:{{ t.card }}; border-radius:26px; padding:22px; box-shadow:{{ t.shadow }}">
+                <p style="{{ rot }}">TU PEDIDO</p>
+                <div style="margin-top:12px">
+                  <sc-for list="{{ resumen }}" as="r" hint-placeholder-count="2">
+                    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid {{ t.line }}; animation:vcLine .3s ease both">
+                      <span style="font-size:14.5px; font-weight:600; color:{{ r.ink }}">{{ r.txt }}</span>
+                      <span style="font-size:14.5px; font-weight:600; color:{{ t.ink }}; white-space:nowrap">{{ r.sub }}</span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ sinLineas }}" hint-placeholder-val="{{ true }}"><p style="margin:0; padding:10px 0 14px; font-size:14px; color:{{ t.m52 }}; border-bottom:1px solid {{ t.line }}">Todavía no agregaste nada.</p></sc-if>
+                </div>
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-top:16px">
+                  <span style="font-size:15px; font-weight:600; color:{{ t.m52 }}">Total</span>
+                  <span style="color:{{ t.ink }}">{{ totalAside }}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; margin-top:16px; padding:12px 14px; border-radius:16px; background:{{ t.surf }}">
+                  <span style="{{ compDot }}"></span>
+                  <span style="font-size:13.5px; font-weight:600; color:{{ t.ink }}">{{ compEstado }}</span>
+                </div>
+              </aside>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showListo }}" hint-placeholder-val="{{ false }}">
+        <div style="min-height:100%; padding:{{ listoPad }}; animation:vcIn .4s ease both">
+          <div style="max-width:460px; margin:0 auto; display:flex; flex-direction:column; align-items:center; text-align:center">
+            <svg width="92" height="92" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:{{ t.ink }}"><circle cx="26" cy="26" r="24" stroke-dasharray="151" style="stroke-dashoffset:0; animation:vcCircle .6s ease-out both"></circle><path d="M15 27l7 7 15-16" stroke-dasharray="36" style="stroke-dashoffset:0; animation:vcCheck .4s .45s ease-out both"></path></svg>
+            <h1 style="margin:20px 0 0; font-size:30px; line-height:1.1; font-weight:600; letter-spacing:-.03em; color:{{ t.ink }}">¡Compra confirmada!</h1>
+            <p style="margin:10px 0 0; font-size:16px; color:{{ t.m52 }}">Ya recibimos tu comprobante.</p>
+
+            <div style="position:relative; width:100%; margin-top:26px; background:{{ t.card }}; border-radius:24px; text-align:left; box-shadow:{{ t.shadow }}">
+              <div style="padding:22px 22px 18px">
+                <p style="{{ rot }}">PEDIDO N.º</p>
+                <p style="margin:6px 0 0; font:600 30px/1 ui-monospace,Menlo,monospace; letter-spacing:.04em; color:{{ t.ink }}">VOL-4F7K</p>
+              </div>
+              <div style="position:relative; height:0; border-top:2px dashed {{ t.dash }}; margin:0 18px">
+                <span style="position:absolute; left:-30px; top:-12px; width:22px; height:22px; border-radius:999px; background:{{ bg }}"></span>
+                <span style="position:absolute; right:-30px; top:-12px; width:22px; height:22px; border-radius:999px; background:{{ bg }}"></span>
+              </div>
+              <div style="padding:18px 22px 22px">
+                <sc-for list="{{ ticket }}" as="tk" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:baseline; gap:8px; padding:5px 0">
+                    <span style="font-size:14.5px; font-weight:600; color:{{ t.ink }}">{{ tk.txt }}</span>
+                    <span style="flex:1; min-width:12px; border-bottom:2px dotted {{ t.dash }}; transform:translateY(-4px)"></span>
+                    <span style="font-size:14.5px; font-weight:600; color:{{ t.ink }}; white-space:nowrap">{{ tk.sub }}</span>
+                  </div>
+                </sc-for>
+                <p style="margin:12px 0 0; padding-top:12px; border-top:1px solid {{ t.line }}; font-size:16px; font-weight:700; color:{{ t.ink }}">Total {{ ticketTotal }} · Transferencia</p>
+                <p style="margin:8px 0 0; font-size:14px; color:{{ t.m52 }}">{{ ticketPersona }}</p>
+                <p style="margin:3px 0 0; font-size:14px; color:{{ t.m52 }}">16 oct 2026 · 15:42</p>
+              </div>
+            </div>
+            <p style="margin:18px 0 0; font-size:15px; line-height:1.5; font-weight:600; color:{{ t.ink }}">Retiralo en el Punto de Información mostrando esta pantalla.</p>
+            <div style="display:flex; flex-direction:column; gap:10px; width:100%; margin-top:24px">
+              <button onClick="{{ alInicio }}" style="height:58px; border:0; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:16.5px; font-weight:600; cursor:pointer" style-active="transform:scale(.98)">Volver al inicio</button>
+              <button onClick="{{ otroPedido }}" style="height:58px; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; font-size:16.5px; font-weight:600; cursor:pointer" style-active="transform:scale(.98)">Hacer otro pedido</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ barra }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute; left:0; right:0; bottom:0; z-index:10; background:{{ bg }}; transition:background-color .4s ease; border-top:1px solid {{ t.line }}; padding:10px 16px 34px">
+        <sc-if value="{{ hayLineas }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ abrirSheet }}" aria-label="Ver el detalle del pedido" style="width:100%; height:48px; margin-bottom:8px; padding:0 4px; border:0; background:transparent; display:flex; align-items:center; gap:10px; color:{{ t.ink }}; cursor:pointer">
+            <span style="font-size:15px; font-weight:600">{{ resumenTxt }}</span>
+            <span style="margin-left:auto; display:flex; align-items:center; gap:4px; font-size:13.5px; font-weight:600; color:{{ t.m52 }}">Ver detalle<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"></path></svg></span>
+          </button>
+        </sc-if>
+        <sc-if value="{{ hayRazon }}" hint-placeholder-val="{{ false }}"><p style="margin:0 0 8px; text-align:center; font-size:13px; font-weight:600; color:{{ t.m52 }}">{{ razon }}</p></sc-if>
+        <button onClick="{{ principal }}" disabled="{{ principalOff }}" style="{{ principalStyle }}"><sc-if value="{{ confirmando }}" hint-placeholder-val="{{ false }}"><span style="width:18px; height:18px; border-radius:999px; border:2.5px solid currentColor; border-right-color:transparent; animation:vcSpin .7s linear infinite"></span></sc-if>{{ principalTxt }}</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+      <span aria-hidden="true" style="position:absolute; left:50%; bottom:8px; z-index:50; transform:translateX(-50%); width:134px; height:5px; border-radius:999px; background:{{ t.m38 }}; pointer-events:none"></span>
+    </sc-if>
+
+    <sc-if value="{{ sheet }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cerrarSheet }}" style="position:absolute; inset:0; z-index:40; background:rgba(0,0,0,.45); display:flex; align-items:flex-end; animation:vcFade .2s ease">
+        <div ref="{{ sheetRef }}" onClick="{{ stop }}" role="dialog" aria-label="Detalle del pedido" style="width:100%; max-height:92%; overflow-y:auto; background:{{ t.card }}; border-radius:28px 28px 0 0; padding:0 20px 34px; animation:vcUp .28s cubic-bezier(.2,.8,.2,1)">
+          <div onPointerDown="{{ dragStart }}" onPointerMove="{{ dragMove }}" onPointerUp="{{ dragEnd }}" onPointerCancel="{{ dragEnd }}" style="padding:10px 0 6px; touch-action:none; cursor:grab"><div style="width:40px; height:5px; border-radius:999px; background:{{ t.m38 }}; margin:0 auto"></div></div>
+          <p style="{{ rot }}; margin-top:10px">TU PEDIDO</p>
+          <div style="margin-top:8px">
+            <sc-for list="{{ resumen }}" as="r" hint-placeholder-count="2">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid {{ t.line }}">
+                <span style="font-size:15px; font-weight:600; color:{{ r.ink }}">{{ r.txt }}</span>
+                <span style="font-size:15px; font-weight:600; color:{{ t.ink }}; white-space:nowrap">{{ r.sub }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-top:16px">
+            <span style="font-size:15px; font-weight:600; color:{{ t.m52 }}">Total</span>
+            <span style="color:{{ t.ink }}">{{ totalAside }}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:16px; padding:12px 14px; border-radius:16px; background:{{ t.surf }}">
+            <span style="{{ compDot }}"></span>
+            <span style="font-size:13.5px; font-weight:600; color:{{ t.ink }}">{{ compEstado }}</span>
+          </div>
+          <button onClick="{{ cerrarSheet }}" style="width:100%; height:54px; margin-top:18px; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; font-size:15.5px; font-weight:600; cursor:pointer">Listo</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position:absolute; left:50%; top:20px; z-index:60; transform:translateX(-50%); width:max-content; max-width:calc(100% - 32px); padding:12px 18px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:14px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.2); animation:vcIn .2s ease">{{ toastTxt }}</div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1500,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  PRECIO = { remera: 18000, buzo: 32000 };
+  TALLES = { remera: [1, 2, 3, 4, 6, 8], buzo: [2, 3, 5] };
+  NOMBRE = { remera: 'Remera', buzo: 'Buzo' };
+  ART = { remera: 'la remera', buzo: 'el buzo' };
+  state = {
+    device: 'm', dark: false, paso: 1, volviendo: false,
+    f: { sinTel: false, sinTalles: false, agotado: false, sinConexion: false, subida: 'normal' },
+    tel: '', telOk: false, guardar: true,
+    prod: null, talle: null, cant: 1, lineas: [], nid: 1, aviso5: false,
+    copiado: null, comp: 'vacio', compW: '0%',
+    confirmando: false, errConexion: false, agotadoMsg: '', agotados: {}, agotadoUsado: false,
+    totalVisto: null, montoCambio: false, totalAntes: 0, ticket: null,
+    sheet: false, toast: null
+  };
+  scrollRef = React.createRef(); sheetRef = React.createRef();
+  timers = []; dY = null; dDy = 0;
+
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  later(fn, ms) { const id = setTimeout(fn, ms); this.timers.push(id); return id; }
+  fmt(n) { return '$ ' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  arriba() { const el = this.scrollRef.current; if (el) el.scrollTop = 0; }
+  ir(paso, extra) { this.setState(Object.assign({ paso, sheet: false }, extra || {})); this.arriba(); }
+  aviso(t) { this.setState({ toast: t }); this.later(() => this.setState({ toast: null }), 2200); }
+  vivas() { return this.state.lineas.filter(l => !l.saliendo); }
+  total() { return this.vivas().reduce((a, l) => a + l.cant * this.PRECIO[l.prod], 0); }
+  disponibles(prod) {
+    if (prod === 'buzo' && this.state.f.sinTalles) return [];
+    return this.TALLES[prod].filter(x => !this.state.agotados[prod + '-' + x]);
+  }
+  roll(n, size) {
+    const chars = this.fmt(n).split('');
+    return React.createElement('span', { style: { display: 'inline-flex', overflow: 'hidden', fontSize: size, fontWeight: 600, letterSpacing: '-.025em', lineHeight: 1.15, fontVariantNumeric: 'tabular-nums' }, 'aria-label': this.fmt(n) },
+      chars.map((c, i) => React.createElement('span', { key: (chars.length - i) + ':' + c, 'aria-hidden': 'true', style: { display: 'inline-block', whiteSpace: 'pre', animation: 'vcRoll .34s cubic-bezier(.2,.8,.2,1) both' } }, c)));
+  }
+  agregar() {
+    const s = this.state;
+    if (!s.prod || !s.talle) return;
+    const ex = s.lineas.find(l => !l.saliendo && l.prod === s.prod && l.talle === s.talle);
+    if (ex) {
+      const nc = ex.cant + s.cant;
+      this.setState({ lineas: s.lineas.map(l => l.id === ex.id ? Object.assign({}, l, { cant: Math.min(5, nc), flash: true }) : l), aviso5: nc > 5, talle: null, cant: 1 });
+      this.later(() => this.setState(st => ({ lineas: st.lineas.map(l => l.id === ex.id ? Object.assign({}, l, { flash: false }) : l) })), 700);
+    } else {
+      this.setState({ lineas: s.lineas.concat([{ id: s.nid, prod: s.prod, talle: s.talle, cant: s.cant, err: false }]), nid: s.nid + 1, aviso5: false, talle: null, cant: 1 });
+    }
+  }
+  quitar(id) {
+    this.setState(st => ({ lineas: st.lineas.map(l => l.id === id ? Object.assign({}, l, { saliendo: true }) : l), aviso5: false }));
+    this.later(() => this.setState(st => ({ lineas: st.lineas.filter(l => l.id !== id) })), 260);
+  }
+  subir() {
+    const modo = this.state.f.subida;
+    if (modo === 'grande') { this.setState({ comp: 'grande' }); return; }
+    this.setState({ comp: 'subiendo', compW: '6%', errConexion: false });
+    this.later(() => this.setState({ compW: '100%' }), 40);
+    this.later(() => this.setState({ comp: modo === 'error' ? 'error' : 'listo' }), 1350);
+  }
+  confirmar() {
+    const s = this.state;
+    if (s.comp !== 'listo' || s.confirmando) return;
+    this.setState({ confirmando: true, errConexion: false });
+    this.later(() => {
+      const st = this.state, vivas = this.vivas();
+      if (st.f.sinConexion) { this.setState({ confirmando: false, errConexion: true }); return; }
+      if (st.f.agotado && !st.agotadoUsado && vivas.length) {
+        const blanco = vivas.find(l => l.prod === 'buzo') || vivas[vivas.length - 1];
+        this.ir(2, {
+          confirmando: false, agotadoUsado: true, totalVisto: this.total(),
+          agotados: Object.assign({}, st.agotados, { [blanco.prod + '-' + blanco.talle]: true }),
+          lineas: st.lineas.map(l => l.id === blanco.id ? Object.assign({}, l, { err: true }) : l),
+          agotadoMsg: 'Se agotó ' + this.ART[blanco.prod] + ' talle ' + blanco.talle + ' mientras comprabas. Cambial' + (blanco.prod === 'remera' ? 'a' : 'o') + ' o quital' + (blanco.prod === 'remera' ? 'a' : 'o') + '.'
+        });
+        return;
+      }
+      this.ir(4, { confirmando: false, montoCambio: false, ticket: { lineas: vivas.map(l => ({ txt: l.cant + ' × ' + this.NOMBRE[l.prod] + ' · Talle ' + l.talle, sub: this.fmt(l.cant * this.PRECIO[l.prod]) })), total: this.fmt(this.total()) } });
+    }, 1400);
+  }
+  copiar(k, txt) {
+    try { navigator.clipboard.writeText(txt); } catch (e) {}
+    this.setState({ copiado: k });
+    this.later(() => this.setState(st => st.copiado === k ? { copiado: null } : null), 1800);
+  }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'pc', dk = s.dark, f = s.f;
+    const seg = on => 'height:32px; padding:0 12px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const a = (o) => dk ? 'rgba(255,255,255,' + o + ')' : 'rgba(0,0,0,' + o + ')';
+    const t = dk
+      ? { ink: '#f4f4f2', card: '#1b1b1a', surf: '#232321', chip: '#2a2a28', line: 'rgba(255,255,255,.08)', prim: '#ffffff', primInk: '#0a0a0a', shadow: 'none', red: '#ff8a7a', warn: '#d9a54a', flash: '#2d2818', track: 'rgba(255,255,255,.12)', dash: 'rgba(255,255,255,.2)', thumb: 'repeating-linear-gradient(135deg,#2a2a28 0 6px,#323230 6px 12px)', skel: '#262624' }
+      : { ink: '#0a0a0a', card: '#ffffff', surf: '#f7f7f5', chip: '#f2f2f0', line: 'rgba(0,0,0,.07)', prim: '#0a0a0a', primInk: '#ffffff', shadow: '0 1px 3px rgba(0,0,0,.04)', red: '#b42318', warn: '#c08a2e', flash: '#f4ecd6', track: 'rgba(0,0,0,.08)', dash: 'rgba(0,0,0,.18)', thumb: 'repeating-linear-gradient(135deg,#ecebe7 0 6px,#e4e2dd 6px 12px)', skel: '#ebeae6' };
+    t.m52 = a(.52); t.m38 = a(.38);
+
+    const BG = dk ? { base: '#111110', crema: '#17140f', verde: '#111611', final: '#0f1a10' } : { base: '#f6f6f4', crema: '#f6f1e6', verde: '#edf1ea', final: '#e2ecdf' };
+    const paso = s.paso;
+    const bg = s.volviendo || paso <= 1 ? BG.base : paso === 2 ? BG.crema : paso === 3 ? BG.verde : BG.final;
+
+    const vivas = this.vivas(), total = this.total(), nProd = vivas.reduce((x, l) => x + l.cant, 0);
+    const hayErr = vivas.some(l => l.err);
+    const telDigits = s.tel.replace(/\D/g, '').length;
+    const telValid = !f.sinTel || s.telOk || telDigits >= 8;
+    const circ = dis => 'width:44px; height:44px; flex:none; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; cursor:' + (dis ? 'default' : 'pointer') + '; opacity:' + (dis ? .35 : 1);
+
+    const prods = ['remera', 'buzo'].map(k => {
+      const disp = this.disponibles(k), off = disp.length === 0, sel = s.prod === k;
+      return {
+        nombre: this.NOMBRE[k], esRemera: k === 'remera', esBuzo: k === 'buzo', sel, selAria: sel ? 'true' : 'false', off,
+        precio: off ? 'Sin talles por ahora' : this.fmt(this.PRECIO[k]),
+        ir: () => { if (!off) this.setState({ prod: k, talle: null, aviso5: false }); },
+        style: 'position:relative; min-height:150px; padding:16px 12px 14px; border-radius:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; text-align:center; font-family:inherit; background:' + t.surf + '; color:' + t.ink + '; border:2px solid ' + (sel ? t.ink : 'transparent') + '; cursor:' + (off ? 'not-allowed' : 'pointer') + '; opacity:' + (off ? .5 : 1) + '; transition:border-color .15s'
+      };
+    });
+    const talles = s.prod ? this.disponibles(s.prod).map(n => {
+      const sel = s.talle === n;
+      return { n, selAria: sel ? 'true' : 'false', ir: () => this.setState({ talle: n, aviso5: false }), style: 'height:56px; border:0; border-radius:16px; font-size:17px; font-weight:600; cursor:pointer; transition:background .15s, color .15s; background:' + (sel ? t.prim : t.surf) + '; color:' + (sel ? t.primInk : t.ink) };
+    }) : [];
+    const puedeAgregar = !!(s.prod && s.talle);
+
+    const lineas = s.lineas.map(l => {
+      const sal = !!l.saliendo;
+      return {
+        nombre: this.NOMBRE[l.prod] + ' · Talle ' + l.talle, esRemera: l.prod === 'remera', esBuzo: l.prod === 'buzo',
+        err: l.err, cant: l.cant, sub: this.fmt(l.cant * this.PRECIO[l.prod]),
+        quitarAria: 'Quitar ' + this.NOMBRE[l.prod].toLowerCase() + ' talle ' + l.talle,
+        quitar: () => this.quitar(l.id),
+        menosOff: l.cant <= 1, masOff: l.cant >= 5, menosStyle: circ(l.cant <= 1), masStyle: circ(l.cant >= 5),
+        menos: () => { if (l.cant > 1) this.setState(st => ({ lineas: st.lineas.map(x => x.id === l.id ? Object.assign({}, x, { cant: x.cant - 1 }) : x) })); },
+        mas: () => { if (l.cant < 5) this.setState(st => ({ lineas: st.lineas.map(x => x.id === l.id ? Object.assign({}, x, { cant: x.cant + 1 }) : x) })); },
+        row: 'overflow:hidden; animation:vcLine .3s ease both; transition:max-height .24s ease, opacity .2s ease, padding .24s ease, background-color .5s ease; max-height:' + (sal ? '0' : '240px') + '; opacity:' + (sal ? 0 : 1) + '; padding:' + (sal ? '0 16px' : '14px 16px') + '; border-bottom:1px solid ' + (sal ? 'transparent' : t.line) + '; background:' + (l.flash ? t.flash : 'transparent')
+      };
+    });
+    const resumen = vivas.map(l => ({ txt: l.cant + ' × ' + this.NOMBRE[l.prod] + ' · Talle ' + l.talle, sub: this.fmt(l.cant * this.PRECIO[l.prod]), ink: l.err ? t.red : t.ink }));
+
+    let principalTxt = '', principalOff = true, razon = '', principal = () => {};
+    if (paso === 1) { principalTxt = 'Son mis datos, seguir'; principalOff = !telValid; razon = telValid ? '' : 'Agregá tu teléfono para seguir.'; principal = () => { if (!telValid) return; this.ir(2, f.sinTel ? { telOk: true } : {}); if (f.sinTel && s.guardar) this.aviso('Teléfono guardado en tu perfil'); }; }
+    if (paso === 2) { principalTxt = 'Ir a pagar'; principalOff = !vivas.length || hayErr; razon = !vivas.length ? 'Agregá al menos una prenda.' : hayErr ? 'Cambiá o quitá el producto agotado para seguir.' : ''; principal = () => { if (principalOff) return; const cambio = s.totalVisto != null && s.totalVisto !== total; this.ir(3, { montoCambio: cambio, totalAntes: s.totalVisto || 0, totalVisto: cambio ? s.totalVisto : total, aviso5: false }); }; }
+    if (paso === 3) { principalTxt = s.confirmando ? 'Confirmando…' : 'Confirmar compra'; principalOff = s.comp !== 'listo' || s.confirmando; razon = s.comp !== 'listo' && !s.confirmando ? 'Subí el comprobante para confirmar.' : ''; principal = () => this.confirmar(); }
+
+    const copyStyle = on => 'height:44px; padding:0 16px; flex:none; border:0; border-radius:999px; display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; cursor:pointer; transition:background .15s, color .15s; background:' + (on ? t.prim : t.chip) + '; color:' + (on ? t.primInk : t.ink);
+    const compEstado = { vacio: 'Falta subir el comprobante', subiendo: 'Subiendo el comprobante…', listo: 'Comprobante subido', error: 'El comprobante no se pudo subir', grande: 'El comprobante no se pudo subir' }[s.comp];
+    const compOk = s.comp === 'listo';
+
+    const forzar = [
+      ['Sin sesión', paso === 0, () => { this.timers.forEach(clearTimeout); this.setState({ paso: 0, volviendo: false, sheet: false }); this.arriba(); }],
+      ['Falta el teléfono', f.sinTel, () => this.setState(st => ({ f: Object.assign({}, st.f, { sinTel: !st.f.sinTel }), tel: '', telOk: false }))],
+      ['Buzo sin talles', f.sinTalles, () => this.setState(st => ({ f: Object.assign({}, st.f, { sinTalles: !st.f.sinTalles }), prod: st.prod === 'buzo' ? null : st.prod, talle: st.prod === 'buzo' ? null : st.talle }))],
+      ['Agotado al confirmar', f.agotado, () => this.setState(st => ({ f: Object.assign({}, st.f, { agotado: !st.f.agotado }), agotadoUsado: false, agotados: {} }))],
+      ['Sin conexión', f.sinConexion, () => this.setState(st => ({ f: Object.assign({}, st.f, { sinConexion: !st.f.sinConexion }) }))]
+    ].map(([tt, on, ir]) => ({ t: tt, on: on ? 'true' : 'false', ir, style: seg(on) }));
+    const subidas = [['normal', 'Normal'], ['error', 'Error'], ['grande', 'Muy grande']].map(([k, tt]) => ({ t: tt, style: seg(f.subida === k), ir: () => this.setState(st => ({ f: Object.assign({}, st.f, { subida: k }) })) }));
+
+    const enPasos = !s.volviendo && paso >= 1 && paso <= 3;
+    const segs = ['Tus datos', 'Tu pedido', 'Pagá'].map((tt, i) => {
+      const n = i + 1, cur = n === paso, past = n < paso;
+      const c = cur ? t.ink : past ? a(.4) : a(.12);
+      return { t: tt, bar: 'height:4px; border-radius:999px; transition:background .3s; background:' + c, lbl: 'margin:7px 0 0; font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:' + (cur ? t.ink : t.m38) };
+    });
+
+    return {
+      t, bg,
+      verMobile: () => this.setState({ device: 'm' }), verPC: () => this.setState({ device: 'pc', sheet: false }),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(!desk), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      forzar, subidas,
+      ejemplo: () => this.ir(2, { volviendo: false, lineas: [{ id: 901, prod: 'remera', talle: 3, cant: 2, err: false }, { id: 902, prod: 'buzo', talle: 5, cant: 1, err: false }], comp: 'vacio', totalVisto: null, montoCambio: false, agotadoUsado: false, agotados: {}, errConexion: false }),
+      frameW: desk ? '1440px' : '390px', frameH: desk ? '900px' : '844px', frameR: desk ? '14px' : '40px',
+      isDesktop: desk, isMobile: !desk,
+      scrollRef: this.scrollRef, sheetRef: this.sheetRef,
+      rot: 'margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:' + t.m38,
+      sk: 'background:' + t.skel + '; border-radius:10px; animation:vcPulse 1.2s ease-in-out infinite',
+      pad: desk ? '40px 40px 64px' : '16px 16px ' + (vivas.length ? '250px' : '200px'),
+      cols: desk ? 'minmax(0,560px) minmax(0,380px)' : 'minmax(0,1fr)',
+      splashPad: desk ? '40px' : '40px 20px 60px', listoPad: desk ? '56px 40px' : '40px 20px 56px',
+
+      showSplash: paso === 0 && !s.volviendo, showSkel: s.volviendo, enPasos, showListo: paso === 4 && !s.volviendo,
+      entrar: () => { this.setState({ volviendo: true, paso: 1 }); this.later(() => this.setState({ volviendo: false }), 1300); },
+      atras: () => { if (paso === 1) this.aviso('Vuelve a la pantalla anterior de la app'); else this.ir(paso - 1, { montoCambio: false }); },
+      pasoAria: 'Paso ' + paso + ' de 3', segs,
+      p1: paso === 1, p2: paso === 2, p3: paso === 3,
+
+      telInput: f.sinTel && !s.telOk, telValor: !f.sinTel || s.telOk,
+      telMostrar: f.sinTel ? s.tel : '11 4567 8901', tel: s.tel,
+      onTel: e => this.setState({ tel: e.target.value.replace(/[^\d\s+-]/g, '').slice(0, 18) }),
+      guardar: s.guardar, guardarAria: s.guardar ? 'true' : 'false', toggleGuardar: () => this.setState(st => ({ guardar: !st.guardar })),
+      checkBox: 'width:24px; height:24px; flex:none; border-radius:8px; display:flex; align-items:center; justify-content:center; background:' + (s.guardar ? t.prim : 'transparent') + '; color:' + t.primInk + '; box-shadow:' + (s.guardar ? 'none' : 'inset 0 0 0 2px ' + t.m38),
+
+      hayErr, agotadoMsg: s.agotadoMsg,
+      prods, hayProd: !!s.prod, noProd: !s.prod, talles,
+      cant: s.cant, cantMenosOff: s.cant <= 1, cantMasOff: s.cant >= 5, cantMenosStyle: circ(s.cant <= 1), cantMasStyle: circ(s.cant >= 5),
+      cantMenos: () => this.setState(st => ({ cant: Math.max(1, st.cant - 1) })), cantMas: () => this.setState(st => ({ cant: Math.min(5, st.cant + 1) })),
+      agregar: () => this.agregar(), agregarOff: !puedeAgregar,
+      agregarTxt: puedeAgregar ? 'Agregar al pedido · ' + this.fmt(this.PRECIO[s.prod] * s.cant) : s.prod ? 'Elegí un talle' : 'Elegí producto y talle',
+      agregarStyle: 'width:100%; height:54px; margin-top:22px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; font-size:15.5px; font-weight:600; cursor:' + (puedeAgregar ? 'pointer' : 'default') + '; opacity:' + (puedeAgregar ? 1 : .45),
+      aviso5: s.aviso5,
+      pedidoRot: 'TU PEDIDO' + (nProd ? ' · ' + nProd + (nProd === 1 ? ' PRODUCTO' : ' PRODUCTOS') : ''),
+      lineas, hayLineas: vivas.length > 0, sinLineas: vivas.length === 0, resumen,
+      totalGrande: this.roll(total, desk ? '32px' : '30px'), totalAside: this.roll(total, '26px'),
+      resumenTxt: nProd + (nProd === 1 ? ' producto' : ' productos') + ' · ' + this.fmt(total),
+
+      totalTxt: this.fmt(total), montoCambio: s.montoCambio, totalAntes: this.fmt(s.totalAntes),
+      montoStyle: 'display:inline-flex; align-items:center; height:30px; padding:0 12px; border-radius:999px; font-size:15px; font-weight:700; transition:background .3s, color .3s; background:' + (s.montoCambio ? t.prim : t.chip) + '; color:' + (s.montoCambio ? t.primInk : t.ink),
+      aliasSize: desk ? '28px' : '25px',
+      aliasCopiado: s.copiado === 'alias', cuitCopiado: s.copiado === 'cuit',
+      aliasTxt: s.copiado === 'alias' ? '¡Copiado!' : 'Copiar', cuitTxt: s.copiado === 'cuit' ? '¡Copiado!' : 'Copiar',
+      copiarAliasStyle: copyStyle(s.copiado === 'alias'), copiarCuitStyle: copyStyle(s.copiado === 'cuit'),
+      copiarAlias: () => this.copiar('alias', 'origen.iglesia'), copiarCuit: () => this.copiar('cuit', '30-70705090-6'),
+      compVacio: s.comp === 'vacio', compSubiendo: s.comp === 'subiendo', compListo: compOk, compError: s.comp === 'error' || s.comp === 'grande',
+      compErrTxt: s.comp === 'grande' ? 'Ese archivo no se puede subir: tiene que ser una imagen o un PDF de hasta 10 MB.' : 'No se pudo subir. Probá con otra imagen.',
+      compW: s.compW, subir: () => this.subir(), quitarComp: () => this.setState({ comp: 'vacio' }),
+      zona: 'width:100%; min-height:150px; padding:22px; border:2px dashed ' + a(.22) + '; border-radius:22px; background:' + (dk ? 'rgba(255,255,255,.02)' : 'rgba(255,255,255,.55)') + '; color:' + t.ink + '; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; cursor:pointer',
+      chipBtn: 'height:44px; padding:0 16px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap',
+      errConexion: s.errConexion, confirmar: () => this.confirmar(),
+      compEstado, compDot: 'width:9px; height:9px; flex:none; border-radius:999px; background:' + (compOk ? t.ink : 'transparent') + '; box-shadow:inset 0 0 0 2px ' + (compOk ? t.ink : t.m38),
+
+      barra: !desk && enPasos,
+      principal, principalOff, principalTxt, razon, hayRazon: !!razon, confirmando: s.confirmando,
+      principalStyle: 'width:100%; height:58px; border:0; border-radius:999px; background:' + t.prim + '; color:' + t.primInk + '; display:flex; align-items:center; justify-content:center; gap:10px; font-size:16.5px; font-weight:600; cursor:' + (principalOff ? 'default' : 'pointer') + '; opacity:' + (principalOff && !s.confirmando ? .3 : 1) + '; transition:opacity .2s',
+
+      sheet: s.sheet && !desk, abrirSheet: () => this.setState({ sheet: true }), cerrarSheet: () => this.setState({ sheet: false }),
+      stop: e => e.stopPropagation(),
+      dragStart: e => { this.dY = e.clientY; this.dDy = 0; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) {} if (this.sheetRef.current) this.sheetRef.current.style.transition = 'none'; },
+      dragMove: e => { if (this.dY == null) return; const dy = Math.max(0, e.clientY - this.dY); this.dDy = dy; if (this.sheetRef.current) this.sheetRef.current.style.transform = 'translateY(' + dy + 'px)'; },
+      dragEnd: () => { if (this.dY == null) return; const dy = this.dDy; this.dY = null; const el = this.sheetRef.current; if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = ''; } if (dy > 90) this.setState({ sheet: false }); },
+
+      ticket: s.ticket ? s.ticket.lineas : [], ticketTotal: s.ticket ? s.ticket.total : '',
+      ticketPersona: 'Daniela Ferreyra · ' + (f.sinTel ? s.tel : '11 4567 8901'),
+      alInicio: () => this.aviso('Va al inicio de la app'),
+      otroPedido: () => this.ir(2, { lineas: [], comp: 'vacio', prod: null, talle: null, cant: 1, totalVisto: null, montoCambio: false, ticket: null, agotadoUsado: false }),
+      hayToast: !!s.toast, toastTxt: s.toast || ''
+    };
+  }
+}
+</script>
+</body>
+</html>
