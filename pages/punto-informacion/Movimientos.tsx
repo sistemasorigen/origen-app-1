@@ -1,9 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useStore } from '../../store';
 import { MovementType, Movement } from '../../types';
-import { ArrowUpRight, ArrowDownLeft, RefreshCw, Trash2, Plus, Receipt, ClipboardCheck, ChevronDown } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, RefreshCw, Trash2, Plus, Receipt, ClipboardCheck, ChevronDown, ArrowLeftRight } from 'lucide-react';
+import DetalleVentaVoluntario from '../../components/Reportes/DetalleVentaVoluntario';
+import { getVentasPorIds, type VentaDeVoluntario } from '../../services/ventasVoluntarios';
+import { pesos } from '../../services/reportesPuntoInfo';
 
 /**
  * El historial de movimientos del Punto.
@@ -63,26 +66,27 @@ const importe = (m: Movement) => {
     return `Quedó en ${m.quantity}`;
 };
 
-/** Una línea del historial: un movimiento suelto, o un reporte entero. */
+/**
+ * Una línea del historial: un movimiento suelto, un reporte entero, o una
+ * compra por transferencia.
+ *
+ * (Esta interfaz estaba escrita dos veces, idéntica. Queda una.)
+ */
 interface Entrada {
     clave: string;
     movimiento?: Movement;
     reporte?: { id: string; fecha: string; autor: string | null; items: Movement[] };
-}
-
-/** Una línea del historial: un movimiento suelto, o un reporte entero. */
-interface Entrada {
-    clave: string;
-    movimiento?: Movement;
-    reporte?: { id: string; fecha: string; autor: string | null; items: Movement[] };
+    venta?: { id: string; fecha: string; items: Movement[] };
 }
 
 const Movements: React.FC = () => {
     const navigate = useNavigate();
     const { movements, deleteMovement, showNotification } = useStore();
     const sinMovimiento = useReducedMotion();
-    /** Qué reporte está desplegado. Uno a la vez. */
+    /** Qué reporte o venta está desplegado. Uno a la vez. */
     const [abierto, setAbierto] = useState<string | null>(null);
+    /** La venta cuya ficha se está mirando. La misma que abre el tablero. */
+    const [ventaAbierta, setVentaAbierta] = useState<string | null>(null);
 
     // Del más nuevo al más viejo, partido por día. Y adentro de cada día, los
     // movimientos de un mismo reporte entran juntos, en el lugar del más
@@ -101,6 +105,16 @@ const Movements: React.FC = () => {
                 dias.push(ultimo);
             }
 
+            if (m.ventaId) {
+                const yaEsta = ultimo.entradas.find(e => e.venta && e.venta.id === m.ventaId);
+                if (yaEsta && yaEsta.venta) yaEsta.venta.items.push(m);
+                else ultimo.entradas.push({
+                    clave: m.ventaId,
+                    venta: { id: m.ventaId, fecha: m.date, items: [m] },
+                });
+                return;
+            }
+
             if (!m.reportId) {
                 ultimo.entradas.push({ clave: m.id, movimiento: m });
                 return;
@@ -115,6 +129,23 @@ const Movements: React.FC = () => {
 
         return dias;
     }, [movements]);
+
+    /**
+     * El código, quién compró y el total viven en la venta, no en el
+     * movimiento. Se piden una vez por lista y se guardan por id.
+     */
+    const idsDeVentas = useMemo(
+        () => Array.from(new Set(movements.map(m => m.ventaId).filter(Boolean) as string[])),
+        [movements],
+    );
+    const [ventas, setVentas] = useState<Map<string, VentaDeVoluntario>>(new Map());
+
+    useEffect(() => {
+        let cancelado = false;
+        if (idsDeVentas.length === 0) { setVentas(new Map()); return; }
+        getVentasPorIds(idsDeVentas).then(m => { if (!cancelado) setVentas(m); });
+        return () => { cancelado = true; };
+    }, [idsDeVentas.join(',')]);
 
     const borrar = async (m: Movement, e: React.MouseEvent) => {
         e.preventDefault();
@@ -209,6 +240,78 @@ const Movements: React.FC = () => {
                                     );
                                 }
 
+                                // ── Una compra por transferencia ──
+                                if (e.venta) {
+                                    const vta = e.venta;
+                                    const datos = ventas.get(vta.id);
+                                    const unidades = vta.items.reduce((n, m) => n + m.quantity, 0);
+                                    const estaAbierto = abierto === vta.id;
+                                    return (
+                                        <li key={e.clave}>
+                                            <div className="w-full px-5 sm:px-6 py-3 flex items-center gap-3 hover:bg-slate-50/60 transition-colors">
+                                                <span className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center bg-emerald-50 text-emerald-700">
+                                                    <ArrowLeftRight className="w-[18px] h-[18px]" />
+                                                </span>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAbierto(estaAbierto ? null : vta.id)}
+                                                    aria-expanded={estaAbierto}
+                                                    aria-controls={`venta-${vta.id}`}
+                                                    className="min-w-0 flex-1 text-left"
+                                                >
+                                                    <h4 className="font-semibold text-[15px] text-black truncate leading-tight">
+                                                        Venta por transferencia{datos ? ` · ${datos.codigo}` : ''}
+                                                    </h4>
+                                                    <p className="mt-0.5 text-[13px] text-slate-400 truncate">
+                                                        {datos?.nombreCompleto ? `${datos.nombreCompleto} · ` : ''}
+                                                        {hora(vta.fecha)}
+                                                        {datos ? ` · ${pesos(datos.total)}` : ''}
+                                                    </p>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setVentaAbierta(vta.id)}
+                                                    className="shrink-0 h-9 px-3 rounded-full text-[13px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                                                >
+                                                    Ver detalles
+                                                </button>
+
+                                                <ChevronDown
+                                                    onClick={() => setAbierto(estaAbierto ? null : vta.id)}
+                                                    className={`shrink-0 w-4 h-4 text-slate-300 transition-transform duration-200 cursor-pointer ${estaAbierto ? 'rotate-180' : ''}`}
+                                                />
+                                            </div>
+
+                                            <AnimatePresence initial={false}>
+                                                {estaAbierto && (
+                                                    <motion.ul
+                                                        id={`venta-${vta.id}`}
+                                                        initial={sinMovimiento ? false : { height: 0, opacity: 0 }}
+                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                        exit={sinMovimiento ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                                                        transition={{ duration: sinMovimiento ? 0 : 0.2, ease: 'easeOut' }}
+                                                        className="overflow-hidden bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100"
+                                                    >
+                                                        {vta.items.map(m => (
+                                                            <li key={m.id} className="pl-[68px] pr-5 sm:pr-6 py-2.5 flex items-center gap-3">
+                                                                <span className="min-w-0 flex-1 text-[14px] text-slate-600 truncate">{m.productName}</span>
+                                                                <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[13px] font-semibold tabular-nums bg-red-50 text-red-700">
+                                                                    −{m.quantity}
+                                                                </span>
+                                                            </li>
+                                                        ))}
+                                                        <li className="pl-[68px] pr-5 sm:pr-6 py-2.5 text-[13px] text-slate-500">
+                                                            {unidades === 1 ? '1 unidad' : `${unidades} unidades`} · Transferencia
+                                                        </li>
+                                                    </motion.ul>
+                                                )}
+                                            </AnimatePresence>
+                                        </li>
+                                    );
+                                }
+
                                 // ── Un movimiento suelto ──
                                 const m = e.movimiento as Movement;
                                 const pinta = PINTA[m.type] || PINTA[MovementType.ADJUST];
@@ -236,8 +339,10 @@ const Movements: React.FC = () => {
                                         </span>
 
                                         {/* Los de un reporte no se borran de a uno: sacar uno
-                                            descuadraría el conteo entero. */}
-                                        {!m.reportId && (
+                                            descuadraría el conteo entero. Los de una venta
+                                            tampoco: la compra ya se pagó, y sacarle una prenda
+                                            la dejaría sin su stock descontado. */}
+                                        {!m.reportId && !m.ventaId && (
                                             <button
                                                 type="button"
                                                 onClick={ev => borrar(m, ev)}
@@ -273,6 +378,9 @@ const Movements: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* La misma ficha que abren el tablero y la planilla de ventas. */}
+            <DetalleVentaVoluntario ventaId={ventaAbierta} onCerrar={() => setVentaAbierta(null)} />
         </div>
     );
 };

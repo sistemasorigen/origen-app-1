@@ -394,6 +394,30 @@ export const getVentasVoluntarios = async (rango: Rango): Promise<VentaDeVolunta
     return filas.map(mapearVenta);
 };
 
+/**
+ * Las ventas de esta lista de ids.
+ *
+ * Para el historial de Movimientos del Punto, que tiene los movimientos pero
+ * no sabe el codigo, quien compro ni el total: eso vive en la venta. De a
+ * tandas porque `.in()` con mil ids arma una URL que el servidor rechaza.
+ */
+export const getVentasPorIds = async (ids: string[]): Promise<Map<string, VentaDeVoluntario>> => {
+    const porId = new Map<string, VentaDeVoluntario>();
+    const unicos = Array.from(new Set(ids.filter(Boolean)));
+    if (unicos.length === 0) return porId;
+
+    const TANDA = 200;
+    for (let i = 0; i < unicos.length; i += TANDA) {
+        const { data, error } = await supabase
+            .from('ventas_voluntarios')
+            .select('*')
+            .in('id', unicos.slice(i, i + TANDA));
+        if (error) { aviso('getVentasPorIds', error); return porId; }
+        (data || []).forEach((v: any) => porId.set(v.id, mapearVenta(v as VentaCruda)));
+    }
+    return porId;
+};
+
 /** Una compra con sus renglones. */
 export const getDetalleVenta = async (id: string): Promise<DetalleDeVenta | null> => {
     const [venta, items] = await Promise.all([
