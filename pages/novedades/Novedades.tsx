@@ -27,17 +27,28 @@ import {
 
 // ── La tarjeta de un link ───────────────────────────────────────────────
 
-const Tarjeta: React.FC<{ link: LinkDeNovedad; onAbrir: () => void }> = ({ link, onAbrir }) => {
+/**
+ * Se exporta porque el panel la usa como vista previa mientras se carga un
+ * link (pages/admin/LinksNovedades.tsx). Es la misma tarjeta, no una copia:
+ * lo que se ve en el panel es literalmente lo que se va a publicar.
+ */
+export const TarjetaDeLink: React.FC<{
+    link: LinkDeNovedad;
+    onAbrir: () => void;
+    /** En el panel la tarjeta se mira, no se toca: ni foco ni clicks. */
+    vistaPrevia?: boolean;
+}> = ({ link, onAbrir, vistaPrevia = false }) => {
     const esExterno = link.tipoDestino === 'externo';
     const cierra = textoDeVencimiento(link.vence);
 
     return (
         <div
-            role="link"
-            tabIndex={0}
-            aria-label={etiquetaDeLink(link)}
-            onClick={onAbrir}
-            onKeyDown={e => {
+            role={vistaPrevia ? undefined : 'link'}
+            tabIndex={vistaPrevia ? undefined : 0}
+            aria-label={vistaPrevia ? undefined : etiquetaDeLink(link)}
+            aria-hidden={vistaPrevia || undefined}
+            onClick={vistaPrevia ? undefined : onAbrir}
+            onKeyDown={vistaPrevia ? undefined : e => {
                 // Un div con role="link" no recibe el Enter del navegador:
                 // hay que atender las dos teclas a mano, como haría un <a>.
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -45,7 +56,7 @@ const Tarjeta: React.FC<{ link: LinkDeNovedad; onAbrir: () => void }> = ({ link,
                     onAbrir();
                 }
             }}
-            className="flex flex-col p-[18px] rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-none cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)] dark:hover:border-zinc-600 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-zinc-950"
+            className={`flex flex-col p-[18px] rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-none ${vistaPrevia ? '' : 'cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)] dark:hover:border-zinc-600 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-zinc-950'}`}
         >
             <div className="flex flex-wrap gap-1.5">
                 <span className={`inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-full text-xs font-semibold whitespace-nowrap ${esExterno
@@ -70,13 +81,13 @@ const Tarjeta: React.FC<{ link: LinkDeNovedad; onAbrir: () => void }> = ({ link,
                 )}
             </div>
 
-            <p className="mt-3.5 mb-0 text-[17.5px] leading-[1.3] font-bold tracking-[-0.01em] text-slate-900 dark:text-white line-clamp-2">
+            <p className="mt-3.5 mb-0 text-[17.5px] leading-[1.3] font-bold tracking-[-0.01em] text-slate-900 dark:text-white line-clamp-2 [overflow-wrap:anywhere]">
                 {link.titulo}
             </p>
 
             {/* Sin descripción no queda hueco: el botón sube. */}
             {link.descripcion && (
-                <p className="mt-1.5 mb-0 text-sm leading-[1.5] text-slate-500 dark:text-zinc-400 line-clamp-3">
+                <p className="mt-1.5 mb-0 text-sm leading-[1.5] text-slate-500 dark:text-zinc-400 line-clamp-3 [overflow-wrap:anywhere]">
                     {link.descripcion}
                 </p>
             )}
@@ -154,7 +165,7 @@ const Novedades: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
 
                             <div className={`${GRILLA} mt-[22px]`}>
                                 {links.map(l => (
-                                    <Tarjeta key={l.id} link={l} onAbrir={() => abrirLink(l, navigate)} />
+                                    <TarjetaDeLink key={l.id} link={l} onAbrir={() => abrirLink(l, navigate)} />
                                 ))}
                             </div>
                         </section>

@@ -6,11 +6,12 @@ import VideoUpload from '../../components/media/SubidaVideo';
 import EncuadreMedia from '../../components/media/EncuadreMedia';
 import { getMediaFrameStyle } from '../../components/ui/CarruselHero';
 import { PedidoConfirmacion, Rotulo } from './piezasAdmin';
+import LinksNovedades from './LinksNovedades';
 
 /**
  * Configuración de la app (design-claude/Admin General).
  *
- * Cuatro secciones: identidad, banners, música y pies. El editor de un slide
+ * Cinco secciones: identidad, banners, música, pies y los links de /novedades. El editor de un slide
  * dejó de ser un modal y pasó a vivir al lado de la lista, como en el
  * diseño: se elige uno a la izquierda y se lo encuadra a la derecha, viendo
  * al mismo tiempo el recorte real y cómo va a quedar en la app.
@@ -20,13 +21,14 @@ import { PedidoConfirmacion, Rotulo } from './piezasAdmin';
  * hacía meses que no había ninguna pestaña que lo eligiera.
  */
 
-export type SubSeccion = 'identidad' | 'banners' | 'musica' | 'pies';
+export type SubSeccion = 'identidad' | 'banners' | 'musica' | 'pies' | 'links';
 
 const SUB_SECCIONES: { id: SubSeccion; label: string }[] = [
     { id: 'identidad', label: 'Identidad' },
     { id: 'banners', label: 'Banners' },
     { id: 'musica', label: 'Música' },
     { id: 'pies', label: 'Pies' },
+    { id: 'links', label: 'Links' },
 ];
 
 const COLORES_RAPIDOS = ['#0a0a0a', '#1d4ed8', '#0b7a53', '#7a3ba8', '#b0431f'];
@@ -55,11 +57,12 @@ interface Props {
     onBorrarMusica: (id: string) => Promise<void>;
     guardandoMusica: boolean;
     pedirConfirmacion: (p: PedidoConfirmacion) => void;
+    avisar: (texto: string, tipo?: 'ok' | 'error') => void;
 }
 
 const ConfiguracionApp: React.FC<Props> = ({
     sub, onSub, config, onConfig, onGuardarConfig, onGuardarPies, pies, onPies,
-    musicaSlides, onGuardarMusica, onBorrarMusica, guardandoMusica, pedirConfirmacion,
+    musicaSlides, onGuardarMusica, onBorrarMusica, guardandoMusica, pedirConfirmacion, avisar,
 }) => (
     <>
         <div className="-mx-3.5 flex gap-[7px] overflow-x-auto px-3.5 pb-0.5 md:mx-0 md:px-0">
@@ -92,6 +95,9 @@ const ConfiguracionApp: React.FC<Props> = ({
         )}
         {sub === 'pies' && (
             <Pies pies={pies} onPies={onPies} onGuardar={onGuardarPies} />
+        )}
+        {sub === 'links' && (
+            <LinksNovedades pedirConfirmacion={pedirConfirmacion} avisar={avisar} />
         )}
     </>
 );

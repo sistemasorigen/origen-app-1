@@ -529,6 +529,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                         onBorrarMusica={borrarMusica}
                         guardandoMusica={guardandoMusica}
                         pedirConfirmacion={setConfirmacion}
+                        avisar={avisar}
                     />
                 )}
 
