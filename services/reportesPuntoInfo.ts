@@ -30,8 +30,12 @@ export type ClaseDeProducto = 'Remeras' | 'Buzos';
 export type TipoDeSolicitud = 'bautismos' | 'presentaciones';
 export type EstadoDeSolicitud = 'Pendiente' | 'Realizado' | 'Cancelado';
 
-/** Un reporte de stock entra como una novedad sola, no como veinte ajustes. */
-export type TipoDeNovedad = TipoDeMovimiento | 'Reporte';
+/**
+ * Un reporte de stock entra como una novedad sola, no como veinte ajustes.
+ * Una venta por transferencia, igual: una compra de tres prendas son tres
+ * Salidas y se leen como UNA venta.
+ */
+export type TipoDeNovedad = TipoDeMovimiento | 'Reporte' | 'Venta';
 
 export interface Novedad {
     id: string;
@@ -56,6 +60,8 @@ export interface Novedad {
     talle: number | null;
     /** El reporte que la generó: la fila se puede tocar y abre su detalle. */
     reportId?: string | null;
+    /** La venta que la generó: la fila se puede tocar y abre su detalle. */
+    ventaId?: string | null;
 }
 
 /** Las cuentas del período que encabezan la lista completa de novedades. */
@@ -72,6 +78,8 @@ export interface TotalesDeNovedades {
     ediciones: number;
     /** Conteos del stand. */
     reportes: number;
+    /** Compras de /voluntarios. Son aparte: no se cargan en el stand. */
+    ventasPorTransferencia: number;
 }
 
 export interface NovedadesCompletas {
@@ -223,6 +231,10 @@ const diaAnterior = (dia: string): string => {
     return x.toISOString().slice(0, 10);
 };
 
+/** "$ 68.000", como se escribe la plata en todo el Punto. */
+const PESOS_AR = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
+export const pesos = (n: number): string => `$ ${PESOS_AR.format(Math.round(n || 0))}`;
+
 /** Cuántos días pasaron desde esa solicitud hasta hoy. */
 export const diasDeEspera = (fecha: string | null | undefined, ahora: Date = new Date()): number | null => {
     if (!fecha) return null;
@@ -248,6 +260,17 @@ interface MovimientoCrudo {
     createdByName?: string | null;
     previousStock?: number | null;
     reportId?: string | null;
+    ventaId?: string | null;
+}
+
+/** Lo que se pide de ventas_voluntarios para armar la novedad. */
+interface VentaCrudaMinima {
+    id: string;
+    codigo: string;
+    nombre: string | null;
+    apellido: string | null;
+    total: number | null;
+    created_at: string;
 }
 
 /** Lo que se pide de stock_reports para armar la novedad. */
@@ -292,6 +315,39 @@ export const fraseDeMovimiento = (
     }
     const antes = stockAnterior === null || stockAnterior === undefined ? '' : ` (antes ${stockAnterior})`;
     return `Se editó el stock de ${plural}${cola}: quedó en ${cantidad}${antes}`;
+};
+
+/**
+ * "2 remeras y 1 buzo" · "1 remera" · "2 remeras, 1 buzo"
+ *
+ * Agrupa por PRENDA y no por talle a propósito. Donde esto se lee —una
+ * frase de novedad, una columna angosta de la planilla— la pregunta es
+ * cuánto salió, no qué talles: los talles están en la ficha, que es donde
+ * sirven. Con `y` arma la frase; con coma, la celda.
+ */
+export const resumenDePrendas = (
+    prendas: { producto: ClaseDeProducto | null; cantidad: number }[],
+    union: ' y ' | ', ' = ' y ',
+): string => {
+    const SINGULAR: Record<string, string> = { Remeras: 'remera', Buzos: 'buzo' };
+    const porClase = new Map<string, number>();
+    prendas.forEach(p => {
+        const clase = p.producto || 'Remeras';
+        porClase.set(clase, (porClase.get(clase) || 0) + (p.cantidad || 0));
+    });
+
+    // Las remeras primero, como en todo el resto del Punto.
+    const orden: ClaseDeProducto[] = ['Remeras', 'Buzos'];
+    const partes = orden
+        .filter(c => (porClase.get(c) || 0) > 0)
+        .map(c => {
+            const n = porClase.get(c) as number;
+            return `${n} ${n === 1 ? SINGULAR[c] : c.toLowerCase()}`;
+        });
+
+    if (partes.length === 0) return 'sin prendas';
+    if (partes.length === 1) return partes[0];
+    return partes.slice(0, -1).join(', ') + union + partes[partes.length - 1];
 };
 
 /** "REMERAS-3" o "Remeras Talle 3" → 3. */
@@ -433,6 +489,34 @@ const pedirCabeceras = async (
 };
 
 /**
+ * Las cabeceras de las ventas que tocaron estos movimientos.
+ *
+ * El código, quién compró y cuánto pagó viven en ventas_voluntarios: el
+ * movimiento solo sabe que salió una prenda.
+ */
+const pedirVentas = async (
+    movimientos: MovimientoCrudo[],
+    donde: string,
+): Promise<Map<string, VentaCrudaMinima> | null> => {
+    const ids = Array.from(new Set(
+        movimientos.map(m => m.ventaId).filter((x): x is string => !!x),
+    ));
+    const ventas = new Map<string, VentaCrudaMinima>();
+    if (ids.length === 0) return ventas;
+
+    const TANDA = 200;
+    for (let i = 0; i < ids.length; i += TANDA) {
+        const { data, error } = await supabase
+            .from('ventas_voluntarios')
+            .select('id, codigo, nombre, apellido, total, created_at')
+            .in('id', ids.slice(i, i + TANDA));
+        if (error) { aviso(`${donde}(ventas)`, error); return null; }
+        (data || []).forEach((v: any) => ventas.set(v.id, v));
+    }
+    return ventas;
+};
+
+/**
  * De movimientos crudos a las filas que se leen en pantalla.
  *
  * Lo usan las DOS pantallas —la tarjeta del tablero y la lista completa—
@@ -443,12 +527,51 @@ const armarNovedades = (
     movimientos: MovimientoCrudo[],
     catalogo: Pick<ProductoCrudo, 'code' | 'type' | 'size'>[],
     cabeceras: Map<string, ReporteCrudoMinimo>,
+    ventas: Map<string, VentaCrudaMinima>,
 ): Novedad[] => {
     const porCodigo = new Map(catalogo.map(p => [p.code, p] as const));
     const novedades: Novedad[] = [];
     const yaPuesto = new Set<string>();
 
+    /** Qué clase de prenda es un movimiento, con el catálogo o con el nombre. */
+    const claseDelMovimiento = (m: MovimientoCrudo): ClaseDeProducto | null => {
+        const p = m.productCode ? porCodigo.get(m.productCode) : null;
+        return (p?.type as ClaseDeProducto) || claseDe(m.productCode, m.productName);
+    };
+
     movimientos.forEach(m => {
+        // ── Una compra entera, en una sola línea ──
+        if (m.ventaId) {
+            if (yaPuesto.has(m.ventaId)) return;
+            yaPuesto.add(m.ventaId);
+            const v = ventas.get(m.ventaId);
+
+            // Las prendas salen de los movimientos de ESA venta: cada uno es
+            // una Salida con su cantidad. No hace falta pedirle los ítems a
+            // la base para escribir la frase.
+            const prendas = movimientos
+                .filter(x => x.ventaId === m.ventaId)
+                .map(x => ({ producto: claseDelMovimiento(x), cantidad: x.quantity }));
+
+            const quien = [v?.nombre, v?.apellido].filter(Boolean).join(' ').trim();
+            const fecha = v?.created_at || m.date;
+            novedades.push({
+                id: `venta-${m.ventaId}`,
+                tipo: 'Venta',
+                frase: `Venta por transferencia: ${resumenDePrendas(prendas)}`,
+                detalle: [quien || null, v ? pesos(v.total ?? 0) : null].filter(Boolean).join(' · ') || undefined,
+                fecha,
+                cuando: cuandoTexto(fecha),
+                // Quién la cargó es el disparador de la base, que para una
+                // compra es quien compró: ya está en el detalle.
+                autor: null,
+                producto: null,
+                talle: null,
+                ventaId: m.ventaId,
+            });
+            return;
+        }
+
         // ── Un reporte entero, en una sola línea ──
         if (m.reportId) {
             if (yaPuesto.has(m.reportId)) return;
@@ -512,10 +635,13 @@ export const getNovedades = async (rango: Rango): Promise<Novedad[] | null> => {
     const catalogo = (prods.data || []) as Pick<ProductoCrudo, 'code' | 'type' | 'size'>[];
     const movimientos = (movs.data || []) as MovimientoCrudo[];
 
-    const cabeceras = await pedirCabeceras(movimientos, 'getNovedades');
-    if (!cabeceras) return null;
+    const [cabeceras, ventas] = await Promise.all([
+        pedirCabeceras(movimientos, 'getNovedades'),
+        pedirVentas(movimientos, 'getNovedades'),
+    ]);
+    if (!cabeceras || !ventas) return null;
 
-    return armarNovedades(movimientos, catalogo, cabeceras).slice(0, 3);
+    return armarNovedades(movimientos, catalogo, cabeceras, ventas).slice(0, 3);
 };
 
 /**
@@ -550,13 +676,17 @@ export const getNovedadesCompletas = async (rango: Rango): Promise<NovedadesComp
     if (prods.error) { aviso('getNovedadesCompletas(productos)', prods.error); return null; }
     const catalogo = (prods.data || []) as Pick<ProductoCrudo, 'code' | 'type' | 'size'>[];
 
-    const cabeceras = await pedirCabeceras(movimientos, 'getNovedadesCompletas');
-    if (!cabeceras) return null;
+    const [cabeceras, ventas] = await Promise.all([
+        pedirCabeceras(movimientos, 'getNovedadesCompletas'),
+        pedirVentas(movimientos, 'getNovedadesCompletas'),
+    ]);
+    if (!cabeceras || !ventas) return null;
 
-    const novedades = armarNovedades(movimientos, catalogo, cabeceras);
+    const novedades = armarNovedades(movimientos, catalogo, cabeceras, ventas);
 
-    // Los sueltos: lo que vino de un reporte ya está contado en su reporte.
-    const sueltos = movimientos.filter(m => !m.reportId);
+    // Los sueltos: lo que vino de un reporte o de una venta ya está contado
+    // en su reporte o en su venta.
+    const sueltos = movimientos.filter(m => !m.reportId && !m.ventaId);
     const deTipo = (t: TipoDeMovimiento) => sueltos.filter(m => m.type === t);
     const entradas = deTipo('Entrada');
     const salidas = deTipo('Salida');
@@ -572,6 +702,7 @@ export const getNovedadesCompletas = async (rango: Rango): Promise<NovedadesComp
             ventas: salidas.length,
             ediciones: deTipo('Ajuste').length,
             reportes: novedades.filter(n => n.tipo === 'Reporte').length,
+            ventasPorTransferencia: novedades.filter(n => n.tipo === 'Venta').length,
         },
     };
 };

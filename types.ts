@@ -231,6 +231,8 @@ export interface Movement {
     previousStock?: number | null;
     /** El reporte de stock que lo generó. NULL si se cargó a mano. */
     reportId?: string | null;
+    /** La compra de /voluntarios que lo generó. NULL si se cargó en el stand. */
+    ventaId?: string | null;
 }
 
 export enum PendingStatus {

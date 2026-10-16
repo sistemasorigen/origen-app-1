@@ -67,6 +67,7 @@ import InscripcionDPadre from './pages/eventos/dpadre/InscripcionDPadre';
 import RankingDPadre from './pages/eventos/dpadre/RankingDPadre';
 import InscripcionDiaNino from './pages/eventos/dianino/InscripcionDiaNino';
 import InscripcionNocturna from './pages/eventos/nocturna/InscripcionNocturna';
+import CompraVoluntarios from './pages/voluntarios/CompraVoluntarios';
 import InscripcionInfluosDia from './pages/eventos/influos/InscripcionInfluosDia';
 import BuscarInfluosDia from './pages/eventos/influos/BuscarInfluosDia';
 import AdminInfluosDia from './pages/eventos/influos/AdminInfluosDia';
@@ -574,6 +575,26 @@ const AppContent: React.FC = () => {
                     sinNavegacion
                 >
                     <InscripcionNocturna />
+                </Layout>
+            } />
+            {/* Comprar remeras y buzos del Punto. Es PUBLICA a proposito:
+                sin sesion muestra su propia pantalla de entrada y manda al
+                login con el destino puesto, en vez de rebotar a SinAcceso.
+                No se mira el rol: compra cualquiera, no solo el que atiende
+                el stand.
+
+                `sinNavegacion` por lo mismo que Nocturna: es un tramite de
+                principio a fin, con un comprobante de por medio, y ofrecer
+                una salida en el medio es invitar a abandonarlo. */}
+            <Route path="/voluntarios" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                    sinNavegacion
+                >
+                    <CompraVoluntarios />
                 </Layout>
             } />
             <Route path="/tribal-wars" element={<InscripcionInfluosDia />} />
