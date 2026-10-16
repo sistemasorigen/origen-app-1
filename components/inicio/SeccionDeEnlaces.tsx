@@ -30,11 +30,18 @@ import {
 // ── La tarjeta ──────────────────────────────────────────────────────────
 
 /**
- * El alto de la tarjeta, igual para todas y en los dos tamaños de pantalla.
- * Es fijo a propósito: con una imagen de fondo, una tarjeta que crece con su
- * texto deja a las de al lado con el recorte corrido.
+ * La forma de la tarjeta: 4:3, la MISMA que el marco del encuadre del panel
+ * (pages/admin/EnlacesOrigen.tsx, MARCO). Que sean iguales no es cosmético:
+ * el recorte de una imagen con object-cover depende de la proporción de la
+ * caja, así que si el panel encuadra en 400×260 y la tarjeta mide 304×260,
+ * lo que se eligió no es lo que se ve. Con una proporción fija, el recorte
+ * es idéntico en el teléfono, en la compu y en la vista previa.
+ *
+ * El `min-h` es un piso para pantallas muy angostas (320px), donde la
+ * proporción dejaría la tarjeta más corta que su propio texto y el botón
+ * quedaría cortado. Ahí el recorte se desvía menos de un 1%: invisible.
  */
-const ALTO = 'h-[260px]';
+const FORMA = 'aspect-[4/3] min-h-[232px]';
 
 
 /**
@@ -67,7 +74,7 @@ export const TarjetaDeLink: React.FC<{
                     onAbrir();
                 }
             }}
-            className={`relative overflow-hidden ${ALTO} rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-none ${conImagen
+            className={`relative overflow-hidden ${FORMA} rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-none ${conImagen
                 ? 'bg-slate-900'
                 : 'bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800'} ${vistaPrevia ? '' : 'cursor-pointer transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)] dark:hover:border-zinc-600 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-zinc-950'}`}
         >
@@ -122,7 +129,7 @@ export const TarjetaDeLink: React.FC<{
 
                     {/* Sin descripción no queda hueco: el botón sube. */}
                     {link.descripcion && (
-                        <p className={`mt-1.5 mb-0 text-sm leading-[1.5] [overflow-wrap:anywhere] ${conImagen ? 'text-white/85 line-clamp-2' : 'text-slate-500 dark:text-zinc-400 line-clamp-3'}`}>
+                        <p className={`mt-1.5 mb-0 text-sm leading-[1.5] [overflow-wrap:anywhere] ${conImagen ? 'text-white/85' : 'text-slate-500 dark:text-zinc-400'} line-clamp-2`}>
                             {link.descripcion}
                         </p>
                     )}
@@ -149,7 +156,7 @@ export const TarjetaDeLink: React.FC<{
 // ── Mientras llegan ─────────────────────────────────────────────────────
 
 const Esqueleto: React.FC = () => (
-    <div className={`p-[18px] rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 ${ALTO}`}>
+    <div className={`p-[18px] rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 ${FORMA}`}>
         <div className="h-6 w-24 rounded-full bg-slate-200 dark:bg-zinc-800 animate-pulse" />
         <div className="mt-4 h-[18px] w-[85%] rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
         <div className="mt-3 h-[13px] w-full rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
@@ -171,8 +178,8 @@ const FILA = 'flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb
  * que deja asomar a la siguiente. Sin eso, en la compu tres tarjetas llenan
  * la fila exacta y nada dice que haya una cuarta.
  */
-const JUSTAS = 'snap-start shrink-0 w-[85%] sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]';
-const CON_ASOMO = 'snap-start shrink-0 w-[85%] sm:w-[calc((100%-1rem)/2-26px)] lg:w-[calc((100%-2rem)/3-26px)]';
+const JUSTAS = 'snap-start shrink-0 w-[90%] sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]';
+const CON_ASOMO = 'snap-start shrink-0 w-[90%] sm:w-[calc((100%-1rem)/2-26px)] lg:w-[calc((100%-2rem)/3-26px)]';
 
 const SeccionDeEnlaces: React.FC = () => {
     const navigate = useNavigate();

@@ -117,8 +117,15 @@ const VACIO: Borrador = {
     vence: '', visible: true, orden: 0,
 };
 
-/** La proporción de la tarjeta del inicio, para encuadrar contra lo real. */
-const MARCO = { ancho: 400, alto: 260 };
+/**
+ * El marco del encuadre: la MISMA proporción que la tarjeta del inicio
+ * (components/inicio/SeccionDeEnlaces.tsx, FORMA = 4:3). Si acá se encuadra
+ * en una caja y allá se dibuja en otra, lo que se eligió no es lo que se ve:
+ * object-cover recorta según la proporción de la caja, no según el archivo.
+ * Los números son los de una tarjeta de escritorio; lo que importa es que
+ * 400/300 sea 4:3.
+ */
+const MARCO = { ancho: 400, alto: 300 };
 
 const aBorrador = (l: LinkDeNovedad): Borrador => {
     const f = l.tipoDestino === 'interno' ? FUNCIONES.find(x => x.ruta && x.ruta === l.destino) : undefined;
