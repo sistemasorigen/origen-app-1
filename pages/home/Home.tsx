@@ -119,10 +119,15 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
 
     const safeIndex = Math.min(index, eventos.length - 1);
 
-    // CTA al ancho de la columna de acción, igual que el contador: los dos
-    // son bloques de la misma familia (uno mide la urgencia, el otro la
+    // El botón, al ancho de la columna de acción igual que el contador: los
+    // dos son bloques de la misma familia (uno mide la urgencia, el otro la
     // resuelve), así que comparten ancho y quedan alineados.
-    const ctaClass = 'w-full inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-base font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
+    //
+    // Las medidas son las de las tarjetas de Enlaces Origen —46px de alto,
+    // radio 12, 14.5px de texto—: en el teléfono las dos secciones se ven
+    // una abajo de la otra y un botón más grande acá se leía como si fuera
+    // otra cosa.
+    const ctaClass = 'w-full h-[46px] inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[14.5px] font-semibold hover:bg-black dark:hover:bg-slate-200 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-900/20 dark:focus-visible:ring-white/20';
 
     return (
         <div>
@@ -176,7 +181,7 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                         acción a la derecha. Separa lo que se lee de lo que se
                                         toca, y evita que en desktop el CTA quede estirado a
                                         900px por un texto de dos palabras. */}
-                                    <div className="flex-1 min-w-0 p-4 sm:p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
+                                    <div className="flex-1 min-w-0 p-[18px] sm:p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-0 md:gap-6">
 
                                         <div className="flex-1 min-w-0 flex flex-col gap-1.5 sm:gap-2">
                                             {/* TÍTULO — Bold (700). Es el único 700 de la
@@ -184,7 +189,7 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                                 etiqueta, el enlace, las unidades y el
                                                 botón, y el nombre del evento terminaba
                                                 pesando lo mismo que un "Ver más". */}
-                                            <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                                            <h3 className="text-[17.5px] leading-[1.3] tracking-[-0.01em] sm:text-2xl sm:leading-tight sm:tracking-tight font-bold text-slate-900 dark:text-white">
                                                 {ev.name}
                                             </h3>
 
@@ -238,13 +243,14 @@ const EventosCarousel: React.FC<{ eventos: EventoGeneral[]; now: number }> = ({ 
                                         {/* ACCIÓN — contador y botón comparten ancho y se leen
                                             como un bloque: uno mide la urgencia, el otro la
                                             resuelve. */}
-                                        {/* La línea reemplaza a la placa: en mobile y tablet el
-                                            bloque de acción va apilado bajo la descripción y
-                                            necesita su propio piso. Un filete de 1px separa
-                                            igual de bien que una caja, sin agregar un segundo
-                                            objeto negro. En desktop es una columna aparte, así
-                                            que la separación ya la da el espacio. */}
-                                        <div className="shrink-0 w-full md:w-52 lg:w-60 flex flex-col gap-4 border-t border-slate-100 dark:border-zinc-800 pt-4 md:border-t-0 md:pt-0">
+                                        {/* En el teléfono va apilado bajo el texto, separado
+                                            por los mismos 18px que usan las tarjetas de
+                                            Enlaces Origen entre la bajada y su botón. Sin
+                                            filete: dos secciones seguidas con líneas y cajas
+                                            distintas se leen como dos apps. En desktop es una
+                                            columna aparte, así que la separación ya la da el
+                                            espacio. */}
+                                        <div className="shrink-0 w-full md:w-52 lg:w-60 flex flex-col gap-4 pt-[18px] md:pt-0">
 
                                             {/* CONTADOR — el mismo reloj, sobre el papel.
                                                 Contador y botón no son la misma clase de cosa:
