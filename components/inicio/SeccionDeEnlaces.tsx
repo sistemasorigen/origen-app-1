@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { getMediaFrameStyle } from '../ui/CarruselHero';
-import { ArrowRight, ArrowUpRight, ChevronDown, ExternalLink } from 'lucide-react';
+import { ArrowRight, ChevronDown, ExternalLink } from 'lucide-react';
 import {
     getLinksPublicos,
     abrirLink,
@@ -174,32 +174,22 @@ export const TarjetaDeLink: React.FC<{
                 transition={transicion}
                 className={`flex flex-col p-[18px] ${abierta ? 'relative' : 'absolute inset-0'}`}
             >
-                <div className="flex flex-wrap gap-1.5">
-                    <span className={`inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-full text-xs font-semibold whitespace-nowrap ${esExterno
-                        ? 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300'
-                        : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'}`}>
-                        {esExterno ? (
-                            <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={2.4} />
-                        ) : (
-                            // La marca de "esto es de acá": un cuadradito con un
-                            // punto calado, como en el diseño.
-                            <span className="w-3.5 h-3.5 rounded bg-current flex items-center justify-center">
-                                <span className={`w-[5px] h-[5px] rounded-full ${esExterno ? 'bg-slate-100' : 'bg-emerald-50'} dark:bg-zinc-900`} />
-                            </span>
-                        )}
-                        {esExterno ? 'Link externo' : 'En Origen'}
-                    </span>
-
-                    {cierra && (
+                {/* La única pastilla que queda es la del cierre, que avisa
+                    algo que no se sabe de otra forma. La de "Link externo" /
+                    "En Origen" se fue: el ícono del botón ya dice si se abre
+                    afuera o acá adentro, y el lector de pantalla lo escucha
+                    en el nombre de la tarjeta. */}
+                {cierra && (
+                    <div className="flex flex-wrap gap-1.5">
                         <span className="inline-flex items-center h-[26px] px-2.5 rounded-full text-xs font-semibold whitespace-nowrap bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                             {cierra}
                         </span>
-                    )}
-                </div>
+                    </div>
+                )}
 
                 {/* Cerrada y con imagen, el texto se apoya abajo sobre la parte
                     oscura del velo; en cualquier otro caso arranca arriba. */}
-                <div className={sobreLaFoto ? 'mt-auto' : 'mt-3.5'}>
+                <div className={sobreLaFoto ? 'mt-auto' : cierra ? 'mt-3.5' : ''}>
                     <p className={`mb-0 text-[17.5px] leading-[1.3] font-bold tracking-[-0.01em] line-clamp-2 [overflow-wrap:anywhere] ${sobreLaFoto ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.35)]' : 'text-slate-900 dark:text-white'}`}>
                         {link.titulo}
                     </p>
