@@ -46,10 +46,10 @@ interface LayoutProps {
  * también tiene que estar en RUTAS_A_TODO_ANCHO: sin eso el contenedor
  * angosto le pone márgenes al hero y lo que iba a sangre queda flotando.
  */
-const RUTAS_CON_HERO = ['/', '/novedades', '/gcx', '/ninez'];
+const RUTAS_CON_HERO = ['/', '/gcx', '/ninez'];
 
 /** Las que manejan su propio ancho, sin el marco de 7xl con padding. */
-const RUTAS_A_TODO_ANCHO = ['/', '/novedades', '/store', '/gcx', '/ninez', '/alabanza', '/prode', '/nocturna-inscripcion'];
+const RUTAS_A_TODO_ANCHO = ['/', '/store', '/gcx', '/ninez', '/alabanza', '/prode', '/nocturna-inscripcion'];
 
 /** Lo mismo, pero para familias enteras de rutas. */
 const COMIENZOS_A_TODO_ANCHO = ['/punto-de-informacion', '/coordinators', '/audiencia-servicios'];

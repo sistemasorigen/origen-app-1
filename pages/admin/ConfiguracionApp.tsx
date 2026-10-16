@@ -6,12 +6,12 @@ import VideoUpload from '../../components/media/SubidaVideo';
 import EncuadreMedia from '../../components/media/EncuadreMedia';
 import { getMediaFrameStyle } from '../../components/ui/CarruselHero';
 import { PedidoConfirmacion, Rotulo } from './piezasAdmin';
-import LinksNovedades from './LinksNovedades';
+import EnlacesOrigen from './EnlacesOrigen';
 
 /**
  * Configuración de la app (design-claude/Admin General).
  *
- * Cinco secciones: identidad, banners, música, pies y los links de /novedades. El editor de un slide
+ * Cinco secciones: identidad, banners, música, pies y los enlaces del inicio. El editor de un slide
  * dejó de ser un modal y pasó a vivir al lado de la lista, como en el
  * diseño: se elige uno a la izquierda y se lo encuadra a la derecha, viendo
  * al mismo tiempo el recorte real y cómo va a quedar en la app.
@@ -97,7 +97,7 @@ const ConfiguracionApp: React.FC<Props> = ({
             <Pies pies={pies} onPies={onPies} onGuardar={onGuardarPies} />
         )}
         {sub === 'links' && (
-            <LinksNovedades pedirConfirmacion={pedirConfirmacion} avisar={avisar} />
+            <EnlacesOrigen pedirConfirmacion={pedirConfirmacion} avisar={avisar} />
         )}
     </>
 );

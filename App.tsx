@@ -4,7 +4,6 @@ import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'r
 import Layout from './components/layout/Estructura';
 import ErrorBoundary from './components/ui/LimiteError';
 import Dashboard from './pages/home/Home';
-import Novedades from './pages/novedades/Novedades';
 import InfoPoint from './pages/primarias/PuntoInformacion';
 import PaginaNuevoBautismo from './pages/punto-informacion/PaginaNuevoBautismo';
 import PaginaNuevoPrestamo from './pages/punto-informacion/PaginaNuevoPrestamo';
@@ -630,23 +629,6 @@ const AppContent: React.FC = () => {
                         currentUser={user}
                         onLoginRequest={handleLogin}
                     />
-                </Layout>
-            } />
-
-            {/* Pública: se entra con sesión y sin ella, igual que /eventos. */}
-            <Route path="/novedades" element={
-                <Layout
-                    userRole={user?.role || null}
-                    currentUser={user}
-                    onLogout={onLogoutClick}
-                    appConfig={config}
-                    onVolunteerClick={
-                        user && showVolunteerAccess
-                            ? () => setIsVolunteerModalOpen(true)
-                            : undefined
-                    }
-                >
-                    <Novedades currentUser={user} />
                 </Layout>
             } />
 

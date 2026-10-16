@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import HeroDeInicio from '../../components/inicio/HeroDeInicio';
 import SeccionDeBanner, { MUSICA, YOUVERS } from '../../components/inicio/SeccionDeBanner';
+import SeccionDeEnlaces from '../../components/inicio/SeccionDeEnlaces';
 import SeccionGruposParaVos from '../../components/inicio/SeccionGruposParaVos';
 import PieDeInicio from '../../components/inicio/PieDeInicio';
 import { useBannersDeInicio } from '../../src/hooks/useBannersDeInicio';
@@ -494,6 +495,8 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
 
                         <SeccionDeBanner {...MUSICA} slides={musicaSlides} />
                         <SeccionDeBanner {...YOUVERS} slides={youversSlides} />
+
+                        <SeccionDeEnlaces />
 
                         <SeccionGruposParaVos currentUser={currentUser} />
                     </div>

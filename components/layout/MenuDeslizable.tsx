@@ -26,8 +26,7 @@ import {
     LayoutDashboard,
     Users,
     UserCheck,
-    Baby,
-    Megaphone
+    Baby
 } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
@@ -307,14 +306,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Inicio',
             icon: Home,
             path: '/',
-            roles: []
-        },
-        {
-            // Pública: se ve con sesión y sin ella, como Inicio y Eventos.
-            label: 'Novedades',
-            icon: Megaphone,
-            path: '/novedades',
-            exact: true,
             roles: []
         },
         {

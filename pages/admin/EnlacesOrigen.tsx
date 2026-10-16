@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useDragControls, useReducedMotion } from 'fram
 import { X, Plus, GripVertical, ChevronUp, ChevronDown, Link2 } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import { PedidoConfirmacion, Rotulo } from './piezasAdmin';
-import { TarjetaDeLink } from '../novedades/Novedades';
+import { TarjetaDeLink } from '../../components/inicio/SeccionDeEnlaces';
 import {
     getLinksAdmin, crearLink, actualizarLink, borrarLink, reordenarLinks,
     diasParaVencer, hoyArgentino,
@@ -11,7 +11,11 @@ import {
 } from '../../services/novedades';
 
 /**
- * Los links de /novedades, desde el panel (design-claude/Admin - Links).
+ * Los enlaces del inicio, desde el panel (design-claude/Admin - Links).
+ *
+ * La tabla sigue llamándose novedades_links: nació junto con una página
+ * /novedades que terminó siendo esta tira en el inicio. Renombrarla en
+ * producción no arregla nada que esté roto.
  *
  * Tres cosas que no se ven y conviene saber:
  *
@@ -22,7 +26,7 @@ import {
  *   · Las validaciones de acá son las mismas reglas que el CHECK de la base,
  *     escritas igual. No es una comodidad: es lo que evita que el panel deje
  *     guardar algo que la base va a rechazar.
- *   · La vista previa es la MISMA tarjeta que dibuja /novedades, importada.
+ *   · La vista previa es la MISMA tarjeta que dibuja el inicio, importada.
  *     Una copia se vería parecida hoy y distinta dentro de dos meses.
  */
 
@@ -183,7 +187,7 @@ const Pastilla: React.FC<{ estado: Estado }> = ({ estado }) => (
 
 // ── La subsección ───────────────────────────────────────────────────────
 
-const LinksNovedades: React.FC<{
+const EnlacesOrigen: React.FC<{
     pedirConfirmacion: (p: PedidoConfirmacion) => void;
     avisar: (texto: string, tipo?: 'ok' | 'error') => void;
 }> = ({ pedirConfirmacion, avisar }) => {
@@ -259,7 +263,7 @@ const LinksNovedades: React.FC<{
             avisar('No se pudo cambiar. Quedó como estaba.', 'error');
             return;
         }
-        avisar(l.visible ? 'Oculto en Novedades' : 'Visible en Novedades');
+        avisar(l.visible ? 'Oculto en el inicio' : 'Visible en el inicio');
     };
 
     // ── Guardar y borrar ────────────────────────────────────────────────
@@ -294,7 +298,7 @@ const LinksNovedades: React.FC<{
         pedirConfirmacion({
             tipo: 'destructivo',
             titulo: `¿Borrar «${b.titulo.trim() || 'este link'}»?`,
-            texto: 'Deja de verse en Novedades al instante. No se puede deshacer desde acá.',
+            texto: 'Deja de verse en el inicio al instante. No se puede deshacer desde acá.',
             detalleTitulo: 'A dónde llevaba',
             detalle: destinoDe(b) || '—',
             etiquetaBoton: 'Sí, borrar el link',
@@ -320,18 +324,18 @@ const LinksNovedades: React.FC<{
             <div className="flex flex-wrap items-start gap-x-4 gap-y-3 px-5 py-[18px] md:px-[22px]">
                 <div className="min-w-0 flex-[1_1_240px]">
                     <p className="text-[16px] font-semibold text-[#0a0a0a]">
-                        Links de Novedades · {lista.length}
+                        Enlaces Origen · {lista.length}
                     </p>
                     <p className="mt-1.5 text-[12.5px] font-medium leading-[1.55] text-black/[.62]">
-                        Se muestran en /novedades en este orden.
+                        Se muestran en el inicio, de a tres y en este orden.
                     </p>
                     <a
-                        href="#/novedades"
+                        href="#/"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-1 inline-flex min-h-[32px] items-center gap-1.5 text-[12.5px] font-semibold text-[#0a0a0a] underline underline-offset-[3px]"
                     >
-                        Ver la página ↗
+                        Ver el inicio ↗
                     </a>
                 </div>
                 <button
@@ -350,7 +354,7 @@ const LinksNovedades: React.FC<{
 
             {!cargando && error && (
                 <p className="mx-5 mb-[22px] rounded-[16px] bg-[#fdf1ef] px-4 py-3.5 text-[13px] font-semibold leading-[1.55] text-[#a32218] md:mx-[22px]">
-                    No se pudieron traer los links. Probá recargar la página.
+                    No se pudieron traer los enlaces. Probá recargar la página.
                 </p>
             )}
 
@@ -360,7 +364,7 @@ const LinksNovedades: React.FC<{
                         <Link2 className="h-6 w-6 text-black/50" strokeWidth={2} />
                     </span>
                     <p className="mt-4 max-w-[320px] text-[14.5px] font-semibold leading-[1.55] text-[#0a0a0a]">
-                        Todavía no hay links. Creá el primero y va a aparecer en Novedades.
+                        Todavía no hay enlaces. Creá el primero y va a aparecer en el inicio.
                     </p>
                     <button
                         type="button"
@@ -825,7 +829,7 @@ const EditorDeLink: React.FC<{
                                         <div className="min-w-0 flex-1">
                                             <p className="text-[14px] font-semibold text-[#0a0a0a]">Visible</p>
                                             <p className="mt-0.5 text-[12px] text-black/60">
-                                                {b.visible ? 'Aparece en Novedades al guardar.' : 'Se guarda, pero no se muestra.'}
+                                                {b.visible ? 'Aparece en el inicio al guardar.' : 'Se guarda, pero no se muestra.'}
                                             </p>
                                         </div>
                                         <Interruptor
@@ -836,9 +840,9 @@ const EditorDeLink: React.FC<{
                                     </div>
                                 </div>
 
-                                {/* ── La vista previa: la tarjeta de /novedades ── */}
+                                {/* ── La vista previa: la tarjeta del inicio ── */}
                                 <div className="min-w-0">
-                                    <p className={rotulo}>Vista previa en Novedades</p>
+                                    <p className={rotulo}>Vista previa en el inicio</p>
                                     <div className="rounded-[18px] bg-slate-50 p-4">
                                         <TarjetaDeLink link={comoSeVeria(b)} onAbrir={() => { }} vistaPrevia />
                                     </div>
@@ -893,4 +897,4 @@ const EditorDeLink: React.FC<{
     );
 };
 
-export default LinksNovedades;
+export default EnlacesOrigen;
