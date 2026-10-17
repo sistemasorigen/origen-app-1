@@ -5,6 +5,7 @@ import { Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useFullBleedHero } from '../../../contexts/HeroContext';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
+import { useBarraDeAppSuelta } from '../../../contexts/BarraDeApp';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
 import { calcularEdad, QUIENES_ENTRAN } from '../../../src/utils/nocturna';
@@ -51,10 +52,8 @@ import {
     OpcionPastilla,
     OpcionRadio,
     Pie,
-    Progreso,
     ROSA,
     TituloLetras,
-    Tramo,
     anillo,
     arch,
     precargarFuentes,
@@ -196,9 +195,6 @@ const Estado: React.FC<{ calma: Calma; nitida?: boolean; children: React.ReactNo
         <Esquinas fecha={EVENTO.fecha} lugar={EVENTO.lugar} />
         {/* Sin cabecera: la marca ahora vive en la barra de la app, que en
             estas pantallas se ve igual que en el resto. */}
-        <div className="noc-tapa-barra" aria-hidden="true">
-            <Fondo etapa={0} nitida={nitida} calma={calma} portada={false} />
-        </div>
         <div className="noc-contenido">
             <main className="noc-columna">
                 <div className="noc-cuerpo" style={{ animation: 'nocEntrada .5s cubic-bezier(.2,.8,.2,1)' }}>
@@ -316,11 +312,15 @@ const InscripcionNocturna: React.FC = () => {
 
     useBloqueoDeFondo(modalSalir || !!aviso);
 
-    // La barra de la app, transparente sobre el rosa y con el logo en blanco,
-    // también al scrollear: detrás va una franja del mismo rosa
-    // (.noc-tapa-barra) que tapa lo que pasa por debajo. El Layout sube la
-    // página 64 px para que el rosa llegue al borde de arriba.
+    // La barra de la app, transparente sobre el rosa y con el logo en blanco.
+    // El Layout sube la página 64 px para que el rosa llegue al borde de
+    // arriba, y como el fondo de esta pantalla es fijo, detrás del logo hay
+    // rosa en cualquier posición del scroll.
     useFullBleedHero(true, true);
+
+    // Y no sigue al dedo: se queda arriba de todo y se va con el contenido,
+    // igual que el Volver. Vuelve a pegarse al salir de la ruta.
+    useBarraDeAppSuelta();
 
     /**
      * El fondo, hasta el borde de la pantalla.
@@ -531,24 +531,6 @@ const InscripcionNocturna: React.FC = () => {
         .filter(Boolean)
         .join(' · ');
 
-
-    /**
-     * Sumando chicos, la pantalla de las fotos no se muestra.
-     *
-     * `acepta_fotos` es una sola respuesta para toda la inscripción y ya está
-     * contestada; la base ignora lo que mande el formulario. Volver a
-     * preguntarlo sería simular que su respuesta de hoy cambia algo.
-     *
-     * La autorización, en cambio, SÍ se vuelve a pedir: los chicos nuevos no
-     * estaban en lo que firmó, y la base guarda esa constancia aparte.
-     */
-    const ultimoPaso = agregando ? 6 : 7;
-    // Sumando, la pantalla de fotos no se muestra: las que quedan son seis y
-    // se numeran de 1 a 6, aunque por dentro sean la 6 y la 7.
-    const pasoMostrado = !agregando ? pantalla
-        : pantalla === 6 ? 5
-            : pantalla === 7 ? 6
-                : pantalla;
 
     // ── Acciones ──────────────────────────────────────────────────────────
     const irA = (p: Pantalla) => {
@@ -808,8 +790,13 @@ const InscripcionNocturna: React.FC = () => {
         }
         if (pantalla === 1) { void revisarSiYaEstaInscripto(); return; }
         if (pantalla === 7) { enviar(); return; }
-        // Sumando, de la autorización se va derecho al pago: lo de las fotos
-        // ya está contestado para esta inscripción.
+        // Sumando chicos, de la autorización se va derecho al pago: la
+        // pantalla de las fotos no se muestra. `acepta_fotos` es una sola
+        // respuesta para toda la inscripción y ya está contestada; la base
+        // ignora lo que mande el formulario, así que volver a preguntarlo
+        // sería simular que la respuesta de hoy cambia algo. La autorización,
+        // en cambio, SÍ se vuelve a pedir: los chicos nuevos no estaban en lo
+        // que firmó, y la base guarda esa constancia aparte.
         if (agregando && pantalla === 4) { irA(6); return; }
         if (typeof pantalla === 'number') irA((pantalla + 1) as Pantalla);
     };
@@ -1081,13 +1068,11 @@ const InscripcionNocturna: React.FC = () => {
             ? 'baja'
             : 'no';
 
-    // La barra de pasos. Sumando chicos no hay pantalla de fotos, así que el
-    // tramo del medio tiene uno menos (ver pasoMostrado, más arriba).
-    const tramos: Tramo[] = [
-        { nombre: 'Datos', pasos: [1, 2] },
-        { nombre: 'Información', pasos: agregando ? [3, 4, 5] : [3, 4, 5, 6] },
-        { nombre: 'Pago', pasos: [ultimoPaso] },
-    ];
+    // La inscripción tenía arriba una barra de tres tramos —Datos,
+    // Información, Pago— con un segmento por pantalla. Se fue: cada pantalla
+    // ya se presenta sola y el formulario no es tan largo como para que haga
+    // falta un mapa. Queda el volver, que es navegación y no decoración.
+    //
     // Volver existe en los pasos 1 a 7 y en la salida sin autorización. En
     // el pago es nuevo (la versión anterior no lo tenía) y usa el mismo
     // `atras` que el resto: sumando adolescentes, el paso anterior es otro.
@@ -1095,7 +1080,6 @@ const InscripcionNocturna: React.FC = () => {
     // no se sale a mitad de una operación.
     const conVolver = pantalla === 'noAut' || (typeof pantalla === 'number' && pantalla >= 1 && pantalla <= 7);
     const volverApagado = pantalla === 7 && (subiendo || enviando);
-    const conTramos = typeof pantalla === 'number' && pantalla >= 1 && pantalla <= 7;
 
     const nombreDe = (c: { nombre: string; apellido: string }, i: number) =>
         `${c.nombre} ${c.apellido}`.trim() || `Adolescente ${i + 1}`;
@@ -1115,21 +1099,18 @@ const InscripcionNocturna: React.FC = () => {
         <Marco>
             {fondo}
             <Esquinas fecha={EVENTO.fecha} lugar={EVENTO.lugar} />
-            {/* Detrás de la barra de la app: rosa y la misma palabra de fondo,
-                para que lo que se scrollea pase por debajo sin cortar la
-                palabra (ver .noc-tapa-barra). */}
-            <div className="noc-tapa-barra" aria-hidden="true">{fondo}</div>
-
             <div className={`noc-contenido${hayPie ? ' noc-con-pie' : ''}`}>
                 <div className="noc-cabecera">
-                    {(conVolver || conTramos) && (
-                        <div className="noc-columna noc-progreso">
-                            <Progreso
-                                tramos={conTramos ? tramos : []}
-                                actual={typeof pasoMostrado === 'number' ? pasoMostrado : 0}
-                                onVolver={conVolver ? atras : undefined}
-                                volverApagado={volverApagado}
-                            />
+                    {conVolver && (
+                        <div className="noc-columna noc-volver">
+                            <EnlaceNoc
+                                onClick={atras}
+                                disabled={volverApagado}
+                                aria-label="Volver al paso anterior"
+                                style={{ padding: '0 4px' }}
+                            >
+                                Volver
+                            </EnlaceNoc>
                         </div>
                     )}
                 </div>

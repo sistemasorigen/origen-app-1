@@ -6,8 +6,6 @@ export type { Calma } from './Fondo';
 export { BotonNoc, BotonTribu, Corchetes, EnlaceNoc } from './Botones';
 export { Etiqueta, OpcionDoble, OpcionGrande, OpcionPastilla, OpcionRadio } from './Opciones';
 export { default as TituloLetras } from './TituloLetras';
-export { default as Progreso } from './Progreso';
-export type { Tramo } from './Progreso';
 export { default as Confeti } from './Confeti';
 export { default as Pie } from './Pie';
 export { default as Hoja } from './Hoja';

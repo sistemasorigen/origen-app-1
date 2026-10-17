@@ -132,37 +132,16 @@ ${ANIMACIONES_CSS}
 #nocturna-inscripcion .noc-palabra-escala { transition: transform 1.4s cubic-bezier(.2,.7,.2,1); }
 #nocturna-inscripcion .noc-palabra-fundido { transition: opacity 1.4s ease; }
 
-/* Detrás de la barra transparente, una franja del mismo rosa: lo que se
-   scrollea pasa por debajo y no se ve atrás del logo. La barra queda encima
-   (z-index 30 del Layout). */
-#nocturna-inscripcion .noc-tapa-barra {
-    position: fixed; left: 0; right: 0; top: 0; height: 64px; z-index: 22;
-    background-color: ${ROSA};
-    background-image: ${MANCHAS}
-    background-size: 100vw 100vh;
-    background-position: 0 0;
-    pointer-events: none;
-    /* Adentro va una copia del fondo (la palabra), fija igual que el
-       original: como las dos se miden contra la pantalla, coinciden al
-       píxel y la franja no se nota. contain: paint la recorta a estos 64 px
-       y hace que el fixed de adentro se mida contra la franja, que está en
-       el mismo lugar que la pantalla. */
-    contain: paint;
-}
-
 /* ── El contenido ─────────────────────────────────────────────────────── */
 #nocturna-inscripcion .noc-contenido { position: relative; z-index: 1; }
 
-/* Arriba, en el teléfono: los pasos. Queda pegado debajo de la barra
-   mientras se scrollea, como en el diseño, donde esa franja no se mueve y lo
-   que corre es lo de abajo. */
-#nocturna-inscripcion .noc-cabecera {
-    position: sticky; top: 64px; z-index: 20;
-    background-color: ${ROSA};
-    background-image: ${MANCHAS}
-    background-size: 100vw 100vh;
-    background-position: 0 -64px;
-}
+/* Arriba del todo y nada más: ni esta fila ni la barra de la app siguen al
+   scroll. Tenían sentido cuando acá arriba vivía la barra de pasos —saber
+   en cuál vas mientras llenás el formulario—; con sólo el Volver, lo que
+   hacían era comerse 60 px de pantalla en cada scroll.
+   Sin el pegado tampoco hace falta el fondo: lo que se ve detrás es el fondo
+   de la página, que ya está ahí. */
+#nocturna-inscripcion .noc-cabecera { position: static; }
 #nocturna-inscripcion .noc-fila-marca {
     display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
     padding: 16px 18px 0;
@@ -173,7 +152,7 @@ ${ANIMACIONES_CSS}
     font: 800 11.5px/1.2 ${FUENTE}; letter-spacing: -.01em; text-transform: uppercase;
 }
 #nocturna-inscripcion .noc-columna { width: 100%; margin: 0 auto; }
-#nocturna-inscripcion .noc-progreso { padding: 12px 18px 10px; }
+#nocturna-inscripcion .noc-volver { padding: 12px 18px 10px; }
 #nocturna-inscripcion .noc-cuerpo { padding: 14px 18px 30px; }
 #nocturna-inscripcion .noc-cuerpo.portada { padding-top: 6px; }
 
@@ -381,10 +360,9 @@ ${ANIMACIONES_CSS}
         --blur-a: 20px; --blur-b: 7px;
     }
     #nocturna-inscripcion .noc-palabra-texto { font-size: 330px; }
-    #nocturna-inscripcion .noc-cabecera { position: static; background: transparent; }
     #nocturna-inscripcion .noc-columna { max-width: 520px; }
     #nocturna-inscripcion .noc-columna.ancha { max-width: 620px; }
-    #nocturna-inscripcion .noc-progreso { padding: 0 20px; }
+    #nocturna-inscripcion .noc-volver { padding: 0 20px; }
     #nocturna-inscripcion .noc-cuerpo { padding: 18px 20px 24px; }
     /* 16 px arriba: el árbol sube 8 px con el vaivén y no puede meterse
        debajo de la barra. */
