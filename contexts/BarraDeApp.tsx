@@ -20,11 +20,15 @@ import React, { createContext, useContext, useEffect } from 'react';
 interface BarraDeAppValue {
     barraOculta: boolean;
     setBarraOculta: (oculta: boolean) => void;
+    barraSuelta: boolean;
+    setBarraSuelta: (suelta: boolean) => void;
 }
 
 export const BarraDeAppContext = createContext<BarraDeAppValue>({
     barraOculta: false,
     setBarraOculta: () => { },
+    barraSuelta: false,
+    setBarraSuelta: () => { },
 });
 
 /** Se llama desde la pantalla que quiere la barra fuera. */
@@ -35,6 +39,25 @@ export const useBarraDeAppOculta = (oculta: boolean = true) => {
         setBarraOculta(oculta);
         return () => setBarraOculta(false);
     }, [oculta, setBarraOculta]);
+};
+
+/**
+ * Se llama desde la pantalla que NO quiere la barra pegada al scroll: en vez
+ * de seguir al dedo, se queda arriba de todo y se va con el contenido.
+ *
+ * Es para una pantalla que abre con una portada y la barra montada encima:
+ * ahí la barra es parte de esa cabecera, no un elemento de navegación que
+ * tenga que estar siempre a mano. Quien la deja suelta se queda sin su
+ * atajo al menú mientras scrollea, así que es una decisión de esa pantalla y
+ * no de la app: al desmontarse vuelve a pegarse sola.
+ */
+export const useBarraDeAppSuelta = (suelta: boolean = true) => {
+    const { setBarraSuelta } = useContext(BarraDeAppContext);
+
+    useEffect(() => {
+        setBarraSuelta(suelta);
+        return () => setBarraSuelta(false);
+    }, [suelta, setBarraSuelta]);
 };
 
 export const useBarraDeApp = () => useContext(BarraDeAppContext);

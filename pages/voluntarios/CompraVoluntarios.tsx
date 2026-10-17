@@ -7,6 +7,13 @@
 // Es PÚBLICA: sin sesión no redirige, muestra la pantalla 0 y de ahí manda
 // al login. Volver es la parte delicada y va documentada abajo.
 //
+// Por la pantalla 0 pasa TODO el mundo, también quien ya tiene la sesión
+// puesta. Antes se la salteaba y la compra arrancaba sola: en un teléfono
+// prestado, o con la cuenta de otro todavía abierta, uno llegaba al paso de
+// pagar sin haber visto nunca a nombre de quién estaba comprando. Con sesión
+// la pantalla dice quién sos y ofrece las dos salidas reales: seguir, o
+// cerrar la sesión y entrar con la tuya.
+//
 // Nada que valga plata se decide acá. El precio, el total, el stock y el
 // código salen de registrar_venta_voluntario (sql/voluntarios_ventas.sql).
 // Esta pantalla junta lo que la persona eligió, manda el total que MOSTRÓ y,
@@ -30,6 +37,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useBarraDeAppSuelta } from '../../contexts/BarraDeApp';
+import { useFullBleedHero } from '../../contexts/HeroContext';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import { guardarDestino } from '../../components/auth/SinAcceso';
 import { safeUUID } from '../../services/uuidUtils';
@@ -46,6 +55,37 @@ const RUTA = '/voluntarios';
 
 /** Mientras cambie la forma del borrador, los viejos se descartan solos. */
 const BORRADOR = 'voluntarios_borrador_v1';
+
+/**
+ * Marca que fue ESTA pantalla la que mandó a iniciar sesión.
+ *
+ * La pantalla 0 la ve todo el mundo, con sesión o sin ella. La única
+ * excepción es volver del login: ahí la persona acaba de pasar por la 0 y
+ * pedirle otro toque sería devolverla a la puerta que recién cruzó. Va en
+ * sessionStorage y no en el state de react-router por lo mismo que el
+ * destino: el login con Google recarga la página entera.
+ */
+const VOLVIENDO = 'voluntarios_volviendo';
+
+/**
+ * La portada, arriba de todo salvo en el ticket.
+ *
+ * Ocupa el lugar que tenían los tres segmentos del progreso, que se fueron:
+ * cada paso lo dice su título. La barra de la app se monta encima, en
+ * transparente, como en el inicio —la imagen no trae el logo de Origen
+ * justamente porque lo pone la barra—, y recupera su fondo al scrollear.
+ *
+ * El fondo del recuadro es el mismo azul del archivo, así que la imagen entra
+ * entera —`contain`, nunca recortada— y los costados que sobran en una
+ * pantalla ancha no se notan.
+ *
+ * En el ticket no va: esa pantalla ya no es el trámite, es el comprobante que
+ * se muestra en el mostrador, y ahí la barra vuelve a ser la de siempre.
+ */
+const PORTADA = '/voluntarios-portada.jpg';
+const PORTADA_FONDO = '#1f2a46';
+/** Cuánto sube la hoja sobre la portada; el radio de arriba es el mismo. */
+const MONTA = 28;
 
 type Paso = 0 | 1 | 2 | 3 | 4;
 type EstadoComp = 'vacio' | 'subiendo' | 'listo' | 'error';
@@ -98,13 +138,24 @@ const pesoTexto = (bytes: number): string =>
 const CompraVoluntarios: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, isLoadingSession, isLoadingProfile } = useAuth();
+    const { user, isLoadingSession, isLoadingProfile, signOut } = useAuth();
     const oscuro = useOscuro();
     const esPc = useEsPc();
     const t = useMemo(() => tokens(oscuro), [oscuro]);
 
     // ── Estado ──────────────────────────────────────────────────────────
     const [paso, setPaso] = useState<Paso>(1);
+    // La pantalla 0, la que presenta la compra y confirma con qué cuenta se
+    // está comprando. Arranca puesta siempre; sólo volver del login la saltea.
+    const [pasoCero, setPasoCero] = useState(() => {
+        try {
+            if (sessionStorage.getItem(VOLVIENDO) === '1') {
+                sessionStorage.removeItem(VOLVIENDO);
+                return false;
+            }
+        } catch { /* sin storage: se muestra, que es el camino normal */ }
+        return true;
+    });
     const [restaurado, setRestaurado] = useState(false);
 
     const [catalogo, setCatalogo] = useState<ClaseDelCatalogo[] | null>(null);
@@ -185,8 +236,25 @@ const CompraVoluntarios: React.FC = () => {
     }, [user]);
 
     const irAEntrar = () => {
+        try { sessionStorage.setItem(VOLVIENDO, '1'); } catch { /* sin storage */ }
         guardarDestino({ pathname: RUTA, search: location.search });
         navigate('/auth', { state: { from: { pathname: RUTA, search: location.search } } });
+    };
+
+    /**
+     * "Cerrar sesión", desde la pantalla 0.
+     *
+     * No navega a ningún lado: la pantalla es pública, así que se queda donde
+     * está y vuelven los botones de entrar. Se lleva puesto el borrador —el
+     * pedido es de quien estaba adentro, y el que entre después no tiene por
+     * qué encontrarse el carrito de otro.
+     */
+    const cerrarSesion = async () => {
+        limpiarBorrador();
+        setLineas([]);
+        setPaso(1);
+        setPasoCero(true);
+        await signOut();
     };
 
     // ── El borrador ─────────────────────────────────────────────────────
@@ -261,6 +329,21 @@ const CompraVoluntarios: React.FC = () => {
     };
 
     const ir = (p: Paso) => { setPaso(p); setSheet(false); arriba(); };
+
+    /**
+     * Volver, paso por paso, hasta la pantalla 0.
+     *
+     * Del primer paso no sale a la app: devuelve a la 0. Ahí está "Cerrar
+     * sesión", que es a lo que vuelve quien se dio cuenta de que entró con la
+     * cuenta de otro —y es el único lugar donde eso se puede arreglar.
+     * El pedido no se toca: sigue en el borrador, y Continuar lo devuelve
+     * donde estaba.
+     */
+    const atras = () => {
+        if (paso === 1) { setPasoCero(true); setSheet(false); arriba(); return; }
+        setMontoCambio(false);
+        ir((paso - 1) as Paso);
+    };
 
     // ── Armar el pedido ─────────────────────────────────────────────────
     const agregar = () => {
@@ -537,20 +620,38 @@ const CompraVoluntarios: React.FC = () => {
         principal = confirmar;
     }
 
-    const atras = () => {
-        if (paso === 1) { navigate('/'); return; }
-        setMontoCambio(false);
-        ir((paso - 1) as Paso);
-    };
-
     // ── Qué pantalla toca ───────────────────────────────────────────────
     const cargandoSesion = isLoadingSession || isLoadingProfile;
-    const mostrarSplash = !cargandoSesion && !user && paso !== 4;
-    const mostrarEsqueleto = cargandoSesion || (!!user && !restaurado) || (!!user && !catalogo && !fallaCatalogo);
-    const enPasos = !!user && !mostrarEsqueleto && paso >= 1 && paso <= 3;
+    // Con sesión la pantalla 0 también se muestra, hasta que se toque
+    // "Continuar". Sin sesión no hay otra cosa que mostrar.
+    const mostrarSplash = !cargandoSesion && (!user || pasoCero) && paso !== 4;
+    // El esqueleto espera su turno detrás de la 0: mientras se lee con qué
+    // cuenta se compra, el catálogo se trae por atrás y no hay nada que
+    // avisar. Los dos bloques son hermanos en el JSX, así que sin esto se
+    // apilarían uno debajo del otro.
+    const mostrarEsqueleto = !mostrarSplash
+        && (cargandoSesion || (!!user && !restaurado) || (!!user && !catalogo && !fallaCatalogo));
+    const enPasos = !!user && !pasoCero && !mostrarEsqueleto && paso >= 1 && paso <= 3;
     const mostrarListo = paso === 4 && !!ticket;
 
-    const bg = fondoDelPaso(mostrarListo ? 4 : paso, oscuro);
+    /** El ticket es la única pantalla sin portada. */
+    const hayPortada = !mostrarListo;
+
+    // Con portada, la barra de la app se monta encima en transparente y el
+    // contenido sube los 64px de la barra, igual que el hero del inicio. En
+    // el ticket no hay imagen detrás: la barra vuelve a tener su fondo, y se
+    // apaga sola al salir de la ruta.
+    //
+    // Transparente SIEMPRE, no sólo arriba de todo: como la barra ya no se
+    // pega al scroll, recuperar el fondo blanco al primer desplazamiento se
+    // vería como un parpadeo justo antes de irse de pantalla.
+    useFullBleedHero(hayPortada, hayPortada);
+
+    // Acá la barra no sigue al dedo: es la cabecera de la portada, se queda
+    // arriba de todo y se va con ella. Vuelve a pegarse al salir de la ruta.
+    useBarraDeAppSuelta();
+
+    const bg = fondoDelPaso(mostrarSplash ? 0 : mostrarListo ? 4 : paso, oscuro);
     const padInferior = esPc ? 64 : (vivas.length ? 250 : 200);
 
     // ── Estilos que se repiten ──────────────────────────────────────────
@@ -654,44 +755,166 @@ const CompraVoluntarios: React.FC = () => {
                 tabIndex={-1}
             />
 
+            {/* ══ La portada ══ */}
+            {hayPortada && (
+                <div style={{
+                    position: 'relative', width: '100%', background: PORTADA_FONDO,
+                    height: esPc ? 260 : undefined, lineHeight: 0,
+                }}>
+                    <img
+                        src={PORTADA}
+                        alt="Punto de Información · Información y novedades"
+                        style={{
+                            display: 'block', width: '100%',
+                            height: esPc ? '100%' : 'auto', objectFit: 'contain',
+                        }}
+                    />
+                </div>
+            )}
+
+            {/* ══ La hoja, montada sobre la portada ══
+                Lleva el fondo del paso —no blanco— para que cada tramo
+                conserve su color; lo que se ve por las esquinas redondeadas
+                es la portada de atrás. */}
+            <div style={{
+                position: 'relative', background: bg,
+                transition: 'background-color .4s ease',
+                marginTop: hayPortada ? -MONTA : 0,
+                borderTopLeftRadius: hayPortada ? MONTA : 0,
+                borderTopRightRadius: hayPortada ? MONTA : 0,
+                // Llena la pantalla sin pasarse: en el teléfono la portada
+                // mide 53vw —el alto de la imagen a todo el ancho— y la hoja
+                // se monta MONTA px sobre ella. Sin portada lo único que hay
+                // arriba es la barra de la app, que mide 64.
+                minHeight: !hayPortada
+                    ? 'calc(100vh - 64px)'
+                    : esPc
+                        ? `calc(100vh - ${260 - MONTA}px)`
+                        : `calc(100vh - 53vw + ${MONTA}px)`,
+            }}>
+
             {/* ══ 0 · Sin sesión ══ */}
             {mostrarSplash && (
                 <div style={{
-                    minHeight: '100vh', display: 'flex', flexDirection: 'column',
-                    justifyContent: 'center', padding: esPc ? 40 : '40px 20px 60px',
+                    display: 'flex', flexDirection: 'column',
+                    padding: esPc ? 40 : '34px 20px 60px',
                     animation: 'vcIn .35s ease both',
                 }}>
                     <div style={{ width: '100%', maxWidth: 420, margin: '0 auto' }}>
-                        <p style={rot(t)}>ORIGEN · VOLUNTARIOS</p>
+                        {/* El saludo y lo que lo completa son UNA frase partida
+                            en dos tamaños, no un título con su bajada: por eso
+                            van pegados —8px— y no separados como dos bloques.
+                            Es lo único que levanta la voz en la pantalla; la
+                            tarjeta de la cuenta y los botones siguen en el tono
+                            de siempre.
+
+                            El rótulo "ORIGEN · VOLUNTARIOS" se fue antes, y por
+                            el mismo motivo: la portada ya dice de quién es esto
+                            y el saludo dice a qué entraste. */}
                         <h1 style={{
-                            margin: '12px 0 0', fontSize: 34, lineHeight: 1.08, fontWeight: 600,
-                            letterSpacing: '-.03em', color: t.ink,
-                        }}>Remeras y buzos del equipo</h1>
-                        <p style={{ margin: '12px 0 0', fontSize: 16, lineHeight: 1.55, color: t.m52 }}>
-                            Entrá con tu cuenta para comprar los tuyos.
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 32 }}>
-                            <button type="button" onClick={irAEntrar} style={{
-                                height: 58, border: `1px solid ${t.line}`, borderRadius: 999,
-                                background: t.card, color: t.ink, display: 'flex', alignItems: 'center',
-                                justifyContent: 'center', gap: 12, fontSize: 16.5, fontWeight: 600, cursor: 'pointer',
+                            margin: 0, fontSize: esPc ? 42 : 36, lineHeight: 1.05, fontWeight: 700,
+                            letterSpacing: '-.035em', color: t.ink,
+                        }}>¡Bienvenidos!</h1>
+                        <p style={{
+                            margin: '8px 0 0', fontSize: esPc ? 18 : 17, lineHeight: 1.45,
+                            fontWeight: 500, color: t.m52,
+                            // Renglones parejos y cortos: una frase de ancho
+                            // completo al lado de un saludo corto se lee como
+                            // letra chica, no como la segunda mitad de la frase.
+                            textWrap: 'balance', maxWidth: '30ch',
+                        }}>Al punto de ventas de remeras y buzos de los voluntarios de la casa.</p>
+
+                        {/* Con sesión: quién sos, y las dos salidas. El nombre
+                            va antes que los botones porque es lo que decide
+                            cuál de los dos tocar.
+
+                            Los espacios de acá abajo no son parejos a propósito:
+                            agrupan. La tarjeta dice quién sos; los dos botones y
+                            la línea chica que los explica son lo que se hace con
+                            eso, y van juntos; "Volver al inicio" es otra cosa
+                            —irse— y por eso queda lejos. Parejos, los cuatro
+                            bloques se leían como una sola lista. */}
+                        {user && (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: 16, marginTop: 30,
+                                padding: 16, borderRadius: 22, background: t.card, boxShadow: t.shadow,
                             }}>
-                                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.5 5.5 0 01-2.4 3.62v3h3.87c2.27-2.09 3.58-5.17 3.58-8.81z" />
-                                    <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.92l-3.87-3c-1.08.72-2.45 1.15-4.08 1.15-3.13 0-5.79-2.11-6.74-4.96H1.27v3.1A12 12 0 0012 24z" />
-                                    <path fill="#FBBC05" d="M5.26 14.27a7.2 7.2 0 010-4.54v-3.1H1.27a12 12 0 000 10.74l3.99-3.1z" />
-                                    <path fill="#EA4335" d="M12 4.77c1.76 0 3.35.61 4.6 1.8l3.43-3.43A11.5 11.5 0 0012 0 12 12 0 001.27 6.63l3.99 3.1C6.21 6.88 8.87 4.77 12 4.77z" />
-                                </svg>
-                                Continuar con Google
-                            </button>
-                            <button type="button" onClick={irAEntrar} style={{
-                                height: 58, border: 0, borderRadius: 999, background: t.prim,
-                                color: t.primInk, fontSize: 16.5, fontWeight: 600, cursor: 'pointer',
-                            }}>Entrar con email</button>
+                                <div style={{
+                                    width: 44, height: 44, flex: 'none', borderRadius: 999, overflow: 'hidden',
+                                    background: t.prim, color: t.primInk, display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', fontSize: 15, fontWeight: 600,
+                                }}>
+                                    {user.avatarUrl
+                                        ? <img src={user.avatarUrl} alt="" aria-hidden="true" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        : iniciales}
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <p style={{
+                                        margin: 0, fontSize: 16, fontWeight: 600, color: t.ink,
+                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    }}>{entero || 'Tu cuenta'}</p>
+                                    {user.email && (
+                                        <p style={{
+                                            margin: '2px 0 0', fontSize: 13.5, color: t.m52,
+                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                        }}>{user.email}</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* El bloque de botones arranca bien abajo de lo que
+                            lo precede —la tarjeta de la cuenta, o el saludo si
+                            no hay sesión—: lo que está arriba se lee, y recién
+                            después se decide. La nota y "Volver al inicio"
+                            bajan con él, que es lo que los mantiene agrupados. */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 40 }}>
+                            {user && (
+                                <>
+                                    <button type="button" onClick={() => setPasoCero(false)} style={{
+                                        height: 58, border: 0, borderRadius: 999, background: t.prim,
+                                        color: t.primInk, fontSize: 16.5, fontWeight: 600, cursor: 'pointer',
+                                    }}>Continuar</button>
+                                    <button type="button" onClick={cerrarSesion} style={{
+                                        height: 58, border: `1px solid ${t.line}`, borderRadius: 999,
+                                        background: t.card, color: t.ink, fontSize: 16.5, fontWeight: 600,
+                                        cursor: 'pointer',
+                                    }}>Cerrar sesión</button>
+                                </>
+                            )}
+                            {/* Un solo botón, y dice lo que hace.
+                                Acá había dos —"Continuar con Google" y "Entrar
+                                con email"— y los dos llamaban a la MISMA
+                                función: ninguno entra, los dos llevan a /auth,
+                                que es donde se elige cómo entrar. El de Google
+                                además llevaba el logo, así que prometía entrar
+                                con Google y no lo hacía. Si algún día esta
+                                pantalla arranca el login de Google de verdad,
+                                vuelve el botón con su logo y se gana el lugar. */}
+                            {!user && (
+                                <button type="button" onClick={irAEntrar} style={{
+                                    height: 58, border: 0, borderRadius: 999, background: t.prim,
+                                    color: t.primInk, fontSize: 16.5, fontWeight: 600, cursor: 'pointer',
+                                }}>Entrar para comprar</button>
+                            )}
                         </div>
-                        <p style={{ margin: '18px 0 0', textAlign: 'center', fontSize: 13.5, color: t.m52 }}>
-                            Después de entrar, volvés directo acá.
+                        <p style={{ margin: '16px 0 0', textAlign: 'center', fontSize: 13.5, lineHeight: 1.45, color: t.m52 }}>
+                            {user
+                                ? 'Si no sos vos, cerrá la sesión y entrá con la tuya.'
+                                : 'Después de entrar, volvés directo acá.'}
                         </p>
+
+                        {/* La salida de la pantalla. Va acá abajo y en voz
+                            baja —ancho de su texto, fondo de chip— porque es
+                            lo contrario de lo que esta pantalla propone: no
+                            tiene que competir con Continuar ni con Entrar. */}
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 30 }}>
+                            <button type="button" onClick={() => navigate('/')} style={{
+                                height: 44, padding: '0 20px', border: 0, borderRadius: 999,
+                                background: t.chip, color: t.ink, fontSize: 14.5, fontWeight: 600,
+                                cursor: 'pointer',
+                            }}>Volver al inicio</button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -732,42 +955,26 @@ const CompraVoluntarios: React.FC = () => {
                         gap: 48, justifyContent: 'center', alignItems: 'start',
                     }}>
                         <div style={{ minWidth: 0 }}>
-                            {/* ── Los tres segmentos ── */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                <button type="button" onClick={atras} aria-label="Volver" style={{
-                                    width: 44, height: 44, flex: 'none', border: 0, borderRadius: 999,
-                                    background: t.chip, color: t.ink, display: 'flex', alignItems: 'center',
-                                    justifyContent: 'center', cursor: 'pointer',
-                                }}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
-                                </button>
-                                <div
-                                    aria-label={`Paso ${paso} de 3`}
-                                    style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 6 }}
-                                >
-                                    {['Tus datos', 'Tu pedido', 'Pagá'].map((txt, i) => {
-                                        const n = i + 1;
-                                        const cur = n === paso;
-                                        const past = n < paso;
-                                        const color = cur ? t.ink
-                                            : past ? (oscuro ? 'rgba(255,255,255,.4)' : 'rgba(0,0,0,.4)')
-                                                : (oscuro ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)');
-                                        return (
-                                            <div key={txt} style={{ minWidth: 0 }}>
-                                                <div style={{ height: 4, borderRadius: 999, transition: 'background .3s', background: color }} />
-                                                <p style={{
-                                                    margin: '7px 0 0', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-                                                    overflow: 'hidden', textOverflow: 'ellipsis', color: cur ? t.ink : t.m38,
-                                                }}>{txt}</p>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                            {/* Acá vivían los tres segmentos del progreso, que
+                                se fueron: cada paso lo anuncia su título.
+
+                                Queda el volver, en el mismo tono bajo que
+                                "Volver al inicio": retrocede un paso, y del
+                                primero devuelve a la pantalla 0, que es donde
+                                está "Cerrar sesión". */}
+                            <button type="button" onClick={atras} style={{
+                                height: 40, padding: '0 16px 0 11px', marginBottom: 18,
+                                border: 0, borderRadius: 999, background: t.chip, color: t.ink,
+                                fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                                display: 'inline-flex', alignItems: 'center', gap: 5,
+                            }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+                                Volver
+                            </button>
 
                             {/* ── Paso 1 · Tus datos ── */}
                             {paso === 1 && (
-                                <div style={{ marginTop: 28, animation: 'vcIn .35s ease both' }}>
+                                <div style={{ animation: 'vcIn .35s ease both' }}>
                                     <h2 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-.025em', color: t.ink }}>Tus datos</h2>
                                     <div style={{ ...tarjeta, marginTop: 18 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -848,7 +1055,7 @@ const CompraVoluntarios: React.FC = () => {
 
                             {/* ── Paso 2 · Armá tu pedido ── */}
                             {paso === 2 && (
-                                <div style={{ marginTop: 28, animation: 'vcIn .35s ease both' }}>
+                                <div style={{ animation: 'vcIn .35s ease both' }}>
                                     <h2 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-.025em', color: t.ink }}>Armá tu pedido</h2>
 
                                     {(hayErr || agotadoMsg) && (
@@ -1064,7 +1271,7 @@ const CompraVoluntarios: React.FC = () => {
 
                             {/* ── Paso 3 · Pagá ── */}
                             {paso === 3 && (
-                                <div style={{ marginTop: 28, animation: 'vcIn .35s ease both' }}>
+                                <div style={{ animation: 'vcIn .35s ease both' }}>
                                     <h2 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-.025em', color: t.ink }}>Pagá</h2>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 20 }}>
                                         <span style={rot(t)}>TRANSFERÍ</span>
@@ -1231,7 +1438,7 @@ const CompraVoluntarios: React.FC = () => {
 
             {/* ══ 4 · ¡Listo! ══ */}
             {mostrarListo && ticket && (
-                <div style={{ minHeight: '100vh', padding: esPc ? '56px 40px' : '40px 20px 56px', animation: 'vcIn .4s ease both' }}>
+                <div style={{ padding: esPc ? '48px 40px 56px' : '34px 20px 56px', animation: 'vcIn .4s ease both' }}>
                     <div style={{ maxWidth: 460, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                         <svg width="92" height="92" viewBox="0 0 52 52" fill="none" stroke="currentColor" strokeWidth="2.4"
                             strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ color: t.ink }}>
@@ -1300,6 +1507,8 @@ const CompraVoluntarios: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            </div>{/* fin de la hoja */}
 
             {/* ══ La barra de abajo, sólo en el teléfono ══ */}
             {!esPc && enPasos && (

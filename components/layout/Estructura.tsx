@@ -86,9 +86,12 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     // algunos de sus modos y puesta en otros, sin cambiar de ruta — ver
     // contexts/BarraDeApp.tsx.
     const [barraOculta, setBarraOculta] = useState(false);
+    // Y hay pantallas que la quieren puesta pero NO pegada al scroll: arriba
+    // de todo, yéndose con el contenido.
+    const [barraSuelta, setBarraSuelta] = useState(false);
     const barraDeApp = useMemo(
-        () => ({ barraOculta, setBarraOculta }),
-        [barraOculta]
+        () => ({ barraOculta, setBarraOculta, barraSuelta, setBarraSuelta }),
+        [barraOculta, barraSuelta]
     );
     const isDashboard = estaEnLaLista(location.pathname, RUTAS_CON_HERO) || !!hasFullBleedHero;
     // `/ninez` entra acá junto con isDashboard, no por separado: el -mt-16 que
@@ -222,7 +225,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
 
                 {/* Navbar */}
                 {!barraOculta && (
-                <header className={`no-print print:hidden sticky top-0 z-30 flex-shrink-0 h-16 border-b transition-colors duration-300 ${isNavbarTransparent
+                <header className={`no-print print:hidden z-30 flex-shrink-0 h-16 border-b transition-colors duration-300 ${barraSuelta ? 'relative' : 'sticky top-0'} ${isNavbarTransparent
                     ? 'bg-transparent border-transparent'
                     : 'bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-slate-200 dark:border-zinc-800'
                     }`}>
