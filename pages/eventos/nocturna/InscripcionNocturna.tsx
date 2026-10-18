@@ -1196,16 +1196,6 @@ const InscripcionNocturna: React.FC = () => {
                         <p style={{ margin: '10px 0 0', ...arch(600, '15px', '1.45') }}>
                             Quien hace la inscripción y se hace cargo de los adolescentes esa noche.
                         </p>
-                        {!!cuenta && (
-                            <div style={{ marginTop: 16, borderRadius: 20, background: NEGRO, padding: '14px 18px', display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                                <span style={{ flex: 'none', minHeight: 24, padding: '3px 9px', borderRadius: 999, background: LIMA, display: 'flex', alignItems: 'center', ...arch(900, '10.5px'), textTransform: 'uppercase' }}>
-                                    De tu cuenta
-                                </span>
-                                <p style={{ margin: 0, flex: '1 1 200px', ...arch(700, '14px', '1.45'), color: LIMA }}>
-                                    Revisalo. Si cambiás algo, vale solo para esta inscripción: tu cuenta queda igual.
-                                </p>
-                            </div>
-                        )}
                         <div style={{ marginTop: 16, borderRadius: 30, background: LIMA, boxShadow: anillo(), padding: '18px 16px' }}>
                             <div className="noc-grilla" style={{ gap: '16px 10px' }}>
                                 {campoAdulto('nombre', 'Nombre', 'text', 'text', 'Nombre')}
