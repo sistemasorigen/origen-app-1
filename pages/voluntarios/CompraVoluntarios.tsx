@@ -116,8 +116,6 @@ interface Borrador {
     paso: Paso;
     lineas: Linea[];
     nid: number;
-    tel: string;
-    guardar: boolean;
     comp: EstadoComp;
     compPath: string | null;
     compNombre: string;
@@ -146,7 +144,11 @@ const CompraVoluntarios: React.FC = () => {
     const t = useMemo(() => tokens(oscuro), [oscuro]);
 
     // ── Estado ──────────────────────────────────────────────────────────
-    const [paso, setPaso] = useState<Paso>(1);
+    // El 1 era "Tus datos", que se retiró: lo único que hacía era mostrar
+    // el nombre y el teléfono de la cuenta para que se confirmaran, y eso
+    // ahora se ve en la pantalla 0, con la tarjeta de la cuenta. La compra
+    // empieza en el pedido.
+    const [paso, setPaso] = useState<Paso>(2);
     // La pantalla 0, la que presenta la compra y confirma con qué cuenta se
     // está comprando. Arranca puesta siempre; sólo volver del login la saltea.
     const [pasoCero, setPasoCero] = useState(() => {
@@ -170,9 +172,6 @@ const CompraVoluntarios: React.FC = () => {
     const [cant, setCant] = useState(1);
     const [aviso5, setAviso5] = useState(false);
 
-    const [tel, setTel] = useState('');
-    const [guardar, setGuardar] = useState(true);
-
     const [comp, setComp] = useState<EstadoComp>('vacio');
     const [compPath, setCompPath] = useState<string | null>(null);
     const [compNombre, setCompNombre] = useState('');
@@ -190,7 +189,7 @@ const CompraVoluntarios: React.FC = () => {
     const [ventaId, setVentaId] = useState(() => safeUUID());
     const [ticket, setTicket] = useState<Ticket | null>(null);
 
-    const [copiado, setCopiado] = useState<'alias' | 'cuit' | null>(null);
+    const [copiado, setCopiado] = useState<'alias' | null>(null);
     const [sheet, setSheet] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
 
@@ -218,10 +217,6 @@ const CompraVoluntarios: React.FC = () => {
     const iniciales = [nombre, apellido].filter(Boolean)
         .map(p => p[0]?.toUpperCase() || '').join('').slice(0, 2) || '—';
     const telDeLaCuenta = (user?.phone || '').trim();
-    const sinTel = !telDeLaCuenta;
-    const telDigitos = tel.replace(/\D/g, '').length;
-    const telValido = !sinTel || telDigitos >= 8;
-    const telMostrar = sinTel ? tel : telDeLaCuenta;
 
     // ── La vuelta del login ─────────────────────────────────────────────
     //
@@ -266,11 +261,9 @@ const CompraVoluntarios: React.FC = () => {
             if (crudo) {
                 const b = JSON.parse(crudo) as Borrador;
                 if (b && Array.isArray(b.lineas)) {
-                    setPaso(b.paso >= 1 && b.paso <= 3 ? b.paso : 1);
+                    setPaso(b.paso >= 2 && b.paso <= 3 ? b.paso : 2);
                     setLineas(b.lineas);
                     setNid(b.nid || b.lineas.length + 1);
-                    setTel(b.tel || '');
-                    setGuardar(b.guardar !== false);
                     // El comprobante se restaura sólo si llegó a subirse: un
                     // 'subiendo' guardado es una subida que se cortó.
                     if (b.comp === 'listo' && b.compPath) {
@@ -296,13 +289,13 @@ const CompraVoluntarios: React.FC = () => {
         try {
             const b: Borrador = {
                 paso,
-                lineas, nid, tel, guardar,
+                lineas, nid,
                 comp: comp === 'listo' ? 'listo' : 'vacio',
                 compPath, compNombre, compTam, ventaId, totalVisto,
             };
             sessionStorage.setItem(BORRADOR, JSON.stringify(b));
         } catch { /* sin storage: el borrador no sobrevive, la compra sí */ }
-    }, [restaurado, paso, lineas, nid, tel, guardar, comp, compPath, compNombre, compTam, ventaId, totalVisto]);
+    }, [restaurado, paso, lineas, nid, comp, compPath, compNombre, compTam, ventaId, totalVisto]);
 
     const limpiarBorrador = () => {
         try { sessionStorage.removeItem(BORRADOR); } catch { /* sin storage */ }
@@ -342,7 +335,7 @@ const CompraVoluntarios: React.FC = () => {
      * donde estaba.
      */
     const atras = () => {
-        if (paso === 1) { setPasoCero(true); setSheet(false); arriba(); return; }
+        if (paso === 2) { setPasoCero(true); setSheet(false); arriba(); return; }
         setMontoCambio(false);
         ir((paso - 1) as Paso);
     };
@@ -440,8 +433,6 @@ const CompraVoluntarios: React.FC = () => {
             items: vivas.map(l => ({ code: l.code, cantidad: l.cant })),
             comprobantePath: compPath,
             totalEsperado: total,
-            telefono: sinTel ? tel.trim() : undefined,
-            guardarTelefono: sinTel ? guardar : false,
         });
 
         setConfirmando(false);
@@ -461,7 +452,7 @@ const CompraVoluntarios: React.FC = () => {
                     sub: fmt(l.cant * l.precio),
                 })),
                 total: fmt(r.total),
-                persona: `${entero}${telMostrar ? ` · ${telMostrar}` : ''}`,
+                persona: `${entero}${telDeLaCuenta ? ` · ${telDeLaCuenta}` : ''}`,
                 // La hora del SERVIDOR, no la del telefono: el ticket se
                 // muestra en el stand y el reloj de un celular puede estar
                 // corrido. fechaYHora ya lo escribe en hora argentina.
@@ -544,7 +535,7 @@ const CompraVoluntarios: React.FC = () => {
     }, [catalogo]);
 
     // ── Copiar ──────────────────────────────────────────────────────────
-    const copiar = async (cual: 'alias' | 'cuit', texto: string) => {
+    const copiar = async (cual: 'alias', texto: string) => {
         const ok = await copiarTexto(texto);
         if (!ok) { avisar('No pudimos copiarlo. Anotalo a mano.'); return; }
         setCopiado(cual);
@@ -591,16 +582,7 @@ const CompraVoluntarios: React.FC = () => {
     let razon = '';
     let principal: () => void = () => { };
 
-    if (paso === 1) {
-        principalTxt = 'Son mis datos, seguir';
-        principalOff = !telValido;
-        razon = telValido ? '' : 'Agregá tu teléfono para seguir.';
-        principal = () => {
-            if (!telValido) return;
-            ir(2);
-            if (sinTel && guardar) avisar('Teléfono guardado en tu perfil');
-        };
-    } else if (paso === 2) {
+    if (paso === 2) {
         principalTxt = 'Ir a pagar';
         principalOff = !vivas.length || hayErr;
         razon = !vivas.length
@@ -633,7 +615,7 @@ const CompraVoluntarios: React.FC = () => {
     // apilarían uno debajo del otro.
     const mostrarEsqueleto = !mostrarSplash
         && (cargandoSesion || (!!user && !restaurado) || (!!user && !catalogo && !fallaCatalogo));
-    const enPasos = !!user && !pasoCero && !mostrarEsqueleto && paso >= 1 && paso <= 3;
+    const enPasos = !!user && !pasoCero && !mostrarEsqueleto && paso >= 2 && paso <= 3;
     const mostrarListo = paso === 4 && !!ticket;
 
     /** El ticket es la única pantalla sin portada. */
@@ -980,87 +962,6 @@ const CompraVoluntarios: React.FC = () => {
                                 Volver
                             </button>
 
-                            {/* ── Paso 1 · Tus datos ── */}
-                            {paso === 1 && (
-                                <div style={{ animation: 'vcIn .35s ease both' }}>
-                                    <h2 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-.025em', color: t.ink }}>Tus datos</h2>
-                                    <div style={{ ...tarjeta, marginTop: 18 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                            <div style={{
-                                                width: 52, height: 52, borderRadius: 999, background: t.chip,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: 17, fontWeight: 600, color: t.ink,
-                                            }}>{iniciales}</div>
-                                            <p style={{ margin: 0, fontSize: 17, fontWeight: 600, color: t.ink }}>{entero || 'Tu cuenta'}</p>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 18 }}>
-                                            <div style={{ background: t.surf, borderRadius: 16, padding: '12px 16px' }}>
-                                                <p style={rot(t)}>NOMBRE</p>
-                                                <p style={{ margin: '4px 0 0', fontSize: 16, fontWeight: 600, color: t.ink }}>{nombre || '—'}</p>
-                                            </div>
-                                            <div style={{ background: t.surf, borderRadius: 16, padding: '12px 16px' }}>
-                                                <p style={rot(t)}>APELLIDO</p>
-                                                <p style={{ margin: '4px 0 0', fontSize: 16, fontWeight: 600, color: t.ink }}>{apellido || '—'}</p>
-                                            </div>
-
-                                            {sinTel ? (
-                                                <>
-                                                    <label style={{
-                                                        display: 'block', background: t.surf, borderRadius: 16,
-                                                        padding: '12px 16px', boxShadow: `inset 0 0 0 2px ${t.warn}`,
-                                                    }}>
-                                                        <span style={{ ...rot(t), display: 'block' }}>TELÉFONO</span>
-                                                        <input
-                                                            type="tel"
-                                                            inputMode="tel"
-                                                            value={tel}
-                                                            onChange={e => setTel(e.target.value.replace(/[^\d\s+-]/g, '').slice(0, 18))}
-                                                            placeholder="Agregá tu teléfono"
-                                                            style={{
-                                                                width: '100%', height: 32, marginTop: 4, border: 0,
-                                                                background: 'transparent', fontSize: 16, fontWeight: 600, color: t.ink,
-                                                            }}
-                                                        />
-                                                    </label>
-                                                    <p style={{ margin: '2px 4px 0', fontSize: 13, fontWeight: 600, color: t.ink }}>
-                                                        Tu cuenta no tiene teléfono. Lo necesitamos para avisarte.
-                                                    </p>
-                                                    <button
-                                                        type="button"
-                                                        role="checkbox"
-                                                        aria-checked={guardar}
-                                                        onClick={() => setGuardar(g => !g)}
-                                                        style={{
-                                                            minHeight: 44, padding: '0 4px', border: 0, background: 'transparent',
-                                                            display: 'flex', alignItems: 'center', gap: 12, fontSize: 14,
-                                                            fontWeight: 600, color: t.ink, cursor: 'pointer', textAlign: 'left',
-                                                        }}
-                                                    >
-                                                        <span style={{
-                                                            width: 24, height: 24, flex: 'none', borderRadius: 8,
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            background: guardar ? t.prim : 'transparent', color: t.primInk,
-                                                            boxShadow: guardar ? 'none' : `inset 0 0 0 2px ${t.m38}`,
-                                                        }}>
-                                                            {guardar && <Tilde tam={14} />}
-                                                        </span>
-                                                        Guardarlo también en mi perfil
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <div style={{ background: t.surf, borderRadius: 16, padding: '12px 16px' }}>
-                                                    <p style={rot(t)}>TELÉFONO</p>
-                                                    <p style={{ margin: '4px 0 0', fontSize: 16, fontWeight: 600, color: t.ink }}>{telMostrar}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <p style={{ margin: '14px 4px 0', fontSize: 13.5, lineHeight: 1.55, color: t.m52 }}>
-                                        Son los datos de tu cuenta. Los usamos para avisarte cuando tu pedido esté listo.
-                                    </p>
-                                </div>
-                            )}
-
                             {/* ── Paso 2 · Armá tu pedido ── */}
                             {paso === 2 && (
                                 <div style={{ animation: 'vcIn .35s ease both' }}>
@@ -1322,22 +1223,8 @@ const CompraVoluntarios: React.FC = () => {
                                         <p style={rot(t)}>TITULAR</p>
                                         <p style={{ margin: '5px 0 0', fontSize: 15, fontWeight: 600, color: t.ink }}>{TITULAR}</p>
                                         <div style={{ height: 1, background: t.line, margin: '16px 0' }} />
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <p style={rot(t)}>CUIT</p>
-                                                <p style={{ margin: '5px 0 0', fontSize: 15, fontWeight: 600, color: t.ink }}>{CUIT}</p>
-                                            </div>
-                                            <button type="button" onClick={() => copiar('cuit', CUIT)} style={{
-                                                height: 44, padding: '0 16px', flex: 'none', border: 0, borderRadius: 999,
-                                                display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 600,
-                                                cursor: 'pointer', transition: 'background .15s, color .15s',
-                                                background: copiado === 'cuit' ? t.prim : t.chip,
-                                                color: copiado === 'cuit' ? t.primInk : t.ink,
-                                            }}>
-                                                {copiado === 'cuit' && <Tilde tam={14} />}
-                                                {copiado === 'cuit' ? '¡Copiado!' : 'Copiar'}
-                                            </button>
-                                        </div>
+                                        <p style={rot(t)}>CUIT</p>
+                                        <p style={{ margin: '5px 0 0', fontSize: 15, fontWeight: 600, color: t.ink }}>{CUIT}</p>
                                     </div>
                                     <p style={{ margin: '12px 4px 0', fontSize: 13.5, lineHeight: 1.55, color: t.m52 }}>
                                         Una sola transferencia por el total del pedido. Guardá la captura del comprobante.
