@@ -1,8 +1,9 @@
 // ════════════════════════════════════════════════════════════════════════
 // /voluntarios — comprar remeras y buzos del Punto con una transferencia.
 //
-// Implementa design-claude/Voluntarios - Compra.dc.html: pantalla 0 (sin
-// sesión), los tres pasos —Tus datos · Tu pedido · Pagá— y el ticket final.
+// Implementa design-claude/Voluntarios - Compra.dc.html: la pantalla 0, los
+// pasos —Tu pedido y Pagá— y el ticket final. Eran tres: "Tus datos" se
+// retiró, porque lo que confirmaba ya se lee en la 0.
 //
 // Es PÚBLICA: sin sesión no redirige, muestra la pantalla 0 y de ahí manda
 // al login. Volver es la parte delicada y va documentada abajo.
