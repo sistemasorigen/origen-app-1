@@ -86,6 +86,8 @@ const PORTADA = '/voluntarios-portada.jpg';
 const PORTADA_FONDO = '#1f2a46';
 /** Cuánto sube la hoja sobre la portada; el radio de arriba es el mismo. */
 const MONTA = 28;
+/** Cuánto sube la imagen dentro de su recuadro, para acercarla al logo. */
+const SUBE = 10;
 
 type Paso = 0 | 1 | 2 | 3 | 4;
 type EstadoComp = 'vacio' | 'subiendo' | 'listo' | 'error';
@@ -759,14 +761,20 @@ const CompraVoluntarios: React.FC = () => {
             {hayPortada && (
                 <div style={{
                     position: 'relative', width: '100%', background: PORTADA_FONDO,
-                    height: esPc ? 260 : undefined, lineHeight: 0,
+                    height: esPc ? 260 : undefined, lineHeight: 0, overflow: 'hidden',
                 }}>
+                    {/* La imagen sube SUBE px y el recuadro se queda con su
+                        alto: lo que se recorta arriba es azul vacío, y abajo
+                        asoma el mismo azul del archivo. El texto de la portada
+                        queda más cerca del logo de la barra, que es lo que lo
+                        hace leerse como una sola cabecera y no como dos cosas
+                        sueltas con un hueco en el medio. */}
                     <img
                         src={PORTADA}
                         alt="Punto de Información · Información y novedades"
                         style={{
-                            display: 'block', width: '100%',
-                            height: esPc ? '100%' : 'auto', objectFit: 'contain',
+                            display: 'block', width: '100%', marginTop: -SUBE,
+                            height: esPc ? `calc(100% + ${SUBE}px)` : 'auto', objectFit: 'contain',
                         }}
                     />
                 </div>
