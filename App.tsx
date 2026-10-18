@@ -11,8 +11,6 @@ import PaginaNuevaPresentacion from './pages/punto-informacion/PaginaNuevaPresen
 import PaginaNuevoMovimiento from './pages/punto-informacion/PaginaNuevoMovimiento';
 import PaginaMovimientosVarios from './pages/punto-informacion/PaginaMovimientosVarios';
 import PaginaReportarStock from './pages/punto-informacion/PaginaReportarStock';
-import PaginaNuevoEvento from './pages/punto-informacion/PaginaNuevoEvento';
-import PaginaNuevoAnuncio from './pages/punto-informacion/PaginaNuevoAnuncio';
 import Groups from './pages/groups/Grupos';
 import Admin from './pages/admin/Administrador';
 import AuthScreen from './pages/auth/PantallaAutenticacion';
@@ -731,8 +729,6 @@ const AppContent: React.FC = () => {
                                 <Route path="/punto-de-informacion/movimientos/nuevo" element={<PaginaNuevoMovimiento />} />
                                 <Route path="/punto-de-informacion/movimientos/varios" element={<PaginaMovimientosVarios />} />
                                 <Route path="/punto-de-informacion/reportar" element={<PaginaReportarStock />} />
-                                <Route path="/punto-de-informacion/eventos/nuevo" element={<PaginaNuevoEvento />} />
-                                <Route path="/punto-de-informacion/anuncios/nuevo" element={<PaginaNuevoAnuncio />} />
                                 <Route path="/panel-admin" element={
                                     isSuperAdmin(user)
                                         ? <Admin currentUser={user} onConfigUpdate={refreshConfig} />

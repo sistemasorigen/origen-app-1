@@ -14,7 +14,6 @@ import { useToast } from '../punto-informacion/context/ContextoToast';
 import Inventory from '../punto-informacion/Inventario';
 import NewProduct from '../punto-informacion/NuevoProducto';
 import Movements from '../punto-informacion/Movimientos';
-import Events from '../punto-informacion/Eventos';
 import Loans from '../punto-informacion/Prestamos';
 import Baptisms from '../punto-informacion/Bautismos';
 import ChildPresentations from '../punto-informacion/PresentacionNinos';
@@ -23,7 +22,6 @@ import AdminPanel from '../punto-informacion/PanelAdministrador';
 import MobileHeader from '../punto-informacion/EncabezadoMovil';
 import SinAcceso from '../../components/auth/SinAcceso';
 import InfoPointMenu from '../punto-informacion/MenuPuntoInformacion';
-import Announcements from '../punto-informacion/Anuncios';
 
 interface InfoPointProps {
     currentUser: User | null;
@@ -146,13 +144,11 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             case 'INVENTORY': return 'Inventario';
             case 'NEW_PRODUCT': return 'Nuevo Producto';
             case 'MOVEMENTS': return 'Movimientos';
-            case 'EVENTS': return 'Eventos';
             case 'LOANS': return 'Préstamos';
             case 'BAPTISMS': return 'Bautismos';
             case 'PRESENTATIONS': return 'Presentaciones';
             case 'SEARCH': return 'Buscar';
             case 'ADMIN_PANEL': return 'Configuración';
-            case 'ANNOUNCEMENTS': return 'Anuncios';
             default: return 'Punto de Info';
         }
     };
@@ -168,11 +164,9 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
             case 'INVENTORY': return <Inventory />;
             case 'NEW_PRODUCT': return <NewProduct />;
             case 'MOVEMENTS': return <Movements />;
-            case 'EVENTS': return <Events />;
             case 'LOANS': return <Loans />;
             case 'BAPTISMS': return <Baptisms />;
             case 'PRESENTATIONS': return <ChildPresentations />;
-            case 'ANNOUNCEMENTS': return <Announcements />;
             case 'ADMIN_PANEL': {
                 if (!canAccessAdminPanel) {
                     toast.error('No tienes permisos para acceder a Configuración');

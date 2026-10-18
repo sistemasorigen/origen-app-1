@@ -280,36 +280,6 @@ export interface Loan {
     status: 'ACTIVE' | 'RETURNED';
 }
 
-// --- CALENDAR TYPES ---
-
-export enum EventType {
-    CULTO = 'Culto',
-    AYUNO = 'Ayuno',
-    RETIRO = 'Retiro',
-    CONFERENCIA = 'Conferencia',
-    ORACION = 'Reunión de Oración',
-    ESTUDIO = 'Estudio Bíblico',
-    SERVICIO = 'Servicio Comunitario',
-    SOCIAL = 'Evento Social',
-    OTRO = 'Otro'
-}
-
-export interface AppEvent {
-    id: string;
-    name: string;
-    description?: string; // New Description field
-    date: string;
-    link?: string; // New Link field
-    qrCodeUrl: string;
-    createdAt: string;
-    startTime?: string;
-    endTime?: string;
-    type?: EventType;
-    color?: string;
-    imageUrl?: string;  // URL de imagen de portada
-    location?: string;  // Ubicación del evento
-}
-
 // ── Evento "Día del Niño" ──────────────────────
 
 export interface DiaNinoSession {
@@ -431,19 +401,6 @@ export interface NinezBannerSlide {
     createdAt: string;
 }
 
-export interface Announcement {
-    id: string;
-    title: string;
-    description: string;
-    startDate: string; // ISO Date (YYYY-MM-DD)
-    endDate: string;   // ISO Date (YYYY-MM-DD)
-    createdAt: string; // ISO Timestamp
-    isActive?: boolean; // Manual override
-    isPermanent?: boolean; // NEW: Permanent mode
-    link?: string; // Links for announcements
-    qrCodeUrl?: string; // Generated qr code url
-}
-
 export interface AppSettings {
     id?: string;
     appName: string;
@@ -460,7 +417,6 @@ export type ViewState =
     | 'BAPTISMS'
     | 'PRESENTATIONS'
     | 'LOANS'
-    | 'EVENTS'
     | 'SEARCH'
     | 'SUMMARY'
     // Vive en su propia ruta (/punto-de-informacion/reportar), pero el panel
@@ -468,8 +424,7 @@ export type ViewState =
     | 'REPORTAR'
     | 'WELCOME'
     | 'REPORTES'
-    | 'ADMIN_PANEL'
-    | 'ANNOUNCEMENTS';
+    | 'ADMIN_PANEL';
 
 
 // --- END INFO POINT TYPES ---

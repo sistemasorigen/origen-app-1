@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, AppSettings, ProductType, User, Announcement } from './types';
+import { InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppSettings, ProductType, User } from './types';
 import { safeUUID } from './services/uuidUtils';
 import { db } from './services/dbService';
 import { dbAPI } from './services/db';
@@ -17,8 +17,6 @@ interface AppContextType {
     baptisms: Baptism[];
     presentations: ChildPresentation[];
     loans: Loan[];
-    events: AppEvent[];
-    announcements: Announcement[];
     settings: AppSettings;
     isLoading: boolean;
     notification: NotificationState;
@@ -45,13 +43,6 @@ interface AppContextType {
     addLoan: (l: Loan) => Promise<void>;
     updateLoan: (l: Loan) => Promise<void>;
     deleteLoan: (id: string) => Promise<void>;
-    addAnnouncement: (a: Announcement) => Promise<boolean>;
-    updateAnnouncement: (a: Announcement) => Promise<boolean>;
-    deleteAnnouncement: (id: string) => Promise<void>;
-
-    addEvent: (e: AppEvent) => Promise<void>;
-    updateEvent: (e: AppEvent) => Promise<void>;
-    deleteEvent: (id: string) => Promise<void>;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -69,8 +60,6 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
     const [baptisms, setBaptisms] = useState<Baptism[]>([]);
     const [presentations, setPresentations] = useState<ChildPresentation[]>([]);
     const [loans, setLoans] = useState<Loan[]>([]);
-    const [events, setEvents] = useState<AppEvent[]>([]);
-    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -108,14 +97,12 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
         setIsRefreshing(true);
 
         try {
-            const [p, m, b, pres, l, e, ann, s] = await Promise.all([
+            const [p, m, b, pres, l, s] = await Promise.all([
                 dbAPI.getAllProducts().catch(() => []),
                 dbAPI.getAllMovements().catch(() => []),
                 dbAPI.getAllBaptisms().catch(() => []),
                 dbAPI.getAllPresentations().catch(() => []),
                 dbAPI.getAllLoans().catch(() => []),
-                dbAPI.getAllEvents().catch(() => []),
-                dbAPI.getAllAnnouncements().catch(() => []),
                 dbAPI.getSettings().catch(() => undefined)
             ]);
 
@@ -124,8 +111,6 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
             setBaptisms(b || []);
             setPresentations(pres || []);
             setLoans(l || []);
-            setEvents(e || []);
-            setAnnouncements(ann || []);
 
             if (s) {
                 setSettings(s);
@@ -276,71 +261,6 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
         }
     };
 
-    const addEvent = async (e: AppEvent) => {
-        setEvents(prev => [...prev, e]);
-        await dbAPI.addEvent(e);
-        logAction('Crear Evento', `Evento: ${e.name} (${e.date})`);
-        await refreshData();
-    };
-
-    // --- ANNOUNCEMENTS CRUD (Supabase) ---
-    const addAnnouncement = async (a: Announcement): Promise<boolean> => {
-        setAnnouncements(prev => [...prev, a]); // optimistic update
-        try {
-            await dbAPI.saveAnnouncement(a);
-            await refreshData();
-            return true;
-        } catch (e) {
-            console.error('[addAnnouncement] Error:', e);
-            setAnnouncements(prev => prev.filter(item => item.id !== a.id)); // rollback
-            showNotification('Error al guardar el anuncio. Verificá los datos.', 'error');
-            return false;
-        }
-    };
-
-    const updateAnnouncement = async (a: Announcement): Promise<boolean> => {
-        const previous = announcements;
-        setAnnouncements(prev => prev.map(item => item.id === a.id ? a : item)); // optimistic update
-        try {
-            await dbAPI.saveAnnouncement(a);
-            await refreshData();
-            return true;
-        } catch (e) {
-            console.error('[updateAnnouncement] Error:', e);
-            setAnnouncements(previous); // rollback
-            showNotification('Error al guardar el anuncio. Verificá los datos.', 'error');
-            return false;
-        }
-    };
-
-    const deleteAnnouncement = async (id: string) => {
-        setAnnouncements(prev => prev.filter(a => a.id !== id)); // optimistic update
-        try {
-            await dbAPI.deleteAnnouncement(id);
-        } catch (e) {
-            console.error(e);
-            await refreshData();
-        }
-    };
-
-    const updateEvent = async (e: AppEvent) => {
-        setEvents(prev => prev.map(item => item.id === e.id ? e : item));
-        await dbAPI.updateEvent(e);
-        logAction('Actualizar Evento', `Evento actualizado: ${e.name}`);
-    };
-
-    const deleteEvent = async (id: string) => {
-        const name = events.find(e => e.id === id)?.name || 'Evento';
-        setEvents(prev => prev.filter(e => e.id !== id));
-        try {
-            await dbAPI.deleteEvent(id);
-            logAction('Eliminar Evento', `Borrado: ${name}`);
-        } catch (e) {
-            console.error(e);
-            await refreshData();
-        }
-    };
-
     const updateSettings = async (s: AppSettings) => {
         setSettings(s);
         await dbAPI.saveSettings(s);
@@ -349,15 +269,13 @@ export const AppProvider: React.FC<{ children: ReactNode, currentUser: User | nu
 
     return (
         <AppContext.Provider value={{
-            products, movements, baptisms, presentations, loans, events, announcements, settings, isLoading, notification,
+            products, movements, baptisms, presentations, loans, settings, isLoading, notification,
             refreshData, updateSettings, showNotification,
             addProduct, deleteProduct,
             addMovement, addMovements, deleteMovement, registrarEnBitacora,
             addBaptism, updateBaptism, deleteBaptism,
             addPresentation, updatePresentation, deletePresentation,
-            addLoan, updateLoan, deleteLoan,
-            addEvent, updateEvent, deleteEvent,
-            addAnnouncement, updateAnnouncement, deleteAnnouncement
+            addLoan, updateLoan, deleteLoan
         }}>
             {children}
         </AppContext.Provider>

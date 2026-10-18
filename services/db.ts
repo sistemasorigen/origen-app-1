@@ -1,7 +1,7 @@
 
 import { initDB } from './idb-setup';
 import { supabaseService } from './supabaseService';
-import { InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppEvent, AppSettings, ProductType, Song, AlabanzaApplication, AlabanzaCategory, AlabanzaArtist, PlaybackRecord } from '../types';
+import { InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, AppSettings, ProductType, Song, AlabanzaApplication, AlabanzaCategory, AlabanzaArtist, PlaybackRecord } from '../types';
 
 export const dbAPI = {
   // --- INFO POINT (SUPABASE) ---
@@ -84,36 +84,6 @@ export const dbAPI = {
 
   async deleteLoan(id: string): Promise<void> {
     await supabaseService.deleteLoan(id);
-  },
-
-  async getAllEvents(): Promise<AppEvent[]> {
-    return await supabaseService.getEvents();
-  },
-
-  async addEvent(event: AppEvent): Promise<void> {
-    await supabaseService.saveEvent(event);
-  },
-
-  async updateEvent(event: AppEvent): Promise<void> {
-    await supabaseService.saveEvent(event);
-  },
-
-  async deleteEvent(id: string): Promise<void> {
-    await supabaseService.deleteEvent(id);
-  },
-
-  // --- ANNOUNCEMENTS (SUPABASE) ---
-
-  async getAllAnnouncements(): Promise<import('../types').Announcement[]> {
-    return await supabaseService.getAnnouncements();
-  },
-
-  async saveAnnouncement(announcement: import('../types').Announcement): Promise<void> {
-    await supabaseService.saveAnnouncement(announcement);
-  },
-
-  async deleteAnnouncement(id: string): Promise<void> {
-    await supabaseService.deleteAnnouncement(id);
   },
 
   async getSettings(): Promise<AppSettings | undefined> {

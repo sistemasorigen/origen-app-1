@@ -1,6 +1,6 @@
 
 
-import { User, UserRole, Log, SystemModule, AppConfig, SystemNotification, GroupCategory, GroupTag, Group, Product, LeaderApplication, FooterLinks, NotificationPreferences, DEFAULT_NOTIFICATION_PREFERENCES, Announcement } from '../types';
+import { User, UserRole, Log, SystemModule, AppConfig, SystemNotification, GroupCategory, GroupTag, Group, Product, LeaderApplication, FooterLinks, NotificationPreferences, DEFAULT_NOTIFICATION_PREFERENCES } from '../types';
 import { safeUUID } from './uuidUtils';
 
 // Default Data - STRICTLY ADMINS ONLY. Volunteers must be created via Admin Panel.
@@ -548,26 +548,6 @@ class DBService {
         return [];
     }
 
-    // --- ANNOUNCEMENTS ---
-    getAnnouncements(): Announcement[] {
-        return JSON.parse(localStorage.getItem('infopoint_announcements') || '[]');
-    }
-
-    saveAnnouncement(announcement: Announcement): void {
-        const list = this.getAnnouncements();
-        const index = list.findIndex(a => a.id === announcement.id);
-        if (index >= 0) {
-            list[index] = announcement;
-        } else {
-            list.unshift(announcement);
-        }
-        localStorage.setItem('infopoint_announcements', JSON.stringify(list));
-    }
-
-    deleteAnnouncement(id: string): void {
-        const list = this.getAnnouncements().filter(a => a.id !== id);
-        localStorage.setItem('infopoint_announcements', JSON.stringify(list));
-    }
 }
 
 export const db = new DBService();

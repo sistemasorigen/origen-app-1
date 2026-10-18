@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ViewState, UserRole, User as UserType } from '../../types';
 import {
-    Package, CalendarRange, ArrowLeftRight, Baby, User, Settings,
-    Tag, FileText, Megaphone, ChevronRight, ChevronDown, ClipboardCheck,
+    Package, ArrowLeftRight, Baby, User, Settings,
+    Tag, FileText, ChevronRight, ChevronDown, ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasRole } from '../../services/authUtils';
@@ -56,10 +56,16 @@ const GESTION: Funcion[] = [
     { id: 'PRESENTATIONS', label: 'Presentaciones', descripcion: 'Los chicos que se van a presentar', icon: Baby, fondo: 'bg-violet-50', tinta: 'text-violet-600' },
 ];
 
-/** Lo que se carga una vez y queda: la agenda, los avisos, los números. */
+/**
+ * Lo que se carga una vez y queda: los números y los ajustes.
+ *
+ * Acá vivan también Anuncios y Eventos. Los dos publicaban en una sola
+ * pantalla —el inicio público del Punto— y cuando ese inicio se borró
+ * quedaron escribiendo para nadie: se cargaba un anuncio y no aparecía en
+ * ningún lado. Un editor que no muestra en ninguna parte es peor que no
+ * tenerlo, así que se fueron.
+ */
 const ADMINISTRACION: Funcion[] = [
-    { id: 'ANNOUNCEMENTS', label: 'Anuncios', descripcion: 'Lo que se muestra en la app', icon: Megaphone, fondo: 'bg-amber-50', tinta: 'text-amber-600' },
-    { id: 'EVENTS', label: 'Eventos', descripcion: 'La agenda de lo que viene', icon: CalendarRange, fondo: 'bg-rose-50', tinta: 'text-rose-600' },
     {
         id: 'REPORTES',
         label: 'Reportes',
@@ -85,7 +91,7 @@ const ADMINISTRACION: Funcion[] = [
     },
 ];
 
-/** "Anuncios, Eventos y Reportes": lo que hay adentro, antes de abrir. */
+/** "Reportes y Configuración": lo que hay adentro, antes de abrir. */
 const enumerar = (items: Funcion[]) =>
     items.map(i => i.label).join(', ').replace(/, ([^,]+)$/, ' y $1');
 

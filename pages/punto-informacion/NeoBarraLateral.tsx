@@ -11,12 +11,10 @@ import {
     Droplets,
     Baby,
     Shirt,
-    CalendarDays,
     Search,
     Settings,
     X,
     FileText,
-    Megaphone,
     ClipboardCheck,
     PanelLeftClose,
     PanelLeftOpen,
@@ -40,7 +38,6 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
     const allMenuItems = [
         { id: 'REPORTAR', label: 'Reportar', icon: ClipboardCheck, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'PANEL', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-        { id: 'ANNOUNCEMENTS', label: 'Anuncios', icon: Megaphone, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
 
         { id: 'INVENTORY', label: 'Inventario', icon: Package, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
 
@@ -48,7 +45,6 @@ const NeoSidebar: React.FC<NeoSidebarProps> = ({ currentView, setView, settings,
         { id: 'LOANS', label: 'Préstamos', icon: Shirt, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'BAPTISMS', label: 'Bautismos', icon: Droplets, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
         { id: 'PRESENTATIONS', label: 'Presentaciones', icon: Baby, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO, UserRole.ANFITRION] },
-        { id: 'EVENTS', label: 'Eventos', icon: CalendarDays, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO] },
         { id: 'ADMIN_PANEL', label: 'Configuración', icon: Settings, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO] },
         { id: 'REPORTS', label: 'Reportes', icon: FileText, roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.REPORTES] },
     ];
