@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
     X,
     Menu,
@@ -700,6 +700,23 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     const ordenDe = new Map<MenuItem, number>();
     secciones.forEach(sec => sec.items.forEach(it => ordenDe.set(it, ordenDe.size)));
 
+    /**
+     * El despliegue de un grupo: la altura se abre y se cierra, no aparece.
+     *
+     * Va con AnimatePresence y no con una transición de max-height como el
+     * .dc porque ahí las filas cerradas quedan montadas en cero: acá, cuando
+     * el grupo está cerrado, sus ítems no existen en la página —que es lo
+     * que mide la foto de lógica, y lo que un lector de pantalla recorre.
+     */
+    const despliegue = {
+        initial: { height: 0, opacity: 0 },
+        animate: { height: 'auto' as const, opacity: 1 },
+        exit: { height: 0, opacity: 0 },
+        transition: sinMovimiento
+            ? { duration: 0 }
+            : { duration: 0.26, ease: [0.3, 0.7, 0.2, 1] as const },
+    };
+
     /** El alto de cada nivel: la compu aprieta, el teléfono no. */
     const alto = ALTO[isSidebar ? 'pc' : 'movil'];
     /**
@@ -835,11 +852,12 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     )}
                 </button>
 
-                {hijosALaVista && (
+                <AnimatePresence initial={false}>
+                    {hijosALaVista && (
                     /* Sin borde ni sangría en el contenedor: cada fila trae su
                        propia guía vertical, que es lo que deja los tres niveles
                        alineados contra la misma columna. */
-                    <div className="relative">
+                    <motion.div className="relative overflow-hidden" {...despliegue}>
                         {/* SubGroups: secciones rotuladas, opcionalmente expandibles */}
                         {visibleSubGroups.map((group, gi) => {
                             if (group.separator) {
@@ -895,8 +913,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                             )}
                                         </button>
                                     </div>
-                                    {hasGroupItems && isGroupExpanded && (
-                                        <div>
+                                    <AnimatePresence initial={false}>
+                                        {hasGroupItems && isGroupExpanded && (
+                                        <motion.div className="overflow-hidden" {...despliegue}>
                                             {group.subItems!.map((sub, si) => {
                                                 const isSubActive = (location.pathname + location.search) === sub.path
                                                     || (sub.activePaths?.some(p => location.pathname.startsWith(p)) ?? false);
@@ -925,8 +944,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                                     </div>
                                                 );
                                             })}
-                                        </div>
-                                    )}
+                                        </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
                             );
                         })}
@@ -971,8 +991,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 </div>
                             );
                         })}
-                    </div>
-                )}
+                    </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         );
     };
