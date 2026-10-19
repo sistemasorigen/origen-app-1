@@ -43,6 +43,8 @@ export interface AdultoForm {
     apellido: string;
     dni: string;
     email: string;
+    /** Su celular. Obligatorio: la base rechaza el alta sin él. */
+    telefono: string;
     /** 'YYYY-MM-DD'. */
     nac: string;
 }
@@ -66,6 +68,16 @@ export interface ChicoForm {
     dni: string;
     nac: string;
     tribu: NocturnaTribu | '';
+    /**
+     * Si tiene celular propio.
+     *
+     * Se pregunta antes de pedir el número y es una respuesta, no un campo
+     * vacío: a esta edad muchos no tienen, y un teléfono en blanco no
+     * distingue entre "no tiene" y "me olvidé de completarlo".
+     */
+    tieneCelular: 'si' | 'no' | null;
+    /** Su celular, si dijo que tiene. */
+    telefono: string;
     /**
      * Lo que no puede comer.
      *
@@ -97,7 +109,7 @@ export interface OtroForm {
     telefono: string;
 }
 
-export const ADULTO_VACIO: AdultoForm = { nombre: '', apellido: '', dni: '', email: '', nac: '' };
+export const ADULTO_VACIO: AdultoForm = { nombre: '', apellido: '', dni: '', email: '', telefono: '', nac: '' };
 export const OTRO_VACIO: OtroForm = { nombre: '', apellido: '', dni: '', telefono: '' };
 
 // ── Validación ────────────────────────────────────────────────────────────
@@ -114,6 +126,20 @@ export const DNI_MINIMO = 6;
 
 export const soloDigitos = (v: string, max: number) => v.replace(/\D/g, '').slice(0, max);
 
+/**
+ * Lo que se deja escribir en un teléfono: dígitos, espacios y el + del
+ * prefijo internacional. Nada de letras, pero tampoco un formato impuesto:
+ * hay quien escribe 11 2345 6789 y quien escribe +54 9 11 2345-6789.
+ */
+export const soloTelefono = (v: string) => v.replace(/[^\d\s+]/g, '').slice(0, 25);
+
+/**
+ * Mínimo de un teléfono: seis caracteres, los mismos que ya pedía el de quien
+ * retira. Alcanza para descartar un dedazo sin rechazar una línea de interior
+ * ni un número de otro país.
+ */
+export const telefonoCompleto = (v: string): boolean => v.trim().length >= 6;
+
 /** Qué le falta a un chico, en palabras, para poder decírselo a la persona. */
 export const faltanDelChico = (c: ChicoForm): string[] => {
     const f: string[] = [];
@@ -122,6 +148,10 @@ export const faltanDelChico = (c: ChicoForm): string[] => {
     if (c.dni.trim().length < DNI_MINIMO) f.push('DNI');
     if (!c.nac || calcularEdad(c.nac) === null) f.push('fecha de nacimiento');
     if (!c.tribu) f.push('tribu');
+    // Primero la respuesta, después el número: quien no contestó todavía no
+    // dijo "no tiene".
+    if (c.tieneCelular === null || c.tieneCelular === undefined) f.push('si tiene celular');
+    else if (c.tieneCelular === 'si' && !telefonoCompleto(c.telefono || '')) f.push('su celular');
     return f;
 };
 
@@ -143,7 +173,8 @@ export const adultoEsMenorDeEdad = (a: AdultoForm): boolean =>
 
 export const adultoCompleto = (a: AdultoForm): boolean =>
     !!a.nombre.trim() && !!a.apellido.trim() && a.dni.trim().length >= DNI_MINIMO
-    && !!a.email.trim() && !!a.nac && calcularEdad(a.nac) !== null && !adultoEsMenorDeEdad(a);
+    && !!a.email.trim() && telefonoCompleto(a.telefono || '')
+    && !!a.nac && calcularEdad(a.nac) !== null && !adultoEsMenorDeEdad(a);
 
 export const chicosCompletos = (chicos: ChicoForm[]): boolean =>
     chicos.length > 0
@@ -160,7 +191,7 @@ export const retiroCompleto = (
     if (quien === 'yo') return true;
     if (quien !== 'otro') return false;
     return !!otro.nombre.trim() && !!otro.apellido.trim()
-        && otro.dni.trim().length >= DNI_MINIMO && otro.telefono.trim().length >= 6;
+        && otro.dni.trim().length >= DNI_MINIMO && telefonoCompleto(otro.telefono);
 };
 
 // ── Armado del payload ────────────────────────────────────────────────────
@@ -211,6 +242,9 @@ export const armarPayloadNocturna = (opciones: {
         dni: c.dni.trim(),
         fechaNacimiento: c.nac,
         tribu: (c.tribu || 'Sin tribu') as NocturnaTribu,
+        // Sólo si dijo que tiene. Con 'no' no viaja y la base guarda NULL,
+        // que es como se lee "no tiene".
+        ...(c.tieneCelular === 'si' && c.telefono.trim() ? { telefono: c.telefono.trim() } : {}),
         restriccion: c.restriccion || 'ninguna',
     }));
 
@@ -225,6 +259,7 @@ export const armarPayloadNocturna = (opciones: {
             apellido: adulto.apellido.trim(),
             dni: adulto.dni.trim(),
             email: adulto.email.trim(),
+            telefono: adulto.telefono.trim(),
             fechaNacimiento: adulto.nac,
         },
         jovenes,

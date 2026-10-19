@@ -553,6 +553,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                                 <p style={{ ...fuente(600, '14.5px'), color: INK, margin: 0 }}>{j.nombre} {j.apellido}</p>
                                                 <p style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.58)', margin: '2px 0 0' }}>
                                                     {calcularEdad(j.fechaNacimiento) ?? '—'} años · DNI {j.dni}
+                                                    {j.telefono ? ` · ${j.telefono}` : ''}
                                                 </p>
                                             </div>
                                             <span
@@ -591,6 +592,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                             <Carta titulo="Adulto responsable">
                                 <div className="mt-2">
                                     <Fila k="DNI" v={insc.adultoDni} />
+                                    <Fila k="Celular" v={insc.adultoTelefono || '—'} />
                                     <Fila k="Email" v={insc.adultoEmail} />
                                     <Fila k="Nacimiento" v={`${insc.adultoFechaNacimiento} · ${calcularEdad(insc.adultoFechaNacimiento) ?? '—'} años`} ultima />
                                 </div>

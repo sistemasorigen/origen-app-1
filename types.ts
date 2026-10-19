@@ -1790,6 +1790,12 @@ export interface NocturnaJoven {
     /** 'YYYY-MM-DD'. La edad NO se guarda: se calcula con calcularEdad(). */
     fechaNacimiento: string;
     tribu: NocturnaTribu;
+    /**
+     * Su celular, si tiene. null es "no tiene": a esta edad algunos tienen y
+     * otros no, y el formulario pregunta primero si tiene. No es el teléfono
+     * de la familia —ese es `adultoTelefono` de la inscripción—.
+     */
+    telefono: string | null;
     retiro: NocturnaRetiro;
     acreditadoAt: string | null;
     /** No vino. Excluyente con `acreditadoAt`: no se puede estar en los dos. */
@@ -1813,6 +1819,11 @@ export interface NocturnaInscripcion {
     adultoApellido: string;
     adultoDni: string;
     adultoEmail: string;
+    /**
+     * El celular de quien se hace cargo. Obligatorio en las altas nuevas; null
+     * en las inscripciones anteriores al 2026-10-19 que nadie completó todavía.
+     */
+    adultoTelefono: string | null;
     adultoFechaNacimiento: string;
 
     autorizaAsistencia: boolean;
@@ -1862,6 +1873,8 @@ export interface NocturnaJovenPayload {
     dni: string;
     fechaNacimiento: string;
     tribu: NocturnaTribu;
+    /** Su celular. Si no viaja, la base guarda NULL: "no tiene". */
+    telefono?: string;
     retiroTipo: NocturnaRetiroTipo;
     retiroNombre?: string;
     retiroApellido?: string;
@@ -1887,6 +1900,8 @@ export interface NocturnaPayload {
         apellido: string;
         dni: string;
         email: string;
+        /** Obligatorio: nocturna_alta rechaza el alta sin él. */
+        telefono: string;
         fechaNacimiento: string;
     };
     jovenes: NocturnaJovenPayload[];

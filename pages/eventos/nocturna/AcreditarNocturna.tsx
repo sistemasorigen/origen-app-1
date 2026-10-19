@@ -29,6 +29,8 @@ interface JovenAcred {
     apellido: string;
     edad: number;
     tribu: string;
+    /** Su celular, si tiene. */
+    telefono: string | null;
     acreditado_at: string | null;
     ausente_at: string | null;
     retirado_at: string | null;
@@ -47,6 +49,7 @@ interface InscAcred {
     adulto_apellido: string;
     adulto_dni: string;
     adulto_email: string;
+    adulto_telefono: string | null;
     acepta_fotos: boolean;
     adulto_acreditado_at: string | null;
 }
@@ -800,10 +803,11 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
             return {
                 nombre: `${insc.adulto_nombre} ${insc.adulto_apellido}`.trim(),
                 dni: insc.adulto_dni,
-                // Del adulto responsable la inscripción guarda el email, no el
-                // teléfono: es lo que hay para contactarlo si algo no cierra.
-                contacto: insc.adulto_email,
-                etiquetaContacto: 'Email',
+                // A las 6 de la mañana, en la puerta, se llama: desde el
+                // 2026-10-19 la inscripción guarda su celular. El email queda
+                // para las inscripciones viejas que no alcanzaron a tenerlo.
+                contacto: (insc.adulto_telefono || '').trim() || insc.adulto_email,
+                etiquetaContacto: (insc.adulto_telefono || '').trim() ? 'Celular' : 'Email',
             };
         }
         return {

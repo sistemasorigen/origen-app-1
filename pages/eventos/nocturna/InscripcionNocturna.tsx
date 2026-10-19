@@ -28,6 +28,8 @@ import {
     RESTRICCIONES,
     retiroCompleto,
     soloDigitos,
+    soloTelefono,
+    telefonoCompleto,
     TEXTO_AUTORIZACION,
     TEXTO_FOTOS,
     TRIBUS,
@@ -164,6 +166,8 @@ const chicoNuevo = (apellido = ''): ChicoForm => ({
     dni: '',
     nac: '',
     tribu: '',
+    tieneCelular: null,
+    telefono: '',
     restriccion: 'ninguna',
 });
 
@@ -378,7 +382,13 @@ const InscripcionNocturna: React.FC = () => {
                     // formulario no se intenta arreglar: se descarta.
                     if (b && b.v === VERSION_BORRADOR && b.edicion === cfg.edicion) {
                         setAdulto({ ...ADULTO_VACIO, ...(b.adulto || {}) });
-                        setChicos(Array.isArray(b.chicos) ? b.chicos : []);
+                        // Cada chico se completa con los campos de uno nuevo:
+                        // un borrador guardado antes de que existiera la
+                        // pregunta del celular no trae tieneCelular, y sin esto
+                        // llegaría como undefined a la validación.
+                        setChicos(Array.isArray(b.chicos)
+                            ? b.chicos.map(c => ({ ...chicoNuevo(), ...c }))
+                            : []);
                         setRetiro(b.retiro ?? null);
                         setRetiroQuien(b.retiroQuien ?? null);
                         setOtro({ ...OTRO_VACIO, ...(b.otro || {}) });
@@ -441,6 +451,9 @@ const InscripcionNocturna: React.FC = () => {
             nombre: partes[0] || '',
             apellido: partes.length > 1 ? partes.slice(1).join(' ') : '',
             email: user.email || '',
+            // El teléfono que la persona ya cargó en su perfil: lo dio una
+            // vez, no hace falta volver a pedírselo.
+            telefono: user.phone || '',
             nac: (user.birthDate || '').slice(0, 10),
         };
     }, [user]);
@@ -450,9 +463,16 @@ const InscripcionNocturna: React.FC = () => {
     useEffect(() => {
         if (cargando || !cuenta || autocompletado.current) return;
         autocompletado.current = true;
-        setAdulto(a => (a.nombre || a.apellido || a.email || a.nac
+        setAdulto(a => (a.nombre || a.apellido || a.email || a.telefono || a.nac
             ? a
-            : { ...a, nombre: cuenta.nombre, apellido: cuenta.apellido, email: cuenta.email, nac: cuenta.nac }));
+            : {
+                ...a,
+                nombre: cuenta.nombre,
+                apellido: cuenta.apellido,
+                email: cuenta.email,
+                telefono: cuenta.telefono,
+                nac: cuenta.nac,
+            }));
     }, [cargando, cuenta]);
 
     // Sin sesión ya no hay nada de lo que salir.
@@ -907,13 +927,13 @@ const InscripcionNocturna: React.FC = () => {
     }
 
     // ── Campos del adulto ─────────────────────────────────────────────────
-    type ClaveDeCuenta = 'nombre' | 'apellido' | 'email' | 'nac';
+    type ClaveDeCuenta = 'nombre' | 'apellido' | 'email' | 'telefono' | 'nac';
 
     const campoAdulto = (
         k: keyof AdultoForm,
         label: string,
         tipo: string,
-        modo: 'text' | 'numeric' | 'email',
+        modo: 'text' | 'numeric' | 'email' | 'tel',
         ph: string,
         ancho = false,
     ) => {
@@ -945,7 +965,9 @@ const InscripcionNocturna: React.FC = () => {
                     placeholder={ph}
                     aria-describedby={etiqueta ? `noc-${k}-origen` : undefined}
                     onChange={e => {
-                        const v = k === 'dni' ? soloDigitos(e.target.value, 9) : e.target.value;
+                        const v = k === 'dni' ? soloDigitos(e.target.value, 9)
+                            : k === 'telefono' ? soloTelefono(e.target.value)
+                                : e.target.value;
                         setAdulto(a => ({ ...a, [k]: v }));
                     }}
                 />
@@ -972,6 +994,7 @@ const InscripcionNocturna: React.FC = () => {
                 [!adulto.apellido.trim(), 'apellido'],
                 [adulto.dni.trim().length < DNI_MINIMO, 'DNI'],
                 [!adulto.email.trim(), 'email'],
+                [!telefonoCompleto(adulto.telefono), 'celular'],
                 [!adulto.nac || calcularEdad(adulto.nac) === null, 'fecha de nacimiento'],
             ]);
             return f.length ? `Falta: ${f.join(', ')}.` : 'Revisá tus datos.';
@@ -1202,6 +1225,7 @@ const InscripcionNocturna: React.FC = () => {
                                 {campoAdulto('apellido', 'Apellido', 'text', 'text', 'Apellido')}
                                 {campoAdulto('dni', 'DNI', 'text', 'numeric', 'Sin puntos')}
                                 {campoAdulto('nac', 'Fecha de nacimiento', 'date', 'text', '')}
+                                {campoAdulto('telefono', 'Celular', 'tel', 'tel', '11 2345 6789', true)}
                                 {campoAdulto('email', 'Email', 'email', 'email', 'nombre@mail.com', true)}
                             </div>
                         </div>
@@ -1381,6 +1405,31 @@ const InscripcionNocturna: React.FC = () => {
                                                     aria-label="DNI del adolescente"
                                                     onChange={e => editarChico(c.id, 'dni', soloDigitos(e.target.value, 9))}
                                                 />
+                                                {/* El celular del adolescente, uno por persona.
+                                                    Primero si tiene: a esta edad muchos no, y un
+                                                    campo vacío no distingue "no tiene" de "me
+                                                    olvidé de completarlo". */}
+                                                <p style={{ margin: '18px 0 8px', ...arch(800, '12px'), letterSpacing: '.03em', textTransform: 'uppercase' }}>¿Tiene celular?</p>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                                    <OpcionPastilla elegida={c.tieneCelular === 'si'} onClick={() => editarChico(c.id, 'tieneCelular', 'si')}>
+                                                        Sí, tiene
+                                                    </OpcionPastilla>
+                                                    <OpcionPastilla elegida={c.tieneCelular === 'no'} onClick={() => editarChico(c.id, 'tieneCelular', 'no')}>
+                                                        No tiene
+                                                    </OpcionPastilla>
+                                                </div>
+                                                {c.tieneCelular === 'si' && (
+                                                    <input
+                                                        className="noc-campo"
+                                                        style={{ marginTop: 8 }}
+                                                        value={c.telefono}
+                                                        placeholder="Su celular"
+                                                        inputMode="tel"
+                                                        autoComplete="off"
+                                                        aria-label={`Celular de ${c.nombre.trim() || 'el adolescente'}`}
+                                                        onChange={e => editarChico(c.id, 'telefono', soloTelefono(e.target.value))}
+                                                    />
+                                                )}
                                                 <p style={{ margin: '18px 0 8px', ...arch(800, '12px'), letterSpacing: '.03em', textTransform: 'uppercase' }}>Fecha de nacimiento</p>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                     <input
@@ -1524,6 +1573,7 @@ const InscripcionNocturna: React.FC = () => {
                                         {([
                                             ['Nombre', nombreAdulto || '—'],
                                             ['DNI', adulto.dni ? Number(adulto.dni).toLocaleString('es-AR') : '—'],
+                                            ['Celular', adulto.telefono || '—'],
                                             ['Email', adulto.email || '—'],
                                         ] as [string, string][]).map(([k, v]) => (
                                             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 14, padding: '10px 0', borderBottom: `2px solid ${NEGRO}` }}>

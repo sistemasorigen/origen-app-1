@@ -9538,6 +9538,9 @@ export const supabaseService = {
       dni: row.dni,
       fechaNacimiento: row.fecha_nacimiento,
       tribu: row.tribu,
+      // null es "no tiene": la pregunta del formulario es si tiene celular, y
+      // la respuesta "no" no guarda número.
+      telefono: row.telefono ?? null,
       // Las filas de antes de octubre no tienen la columna cargada desde la
       // app, pero la base les puso 'ninguna'. El COALESCE es para un row que
       // llegue de una consulta vieja sin la columna.
@@ -9569,6 +9572,10 @@ export const supabaseService = {
       adultoApellido: row.adulto_apellido,
       adultoDni: row.adulto_dni,
       adultoEmail: row.adulto_email,
+      // Las inscripciones anteriores al 2026-10-19 pueden no tenerlo: las que
+      // se hicieron con sesión se completaron con el teléfono del perfil, las
+      // anónimas quedaron sin número.
+      adultoTelefono: row.adulto_telefono ?? null,
       adultoFechaNacimiento: row.adulto_fecha_nacimiento,
       autorizaAsistencia: row.autoriza_asistencia,
       aceptaFotos: row.acepta_fotos,

@@ -23,6 +23,7 @@ import {
     plata,
     retiroCompleto,
     soloDigitos,
+    soloTelefono,
     TEXTO_AUTORIZACION,
     TEXTO_FOTOS,
     TRIBUS,
@@ -76,6 +77,8 @@ const chicoNuevo = (apellido = ''): ChicoForm => ({
     dni: '',
     nac: '',
     tribu: '',
+    tieneCelular: null,
+    telefono: '',
     restriccion: 'ninguna',
 });
 
@@ -133,6 +136,7 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                     apellido: i.adultoApellido,
                     dni: i.adultoDni,
                     email: i.adultoEmail,
+                    telefono: i.adultoTelefono || '',
                     nac: (i.adultoFechaNacimiento || '').slice(0, 10),
                 });
                 // El id de cada chico viaja de vuelta: es lo que le dice a la
@@ -145,6 +149,12 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                     dni: j.dni,
                     nac: (j.fechaNacimiento || '').slice(0, 10),
                     tribu: j.tribu,
+                    // Una inscripción anterior al 2026-10-19 no tiene teléfono
+                    // cargado: se abre como "no tiene", que es lo que la base
+                    // ya guarda, y así corregir un nombre no obliga a
+                    // contestar por cada adolescente.
+                    tieneCelular: j.telefono ? 'si' : 'no',
+                    telefono: j.telefono || '',
                     restriccion: j.restriccion || 'ninguna',
                 })));
                 const primero = (i.jovenes || [])[0];
@@ -524,6 +534,7 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                                         <input className="campo" value={adulto.apellido} placeholder="Apellido" aria-label="Apellido del adulto" onChange={e => setAdulto(a => ({ ...a, apellido: e.target.value }))} />
                                         <input className="campo" value={adulto.dni} placeholder="DNI" inputMode="numeric" aria-label="DNI del adulto" onChange={e => setAdulto(a => ({ ...a, dni: soloDigitos(e.target.value, 9) }))} />
                                         <input className="campo" value={adulto.email} placeholder="Email · acá llega la entrada" type="email" inputMode="email" aria-label="Email del adulto" onChange={e => setAdulto(a => ({ ...a, email: e.target.value }))} />
+                                        <input className="campo" value={adulto.telefono} placeholder="Celular" inputMode="tel" aria-label="Celular del adulto" onChange={e => setAdulto(a => ({ ...a, telefono: soloTelefono(e.target.value) }))} />
                                     </div>
                                     <p style={{ ...fuente(600, '12px'), color: 'rgba(0,0,0,.6)', margin: '12px 0 6px' }}>Fecha de nacimiento</p>
                                     <div className="flex items-center gap-2.5">
@@ -628,6 +639,36 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                                                     ))}
                                                 </div>
                                             </div>
+                                            {/* El celular, por adolescente. Primero si
+                                                tiene: dejarlo en blanco no distingue
+                                                "no tiene" de "falta cargarlo". */}
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="flex-none" style={{ ...fuente(600, '11.5px'), color: 'rgba(0,0,0,.5)' }}>CELULAR</span>
+                                                <div className="grid grid-cols-2 gap-1.5 flex-1">
+                                                    {([['si', 'Tiene'], ['no', 'No tiene']] as ['si' | 'no', string][]).map(([valor, etiqueta]) => (
+                                                        <button
+                                                            key={valor}
+                                                            type="button"
+                                                            onClick={() => editarChico(c.id, 'tieneCelular', valor)}
+                                                            aria-pressed={c.tieneCelular === valor}
+                                                            className="border-0 rounded-full cursor-pointer"
+                                                            style={{ height: 38, background: c.tieneCelular === valor ? INK : CARTA, color: c.tieneCelular === valor ? '#fff' : INK, ...fuente(600, '12.5px') }}
+                                                        >
+                                                            {etiqueta}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {c.tieneCelular === 'si' && (
+                                                <input
+                                                    className="campo campo--claro mt-2"
+                                                    value={c.telefono}
+                                                    placeholder="Celular del adolescente"
+                                                    inputMode="tel"
+                                                    aria-label={`Celular del adolescente ${i + 1}`}
+                                                    onChange={e => editarChico(c.id, 'telefono', soloTelefono(e.target.value))}
+                                                />
+                                            )}
                                             {intento && !!faltanDelChico(c).length && (
                                                 <p style={{ ...fuente(500, '12px'), color: AMBAR_INK, margin: '8px 2px 0' }}>
                                                     Falta: {faltanDelChico(c).join(', ')}
