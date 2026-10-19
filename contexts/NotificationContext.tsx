@@ -207,6 +207,20 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     );
 };
 
+/**
+ * Cuántas hay sin leer, para quien sólo quiere pintar la marca roja.
+ *
+ * No pasa por useNotificationContext porque ése tira si no encuentra el
+ * provider, y la hamburguesa de la navbar se dibuja en pantallas sin sesión:
+ * una marca que no se puede contar no puede romper el botón que abre el
+ * menú. Sin provider —o sin sesión, que es cuando el contador se limpia
+ * solo— devuelve 0.
+ */
+export const useSinLeer = (): number => {
+    const context = useContext(NotificationContext);
+    return context?.unreadCount ?? 0;
+};
+
 export const useNotificationContext = () => {
     const context = useContext(NotificationContext);
     if (context === undefined) {
