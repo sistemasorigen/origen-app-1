@@ -710,8 +710,14 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
      * Al expandir vuelve con un retraso, para que no aparezca encimado
      * mientras el panel todavía se está abriendo.
      */
-    const textoQueSeVa = 'flex-1 min-w-0 truncate text-left';
+    const textoQueSeVa = 'min-w-0 truncate text-left overflow-hidden';
     const estiloTexto: React.CSSProperties = {
+        // Contraído no basta con apagarlo: tiene que dejar de ocupar, y el
+        // separador tiene que irse con él. Por eso el espacio entre ícono y
+        // texto es el margen del texto y no un `gap` del botón: así, con el
+        // texto en cero, el ícono queda centrado en el riel de 80 px.
+        flex: isCollapsed ? '0 1 0%' : '1 1 0%',
+        marginLeft: isCollapsed ? 0 : 12,
         opacity: isCollapsed ? 0 : 1,
         transition: sinMovimiento ? 'none' : (isCollapsed ? 'opacity .1s ease' : 'opacity .16s ease .2s'),
     };
@@ -812,7 +818,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         borderRadius: isCollapsed ? 14 : 999,
                         fontSize: isSidebar ? 14.5 : 15.5,
                     }}
-                    className={`relative z-[1] w-full flex items-center gap-3 px-[14px] text-left font-semibold transition-colors duration-150 ${FOCO} ${llevaPildora
+                    className={`relative z-[1] w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-[14px]'} text-left font-semibold transition-colors duration-150 ${FOCO} ${llevaPildora
                         ? 'text-white dark:text-[#0a0a0a]'
                         : isActive
                             ? `${TINTA} ${ENCIMA}`
@@ -821,13 +827,10 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 >
                     <item.icon className="w-[19px] h-[19px] shrink-0" strokeWidth={2} />
                     <span className={textoQueSeVa} style={estiloTexto}>{item.label}</span>
-                    {hasChildren && (
+                    {hasChildren && !isCollapsed && (
                         <ChevronDown
-                            className="w-4 h-4 shrink-0 ml-auto transition-transform duration-[250ms]"
-                            style={{
-                                transform: isExpanded ? 'rotate(180deg)' : 'none',
-                                opacity: isCollapsed ? 0 : 0.75,
-                            }}
+                            className="w-4 h-4 shrink-0 ml-auto opacity-75 transition-transform duration-[250ms]"
+                            style={{ transform: isExpanded ? 'rotate(180deg)' : 'none' }}
                         />
                     )}
                 </button>
@@ -1014,11 +1017,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 <span className={`${textoQueSeVa} text-[17px] font-semibold tracking-[-0.01em] ${TINTA}`} style={estiloTexto}>
                                     Origen
                                 </span>
-                                {isSidebar && (
-                                    <ChevronsLeft
-                                        className={`w-[18px] h-[18px] shrink-0 ml-auto ${M55}`}
-                                        style={estiloTexto}
-                                    />
+                                {isSidebar && !isCollapsed && (
+                                    <ChevronsLeft className={`w-[18px] h-[18px] shrink-0 ml-auto ${M55}`} />
                                 )}
                             </>
                         );
@@ -1027,7 +1027,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         // la marca no finge ser un botón: es solo el rótulo.
                         if (!isSidebar) {
                             return (
-                                <div className="flex flex-1 min-w-0 items-center gap-3 px-1.5 py-2">
+                                <div className="flex flex-1 min-w-0 items-center px-1.5 py-2">
                                     {marca}
                                 </div>
                             );
@@ -1039,7 +1039,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 aria-label={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
                                 title={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
                                 aria-expanded={!isCollapsed}
-                                className={`h-[52px] flex items-center gap-3 rounded-[18px] px-1.5 transition-colors duration-150 ${ENCIMA} ${FOCO} ${isCollapsed ? 'justify-center w-full' : 'flex-1 min-w-0'
+                                className={`h-[52px] flex items-center rounded-[18px] transition-colors duration-150 ${ENCIMA} ${FOCO} ${isCollapsed ? 'justify-center w-full px-0' : 'flex-1 min-w-0 px-1.5'
                                     }`}
                             >
                                 {marca}
@@ -1135,7 +1135,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                             aria-expanded={cuentaAbierta}
                             aria-label={isCollapsed ? `Cuenta de ${currentUser.name}` : undefined}
                             title={isCollapsed ? currentUser.name : undefined}
-                            className={`w-full flex items-center gap-3 rounded-[22px] ${TARJETA} ${TINTA} shadow-[0_1px_3px_rgba(0,0,0,.05)] dark:shadow-none transition-colors duration-150 hover:bg-[#fbfbfa] dark:hover:bg-[#222220] ${FOCO} ${isCollapsed ? 'justify-center p-1.5' : isSidebar ? 'p-2' : 'py-1.5 pl-1.5 pr-2.5'
+                            className={`w-full flex items-center rounded-[22px] ${TARJETA} ${TINTA} shadow-[0_1px_3px_rgba(0,0,0,.05)] dark:shadow-none transition-colors duration-150 hover:bg-[#fbfbfa] dark:hover:bg-[#222220] ${FOCO} ${isCollapsed ? 'justify-center p-1.5' : isSidebar ? 'p-2' : 'py-1.5 pl-1.5 pr-2.5'
                                 }`}
                         >
                             <div className={`${isSidebar ? 'w-8 h-8' : 'w-10 h-10'} rounded-full overflow-hidden shrink-0 ${PASTILLA}`}>
@@ -1156,10 +1156,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 <span className={`max-w-full text-sm font-semibold truncate ${TINTA}`}>{currentUser.name}</span>
                                 <span className={`max-w-full mt-px text-[12.5px] font-medium truncate ${M55}`}>{currentUser.email}</span>
                             </div>
-                            <ChevronUp
-                                className={`w-4 h-4 shrink-0 ${M55} transition-transform duration-[250ms] ${cuentaAbierta ? '' : 'rotate-180'}`}
-                                style={estiloTexto}
-                            />
+                            {!isCollapsed && (
+                                <ChevronUp
+                                    className={`w-4 h-4 shrink-0 ml-2 ${M55} transition-transform duration-[250ms] ${cuentaAbierta ? '' : 'rotate-180'}`}
+                                />
+                            )}
                         </button>
 
                         {cuentaAbierta && (
