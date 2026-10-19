@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}.mm-s::-webkit-scrollbar{width:0}@keyframes mmIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}@keyframes mmFade{from{opacity:0}to{opacity:1}}@keyframes mmPop{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">PERFIL</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px">
+      <sc-for list="{{ roles }}" as="r" hint-placeholder-count="4"><button onClick="{{ r.ir }}" style="{{ r.style }}">{{ r.t }}</button></sc-for>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ESTADOS</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px">
+      <sc-for list="{{ acciones }}" as="a" hint-placeholder-count="3"><button onClick="{{ a.ir }}" style="height:32px; padding:0 13px; border:1px solid #e2e0db; border-radius:999px; background:#fff; color:#0a0a0a; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap">{{ a.t }}</button></sc-for>
+    </div>
+  </div>
+
+  <div ref="{{ frameRef }}" style="position:relative; flex:none; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}; background:{{ t.page }}; box-shadow:0 6px 28px rgba(0,0,0,.14); color:{{ t.ink }}">
+
+    <div style="{{ pageWrap }}">
+      <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:47px 8px 0; display:flex; align-items:center; gap:4px">
+          <button onClick="{{ abrirMenu }}" aria-label="Abrir el menú" style="width:44px; height:44px; border:0; border-radius:999px; background:transparent; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"></path></svg></button>
+          <span style="font-size:16px; font-weight:600; color:{{ t.ink }}">Origen</span>
+        </div>
+      </sc-if>
+      <div style="padding:{{ pagePad }}">
+        <p style="margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m55 }}">{{ crumb }}</p>
+        <h1 style="margin:8px 0 0; font-size:{{ pageH1 }}; line-height:1.1; font-weight:600; letter-spacing:-.025em; color:{{ t.ink }}">{{ pageTitulo }}</h1>
+        <div style="display:grid; grid-template-columns:{{ pageCols }}; gap:14px; margin-top:24px">
+          <div style="height:180px; border-radius:26px; background:{{ t.ph }}; display:flex; align-items:flex-end; padding:16px"><span style="font:500 11px ui-monospace,Menlo,monospace; color:{{ t.m55 }}">contenido de la pantalla</span></div>
+          <div style="height:180px; border-radius:26px; background:{{ t.ph }}"></div>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+      <div onClick="{{ cerrarMenu }}" style="{{ backdrop }}"></div>
+    </sc-if>
+
+    <aside ref="{{ panelRef }}" aria-label="Menú principal" onPointerDown="{{ pDown }}" onPointerMove="{{ pMove }}" onPointerUp="{{ pUp }}" onPointerCancel="{{ pUp }}" style="{{ aside }}">
+      <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:none; padding:20px 16px 10px">
+          <button onClick="{{ toggleCollapse }}" aria-label="{{ collapseLabel }}" aria-expanded="{{ expAria }}" style="width:100%; height:52px; padding:0 6px; border:0; border-radius:18px; background:transparent; color:{{ t.ink }}; display:flex; align-items:center; gap:12px; cursor:pointer; transition:background-color .15s" style-hover="background:{{ t.hover }}">
+            <span style="{{ logo }}"><span style="{{ logoRing }}"></span></span>
+            <span style="{{ brandTxt }}">Origen</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ chevronsStyle }}"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"></path></svg>
+          </button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:none; padding:8px 10px 10px 18px; display:flex; align-items:center; gap:12px">
+          <span style="{{ logo }}"><span style="{{ logoRing }}"></span></span>
+          <span style="font-size:17px; font-weight:600; letter-spacing:-.01em; color:{{ t.ink }}">Origen</span>
+          <button onClick="{{ cerrarMenu }}" aria-label="Cerrar el menú" style="width:44px; height:44px; margin-left:auto; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+      </sc-if>
+
+      <nav class="mm-s" style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; padding:{{ listPad }}">
+        <div ref="{{ listRef }}" style="position:relative">
+          <div aria-hidden="true" style="{{ pill }}"></div>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="12">
+            <sc-if value="{{ r.isLabel }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ r.wrap }}">
+                <span style="{{ r.lbl }}">{{ r.label }}</span>
+                <span aria-hidden="true" style="{{ r.divider }}"></span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ r.isItem }}" hint-placeholder-val="{{ true }}">
+              <div style="{{ r.wrap }}">
+                <sc-if value="{{ r.g1 }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="{{ r.g1s }}"></span></sc-if>
+                <sc-if value="{{ r.g2 }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="{{ r.g2s }}"></span></sc-if>
+                <button data-active="{{ r.dataActive }}" onClick="{{ r.click }}" onMouseEnter="{{ r.enter }}" onMouseLeave="{{ r.leave }}" aria-expanded="{{ r.exp }}" aria-current="{{ r.current }}" aria-label="{{ r.aria }}" tabIndex="{{ r.tab }}" style="{{ r.btn }}" style-hover="{{ r.hover }}">
+                  <sc-if value="{{ r.hasIcon }}" hint-placeholder-val="{{ true }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ r.icon }}"></path></svg></sc-if>
+                  <span style="{{ r.lbl }}">{{ r.label }}</span>
+                  <sc-if value="{{ r.hasKids }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="{{ r.chev }}"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+                </button>
+              </div>
+            </sc-if>
+          </sc-for>
+        </div>
+      </nav>
+
+      <div style="flex:none; padding:{{ footPad }}; border-top:1px solid {{ t.line }}">
+        <sc-if value="{{ conSesion }}" hint-placeholder-val="{{ true }}">
+          <div style="position:relative">
+            <sc-if value="{{ acct }}" hint-placeholder-val="{{ false }}">
+              <div role="menu" style="{{ pop }}">
+                <button role="menuitem" onClick="{{ irPerfil }}" style="{{ popItem }}" style-hover="background:{{ t.hover }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4.5 21a7.5 7.5 0 0115 0"></path></svg>Mi perfil</button>
+                <button role="menuitemcheckbox" aria-checked="{{ darkAria }}" onClick="{{ toggleDark }}" style="{{ popItem }}" style-hover="background:{{ t.hover }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"></path></svg><span style="flex:1; text-align:left">Tema oscuro</span><span style="{{ track }}"><span style="{{ knob }}"></span></span></button>
+                <div style="height:1px; background:{{ t.line }}; margin:4px 10px"></div>
+                <button role="menuitem" onClick="{{ salir }}" style="{{ popItemRed }}" style-hover="background:{{ t.hover }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 17l-5-5 5-5M5 12h11"></path></svg>Cerrar sesión</button>
+              </div>
+            </sc-if>
+            <button onClick="{{ toggleAcct }}" aria-haspopup="menu" aria-expanded="{{ acctAria }}" aria-label="{{ acctLabel }}" style="{{ acctBtn }}" style-hover="{{ acctHover }}">
+              <span style="{{ avatar }}">{{ user.i }}</span>
+              <span style="{{ acctTxt }}">
+                <span style="max-width:100%; font-size:14px; font-weight:600; color:{{ t.ink }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ user.n }}</span>
+                <span style="max-width:100%; margin-top:1px; font-size:12.5px; font-weight:500; color:{{ t.m55 }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ user.e }}</span>
+              </span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="{{ acctChev }}"><path d="M6 15l6-6 6 6"></path></svg>
+            </button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ sinSesion }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ entrar }}" aria-label="Iniciar sesión" style="{{ loginBtn }}" style-active="transform:scale(.98)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 17l5-5-5-5M15 12H3"></path></svg>
+            <span style="{{ loginTxt }}">Iniciar sesión</span>
+          </button>
+          <button onClick="{{ toggleDark }}" role="switch" aria-checked="{{ darkAria }}" aria-label="Tema oscuro" style="{{ temaRow }}" style-hover="background:{{ t.hover }}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"></path></svg>
+            <span style="{{ temaTxt }}">Tema oscuro</span>
+            <span style="{{ trackFade }}"><span style="{{ knob }}"></span></span>
+          </button>
+        </sc-if>
+      </div>
+    </aside>
+
+    <sc-if value="{{ hayTip }}" hint-placeholder-val="{{ false }}">
+      <div role="tooltip" style="position:absolute; left:92px; top:{{ tipY }}; z-index:60; transform:translateY(-50%); padding:8px 12px; border-radius:12px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:13px; font-weight:600; white-space:nowrap; pointer-events:none; animation:mmFade .12s ease">{{ tipTxt }}</div>
+    </sc-if>
+
+    <sc-if value="{{ hayFly }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cerrarFly }}" style="position:absolute; inset:0; z-index:55"></div>
+      <div role="menu" aria-label="{{ flyTitulo }}" style="position:absolute; left:92px; top:{{ flyY }}; z-index:56; width:256px; max-height:calc(100% - 32px); overflow-y:auto; padding:8px; border-radius:22px; background:{{ t.card }}; box-shadow:0 14px 40px rgba(0,0,0,.16); animation:mmPop .16s ease-out">
+        <p style="margin:0; padding:8px 12px 6px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m55 }}">{{ flyTitulo }}</p>
+        <sc-for list="{{ flyRows }}" as="f" hint-placeholder-count="5">
+          <div style="position:relative">
+            <sc-if value="{{ f.g }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="position:absolute; left:18px; top:0; bottom:0; width:1.5px; background:{{ t.guide }}"></span></sc-if>
+            <button role="menuitem" onClick="{{ f.click }}" aria-expanded="{{ f.exp }}" style="{{ f.btn }}" style-hover="{{ f.hover }}">
+              <span style="flex:1; min-width:0; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ f.label }}</span>
+              <sc-if value="{{ f.hasKids }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="{{ f.chev }}"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+            </button>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+      <span aria-hidden="true" style="position:absolute; left:50%; bottom:8px; z-index:70; transform:translateX(-50%); width:134px; height:5px; border-radius:999px; background:{{ t.m55 }}; pointer-events:none"></span>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1500,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  I = {
+    home: 'M3 10.5L12 3l9 7.5M5.5 9v11.5h13V9',
+    mega: 'M3 10v4h3l7 4.5v-13L6 10H3zM17 9a4 4 0 010 6M19.5 6.5a7.5 7.5 0 010 11',
+    users: 'M15.5 20v-1.5a4 4 0 00-4-4h-4a4 4 0 00-4 4V20M9.5 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 20v-1.5a4 4 0 00-3-3.85M16 4.15a3.5 3.5 0 010 6.7',
+    cal: 'M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zM8 3v4M16 3v4M4 10h16',
+    star: 'M12 3l2.7 5.5 6 .9-4.35 4.25 1 6L12 16.8l-5.4 2.85 1-6L3.3 9.4l6-.9z',
+    shirt: 'M8.5 3.5L4 5.5 2.5 10l3 1 1-2v11.5h11V9l1 2 3-1L20 5.5l-4.5-2c-.6 1.6-2 2.5-3.5 2.5S9.1 5.1 8.5 3.5z',
+    trophy: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM7 6H4v1a3 3 0 003 3M17 6h3v1a3 3 0 01-3 3',
+    bars: 'M4 20V10M10 20V4M16 20v-7M21 20H3',
+    door: 'M8 21V5a2 2 0 012-2h6a2 2 0 012 2v16M4 21h16M14.5 12h.01',
+    grid: 'M5 4h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1zM15 4h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5a1 1 0 011-1zM5 14h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4a1 1 0 011-1zM15 14h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4a1 1 0 011-1z',
+    house: 'M3 10.5L12 3l9 7.5V21H3zM12 14.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM8 21v-.5a4 4 0 018 0v.5',
+    net: 'M12 8a3 3 0 100-6 3 3 0 000 6zM5 22a3 3 0 100-6 3 3 0 000 6zM19 22a3 3 0 100-6 3 3 0 000 6zM12 8v4M12 12l-5.2 4.6M12 12l5.2 4.6',
+    calcheck: 'M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zM8 3v4M16 3v4M4 10h16M9 15l2 2 4-4',
+    zap: 'M13 2L4 14h7l-1 8 9-12h-7z',
+    smile: 'M12 21a9 9 0 100-18 9 9 0 000 18zM9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 007 0',
+    info: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 11v5M12 8h.01',
+    server: 'M6 4h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2zM6 14h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 012-2zM8 7h.01M8 17h.01'
+  };
+  MENU = [
+    { sec: 'GENERAL', items: [
+      { id: 'inicio', l: 'Inicio', ic: 'home', r: 'all' },
+      { id: 'novedades', l: 'Novedades', ic: 'mega', r: 'all' },
+      { id: 'gcx', l: 'GCX', ic: 'users', r: 'all' },
+      { id: 'calendario', l: 'Mi Calendario', ic: 'cal', r: 'auth' },
+      { id: 'eventos', l: 'Eventos', ic: 'star', r: 'all' },
+      { id: 'voluntarios', l: 'Remeras y buzos', ic: 'shirt', r: 'auth' },
+      { id: 'prode', l: 'Prode Mundial', ic: 'trophy', r: 'all', kids: [{ id: 'prode-inicio', l: 'Inicio' }, { id: 'prode-ranking', l: 'Ranking' }, { id: 'prode-pred', l: 'Predicciones y resultados' }] }
+    ] },
+    { sec: 'ADMINISTRACIÓN', items: [
+      { id: 'audiencia', l: 'Audiencia Servicios', ic: 'bars', r: 'admin' },
+      { id: 'bienvenida', l: 'Bienvenida', ic: 'door', r: 'admin' },
+      { id: 'panelgcx', l: 'Panel GCX', ic: 'grid', r: 'admin', kids: [
+        { id: 'gestion', l: 'Gestión de grupos', kids: [{ id: 'ver-grupos', l: 'Ver todos los grupos' }, { id: 'crear-grupo', l: 'Crear grupo' }, { id: 'agregar-grupo', l: 'Agregar grupo' }, { id: 'bajas', l: 'Solicitudes de baja' }] },
+        { id: 'anfitriones', l: 'Gestión de anfitriones' }, { id: 'gcx-coord', l: 'Gestión de coordinadores' }, { id: 'categorias', l: 'Categorías' }, { id: 'etiquetas', l: 'Etiquetas' }, { id: 'gcx-config', l: 'Configuración' }, { id: 'temporadas', l: 'Temporadas' }, { id: 'gcx-reportes', l: 'Reportes' }
+      ] },
+      { id: 'panelanf', l: 'Panel de Anfitrión', ic: 'house', r: 'anf' },
+      { id: 'coordinadores', l: 'Coordinadores', ic: 'net', r: 'admin' },
+      { id: 'panel-eventos', l: 'Panel de eventos', ic: 'calcheck', r: 'admin' },
+      { id: 'influos', l: 'Influos', ic: 'zap', r: 'admin', kids: [{ id: 'influos-panel', l: 'Panel Influos' }, { id: 'tribal', l: 'Tribal Wars' }] },
+      { id: 'ninez', l: 'Niñez', ic: 'smile', r: 'admin', kids: [{ id: 'ninez-panel', l: 'Panel Niñez' }, { id: 'ninez-config', l: 'Configuración' }] },
+      { id: 'punto', l: 'Punto de información', ic: 'info', r: 'admin' },
+      { id: 'sistemas', l: 'Sistemas', ic: 'server', r: 'admin', kids: [{ id: 'sis-usuarios', l: 'Usuarios' }, { id: 'sis-config', l: 'Configuración' }, { id: 'sis-logs', l: 'Logs' }] }
+    ] }
+  ];
+  USERS = { usuario: { n: 'Daniela Ferreyra', e: 'daniela.ferreyra@gmail.com', i: 'DF' }, anf: { n: 'Martín Sosa', e: 'martin.sosa.almagro@gmail.com', i: 'MS' }, admin: { n: 'Pablo Arce', e: 'pablo.arce@origeniglesia.org', i: 'PA' } };
+  state = { device: 'm', dark: false, role: 'admin', active: 'inicio', open: {}, collapsed: false, mOpen: true, acct: false, pill: null, tip: null, fly: null };
+  frameRef = React.createRef(); listRef = React.createRef(); panelRef = React.createRef();
+  raf = 0; mt = null; ct = null; dx0 = null; drag = false; ddx = 0;
+
+  componentDidMount() { this.schedule(); }
+  componentDidUpdate() { this.schedule(); }
+  componentWillUnmount() { cancelAnimationFrame(this.raf); clearTimeout(this.mt); clearTimeout(this.ct); }
+  schedule() {
+    cancelAnimationFrame(this.raf); this.raf = requestAnimationFrame(() => this.measure());
+    clearTimeout(this.mt); this.mt = setTimeout(() => this.measure(), 420);
+  }
+  measure() {
+    const c = this.listRef.current; if (!c) return;
+    const el = c.querySelector('[data-active="true"]');
+    if (!el) { if (this.state.pill) this.setState({ pill: null }); return; }
+    const cr = c.getBoundingClientRect(), er = el.getBoundingClientRect();
+    const p = { t: Math.round(er.top - cr.top), l: Math.round(er.left - cr.left), w: Math.round(er.width), h: Math.round(er.height) };
+    const o = this.state.pill;
+    if (!o || o.t !== p.t || o.l !== p.l || o.w !== p.w || o.h !== p.h) this.setState({ pill: p });
+  }
+  puede(it) { const r = this.state.role; return it.r === 'all' || (it.r === 'auth' && r !== 'visitante') || (it.r === 'anf' && (r === 'anf' || r === 'admin')) || (it.r === 'admin' && r === 'admin'); }
+  path(items, id, acc) {
+    for (const it of items) { const p = acc.concat(it); if (it.id === id) return p; if (it.kids) { const q = this.path(it.kids, id, p); if (q) return q; } }
+    return null;
+  }
+  todo() { return this.MENU.reduce((a, s) => a.concat(s.items), []); }
+  ir(id) {
+    this.setState({ active: id, acct: false, fly: null, tip: null });
+    if (this.state.device === 'm') { clearTimeout(this.ct); this.ct = setTimeout(() => this.setState({ mOpen: false }), 420); }
+  }
+  frameY(el) { const f = this.frameRef.current; if (!f || !el) return 0; const fr = f.getBoundingClientRect(), r = el.getBoundingClientRect(); return { top: r.top - fr.top, mid: r.top - fr.top + r.height / 2, fh: fr.height }; }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'pc', dk = s.dark, col = desk && s.collapsed, mob = !desk;
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const a = o => (dk ? 'rgba(255,255,255,' : 'rgba(0,0,0,') + o + ')';
+    const t = dk
+      ? { panel: '#111110', page: '#171716', card: '#1b1b1a', chip: '#2a2a28', hover: '#232321', ink: '#f4f4f2', prim: '#ffffff', primInk: '#0a0a0a', red: '#ff8a7a', line: 'rgba(255,255,255,.07)', ph: 'repeating-linear-gradient(135deg,#1d1d1c 0 10px,#222220 10px 20px)' }
+      : { panel: '#f6f6f4', page: '#ffffff', card: '#ffffff', chip: '#f2f2f0', hover: '#ecebe7', ink: '#0a0a0a', prim: '#0a0a0a', primInk: '#ffffff', red: '#b42318', line: 'rgba(0,0,0,.06)', ph: 'repeating-linear-gradient(135deg,#f4f4f2 0 10px,#efefec 10px 20px)' };
+    t.m55 = a(.55); t.m66 = a(.66); t.guide = a(.1);
+
+    const pathArr = this.path(this.todo(), s.active, []) || [];
+    const pathIds = pathArr.map(x => x.id);
+    const H = desk ? { 1: 42, 2: 38, 3: 34 } : { 1: 46, 2: 44, 3: 44 };
+    const fade = col ? 'opacity .1s ease' : 'opacity .16s ease .2s';
+    const anim = mob ? (s.mOpen ? 'mmIn .32s cubic-bezier(.2,.8,.2,1) both' : 'none') : 'none';
+    const rows = []; let n = 0;
+
+    const walk = (items, level, shown) => {
+      items.forEach(it => {
+        if (level === 1 && !this.puede(it)) return;
+        const hasKids = !!it.kids, open = !!s.open[it.id], act = s.active === it.id, inPath = !act && pathIds.includes(it.id);
+        const vis = shown && (level === 1 || !col);
+        const rep = col ? (level === 1 && pathIds[0] === it.id) : (act && vis);
+        const strong = (act && !col) || rep;
+        const ml = level === 1 ? 0 : level === 2 ? 36 : 56;
+        const color = strong ? t.primInk : inPath ? t.ink : level === 3 ? t.m55 : t.m66;
+        const fw = level === 1 || strong || inPath ? 600 : 500;
+        const fs = level === 1 ? (desk ? 14.5 : 15.5) : level === 2 ? 14 : 13;
+        const i = n++;
+        rows.push({
+          isItem: true, isLabel: false, label: it.l, hasIcon: level === 1, icon: this.I[it.ic] || '', hasKids,
+          g1: level >= 2, g2: level === 3,
+          g1s: 'position:absolute; left:23px; top:0; bottom:2px; width:1.5px; background:' + t.guide,
+          g2s: 'position:absolute; left:47px; top:0; bottom:2px; width:1.5px; background:' + t.guide,
+          dataActive: rep ? 'true' : 'false', current: act ? 'page' : undefined,
+          exp: hasKids ? (open ? 'true' : 'false') : undefined,
+          aria: col ? it.l : undefined, tab: vis ? 0 : -1,
+          wrap: 'position:relative; overflow:hidden; padding-bottom:2px; transition:max-height .26s cubic-bezier(.3,.7,.2,1), opacity .2s ease; max-height:' + (vis ? (H[level] + 2) + 'px' : '0') + '; opacity:' + (vis ? 1 : 0),
+          btn: 'position:relative; z-index:1; display:flex; align-items:center; gap:12px; width:calc(100% - ' + ml + 'px); margin-left:' + ml + 'px; height:' + H[level] + 'px; padding:0 ' + (level === 1 ? 14 : 12) + 'px; border:0; border-radius:' + (col ? '14px' : '999px') + '; background:transparent; color:' + color + '; font-size:' + fs + 'px; font-weight:' + fw + '; text-align:left; cursor:pointer; transition:background-color .15s ease, color .25s ease; animation:' + anim + '; animation-delay:' + (i * 25) + 'ms',
+          hover: strong ? 'background:transparent' : 'background:' + t.hover,
+          lbl: 'flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:' + fade + '; opacity:' + (col ? 0 : 1),
+          chev: 'margin-left:auto; flex:none; transition:transform .25s ease, opacity .15s ease; transform:rotate(' + (open ? 180 : 0) + 'deg); opacity:' + (col ? 0 : .75),
+          click: e => {
+            if (hasKids) {
+              if (col && level === 1) { const y = this.frameY(e.currentTarget); const est = 56 + it.kids.length * 42; this.setState({ fly: { id: it.id, y: Math.max(12, Math.min(y.top - 8, y.fh - est - 16)) }, tip: null, acct: false }); }
+              else this.setState(st => ({ open: Object.assign({}, st.open, { [it.id]: !st.open[it.id] }) }));
+            } else this.ir(it.id);
+          },
+          enter: e => { if (col && level === 1 && !s.fly) this.setState({ tip: { t: it.l, y: this.frameY(e.currentTarget).mid } }); },
+          leave: () => { if (s.tip) this.setState({ tip: null }); }
+        });
+        if (hasKids) walk(it.kids, level + 1, vis && open);
+      });
+    };
+    this.MENU.forEach((sec, si) => {
+      if (!sec.items.some(it => this.puede(it))) return;
+      rows.push({
+        isItem: false, isLabel: true, label: sec.sec,
+        wrap: 'position:relative; height:' + (si === 0 ? 30 : 46) + 'px; display:flex; align-items:flex-end; padding:0 14px 8px',
+        lbl: 'font-size:12px; font-weight:600; letter-spacing:.07em; white-space:nowrap; color:' + t.m55 + '; transition:' + fade + '; opacity:' + (col ? 0 : 1),
+        divider: 'position:absolute; left:50%; bottom:14px; width:22px; height:1.5px; margin-left:-11px; border-radius:2px; background:' + a(.14) + '; transition:opacity .15s; opacity:' + (col ? 1 : 0)
+      });
+      walk(sec.items, 1, true);
+    });
+
+    const pl = s.pill;
+    const pill = 'position:absolute; z-index:0; pointer-events:none; background:' + t.prim + '; left:' + (pl ? pl.l : 0) + 'px; top:' + (pl ? pl.t : 0) + 'px; width:' + (pl ? pl.w : 0) + 'px; height:' + (pl ? pl.h : 0) + 'px; border-radius:' + (col ? '14px' : '999px') + '; opacity:' + (pl ? 1 : 0) + '; transition:top .34s cubic-bezier(.3,.8,.2,1), left .34s cubic-bezier(.3,.8,.2,1), width .34s cubic-bezier(.3,.8,.2,1), height .34s cubic-bezier(.3,.8,.2,1), border-radius .2s, opacity .2s';
+
+    let flyRows = [], flyTitulo = '';
+    if (s.fly && col) {
+      const it = this.todo().find(x => x.id === s.fly.id);
+      if (it) {
+        flyTitulo = it.l.toUpperCase();
+        const fw2 = (kids, lv) => kids.forEach(k => {
+          const act = s.active === k.id, inP = !act && pathIds.includes(k.id), open = !!s.open[k.id];
+          flyRows.push({
+            label: k.l, hasKids: !!k.kids, g: lv === 2, exp: k.kids ? (open ? 'true' : 'false') : undefined,
+            btn: 'width:' + (lv === 2 ? 'calc(100% - 28px)' : '100%') + '; margin-left:' + (lv === 2 ? 28 : 0) + 'px; height:' + (lv === 2 ? 36 : 40) + 'px; padding:0 12px; border:0; border-radius:999px; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:' + (lv === 2 ? 13 : 14) + 'px; font-weight:' + (act || inP ? 600 : 500) + '; background:' + (act ? t.prim : 'transparent') + '; color:' + (act ? t.primInk : inP ? t.ink : t.m66) + '; transition:background-color .15s',
+            hover: act ? '' : 'background:' + t.hover,
+            chev: 'flex:none; transition:transform .25s; transform:rotate(' + (open ? 180 : 0) + 'deg)',
+            click: () => { if (k.kids) this.setState(st => ({ open: Object.assign({}, st.open, { [k.id]: !st.open[k.id] }) })); else this.ir(k.id); }
+          });
+          if (k.kids && open) fw2(k.kids, lv + 1);
+        });
+        fw2(it.kids, 1);
+      }
+    }
+
+    const sesion = s.role !== 'visitante';
+    const user = this.USERS[s.role] || this.USERS.usuario;
+    const asideW = col ? 80 : 256;
+    const wT = 'cubic-bezier(.3,.7,.2,1)';
+    const txtFade = 'flex:1; min-width:0; overflow:hidden; white-space:nowrap; transition:' + fade + '; opacity:' + (col ? 0 : 1);
+
+    const roles = [['visitante', 'Visitante'], ['usuario', 'Usuario'], ['anf', 'Anfitrión'], ['admin', 'Super admin']].map(([k, tt]) => ({ t: tt, style: seg(s.role === k), ir: () => this.setState({ role: k, acct: false, fly: null, active: 'inicio' }) }));
+    const acciones = [
+      { t: 'Activar “Crear grupo”', ir: () => this.setState(st => ({ role: 'admin', active: 'crear-grupo', open: Object.assign({}, st.open, { panelgcx: true, gestion: true }), mOpen: true, acct: false, fly: null })) },
+      { t: s.acct ? 'Cerrar la cuenta' : 'Abrir la cuenta', ir: () => this.setState(st => ({ acct: !st.acct, role: st.role === 'visitante' ? 'usuario' : st.role, mOpen: true, fly: null })) },
+      desk
+        ? { t: s.collapsed ? 'Expandir la barra' : 'Contraer la barra', ir: () => this.setState(st => ({ collapsed: !st.collapsed, fly: null, tip: null, acct: false })) }
+        : { t: s.mOpen ? 'Cerrar el menú' : 'Abrir el menú', ir: () => this.setState(st => ({ mOpen: !st.mOpen })) }
+    ];
+
+    const lbl = pathArr.map(x => x.l);
+    const titulo = s.active === 'perfil' ? 'Mi perfil' : lbl[lbl.length - 1] || 'Inicio';
+    const crumb = s.active === 'perfil' ? 'CUENTA' : lbl.length > 1 ? lbl.slice(0, -1).join(' · ').toUpperCase() : 'ORIGEN';
+
+    return {
+      t, roles, acciones,
+      verMobile: () => this.setState({ device: 'm', tip: null, fly: null }), verPC: () => this.setState({ device: 'pc', mOpen: true }),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(mob), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      frameRef: this.frameRef, listRef: this.listRef, panelRef: this.panelRef,
+      frameW: desk ? '1440px' : '390px', frameH: desk ? '900px' : '844px', frameR: desk ? '14px' : '40px',
+      isDesktop: desk, isMobile: mob,
+      pageWrap: desk ? 'position:absolute; top:0; bottom:0; right:0; left:' + asideW + 'px; overflow:auto; background:' + t.page + '; transition:left .26s ' + wT + (col ? ' .1s' : '') : 'position:absolute; inset:0; overflow:auto; background:' + t.page,
+      pagePad: desk ? '40px 48px' : '18px 20px 40px', pageH1: desk ? '30px' : '26px', pageCols: desk ? 'repeat(2,minmax(0,1fr))' : 'minmax(0,1fr)',
+      crumb, pageTitulo: titulo,
+      abrirMenu: () => this.setState({ mOpen: true }), cerrarMenu: () => this.setState({ mOpen: false, acct: false }),
+      backdrop: 'position:absolute; inset:0; z-index:25; background:rgba(0,0,0,.42); transition:opacity .3s ease; opacity:' + (s.mOpen ? 1 : 0) + '; pointer-events:' + (s.mOpen ? 'auto' : 'none'),
+      aside: desk
+        ? 'position:absolute; left:0; top:0; bottom:0; z-index:20; display:flex; flex-direction:column; width:' + asideW + 'px; background:' + t.panel + '; box-shadow:1px 0 0 ' + t.line + '; transition:width .26s ' + wT + (col ? ' .1s' : '')
+        : 'position:absolute; left:0; top:0; bottom:0; z-index:30; display:flex; flex-direction:column; width:85%; max-width:350px; padding-top:47px; background:' + t.panel + '; border-radius:0 28px 28px 0; box-shadow:12px 0 40px rgba(0,0,0,.18); transform:translateX(' + (s.mOpen ? '0' : '-104%') + '); transition:transform .35s cubic-bezier(.22,1,.36,1); touch-action:pan-y',
+      pDown: e => { if (desk) return; this.dx0 = e.clientX; this.drag = false; this.ddx = 0; },
+      pMove: e => {
+        if (this.dx0 == null) return; const dx = e.clientX - this.dx0, el = this.panelRef.current;
+        if (!this.drag && dx < -8) { this.drag = true; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) {} if (el) el.style.transition = 'none'; }
+        if (this.drag && el) { this.ddx = Math.min(0, dx); el.style.transform = 'translateX(' + this.ddx + 'px)'; }
+      },
+      pUp: () => {
+        if (this.dx0 == null) return; const was = this.drag, d = this.ddx, el = this.panelRef.current;
+        this.dx0 = null; this.drag = false;
+        if (was && el) { el.style.transition = 'transform .35s cubic-bezier(.22,1,.36,1)'; el.style.transform = ''; if (d < -70) this.setState({ mOpen: false, acct: false }); }
+      },
+      toggleCollapse: () => this.setState(st => ({ collapsed: !st.collapsed, fly: null, tip: null, acct: false })),
+      collapseLabel: col ? 'Expandir el menú' : 'Contraer el menú', expAria: col ? 'false' : 'true',
+      logo: 'width:36px; height:36px; flex:none; border-radius:12px; background:' + t.prim + '; display:flex; align-items:center; justify-content:center',
+      logoRing: 'width:16px; height:16px; border-radius:999px; box-shadow:inset 0 0 0 3px ' + t.primInk,
+      chevronsStyle: 'flex:none; margin-left:auto; color:' + t.m55 + '; transition:' + fade + '; opacity:' + (col ? 0 : 1),
+      txtFade,
+      popItemRed: 'width:100%; height:' + (desk ? 42 : 48) + 'px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:' + t.red + '; display:flex; align-items:center; gap:12px; font-size:14px; font-weight:600; cursor:pointer; transition:background-color .15s',
+      brandTxt: txtFade + '; text-align:left; font-size:17px; font-weight:600; letter-spacing:-.01em',
+      acctTxt: txtFade + '; display:flex; flex-direction:column; align-items:flex-start; text-align:left',
+      temaTxt: txtFade + '; font-size:14px; font-weight:600; text-align:left',
+      listPad: desk ? '0 16px 12px' : '0 12px 12px',
+      rows, pill,
+      footPad: desk ? '12px 16px 18px' : '10px 12px 34px',
+      conSesion: sesion, sinSesion: !sesion, user,
+      acct: s.acct, acctAria: s.acct ? 'true' : 'false', acctLabel: user.n + ', abrir opciones de la cuenta',
+      toggleAcct: () => this.setState(st => ({ acct: !st.acct, tip: null, fly: null })),
+      acctBtn: 'width:100%; display:flex; align-items:center; gap:12px; padding:' + (desk ? '8px' : '6px 10px 6px 6px') + '; border:0; border-radius:22px; background:' + t.card + '; color:' + t.ink + '; cursor:pointer; box-shadow:' + (dk ? 'none' : '0 1px 3px rgba(0,0,0,.05)') + '; transition:background-color .15s',
+      acctHover: 'background:' + (dk ? '#222220' : '#fbfbfa'),
+      avatar: 'width:' + (desk ? 32 : 40) + 'px; height:' + (desk ? 32 : 40) + 'px; flex:none; border-radius:999px; background:' + t.chip + '; display:flex; align-items:center; justify-content:center; font-size:' + (desk ? 12 : 14) + 'px; font-weight:600; color:' + t.ink,
+      acctChev: 'flex:none; color:' + t.m55 + '; transition:transform .25s ease, opacity .15s; transform:rotate(' + (s.acct ? 0 : 180) + 'deg); opacity:' + (col ? 0 : 1),
+      pop: 'position:absolute; z-index:5; padding:6px; border-radius:22px; background:' + t.card + '; box-shadow:0 14px 40px rgba(0,0,0,.16); animation:mmPop .16s ease-out; ' + (col ? 'left:calc(100% + 16px); bottom:0; width:240px' : 'left:0; right:0; bottom:calc(100% + 8px)'),
+      popItem: 'width:100%; height:' + (desk ? 42 : 48) + 'px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:' + t.ink + '; display:flex; align-items:center; gap:12px; font-size:14px; font-weight:600; cursor:pointer; transition:background-color .15s',
+      track: 'width:40px; height:24px; flex:none; border-radius:999px; position:relative; transition:background .18s; background:' + (dk ? '#ffffff' : 'rgba(0,0,0,.16)'),
+      trackFade: 'width:40px; height:24px; flex:none; border-radius:999px; position:relative; transition:background .18s, ' + fade + '; opacity:' + (col ? 0 : 1) + '; background:' + (dk ? '#ffffff' : 'rgba(0,0,0,.16)'),
+      knob: 'position:absolute; top:3px; left:' + (dk ? '19px' : '3px') + '; width:18px; height:18px; border-radius:999px; background:' + (dk ? '#0a0a0a' : '#ffffff') + '; box-shadow:0 1px 2px rgba(0,0,0,.2); transition:left .18s',
+      darkAria: dk ? 'true' : 'false', toggleDark: () => this.setState(st => ({ dark: !st.dark })),
+      irPerfil: () => this.ir('perfil'),
+      salir: () => this.setState({ role: 'visitante', acct: false, active: 'inicio' }),
+      entrar: () => this.setState({ role: 'usuario' }),
+      loginBtn: 'width:100%; height:' + (desk ? 46 : 52) + 'px; border:0; border-radius:' + (col ? '14px' : '999px') + '; background:' + t.prim + '; color:' + t.primInk + '; display:flex; align-items:center; justify-content:center; gap:' + (col ? 0 : 8) + 'px; font-size:15px; font-weight:600; cursor:pointer; overflow:hidden; white-space:nowrap',
+      loginTxt: 'overflow:hidden; transition:' + fade + ', max-width .2s; opacity:' + (col ? 0 : 1) + '; max-width:' + (col ? '0' : '200px'),
+      temaRow: 'width:100%; height:' + (desk ? 42 : 48) + 'px; margin-top:6px; padding:0 ' + (col ? 15 : 8) + 'px 0 ' + (col ? 15 : 14) + 'px; border:0; border-radius:' + (col ? '14px' : '999px') + '; background:transparent; color:' + t.ink + '; display:flex; align-items:center; gap:12px; cursor:pointer; transition:background-color .15s',
+      hayTip: !!s.tip && col, tipY: s.tip ? s.tip.y + 'px' : '0', tipTxt: s.tip ? s.tip.t : '',
+      hayFly: !!s.fly && col, flyY: s.fly ? s.fly.y + 'px' : '0', flyTitulo, flyRows,
+      cerrarFly: () => this.setState({ fly: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

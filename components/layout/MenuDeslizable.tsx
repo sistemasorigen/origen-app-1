@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useReducedMotion } from 'framer-motion';
 import {
     X,
     Menu,
@@ -11,6 +12,7 @@ import {
     Heart,
     HeartHandshake,
     ChevronUp,
+    ChevronDown,
     ChevronRight,
     ChevronsLeft,
     LogOut,
@@ -32,6 +34,47 @@ import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import { supabaseService } from '../../services/supabaseService';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
+
+// ══════════════════════════════════════════════════════════════════════
+//  Los tokens del diseño (design-claude/Menu Deslizable.dc)
+//
+//  Van como clases de Tailwind y no como objeto de estilos en línea
+//  porque el tema oscuro de esta app es la clase `dark` del <html>: con
+//  estilos en línea habría que saber acá adentro qué tema está puesto,
+//  y a este componente no se lo pasan (Estructura.tsx no manda
+//  isDarkMode). La geometría que cambia por nivel —alturas, sangrías—
+//  sí va en línea: son números, no colores.
+// ══════════════════════════════════════════════════════════════════════
+const PANEL = 'bg-[#f6f6f4] dark:bg-[#111110]';
+const TARJETA = 'bg-white dark:bg-[#1b1b1a]';
+const PASTILLA = 'bg-[#f2f2f0] dark:bg-[#2a2a28]';
+const ENCIMA = 'hover:bg-[#ecebe7] dark:hover:bg-[#232321]';
+const TINTA = 'text-[#0a0a0a] dark:text-[#f4f4f2]';
+const M55 = 'text-black/55 dark:text-white/55';
+const M66 = 'text-black/[0.66] dark:text-white/[0.66]';
+const LINEA = 'border-black/[0.06] dark:border-white/[0.07]';
+const GUIA = 'bg-black/10 dark:bg-white/10';
+const FOCO = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-black/25 dark:focus-visible:ring-white/25';
+
+/** Alto de cada nivel, en píxeles: la compu aprieta, el teléfono no. */
+const ALTO = { pc: [42, 38, 34], movil: [46, 44, 44] };
+/** Sangría de cada nivel. El nivel 1 arranca contra el borde. */
+const SANGRIA = [0, 36, 56];
+
+/**
+ * La entrada en cascada de los ítems y el asomo del menú de cuenta.
+ *
+ * Va en un <style> del propio componente y no en index.html porque es lo
+ * único que lo usa; prefers-reduced-motion lo apaga entero, igual que en
+ * el .dc.
+ */
+const ANIMACIONES = `
+@keyframes mdEntra { from { opacity: 0; transform: translateX(-14px) } to { opacity: 1; transform: none } }
+@keyframes mdAsoma { from { opacity: 0; transform: translateY(6px) scale(.98) } to { opacity: 1; transform: none } }
+@media (prefers-reduced-motion: reduce) {
+  .md-menu *, .md-menu *::before, .md-menu *::after { animation: none !important; transition: none !important }
+}
+`;
 
 interface DrawerMenuProps {
     isOpen: boolean;
@@ -156,6 +199,23 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     // La lista scrolleable y el ítem donde estás parado ahora mismo.
     const navRef = useRef<HTMLElement>(null);
     const itemActivoRef = useRef<HTMLButtonElement>(null);
+    const sinMovimiento = useReducedMotion();
+
+    /**
+     * La píldora negra que marca dónde estás, y que se desliza de un ítem a
+     * otro en vez de prenderse y apagarse.
+     *
+     * Es un solo recuadro por detrás de la lista: se mide el botón activo y
+     * se la lleva a su caja. Cuando hay más de uno marcado —"Sistemas" y su
+     * "Configuración", por ejemplo— va sobre el más profundo, que es el
+     * lugar exacto; el de arriba se pinta igual, como hoy.
+     *
+     * Se mide con offset* y no con getBoundingClientRect porque los ítems
+     * entran con un translateX: el rect devolvería la caja a mitad de la
+     * animación y la píldora saldría corrida.
+     */
+    const listaRef = useRef<HTMLDivElement>(null);
+    const [pildora, setPildora] = useState<{ t: number; l: number; w: number; h: number; mover: boolean } | null>(null);
 
     useEffect(() => {
         supabaseService.getAppConfig()
@@ -273,6 +333,59 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         // desplegable, la lista no debe saltar bajo su dedo.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, shouldRender, type, isCollapsed, location.pathname, location.search]);
+
+    // Sin lista de dependencias a propósito: la píldora tiene que seguir a
+    // la lista mientras un grupo se despliega, y eso dura varios cuadros. La
+    // guarda de "si la caja no cambió, no toques el estado" es la que corta
+    // el ciclo cuando la animación termina.
+    const medirPildora = useCallback(() => {
+        const lista = listaRef.current;
+        if (!lista) return;
+        {
+            const marcados = lista.querySelectorAll<HTMLElement>('[data-activo="true"]');
+            const el = marcados[marcados.length - 1];
+            if (!el) { setPildora(p => (p === null ? p : null)); return; }
+            // Se suma la cadena de offsetParent hasta la lista: los sub-ítems
+            // viven dentro de filas posicionadas (las que sostienen las guías
+            // verticales), así que su offsetTop solo no dice dónde están.
+            let t = 0, l = 0;
+            for (let n: HTMLElement | null = el; n && n !== lista; n = n.offsetParent as HTMLElement | null) {
+                t += n.offsetTop;
+                l += n.offsetLeft;
+            }
+            setPildora(p => {
+                const igual = p && p.t === t && p.l === l
+                    && p.w === el.offsetWidth && p.h === el.offsetHeight;
+                if (igual) return p;
+                return {
+                    t, l, w: el.offsetWidth, h: el.offsetHeight,
+                    // La primera vez aparece puesta; si no, se la vería venir
+                    // desde la esquina de arriba cada vez que se abre el menú.
+                    mover: !!p && !sinMovimiento,
+                };
+            });
+        }
+    }, [sinMovimiento]);
+
+    useLayoutEffect(() => {
+        const cuadro = requestAnimationFrame(medirPildora);
+        return () => cancelAnimationFrame(cuadro);
+    });
+
+    /**
+     * Y también cuando la barra cambia de ancho.
+     *
+     * Contraer y expandir es una transición de CSS: la lista se angosta sin
+     * que React vuelva a pintar, así que la medición de arriba no se entera
+     * y la píldora quedaría con el ancho viejo.
+     */
+    useEffect(() => {
+        const lista = listaRef.current;
+        if (!lista || typeof ResizeObserver === 'undefined') return;
+        const observador = new ResizeObserver(() => medirPildora());
+        observador.observe(lista);
+        return () => observador.disconnect();
+    }, [medirPildora]);
 
     const toggleExpand = (label: string) => {
         setExpandedItems(prev =>
@@ -564,17 +677,45 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         <button
             role="menuitem"
             onClick={onClick}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold transition-colors ${danger
-                ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20'
-                : 'text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
+            className={`w-full flex items-center gap-3 px-3 rounded-full text-sm font-semibold transition-colors duration-150 ${ENCIMA} ${danger
+                ? 'text-[#b42318] dark:text-[#ff8a7a]'
+                : TINTA
                 }`}
+            style={{ height: isSidebar ? 42 : 48 }}
         >
-            <Icono className="w-4 h-4 shrink-0" />
+            <Icono className="w-[18px] h-[18px] shrink-0" />
             <span className="truncate">{label}</span>
         </button>
     );
 
     // ── Un ítem de menú (con o sin hijos) ────────────────────────────────
+    /**
+     * El lugar de cada ítem en la lista entera.
+     *
+     * Es para escalonar la entrada del cajón: cada fila entra 25 ms después
+     * de la anterior, que es lo que hace que el menú se "despliegue" en vez
+     * de aparecer de golpe. Se cuenta sobre las secciones ya filtradas por
+     * rol, así que no quedan huecos de tiempo por ítems que no se ven.
+     */
+    const ordenDe = new Map<MenuItem, number>();
+    secciones.forEach(sec => sec.items.forEach(it => ordenDe.set(it, ordenDe.size)));
+
+    /** El alto de cada nivel: la compu aprieta, el teléfono no. */
+    const alto = ALTO[isSidebar ? 'pc' : 'movil'];
+    /**
+     * El texto de un ítem al contraer la barra.
+     *
+     * No se deja de dibujar: se desvanece y se queda sin ancho, que es lo
+     * que hace que el ícono viaje suave al centro en vez de saltar.
+     * Al expandir vuelve con un retraso, para que no aparezca encimado
+     * mientras el panel todavía se está abriendo.
+     */
+    const textoQueSeVa = 'flex-1 min-w-0 truncate text-left';
+    const estiloTexto: React.CSSProperties = {
+        opacity: isCollapsed ? 0 : 1,
+        transition: sinMovimiento ? 'none' : (isCollapsed ? 'opacity .1s ease' : 'opacity .16s ease .2s'),
+    };
+
     const renderItem = (item: MenuItem, key: React.Key) => {
         const isActive = item.path === '/'
             ? location.pathname === '/'
@@ -609,12 +750,47 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         const hasChildren = hasSubItems || hasSubGroups;
         const isExpanded = expandedItems.includes(item.label) || (isActive && !isCollapsed);
 
+        // ── Sólo apariencia de acá abajo ────────────────────────────────
+        //
+        // La píldora va sobre el marcado MÁS PROFUNDO que esté a la vista.
+        // Cuando estás en "Sistemas › Configuración" los dos cuentan como
+        // activos —eso no cambió—, pero pintar los dos de negro repetía el
+        // mismo dato dos veces: ahora el de arriba queda en tinta plena, que
+        // es el "estás acá adentro" del diseño, y la píldora marca el final
+        // del camino.
+        const esSubActivo = (sub: SubMenuItem) => sub.path
+            ? (location.pathname + location.search) === sub.path
+            || (sub.activePaths?.some(p => location.pathname.startsWith(p)) ?? false)
+            : false;
+        const hijosALaVista = !isCollapsed && hasChildren && isExpanded;
+        const conHijoMarcado = hijosALaVista && (
+            visibleSubItems.some(sub => !sub.separator && esSubActivo(sub))
+            || visibleSubGroups.some(group => {
+                if (group.separator) return false;
+                const conItems = (group.subItems?.length ?? 0) > 0;
+                const grupoActivo = group.path
+                    ? (location.pathname + location.search).startsWith(group.path)
+                    : group.subItems?.some(s => (location.pathname + location.search) === s.path);
+                if (!conItems) return !!grupoActivo;
+                const abierto = expandedItems.includes(`${item.label}::${group.label}`) || !!grupoActivo;
+                return abierto && (group.subItems ?? []).some(esSubActivo);
+            })
+        );
+        const llevaPildora = isActive && !conHijoMarcado;
+
+        // La cascada es del cajón del teléfono: en la compu la barra ya está
+        // puesta y no hay entrada que acompañar.
+        const entrada = !isSidebar && isOpen && !sinMovimiento
+            ? `mdEntra .32s cubic-bezier(.2,.8,.2,1) ${(ordenDe.get(item) ?? 0) * 25}ms both`
+            : undefined;
+
         return (
-            <div key={key} title={isCollapsed ? item.label : undefined}>
+            <div key={key} title={isCollapsed ? item.label : undefined} style={{ animation: entrada }}>
                 <button
                     // Sólo hay un activo por vez: es el ancla a la que el menú
                     // scrollea al abrirse.
                     ref={isActive ? itemActivoRef : undefined}
+                    data-activo={isActive ? 'true' : undefined}
                     onClick={() => {
                         if (hasChildren) {
                             // Tiene hijos: SOLO expande/colapsa, nunca navega.
@@ -630,59 +806,44 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         }
                     }}
                     aria-expanded={hasChildren && !isCollapsed ? isExpanded : undefined}
-                    className={`w-full flex items-center rounded-xl transition-colors duration-200 group text-left ${isCollapsed ? 'justify-center py-2.5 px-0' : 'gap-2 py-2.5 px-2'
-                        } ${isActive
-                        // Negro pleno = dónde estás parado, y hay uno solo.
-                        // Abierto pero no activo va en gris claro: con nueve
-                        // desplegables, pintar cada uno que se abre del mismo
-                        // negro dejaba tres o cuatro "activos" a la vez y el
-                        // color perdía la única cosa que tiene para decir.
-                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
-                        : isExpanded && !isCollapsed
-                            ? 'bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white'
-                            : 'text-gray-700 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                    aria-current={isActive ? 'page' : undefined}
+                    style={{
+                        height: alto[0],
+                        borderRadius: isCollapsed ? 14 : 999,
+                        fontSize: isSidebar ? 14.5 : 15.5,
+                    }}
+                    className={`relative z-[1] w-full flex items-center gap-3 px-[14px] text-left font-semibold transition-colors duration-150 ${FOCO} ${llevaPildora
+                        ? 'text-white dark:text-[#0a0a0a]'
+                        : isActive
+                            ? `${TINTA} ${ENCIMA}`
+                            : `${M66} ${ENCIMA}`
                         }`}
                 >
-                    {/* Carril de despliegue, a la IZQUIERDA del ícono.
-                        El hueco se reserva siempre —aunque el ítem no tenga
-                        hijos— para que todos los íconos caigan sobre la misma
-                        vertical: si el carril apareciera solo en los ítems con
-                        flecha, la columna de íconos se movería fila por fila. */}
-                    {!isCollapsed && (
-                        <span className="w-4 shrink-0 flex items-center justify-center" aria-hidden="true">
-                            {hasChildren && (
-                                <ChevronRight
-                                    className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''} ${isActive
-                                        ? 'text-white dark:text-slate-900'
-                                        : isExpanded
-                                            ? 'text-slate-500 dark:text-zinc-400'
-                                            : 'text-gray-400 dark:text-zinc-600'
-                                        }`}
-                                />
-                            )}
-                        </span>
+                    <item.icon className="w-[19px] h-[19px] shrink-0" strokeWidth={2} />
+                    <span className={textoQueSeVa} style={estiloTexto}>{item.label}</span>
+                    {hasChildren && (
+                        <ChevronDown
+                            className="w-4 h-4 shrink-0 ml-auto transition-transform duration-[250ms]"
+                            style={{
+                                transform: isExpanded ? 'rotate(180deg)' : 'none',
+                                opacity: isCollapsed ? 0 : 0.75,
+                            }}
+                        />
                     )}
-                    <item.icon
-                        className={`w-5 h-5 shrink-0 transition-colors ${isActive
-                            ? 'text-white dark:text-slate-900'
-                            : isExpanded && !isCollapsed
-                                ? 'text-slate-900 dark:text-white'
-                                : 'text-gray-500 dark:text-zinc-500 group-hover:text-slate-900 dark:group-hover:text-white'
-                            }`}
-                    />
-                    {!isCollapsed && <span className="text-sm font-bold truncate">{item.label}</span>}
                 </button>
 
-                {!isCollapsed && hasChildren && isExpanded && (
-                    /* ml-8 alinea el hilo de los hijos con el ÍCONO del padre
-                       (px-2 + carril de 16px + gap de 8px), no con su flecha. */
-                    <div className="ml-8 pl-2 border-l border-gray-100 dark:border-zinc-800 mt-1 mb-2 space-y-1">
+                {hijosALaVista && (
+                    /* Sin borde ni sangría en el contenedor: cada fila trae su
+                       propia guía vertical, que es lo que deja los tres niveles
+                       alineados contra la misma columna. */
+                    <div className="relative">
                         {/* SubGroups: secciones rotuladas, opcionalmente expandibles */}
                         {visibleSubGroups.map((group, gi) => {
                             if (group.separator) {
                                 return (
-                                    <div key={gi} className="px-3 pt-3 pb-1">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-zinc-600 select-none">
+                                    <div key={gi} className="relative flex items-end h-[38px] pb-2" style={{ paddingLeft: SANGRIA[1] + 12 }}>
+                                        <span aria-hidden="true" className={`absolute left-[23px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
+                                        <span className={`text-[11px] font-semibold uppercase tracking-[0.07em] ${M55} select-none`}>
                                             {group.label}
                                         </span>
                                     </div>
@@ -695,43 +856,70 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 ? (location.pathname + location.search).startsWith(group.path)
                                 : group.subItems?.some(s => (location.pathname + location.search) === s.path);
                             const isGroupExpanded = expandedItems.includes(groupKey) || (!!isGroupActive && hasGroupItems);
+                            const grupoConPildora = !hasGroupItems && !!isGroupActive;
 
                             return (
                                 <div key={gi}>
-                                    <button
-                                        onClick={() => {
-                                            if (hasGroupItems) toggleExpand(groupKey);
-                                            else if (group.path) handleNavigation(group.path);
-                                        }}
-                                        aria-expanded={hasGroupItems ? isGroupExpanded : undefined}
-                                        className={`w-full flex items-center gap-1.5 text-left px-2 py-1.5 text-xs font-bold rounded-lg transition-colors ${!hasGroupItems && isGroupActive
-                                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                                            : 'text-gray-500 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800'
-                                            }`}
-                                    >
-                                        <span className="w-3 shrink-0 flex items-center justify-center" aria-hidden="true">
+                                    <div className="relative">
+                                        <span aria-hidden="true" className={`absolute left-[23px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
+                                        <button
+                                            data-activo={!hasGroupItems && isGroupActive ? 'true' : undefined}
+                                            onClick={() => {
+                                                if (hasGroupItems) toggleExpand(groupKey);
+                                                else if (group.path) handleNavigation(group.path);
+                                            }}
+                                            aria-expanded={hasGroupItems ? isGroupExpanded : undefined}
+                                            style={{
+                                                height: alto[1],
+                                                marginLeft: SANGRIA[1],
+                                                width: `calc(100% - ${SANGRIA[1]}px)`,
+                                                borderRadius: 999,
+                                                fontSize: 14,
+                                            }}
+                                            className={`relative z-[1] flex items-center gap-2 px-3 text-left transition-colors duration-150 ${FOCO} ${grupoConPildora
+                                                ? 'font-semibold text-white dark:text-[#0a0a0a]'
+                                                : isGroupActive
+                                                    ? `font-semibold ${TINTA} ${ENCIMA}`
+                                                    : `font-medium ${M66} ${ENCIMA}`
+                                                }`}
+                                        >
+                                            <span className="flex-1 min-w-0 truncate">{group.label}</span>
                                             {hasGroupItems && (
-                                                <ChevronRight className={`w-3 h-3 transition-transform duration-200 ${isGroupExpanded ? 'rotate-90' : ''}`} />
+                                                <ChevronDown
+                                                    className="w-[15px] h-[15px] shrink-0 opacity-75 transition-transform duration-[250ms]"
+                                                    style={{ transform: isGroupExpanded ? 'rotate(180deg)' : 'none' }}
+                                                />
                                             )}
-                                        </span>
-                                        <span className="truncate">{group.label}</span>
-                                    </button>
+                                        </button>
+                                    </div>
                                     {hasGroupItems && isGroupExpanded && (
-                                        <div className="ml-3 pl-2 border-l border-gray-100 dark:border-zinc-800 mt-0.5 mb-1 space-y-0.5">
+                                        <div>
                                             {group.subItems!.map((sub, si) => {
                                                 const isSubActive = (location.pathname + location.search) === sub.path
                                                     || (sub.activePaths?.some(p => location.pathname.startsWith(p)) ?? false);
                                                 return (
-                                                    <button
-                                                        key={si}
-                                                        onClick={() => sub.path && handleNavigation(sub.path)}
-                                                        className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${isSubActive
-                                                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                                                            : 'text-gray-500 dark:text-zinc-500 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
-                                                            }`}
-                                                    >
-                                                        {sub.label}
-                                                    </button>
+                                                    <div key={si} className="relative">
+                                                        <span aria-hidden="true" className={`absolute left-[23px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
+                                                        <span aria-hidden="true" className={`absolute left-[47px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
+                                                        <button
+                                                            data-activo={isSubActive ? 'true' : undefined}
+                                                            onClick={() => sub.path && handleNavigation(sub.path)}
+                                                            aria-current={isSubActive ? 'page' : undefined}
+                                                            style={{
+                                                                height: alto[2],
+                                                                marginLeft: SANGRIA[2],
+                                                                width: `calc(100% - ${SANGRIA[2]}px)`,
+                                                                borderRadius: 999,
+                                                                fontSize: 13,
+                                                            }}
+                                                            className={`relative z-[1] flex items-center px-3 text-left truncate transition-colors duration-150 ${FOCO} ${isSubActive
+                                                                ? 'font-semibold text-white dark:text-[#0a0a0a]'
+                                                                : `font-medium ${M55} ${ENCIMA}`
+                                                                }`}
+                                                        >
+                                                            {sub.label}
+                                                        </button>
+                                                    </div>
                                                 );
                                             })}
                                         </div>
@@ -744,8 +932,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         {visibleSubItems.map((sub, si) => {
                             if (sub.separator) {
                                 return (
-                                    <div key={si} className="px-3 pt-3 pb-1">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-zinc-600 select-none">
+                                    <div key={si} className="relative flex items-end h-[38px] pb-2" style={{ paddingLeft: SANGRIA[1] + 12 }}>
+                                        <span aria-hidden="true" className={`absolute left-[23px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
+                                        <span className={`text-[11px] font-semibold uppercase tracking-[0.07em] ${M55} select-none`}>
                                             {sub.label}
                                         </span>
                                     </div>
@@ -756,16 +945,27 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 || (sub.activePaths?.some(p => location.pathname.startsWith(p)) ?? false)
                                 : false;
                             return (
-                                <button
-                                    key={si}
-                                    onClick={() => sub.path && handleNavigation(sub.path)}
-                                    className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${isSubActive
-                                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                                        : 'text-gray-500 dark:text-zinc-500 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
-                                        }`}
-                                >
-                                    {sub.label}
-                                </button>
+                                <div key={si} className="relative">
+                                    <span aria-hidden="true" className={`absolute left-[23px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
+                                    <button
+                                        data-activo={isSubActive ? 'true' : undefined}
+                                        onClick={() => sub.path && handleNavigation(sub.path)}
+                                        aria-current={isSubActive ? 'page' : undefined}
+                                        style={{
+                                            height: alto[1],
+                                            marginLeft: SANGRIA[1],
+                                            width: `calc(100% - ${SANGRIA[1]}px)`,
+                                            borderRadius: 999,
+                                            fontSize: 14,
+                                        }}
+                                        className={`relative z-[1] flex items-center px-3 text-left truncate transition-colors duration-150 ${FOCO} ${isSubActive
+                                            ? 'font-semibold text-white dark:text-[#0a0a0a]'
+                                            : `font-medium ${M66} ${ENCIMA}`
+                                            }`}
+                                    >
+                                        {sub.label}
+                                    </button>
+                                </div>
                             );
                         })}
                     </div>
@@ -776,8 +976,17 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
     const SidebarContent = (
         <div
-            className={`flex flex-col h-full bg-white dark:bg-zinc-950 border-r border-slate-200 dark:border-zinc-800 transition-all duration-300 ${isSidebar ? (isCollapsed ? 'w-20' : 'w-64') : 'w-full'}`}
+            className={`md-menu flex flex-col h-full ${PANEL} ${isSidebar ? (isCollapsed ? 'w-20' : 'w-64') : 'w-full'}`}
+            style={{
+                fontFamily: 'Manrope, system-ui, sans-serif',
+                // Una línea de 1px a la derecha, en vez de un borde: el borde
+                // entra en la cuenta del ancho y hace saltar el contenido
+                // cuando la barra se contrae.
+                boxShadow: isSidebar ? `1px 0 0 ${'rgba(0,0,0,.06)'}` : 'none',
+                transition: sinMovimiento ? 'none' : `width .26s cubic-bezier(.3,.7,.2,1)${isCollapsed ? ' .1s' : ''}`,
+            }}
         >
+            <style>{ANIMACIONES}</style>
             {/* ── MARCA ────────────────────────────────────────────────────
                 Ocupa el lugar de la hamburguesa y hereda su único trabajo:
                 contraer y expandir el panel. Un solo control, en los dos
@@ -785,8 +994,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 toque, así contraer nunca es un camino sin vuelta.
                 Sin chevron: la flecha significa "acá se despliega algo", y lo
                 que se despliega es el menú de cuenta, abajo. */}
-            <div className="shrink-0 border-b border-gray-100/70 dark:border-zinc-800">
-                <div className={`h-16 flex items-center gap-1 ${isCollapsed ? 'justify-center px-0' : 'px-3'}`}>
+            <div className="shrink-0">
+                <div className={`flex items-center gap-1 pt-5 pb-2.5 ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
                     {(() => {
                         const marca = (
                             <>
@@ -800,22 +1009,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                     src="/favicon.png"
                                     alt=""
                                     aria-hidden="true"
-                                    className="w-8 h-8 object-contain shrink-0 dark:invert"
+                                    className="w-9 h-9 object-contain shrink-0 dark:invert"
                                 />
-                                {!isCollapsed && (
-                                    <>
-                                        <span className="flex-1 min-w-0 text-left">
-                                            <span className="block text-sm font-black tracking-tight text-slate-900 dark:text-white leading-none truncate">
-                                                Origen
-                                            </span>
-                                            <span className="block text-[11px] font-medium text-slate-400 dark:text-zinc-500 leading-none mt-1 truncate">
-                                                App
-                                            </span>
-                                        </span>
-                                        {isSidebar && (
-                                            <ChevronsLeft className="w-4 h-4 shrink-0 text-slate-400 dark:text-zinc-600" />
-                                        )}
-                                    </>
+                                <span className={`${textoQueSeVa} text-[17px] font-semibold tracking-[-0.01em] ${TINTA}`} style={estiloTexto}>
+                                    Origen
+                                </span>
+                                {isSidebar && (
+                                    <ChevronsLeft
+                                        className={`w-[18px] h-[18px] shrink-0 ml-auto ${M55}`}
+                                        style={estiloTexto}
+                                    />
                                 )}
                             </>
                         );
@@ -824,7 +1027,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         // la marca no finge ser un botón: es solo el rótulo.
                         if (!isSidebar) {
                             return (
-                                <div className="flex flex-1 min-w-0 items-center gap-2.5 px-2 py-2">
+                                <div className="flex flex-1 min-w-0 items-center gap-3 px-1.5 py-2">
                                     {marca}
                                 </div>
                             );
@@ -835,7 +1038,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 onClick={() => onToggleCollapse?.()}
                                 aria-label={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
                                 title={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
-                                className={`flex items-center gap-2.5 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/30 dark:focus-visible:ring-white/30 ${isCollapsed ? 'p-1.5' : 'flex-1 min-w-0 px-2 py-2'
+                                aria-expanded={!isCollapsed}
+                                className={`h-[52px] flex items-center gap-3 rounded-[18px] px-1.5 transition-colors duration-150 ${ENCIMA} ${FOCO} ${isCollapsed ? 'justify-center w-full' : 'flex-1 min-w-0'
                                     }`}
                             >
                                 {marca}
@@ -849,9 +1053,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         <button
                             onClick={onClose}
                             aria-label="Cerrar menú"
-                            className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors group shrink-0"
+                            className={`w-11 h-11 shrink-0 ml-auto rounded-full ${PASTILLA} ${TINTA} flex items-center justify-center transition-colors group ${FOCO}`}
                         >
-                            <X className="w-5 h-5 text-slate-900 dark:text-white group-hover:rotate-90 transition-transform duration-300" />
+                            <X className="w-[17px] h-[17px] group-hover:rotate-90 transition-transform duration-300" />
                         </button>
                     )}
                 </div>
@@ -861,23 +1065,53 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 Dos bloques separados por aire, no por una línea: la distancia
                 ya dice que son cosas distintas y una regla más sumaría ruido
                 a una columna que ya tiene bordes, pastillas y hilos. */}
-            <nav ref={navRef} className={`flex-1 overflow-y-auto py-4 ${isCollapsed ? 'px-2' : 'px-3'} ${isSidebar ? '' : 'contenido-del-overlay'}`}>
-                {secciones.map((seccion, si) => (
-                    <div key={seccion.titulo} className={si > 0 ? 'mt-7' : ''}>
-                        {isCollapsed ? (
-                            // Contraído no entra el rótulo: queda solo la marca
-                            // de corte entre bloques, y nada arriba de todo.
-                            si > 0 && <div className="h-px w-8 mx-auto mb-3 bg-slate-200 dark:bg-zinc-800" />
-                        ) : (
-                            <p className="px-2 pb-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-zinc-600 select-none">
-                                {seccion.titulo}
-                            </p>
-                        )}
-                        <div className="space-y-1">
+            <nav
+                ref={navRef}
+                className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide ${isCollapsed ? 'px-2' : 'px-4'} pb-3 ${isSidebar ? '' : 'contenido-del-overlay'}`}
+            >
+                <div ref={listaRef} className="relative">
+                    {/* La píldora, por detrás de todo (z-0 contra el z-[1] de
+                        los botones). Sin ítem activo no se dibuja. */}
+                    <div
+                        aria-hidden="true"
+                        className="absolute z-0 pointer-events-none bg-[#0a0a0a] dark:bg-white"
+                        style={{
+                            left: pildora?.l ?? 0,
+                            top: pildora?.t ?? 0,
+                            width: pildora?.w ?? 0,
+                            height: pildora?.h ?? 0,
+                            borderRadius: isCollapsed ? 14 : 999,
+                            opacity: pildora ? 1 : 0,
+                            transition: pildora?.mover
+                                ? 'top .34s cubic-bezier(.3,.8,.2,1), left .34s cubic-bezier(.3,.8,.2,1), width .34s cubic-bezier(.3,.8,.2,1), height .34s cubic-bezier(.3,.8,.2,1), border-radius .2s, opacity .2s'
+                                : 'opacity .2s',
+                        }}
+                    />
+                    {secciones.map((seccion, si) => (
+                        <div key={seccion.titulo}>
+                            {/* Contraído el rótulo no entra, y en su lugar queda
+                                un guión centrado: la marca de corte entre
+                                bloques, que es lo único que hace falta ahí. */}
+                            <div
+                                className="relative flex items-end px-[14px] pb-2"
+                                style={{ height: si === 0 ? 30 : 46 }}
+                            >
+                                <span
+                                    className={`text-[12px] font-semibold uppercase tracking-[0.07em] whitespace-nowrap ${M55} select-none`}
+                                    style={estiloTexto}
+                                >
+                                    {seccion.titulo}
+                                </span>
+                                <span
+                                    aria-hidden="true"
+                                    className="absolute left-1/2 bottom-[14px] w-[22px] h-[1.5px] -ml-[11px] rounded-sm bg-black/[0.14] dark:bg-white/[0.14] transition-opacity duration-150"
+                                    style={{ opacity: isCollapsed ? 1 : 0 }}
+                                />
+                            </div>
                             {seccion.items.map((item, ii) => renderItem(item, `${seccion.titulo}-${ii}`))}
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </nav>
 
             {/* ── PIE / CUENTA ────────────────────────────────────────────
@@ -891,7 +1125,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 la vista — nadie abre un desplegable para buscar cómo entrar. */}
             <div
                 ref={cuentaRef}
-                className={`relative p-4 border-t border-gray-100 dark:border-zinc-800 ${isCollapsed ? 'flex flex-col items-center px-2' : ''}`}
+                className={`relative shrink-0 border-t ${LINEA} ${isSidebar ? 'px-4 pt-3 pb-[18px]' : 'px-3 pt-2.5 pb-[34px]'} ${isCollapsed ? 'flex flex-col items-center px-2' : ''}`}
             >
                 {currentUser ? (
                     <>
@@ -901,10 +1135,10 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                             aria-expanded={cuentaAbierta}
                             aria-label={isCollapsed ? `Cuenta de ${currentUser.name}` : undefined}
                             title={isCollapsed ? currentUser.name : undefined}
-                            className={`w-full flex items-center gap-3 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/30 dark:focus-visible:ring-white/30 ${cuentaAbierta ? 'bg-gray-100 dark:bg-zinc-800' : 'hover:bg-gray-100 dark:hover:bg-zinc-800'
-                                } ${isCollapsed ? 'justify-center p-1.5' : 'px-2 py-2'}`}
+                            className={`w-full flex items-center gap-3 rounded-[22px] ${TARJETA} ${TINTA} shadow-[0_1px_3px_rgba(0,0,0,.05)] dark:shadow-none transition-colors duration-150 hover:bg-[#fbfbfa] dark:hover:bg-[#222220] ${FOCO} ${isCollapsed ? 'justify-center p-1.5' : isSidebar ? 'p-2' : 'py-1.5 pl-1.5 pr-2.5'
+                                }`}
                         >
-                            <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-zinc-700 shrink-0">
+                            <div className={`${isSidebar ? 'w-8 h-8' : 'w-10 h-10'} rounded-full overflow-hidden shrink-0 ${PASTILLA}`}>
                                 {currentUser.avatarUrl ? (
                                     <img
                                         src={currentUser.avatarUrl}
@@ -913,22 +1147,19 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <div className="w-full h-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-bold text-xs">
+                                    <div className={`w-full h-full flex items-center justify-center font-semibold ${TINTA} ${isSidebar ? 'text-xs' : 'text-sm'}`}>
                                         {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
                                     </div>
                                 )}
                             </div>
-                            {!isCollapsed && (
-                                <>
-                                    <div className="flex-1 min-w-0 text-left">
-                                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{currentUser.name}</p>
-                                        <p className="text-[10px] text-gray-500 dark:text-zinc-500 truncate">{currentUser.email}</p>
-                                    </div>
-                                    <ChevronUp
-                                        className={`w-4 h-4 shrink-0 text-slate-400 dark:text-zinc-600 transition-transform duration-200 ${cuentaAbierta ? 'rotate-180' : ''}`}
-                                    />
-                                </>
-                            )}
+                            <div className={`${textoQueSeVa} flex flex-col items-start`} style={estiloTexto}>
+                                <span className={`max-w-full text-sm font-semibold truncate ${TINTA}`}>{currentUser.name}</span>
+                                <span className={`max-w-full mt-px text-[12.5px] font-medium truncate ${M55}`}>{currentUser.email}</span>
+                            </div>
+                            <ChevronUp
+                                className={`w-4 h-4 shrink-0 ${M55} transition-transform duration-[250ms] ${cuentaAbierta ? '' : 'rotate-180'}`}
+                                style={estiloTexto}
+                            />
                         </button>
 
                         {cuentaAbierta && (
@@ -940,8 +1171,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                    un ancho propio y desborda sobre el contenido,
                                    que es lo que hace cualquier menú de un rail
                                    angosto. */
-                                className={`absolute bottom-[calc(100%-0.75rem)] z-50 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg shadow-slate-900/10 overflow-hidden py-1 ${isCollapsed ? 'left-2 w-56' : 'left-3 right-3'
+                                className={`absolute z-50 p-1.5 rounded-[22px] ${TARJETA} shadow-[0_14px_40px_rgba(0,0,0,.16)] ${isCollapsed ? 'left-2 w-60 bottom-2' : 'left-4 right-4 bottom-[calc(100%-0.5rem)]'
                                     }`}
+                                style={{ animation: sinMovimiento ? 'none' : 'mdAsoma .16s ease-out' }}
                             >
                                 <FilaCuenta
                                     icon={UserCircle}
@@ -955,7 +1187,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                         onClick={() => { onToggleTheme(); setCuentaAbierta(false); }}
                                     />
                                 )}
-                                <div className="my-1 h-px bg-slate-100 dark:bg-zinc-800" />
+                                <div className={`my-1 mx-2.5 h-px ${GUIA}`} />
                                 <FilaCuenta
                                     icon={LogOut}
                                     label="Cerrar sesión"
@@ -968,11 +1200,22 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 ) : (
                     <button
                         onClick={() => { handleNavigation('/auth'); onClose(); }}
-                        className={`w-full flex items-center gap-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs uppercase tracking-wider transition-all hover:bg-black dark:hover:bg-slate-200 ${isCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+                        className={`w-full flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] text-[15px] font-semibold transition-transform active:scale-[.98] ${FOCO}`}
+                        style={{
+                            height: isSidebar ? 46 : 52,
+                            borderRadius: isCollapsed ? 14 : 999,
+                        }}
                         title={isCollapsed ? 'Iniciar Sesión' : undefined}
                     >
-                        <LogIn className="w-4 h-4 shrink-0" />
-                        {!isCollapsed && <span>Iniciar Sesión</span>}
+                        <LogIn className="w-[18px] h-[18px] shrink-0" />
+                        <span
+                            className="overflow-hidden"
+                            style={{
+                                opacity: isCollapsed ? 0 : 1,
+                                maxWidth: isCollapsed ? 0 : 200,
+                                transition: sinMovimiento ? 'none' : 'opacity .16s ease .2s, max-width .2s',
+                            }}
+                        >Iniciar Sesión</span>
                     </button>
                 )}
             </div>
@@ -981,7 +1224,10 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
     if (type === 'sidebar') {
         return (
-            <aside className={`hidden md:block fixed inset-y-0 left-0 z-40 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
+            <aside
+                className={`hidden md:block fixed inset-y-0 left-0 z-40 ${isCollapsed ? 'w-20' : 'w-64'}`}
+                style={{ transition: sinMovimiento ? 'none' : `width .26s cubic-bezier(.3,.7,.2,1)${isCollapsed ? ' .1s' : ''}` }}
+            >
                 {SidebarContent}
             </aside>
         );
@@ -991,13 +1237,13 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         <div className={`fixed inset-0 z-[60] flex justify-start md:hidden ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
             {/* Backdrop */}
             <div
-                className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-500 ease-in-out ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+                className={`absolute inset-0 bg-black/[0.42] transition-opacity duration-300 ease-out ${isOpen ? 'opacity-100' : 'opacity-0'}`}
                 onClick={onClose}
             />
 
             {/* Drawer Panel */}
             <div
-                className={`relative w-[85vw] sm:w-[350px] h-full shadow-[-10px_0_20px_rgba(0,0,0,0.1)] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                className={`relative w-[85vw] max-w-[350px] h-full overflow-hidden rounded-r-[28px] shadow-[12px_0_40px_rgba(0,0,0,0.18)] transition-transform duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] transform ${isOpen ? 'translate-x-0' : '-translate-x-[104%]'}`}
                 style={{ touchAction: 'auto' }}
             >
                 {SidebarContent}
