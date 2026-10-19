@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { getMediaFrameStyle } from '../ui/CarruselHero';
-import { ArrowRight, ChevronDown, ExternalLink } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import {
     getLinksPublicos,
     abrirLink,
@@ -21,8 +21,13 @@ import {
  * que se note que hay más.
  *
  * Cuando hay más de los que entran, las tarjetas se angostan unos píxeles
- * para que la de al lado asome. Esa es toda la señal de "seguí": no hay
- * flechas ni puntos.
+ * para que la de al lado asome: esa es la señal de "seguí".
+ *
+ * En el teléfono alcanza, porque se desliza con el dedo. En la compu no: sin
+ * barra y sin arrastre, quien no tenga un trackpad con desplazamiento
+ * horizontal se queda en los primeros tres. Por eso en pantallas grandes el
+ * riel lleva dos flechas, que aparecen al pasar el mouse por la sección —las
+ * mismas que el carrusel de grupos, que está en la misma pantalla—.
  *
  * Si no hay links, o si no se pudieron traer, la sección no aparece y el
  * resto del inicio sigue igual.
@@ -269,6 +274,16 @@ const Esqueleto: React.FC = () => (
 
 // ── La sección ──────────────────────────────────────────────────────────
 
+/**
+ * Las dos flechas de la compu. Redondas, chicas y por fuera del riel, como
+ * las del carrusel de grupos.
+ *
+ * El `top` lo pone la sección, medido: no puede ser la mitad del riel porque
+ * con una tarjeta desplegada el riel se estira y las flechas se irían para
+ * abajo, lejos de las tarjetas cerradas.
+ */
+const FLECHA = 'absolute -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md items-center justify-center text-slate-600 dark:text-zinc-300 opacity-0 group-hover/riel:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-slate-50 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white z-10';
+
 /** El riel del teléfono y la grilla de la compu, en un solo árbol. */
 const FILA = 'flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1 items-start';
 
@@ -291,11 +306,28 @@ const CON_ASOMO = 'snap-start shrink-0 w-[90%] sm:w-[calc((100%-1rem)/2-26px)] l
  */
 const COPIAS = 3;
 
+/**
+ * El espacio entre tarjetas, el mismo que pone `gap-4` en FILA. Va acá
+ * porque la flecha corre "una tarjeta", y una tarjeta es su ancho más el
+ * espacio que la separa de la siguiente.
+ */
+const ESPACIO = 16;
+
 const SeccionDeEnlaces: React.FC = () => {
     const navigate = useNavigate();
     const rielRef = useRef<HTMLDivElement>(null);
+    const sinMovimiento = useReducedMotion();
     /** Sólo tiene sentido dar la vuelta si lo que hay no entra en pantalla. */
     const [enRonda, setEnRonda] = useState(false);
+    /**
+     * El alto de una tarjeta CERRADA, para poner las flechas a su mitad.
+     *
+     * Se calcula con el ancho —que es el que manda, por la proporción 4:3 de
+     * FORMA— y no se mide la tarjeta: la primera puede estar desplegada, y
+     * entonces las flechas se moverían al abrirla. El piso de 232 es el
+     * `min-h` de FORMA, que gana en pantallas muy angostas.
+     */
+    const [altoCerrada, setAltoCerrada] = useState(232);
     /** Abierta o cerrada: lo sabe la sección, porque cada enlace se dibuja tres veces. */
     const [abiertoId, setAbiertoId] = useState<string | null>(null);
 
@@ -328,6 +360,8 @@ const SeccionDeEnlaces: React.FC = () => {
         const medir = () => {
             const unaCopia = el.scrollWidth / (enRonda ? COPIAS : 1);
             setEnRonda(unaCopia > el.clientWidth + 8);
+            const tarjeta = el.querySelector<HTMLElement>('[data-copia]');
+            if (tarjeta) setAltoCerrada(Math.max(232, (tarjeta.offsetWidth * 3) / 4));
         };
         medir();
         const observador = new ResizeObserver(medir);
@@ -354,6 +388,22 @@ const SeccionDeEnlaces: React.FC = () => {
         const unaCopia = el.scrollWidth / COPIAS;
         if (el.scrollLeft > unaCopia * 1.75) el.scrollLeft -= unaCopia;
         else if (el.scrollLeft < unaCopia * 0.25) el.scrollLeft += unaCopia;
+    };
+
+    /**
+     * Una tarjeta por click, con la misma cuenta que el carrusel de grupos.
+     *
+     * En ronda no hace falta frenar en las puntas: el salto de
+     * `volverAlMedio` corre el riel una copia entera cuando esto termina, así
+     * que siempre hay algo del otro lado. Sin ronda las flechas no se
+     * dibujan, porque no hay nada a dónde ir.
+     */
+    const correr = (direccion: 1 | -1) => {
+        const el = rielRef.current;
+        if (!el) return;
+        const tarjeta = el.querySelector<HTMLElement>('[data-copia]');
+        const paso = tarjeta ? tarjeta.offsetWidth + ESPACIO : el.clientWidth * 0.8;
+        el.scrollBy({ left: paso * direccion, behavior: sinMovimiento ? 'auto' : 'smooth' });
     };
 
     const frenado = useRef<number | undefined>(undefined);
@@ -389,26 +439,55 @@ const SeccionDeEnlaces: React.FC = () => {
                 Lo que está pasando en Origen, en un solo lugar.
             </p>
 
-            <div ref={rielRef} onScroll={alDeslizar} className={FILA}>
-                {Array.from({ length: enRonda ? COPIAS : 1 }).map((_, copia) =>
-                    lista.map(l => (
-                        <div
-                            key={`${copia}-${l.id}`}
-                            data-copia={copia}
-                            // Las copias son las mismas tarjetas repetidas: un
-                            // lector de pantalla tiene que leer la lista una
-                            // sola vez.
-                            aria-hidden={copia > 0 || undefined}
-                            className={TARJETA}
+            <div className="relative group/riel">
+                <div ref={rielRef} onScroll={alDeslizar} className={FILA}>
+                    {Array.from({ length: enRonda ? COPIAS : 1 }).map((_, copia) =>
+                        lista.map(l => (
+                            <div
+                                key={`${copia}-${l.id}`}
+                                data-copia={copia}
+                                // Las copias son las mismas tarjetas repetidas: un
+                                // lector de pantalla tiene que leer la lista una
+                                // sola vez.
+                                aria-hidden={copia > 0 || undefined}
+                                className={TARJETA}
+                            >
+                                <TarjetaDeLink
+                                    link={l}
+                                    onAbrir={() => abrirLink(l, navigate)}
+                                    abierta={abiertoId === l.id}
+                                    onAlternar={() => setAbiertoId(a => (a === l.id ? null : l.id))}
+                                />
+                            </div>
+                        )),
+                    )}
+                </div>
+
+                {/* Sólo cuando hay a dónde ir. Con tres enlaces o menos en la
+                    compu entran todos y una flecha no llevaría a ninguna
+                    parte. En el teléfono no van: ahí se desliza con el dedo,
+                    y dos botones encima taparían la tarjeta. */}
+                {enRonda && (
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => correr(-1)}
+                            aria-label="Enlaces anteriores"
+                            style={{ top: altoCerrada / 2 }}
+                            className={`hidden sm:flex -left-3 ${FLECHA}`}
                         >
-                            <TarjetaDeLink
-                                link={l}
-                                onAbrir={() => abrirLink(l, navigate)}
-                                abierta={abiertoId === l.id}
-                                onAlternar={() => setAbiertoId(a => (a === l.id ? null : l.id))}
-                            />
-                        </div>
-                    )),
+                            <ChevronLeft className="w-4 h-4" strokeWidth={2.2} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => correr(1)}
+                            aria-label="Más enlaces"
+                            style={{ top: altoCerrada / 2 }}
+                            className={`hidden sm:flex -right-3 ${FLECHA}`}
+                        >
+                            <ChevronRight className="w-4 h-4" strokeWidth={2.2} />
+                        </button>
+                    </>
                 )}
             </div>
         </div>
