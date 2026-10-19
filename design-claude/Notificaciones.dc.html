@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes nfFa{from{opacity:0}to{opacity:1}}@keyframes nfFb{from{opacity:0}to{opacity:1}}@keyframes nfNew{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}@keyframes nfUp{from{opacity:.3;transform:translateY(12px)}to{opacity:1;transform:none}}@keyframes nfSheet{from{transform:translateY(100%)}to{transform:none}}@keyframes nfPop{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}@keyframes nfPulse{0%,100%{opacity:1}50%{opacity:.55}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ESTADO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center">
+      <sc-for list="{{ presets }}" as="p" hint-placeholder-count="8"><button onClick="{{ p.ir }}" style="height:32px; padding:0 13px; border:1px solid #e2e0db; border-radius:999px; background:#fff; color:#0a0a0a; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap">{{ p.t }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}; background:{{ t.bg }}; box-shadow:0 6px 28px rgba(0,0,0,.14); color:{{ t.ink }}">
+    <div style="position:absolute; inset:0; overflow-y:auto; overflow-x:hidden">
+      <div style="max-width:752px; margin:0 auto; padding:{{ pad }}">
+
+        <div style="display:flex; align-items:flex-start; gap:10px">
+          <div style="flex:1; min-width:0">
+            <h1 style="margin:0; font-size:{{ h1 }}; line-height:1.1; font-weight:600; letter-spacing:-.025em; color:{{ t.ink }}">Notificaciones</h1>
+            <p style="margin:6px 0 0; font-size:14.5px; font-weight:600; color:{{ t.m50 }}">{{ subtitulo }}</p>
+          </div>
+          <sc-if value="{{ pillDesk }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ marcarTodas }}" style="{{ secPill }}">Marcar todas como leídas</button>
+          </sc-if>
+          <div style="position:relative; flex:none">
+            <button onClick="{{ abrirMenu }}" aria-label="Más opciones" aria-haspopup="menu" aria-expanded="{{ menuAria }}" style="{{ roundBtn }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="18.5" cy="12" r="1.7"></circle></svg></button>
+            <sc-if value="{{ menuDesk }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ cerrarMenu }}" style="position:fixed; inset:0; z-index:30"></div>
+              <div role="menu" style="position:absolute; right:0; top:calc(100% + 8px); z-index:31; width:220px; padding:6px; border-radius:20px; background:{{ t.card }}; box-shadow:0 14px 40px rgba(0,0,0,.16); animation:nfPop .16s ease-out">
+                <button role="menuitem" onClick="{{ pedirBorrarTodas }}" disabled="{{ sinItems }}" style="{{ menuItemRed }}" style-hover="background:{{ t.hover }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"></path></svg>Borrar todas</button>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+        <sc-if value="{{ pillMob }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ marcarTodas }}" style="{{ secPill }}; margin-top:14px">Marcar todas como leídas</button>
+        </sc-if>
+
+        <div role="tablist" aria-label="Vista" style="{{ segWrap }}">
+          <span aria-hidden="true" style="{{ segPill }}"></span>
+          <button role="tab" aria-selected="{{ allAria }}" onClick="{{ verTodas }}" style="{{ segTodas }}">Todas</button>
+          <button role="tab" aria-selected="{{ unreadAria }}" onClick="{{ verNoLeidas }}" style="{{ segNoLeidas }}">No leídas<sc-if value="{{ hayUnread }}" hint-placeholder-val="{{ true }}"><span style="{{ segBadge }}">{{ nUnread }}</span></sc-if></button>
+        </div>
+
+        <div style="{{ listAnim }}">
+          <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+            <div aria-busy="true">
+              <div style="{{ sk }}; width:60px; height:11px; margin:26px 0 10px 6px"></div>
+              <div style="background:{{ t.card }}; border-radius:26px; box-shadow:{{ t.shadow }}">
+                <sc-for list="{{ skRows }}" as="s" hint-placeholder-count="4">
+                  <div style="display:flex; gap:12px; padding:16px 16px 16px 22px; border-top:{{ s.bt }}">
+                    <div style="{{ sk }}; width:40px; height:40px; flex:none; border-radius:999px"></div>
+                    <div style="flex:1; min-width:0; padding-top:3px"><div style="{{ sk }}; width:{{ s.w1 }}; height:13px"></div><div style="{{ sk }}; width:{{ s.w2 }}; height:11px; margin-top:10px"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ vacioTodo }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:72px 24px; display:flex; flex-direction:column; align-items:center; text-align:center">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="color:{{ t.m38 }}"><path d="M6 16.5V11a6 6 0 0112 0v5.5l1.5 2h-15z"></path><path d="M10 20.5a2 2 0 004 0"></path></svg>
+              <p style="margin:20px 0 0; font-size:18px; font-weight:600; color:{{ t.ink }}">No tenés notificaciones</p>
+              <p style="margin:8px 0 0; max-width:290px; font-size:14.5px; line-height:1.55; color:{{ t.m50 }}">Cuando pase algo en tus grupos o eventos, te avisamos acá.</p>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ vacioUnread }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:72px 24px; display:flex; flex-direction:column; align-items:center; text-align:center">
+              <span style="width:64px; height:64px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; color:{{ t.m50 }}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>
+              <p style="margin:20px 0 0; font-size:18px; font-weight:600; color:{{ t.ink }}">Estás al día</p>
+              <p style="margin:8px 0 0; font-size:14.5px; color:{{ t.m50 }}">No tenés notificaciones sin leer.</p>
+            </div>
+          </sc-if>
+
+          <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="3">
+            <div>
+              <p style="{{ rot }}">{{ g.label }}</p>
+              <div style="background:{{ t.card }}; border-radius:26px; overflow:hidden; box-shadow:{{ t.shadow }}">
+                <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="2">
+                  <div onMouseEnter="{{ r.enter }}" onMouseLeave="{{ r.leave }}" style="{{ r.wrap }}">
+                    <sc-if value="{{ r.notFirst }}" hint-placeholder-val="{{ false }}"><div style="height:1px; margin-left:74px; background:{{ t.line }}"></div></sc-if>
+                    <div style="display:flex; align-items:flex-start">
+                      <button onClick="{{ r.open }}" aria-label="{{ r.aria }}" style="{{ mainBtn }}">
+                        <span aria-hidden="true" style="{{ r.dot }}"></span>
+                        <span style="{{ circle }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg></span>
+                        <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px">
+                          <span style="display:flex; align-items:baseline; gap:8px">
+                            <span style="{{ r.title }}">{{ r.titulo }}</span>
+                            <span style="flex:none; display:flex; align-items:center; gap:4px; font-size:12px; font-weight:600; color:{{ t.m50 }}; white-space:nowrap">
+                              <sc-if value="{{ r.pinned }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-label="Anclada"><path d="M9 3h6l-1 6.5 3.5 3.5v1.5h-11V13L10 9.5z"></path><path d="M11.25 14.5h1.5V21h-1.5z"></path></svg></sc-if>
+                              {{ r.hora }}
+                            </span>
+                          </span>
+                          <span style="{{ msgStyle }}">{{ r.msg }}</span>
+                        </span>
+                        <sc-if value="{{ r.link }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; align-self:center; color:{{ t.m38 }}"><path d="M9 6l6 6-6 6"></path></svg></sc-if>
+                      </button>
+                      <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+                        <div style="{{ r.hoverBox }}">
+                          <button onClick="{{ r.pin }}" aria-label="{{ r.pinLabel }}" tabIndex="{{ r.tab }}" style="{{ smallRound }}" style-hover="background:{{ t.hover }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 6.5 3.5 3.5v1.5h-11V13L10 9.5zM12 14.5V21"></path></svg></button>
+                          <button onClick="{{ r.del }}" aria-label="Borrar" tabIndex="{{ r.tab }}" style="{{ smallRoundRed }}" style-hover="background:{{ t.hover }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"></path></svg></button>
+                        </div>
+                      </sc-if>
+                      <button onClick="{{ r.more }}" aria-label="Acciones de la notificación" style="{{ moreBtn }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="18.5" cy="12" r="1.6"></circle></svg></button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position:absolute; left:50%; bottom:{{ toastBottom }}; z-index:60; transform:translateX(-50%); width:max-content; max-width:calc(100% - 32px); padding:13px 20px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:14px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.2); animation:nfNew .22s ease reverse both; animation-direction:normal">{{ toastTxt }}</div>
+    </sc-if>
+
+    <sc-if value="{{ haySheet }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cerrarSheet }}" style="{{ sheetOverlay }}">
+        <div ref="{{ sheetRef }}" onClick="{{ stop }}" role="dialog" aria-label="{{ sheetAria }}" style="{{ sheetPanel }}">
+          <div onPointerDown="{{ dragStart }}" onPointerMove="{{ dragMove }}" onPointerUp="{{ dragEnd }}" onPointerCancel="{{ dragEnd }}" style="padding:10px 0 8px; touch-action:none; cursor:grab"><div style="width:40px; height:5px; border-radius:999px; background:{{ t.m38 }}; margin:0 auto"></div></div>
+
+          <sc-if value="{{ sheetRow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; align-items:center; gap:12px; padding:6px 6px 14px">
+              <span style="{{ circle }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ sh.icon }}"></path></svg></span>
+              <div style="flex:1; min-width:0"><p style="margin:0; font-size:15px; font-weight:600; color:{{ t.ink }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ sh.titulo }}</p><p style="margin:2px 0 0; font-size:13px; color:{{ t.m50 }}">{{ sh.hora }}</p></div>
+            </div>
+            <div style="background:{{ t.surf }}; border-radius:22px; padding:4px">
+              <button onClick="{{ sh.pin }}" style="{{ sheetItem }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 6.5 3.5 3.5v1.5h-11V13L10 9.5zM12 14.5V21"></path></svg>{{ sh.pinLabel }}</button>
+              <sc-if value="{{ sh.unread }}" hint-placeholder-val="{{ false }}"><button onClick="{{ sh.read }}" style="{{ sheetItem }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>Marcar como leída</button></sc-if>
+              <button onClick="{{ sh.del }}" style="{{ sheetItemRed }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"></path></svg>Borrar</button>
+            </div>
+            <button onClick="{{ cerrarSheet }}" style="{{ chipFull }}; margin-top:12px">Cancelar</button>
+          </sc-if>
+
+          <sc-if value="{{ sheetTop }}" hint-placeholder-val="{{ false }}">
+            <div style="background:{{ t.surf }}; border-radius:22px; padding:4px; margin-top:6px">
+              <button onClick="{{ pedirBorrarTodas }}" disabled="{{ sinItems }}" style="{{ sheetItemRed }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"></path></svg>Borrar todas</button>
+            </div>
+            <button onClick="{{ cerrarSheet }}" style="{{ chipFull }}; margin-top:12px">Cancelar</button>
+          </sc-if>
+
+          <sc-if value="{{ sheetConfirm }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:10px 6px 4px; text-align:center">
+              <p style="margin:0; font-size:20px; font-weight:600; letter-spacing:-.015em; color:{{ t.ink }}">¿Borrar todas tus notificaciones?</p>
+              <p style="margin:8px 0 0; font-size:14.5px; color:{{ t.m50 }}">No se puede deshacer.</p>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:22px">
+              <button onClick="{{ borrarTodas }}" style="{{ chipFullRed }}">Borrar todas</button>
+              <button onClick="{{ cerrarSheet }}" style="{{ chipFull }}">Cancelar</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayModal }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cerrarModal }}" style="position:absolute; inset:0; z-index:40; background:rgba(0,0,0,.42); display:flex; align-items:center; justify-content:center; animation:nfFa .2s ease">
+        <div onClick="{{ stop }}" role="alertdialog" aria-label="Borrar todas" style="width:480px; padding:30px 28px 24px; border-radius:28px; background:{{ t.card }}; box-shadow:0 24px 60px rgba(0,0,0,.22); text-align:center; animation:nfPop .2s ease-out">
+          <p style="margin:0; font-size:21px; font-weight:600; letter-spacing:-.015em; color:{{ t.ink }}">¿Borrar todas tus notificaciones?</p>
+          <p style="margin:8px 0 0; font-size:14.5px; color:{{ t.m50 }}">No se puede deshacer.</p>
+          <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:24px">
+            <button onClick="{{ cerrarModal }}" style="{{ chipFull }}">Cancelar</button>
+            <button onClick="{{ borrarTodas }}" style="{{ chipFullRed }}">Borrar todas</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+      <span aria-hidden="true" style="position:absolute; left:50%; bottom:8px; z-index:70; transform:translateX(-50%); width:134px; height:5px; border-radius:999px; background:{{ t.m38 }}; pointer-events:none"></span>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1500,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  ICON = {
+    REGISTRATION: 'M16 20v-1.5a4 4 0 00-4-4H7a4 4 0 00-4 4V20M9.5 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 20v-1.5a4 4 0 00-3-3.85M16 4.15a3.5 3.5 0 010 6.7',
+    ATTENDANCE: 'M9 3.5h6v3H9zM8.5 5H6.5A1.5 1.5 0 005 6.5v13A1.5 1.5 0 006.5 21h11a1.5 1.5 0 001.5-1.5v-13A1.5 1.5 0 0017.5 5h-2M9 14l2 2 4-4',
+    ADMIN: 'M12 3l7.5 3v5.5c0 4.5-3.2 8.2-7.5 9.5-4.3-1.3-7.5-5-7.5-9.5V6zM9 12l2 2 4-4',
+    success: 'M12 21a9 9 0 100-18 9 9 0 000 18zM8.5 12.5l2.5 2.5 4.5-5',
+    warning: 'M12 4l9 16H3zM12 10v4M12 17h.01',
+    info: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 11v5M12 8h.01'
+  };
+  base() {
+    const n = (id, title, msg, type, m, read, pinned, link) => ({ id, title, msg, type, m, read, pinned: !!pinned, link: link || null });
+    return [
+      n('n1', '📋 Nueva Solicitud de Grupo', 'Martín Gómez creó el grupo «Hombres de valor». Pendiente de revisión.', 'ADMIN', 5, false),
+      n('n2', 'Nueva solicitud de miembro', 'Lucía Pérez se unió a Mujeres de Fe.', 'REGISTRATION', 120, false, false, 'Mujeres de Fe · Solicitudes'),
+      n('n3', '✅ Asistencia registrada', 'Registraste 8 presentes en Jóvenes Norte el 18 de octubre. ¡Seguí así!', 'ATTENDANCE', 1500, true),
+      n('n4', 'Estado de tu Grupo Actualizado', 'Tu grupo «Jóvenes Norte» cambió de estado a: Aprobado.', 'success', 4320, true, true, 'Jóvenes Norte'),
+      n('n5', '🔄 Grupo Re-enviado para Revisión', 'Ana Ruiz corrigió «Parejas en camino» y lo volvió a enviar.', 'ADMIN', 17280, true, false, 'Panel GCX · Revisión'),
+      n('n6', 'Tu grupo está casi lleno', 'A «Mujeres de Fe» le quedan 2 lugares para esta temporada.', 'warning', 28800, true)
+    ];
+  }
+  state = { device: 'm', dark: false, view: 'all', items: this.base(), loading: false, sheet: null, menu: false, modal: false, toast: null, hover: null, fadeN: 0, justRead: {}, nid: 1 };
+  sheetRef = React.createRef(); timers = []; dY = null; dDy = 0;
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+  aviso(txt) { const k = Date.now(); this.setState({ toast: { txt, k } }); this.later(() => this.setState(s => s.toast && s.toast.k === k ? { toast: null } : null), 2400); }
+  strip(t) { return t.replace(/^[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D\s]+/u, ''); }
+  rel(m) {
+    if (m < 1) return 'Ahora';
+    if (m < 60) return 'Hace ' + m + ' min';
+    if (m < 1440) return 'Hace ' + Math.floor(m / 60) + ' h';
+    if (m < 2880) return 'Ayer';
+    if (m < 10080) return 'Hace ' + Math.floor(m / 1440) + ' días';
+    const d = new Date(2026, 9, 19, 12); d.setMinutes(d.getMinutes() - m);
+    return d.getDate() + ' ' + ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()];
+  }
+  grupo(i) { return i.pinned ? 'ANCLADAS' : i.m < 1440 ? 'HOY' : i.m < 2880 ? 'AYER' : i.m < 10080 ? 'ESTA SEMANA' : 'ANTES'; }
+  patch(id, p) { this.setState(s => ({ items: s.items.map(i => i.id === id ? Object.assign({}, i, p) : i) })); }
+  leer(id) { this.setState(s => ({ items: s.items.map(i => i.id === id ? Object.assign({}, i, { read: true }) : i), justRead: s.view === 'unread' ? Object.assign({}, s.justRead, { [id]: true }) : s.justRead })); }
+  abrir(i) { this.leer(i.id); this.setState({ sheet: null }); if (i.link) this.later(() => this.aviso('Abre: ' + i.link), 220); }
+  borrar(id) { this.patch(id, { removing: true }); this.setState({ sheet: null, hover: null }); this.later(() => this.setState(s => ({ items: s.items.filter(i => i.id !== id) })), 260); this.aviso('Notificación borrada'); }
+  anclar(id) {
+    const it = this.state.items.find(i => i.id === id);
+    this.patch(id, { pinned: !it.pinned, moved: true }); this.setState({ sheet: null });
+    this.later(() => this.patch(id, { moved: false }), 450);
+  }
+  vista(v) { this.setState(s => ({ view: v, fadeN: s.fadeN + 1, justRead: {} })); }
+  preset(p) {
+    const b = this.base(), leidas = b.map(i => Object.assign({}, i, { read: true }));
+    const r = { sheet: null, modal: false, menu: false, loading: false, justRead: {}, hover: null };
+    if (p === 'full') this.setState(Object.assign(r, { items: b, view: 'all' }));
+    if (p === 'leidas') this.setState(Object.assign(r, { items: leidas, view: 'all' }));
+    if (p === 'vacio') this.setState(Object.assign(r, { items: [], view: 'all' }));
+    if (p === 'unreadVacia') this.setState(Object.assign(r, { items: leidas, view: 'unread' }));
+    if (p === 'cargando') this.setState(Object.assign(r, { loading: true }));
+    if (p === 'fila') this.setState(Object.assign(r, { device: 'm', items: b, view: 'all', sheet: { k: 'row', id: 'n2' } }));
+    if (p === 'confirm') this.setState(s => Object.assign(r, s.items.length ? {} : { items: b }, s.device === 'pc' ? { modal: true } : { sheet: { k: 'confirm' } }));
+    if (p === 'nueva') {
+      const id = 'x' + this.state.nid;
+      this.setState(s => Object.assign(r, { nid: s.nid + 1, view: 'all', items: [{ id, title: '📋 Nueva solicitud de miembro', msg: 'Tomás Rivas pidió unirse a Jóvenes Norte.', type: 'REGISTRATION', m: 0, read: false, pinned: false, link: 'Jóvenes Norte · Solicitudes', isNew: true, glow: true }].concat(s.items) }));
+      this.later(() => this.patch(id, { glow: false }), 80);
+      this.later(() => this.patch(id, { isNew: false }), 700);
+    }
+  }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'pc', dk = s.dark;
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const a = o => (dk ? 'rgba(255,255,255,' : 'rgba(0,0,0,') + o + ')';
+    const t = dk
+      ? { bg: '#111110', card: '#1b1b1a', surf: '#232321', chip: '#2a2a28', hover: '#2a2a28', ink: '#f4f4f2', prim: '#ffffff', primInk: '#0a0a0a', red: '#ff6369', line: 'rgba(255,255,255,.07)', shadow: 'none', glow: '#2b2716', skel: '#262624' }
+      : { bg: '#f6f6f4', card: '#ffffff', surf: '#f7f7f5', chip: '#f2f2f0', hover: '#f2f2f0', ink: '#0a0a0a', prim: '#0a0a0a', primInk: '#ffffff', red: '#e5484d', line: 'rgba(0,0,0,.06)', shadow: '0 1px 3px rgba(0,0,0,.04)', glow: '#f6eed6', skel: '#ecebe7' };
+    t.m50 = a(.55); t.m38 = a(.4); t.m66 = a(.68);
+    t.redTxt = dk ? '#ff6369' : '#d1343a';
+
+    const vivos = s.items.filter(i => !i.removing);
+    const nUnread = vivos.filter(i => !i.read).length;
+    const lista = s.items.filter(i => s.view === 'all' || !i.read || s.justRead[i.id]);
+    const ORDEN = ['ANCLADAS', 'HOY', 'AYER', 'ESTA SEMANA', 'ANTES'];
+    const grupos = [];
+    if (!s.loading) ORDEN.forEach(label => {
+      const its = lista.filter(i => this.grupo(i) === label).sort((x, y) => x.m - y.m);
+      if (!its.length) return;
+      grupos.push({ label, rows: its.map((i, idx) => {
+        const hov = desk && s.hover === i.id;
+        const titulo = this.strip(i.title);
+        return {
+          titulo, msg: i.msg, hora: this.rel(i.m), pinned: i.pinned, link: !!i.link, icon: this.ICON[i.type] || this.ICON.info, notFirst: idx > 0,
+          aria: titulo + (i.read ? '' : ', sin leer') + (i.link ? ', abre ' + i.link : ''),
+          wrap: 'position:relative; overflow:hidden; transition:max-height .26s ease, opacity .2s ease, background-color 1.6s ease; max-height:' + (i.removing ? '0' : '240px') + '; opacity:' + (i.removing ? 0 : 1) + '; background:' + (i.glow ? t.glow : 'transparent') + '; animation:' + (i.isNew ? 'nfNew .45s cubic-bezier(.2,.8,.2,1) both' : i.moved ? 'nfUp .32s ease both' : 'none'),
+          dot: 'position:absolute; left:8px; top:31px; width:8px; height:8px; border-radius:999px; background:' + t.red + '; transition:transform .2s ease, opacity .2s ease; transform:scale(' + (i.read ? 0 : 1) + '); opacity:' + (i.read ? 0 : 1),
+          title: 'flex:1; min-width:0; font-size:15px; line-height:1.3; font-weight:600; transition:color .2s ease; color:' + (i.read ? t.m66 : t.ink) + '; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden',
+          hoverBox: 'display:flex; gap:4px; padding-top:12px; flex:none; transition:opacity .15s ease; opacity:' + (hov ? 1 : 0) + '; pointer-events:' + (hov ? 'auto' : 'none'),
+          tab: hov ? 0 : -1,
+          pinLabel: i.pinned ? 'Desanclar' : 'Anclar',
+          enter: () => { if (desk && s.hover !== i.id) this.setState({ hover: i.id }); },
+          leave: () => { if (s.hover === i.id) this.setState({ hover: null }); },
+          open: () => this.abrir(i), pin: () => this.anclar(i.id), del: () => this.borrar(i.id),
+          more: () => this.setState({ sheet: { k: 'row', id: i.id }, menu: false, modal: false })
+        };
+      }) });
+    });
+
+    const shItem = s.sheet && s.sheet.k === 'row' ? s.items.find(i => i.id === s.sheet.id) : null;
+    const sheetOpen = !!s.sheet && (!!shItem || s.sheet.k !== 'row');
+    const btnItem = color => 'width:100%; height:52px; padding:0 16px; border:0; border-radius:18px; background:transparent; color:' + color + '; display:flex; align-items:center; gap:14px; font-size:15.5px; font-weight:600; cursor:pointer; text-align:left';
+    const pill = 'height:44px; padding:0 18px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap; flex:none';
+
+    return {
+      t,
+      verMobile: () => this.setState({ device: 'm', modal: false, menu: false, hover: null }), verPC: () => this.setState({ device: 'pc', sheet: null }),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(!desk), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      presets: [['full', 'Con notificaciones'], ['leidas', 'Solo leídas'], ['vacio', 'Vacío'], ['unreadVacia', '“No leídas” vacía'], ['cargando', 'Cargando'], ['fila', 'Panel de una fila'], ['confirm', 'Confirmar borrar todas'], ['nueva', 'Llega una nueva']].map(([k, tt]) => ({ t: tt, ir: () => this.preset(k) })),
+      frameW: desk ? '1440px' : '390px', frameH: desk ? '900px' : '844px', frameR: desk ? '14px' : '40px',
+      isDesktop: desk, isMobile: !desk,
+      pad: desk ? '64px 16px 80px' : '59px 16px 56px', h1: desk ? '32px' : '28px',
+      subtitulo: s.loading ? 'Cargando…' : nUnread ? nUnread + ' sin leer' : 'Estás al día',
+      pillDesk: desk && nUnread > 0 && !s.loading, pillMob: !desk && nUnread > 0 && !s.loading,
+      secPill: pill,
+      roundBtn: 'width:44px; height:44px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+      marcarTodas: () => this.setState(st => ({ items: st.items.map(i => Object.assign({}, i, { read: true })), justRead: st.view === 'unread' ? st.items.reduce((o, i) => (i.read ? o : Object.assign(o, { [i.id]: true })), Object.assign({}, st.justRead)) : st.justRead })),
+      abrirMenu: () => desk ? this.setState(st => ({ menu: !st.menu })) : this.setState({ sheet: { k: 'top' } }),
+      cerrarMenu: () => this.setState({ menu: false }), menuDesk: desk && s.menu, menuAria: s.menu ? 'true' : 'false',
+      menuItemRed: btnItem(t.redTxt) + '; height:44px; font-size:14.5px; border-radius:999px; opacity:' + (vivos.length ? 1 : .4),
+      sinItems: !vivos.length,
+      pedirBorrarTodas: () => { if (!vivos.length) return; desk ? this.setState({ menu: false, modal: true }) : this.setState({ sheet: { k: 'confirm' } }); },
+      borrarTodas: () => { this.setState({ items: [], sheet: null, modal: false, view: 'all' }); this.aviso('Borraste todas las notificaciones'); },
+
+      segWrap: 'position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:' + (desk ? '320px' : '100%') + '; margin-top:22px; padding:4px; border-radius:999px; background:' + t.chip,
+      segPill: 'position:absolute; top:4px; bottom:4px; width:calc(50% - 4px); left:' + (s.view === 'all' ? '4px' : '50%') + '; border-radius:999px; background:' + t.prim + '; transition:left .3s cubic-bezier(.3,.8,.2,1)',
+      segTodas: 'position:relative; z-index:1; height:44px; border:0; background:transparent; font-size:14.5px; font-weight:600; cursor:pointer; transition:color .25s; color:' + (s.view === 'all' ? t.primInk : t.ink),
+      segNoLeidas: 'position:relative; z-index:1; height:44px; border:0; background:transparent; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14.5px; font-weight:600; cursor:pointer; transition:color .25s; color:' + (s.view === 'unread' ? t.primInk : t.ink),
+      segBadge: 'min-width:22px; height:22px; padding:0 7px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; background:' + (s.view === 'unread' ? (dk ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.2)') : a(.08)),
+      allAria: s.view === 'all' ? 'true' : 'false', unreadAria: s.view === 'unread' ? 'true' : 'false',
+      verTodas: () => this.vista('all'), verNoLeidas: () => this.vista('unread'),
+      hayUnread: nUnread > 0, nUnread,
+      listAnim: 'animation:' + (s.fadeN % 2 ? 'nfFa' : 'nfFb') + ' .22s ease both',
+
+      loading: s.loading,
+      sk: 'background:' + t.skel + '; border-radius:8px; animation:nfPulse 1.2s ease-in-out infinite',
+      skRows: [['62%', '88%'], ['48%', '70%'], ['55%', '80%'], ['40%', '64%']].map((w, i) => ({ w1: w[0], w2: w[1], bt: i ? '1px solid ' + t.line : '0' })),
+      vacioTodo: !s.loading && !vivos.length,
+      vacioUnread: !s.loading && vivos.length > 0 && s.view === 'unread' && !lista.filter(i => !i.removing).length,
+      grupos,
+      rot: 'margin:26px 0 10px 6px; font-size:12px; font-weight:600; letter-spacing:.07em; color:' + t.m38,
+      mainBtn: 'position:relative; flex:1; min-width:0; display:flex; align-items:flex-start; gap:12px; padding:15px 4px 15px 22px; border:0; background:transparent; color:' + t.ink + '; text-align:left; cursor:pointer; font-family:inherit',
+      circle: 'width:40px; height:40px; flex:none; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center',
+      msgStyle: 'font-size:14px; line-height:1.45; font-weight:500; color:' + t.m50 + '; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden',
+      moreBtn: 'width:44px; height:44px; flex:none; margin:10px 6px 0 0; border:0; border-radius:999px; background:transparent; color:' + t.m50 + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+      smallRound: 'width:36px; height:36px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+      smallRoundRed: 'width:36px; height:36px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.redTxt + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+
+      hayToast: !!s.toast, toastTxt: s.toast ? s.toast.txt : '', toastBottom: desk ? '32px' : '40px',
+      haySheet: sheetOpen, sheetRef: this.sheetRef,
+      sheetOverlay: 'position:absolute; inset:0; z-index:40; background:rgba(0,0,0,.42); display:flex; animation:nfFa .2s ease; ' + (desk ? 'align-items:center; justify-content:center' : 'align-items:flex-end'),
+      sheetPanel: 'max-height:92%; overflow-y:auto; background:' + t.card + '; ' + (desk ? 'width:480px; border-radius:28px; padding:0 16px 20px; box-shadow:0 24px 60px rgba(0,0,0,.22); animation:nfPop .2s ease-out' : 'width:100%; border-radius:28px 28px 0 0; padding:0 16px 34px; animation:nfSheet .28s cubic-bezier(.2,.8,.2,1)'),
+      sheetAria: s.sheet && s.sheet.k === 'confirm' ? 'Borrar todas' : 'Acciones',
+      sheetRow: !!shItem, sheetTop: !!s.sheet && s.sheet.k === 'top', sheetConfirm: !!s.sheet && s.sheet.k === 'confirm',
+      sh: shItem ? {
+        titulo: this.strip(shItem.title), hora: this.rel(shItem.m), icon: this.ICON[shItem.type] || this.ICON.info,
+        unread: !shItem.read, pinLabel: shItem.pinned ? 'Desanclar' : 'Anclar',
+        pin: () => this.anclar(shItem.id), read: () => { this.leer(shItem.id); this.setState({ sheet: null }); }, del: () => this.borrar(shItem.id)
+      } : { titulo: '', hora: '', icon: '', unread: false, pinLabel: '' },
+      sheetItem: btnItem(t.ink), sheetItemRed: btnItem(t.redTxt) + '; opacity:' + (vivos.length ? 1 : .4),
+      chipFull: 'width:100%; height:54px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; font-size:15.5px; font-weight:600; cursor:pointer',
+      chipFullRed: 'width:100%; height:54px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.redTxt + '; font-size:15.5px; font-weight:600; cursor:pointer',
+      cerrarSheet: () => this.setState({ sheet: null }), cerrarModal: () => this.setState({ modal: false }),
+      hayModal: desk && s.modal,
+      stop: e => e.stopPropagation(),
+      dragStart: e => { this.dY = e.clientY; this.dDy = 0; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) {} if (this.sheetRef.current) this.sheetRef.current.style.transition = 'none'; },
+      dragMove: e => { if (this.dY == null) return; const dy = Math.max(0, e.clientY - this.dY); this.dDy = dy; if (this.sheetRef.current) this.sheetRef.current.style.transform = 'translateY(' + dy + 'px)'; },
+      dragEnd: () => { if (this.dY == null) return; const dy = this.dDy; this.dY = null; const el = this.sheetRef.current; if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = ''; } if (dy > 90) this.setState({ sheet: null }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
