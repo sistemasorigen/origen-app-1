@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
     X,
     Menu,
+    Bell,
     Home,
     BarChart,
     Info,
@@ -34,6 +35,7 @@ import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import { supabaseService } from '../../services/supabaseService';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
+import { useSinLeer } from '../../contexts/NotificationContext';
 
 // ══════════════════════════════════════════════════════════════════════
 //  Los tokens del diseño (design-claude/Menu Deslizable.dc)
@@ -89,6 +91,52 @@ interface DrawerMenuProps {
 }
 
 /**
+ * El rojo de "sin leer": la única excepción a la paleta del menú, porque es
+ * lo único que tiene que llamar la atención aunque el ojo esté en otra cosa.
+ */
+const ROJO = 'bg-[#e5484d] dark:bg-[#ff6369]';
+
+/**
+ * El pop de la marca cuando llega una notificación nueva.
+ *
+ * Devuelve un número que sólo cambia cuando el contador SUBE: se usa como
+ * `key` para que la marca vuelva a entrar. Al bajar —marcar como leída— no
+ * salta: lo que importa es lo que llega, no lo que se va.
+ */
+const usePop = (n: number): number => {
+    const anterior = useRef(n);
+    const [pop, setPop] = useState(0);
+    useEffect(() => {
+        if (n > anterior.current) setPop(p => p + 1);
+        anterior.current = n;
+    }, [n]);
+    return pop;
+};
+
+/**
+ * La marca roja sobre la foto de perfil.
+ *
+ * Va FUERA del círculo de la foto —que recorta lo que sobresale— y con un
+ * borde del color de la tarjeta, que es lo que la despega de la imagen.
+ * Apoyada en la esquina y apenas por fuera: así no tapa la cara.
+ *
+ * Se define acá afuera y no adentro del menú a propósito: un componente
+ * declarado en el cuerpo de otro cambia de identidad en cada render, React
+ * lo vuelve a montar y la animación de entrada se repetiría sola.
+ */
+const MarcaSinLeer: React.FC<{ n: number; quieto: boolean }> = ({ n, quieto }) => (
+    <motion.span
+        aria-hidden="true"
+        initial={quieto ? false : { scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={quieto ? { duration: 0 } : { duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+        className={`absolute -top-1 -right-1 h-[18px] min-w-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white dark:border-[#1b1b1a] text-[11px] font-semibold leading-none text-white ${ROJO}`}
+    >
+        {n > 9 ? '9+' : n}
+    </motion.span>
+);
+
+/**
  * Hamburguesa de la navbar mobile.
  *
  * Sigue exportándose aunque el sidebar de escritorio ya no la use: Estructura.tsx
@@ -108,20 +156,37 @@ export const HamburgerButton: React.FC<{
      * estilos, no el orden del atributo class.
      */
     onMedia?: boolean;
-}> = ({ onClick, className = "", onMedia = false }) => (
-    <button
-        id="hamburger-menu-btn"
-        onClick={onClick}
-        style={{ transition: 'color 600ms ease-out, filter 600ms ease-out' }}
-        className={`flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full focus-visible:outline-none focus-visible:ring-2 group ${onMedia
-            ? 'text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.5)] focus-visible:ring-white/60'
-            : 'text-slate-700 dark:text-zinc-200 drop-shadow-none hover:text-slate-900 dark:hover:text-white focus-visible:ring-slate-900/30 dark:focus-visible:ring-white/30'
-            } ${className}`}
-        aria-label="Menú"
-    >
-        <Menu className="w-5 h-5 transition-transform group-hover:scale-110" />
-    </button>
-);
+}> = ({ onClick, className = "", onMedia = false }) => {
+    /**
+     * El punto de "sin leer", sin número: en la navbar no hay lugar para una
+     * cifra, y lo único que tiene que decir es "entrá al menú". Sin sesión el
+     * contador es 0, así que el punto no se dibuja.
+     */
+    const sinLeer = useSinLeer();
+
+    return (
+        <button
+            id="hamburger-menu-btn"
+            onClick={onClick}
+            style={{ transition: 'color 600ms ease-out, filter 600ms ease-out' }}
+            className={`relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full focus-visible:outline-none focus-visible:ring-2 group ${onMedia
+                ? 'text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.5)] focus-visible:ring-white/60'
+                : 'text-slate-700 dark:text-zinc-200 drop-shadow-none hover:text-slate-900 dark:hover:text-white focus-visible:ring-slate-900/30 dark:focus-visible:ring-white/30'
+                } ${className}`}
+            aria-label={sinLeer > 0 ? 'Menú, notificaciones sin leer' : 'Menú'}
+        >
+            <Menu className="w-5 h-5 transition-transform group-hover:scale-110" />
+            {sinLeer > 0 && (
+                /* Sobre el hero el borde va blanco siempre: ahí atrás no hay
+                   navbar, hay una foto, y un borde oscuro desaparecería. */
+                <span
+                    aria-hidden="true"
+                    className={`absolute top-1.5 right-1.5 w-[9px] h-[9px] rounded-full border-2 ${ROJO} ${onMedia ? 'border-white' : 'border-white dark:border-zinc-950'}`}
+                />
+            )}
+        </button>
+    );
+};
 
 interface SubMenuItem {
     label: string;
@@ -200,6 +265,12 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     const navRef = useRef<HTMLElement>(null);
     const itemActivoRef = useRef<HTMLButtonElement>(null);
     const sinMovimiento = useReducedMotion();
+    /**
+     * Las que esperan sin leer. El contexto las actualiza en vivo por el
+     * canal de Supabase, así que la marca aparece y se va sola.
+     */
+    const sinLeer = useSinLeer();
+    const pop = usePop(sinLeer);
 
     /**
      * La píldora negra que marca dónde estás, y que se desliza de un ítem a
@@ -673,10 +744,15 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         label: string;
         onClick: () => void;
         danger?: boolean;
-    }> = ({ icon: Icono, label, onClick, danger }) => (
+        /** Cuántas sin leer: 0 o sin valor, no se dibuja la pastilla. */
+        insignia?: number;
+        /** Para cuando el texto de la fila no alcanza a decir todo. */
+        etiqueta?: string;
+    }> = ({ icon: Icono, label, onClick, danger, insignia = 0, etiqueta }) => (
         <button
             role="menuitem"
             onClick={onClick}
+            aria-label={etiqueta}
             className={`w-full flex items-center gap-3 px-3 rounded-full text-sm font-semibold transition-colors duration-150 ${ENCIMA} ${danger
                 ? 'text-[#b42318] dark:text-[#ff8a7a]'
                 : TINTA
@@ -685,6 +761,14 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         >
             <Icono className="w-[18px] h-[18px] shrink-0" />
             <span className="truncate">{label}</span>
+            {insignia > 0 && (
+                <span
+                    aria-hidden="true"
+                    className={`ml-auto shrink-0 h-[18px] min-w-[18px] px-1.5 flex items-center justify-center rounded-full text-[11px] font-semibold leading-none text-white ${ROJO}`}
+                >
+                    {insignia > 9 ? '9+' : insignia}
+                </span>
+            )}
         </button>
     );
 
@@ -1154,23 +1238,36 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                             onClick={() => setCuentaAbierta(v => !v)}
                             aria-haspopup="menu"
                             aria-expanded={cuentaAbierta}
-                            aria-label={isCollapsed ? `Cuenta de ${currentUser.name}` : undefined}
+                            /* Contraída la tarjeta es sólo la foto, así que
+                               siempre lleva nombre. Con algo sin leer lo lleva
+                               también expandida, para que el lector de pantalla
+                               diga el número que se ve en rojo. */
+                            aria-label={sinLeer > 0
+                                ? `Cuenta de ${currentUser.name}, ${sinLeer} ${sinLeer === 1 ? 'notificación sin leer' : 'notificaciones sin leer'}`
+                                : isCollapsed ? `Cuenta de ${currentUser.name}` : undefined}
                             title={isCollapsed ? currentUser.name : undefined}
                             className={`w-full flex items-center rounded-[22px] ${TARJETA} ${TINTA} shadow-[0_1px_3px_rgba(0,0,0,.05)] dark:shadow-none transition-colors duration-150 hover:bg-[#fbfbfa] dark:hover:bg-[#222220] ${FOCO} ${isCollapsed ? 'justify-center p-1.5' : isSidebar ? 'p-2' : 'py-1.5 pl-1.5 pr-2.5'
                                 }`}
                         >
-                            <div className={`${isSidebar ? 'w-8 h-8' : 'w-10 h-10'} rounded-full overflow-hidden shrink-0 ${PASTILLA}`}>
-                                {currentUser.avatarUrl ? (
-                                    <img
-                                        src={currentUser.avatarUrl}
-                                        alt=""
-                                        aria-hidden="true"
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className={`w-full h-full flex items-center justify-center font-semibold ${TINTA} ${isSidebar ? 'text-xs' : 'text-sm'}`}>
-                                        {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
-                                    </div>
+                            {/* La marca va afuera del círculo: adentro la
+                                recortaría el overflow-hidden de la foto. */}
+                            <div className="relative shrink-0">
+                                <div className={`${isSidebar ? 'w-8 h-8' : 'w-10 h-10'} rounded-full overflow-hidden ${PASTILLA}`}>
+                                    {currentUser.avatarUrl ? (
+                                        <img
+                                            src={currentUser.avatarUrl}
+                                            alt=""
+                                            aria-hidden="true"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className={`w-full h-full flex items-center justify-center font-semibold ${TINTA} ${isSidebar ? 'text-xs' : 'text-sm'}`}>
+                                            {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
+                                        </div>
+                                    )}
+                                </div>
+                                {sinLeer > 0 && (
+                                    <MarcaSinLeer key={pop} n={sinLeer} quieto={!!sinMovimiento} />
                                 )}
                             </div>
                             <div className={`${textoQueSeVa} flex flex-col items-start`} style={estiloTexto}>
@@ -1201,6 +1298,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                     icon={UserCircle}
                                     label="Mi perfil"
                                     onClick={() => handleNavigation('/perfil')}
+                                />
+                                {/* handleNavigation ya cierra el panel de la
+                                    cuenta y el menú: no hace falta pedirlo
+                                    acá, igual que en Mi perfil. */}
+                                <FilaCuenta
+                                    icon={Bell}
+                                    label="Notificaciones"
+                                    insignia={sinLeer}
+                                    etiqueta={sinLeer > 0 ? `Notificaciones, ${sinLeer} sin leer` : 'Notificaciones'}
+                                    onClick={() => handleNavigation('/notificaciones')}
                                 />
                                 {onToggleTheme && (
                                     <FilaCuenta

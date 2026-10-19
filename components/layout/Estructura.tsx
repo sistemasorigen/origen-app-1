@@ -10,7 +10,6 @@ import GlobalPlayer from './ReproductorGlobal';
 import DrawerMenu, { HamburgerButton } from './MenuDeslizable';
 import { useAudio } from '../../contexts/AudioContext';
 import { Sun, Moon } from 'lucide-react';
-import { NotificationBell, NotificationDrawer } from '../notifications/InterfazNotificaciones';
 import { useAttendanceReminder } from '../../hooks/useAttendanceReminder';
 import PushPermissionBanner from '../notifications/BannerPermisoNotificaciones';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
@@ -65,7 +64,6 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     const { shouldShowBanner, requestPermission, dismissBanner } = usePushNotifications();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-    const [isNotifDrawerOpen, setIsNotifDrawerOpen] = useState(false);
 
     // Páginas con hero "soft" a pantalla completa —
     // la navbar arranca transparente sobre la imagen
@@ -295,12 +293,6 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                                     <Moon className="h-5 w-5 hidden dark:block" />
                                 </button>
                             )}
-                            {currentUser && !sinNavegacion && (
-                                <NotificationBell
-                                    onToggleDrawer={() => setIsNotifDrawerOpen(true)}
-                                    onMedia={isNavbarTransparent}
-                                />
-                            )}
                             <div className="flex items-center">
                                 {!currentUser && (
                                     <div className="hidden md:flex items-center gap-2">
@@ -339,11 +331,6 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
 
                 <GlobalPlayer />
             </div>
-
-            <NotificationDrawer
-                isOpen={isNotifDrawerOpen}
-                onClose={() => setIsNotifDrawerOpen(false)}
-            />
         </div>
         </BarraDeAppContext.Provider>
         </HeroLayoutContext.Provider>
