@@ -48,10 +48,22 @@ interface LayoutProps {
 const RUTAS_CON_HERO = ['/', '/gcx', '/ninez'];
 
 /** Las que manejan su propio ancho, sin el marco de 7xl con padding. */
-const RUTAS_A_TODO_ANCHO = ['/', '/store', '/gcx', '/ninez', '/alabanza', '/prode', '/nocturna-inscripcion', '/voluntarios', '/notificaciones', '/panel-eventos'];
+const RUTAS_A_TODO_ANCHO = ['/', '/store', '/gcx', '/ninez', '/alabanza', '/prode', '/nocturna-inscripcion', '/voluntarios', '/notificaciones'];
 
-/** Lo mismo, pero para familias enteras de rutas. */
-const COMIENZOS_A_TODO_ANCHO = ['/punto-de-informacion', '/coordinators', '/audiencia-servicios', '/eventos/admin/general'];
+/**
+ * Lo mismo, pero para familias enteras de rutas.
+ *
+ * Los paneles de eventos entran todos: cada uno es un `min-h-screen` con su
+ * propio fondo, su propio ancho máximo y su propio padding de arriba. Con el
+ * marco de 7xl encima, ese padding se sumaba a los 32 px de `py-8` y entre
+ * la navbar y el título quedaba un hueco de medio dedo. El escáner del Día
+ * del Niño, que va a pantalla completa en negro, directamente se dibujaba
+ * adentro de un recuadro.
+ */
+const COMIENZOS_A_TODO_ANCHO = [
+    '/punto-de-informacion', '/coordinators', '/audiencia-servicios',
+    '/panel-eventos', '/eventos/admin',
+];
 
 const estaEnLaLista = (pathname: string, exactas: string[], comienzos: string[] = []) =>
     exactas.includes(pathname) || comienzos.some(c => pathname.startsWith(c));

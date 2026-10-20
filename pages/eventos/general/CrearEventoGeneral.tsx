@@ -281,7 +281,7 @@ const CrearEventoGeneral: React.FC = () => {
                 }}
             />
 
-            <div className="eg-entra max-w-[1080px] mx-auto px-4 pt-[59px] pb-[170px] lg:px-10 lg:pt-12 lg:pb-20">
+            <div className="eg-entra max-w-[1080px] mx-auto px-4 pt-6 pb-[170px] lg:px-10 lg:pt-8 lg:pb-20">
 
                 <div className="flex items-center gap-3.5">
                     <button

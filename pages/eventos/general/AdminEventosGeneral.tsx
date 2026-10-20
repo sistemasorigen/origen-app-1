@@ -231,7 +231,7 @@ const AdminEventosGeneral: React.FC<Props> = () => {
         <div id="eventos-generales" className={`min-h-screen ${T.fondo} ${T.tinta} ${T.fuente}`}>
             <style>{ESTILOS}</style>
 
-            <div className="eg-entra max-w-[1160px] mx-auto px-4 pt-[59px] pb-14 lg:px-10 lg:pt-12 lg:pb-20">
+            <div className="eg-entra max-w-[1160px] mx-auto px-4 pt-6 pb-14 lg:px-10 lg:pt-8 lg:pb-20">
 
                 <button
                     type="button"

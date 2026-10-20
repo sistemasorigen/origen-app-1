@@ -301,7 +301,7 @@ const PanelEventos: React.FC<PanelEventosProps> = ({ currentUser }) => {
         <div id="panel-eventos" className={`min-h-screen ${T.fondo} ${T.tinta} ${T.fuente}`}>
             <style>{ESTILOS}</style>
 
-            <div className="max-w-[1120px] mx-auto px-4 pt-[59px] pb-14 lg:px-10 lg:pt-16 lg:pb-20">
+            <div className="max-w-[1120px] mx-auto px-4 pt-6 pb-14 lg:px-10 lg:pt-8 lg:pb-20">
 
                 {/* ── Encabezado ── */}
                 <div className="pe-entra flex flex-wrap items-end gap-x-6 gap-y-4">

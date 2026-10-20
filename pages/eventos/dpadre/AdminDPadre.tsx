@@ -165,7 +165,7 @@ const AdminDPadre: React.FC<AdminDPadreProps> = ({ currentUser }) => {
 
     return (
         <div className="min-h-screen bg-white">
-            <div className="max-w-4xl mx-auto px-4 md:px-8 py-10 md:py-14">
+            <div className="max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-10">
 
                 {/* Header */}
                 <div className="mb-8 pb-8 border-b border-gray-100">
