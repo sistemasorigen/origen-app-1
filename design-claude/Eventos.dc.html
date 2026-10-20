@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes evIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes evShim{from{background-position:120% 0}to{background-position:-120% 0}}@keyframes evFade{from{opacity:0}to{opacity:1}}@keyframes evZoom{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1100px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ESTADO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px">
+      <sc-for list="{{ estados }}" as="es" hint-placeholder-count="5"><button onClick="{{ es.ir }}" style="{{ es.style }}">{{ es.t }}</button></sc-for>
+    </div>
+    <button onClick="{{ lentas }}" style="height:32px; padding:0 14px; border:1px solid #e2e0db; border-radius:999px; background:#fff; color:#0a0a0a; font-size:12.5px; font-weight:600; cursor:pointer">Simular portadas lentas</button>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}; background:{{ t.bg }}; box-shadow:0 6px 28px rgba(0,0,0,.14); color:{{ t.ink }}">
+    <div style="position:absolute; inset:0; overflow-y:auto; overflow-x:hidden">
+
+      <div style="position:sticky; top:0; z-index:5; background:{{ t.bg }}; padding:{{ navPad }}">
+        <div style="max-width:1200px; margin:0 auto; height:56px; display:flex; align-items:center; gap:12px">
+          <button aria-label="Abrir el menú" style="width:44px; height:44px; flex:none; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+          <span style="font-size:17px; font-weight:700; letter-spacing:-.02em; color:{{ t.ink }}">Origen</span>
+        </div>
+      </div>
+
+      <div style="max-width:1200px; margin:0 auto; padding:{{ pad }}">
+        <div style="animation:evIn .4s ease both">
+          <p style="{{ rot }}">ORIGEN · COMUNIDAD</p>
+          <h1 style="margin:10px 0 0; font-size:{{ h1 }}; line-height:1; font-weight:600; letter-spacing:-.035em; color:{{ t.ink }}">Eventos</h1>
+          <p style="margin:10px 0 0; font-size:16px; line-height:1.5; color:{{ t.m55 }}">Lo que viene en Origen. Guardate la fecha.</p>
+        </div>
+
+        <sc-if value="{{ cargando }}" hint-placeholder-val="{{ false }}">
+          <div aria-busy="true" aria-label="Cargando eventos" style="margin-top:28px">
+            <div style="display:grid; grid-template-columns:{{ destCols }}; gap:{{ destGap }}; align-items:center">
+              <div style="{{ shim }}; aspect-ratio:1/1; border-radius:22px"></div>
+              <div style="display:flex; flex-direction:column; gap:12px; padding:{{ skPad }}">
+                <div style="{{ shim }}; width:110px; height:30px; border-radius:999px"></div>
+                <div style="{{ shim }}; width:70%; height:26px; border-radius:10px"></div>
+                <div style="{{ shim }}; width:55%; height:16px; border-radius:8px"></div>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:{{ gridCols }}; gap:16px; margin-top:40px">
+              <div style="background:{{ t.card }}; border-radius:28px; padding:10px"><div style="{{ shim }}; aspect-ratio:1/1; border-radius:22px"></div><div style="{{ shim }}; width:60%; height:18px; border-radius:8px; margin:16px 10px 12px"></div></div>
+              <div style="background:{{ t.card }}; border-radius:28px; padding:10px"><div style="{{ shim }}; aspect-ratio:1/1; border-radius:22px"></div><div style="{{ shim }}; width:50%; height:18px; border-radius:8px; margin:16px 10px 12px"></div></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vacio }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:28px; background:{{ t.card }}; border-radius:28px; padding:48px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; animation:evIn .4s ease both">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:{{ t.m40 }}"><rect x="12" y="16" width="40" height="36" rx="9"></rect><path d="M12 27h40M23 11v9M41 11v9"></path><path d="M26 39h12"></path></svg>
+            <p style="margin:18px 0 0; font-size:19px; font-weight:600; color:{{ t.ink }}">No hay eventos próximos</p>
+            <p style="margin:8px 0 0; font-size:15px; line-height:1.5; color:{{ t.m55 }}">Cuando haya algo nuevo, lo vas a ver acá.</p>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ error }}" hint-placeholder-val="{{ false }}">
+          <div role="alert" style="margin-top:28px; background:{{ t.card }}; border-radius:28px; padding:44px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; animation:evIn .4s ease both">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{ t.m40 }}"><path d="M2 8.5a15 15 0 0120 0M5.5 12a10 10 0 0113 0M9 15.5a5 5 0 016 0"></path><path d="M3 3l18 18"></path></svg>
+            <p style="margin:18px 0 0; font-size:19px; font-weight:600; color:{{ t.ink }}">No pudimos cargar los eventos</p>
+            <p style="margin:8px 0 0; font-size:15px; line-height:1.5; color:{{ t.m55 }}">Revisá la conexión y probá de nuevo.</p>
+            <button onClick="{{ reintentar }}" style="height:52px; padding:0 28px; margin-top:22px; border:0; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:15.5px; font-weight:600; cursor:pointer" style-active="transform:scale(.98)">Reintentar</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ conDatos }}" hint-placeholder-val="{{ true }}">
+          <section aria-label="Próximo evento" style="margin-top:28px; display:grid; grid-template-columns:{{ destCols }}; gap:{{ destGap }}; align-items:center; animation:evIn .45s .05s ease both">
+            <button onClick="{{ d.abrir }}" aria-label="{{ d.verAria }}" style="display:block; width:100%; padding:0; border:0; background:transparent; cursor:zoom-in; border-radius:22px">
+              <div role="img" aria-label="{{ d.alt }}" style="position:relative; width:100%; aspect-ratio:1/1; border-radius:22px; overflow:hidden; container-type:inline-size; box-shadow:0 2px 14px rgba(0,0,0,.08); background:{{ d.fBg }}">
+                <sc-if value="{{ d.portada }}" hint-placeholder-val="{{ true }}">
+                  <div style="position:absolute; inset:0; opacity:{{ imgOp }}; transition:opacity .5s ease">
+                    <span style="{{ d.decoA }}"></span><span style="{{ d.decoB }}"></span>
+                    <p style="position:absolute; left:7cqw; top:7cqw; right:7cqw; margin:0; font-size:3.6cqw; font-weight:700; letter-spacing:.14em; color:{{ d.fInk }}; text-align:left">{{ d.fTop }}</p>
+                    <p style="position:absolute; left:7cqw; right:7cqw; bottom:7cqw; margin:0; font-size:{{ d.fSize }}; line-height:.9; font-weight:800; letter-spacing:-.045em; color:{{ d.fInk }}; text-align:left">{{ d.fBig }}</p>
+                  </div>
+                  <sc-if value="{{ imgCargando }}" hint-placeholder-val="{{ false }}"><div style="{{ shim }}; position:absolute; inset:0"></div></sc-if>
+                </sc-if>
+                <sc-if value="{{ d.sinPortada }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4cqw; padding:10cqw; text-align:center">
+                    <svg width="18%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{ t.m40 }}"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
+                    <span style="font-size:7cqw; line-height:1.1; font-weight:700; letter-spacing:-.03em; color:{{ t.ink }}">{{ d.nombre }}</span>
+                  </div>
+                </sc-if>
+              </div>
+            </button>
+
+            <div style="background:{{ t.card }}; border-radius:28px; padding:{{ destInfoPad }}; box-shadow:{{ t.shadow }}">
+              <span style="{{ d.pill }}">{{ d.relativa }}</span>
+              <h2 style="margin:14px 0 0; font-size:{{ destH }}; line-height:1.12; font-weight:600; letter-spacing:-.025em; color:{{ t.ink }}">{{ d.nombre }}</h2>
+              <div style="display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:12px">
+                <span style="display:flex; align-items:center; gap:7px; font-size:14.5px; font-weight:600; color:{{ t.m70 }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>{{ d.fechaLarga }}</span>
+                <sc-if value="{{ d.hasHora }}" hint-placeholder-val="{{ true }}"><span style="display:flex; align-items:center; gap:7px; font-size:14.5px; font-weight:600; color:{{ t.m70 }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>{{ d.hora }}</span></sc-if>
+              </div>
+              <sc-if value="{{ d.hasDesc }}" hint-placeholder-val="{{ true }}">
+                <p style="{{ d.descStyle }}">{{ d.desc }}</p>
+                <sc-if value="{{ d.showLeer }}" hint-placeholder-val="{{ false }}"><button onClick="{{ d.toggleLeer }}" aria-expanded="{{ d.leerAria }}" style="height:44px; padding:0; margin-top:2px; border:0; background:transparent; font-size:14.5px; font-weight:700; color:{{ t.ink }}; text-decoration:underline; text-underline-offset:3px; cursor:pointer">{{ d.leerTxt }}</button></sc-if>
+              </sc-if>
+              <sc-if value="{{ d.hasLink }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ d.inscribir }}" style="{{ btnPrim }}; margin-top:18px">Inscribirme<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"></path></svg></button>
+              </sc-if>
+            </div>
+          </section>
+
+          <sc-if value="{{ hayResto }}" hint-placeholder-val="{{ true }}">
+            <p style="{{ rot }}; margin-top:48px">MÁS ADELANTE</p>
+            <sc-for list="{{ meses }}" as="m" hint-placeholder-count="3">
+              <div style="margin-top:22px">
+                <p style="margin:0 0 12px 4px; font-size:13px; font-weight:700; letter-spacing:.07em; color:{{ t.m55 }}">{{ m.mes }}</p>
+                <div style="display:grid; grid-template-columns:{{ gridCols }}; gap:16px; align-items:start">
+                  <sc-for list="{{ m.items }}" as="e" hint-placeholder-count="2">
+                    <article style="background:{{ t.card }}; border-radius:28px; padding:10px; box-shadow:{{ t.shadow }}; animation:evIn .4s ease both; animation-delay:{{ e.delay }}">
+                      <button onClick="{{ e.abrir }}" aria-label="{{ e.verAria }}" style="display:block; width:100%; padding:0; border:0; background:transparent; cursor:zoom-in; border-radius:22px">
+                        <div role="img" aria-label="{{ e.alt }}" style="position:relative; width:100%; aspect-ratio:1/1; border-radius:22px; overflow:hidden; container-type:inline-size; box-shadow:0 1px 8px rgba(0,0,0,.06); background:{{ e.fBg }}">
+                          <sc-if value="{{ e.portada }}" hint-placeholder-val="{{ true }}">
+                            <div style="position:absolute; inset:0; opacity:{{ imgOp }}; transition:opacity .5s ease">
+                              <span style="{{ e.decoA }}"></span><span style="{{ e.decoB }}"></span>
+                              <p style="position:absolute; left:7cqw; top:7cqw; right:7cqw; margin:0; font-size:3.6cqw; font-weight:700; letter-spacing:.14em; color:{{ e.fInk }}; text-align:left">{{ e.fTop }}</p>
+                              <p style="position:absolute; left:7cqw; right:7cqw; bottom:7cqw; margin:0; font-size:{{ e.fSize }}; line-height:.9; font-weight:800; letter-spacing:-.045em; color:{{ e.fInk }}; text-align:left">{{ e.fBig }}</p>
+                            </div>
+                            <sc-if value="{{ imgCargando }}" hint-placeholder-val="{{ false }}"><div style="{{ shim }}; position:absolute; inset:0"></div></sc-if>
+                          </sc-if>
+                          <sc-if value="{{ e.sinPortada }}" hint-placeholder-val="{{ false }}">
+                            <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4cqw; padding:10cqw; text-align:center">
+                              <svg width="18%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:{{ t.m40 }}"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
+                              <span style="font-size:7cqw; line-height:1.1; font-weight:700; letter-spacing:-.03em; color:{{ t.ink }}">{{ e.nombre }}</span>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </button>
+                      <div style="padding:14px 10px 10px">
+                        <div style="display:flex; align-items:center; gap:12px">
+                          <div aria-hidden="true" style="width:54px; height:54px; flex:none; border-radius:16px; background:{{ t.chip }}; display:flex; flex-direction:column; align-items:center; justify-content:center">
+                            <span style="font-size:20px; line-height:1; font-weight:700; letter-spacing:-.02em; color:{{ t.ink }}">{{ e.dia }}</span>
+                            <span style="margin-top:3px; font-size:10.5px; font-weight:700; letter-spacing:.08em; color:{{ t.m55 }}">{{ e.mesCorto }}</span>
+                          </div>
+                          <div style="min-width:0; flex:1">
+                            <h3 style="margin:0; font-size:19px; line-height:1.2; font-weight:600; letter-spacing:-.02em; color:{{ t.ink }}">{{ e.nombre }}</h3>
+                            <p style="margin:4px 0 0; font-size:13.5px; font-weight:600; color:{{ t.m55 }}">{{ e.cuando }}</p>
+                          </div>
+                        </div>
+                        <sc-if value="{{ e.hasDesc }}" hint-placeholder-val="{{ true }}">
+                          <p style="{{ e.descStyle }}">{{ e.desc }}</p>
+                          <sc-if value="{{ e.showLeer }}" hint-placeholder-val="{{ false }}"><button onClick="{{ e.toggleLeer }}" aria-expanded="{{ e.leerAria }}" style="height:44px; padding:0; border:0; background:transparent; font-size:14px; font-weight:700; color:{{ t.ink }}; text-decoration:underline; text-underline-offset:3px; cursor:pointer">{{ e.leerTxt }}</button></sc-if>
+                        </sc-if>
+                        <sc-if value="{{ e.hasLink }}" hint-placeholder-val="{{ false }}">
+                          <button onClick="{{ e.inscribir }}" style="{{ btnPrim }}; height:52px; margin-top:12px">Inscribirme<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"></path></svg></button>
+                        </sc-if>
+                      </div>
+                    </article>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </sc-if>
+        </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ visor }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cerrarVisor }}" role="dialog" aria-modal="true" aria-label="{{ v.alt }}" style="position:absolute; inset:0; z-index:40; background:rgba(8,8,8,.94); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:{{ visorPad }}; animation:evFade .2s ease">
+        <button onClick="{{ cerrarVisor }}" aria-label="Cerrar" style="position:absolute; top:{{ xTop }}; right:16px; width:44px; height:44px; border:0; border-radius:999px; background:rgba(255,255,255,.14); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        <div ref="{{ visorRef }}" onClick="{{ stop }}" onPointerDown="{{ dragStart }}" onPointerMove="{{ dragMove }}" onPointerUp="{{ dragEnd }}" onPointerCancel="{{ dragEnd }}" style="width:100%; max-width:{{ visorW }}; touch-action:pinch-zoom; animation:evZoom .28s cubic-bezier(.2,.8,.2,1)">
+          <div onClick="{{ toggleZoom }}" style="border-radius:22px; overflow:hidden; cursor:{{ zoomCursor }}">
+            <div role="img" aria-label="{{ v.alt }}" style="position:relative; width:100%; aspect-ratio:1/1; overflow:hidden; container-type:inline-size; background:{{ v.fBg }}; transform:{{ zoomT }}; transform-origin:center; transition:transform .25s ease">
+              <sc-if value="{{ v.portada }}" hint-placeholder-val="{{ true }}">
+                <span style="{{ v.decoA }}"></span><span style="{{ v.decoB }}"></span>
+                <p style="position:absolute; left:7cqw; top:7cqw; right:7cqw; margin:0; font-size:3.6cqw; font-weight:700; letter-spacing:.14em; color:{{ v.fInk }}">{{ v.fTop }}</p>
+                <p style="position:absolute; left:7cqw; right:7cqw; bottom:7cqw; margin:0; font-size:{{ v.fSize }}; line-height:.9; font-weight:800; letter-spacing:-.045em; color:{{ v.fInk }}">{{ v.fBig }}</p>
+              </sc-if>
+              <sc-if value="{{ v.sinPortada }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4cqw; padding:10cqw; text-align:center">
+                  <svg width="18%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(0,0,0,.4)"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
+                  <span style="font-size:7cqw; line-height:1.1; font-weight:700; color:#0a0a0a">{{ v.nombre }}</span>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+          <p style="margin:18px 0 0; font-size:20px; font-weight:600; letter-spacing:-.02em; color:#fff; text-align:center">{{ v.nombre }}</p>
+          <p style="margin:6px 0 0; font-size:14px; font-weight:600; color:rgba(255,255,255,.7); text-align:center">{{ v.cuando }}</p>
+          <sc-if value="{{ v.hasLink }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ v.inscribir }}" style="width:100%; height:56px; margin-top:16px; border:0; border-radius:999px; background:#fff; color:#0a0a0a; display:flex; align-items:center; justify-content:center; gap:9px; font-size:16px; font-weight:600; cursor:pointer" style-active="transform:scale(.98)">Inscribirme<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"></path></svg></button>
+          </sc-if>
+          <p style="margin:14px 0 0; font-size:12.5px; color:rgba(255,255,255,.6); text-align:center">{{ visorAyuda }}</p>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position:absolute; left:50%; bottom:28px; z-index:60; transform:translateX(-50%); width:max-content; max-width:calc(100% - 32px); padding:12px 18px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:14px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.2); animation:evIn .2s ease">{{ toastTxt }}</div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1500,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  state = { device: 'm', dark: false, estado: 'datos', imgOk: true, leer: {}, visor: null, zoom: false, toast: null };
+  visorRef = React.createRef(); timers = []; dY = null; dDy = 0;
+
+  EV = [
+    { id: 'noche', nombre: 'Noche de adoración', dia: '07', mesCorto: 'NOV', mes: 'NOVIEMBRE', fechaCorta: 'Sáb 7 nov', fechaLarga: 'Sáb 7 de noviembre', hora: '20:00 a 22:30', link: 'forms.gle',
+      desc: 'Una noche entera para cantar, orar y estar en la presencia de Dios. Al final vamos a tener un tiempo de ministración. Traé a alguien que lo necesite: hay lugar para todos.',
+      f: { bg: '#0d0d16', ink: '#f4efe6', acc: '#e8c26a', top: 'ORIGEN · SÁB 07.11 · 20 H', big: 'NOCHE DE ADORACIÓN', size: '12cqw', shape: 'sol' } },
+    { id: 'cena', nombre: 'Cena de anfitriones', dia: '20', mesCorto: 'NOV', mes: 'NOVIEMBRE', fechaCorta: 'Vie 20 nov', hora: '20:30 a 23:00', link: null, desc: '',
+      f: { bg: '#efe4cf', ink: '#2b1d10', acc: '#c8553d', top: 'SOLO ANFITRIONES GCX · VIE 20.11', big: 'CENA DE ANFITRIONES', size: '10.4cqw', shape: 'plato' } },
+    { id: 'bautismos', nombre: 'Bautismos', dia: '22', mesCorto: 'NOV', mes: 'NOVIEMBRE', fechaCorta: 'Dom 22 nov', hora: '11:00', link: null, sinPortada: true,
+      desc: 'Si querés bautizarte, anotate en el Punto de Información antes del 15 de noviembre.' },
+    { id: 'culto', nombre: 'Culto de fin de año', dia: '27', mesCorto: 'DIC', mes: 'DICIEMBRE', fechaCorta: 'Dom 27 dic', hora: '19:00', link: 'forms.gle',
+      desc: 'Cerramos el año juntos con un culto especial de gratitud. Va a haber un espacio preparado para los chicos durante todo el culto.',
+      f: { bg: '#1f3d2e', ink: '#f3efe2', acc: '#f0b54a', top: 'CULTO ESPECIAL · DOM 27.12 · 19 H', big: 'FIN DE AÑO', size: '15cqw', shape: 'arco' } },
+    { id: 'campa', nombre: 'Campamento', dia: '15', mesCorto: 'ENE', mes: 'ENERO 2027', fechaCorta: 'Vie 15 al lun 18 de enero', hora: null, link: 'origeniglesia.org',
+      desc: 'Cuatro días en Sierra de la Ventana para toda la iglesia: talleres, fogones, caminatas y mucho tiempo juntos. El micro sale desde Av. Eva Perón 3932 el viernes a las 7. Las plazas son limitadas y se confirman con la seña. Si necesitás ayuda con el costo, escribinos: nadie se queda afuera por plata.',
+      f: { bg: '#e8572a', ink: '#fff6ea', acc: '#ffd35c', top: '15 — 18 ENERO · SIERRA DE LA VENTANA', big: 'CAMPAMENTO 2027', size: '12cqw', shape: 'monte' } }
+  ];
+
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+  aviso(t) { this.setState({ toast: t }); this.later(() => this.setState(s => s.toast === t ? { toast: null } : null), 2400); }
+
+  deco(f) {
+    const p = 'position:absolute; display:block; ';
+    if (f.shape === 'sol') return [p + 'right:-14cqw; top:-14cqw; width:62cqw; height:62cqw; border-radius:50%; background:' + f.acc, p + 'left:7cqw; top:20cqw; width:18cqw; height:1.2cqw; background:' + f.acc];
+    if (f.shape === 'plato') return [p + 'right:8cqw; top:17cqw; width:40cqw; height:40cqw; border-radius:50%; background:' + f.acc, p + 'right:16cqw; top:25cqw; width:24cqw; height:24cqw; border-radius:50%; background:' + f.bg];
+    if (f.shape === 'arco') return [p + 'left:20cqw; top:16cqw; width:60cqw; height:60cqw; border-radius:50% 50% 0 0; background:' + f.acc, p + 'left:32cqw; top:28cqw; width:36cqw; height:48cqw; border-radius:50% 50% 0 0; background:' + f.bg];
+    return [p + 'left:-6cqw; right:-6cqw; top:22cqw; height:44cqw; background:' + f.acc + '; clip-path:polygon(0 100%,30% 20%,48% 62%,70% 0,100% 100%)', p + 'right:12cqw; top:9cqw; width:13cqw; height:13cqw; border-radius:50%; background:' + f.ink];
+  }
+
+  item(e, t, desk, destacado, idx) {
+    const s = this.state, abierto = !!s.leer[e.id], f = e.f;
+    const dc = f ? this.deco(f) : ['', ''];
+    const cuando = e.fechaCorta + (e.hora ? ' · ' + e.hora : '');
+    const lineas = destacado ? 4 : 2, lh = destacado ? 24 : 22;
+    const umbral = destacado ? (desk ? 260 : 150) : (desk ? 95 : 85);
+    const largo = e.desc.length > umbral;
+    return {
+      id: e.id, nombre: e.nombre, dia: e.dia, mesCorto: e.mesCorto, cuando,
+      fechaLarga: s.estado === 'hoy' && destacado ? 'Hoy, sábado 7 de noviembre' : (e.fechaLarga || e.fechaCorta),
+      hora: e.hora, hasHora: !!e.hora,
+      desc: e.desc, hasDesc: !!e.desc, showLeer: largo, leerAria: abierto ? 'true' : 'false', leerTxt: abierto ? 'Leer menos' : 'Leer más',
+      toggleLeer: () => this.setState(st => ({ leer: Object.assign({}, st.leer, { [e.id]: !st.leer[e.id] }) })),
+      descStyle: 'margin:' + (destacado ? '16px' : '12px') + ' 0 0; font-size:' + (destacado ? '15.5px' : '14.5px') + '; line-height:' + lh + 'px; color:' + t.m60 + '; overflow:hidden; transition:max-height .3s ease; max-height:' + (largo && !abierto ? lineas * lh + 'px' : '640px') + (largo && !abierto ? '; -webkit-mask-image:linear-gradient(#000 60%,transparent)' : ''),
+      hasLink: !!e.link, inscribir: () => this.aviso('Abre ' + e.link + ' en otra pestaña'),
+      portada: !e.sinPortada, sinPortada: !!e.sinPortada,
+      fBg: e.sinPortada ? t.chip : f.bg, fInk: f ? f.ink : '', fTop: f ? f.top : '', fBig: f ? f.big : '', fSize: f ? f.size : '',
+      decoA: dc[0], decoB: dc[1],
+      alt: e.sinPortada ? e.nombre + ', sin portada' : 'Portada de ' + e.nombre,
+      verAria: 'Ver la portada de ' + e.nombre + ' completa',
+      abrir: () => this.setState({ visor: e.id, zoom: false }),
+      delay: (0.12 + idx * 0.06).toFixed(2) + 's'
+    };
+  }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'pc', dk = s.dark;
+    const a = o => (dk ? 'rgba(255,255,255,' : 'rgba(0,0,0,') + o + ')';
+    const t = dk
+      ? { bg: '#111110', card: '#1b1b1a', chip: '#2a2a28', ink: '#f4f4f2', prim: '#ffffff', primInk: '#0a0a0a', shadow: 'none', sk: '#232321', skHi: '#2e2e2c' }
+      : { bg: '#f6f6f4', card: '#ffffff', chip: '#f2f2f0', ink: '#0a0a0a', prim: '#0a0a0a', primInk: '#ffffff', shadow: '0 1px 3px rgba(0,0,0,.04)', sk: '#ebeae6', skHi: '#f6f5f2' };
+    t.m40 = a(.4); t.m55 = a(.55); t.m60 = a(.62); t.m70 = a(.72);
+    const seg = on => 'height:32px; padding:0 12px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const conDatos = s.estado === 'datos' || s.estado === 'hoy';
+
+    const d = this.item(this.EV[0], t, desk, true, 0);
+    const hoy = s.estado === 'hoy';
+    d.relativa = hoy ? 'Hoy' : 'En 18 días';
+    d.pill = 'display:inline-flex; align-items:center; height:32px; padding:0 14px; border-radius:999px; font-size:13.5px; font-weight:700; background:' + (hoy ? t.prim : t.chip) + '; color:' + (hoy ? t.primInk : t.ink);
+
+    const resto = this.EV.slice(1), meses = [];
+    resto.forEach((e, i) => {
+      let m = meses.find(x => x.mes === e.mes);
+      if (!m) { m = { mes: e.mes, items: [] }; meses.push(m); }
+      m.items.push(this.item(e, t, desk, false, i));
+    });
+
+    const ve = this.EV.find(e => e.id === s.visor);
+    const v = ve ? this.item(ve, t, desk, false, 0) : this.item(this.EV[0], t, desk, false, 0);
+    if (ve && ve.sinPortada) v.fBg = '#f2f2f0';
+
+    const estados = [['datos', 'Con eventos'], ['hoy', 'Destacado es hoy'], ['cargando', 'Cargando'], ['vacio', 'Sin eventos'], ['error', 'Error de carga']]
+      .map(([k, tt]) => ({ t: tt, style: seg(s.estado === k), ir: () => this.setState({ estado: k, visor: null }) }));
+
+    return {
+      t, d, meses, v, estados,
+      verMobile: () => this.setState({ device: 'm' }), verPC: () => this.setState({ device: 'pc' }),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(!desk), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      lentas: () => { this.setState({ estado: s.estado === 'hoy' ? 'hoy' : 'datos', imgOk: false }); this.later(() => this.setState({ imgOk: true }), 2200); },
+      frameW: desk ? '1440px' : '390px', frameH: desk ? '900px' : '844px', frameR: desk ? '14px' : '40px',
+      navPad: desk ? '8px 40px' : '44px 16px 4px',
+      pad: desk ? '28px 40px 72px' : '12px 16px 48px',
+      h1: desk ? '52px' : '40px',
+      rot: 'margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:' + t.m40,
+      destCols: desk ? '440px minmax(0,1fr)' : 'minmax(0,1fr)', destGap: desk ? '40px' : '10px',
+      destInfoPad: desk ? '32px' : '20px', destH: desk ? '34px' : '24px', skPad: desk ? '0' : '8px 4px',
+      gridCols: desk ? 'repeat(3,minmax(0,1fr))' : 'minmax(0,1fr)',
+      shim: 'background:linear-gradient(100deg,' + t.sk + ' 30%,' + t.skHi + ' 50%,' + t.sk + ' 70%); background-size:240% 100%; animation:evShim 1.3s linear infinite',
+      btnPrim: 'width:100%; height:58px; border:0; border-radius:999px; background:' + t.prim + '; color:' + t.primInk + '; display:flex; align-items:center; justify-content:center; gap:9px; font-size:16px; font-weight:600; cursor:pointer',
+      cargando: s.estado === 'cargando', vacio: s.estado === 'vacio', error: s.estado === 'error', conDatos, hayResto: meses.length > 0,
+      reintentar: () => { this.setState({ estado: 'cargando' }); this.later(() => this.setState({ estado: 'datos' }), 1200); },
+      imgOp: s.imgOk ? 1 : 0, imgCargando: !s.imgOk,
+
+      visor: !!ve, visorRef: this.visorRef,
+      visorPad: desk ? '40px' : '64px 16px 40px', visorW: desk ? '560px' : '420px', xTop: desk ? '16px' : '48px',
+      cerrarVisor: () => this.setState({ visor: null, zoom: false }), stop: e => e.stopPropagation(),
+      toggleZoom: () => this.setState(st => ({ zoom: !st.zoom })),
+      zoomT: s.zoom ? 'scale(2)' : 'none', zoomCursor: s.zoom ? 'zoom-out' : 'zoom-in',
+      visorAyuda: desk ? 'Clic en la portada para ampliar · Esc o clic afuera para cerrar' : 'Pellizcá o tocá la portada para ampliar · Deslizá hacia abajo para cerrar',
+      dragStart: e => { if (s.zoom) return; this.dY = e.clientY; this.dDy = 0; const el = this.visorRef.current; if (el) el.style.transition = 'none'; },
+      dragMove: e => { if (this.dY == null) return; const dy = Math.max(0, e.clientY - this.dY); this.dDy = dy; const el = this.visorRef.current; if (el) { el.style.transform = 'translateY(' + dy + 'px)'; el.style.opacity = String(1 - Math.min(dy / 400, .5)); } },
+      dragEnd: () => { if (this.dY == null) return; const dy = this.dDy; this.dY = null; const el = this.visorRef.current; if (el) { el.style.transition = 'transform .2s ease, opacity .2s ease'; el.style.transform = ''; el.style.opacity = ''; } if (dy > 110) this.setState({ visor: null, zoom: false }); },
+
+      hayToast: !!s.toast, toastTxt: s.toast || ''
+    };
+  }
+
+  componentDidMount() {
+    this.onKey = e => { if (e.key === 'Escape' && this.state.visor) this.setState({ visor: null, zoom: false }); };
+    window.addEventListener('keydown', this.onKey);
+  }
+}
+</script>
+</body>
+</html>
