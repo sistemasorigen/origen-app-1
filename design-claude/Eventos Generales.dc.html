@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button,input,textarea{font-family:inherit}input:focus,textarea:focus{outline:none}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes egIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes egFa{from{opacity:0}to{opacity:1}}@keyframes egPvA{from{opacity:.35}to{opacity:1}}@keyframes egPvB{from{opacity:.35}to{opacity:1}}@keyframes egSheet{from{transform:translateY(100%)}to{transform:none}}@keyframes egPop{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}@keyframes egSpin{to{transform:rotate(360deg)}}@keyframes egPulse{0%,100%{opacity:1}50%{opacity:.55}}@keyframes egHi{0%,35%{background-color:rgba(214,170,60,.24)}100%{background-color:transparent}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1240px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ESTADO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center">
+      <sc-for list="{{ presets }}" as="p" hint-placeholder-count="12"><button onClick="{{ p.ir }}" style="height:32px; padding:0 12px; border:1px solid #e2e0db; border-radius:999px; background:#fff; color:#0a0a0a; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap">{{ p.t }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}; background:{{ t.bg }}; box-shadow:0 6px 28px rgba(0,0,0,.14); color:{{ t.ink }}">
+    <div ref="{{ scrollRef }}" style="position:absolute; inset:0; overflow-y:auto; overflow-x:hidden">
+
+      <sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:1160px; margin:0 auto; padding:{{ pad }}; animation:egIn .3s ease both">
+          <button onClick="{{ alPanel }}" aria-label="Volver a Panel de eventos" style="{{ backBtn }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+          <div style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px 24px; margin-top:18px">
+            <div style="flex:1 1 320px; min-width:0">
+              <p style="{{ rot }}">EVENTOS</p>
+              <h1 style="margin:8px 0 0; font-size:{{ h1 }}; line-height:1.08; font-weight:600; letter-spacing:-.03em; color:{{ t.ink }}">Eventos generales</h1>
+              <p style="margin:8px 0 0; font-size:15.5px; line-height:1.5; color:{{ t.m55 }}">Lo que se publica en /eventos y en el inicio.</p>
+            </div>
+            <button onClick="{{ nuevo }}" style="{{ nuevoBtn }}" style-active="transform:scale(.98)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Nuevo evento</button>
+          </div>
+
+          <div style="{{ searchWrap }}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="flex:none; color:{{ t.m55 }}"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+            <input type="search" value="{{ q }}" onChange="{{ onQ }}" placeholder="Buscar por nombre" aria-label="Buscar eventos por nombre" style="{{ searchInput }}" />
+            <sc-if value="{{ hayQ }}" hint-placeholder-val="{{ false }}"><button onClick="{{ limpiarQ }}" aria-label="Limpiar la búsqueda" style="{{ clearBtn }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></sc-if>
+          </div>
+
+          <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+            <div aria-busy="true" style="margin-top:28px">
+              <div style="{{ sk }}; width:90px; height:26px; margin:0 0 14px 6px"></div>
+              <div style="background:{{ t.card }}; border-radius:26px; box-shadow:{{ t.shadow }}">
+                <sc-for list="{{ skRows }}" as="k" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:center; gap:14px; padding:14px 16px; border-top:{{ k.bt }}">
+                    <div style="{{ sk }}; width:56px; height:56px; flex:none; border-radius:14px"></div>
+                    <div style="flex:1; min-width:0"><div style="{{ sk }}; width:{{ k.w1 }}; height:14px"></div><div style="{{ sk }}; width:{{ k.w2 }}; height:11px; margin-top:10px"></div></div>
+                    <div style="{{ sk }}; width:64px; height:24px; border-radius:999px"></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ vacio }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:28px; padding:60px 24px; border-radius:28px; background:{{ t.card }}; box-shadow:{{ t.shadow }}; display:flex; flex-direction:column; align-items:center; text-align:center">
+              <span style="width:64px; height:64px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; color:{{ t.m55 }}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zM8 3v4M16 3v4M4 10h16"></path></svg></span>
+              <p style="margin:20px 0 0; font-size:18px; font-weight:600; color:{{ t.ink }}">Todavía no hay eventos</p>
+              <p style="margin:8px 0 0; font-size:14.5px; line-height:1.55; color:{{ t.m55 }}">Creá el primero y va a aparecer en /eventos.</p>
+              <button onClick="{{ nuevo }}" style="{{ primSmall }}; margin-top:22px">Nuevo evento</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sinRes }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:28px; padding:48px 24px; border-radius:28px; background:{{ t.card }}; box-shadow:{{ t.shadow }}; display:flex; flex-direction:column; align-items:center; text-align:center">
+              <p style="margin:0; font-size:17px; font-weight:600; color:{{ t.ink }}; overflow-wrap:anywhere">Ningún evento coincide con «{{ q }}»</p>
+              <button onClick="{{ limpiarQ }}" style="{{ chipBtn }}; margin-top:18px">Limpiar la búsqueda</button>
+            </div>
+          </sc-if>
+
+          <sc-for list="{{ anios }}" as="y" hint-placeholder-count="2">
+            <section style="{{ y.sec }}">
+              <button onClick="{{ y.toggle }}" aria-expanded="{{ y.exp }}" style="{{ yearBtn }}" style-hover="background:{{ t.hover }}">
+                <span style="font-size:{{ yearSize }}; line-height:1; font-weight:600; letter-spacing:-.03em; color:{{ t.ink }}">{{ y.anio }}</span>
+                <span style="font-size:14.5px; font-weight:600; color:{{ t.m55 }}">{{ y.cant }}</span>
+                <span style="{{ chevWrap }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="{{ y.chev }}"><path d="M6 9l6 6 6-6"></path></svg></span>
+              </button>
+              <div style="{{ y.collapse }}">
+                <div style="overflow:hidden; min-height:0">
+                  <div style="background:{{ t.card }}; border-radius:26px; box-shadow:{{ t.shadow }}; overflow:hidden; margin-bottom:4px">
+                    <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+                      <div style="{{ pcGrid }}; padding:14px 20px 10px; border-bottom:1px solid {{ t.line }}">
+                        <span></span><span style="{{ rotS }}">NOMBRE</span><span style="{{ rotS }}">FECHA Y HORARIO</span><span style="{{ rotS }}">ESTADO</span><span></span>
+                      </div>
+                    </sc-if>
+                    <sc-for list="{{ y.rows }}" as="r" hint-placeholder-count="3">
+                      <sc-if value="{{ r.isSub }}" hint-placeholder-val="{{ false }}">
+                        <p style="{{ subRot }}">{{ r.label }}</p>
+                      </sc-if>
+                      <sc-if value="{{ r.isEv }}" hint-placeholder-val="{{ true }}">
+                        <div style="{{ r.wrap }}">
+                          <sc-if value="{{ r.sep }}" hint-placeholder-val="{{ false }}"><div style="{{ sepLine }}"></div></sc-if>
+                          <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+                            <button onClick="{{ r.abrir }}" aria-label="{{ r.aria }}" style="{{ mobRow }}">
+                              <span style="{{ r.thumb }}"><sc-if value="{{ r.noCover }}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zM8 3v4M16 3v4M4 10h16"></path></svg></sc-if></span>
+                              <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px">
+                                <span style="font-size:15.5px; line-height:1.3; font-weight:600; color:{{ t.ink }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r.n }}</span>
+                                <span style="font-size:13.5px; font-weight:500; color:{{ t.m55 }}">{{ r.meta }}</span>
+                              </span>
+                              <span style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex:none">
+                                <sc-for list="{{ r.pills }}" as="pl" hint-placeholder-count="1"><span style="{{ pl.style }}">{{ pl.t }}</span></sc-for>
+                              </span>
+                            </button>
+                          </sc-if>
+                          <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+                            <div role="button" tabIndex="0" onClick="{{ r.abrir }}" onMouseEnter="{{ r.enter }}" onMouseLeave="{{ r.leave }}" aria-label="{{ r.aria }}" style="{{ pcGrid }}; {{ pcRow }}" style-hover="background:{{ t.hover }}">
+                              <span style="{{ r.thumb }}"><sc-if value="{{ r.noCover }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zM8 3v4M16 3v4M4 10h16"></path></svg></sc-if></span>
+                              <span style="min-width:0; font-size:15px; font-weight:600; color:{{ t.ink }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r.n }}</span>
+                              <span style="min-width:0; font-size:14px; font-weight:500; color:{{ t.m55 }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ r.meta }}</span>
+                              <span style="display:flex; flex-wrap:wrap; gap:6px">
+                                <sc-for list="{{ r.pills }}" as="pl" hint-placeholder-count="1"><span style="{{ pl.style }}">{{ pl.t }}</span></sc-for>
+                              </span>
+                              <span style="display:flex; align-items:center; justify-content:flex-end; gap:4px">
+                                <span style="{{ r.hoverBox }}">
+                                  <button onClick="{{ r.edit }}" aria-label="Editar" tabIndex="{{ r.tab }}" style="{{ roundSm }}" style-hover="background:{{ t.chipHover }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"></path></svg></button>
+                                  <button onClick="{{ r.toggle }}" aria-label="{{ r.toggleLbl }}" tabIndex="{{ r.tab }}" style="{{ roundSm }}" style-hover="background:{{ t.chipHover }}">
+                                    <sc-if value="{{ r.tog }}" hint-placeholder-val="{{ false }}"><span style="{{ spinSm }}"></span></sc-if>
+                                    <sc-if value="{{ r.notTog }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.eye }}"></path></svg></sc-if>
+                                  </button>
+                                  <button onClick="{{ r.del }}" aria-label="Eliminar" tabIndex="{{ r.tab }}" style="{{ roundSmRed }}" style-hover="background:{{ t.chipHover }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"></path></svg></button>
+                                </span>
+                                <button onClick="{{ r.more }}" aria-label="Más acciones" style="{{ roundSmGhost }}" style-hover="background:{{ t.chip }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="18.5" cy="12" r="1.6"></circle></svg></button>
+                              </span>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isForm }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px; margin:0 auto; padding:{{ formPad }}; animation:egIn .3s ease both">
+          <div style="display:flex; align-items:center; gap:14px">
+            <button onClick="{{ salir }}" aria-label="Volver a la lista" style="{{ backBtn }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+            <div style="min-width:0">
+              <p style="{{ rot }}">EVENTOS GENERALES</p>
+              <h1 style="margin:4px 0 0; font-size:{{ h1Form }}; line-height:1.1; font-weight:600; letter-spacing:-.025em; color:{{ t.ink }}">{{ formTitulo }}</h1>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:{{ formCols }}; gap:48px; align-items:start; margin-top:24px">
+            <div style="min-width:0; display:flex; flex-direction:column; gap:22px">
+              <sc-if value="{{ pastNotice }}" hint-placeholder-val="{{ false }}">
+                <div role="note" style="display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:20px; background:{{ t.card }}; box-shadow:{{ t.shadow }}">
+                  <span style="width:28px; height:28px; flex:none; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; color:{{ t.m55 }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2"></path></svg></span>
+                  <p style="margin:3px 0 0; font-size:14px; line-height:1.5; font-weight:500; color:{{ t.ink }}">Este evento ya pasó. Los cambios se ven igual en /eventos si está visible.</p>
+                </div>
+              </sc-if>
+
+              <div>
+                <p style="{{ rot }}">PORTADA</p>
+                <div style="margin-top:10px">
+                  <sc-if value="{{ pVacio }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ subirPortada }}" style="{{ zona }}">
+                      <span style="width:52px; height:52px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5M7 10l5-5 5 5M5 19h14"></path></svg></span>
+                      <span style="font-size:15.5px; font-weight:600">Subir portada</span>
+                      <span style="font-size:13px; font-weight:500; color:{{ t.m55 }}">Cuadrada, 500 × 500</span>
+                    </button>
+                  </sc-if>
+                  <sc-if value="{{ pSubiendo }}" hint-placeholder-val="{{ false }}">
+                    <div role="status" style="{{ zonaSolid }}">
+                      <span style="font-size:15px; font-weight:600; color:{{ t.ink }}">Subiendo la portada…</span>
+                      <div style="width:70%; height:6px; border-radius:999px; background:{{ t.track }}; overflow:hidden"><div style="height:100%; width:{{ pW }}; border-radius:999px; background:{{ t.ink }}; transition:width 1s cubic-bezier(.3,.6,.3,1)"></div></div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ pLista }}" hint-placeholder-val="{{ false }}">
+                    <div style="{{ zonaImg }}"><span style="font:500 11px ui-monospace,Menlo,monospace; color:rgba(0,0,0,.5); background:rgba(255,255,255,.7); padding:4px 8px; border-radius:8px">portada del evento</span></div>
+                    <div style="display:flex; gap:8px; margin-top:10px">
+                      <button onClick="{{ subirPortada }}" style="{{ chipBtn }}">Cambiar</button>
+                      <button onClick="{{ quitarPortada }}" style="{{ chipBtn }}">Quitar</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ pError }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ subirPortada }}" style="{{ zonaErr }}">
+                      <span role="alert" style="font-size:15px; line-height:1.45; font-weight:600; color:{{ t.ink }}">No se pudo subir. Probá con otra imagen.</span>
+                      <span style="{{ chipBtn }}; display:flex; align-items:center">Elegir otra imagen</span>
+                    </button>
+                  </sc-if>
+                </div>
+              </div>
+
+              <label style="display:block">
+                <span style="{{ rot }}; display:block">NOMBRE</span>
+                <input type="text" value="{{ fN }}" onChange="{{ onN }}" maxLength="80" placeholder="Ej.: Noche de adoración" style="{{ fld }}; margin-top:10px" />
+              </label>
+
+              <label style="display:block">
+                <span style="{{ rot }}; display:block">FECHA</span>
+                <input type="date" value="{{ fF }}" onChange="{{ onF }}" style="{{ fld }}; margin-top:10px" />
+              </label>
+
+              <div>
+                <p style="{{ rot }}">HORARIO</p>
+                <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:10px">
+                  <label style="display:block; min-width:0"><span style="font-size:13px; font-weight:600; color:{{ t.m55 }}">Empieza</span><input type="time" value="{{ fIni }}" onChange="{{ onIni }}" style="{{ fld }}; margin-top:6px" /></label>
+                  <label style="display:block; min-width:0"><span style="font-size:13px; font-weight:600; color:{{ t.m55 }}">Termina (opcional)</span><input type="time" value="{{ fFin }}" onChange="{{ onFin }}" aria-invalid="{{ errHorAria }}" style="{{ fldFin }}; margin-top:6px" /></label>
+                </div>
+                <sc-if value="{{ errHor }}" hint-placeholder-val="{{ false }}"><p role="alert" style="{{ errTxt }}">Tiene que terminar después de empezar.</p></sc-if>
+              </div>
+
+              <label style="display:block">
+                <span style="display:flex; align-items:baseline; justify-content:space-between; gap:10px"><span style="{{ rot }}">DESCRIPCIÓN</span><span style="font-size:12.5px; font-weight:600; color:{{ t.m38 }}">{{ descCount }}</span></span>
+                <textarea value="{{ fDesc }}" onChange="{{ onDesc }}" maxLength="400" rows="4" placeholder="Opcional. Contá de qué se trata." style="{{ area }}; margin-top:10px"></textarea>
+              </label>
+
+              <label style="display:block">
+                <span style="{{ rot }}; display:block">LINK DE INSCRIPCIÓN</span>
+                <input type="url" inputMode="url" value="{{ fLink }}" onChange="{{ onLink }}" placeholder="https://" aria-invalid="{{ errLinkAria }}" style="{{ fldLink }}; margin-top:10px" />
+                <sc-if value="{{ errLink }}" hint-placeholder-val="{{ false }}"><span role="alert" style="{{ errTxt }}; display:block">El link tiene que empezar con https:// y ser una dirección válida.</span></sc-if>
+                <sc-if value="{{ hayDom }}" hint-placeholder-val="{{ false }}"><span style="display:block; margin:8px 4px 0; font-size:13px; font-weight:600; color:{{ t.m55 }}">Abre {{ dom }}</span></sc-if>
+              </label>
+
+              <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ verPrevia }}" style="{{ chipFull }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7S2.5 12 2.5 12zM12 15a3 3 0 100-6 3 3 0 000 6z"></path></svg>Ver cómo queda</button>
+              </sc-if>
+
+              <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+                <div style="padding-top:6px">
+                  <sc-if value="{{ hayRazon }}" hint-placeholder-val="{{ false }}"><p style="margin:0 0 10px; font-size:13.5px; font-weight:600; color:{{ t.m55 }}">{{ razon }}</p></sc-if>
+                  <div style="display:flex; gap:10px">
+                    <button onClick="{{ guardar }}" disabled="{{ guardarOff }}" style="{{ guardarBtn }}"><sc-if value="{{ saving }}" hint-placeholder-val="{{ false }}"><span style="{{ spin }}"></span></sc-if>{{ guardarTxt }}</button>
+                    <button onClick="{{ salir }}" style="{{ cancelarBtn }}">Cancelar</button>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+              <aside style="position:sticky; top:24px">
+                <p style="{{ rot }}; margin-bottom:12px">ASÍ SE VE EN /EVENTOS</p>
+                <div style="{{ pvCard }}">
+                  <div style="{{ pvCover }}"><sc-if value="{{ pvNoCover }}" hint-placeholder-val="{{ true }}"><span style="display:flex; flex-direction:column; align-items:center; gap:8px; color:{{ t.m38 }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zM8 3v4M16 3v4M4 10h16"></path></svg><span style="font-size:12.5px; font-weight:600">Sin portada</span></span></sc-if></div>
+                  <div style="padding:18px 20px 20px">
+                    <span style="{{ pvChip }}">{{ pvFecha }}</span>
+                    <p style="margin:12px 0 0; font-size:19px; line-height:1.25; font-weight:700; letter-spacing:-.015em; color:{{ pvNameInk }}; overflow-wrap:anywhere">{{ pvNombre }}</p>
+                    <sc-if value="{{ pvHayHor }}" hint-placeholder-val="{{ false }}"><p style="margin:6px 0 0; font-size:14px; font-weight:600; color:{{ t.m55 }}">{{ pvHor }}</p></sc-if>
+                    <sc-if value="{{ pvHayDesc }}" hint-placeholder-val="{{ false }}"><p style="margin:10px 0 0; font-size:14px; line-height:1.5; color:{{ t.m55 }}; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden">{{ pvDesc }}</p></sc-if>
+                    <sc-if value="{{ pvHayLink }}" hint-placeholder-val="{{ false }}"><span style="{{ pvBtn }}">Inscribirme</span></sc-if>
+                  </div>
+                </div>
+              </aside>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ footMob }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; left:0; right:0; bottom:0; z-index:10; background:{{ t.bg }}; border-top:1px solid {{ t.line }}; padding:10px 16px 34px">
+        <sc-if value="{{ hayRazon }}" hint-placeholder-val="{{ false }}"><p style="margin:0 0 8px; text-align:center; font-size:13px; font-weight:600; color:{{ t.m55 }}">{{ razon }}</p></sc-if>
+        <div style="display:flex; gap:8px">
+          <button onClick="{{ salir }}" style="{{ cancelarBtn }}">Cancelar</button>
+          <button onClick="{{ guardar }}" disabled="{{ guardarOff }}" style="{{ guardarBtn }}"><sc-if value="{{ saving }}" hint-placeholder-val="{{ false }}"><span style="{{ spin }}"></span></sc-if>{{ guardarTxt }}</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayOv }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cerrarOv }}" style="{{ ovBack }}">
+        <div ref="{{ sheetRef }}" onClick="{{ stop }}" role="dialog" aria-label="{{ ovAria }}" style="{{ ovPanel }}">
+          <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+            <div onPointerDown="{{ dragStart }}" onPointerMove="{{ dragMove }}" onPointerUp="{{ dragEnd }}" onPointerCancel="{{ dragEnd }}" style="padding:10px 0 8px; touch-action:none; cursor:grab"><div style="width:40px; height:5px; border-radius:999px; background:{{ t.m38 }}; margin:0 auto"></div></div>
+          </sc-if>
+
+          <sc-if value="{{ ovEv }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ ev.cover }}"><sc-if value="{{ ev.noCover }}" hint-placeholder-val="{{ false }}"><span style="display:flex; flex-direction:column; align-items:center; gap:8px; color:{{ t.m38 }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zM8 3v4M16 3v4M4 10h16"></path></svg><span style="font-size:12.5px; font-weight:600">Sin portada</span></span></sc-if></div>
+            <div style="padding:18px 4px 0">
+              <div style="display:flex; flex-wrap:wrap; gap:6px"><sc-for list="{{ ev.pills }}" as="pl" hint-placeholder-count="1"><span style="{{ pl.style }}">{{ pl.t }}</span></sc-for></div>
+              <p style="margin:12px 0 0; font-size:21px; line-height:1.2; font-weight:600; letter-spacing:-.02em; color:{{ t.ink }}">{{ ev.n }}</p>
+              <p style="margin:6px 0 0; font-size:14.5px; font-weight:600; color:{{ t.m55 }}">{{ ev.meta }}</p>
+              <sc-if value="{{ ev.hasDesc }}" hint-placeholder-val="{{ false }}"><p style="margin:12px 0 0; font-size:14.5px; line-height:1.55; color:{{ t.ink }}">{{ ev.desc }}</p></sc-if>
+              <sc-if value="{{ ev.hasLink }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; align-items:center; gap:10px; margin-top:14px; padding:12px 14px; border-radius:16px; background:{{ t.surf }}">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; color:{{ t.m55 }}"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"></path></svg>
+                  <span style="min-width:0; font-size:13.5px; font-weight:600; color:{{ t.ink }}; overflow-wrap:anywhere">{{ ev.link }}</span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:22px">
+              <button onClick="{{ ev.edit }}" style="{{ primFull }}">Editar</button>
+              <button onClick="{{ ev.toggle }}" style="{{ chipFull }}"><sc-if value="{{ ev.tog }}" hint-placeholder-val="{{ false }}"><span style="{{ spinSm }}"></span></sc-if>{{ ev.toggleTxt }}</button>
+              <button onClick="{{ ev.del }}" style="{{ textRed }}">Eliminar</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ovDel }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px 4px 0; text-align:center">
+              <p style="margin:0; font-size:20px; line-height:1.3; font-weight:600; letter-spacing:-.015em; color:{{ t.ink }}; overflow-wrap:anywhere">¿Eliminar «{{ delNombre }}»?</p>
+              <p style="margin:8px 0 0; font-size:14.5px; line-height:1.5; color:{{ t.m55 }}">Se borra de /eventos y del inicio. No se puede deshacer.</p>
+            </div>
+            <div style="{{ ovBtns }}">
+              <button onClick="{{ confirmarDel }}" style="{{ redFull }}">Eliminar</button>
+              <button onClick="{{ cerrarOv }}" style="{{ chipFull }}">Cancelar</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ovLeave }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px 4px 0; text-align:center">
+              <p style="margin:0; font-size:20px; font-weight:600; letter-spacing:-.015em; color:{{ t.ink }}">¿Salir sin guardar?</p>
+              <p style="margin:8px 0 0; font-size:14.5px; line-height:1.5; color:{{ t.m55 }}">Los cambios que hiciste se pierden.</p>
+            </div>
+            <div style="{{ ovBtns }}">
+              <button onClick="{{ cerrarOv }}" style="{{ primFull }}">Seguir editando</button>
+              <button onClick="{{ salirSinGuardar }}" style="{{ chipFull }}">Salir sin guardar</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ovPrev }}" hint-placeholder-val="{{ false }}">
+            <p style="{{ rot }}; margin:6px 4px 12px">ASÍ SE VE EN /EVENTOS</p>
+            <div style="{{ pvCard }}">
+              <div style="{{ pvCover }}"><sc-if value="{{ pvNoCover }}" hint-placeholder-val="{{ true }}"><span style="display:flex; flex-direction:column; align-items:center; gap:8px; color:{{ t.m38 }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zM8 3v4M16 3v4M4 10h16"></path></svg><span style="font-size:12.5px; font-weight:600">Sin portada</span></span></sc-if></div>
+              <div style="padding:18px 20px 20px">
+                <span style="{{ pvChip }}">{{ pvFecha }}</span>
+                <p style="margin:12px 0 0; font-size:19px; line-height:1.25; font-weight:700; letter-spacing:-.015em; color:{{ pvNameInk }}; overflow-wrap:anywhere">{{ pvNombre }}</p>
+                <sc-if value="{{ pvHayHor }}" hint-placeholder-val="{{ false }}"><p style="margin:6px 0 0; font-size:14px; font-weight:600; color:{{ t.m55 }}">{{ pvHor }}</p></sc-if>
+                <sc-if value="{{ pvHayDesc }}" hint-placeholder-val="{{ false }}"><p style="margin:10px 0 0; font-size:14px; line-height:1.5; color:{{ t.m55 }}; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden">{{ pvDesc }}</p></sc-if>
+                <sc-if value="{{ pvHayLink }}" hint-placeholder-val="{{ false }}"><span style="{{ pvBtn }}">Inscribirme</span></sc-if>
+              </div>
+            </div>
+            <button onClick="{{ cerrarOv }}" style="{{ chipFull }}; margin-top:14px">Seguir editando</button>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position:absolute; left:50%; bottom:{{ toastBottom }}; z-index:60; transform:translateX(-50%); width:max-content; max-width:calc(100% - 32px); padding:13px 20px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:14px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.2); animation:egIn .2s ease both">{{ toastTxt }}</div>
+    </sc-if>
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+      <span aria-hidden="true" style="position:absolute; left:50%; bottom:8px; z-index:70; transform:translateX(-50%); width:134px; height:5px; border-radius:999px; background:{{ t.m38 }}; pointer-events:none"></span>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1500,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  HOY = '2026-10-20';
+  DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  EYE = 'M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7S2.5 12 2.5 12zM12 15a3 3 0 100-6 3 3 0 000 6z';
+  EYE_OFF = 'M3 3l18 18M10.6 5.1A9.7 9.7 0 0112 5c6 0 9.5 7 9.5 7a16 16 0 01-2.7 3.6M6.6 6.6A16.5 16.5 0 002.5 12S6 19 12 19a9.4 9.4 0 004.4-1.1M9.9 9.9a3 3 0 004.2 4.2';
+  base() {
+    const e = (id, n, f, ini, fin, vis, hue, link, desc) => ({ id, n, f, ini, fin, vis, hue, link: link || '', desc: desc || '' });
+    return [
+      e('e1', 'Noche de adoración', '2026-11-07', '20:00', '22:30', true, 265, '', 'Una noche para cantar, orar y estar juntos. Abierto a toda la iglesia.'),
+      e('e2', 'Cena de anfitriones', '2026-11-20', '20:30', '23:00', false, null, '', 'Cena de agradecimiento para los anfitriones de GCX de esta temporada.'),
+      e('e3', 'Culto de fin de año', '2026-12-27', '19:00', '', true, 30, 'https://forms.gle/finDeAnio26', 'Cerramos el año dando gracias. Anotate si querés ayudar con la recepción.'),
+      e('e4', 'Bautismos en el río', '2026-03-22', '10:00', '13:00', true, 200, '', ''),
+      e('e5', 'Retiro de jóvenes', '2026-08-15', '09:00', '', true, 140, 'https://forms.gle/retiro26', 'Tres días en las sierras para jóvenes de 18 a 30.'),
+      e('e6', 'Noche de adoración', '2025-03-15', '20:00', '22:30', true, 265, '', ''),
+      e('e7', 'Día de la familia', '2025-06-14', '11:00', '17:00', true, 90, '', ''),
+      e('e8', 'Retiro de jóvenes', '2025-08-16', '09:00', '', false, 140, '', ''),
+      e('e9', 'Culto de Navidad', '2025-12-24', '20:00', '21:30', true, 0, '', '')
+    ];
+  }
+  state = { device: 'm', dark: false, screen: 'list', items: this.base(), open: { 2026: true }, q: '', loading: false, ov: null, toast: null, hover: null, toggling: null, hi: null, form: null, init: '', editId: null, portada: 'vacio', pW: '0%', saving: false, pvN: 0 };
+  scrollRef = React.createRef(); sheetRef = React.createRef(); timers = []; dY = null; dDy = 0;
+
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+  arriba() { const el = this.scrollRef.current; if (el) el.scrollTop = 0; }
+  aviso(txt) { const k = Date.now() + Math.random(); this.setState({ toast: { txt, k } }); this.later(() => this.setState(s => s.toast && s.toast.k === k ? { toast: null } : null), 2300); }
+  pasado(f) { return f < this.HOY; }
+  fecha(f) { const d = new Date(f + 'T12:00'); return this.DIAS[d.getDay()] + ' ' + d.getDate() + ' ' + this.MES[d.getMonth()]; }
+  hor(ini, fin) { return ini ? (fin ? ini + '–' + fin : ini) : ''; }
+  meta(i) { const h = this.hor(i.ini, i.fin); return this.fecha(i.f) + (h ? ' · ' + h : ''); }
+  cover(hue, dk) { return 'linear-gradient(135deg, hsl(' + hue + ' 34% ' + (dk ? 42 : 82) + '%), hsl(' + hue + ' 30% ' + (dk ? 28 : 66) + '%))'; }
+  norm(x) { return x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  linkOk(l) { try { const u = new URL(l); return u.protocol === 'https:' && u.hostname.includes('.'); } catch (e) { return false; } }
+  snap(form, portada) { return JSON.stringify(Object.assign({}, form, { portada })); }
+
+  openForm(item, extra) {
+    const form = item ? { n: item.n, f: item.f, ini: item.ini, fin: item.fin, desc: item.desc, link: item.link, hue: item.hue } : { n: '', f: '', ini: '', fin: '', desc: '', link: '', hue: null };
+    const portada = item && item.hue != null ? 'lista' : 'vacio';
+    this.setState(Object.assign({ screen: 'form', form, portada, init: this.snap(form, portada), editId: item ? item.id : null, ov: null, saving: false, hover: null }, extra || {}));
+    this.arriba();
+  }
+  volver() { this.setState({ screen: 'list', form: null, ov: null, saving: false }); this.arriba(); }
+  setF(k, v) { this.setState(s => ({ form: Object.assign({}, s.form, { [k]: v }), pvN: s.pvN + 1 })); }
+  toggleVis(id) {
+    const it = this.state.items.find(i => i.id === id); if (!it) return;
+    this.setState(s => ({ toggling: id, items: s.items.map(i => i.id === id ? Object.assign({}, i, { vis: !i.vis }) : i) }));
+    this.later(() => this.setState(s => s.toggling === id ? { toggling: null } : null), 650);
+    this.aviso(it.vis ? 'Oculto de /eventos' : 'Visible en /eventos');
+  }
+  eliminar(id) {
+    this.setState(s => ({ ov: null, hover: null, items: s.items.map(i => i.id === id ? Object.assign({}, i, { removing: true }) : i) }));
+    this.later(() => this.setState(s => ({ items: s.items.filter(i => i.id !== id) })), 280);
+    this.aviso('Evento eliminado');
+  }
+  subirPortada() {
+    this.setState({ portada: 'subiendo', pW: '6%' });
+    this.later(() => this.setState({ pW: '100%' }), 40);
+    const hues = [265, 30, 200, 140, 330, 90];
+    this.later(() => this.setState(s => ({ portada: 'lista', form: Object.assign({}, s.form, { hue: hues[Math.floor(Math.random() * hues.length)] }), pvN: s.pvN + 1 })), 1150);
+  }
+  guardar() {
+    const s = this.state, f = s.form;
+    this.setState({ saving: true });
+    this.later(() => {
+      const st = this.state, ex = st.items.find(i => i.id === st.editId);
+      const id = st.editId || 'n' + Date.now();
+      const item = { id, n: f.n.trim(), f: f.f, ini: f.ini, fin: f.fin, desc: f.desc.trim(), link: f.link.trim(), hue: st.portada === 'lista' ? f.hue : null, vis: ex ? ex.vis : true };
+      const y = +f.f.slice(0, 4);
+      this.setState({ items: ex ? st.items.map(i => i.id === id ? item : i) : st.items.concat([item]), screen: 'list', form: null, saving: false, hi: id, q: '', open: Object.assign({}, st.open, { [y]: true }) });
+      this.arriba();
+      this.aviso(ex ? 'Cambios guardados' : 'Evento creado');
+      this.later(() => this.setState(x => x.hi === id ? { hi: null } : null), 1900);
+    }, 900);
+  }
+  preset(k) {
+    const r = { ov: null, loading: false, q: '', hover: null, toggling: null, saving: false };
+    const e = id => this.base().find(i => i.id === id);
+    if (k === 'lista') this.setState(Object.assign(r, { screen: 'list', items: this.base(), open: { 2026: true } }));
+    if (k === 'buscar') this.setState(Object.assign(r, { screen: 'list', items: this.base(), q: 'noche' }));
+    if (k === 'sinres') this.setState(Object.assign(r, { screen: 'list', items: this.base(), q: 'kermés' }));
+    if (k === 'vacio') this.setState(Object.assign(r, { screen: 'list', items: [] }));
+    if (k === 'cargando') this.setState(Object.assign(r, { screen: 'list', loading: true }));
+    if (k === 'panel') this.setState(Object.assign(r, { screen: 'list', device: 'm', items: this.base(), open: { 2026: true }, ov: { k: 'ev', id: 'e1' } }));
+    if (k === 'eliminar') this.setState(Object.assign(r, { screen: 'list', items: this.base(), open: { 2026: true }, ov: { k: 'del', id: 'e1' } }));
+    if (k === 'nuevo') { this.setState({ items: this.state.items.length ? this.state.items : this.base() }); this.openForm(null); }
+    if (k === 'editar') this.openForm(e('e5'));
+    if (k === 'errores') this.openForm(null, { form: { n: 'Kermés solidaria', f: '2026-11-14', ini: '18:00', fin: '16:00', desc: '', link: 'forms.gle/kermes', hue: null } });
+    if (k === 'subida') this.openForm(null, { portada: 'error' });
+    if (k === 'salir') { const i = e('e1'); this.openForm(i, { form: { n: 'Noche de adoración y oración', f: i.f, ini: i.ini, fin: i.fin, desc: i.desc, link: i.link, hue: i.hue }, ov: { k: 'leave' } }); }
+  }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'pc', dk = s.dark;
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const a = o => (dk ? 'rgba(255,255,255,' : 'rgba(0,0,0,') + o + ')';
+    const t = dk
+      ? { bg: '#111110', card: '#1b1b1a', surf: '#232321', chip: '#2a2a28', chipHover: '#343432', hover: 'rgba(255,255,255,.035)', ink: '#f4f4f2', prim: '#ffffff', primInk: '#0a0a0a', line: 'rgba(255,255,255,.07)', shadow: 'none', emBg: 'rgba(52,199,123,.15)', emInk: '#7ee0aa', warn: '#d9a54a', track: 'rgba(255,255,255,.12)', skel: '#262624', red: '#ff6369', redBg: '#e5484d' }
+      : { bg: '#f6f6f4', card: '#ffffff', surf: '#f7f7f5', chip: '#f2f2f0', chipHover: '#e9e8e4', hover: 'rgba(0,0,0,.025)', ink: '#0a0a0a', prim: '#0a0a0a', primInk: '#ffffff', line: 'rgba(0,0,0,.06)', shadow: '0 1px 3px rgba(0,0,0,.04)', emBg: '#e2f4ea', emInk: '#0b6b45', warn: '#c08a2e', track: 'rgba(0,0,0,.08)', skel: '#ecebe7', red: '#d1343a', redBg: '#d1343a' };
+    t.m55 = a(.55); t.m38 = a(.4);
+
+    const pill = (txt, kind) => ({ t: txt, style: 'height:26px; padding:0 10px; border-radius:999px; display:inline-flex; align-items:center; font-size:12px; font-weight:600; white-space:nowrap; transition:background-color .3s ease, color .3s ease; ' + (kind === 'vis' ? 'background:' + t.emBg + '; color:' + t.emInk : kind === 'oc' ? 'background:' + t.chip + '; color:' + t.m55 : 'background:transparent; box-shadow:inset 0 0 0 1px ' + a(.13) + '; color:' + t.m55) });
+    const pills = i => [pill(i.vis ? 'Visible' : 'Oculto', i.vis ? 'vis' : 'oc')].concat(this.pasado(i.f) ? [pill('Ya pasó', 'pa')] : []);
+    const thumb = (i, size) => 'width:' + size + 'px; height:' + size + 'px; flex:none; border-radius:14px; display:flex; align-items:center; justify-content:center; color:' + t.m55 + '; background:' + (i.hue != null ? this.cover(i.hue, dk) : t.chip);
+
+    const row = (i, sep) => {
+      const hov = desk && s.hover === i.id, tog = s.toggling === i.id;
+      return {
+        isSub: false, isEv: true, sep, n: i.n, meta: this.meta(i), noCover: i.hue == null, thumb: thumb(i, desk ? 48 : 56), pills: pills(i),
+        aria: i.n + ', ' + this.meta(i) + ', ' + (i.vis ? 'visible' : 'oculto'),
+        wrap: 'overflow:hidden; transition:max-height .28s ease, opacity .2s ease; max-height:' + (i.removing ? '0' : '160px') + '; opacity:' + (i.removing ? 0 : 1) + (s.hi === i.id ? '; animation:egHi 1.9s ease both' : ''),
+        abrir: () => this.setState({ ov: { k: 'ev', id: i.id } }),
+        enter: () => { if (desk && s.hover !== i.id) this.setState({ hover: i.id }); },
+        leave: () => { if (s.hover === i.id) this.setState({ hover: null }); },
+        hoverBox: 'display:flex; gap:4px; transition:opacity .15s ease; opacity:' + (hov || tog ? 1 : 0) + '; pointer-events:' + (hov ? 'auto' : 'none'),
+        tab: hov ? 0 : -1,
+        edit: e => { e.stopPropagation(); this.openForm(i); },
+        toggle: e => { e.stopPropagation(); this.toggleVis(i.id); },
+        del: e => { e.stopPropagation(); this.setState({ ov: { k: 'del', id: i.id } }); },
+        more: e => { e.stopPropagation(); this.setState({ ov: { k: 'ev', id: i.id } }); },
+        tog, notTog: !tog, eye: i.vis ? this.EYE_OFF : this.EYE, toggleLbl: i.vis ? 'Ocultar de /eventos' : 'Mostrar en /eventos'
+      };
+    };
+
+    const q = s.q.trim();
+    const filtered = q ? s.items.filter(i => this.norm(i.n).includes(this.norm(q))) : s.items;
+    const years = [...new Set(filtered.map(i => +i.f.slice(0, 4)))].sort((x, y) => y - x);
+    const anioActual = +this.HOY.slice(0, 4);
+    const anios = s.loading ? [] : years.map((y, yi) => {
+      const its = filtered.filter(i => +i.f.slice(0, 4) === y);
+      const vivos = its.filter(i => !i.removing), ocultos = vivos.filter(i => !i.vis).length;
+      const open = q ? true : !!s.open[y];
+      let list = [];
+      const add = arr => arr.forEach(i => { const prev = list[list.length - 1]; list.push(row(i, !!prev && !prev.isSub)); });
+      if (y === anioActual) {
+        const up = its.filter(i => !this.pasado(i.f)).sort((x, z) => x.f.localeCompare(z.f));
+        const pa = its.filter(i => this.pasado(i.f)).sort((x, z) => z.f.localeCompare(x.f));
+        add(up);
+        if (pa.length) { list.push({ isSub: true, isEv: false, label: 'YA PASARON' }); add(pa); }
+      } else add(its.slice().sort((x, z) => x.f.localeCompare(z.f)));
+      return {
+        anio: y, open, exp: open ? 'true' : 'false', rows: list,
+        cant: vivos.length + (vivos.length === 1 ? ' evento' : ' eventos') + (ocultos ? ' · ' + ocultos + (ocultos === 1 ? ' oculto' : ' ocultos') : ''),
+        toggle: () => { if (!q) this.setState(st => ({ open: Object.assign({}, st.open, { [y]: !st.open[y] }) })); },
+        sec: 'margin-top:' + (yi === 0 ? 28 : 18) + 'px; animation:egIn .35s ease both; animation-delay:' + (yi * 60) + 'ms',
+        chev: 'transition:transform .25s ease; transform:rotate(' + (open ? 180 : 0) + 'deg)',
+        collapse: 'display:grid; grid-template-rows:' + (open ? '1fr' : '0fr') + '; transition:grid-template-rows .3s cubic-bezier(.3,.7,.2,1)'
+      };
+    });
+
+    const oi = s.ov && s.ov.id ? s.items.find(i => i.id === s.ov.id) : null;
+    const ovK = s.ov ? s.ov.k : null;
+    const hayOv = !!s.ov && (ovK === 'leave' || ovK === 'prev' || !!oi);
+    const tog = oi && s.toggling === oi.id;
+    const ev = oi ? {
+      n: oi.n, meta: this.meta(oi), pills: pills(oi), desc: oi.desc, hasDesc: !!oi.desc, hasLink: !!oi.link, link: oi.link.replace(/^https:\/\//, ''), noCover: oi.hue == null,
+      cover: 'width:100%; aspect-ratio:16/10; border-radius:22px; display:flex; align-items:center; justify-content:center; background:' + (oi.hue != null ? this.cover(oi.hue, dk) : t.chip),
+      edit: () => this.openForm(oi), toggle: () => this.toggleVis(oi.id), tog, toggleTxt: oi.vis ? 'Ocultar de /eventos' : 'Mostrar en /eventos',
+      del: () => this.setState({ ov: { k: 'del', id: oi.id } })
+    } : { n: '', meta: '', pills: [], desc: '', hasDesc: false, hasLink: false, link: '', noCover: true, cover: '', tog: false, toggleTxt: '' };
+
+    const f = s.form || { n: '', f: '', ini: '', fin: '', desc: '', link: '', hue: null };
+    const errHor = !!(f.ini && f.fin && f.fin <= f.ini);
+    const lk = f.link.trim(), errLink = !!lk && !this.linkOk(lk);
+    const dom = lk && !errLink ? new URL(lk).hostname.replace(/^www\./, '') : '';
+    const falta = !f.n.trim() || !f.f;
+    const guardarOff = falta || errHor || errLink || s.portada === 'subiendo' || s.saving;
+    const razon = s.saving ? '' : falta ? 'Completá el nombre y la fecha.' : errHor || errLink ? 'Corregí lo marcado.' : s.portada === 'subiendo' ? 'Esperá a que termine de subir la portada.' : '';
+    const dirty = s.form ? this.snap(s.form, s.portada) !== s.init : false;
+    const fld = err => 'display:block; width:100%; max-width:100%; min-width:0; -webkit-appearance:none; appearance:none; text-align:left; height:56px; padding:0 18px; border:0; border-radius:16px; background:' + t.surf + '; color:' + t.ink + '; font-size:16px; font-weight:600; color-scheme:' + (dk ? 'dark' : 'light') + '; box-shadow:' + (err ? 'inset 0 0 0 2px ' + t.warn : 'inset 0 0 0 1px ' + t.line) + '; transition:box-shadow .15s';
+    const pvHue = s.portada === 'lista' ? f.hue : null;
+    const btnBase = 'border:0; border-radius:999px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap';
+    const H = desk ? 50 : 58;
+
+    return {
+      t,
+      verMobile: () => this.setState({ device: 'm', hover: null }), verPC: () => this.setState({ device: 'pc', ov: s.ov && s.ov.k === 'prev' ? null : s.ov }),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(!desk), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      presets: [['lista', 'Lista'], ['buscar', 'Buscar “noche”'], ['sinres', 'Búsqueda sin resultados'], ['vacio', 'Sin eventos'], ['cargando', 'Cargando'], ['panel', 'Panel de un evento'], ['eliminar', 'Confirmar eliminar'], ['nuevo', 'Formulario nuevo'], ['editar', 'Editar con portada'], ['errores', 'Errores del formulario'], ['subida', 'Error de subida'], ['salir', 'Salir sin guardar']].map(([k, tt]) => ({ t: tt, ir: () => this.preset(k) })),
+      frameW: desk ? '1440px' : '390px', frameH: desk ? '900px' : '844px', frameR: desk ? '14px' : '40px',
+      isDesktop: desk, isMobile: !desk, scrollRef: this.scrollRef, sheetRef: this.sheetRef,
+      isList: s.screen === 'list', isForm: s.screen === 'form',
+      pad: desk ? '48px 40px 80px' : '59px 16px 56px', formPad: desk ? '48px 40px 80px' : '59px 16px 170px',
+      h1: desk ? '36px' : '30px', h1Form: desk ? '30px' : '26px', yearSize: desk ? '30px' : '26px',
+      rot: 'margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:' + t.m38,
+      rotS: 'font-size:11.5px; font-weight:600; letter-spacing:.07em; color:' + t.m38,
+      subRot: 'margin:0; padding:18px 16px 8px; font-size:12px; font-weight:600; letter-spacing:.07em; color:' + t.m38 + '; border-top:1px solid ' + t.line,
+      backBtn: 'width:44px; height:44px; flex:none; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+      alPanel: () => this.aviso('Vuelve a Panel de eventos'),
+      nuevo: () => this.openForm(null),
+      nuevoBtn: btnBase + '; height:' + H + 'px; padding:0 22px; background:' + t.prim + '; color:' + t.primInk + '; font-size:' + (desk ? 15 : 16.5) + 'px; ' + (desk ? 'flex:none' : 'flex:1 1 100%; width:100%'),
+      primSmall: btnBase + '; height:50px; padding:0 22px; background:' + t.prim + '; color:' + t.primInk + '; font-size:15px',
+      chipBtn: btnBase + '; height:44px; padding:0 18px; background:' + t.chip + '; color:' + t.ink + '; font-size:14px',
+      searchWrap: 'display:flex; align-items:center; gap:10px; height:52px; margin-top:20px; padding:0 8px 0 18px; border-radius:999px; background:' + t.surf + '; box-shadow:inset 0 0 0 1px ' + t.line + '; max-width:' + (desk ? '420px' : 'none'),
+      searchInput: 'flex:1; min-width:0; height:100%; border:0; background:transparent; color:' + t.ink + '; font-size:16px; font-weight:500',
+      clearBtn: 'width:36px; height:36px; flex:none; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+      q: s.q, hayQ: !!s.q, onQ: e => this.setState({ q: e.target.value }), limpiarQ: () => this.setState({ q: '' }),
+      loading: s.loading,
+      sk: 'background:' + t.skel + '; border-radius:8px; animation:egPulse 1.2s ease-in-out infinite',
+      skRows: [['58%', '40%'], ['46%', '34%'], ['62%', '42%'], ['50%', '36%']].map((w, i) => ({ w1: w[0], w2: w[1], bt: i ? '1px solid ' + t.line : '0' })),
+      vacio: !s.loading && !s.items.length,
+      sinRes: !s.loading && !!s.items.length && !!q && !filtered.length,
+      anios,
+      yearBtn: 'width:100%; min-height:56px; display:flex; align-items:center; gap:12px; padding:6px 4px 6px 6px; margin-bottom:12px; border:0; border-radius:20px; background:transparent; color:' + t.ink + '; cursor:pointer; text-align:left; transition:background-color .15s',
+      chevWrap: 'margin-left:auto; width:44px; height:44px; flex:none; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center',
+      pcGrid: 'display:grid; grid-template-columns:48px minmax(0,1.5fr) minmax(0,1fr) 190px 176px; gap:18px; align-items:center',
+      pcRow: 'padding:12px 20px; cursor:pointer; transition:background-color .15s',
+      sepLine: 'height:1px; margin-left:' + (desk ? '86px' : '86px') + '; background:' + t.line,
+      mobRow: 'width:100%; min-height:80px; display:flex; align-items:center; gap:14px; padding:12px 16px; border:0; background:transparent; color:' + t.ink + '; text-align:left; cursor:pointer; font-family:inherit',
+      roundSm: 'width:36px; height:36px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background-color .15s',
+      roundSmRed: 'width:36px; height:36px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.red + '; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background-color .15s',
+      roundSmGhost: 'width:36px; height:36px; border:0; border-radius:999px; background:transparent; color:' + t.m55 + '; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background-color .15s',
+      spinSm: 'width:15px; height:15px; border-radius:999px; border:2px solid currentColor; border-right-color:transparent; animation:egSpin .7s linear infinite; display:inline-block',
+      spin: 'width:18px; height:18px; border-radius:999px; border:2.5px solid currentColor; border-right-color:transparent; animation:egSpin .7s linear infinite',
+
+      formTitulo: s.editId ? 'Editar evento' : 'Nuevo evento',
+      formCols: desk ? 'minmax(0,560px) minmax(0,380px)' : 'minmax(0,1fr)',
+      pastNotice: !!s.editId && !!f.f && this.pasado(f.f),
+      pVacio: s.portada === 'vacio', pSubiendo: s.portada === 'subiendo', pLista: s.portada === 'lista', pError: s.portada === 'error', pW: s.pW,
+      subirPortada: () => this.subirPortada(),
+      quitarPortada: () => this.setState(st => ({ portada: 'vacio', form: Object.assign({}, st.form, { hue: null }), pvN: st.pvN + 1 })),
+      zona: 'width:100%; max-width:280px; aspect-ratio:1/1; padding:20px; border:2px dashed ' + a(.22) + '; border-radius:22px; background:' + (dk ? 'rgba(255,255,255,.02)' : 'rgba(255,255,255,.6)') + '; color:' + t.ink + '; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; cursor:pointer',
+      zonaSolid: 'width:100%; max-width:280px; aspect-ratio:1/1; padding:20px; border-radius:22px; background:' + t.card + '; box-shadow:' + t.shadow + '; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; text-align:center',
+      zonaImg: 'width:100%; max-width:280px; aspect-ratio:1/1; border-radius:22px; display:flex; align-items:flex-end; justify-content:flex-start; padding:12px; background:' + (f.hue != null ? this.cover(f.hue, dk) : t.chip),
+      zonaErr: 'width:100%; max-width:280px; aspect-ratio:1/1; padding:20px; border:2px dashed ' + t.warn + '; border-radius:22px; background:transparent; color:' + t.ink + '; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; cursor:pointer',
+      fN: f.n, fF: f.f, fIni: f.ini, fFin: f.fin, fDesc: f.desc, fLink: f.link,
+      onN: e => this.setF('n', e.target.value), onF: e => this.setF('f', e.target.value), onIni: e => this.setF('ini', e.target.value), onFin: e => this.setF('fin', e.target.value), onDesc: e => this.setF('desc', e.target.value), onLink: e => this.setF('link', e.target.value),
+      fld: fld(false), fldFin: fld(errHor), fldLink: fld(errLink),
+      area: 'width:100%; min-height:120px; padding:14px 18px; border:0; border-radius:20px; resize:vertical; background:' + t.surf + '; color:' + t.ink + '; font-size:16px; line-height:1.5; font-weight:500; box-shadow:inset 0 0 0 1px ' + t.line,
+      descCount: f.desc.length + ' / 400',
+      errHor, errLink, errHorAria: errHor ? 'true' : 'false', errLinkAria: errLink ? 'true' : 'false', hayDom: !!dom, dom,
+      errTxt: 'margin:8px 4px 0; font-size:13.5px; line-height:1.45; font-weight:600; color:' + t.ink,
+      verPrevia: () => this.setState({ ov: { k: 'prev' } }),
+      razon, hayRazon: !!razon, guardarOff, saving: s.saving,
+      guardarTxt: s.saving ? 'Guardando…' : s.editId ? 'Guardar cambios' : 'Guardar evento',
+      guardarBtn: btnBase + '; flex:1; height:' + H + 'px; padding:0 24px; background:' + t.prim + '; color:' + t.primInk + '; font-size:' + (desk ? 15.5 : 16.5) + 'px; opacity:' + (guardarOff && !s.saving ? .3 : 1) + '; cursor:' + (guardarOff ? 'default' : 'pointer') + '; transition:opacity .2s' + (desk ? '; flex:none; min-width:200px' : ''),
+      cancelarBtn: btnBase + '; height:' + H + 'px; padding:0 22px; background:' + t.chip + '; color:' + t.ink + '; font-size:' + (desk ? 15.5 : 16) + 'px; flex:none',
+      guardar: () => { if (!guardarOff) this.guardar(); },
+      salir: () => { if (dirty) this.setState({ ov: { k: 'leave' } }); else this.volver(); },
+      salirSinGuardar: () => this.volver(),
+      footMob: !desk && s.screen === 'form',
+
+      pvCard: 'border-radius:26px; overflow:hidden; background:' + t.card + '; box-shadow:' + (dk ? 'none' : '0 1px 3px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.04)') + '; animation:' + (s.pvN % 2 ? 'egPvA' : 'egPvB') + ' .25s ease both',
+      pvCover: 'width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; background:' + (pvHue != null ? this.cover(pvHue, dk) : t.chip),
+      pvNoCover: pvHue == null,
+      pvChip: 'display:inline-flex; align-items:center; height:28px; padding:0 12px; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; font-size:12px; font-weight:700; letter-spacing:.05em',
+      pvFecha: f.f ? this.fecha(f.f).toUpperCase() : 'FECHA',
+      pvNombre: f.n.trim() || 'Nombre del evento', pvNameInk: f.n.trim() ? t.ink : t.m38,
+      pvHor: this.hor(f.ini, errHor ? '' : f.fin), pvHayHor: !!f.ini,
+      pvDesc: f.desc, pvHayDesc: !!f.desc.trim(), pvHayLink: !!dom,
+      pvBtn: 'display:flex; align-items:center; justify-content:center; height:46px; margin-top:16px; border-radius:999px; background:' + t.prim + '; color:' + t.primInk + '; font-size:14.5px; font-weight:600',
+
+      hayOv, ovEv: ovK === 'ev' && !!oi, ovDel: ovK === 'del' && !!oi, ovLeave: ovK === 'leave', ovPrev: ovK === 'prev' && !desk,
+      ovAria: ovK === 'del' ? 'Eliminar evento' : ovK === 'leave' ? 'Salir sin guardar' : ovK === 'prev' ? 'Vista previa' : 'Detalle del evento',
+      ev, delNombre: oi ? oi.n : '',
+      confirmarDel: () => { if (oi) this.eliminar(oi.id); },
+      ovBack: 'position:absolute; inset:0; z-index:40; background:rgba(0,0,0,.42); display:flex; animation:egFa .2s ease; ' + (desk ? 'align-items:center; justify-content:center' : 'align-items:flex-end'),
+      ovPanel: 'max-height:92%; overflow-y:auto; background:' + t.card + '; ' + (desk ? 'width:' + (ovK === 'ev' ? 520 : 480) + 'px; border-radius:28px; padding:24px; box-shadow:0 24px 60px rgba(0,0,0,.22); animation:egPop .2s ease-out' : 'width:100%; border-radius:28px 28px 0 0; padding:0 16px 34px; animation:egSheet .28s cubic-bezier(.2,.8,.2,1)'),
+      ovBtns: 'display:flex; gap:10px; margin-top:22px; ' + (desk ? 'flex-direction:row-reverse' : 'flex-direction:column'),
+      primFull: btnBase + '; width:100%; height:' + (desk ? 50 : 56) + 'px; background:' + t.prim + '; color:' + t.primInk + '; font-size:15.5px',
+      chipFull: btnBase + '; width:100%; height:' + (desk ? 50 : 56) + 'px; background:' + t.chip + '; color:' + t.ink + '; font-size:15.5px',
+      redFull: btnBase + '; width:100%; height:' + (desk ? 50 : 56) + 'px; background:' + t.redBg + '; color:#ffffff; font-size:15.5px',
+      textRed: btnBase + '; width:100%; height:48px; background:transparent; color:' + t.red + '; font-size:15.5px',
+      cerrarOv: () => this.setState({ ov: null }), stop: e => e.stopPropagation(),
+      dragStart: e => { this.dY = e.clientY; this.dDy = 0; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) {} if (this.sheetRef.current) this.sheetRef.current.style.transition = 'none'; },
+      dragMove: e => { if (this.dY == null) return; const dy = Math.max(0, e.clientY - this.dY); this.dDy = dy; if (this.sheetRef.current) this.sheetRef.current.style.transform = 'translateY(' + dy + 'px)'; },
+      dragEnd: () => { if (this.dY == null) return; const dy = this.dDy; this.dY = null; const el = this.sheetRef.current; if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = ''; } if (dy > 90) this.setState({ ov: null }); },
+      hayToast: !!s.toast, toastTxt: s.toast ? s.toast.txt : '',
+      toastBottom: desk ? '32px' : s.screen === 'form' ? '150px' : '40px'
+    };
+  }
+}
+</script>
+</body>
+</html>

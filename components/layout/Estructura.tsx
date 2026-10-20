@@ -51,7 +51,7 @@ const RUTAS_CON_HERO = ['/', '/gcx', '/ninez'];
 const RUTAS_A_TODO_ANCHO = ['/', '/store', '/gcx', '/ninez', '/alabanza', '/prode', '/nocturna-inscripcion', '/voluntarios', '/notificaciones', '/panel-eventos'];
 
 /** Lo mismo, pero para familias enteras de rutas. */
-const COMIENZOS_A_TODO_ANCHO = ['/punto-de-informacion', '/coordinators', '/audiencia-servicios'];
+const COMIENZOS_A_TODO_ANCHO = ['/punto-de-informacion', '/coordinators', '/audiencia-servicios', '/eventos/admin/general'];
 
 const estaEnLaLista = (pathname: string, exactas: string[], comienzos: string[] = []) =>
     exactas.includes(pathname) || comienzos.some(c => pathname.startsWith(c));
