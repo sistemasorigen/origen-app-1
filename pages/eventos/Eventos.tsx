@@ -517,8 +517,7 @@ const Eventos: React.FC = () => {
 
                 {/* ── Encabezado ── */}
                 <div className="ev-entra">
-                    <p className={rotulo}>ORIGEN · COMUNIDAD</p>
-                    <h1 className="mt-2.5 m-0 text-[40px] lg:text-[52px] leading-none font-semibold tracking-[-.035em]">
+                    <h1 className="m-0 text-[40px] lg:text-[52px] leading-none font-semibold tracking-[-.035em]">
                         Eventos
                     </h1>
                     <p className={`mt-2.5 m-0 text-[16px] leading-[1.5] ${T.suave}`}>
