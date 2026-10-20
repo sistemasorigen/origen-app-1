@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes peIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes peFade{from{opacity:0}to{opacity:1}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">VISTA</span>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ROL</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px">
+      <sc-for list="{{ roles }}" as="r" hint-placeholder-count="4"><button onClick="{{ r.ir }}" style="{{ r.style }}">{{ r.t }}</button></sc-for>
+    </div>
+    <button onClick="{{ toggle2025 }}" style="height:32px; padding:0 13px; border:1px solid #e2e0db; border-radius:999px; background:#fff; color:#0a0a0a; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap">{{ toggle2025Txt }}</button>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}; background:{{ t.bg }}; box-shadow:0 6px 28px rgba(0,0,0,.14); color:{{ t.ink }}">
+    <div style="position:absolute; inset:0; overflow-y:auto; overflow-x:hidden">
+      <div style="max-width:1120px; margin:0 auto; padding:{{ pad }}">
+
+        <div style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px 24px; animation:peIn .35s ease both">
+          <div style="flex:1 1 320px; min-width:0">
+            <p style="{{ rot }}">ADMINISTRACIÓN</p>
+            <h1 style="margin:8px 0 0; font-size:{{ h1 }}; line-height:1.08; font-weight:600; letter-spacing:-.03em; color:{{ t.ink }}">Panel de eventos</h1>
+            <p style="margin:8px 0 0; font-size:15.5px; line-height:1.5; color:{{ t.m55 }}">Elegí el evento que querés administrar.</p>
+          </div>
+          <sc-if value="{{ verConfig }}" hint-placeholder-val="{{ true }}">
+            <div style="{{ cfgWrap }}" onMouseEnter="{{ tipOn }}" onMouseLeave="{{ tipOff }}">
+              <button onClick="{{ irConfig }}" aria-describedby="pe-cfg-ayuda" style="{{ cfgBtn }}" style-hover="background:{{ t.chipHover }}" style-active="transform:scale(.98)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.54V21a2 2 0 01-4 0v-.09a1.7 1.7 0 00-1.1-1.54 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.54-1H3a2 2 0 010-4h.09a1.7 1.7 0 001.54-1.1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34H9a1.7 1.7 0 001-1.54V3a2 2 0 014 0v.09a1.7 1.7 0 001 1.54 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87V9a1.7 1.7 0 001.54 1H21a2 2 0 010 4h-.09a1.7 1.7 0 00-1.54 1z"></path></svg>
+                Configurar /eventos
+              </button>
+              <p id="pe-cfg-ayuda" style="{{ cfgAyuda }}">Crear, editar y publicar los eventos de la página pública.</p>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-for list="{{ anios }}" as="y" hint-placeholder-count="2">
+          <section style="{{ y.sec }}">
+            <button onClick="{{ y.toggle }}" aria-expanded="{{ y.exp }}" aria-controls="{{ y.cid }}" style="{{ yearBtn }}" style-hover="background:{{ t.hover }}">
+              <span style="font-size:{{ yearSize }}; line-height:1; font-weight:600; letter-spacing:-.03em; color:{{ t.ink }}">{{ y.anio }}</span>
+              <span style="font-size:14.5px; font-weight:600; color:{{ t.m55 }}">{{ y.cant }}</span>
+              <span style="{{ y.chevWrap }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="{{ y.chev }}"><path d="M6 9l6 6 6-6"></path></svg></span>
+            </button>
+            <div id="{{ y.cid }}" style="{{ y.collapse }}">
+              <div style="overflow:hidden; min-height:0">
+                <sc-if value="{{ y.open }}" hint-placeholder-val="{{ true }}">
+                  <div style="{{ grid }}">
+                    <sc-for list="{{ y.cards }}" as="c" hint-placeholder-count="4">
+                      <button onClick="{{ c.ir }}" style="{{ c.style }}" style-hover="{{ cardHover }}" style-active="transform:scale(.98)" onMouseEnter="{{ c.enter }}" onMouseLeave="{{ c.leave }}" onFocus="{{ c.enter }}" onBlur="{{ c.leave }}">
+                        <span style="{{ circle }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg></span>
+                        <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; text-align:left">
+                          <span style="font-size:17px; line-height:1.25; font-weight:600; color:{{ t.ink }}">{{ c.nombre }}</span>
+                          <span style="{{ desc }}">{{ c.desc }}</span>
+                        </span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ c.arrow }}"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </section>
+        </sc-for>
+
+        <sc-if value="{{ verHerr }}" hint-placeholder-val="{{ true }}">
+          <section style="{{ herrSec }}">
+            <p style="{{ rot }}; padding:0 4px">HERRAMIENTAS</p>
+            <div style="{{ grid }}">
+              <sc-for list="{{ herr }}" as="c" hint-placeholder-count="1">
+                <button onClick="{{ c.ir }}" style="{{ c.style }}" style-hover="{{ cardHover }}" style-active="transform:scale(.98)" onMouseEnter="{{ c.enter }}" onMouseLeave="{{ c.leave }}" onFocus="{{ c.enter }}" onBlur="{{ c.leave }}">
+                  <span style="{{ circle }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg></span>
+                  <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; text-align:left">
+                    <span style="font-size:17px; line-height:1.25; font-weight:600; color:{{ t.ink }}">{{ c.nombre }}</span>
+                    <span style="{{ desc }}">{{ c.desc }}</span>
+                  </span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ c.arrow }}"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+                </button>
+              </sc-for>
+            </div>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{ vacio }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:40px; padding:64px 24px; border-radius:28px; background:{{ t.card }}; box-shadow:{{ t.shadow }}; display:flex; flex-direction:column; align-items:center; text-align:center; animation:peIn .35s ease .08s both">
+            <span style="width:64px; height:64px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; color:{{ t.m55 }}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zM8 3v4M16 3v4M4 10h16"></path></svg></span>
+            <p style="margin:20px 0 0; font-size:18px; font-weight:600; color:{{ t.ink }}">Todavía no tenés eventos para administrar</p>
+            <p style="margin:8px 0 0; max-width:320px; font-size:14.5px; line-height:1.55; color:{{ t.m55 }}">Si creés que es un error, hablá con el encargado de eventos.</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position:absolute; left:50%; bottom:{{ toastBottom }}; z-index:60; transform:translateX(-50%); width:max-content; max-width:calc(100% - 32px); padding:13px 20px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:14px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.2); animation:peIn .2s ease both">{{ toastTxt }}</div>
+    </sc-if>
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+      <span aria-hidden="true" style="position:absolute; left:50%; bottom:8px; z-index:70; transform:translateX(-50%); width:134px; height:5px; border-radius:999px; background:{{ t.m38 }}; pointer-events:none"></span>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1500,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  I = {
+    moon: 'M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z',
+    balloon: 'M12 15c-3.3 0-5.5-3-5.5-6.2A5.5 5.5 0 0112 3a5.5 5.5 0 015.5 5.8c0 3.2-2.2 6.2-5.5 6.2zM12 15l-1 1.5h2L12 15M12 16.5c0 2 1.5 2.5 1.5 4.5',
+    tie: 'M10 3h4l-1 3h-2zM11 6l-2.5 9.5L12 21l3.5-5.5L13 6',
+    shield: 'M12 3l7.5 3v5.5c0 4.5-3.2 8.2-7.5 9.5-4.3-1.3-7.5-5-7.5-9.5V6z',
+    trophy: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM7 6H4v1a3 3 0 003 3M17 6h3v1a3 3 0 01-3 3',
+    quiz: 'M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1.1-1.5 2.2M12 17h.01'
+  };
+  EV = [
+    { id: 'noc26', y: 2026, n: 'Nocturna', d: 'Planilla de inscripciones, entradas y acreditación del evento.', ic: 'moon', r: ['acred'] },
+    { id: 'nin26', y: 2026, n: 'Día del Niño', d: 'Gestión de inscripciones, entradas y check-in del evento.', ic: 'balloon', r: [] },
+    { id: 'pad26', y: 2026, n: 'Día del Padre', d: 'Gestión de inscripciones, puntos y ranking del evento.', ic: 'tie', r: [] },
+    { id: 'tri26', y: 2026, n: 'Tribal Wars', d: 'Gestión de inscripciones por tribu del evento.', ic: 'shield', r: [] },
+    { id: 'pro26', y: 2026, n: 'Prode Mundial', d: 'Gestión de configuración, partidos y resultados del Prode.', ic: 'trophy', r: ['prode'] },
+    { id: 'noc25', y: 2025, n: 'Nocturna', d: 'Planilla de inscripciones, entradas y acreditación del evento.', ic: 'moon', r: [] },
+    { id: 'nin25', y: 2025, n: 'Día del Niño', d: 'Gestión de inscripciones, entradas y check-in del evento.', ic: 'balloon', r: [] }
+  ];
+  HERR = [{ id: 'kahoot', n: 'Kahoot Origen', d: 'Crear y gestionar juegos de trivia en vivo con PIN.', ic: 'quiz', r: [] }];
+  state = { device: 'm', dark: false, role: 'admin', open: { 2026: true, 2025: false }, hover: null, toast: null, tip: false, mountN: 0 };
+  timers = [];
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  aviso(txt) { const k = Date.now(); this.setState({ toast: { txt, k } }); this.timers.push(setTimeout(() => this.setState(s => s.toast && s.toast.k === k ? { toast: null } : null), 2200)); }
+  ve(it) { const r = this.state.role; return r === 'admin' || it.r.includes(r); }
+
+  renderVals() {
+    const s = this.state, desk = s.device === 'pc', dk = s.dark;
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const a = o => (dk ? 'rgba(255,255,255,' : 'rgba(0,0,0,') + o + ')';
+    const t = dk
+      ? { bg: '#111110', card: '#1b1b1a', chip: '#2a2a28', chipHover: '#333331', hover: 'rgba(255,255,255,.04)', ink: '#f4f4f2', prim: '#ffffff', primInk: '#0a0a0a', shadow: 'none', lift: '0 10px 28px rgba(0,0,0,.45)' }
+      : { bg: '#f6f6f4', card: '#ffffff', chip: '#f2f2f0', chipHover: '#e9e8e4', hover: 'rgba(0,0,0,.03)', ink: '#0a0a0a', prim: '#0a0a0a', primInk: '#ffffff', shadow: '0 1px 3px rgba(0,0,0,.04)', lift: '0 10px 28px rgba(0,0,0,.08)' };
+    t.m55 = a(.55); t.m38 = a(.4);
+
+    const card = (it, i, base) => {
+      const hov = s.hover === it.id;
+      return {
+        nombre: it.n, desc: it.d, icon: this.I[it.ic],
+        ir: () => this.aviso('Abre el panel de ' + it.n + (it.y ? ' ' + it.y : '')),
+        enter: () => this.setState({ hover: it.id }), leave: () => this.setState(st => st.hover === it.id ? { hover: null } : null),
+        style: 'width:100%; min-height:96px; display:flex; align-items:center; gap:16px; padding:20px; border:0; border-radius:26px; background:' + t.card + '; color:' + t.ink + '; box-shadow:' + t.shadow + '; cursor:pointer; font-family:inherit; transition:transform .18s ease, box-shadow .18s ease; animation:peFade .3s ease both; animation-delay:' + (base + i * 45) + 'ms',
+        arrow: 'flex:none; color:' + (hov ? t.ink : t.m38) + '; transition:transform .18s ease, color .18s ease; transform:translateX(' + (hov ? 4 : 0) + 'px)'
+      };
+    };
+
+    const years = [...new Set(this.EV.filter(e => e.y !== 2025 || s.show2025 !== false).map(e => e.y))].sort((x, y) => y - x);
+    const anios = years.map((y, yi) => {
+      const evs = this.EV.filter(e => e.y === y && this.ve(e));
+      if (!evs.length) return null;
+      const open = !!s.open[y];
+      return {
+        anio: y, cant: evs.length + (evs.length === 1 ? ' evento' : ' eventos'), open, exp: open ? 'true' : 'false', cid: 'pe-y' + y,
+        toggle: () => this.setState(st => ({ open: Object.assign({}, st.open, { [y]: !st.open[y] }) })),
+        sec: 'margin-top:' + (yi === 0 ? (desk ? 44 : 32) : 20) + 'px; animation:peIn .38s ease both; animation-delay:' + (80 + yi * 70) + 'ms',
+        chevWrap: 'margin-left:auto; width:44px; height:44px; flex:none; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center',
+        chev: 'transition:transform .25s ease; transform:rotate(' + (open ? 180 : 0) + 'deg)',
+        collapse: 'display:grid; grid-template-rows:' + (open ? '1fr' : '0fr') + '; transition:grid-template-rows .3s cubic-bezier(.3,.7,.2,1)',
+        cards: evs.map((e, i) => card(e, i, 40))
+      };
+    }).filter(Boolean);
+    const herr = this.HERR.filter(h => this.ve(h)).map((h, i) => card(h, i, 0));
+    const verConfig = s.role === 'admin';
+    const vacio = !anios.length && !herr.length;
+
+    return {
+      t,
+      verMobile: () => this.setState({ device: 'm', tip: false }), verPC: () => this.setState({ device: 'pc' }),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(!desk), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      roles: [['admin', 'Super admin'], ['acred', 'Solo ACREDITACION'], ['prode', 'Solo PRODE'], ['nada', 'Sin acceso']].map(([k, tt]) => ({ t: tt, style: seg(s.role === k), ir: () => this.setState({ role: k }) })),
+      toggle2025: () => this.setState(st => ({ open: Object.assign({}, st.open, { 2025: !st.open[2025] }) })),
+      toggle2025Txt: s.open[2025] ? 'Plegar 2025' : 'Desplegar 2025',
+      frameW: desk ? '1440px' : '390px', frameH: desk ? '900px' : '844px', frameR: desk ? '14px' : '40px',
+      isMobile: !desk,
+      pad: desk ? '64px 40px 80px' : '59px 16px 56px', h1: desk ? '36px' : '30px', yearSize: desk ? '30px' : '26px',
+      rot: 'margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:' + t.m38,
+      verConfig, irConfig: () => this.aviso('Abre la configuración de /eventos'),
+      cfgWrap: desk ? 'position:relative; flex:none' : 'flex:1 1 100%; min-width:0',
+      cfgBtn: 'width:' + (desk ? 'auto' : '100%') + '; height:' + (desk ? 46 : 52) + 'px; padding:0 20px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; gap:9px; font-size:15px; font-weight:600; cursor:pointer; white-space:nowrap; transition:background-color .15s, transform .12s',
+      cfgAyuda: desk
+        ? 'position:absolute; right:0; top:calc(100% + 10px); z-index:5; width:260px; margin:0; padding:10px 14px; border-radius:16px; background:' + t.prim + '; color:' + t.primInk + '; font-size:13px; line-height:1.45; font-weight:600; pointer-events:none; transition:opacity .15s ease, transform .15s ease; opacity:' + (s.tip ? 1 : 0) + '; transform:translateY(' + (s.tip ? 0 : -4) + 'px)'
+        : 'margin:8px 4px 0; font-size:13px; line-height:1.45; color:' + t.m55,
+      tipOn: () => { if (desk) this.setState({ tip: true }); }, tipOff: () => { if (s.tip) this.setState({ tip: false }); },
+      anios,
+      yearBtn: 'width:100%; min-height:56px; display:flex; align-items:baseline; gap:12px; padding:6px 4px 6px 6px; margin-bottom:12px; border:0; border-radius:20px; background:transparent; color:' + t.ink + '; cursor:pointer; text-align:left; transition:background-color .15s; align-items:center',
+      grid: 'display:grid; grid-template-columns:' + (desk ? 'repeat(auto-fill,minmax(440px,1fr))' : 'minmax(0,1fr)') + '; gap:12px; padding-bottom:6px',
+      circle: 'width:48px; height:48px; flex:none; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center',
+      desc: 'font-size:14px; line-height:1.45; font-weight:500; color:' + t.m55 + '; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden',
+      cardHover: 'transform:translateY(-2px); box-shadow:' + t.lift,
+      verHerr: herr.length > 0, herr,
+      herrSec: 'margin-top:' + (anios.length ? 36 : 40) + 'px; display:flex; flex-direction:column; gap:12px; animation:peIn .38s ease both; animation-delay:' + (80 + anios.length * 70) + 'ms',
+      vacio,
+      hayToast: !!s.toast, toastTxt: s.toast ? s.toast.txt : '', toastBottom: desk ? '32px' : '40px'
+    };
+  }
+}
+</script>
+</body>
+</html>
