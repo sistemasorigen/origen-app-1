@@ -376,6 +376,87 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
     }
 
+    /* Eventos generales (design-claude/Eventos Generales.dc.html). El
+       override global le pone a todo campo fondo blanco, borde slate, radio
+       de 8px y, al enfocar, un halo azul que REEMPLAZA al box-shadow de la
+       clase. Acá el buscador vive adentro de una píldora y tiene que
+       desaparecer, y los campos del formulario son la superficie gris sin
+       borde, con un anillo interior que marca el error en ámbar.
+
+       El anillo lo dibuja esta hoja y no Tailwind, por el halo azul: si lo
+       pusiera una clase, enfocar un campo mal escrito borraría la marca de
+       que está mal. Acá el estado lo dice aria-invalid, que es el mismo dato
+       que lee el lector de pantalla.
+
+       Scopeado por id, que le gana al !important global por especificidad. */
+    #eventos-generales input[type="search"] {
+      background-color: transparent !important;
+      color: inherit !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+    }
+
+    #eventos-generales input[type="search"]:focus {
+      outline: none !important;
+      box-shadow: none;
+    }
+
+    #evento-form input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    #evento-form textarea {
+      background-color: #f7f7f5 !important;
+      color: #0a0a0a !important;
+      border: 0 !important;
+      border-radius: 16px !important;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+    }
+
+    #evento-form textarea {
+      border-radius: 20px !important;
+    }
+
+    #evento-form input[aria-invalid="true"],
+    #evento-form textarea[aria-invalid="true"] {
+      box-shadow: inset 0 0 0 2px #c08a2e;
+    }
+
+    /* El foco va por outline para no pisar el anillo de adentro. */
+    #evento-form input:focus,
+    #evento-form textarea:focus {
+      outline: 2px solid #0a0a0a !important;
+      outline-offset: 2px;
+      border-color: transparent !important;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+    }
+
+    #evento-form input[aria-invalid="true"]:focus,
+    #evento-form textarea[aria-invalid="true"]:focus {
+      outline-color: #c08a2e !important;
+      box-shadow: inset 0 0 0 2px #c08a2e;
+    }
+
+    .dark #evento-form input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    .dark #evento-form textarea {
+      background-color: #232321 !important;
+      color: #f4f4f2 !important;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+    }
+
+    .dark #evento-form input[aria-invalid="true"],
+    .dark #evento-form textarea[aria-invalid="true"],
+    .dark #evento-form input[aria-invalid="true"]:focus {
+      box-shadow: inset 0 0 0 2px #d9a54a;
+    }
+
+    .dark #evento-form input:focus,
+    .dark #evento-form textarea:focus {
+      outline-color: #f4f4f2 !important;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+    }
+
+    .dark #evento-form input[aria-invalid="true"]:focus {
+      outline-color: #d9a54a !important;
+    }
+
     /* Punto de Información · carga de varios movimientos. El override global
        de arriba le pone fondo blanco, borde slate y radio a todo campo; acá el
        número vive ADENTRO del control de cantidad (- 6 +), así que el borde lo
@@ -1155,7 +1236,7 @@
         }
       })();
   </script>
-  <script type="module" crossorigin src="/assets/index-B2aGRpol.js"></script>
+  <script type="module" crossorigin src="/assets/index-RMXLzWlD.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-CVsVvX9w.css">
 </head>
 
@@ -1163,7 +1244,7 @@
   <!-- Accessibility: Skip to main content link -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <div id="root"></div>
+  <div id="root"></div>
 </body>
 
 </html>
