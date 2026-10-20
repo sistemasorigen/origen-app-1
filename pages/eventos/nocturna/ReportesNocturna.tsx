@@ -13,21 +13,24 @@
 // Dos piezas son propias porque la librería no las tiene: el medidor de
 // anillo y el gráfico por minuto. Las dos están abajo, comentadas.
 // ════════════════════════════════════════════════════════════════════════
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useReducedMotion } from 'framer-motion';
 import {
     ResponsiveContainer, BarChart, Bar, Brush, XAxis, YAxis, CartesianGrid, ReferenceLine, Tooltip,
 } from 'recharts';
-import { AlertCircle, ChevronLeft } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     C, FUENTE, Tarjeta, TituloTarjeta, NotaCobertura, Esqueleto, Kpi, Torta, FilaLeyenda,
 } from '../../../components/Reportes/PiezasTablero';
 import {
     getBaseNocturna, kpis, tortaAsistencia, porcentajeAsistencia, porMinuto,
-    horaDelMinuto, horaCorta, AZUL_SERIE, AMBAR_SERIE,
-    BaseNocturna, PuntoPorMinuto,
+    quienRetira, inscripcionesMultiples, asistenciaEnMultiples, listasDeRetiro,
+    horarios, ordenarHorarios, horaDelMinuto, horaCorta, horaExacta,
+    AZUL_SERIE, AMBAR_SERIE, GRIS_SERIE,
+    BaseNocturna, PuntoPorMinuto, FilaDeRetiro, FilaDeHorario, OrdenDeHorarios,
 } from '../../../services/reportesNocturna';
+import { haciaLaFicha, SeccionDeReportes } from './compartido/volver';
 import { User } from '../../../types';
 
 interface Props {
@@ -295,6 +298,185 @@ const PorMinuto: React.FC<{ puntos: PuntoPorMinuto[]; esMovil: boolean; hayMarca
     );
 };
 
+// ── Pieza propia 3: barras de conteo ────────────────────────────────────
+
+/**
+ * Tres o cuatro categorías con su barra y su número.
+ *
+ * No es recharts y es a propósito: para tres barras horizontales, un gráfico
+ * entero trae un contenedor que mide, un eje que autoescala y, en el
+ * teléfono, un ancho que puede salir en cero. Dos divs con un ancho en
+ * porcentaje dicen lo mismo, se leen igual de bien a 360 px y no pueden
+ * fallar. El largo es contra la categoría más grande, no contra el total:
+ * lo que se compara es una categoría con la otra.
+ */
+const BarrasDeConteo: React.FC<{
+    filas: Array<{ etiqueta: string; valor: number; color: string }>;
+}> = ({ filas }) => {
+    const techo = Math.max(1, ...filas.map(f => f.valor));
+    return (
+        <div className="mt-[18px]">
+            {filas.map((f, i) => (
+                <div key={f.etiqueta} className={i ? 'mt-4' : ''}>
+                    <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-[13px] font-semibold truncate" style={{ color: C.medio }}>{f.etiqueta}</span>
+                        <span className="shrink-0 text-[13.5px] font-semibold tabular-nums" style={{ color: C.tinta }}>{f.valor}</span>
+                    </div>
+                    <div className="mt-[7px] h-[9px] rounded-full overflow-hidden" style={{ background: '#eef0f3' }}>
+                        <div
+                            className="h-full rounded-full"
+                            style={{ width: `${(f.valor / techo) * 100}%`, background: f.color }}
+                        />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// ── Pieza propia 4: las tablas ──────────────────────────────────────────
+
+/** Diez filas de ~52 px: el alto con el que las tres listas quedan parejas. */
+const FILAS_VISIBLES = 10;
+const ALTO_DE_FILA = 52;
+
+const BOTON_VER = {
+    background: '#fff',
+    border: `1px solid ${C.borde}`,
+    color: C.tinta,
+} as const;
+
+/** "06:12:45" o el motivo por el que no hay hora. */
+const horaDeRetiro = (f: FilaDeRetiro) => horaExacta(f.retiradoAt) ?? 'Todavía no registrado';
+
+/**
+ * Una de las tres listas de retiro.
+ *
+ * Cada fila entera es el botón, como en la planilla de solicitudes: en una
+ * tabla de tres columnas angostas, apuntarle a un botón de 34 px desde el
+ * teléfono es peor que tocar la fila.
+ */
+const TablaDeRetiro: React.FC<{
+    titulo: string;
+    filas: FilaDeRetiro[];
+    esMovil: boolean;
+    onVer: (f: FilaDeRetiro) => void;
+}> = ({ titulo, filas, esMovil, onVer }) => (
+    // `h-full` para que las tres queden parejas en la compu aunque una tenga
+    // tres filas y la de al lado una sola.
+    <Tarjeta className="h-full flex flex-col overflow-hidden">
+        <div className="px-5 pt-[18px] pb-3">
+            <p className="m-0 text-[14.5px] font-semibold" style={{ color: C.tinta }}>
+                {titulo}
+                <span className="tabular-nums" style={{ color: C.tenue }}> · {filas.length}</span>
+            </p>
+        </div>
+
+        {filas.length === 0 ? (
+            <div className="mx-5 mb-[18px] px-4 py-8 rounded-xl text-center" style={{ background: C.fondo }}>
+                <p className="m-0 text-[13px] font-semibold" style={{ color: C.apagado }}>Nadie en esta lista.</p>
+            </div>
+        ) : (
+            <div
+                className="overflow-y-auto"
+                // En la compu las tres listas miden lo mismo y la larga se
+                // desplaza sola; en el teléfono, apilada, no hace falta.
+                style={esMovil ? undefined : { maxHeight: FILAS_VISIBLES * ALTO_DE_FILA }}
+            >
+                {filas.map(f => (esMovil ? (
+                    <div
+                        key={f.jovenId}
+                        className="flex items-center gap-3 px-4 py-3"
+                        style={{ borderTop: `1px solid ${C.bordeSuave}` }}
+                    >
+                        <div className="flex-1 min-w-0">
+                            <p className="m-0 text-[14px] font-semibold truncate" style={{ color: C.tinta }}>{f.adolescente}</p>
+                            <p className="mt-0.5 m-0 text-[12px] font-medium tabular-nums" style={{ color: C.apagado }}>
+                                {horaDeRetiro(f)}
+                            </p>
+                            {f.responsable !== '-' && (
+                                <p className="mt-0.5 m-0 text-[12.5px] font-medium truncate" style={{ color: C.medio }}>
+                                    {f.responsable}
+                                </p>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => onVer(f)}
+                            aria-label={`Ver los detalles de la inscripción de ${f.adolescente}`}
+                            className="shrink-0 h-11 px-3.5 rounded-[10px] text-[13px] font-semibold"
+                            style={BOTON_VER}
+                        >
+                            Ver detalles
+                        </button>
+                    </div>
+                ) : (
+                    <div
+                        key={f.jovenId}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => onVer(f)}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onVer(f); }
+                        }}
+                        aria-label={`Ver los detalles de la inscripción de ${f.adolescente}`}
+                        className="grid gap-2.5 items-center px-5 py-2.5 cursor-pointer hover:bg-slate-50"
+                        style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) 34px', borderTop: `1px solid ${C.bordeSuave}` }}
+                    >
+                        <div className="min-w-0">
+                            <p className="m-0 text-[13.5px] font-semibold truncate" title={f.adolescente} style={{ color: C.tinta }}>
+                                {f.adolescente}
+                            </p>
+                            <p className="mt-[3px] m-0 text-[11.5px] font-medium tabular-nums" style={{ color: C.apagado }}>
+                                {horaDeRetiro(f)}
+                            </p>
+                        </div>
+                        <p className="m-0 text-[13px] font-medium truncate" title={f.responsable} style={{ color: C.medio }}>
+                            {f.responsable}
+                        </p>
+                        <span
+                            aria-hidden="true"
+                            className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center"
+                            style={BOTON_VER}
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </span>
+                    </div>
+                )))}
+            </div>
+        )}
+    </Tarjeta>
+);
+
+const GRILLA_HORARIOS = 'minmax(0,1.2fr) minmax(0,1.2fr) 104px 104px 124px';
+const POR_PAGINA = 8;
+
+/** La celda de una hora: la hora, el motivo, o nada. */
+const celdaDeHora = (iso: string | null, ausente: boolean) =>
+    horaExacta(iso) ?? (ausente ? 'Ausente' : '—');
+
+/** La línea del teléfono: lo que pasó con ese adolescente, en una frase. */
+const lineaDeHorario = (f: FilaDeHorario): string => {
+    if (f.ausente) return 'Ausente';
+    if (!f.ingreso) return 'Sin registrar';
+    const entro = `Ingresó ${horaExacta(f.ingreso)}`;
+    return f.egreso ? `${entro} · Salió ${horaExacta(f.egreso)}` : `${entro} · Todavía adentro`;
+};
+
+const BotonDeOrden: React.FC<{ activo: boolean; onClick: () => void; children: React.ReactNode }> = ({ activo, onClick, children }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={activo}
+        className="h-11 md:h-[36px] px-3.5 rounded-[9px] text-[13px] font-semibold whitespace-nowrap"
+        style={activo
+            ? { background: C.tinta, color: '#fff' }
+            : { background: 'transparent', color: C.medio }}
+    >
+        {children}
+    </button>
+);
+
 // ── Esqueletos ──────────────────────────────────────────────────────────
 
 const EsqueletoDelTablero: React.FC = () => (
@@ -332,11 +514,36 @@ const EsqueletoDelTablero: React.FC = () => (
 
 const ReportesNocturna: React.FC<Props> = ({ currentUser }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const esMovil = useEsMovil();
 
     const [base, setBase] = useState<BaseNocturna | null>(null);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(false);
+
+    /**
+     * El orden y la página de la tabla de horarios viven en la URL, no en un
+     * useState: así la ficha de una inscripción puede devolver a quien la
+     * abrió al mismo lugar de la tabla del que salió, y recargar la pantalla
+     * no pierde nada. Se escriben con `replace` para no llenar el historial
+     * con un paso por cada clic.
+     */
+    const q = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const orden: OrdenDeHorarios = q.get('orden') === 'egreso' ? 'egreso' : 'ingreso';
+    const paginaPedida = Math.max(0, Math.floor(Number(q.get('pagina')) || 0));
+
+    const cambiarUrl = useCallback((cambios: Record<string, string | null>) => {
+        const siguiente = new URLSearchParams(location.search);
+        for (const [clave, valor] of Object.entries(cambios)) {
+            if (valor === null) siguiente.delete(clave);
+            else siguiente.set(clave, valor);
+        }
+        const texto = siguiente.toString();
+        navigate({ search: texto ? `?${texto}` : '' }, { replace: true });
+    }, [location.search, navigate]);
+
+    const seccionRetiros = useRef<HTMLDivElement | null>(null);
+    const seccionHorarios = useRef<HTMLDivElement | null>(null);
 
     const pedir = useCallback(async () => {
         setCargando(true);
@@ -354,8 +561,41 @@ const ReportesNocturna: React.FC<Props> = ({ currentUser }) => {
     const serie = useMemo(() => (base ? porMinuto(base) : null), [base]);
     const pct = useMemo(() => (base ? porcentajeAsistencia(base) : 0), [base]);
 
+    const retiros = useMemo(() => (base ? quienRetira(base) : null), [base]);
+    const multiples = useMemo(() => (base ? inscripcionesMultiples(base) : []), [base]);
+    const enMultiples = useMemo(() => (base ? asistenciaEnMultiples(base) : null), [base]);
+    const listas = useMemo(() => (base ? listasDeRetiro(base) : null), [base]);
+    const filasDeHorario = useMemo(
+        () => (base ? ordenarHorarios(horarios(base), orden) : []),
+        [base, orden],
+    );
+
+    const paginas = Math.max(1, Math.ceil(filasDeHorario.length / POR_PAGINA));
+    const pagina = Math.min(paginaPedida, paginas - 1);
+    const visibles = filasDeHorario.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
+
     const actualizado = horaCorta(base?.ultimoDato ?? null);
     const hayMarcas = !!k && (k.acreditados > 0 || k.marcadosAusentes > 0);
+
+    /** Abre la ficha dejando escrito de dónde salió, para la vuelta. */
+    const verLaFicha = useCallback((inscripcionId: string, seccion: SeccionDeReportes) => {
+        navigate(haciaLaFicha(inscripcionId, { orden, pagina, seccion }));
+    }, [navigate, orden, pagina]);
+
+    /**
+     * Volver de una ficha no tiene que dejar a nadie arriba de todo.
+     *
+     * La ficha devuelve con `?ver=` diciendo de qué sección salió; se baja
+     * hasta ahí una sola vez y se limpia el parámetro, para que una recarga
+     * posterior abra la pantalla donde empieza.
+     */
+    const volvio = q.get('ver');
+    useEffect(() => {
+        if (cargando || !volvio) return;
+        const destino = volvio === 'retiros' ? seccionRetiros.current : seccionHorarios.current;
+        if (destino) destino.scrollIntoView({ block: 'start', behavior: 'auto' });
+        cambiarUrl({ ver: null });
+    }, [cargando, volvio, cambiarUrl]);
 
     return (
         <div className="min-h-screen" style={{ background: C.fondo, fontFamily: FUENTE }}>
@@ -509,6 +749,264 @@ const ReportesNocturna: React.FC<Props> = ({ currentUser }) => {
                                     )}
                                 </NotaCobertura>
                             </Tarjeta>
+
+                            {/* ───────────────────── ESPECÍFICOS ───────────────────── */}
+                            <div className="mt-9">
+                                <RotuloDeSeccion>Específicos</RotuloDeSeccion>
+                            </div>
+
+                            <div className="grid lg:grid-cols-3 gap-3">
+                                <Tarjeta className="p-5 flex flex-col">
+                                    <TituloTarjeta
+                                        titulo="¿Quién los retira?"
+                                        detalle="Por inscripción, no por adolescente"
+                                    />
+                                    {retiros && (
+                                        <>
+                                            <div className="mt-5 flex flex-col sm:flex-row items-center sm:items-start gap-5 flex-1">
+                                                <Torta
+                                                    datos={[
+                                                        { nombre: 'El adulto que inscribió', valor: retiros.conElAdulto, color: AZUL_SERIE },
+                                                        { nombre: 'Otra persona', valor: retiros.conOtraPersona, color: AMBAR_SERIE },
+                                                    ]}
+                                                    porcentaje={0}
+                                                    centro={retiros.enElGrafico}
+                                                    etiqueta="inscripciones"
+                                                    tamano={140}
+                                                    separador
+                                                />
+                                                <div className="w-full sm:w-auto sm:flex-1 sm:pt-1">
+                                                    <FilaLeyenda primera color={AZUL_SERIE} nombre="El adulto que inscribió" valor={retiros.conElAdulto} />
+                                                    <FilaLeyenda color={AMBAR_SERIE} nombre="Otra persona" valor={retiros.conOtraPersona} />
+                                                </div>
+                                            </div>
+                                            <NotaCobertura>
+                                                {retiros.soloSeVanSolos > 0
+                                                    ? `${retiros.soloSeVanSolos} ${plural(retiros.soloSeVanSolos, 'inscripción se retira sola', 'inscripciones se retiran solos')} y no ${plural(retiros.soloSeVanSolos, 'entra', 'entran')} en este gráfico.`
+                                                    : 'Ninguna inscripción se retira sola: todas entran en este gráfico.'}
+                                                {retiros.mixtas > 0 && (
+                                                    ` ${retiros.mixtas} ${plural(retiros.mixtas, 'tiene hermanos', 'tienen hermanos')} de los dos tipos y ${plural(retiros.mixtas, 'está contada', 'están contadas')} de los dos lados.`
+                                                )}
+                                            </NotaCobertura>
+                                        </>
+                                    )}
+                                </Tarjeta>
+
+                                <Tarjeta className="p-5 flex flex-col">
+                                    <TituloTarjeta
+                                        titulo="Inscripciones con varios adolescentes"
+                                        detalle="Cuántas anotaron a más de uno"
+                                    />
+                                    <div className="flex-1">
+                                        <BarrasDeConteo
+                                            filas={[
+                                                { etiqueta: '2 adolescentes', valor: multiples[0]?.inscripciones ?? 0, color: '#1d4ed8' },
+                                                { etiqueta: '3 adolescentes', valor: multiples[1]?.inscripciones ?? 0, color: AZUL_SERIE },
+                                                { etiqueta: '4 o más', valor: multiples[2]?.inscripciones ?? 0, color: '#93c5fd' },
+                                            ]}
+                                        />
+                                    </div>
+                                    <NotaCobertura>
+                                        El número es de inscripciones, no de adolescentes. Las de uno solo no están acá.
+                                    </NotaCobertura>
+                                </Tarjeta>
+
+                                <Tarjeta className="p-5 flex flex-col">
+                                    <TituloTarjeta
+                                        titulo="¿Vinieron todos?"
+                                        detalle="De las inscripciones con dos o más"
+                                    />
+                                    {enMultiples && (
+                                        <>
+                                            <div className="flex-1">
+                                                <BarrasDeConteo
+                                                    filas={[
+                                                        { etiqueta: 'Vinieron todos', valor: enMultiples.todos, color: AZUL_SERIE },
+                                                        { etiqueta: 'Vino al menos uno', valor: enMultiples.algunos, color: AMBAR_SERIE },
+                                                        { etiqueta: 'No vino ninguno', valor: enMultiples.ninguno, color: GRIS_SERIE },
+                                                    ]}
+                                                />
+                                            </div>
+                                            <NotaCobertura>
+                                                Sobre {enMultiples.inscripciones} {plural(enMultiples.inscripciones, 'inscripción', 'inscripciones')} con varios adolescentes.
+                                            </NotaCobertura>
+                                        </>
+                                    )}
+                                </Tarjeta>
+                            </div>
+
+                            {/* Las tres listas de retiro. */}
+                            <div ref={seccionRetiros} className="grid lg:grid-cols-3 gap-3 mt-3 scroll-mt-4">
+                                {listas && ([
+                                    ['Retirado por el adulto inscripto', listas.adulto],
+                                    ['Retirado por otro adulto responsable', listas.otraPersona],
+                                    ['Se retira solo', listas.solo],
+                                ] as const).map(([titulo, filas]) => (
+                                    <TablaDeRetiro
+                                        key={titulo}
+                                        titulo={titulo}
+                                        filas={filas}
+                                        esMovil={esMovil}
+                                        onVer={f => verLaFicha(f.inscripcionId, 'retiros')}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Horarios de ingreso y egreso. */}
+                            <div ref={seccionHorarios} className="mt-3 scroll-mt-4">
+                                <Tarjeta className="flex flex-col overflow-hidden">
+                                    <div className="px-5 pt-[18px] pb-4 flex flex-wrap items-start justify-between gap-3">
+                                        <TituloTarjeta
+                                            titulo="Horarios de ingreso y egreso"
+                                            detalle="Una fila por adolescente inscripto, en hora de Buenos Aires"
+                                        />
+                                        <div
+                                            role="group"
+                                            aria-label="Ordenar la tabla"
+                                            className="flex items-center gap-1 p-1 rounded-[11px] shrink-0"
+                                            style={{ background: C.fondo }}
+                                        >
+                                            <BotonDeOrden
+                                                activo={orden === 'ingreso'}
+                                                onClick={() => cambiarUrl({ orden: 'ingreso', pagina: null })}
+                                            >
+                                                Por ingreso
+                                            </BotonDeOrden>
+                                            <BotonDeOrden
+                                                activo={orden === 'egreso'}
+                                                onClick={() => cambiarUrl({ orden: 'egreso', pagina: null })}
+                                            >
+                                                Por egreso
+                                            </BotonDeOrden>
+                                        </div>
+                                    </div>
+
+                                    {filasDeHorario.length === 0 ? (
+                                        <div className="mx-5 mb-[18px] px-5 py-[34px] rounded-xl text-center" style={{ background: C.fondo }}>
+                                            <p className="m-0 text-[15px] font-semibold" style={{ color: C.medio }}>Todavía no hay adolescentes inscriptos</p>
+                                            <p className="mt-1.5 m-0 text-[13px] leading-[1.55] font-medium" style={{ color: C.apagado }}>
+                                                La tabla se llena con cada inscripción que entra.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {!esMovil && (
+                                                <>
+                                                    <div
+                                                        className="grid gap-3 px-5 py-2.5"
+                                                        style={{ gridTemplateColumns: GRILLA_HORARIOS, background: C.fondo, borderTop: `1px solid ${C.bordeSuave}`, borderBottom: `1px solid ${C.bordeSuave}` }}
+                                                    >
+                                                        {['Adulto responsable', 'Adolescente', 'Hora de ingreso', 'Hora de egreso', ''].map((t, i) => (
+                                                            <span key={i} className="text-[11px] font-semibold tracking-[.04em] truncate" style={{ color: C.apagado }}>
+                                                                {t}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                    {visibles.map(f => (
+                                                        <div
+                                                            key={f.jovenId}
+                                                            className="grid gap-3 items-center px-5 py-[11px]"
+                                                            style={{ gridTemplateColumns: GRILLA_HORARIOS, borderBottom: `1px solid #f2f3f5` }}
+                                                        >
+                                                            <span className="text-[13px] font-medium truncate" title={f.adulto} style={{ color: C.medio }}>{f.adulto}</span>
+                                                            <span className="text-[13.5px] font-semibold truncate" title={f.adolescente} style={{ color: C.tinta }}>{f.adolescente}</span>
+                                                            <span className="text-[13px] font-medium tabular-nums" style={{ color: f.ingreso ? C.tinta : C.apagado }}>
+                                                                {celdaDeHora(f.ingreso, f.ausente)}
+                                                            </span>
+                                                            {/* "Ausente" se dice una vez, en el ingreso: es ahí
+                                                                donde se pregunta si vino. Repetirlo en el egreso
+                                                                sugiere dos datos distintos. */}
+                                                            <span className="text-[13px] font-medium tabular-nums" style={{ color: f.egreso ? C.tinta : C.apagado }}>
+                                                                {celdaDeHora(f.egreso, false)}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => verLaFicha(f.inscripcionId, 'horarios')}
+                                                                aria-label={`Ver los detalles de la inscripción de ${f.adolescente}`}
+                                                                className="h-[34px] px-3 rounded-[9px] text-[12.5px] font-semibold"
+                                                                style={BOTON_VER}
+                                                            >
+                                                                Ver detalles
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </>
+                                            )}
+
+                                            {esMovil && visibles.map(f => (
+                                                <div
+                                                    key={f.jovenId}
+                                                    className="flex items-center gap-3 px-4 py-3"
+                                                    style={{ borderTop: `1px solid ${C.bordeSuave}` }}
+                                                >
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="m-0 text-[14.5px] font-semibold truncate" style={{ color: C.tinta }}>{f.adolescente}</p>
+                                                        <p className="mt-0.5 m-0 text-[12.5px] font-medium truncate" style={{ color: C.medio }}>{f.adulto}</p>
+                                                        <p className="mt-1 m-0 text-[12px] font-medium tabular-nums" style={{ color: C.apagado }}>
+                                                            {lineaDeHorario(f)}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => verLaFicha(f.inscripcionId, 'horarios')}
+                                                        aria-label={`Ver los detalles de la inscripción de ${f.adolescente}`}
+                                                        className="shrink-0 h-11 px-3.5 rounded-[10px] text-[13px] font-semibold"
+                                                        style={BOTON_VER}
+                                                    >
+                                                        Ver detalles
+                                                    </button>
+                                                </div>
+                                            ))}
+
+                                            <div
+                                                className="flex items-center justify-between gap-2.5 pl-5 pr-4 py-2.5"
+                                                style={{ borderTop: `1px solid ${C.bordeSuave}`, background: '#fcfcfd' }}
+                                            >
+                                                <span className="text-[12.5px] tabular-nums" style={{ color: C.apagado }}>
+                                                    {pagina * POR_PAGINA + 1}–{pagina * POR_PAGINA + visibles.length} de {filasDeHorario.length}
+                                                </span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => cambiarUrl({ pagina: String(Math.max(0, pagina - 1)) })}
+                                                        disabled={pagina === 0}
+                                                        aria-label="Página anterior"
+                                                        className="w-11 h-11 md:w-[38px] md:h-[38px] rounded-[10px] flex items-center justify-center disabled:opacity-40"
+                                                        style={{ background: '#fff', border: `1px solid ${C.borde}`, color: C.medio }}
+                                                    >
+                                                        <ChevronLeft className="w-[15px] h-[15px]" />
+                                                    </button>
+                                                    {!esMovil && Array.from({ length: paginas }, (_, i) => (
+                                                        <button
+                                                            key={i}
+                                                            type="button"
+                                                            onClick={() => cambiarUrl({ pagina: String(i) })}
+                                                            aria-label={`Página ${i + 1}`}
+                                                            aria-current={i === pagina ? 'page' : undefined}
+                                                            className="min-w-[38px] h-[38px] px-2 rounded-[10px] text-[13px] font-semibold tabular-nums"
+                                                            style={i === pagina
+                                                                ? { background: C.tinta, border: `1px solid ${C.tinta}`, color: '#fff' }
+                                                                : { background: '#fff', border: `1px solid ${C.borde}`, color: C.medio }}
+                                                        >
+                                                            {i + 1}
+                                                        </button>
+                                                    ))}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => cambiarUrl({ pagina: String(Math.min(paginas - 1, pagina + 1)) })}
+                                                        disabled={pagina >= paginas - 1}
+                                                        aria-label="Página siguiente"
+                                                        className="w-11 h-11 md:w-[38px] md:h-[38px] rounded-[10px] flex items-center justify-center disabled:opacity-40"
+                                                        style={{ background: '#fff', border: `1px solid ${C.borde}`, color: C.medio }}
+                                                    >
+                                                        <ChevronRight className="w-[15px] h-[15px]" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </Tarjeta>
+                            </div>
                         </>
                     )}
                 </div>

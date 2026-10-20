@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { supabaseService } from './supabaseService';
-import { NocturnaInscripcion, NocturnaJoven } from '../types';
+import { NocturnaInscripcion, NocturnaJoven, NocturnaRetiroTipo } from '../types';
 
 /**
  * Los datos del tablero de Reportes de Nocturna (/panel-eventos/nocturna/reportes).
@@ -288,6 +288,254 @@ export const porMinuto = (
  */
 export const horaDelMinuto = (minuto: number, desde: string = VENTANA_INICIO): string =>
     horaCorta(new Date(Date.parse(desde) + minuto * MS_POR_MINUTO).toISOString()) || '';
+
+// ── ESPECÍFICOS (todo puro) ─────────────────────────────────────────────
+
+export interface QuienRetira {
+    /** Inscripciones con AL MENOS un adolescente que retira el adulto que inscribió. */
+    conElAdulto: number;
+    /** Inscripciones con al menos uno que retira otra persona. */
+    conOtraPersona: number;
+    /**
+     * Inscripciones donde TODOS se van solos: las únicas que no aparecen en
+     * el gráfico. Una con un hermano que se va solo y otro que retira el
+     * adulto sí aparece, del lado del adulto.
+     */
+    soloSeVanSolos: number;
+    /**
+     * Las que tienen hermanos de los dos tipos y por eso están contadas dos
+     * veces. Sin este número las dos porciones suman más que el total y
+     * parece un error de cuentas.
+     */
+    mixtas: number;
+    /** Inscripciones que entran al gráfico: las que no son `soloSeVanSolos`. */
+    enElGrafico: number;
+}
+
+/**
+ * Quién retira, POR INSCRIPCIÓN y no por adolescente.
+ *
+ * Es la pregunta de la puerta: cuántas familias vienen a buscar a sus chicos
+ * y cuántas mandan a otra persona. Contado por adolescente, una familia con
+ * tres hermanos pesaría el triple que la de al lado.
+ */
+export const quienRetira = (base: BaseNocturna): QuienRetira => {
+    let conElAdulto = 0;
+    let conOtraPersona = 0;
+    let soloSeVanSolos = 0;
+    let mixtas = 0;
+
+    for (const i of base.inscripciones) {
+        const tipos = new Set<NocturnaRetiroTipo>((i.jovenes || []).map(j => j.retiro?.tipo).filter(Boolean) as NocturnaRetiroTipo[]);
+        if (!tipos.size) continue;
+
+        const adulto = tipos.has('adulto');
+        const otra = tipos.has('otra_persona');
+
+        if (!adulto && !otra) { soloSeVanSolos++; continue; }
+        if (adulto) conElAdulto++;
+        if (otra) conOtraPersona++;
+        if (adulto && otra) mixtas++;
+    }
+
+    return {
+        conElAdulto,
+        conOtraPersona,
+        soloSeVanSolos,
+        mixtas,
+        enElGrafico: base.inscripciones.length - soloSeVanSolos,
+    };
+};
+
+export interface GrupoDeMultiples {
+    /** '2', '3' o '4 o más'. */
+    etiqueta: string;
+    inscripciones: number;
+    /** Cuántos adolescentes hay en total en ese grupo. */
+    adolescentes: number;
+}
+
+/**
+ * Las inscripciones de más de un adolescente, por cuántos tienen.
+ *
+ * El tope es "4 o más" porque de ahí para arriba son casos sueltos y cada uno
+ * con su propia barra deja un gráfico de barras de una unidad.
+ */
+export const inscripcionesMultiples = (base: BaseNocturna): GrupoDeMultiples[] => {
+    const grupos: GrupoDeMultiples[] = [
+        { etiqueta: '2', inscripciones: 0, adolescentes: 0 },
+        { etiqueta: '3', inscripciones: 0, adolescentes: 0 },
+        { etiqueta: '4 o más', inscripciones: 0, adolescentes: 0 },
+    ];
+
+    for (const i of base.inscripciones) {
+        const n = (i.jovenes || []).length;
+        if (n < 2) continue;
+        const grupo = n === 2 ? grupos[0] : n === 3 ? grupos[1] : grupos[2];
+        grupo.inscripciones++;
+        grupo.adolescentes += n;
+    }
+
+    return grupos;
+};
+
+export interface AsistenciaEnMultiples {
+    todos: number;
+    algunos: number;
+    ninguno: number;
+    /** El total de inscripciones con 2 o más, para la nota. */
+    inscripciones: number;
+}
+
+/**
+ * De las inscripciones con varios adolescentes, cuántas vinieron enteras.
+ *
+ * "Vino al menos uno" es la que importa en la puerta: es la familia que está
+ * adentro y a la que le falta un hermano.
+ */
+export const asistenciaEnMultiples = (base: BaseNocturna): AsistenciaEnMultiples => {
+    let todos = 0;
+    let algunos = 0;
+    let ninguno = 0;
+    let inscripciones = 0;
+
+    for (const i of base.inscripciones) {
+        const jovenes = i.jovenes || [];
+        if (jovenes.length < 2) continue;
+        inscripciones++;
+
+        const vinieron = jovenes.filter(j => estadoDelJoven(j) === 'acreditado').length;
+        if (vinieron === jovenes.length) todos++;
+        else if (vinieron > 0) algunos++;
+        else ninguno++;
+    }
+
+    return { todos, algunos, ninguno, inscripciones };
+};
+
+export interface FilaDeRetiro {
+    jovenId: string;
+    inscripcionId: string;
+    adolescente: string;
+    /** El adulto que lo retira, o '-' cuando se va solo. */
+    responsable: string;
+    /** El instante del retiro, o null si todavía no se registró. */
+    retiradoAt: string | null;
+}
+
+export interface ListasDeRetiro {
+    adulto: FilaDeRetiro[];
+    otraPersona: FilaDeRetiro[];
+    solo: FilaDeRetiro[];
+}
+
+const nombreDe = (nombre?: string | null, apellido?: string | null) =>
+    `${nombre || ''} ${apellido || ''}`.trim();
+
+/**
+ * Los adolescentes ACREDITADOS, repartidos por quién los retira.
+ *
+ * Sólo los acreditados: quien no entró no se va a retirar de ninguna manera,
+ * y una lista de retiro con gente que no vino es una lista para equivocarse
+ * en la puerta.
+ */
+export const listasDeRetiro = (base: BaseNocturna): ListasDeRetiro => {
+    const listas: ListasDeRetiro = { adulto: [], otraPersona: [], solo: [] };
+
+    for (const i of base.inscripciones) {
+        const adultoDeLaInscripcion = nombreDe(i.adultoNombre, i.adultoApellido) || '—';
+
+        for (const j of i.jovenes || []) {
+            if (estadoDelJoven(j) !== 'acreditado') continue;
+
+            const tipo = j.retiro?.tipo;
+            const fila: FilaDeRetiro = {
+                jovenId: j.id,
+                inscripcionId: i.id,
+                adolescente: nombreDe(j.nombre, j.apellido) || '—',
+                responsable: tipo === 'adulto'
+                    ? adultoDeLaInscripcion
+                    : tipo === 'otra_persona'
+                        ? (nombreDe(j.retiro?.nombre, j.retiro?.apellido) || 'Otra persona')
+                        : '-',
+                retiradoAt: j.retiradoAt,
+            };
+
+            if (tipo === 'adulto') listas.adulto.push(fila);
+            else if (tipo === 'otra_persona') listas.otraPersona.push(fila);
+            else listas.solo.push(fila);
+        }
+    }
+
+    return listas;
+};
+
+export interface FilaDeHorario {
+    jovenId: string;
+    inscripcionId: string;
+    adulto: string;
+    adolescente: string;
+    ingreso: string | null;
+    egreso: string | null;
+    /** Lo marcaron ausente en la puerta: no es lo mismo que no tener hora. */
+    ausente: boolean;
+}
+
+/** Una fila por adolescente inscripto, con sus dos horas. */
+export const horarios = (base: BaseNocturna): FilaDeHorario[] => {
+    const filas: FilaDeHorario[] = [];
+
+    for (const i of base.inscripciones) {
+        const adulto = nombreDe(i.adultoNombre, i.adultoApellido) || '—';
+        for (const j of i.jovenes || []) {
+            filas.push({
+                jovenId: j.id,
+                inscripcionId: i.id,
+                adulto,
+                adolescente: nombreDe(j.nombre, j.apellido) || '—',
+                ingreso: j.acreditadoAt,
+                egreso: j.retiradoAt,
+                ausente: estadoDelJoven(j) === 'ausente',
+            });
+        }
+    }
+
+    return filas;
+};
+
+export type OrdenDeHorarios = 'ingreso' | 'egreso';
+
+/**
+ * De la primera hora a la última, con los que no tienen esa hora al final.
+ *
+ * Ordenados al revés —los sin hora arriba— la tabla abre con una pantalla de
+ * guiones y hay que paginar para llegar a lo que pasó.
+ */
+export const ordenarHorarios = (filas: FilaDeHorario[], orden: OrdenDeHorarios): FilaDeHorario[] =>
+    [...filas].sort((a, b) => {
+        const x = orden === 'ingreso' ? a.ingreso : a.egreso;
+        const y = orden === 'ingreso' ? b.ingreso : b.egreso;
+        if (x && y) return x.localeCompare(y) || a.adolescente.localeCompare(b.adolescente, 'es');
+        if (x) return -1;
+        if (y) return 1;
+        // Entre dos sin hora, por nombre: así la lista del final es estable y
+        // no se reacomoda sola entre dos cargas.
+        return a.adolescente.localeCompare(b.adolescente, 'es');
+    });
+
+/** "23:14:07" en hora argentina. Null si no hay fecha. */
+export const horaExacta = (iso: string | null): string | null => {
+    if (!iso) return null;
+    const t = Date.parse(iso);
+    if (Number.isNaN(t)) return null;
+    return new Date(t).toLocaleTimeString('es-AR', {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    });
+};
 
 /** "06:42" en hora argentina. Null si no hay fecha. */
 export const horaCorta = (iso: string | null): string | null => {

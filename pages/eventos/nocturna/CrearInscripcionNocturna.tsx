@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { Check, ChevronLeft, Loader2 } from 'lucide-react';
 import { supabaseService } from '../../../services/supabaseService';
@@ -28,6 +28,7 @@ import {
     TEXTO_FOTOS,
     TRIBUS,
 } from './compartido/formulario';
+import { vueltaDeLaUrl } from './compartido/volver';
 import {
     AMBAR,
     AMBAR_INK,
@@ -84,7 +85,16 @@ const chicoNuevo = (apellido = ''): ChicoForm => ({
 
 const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = false }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { id: idDeLaUrl } = useParams<{ id: string }>();
+
+    /**
+     * De dónde salió quien está editando: de la planilla del panel o del
+     * tablero de reportes. Viaja en la URL para que la cadena
+     * reportes → ficha → editar → ficha → reportes no se corte. Ver
+     * compartido/volver.ts.
+     */
+    const vuelta = useMemo(() => vueltaDeLaUrl(location.search), [location.search]);
 
     const [config, setConfig] = useState<NocturnaConfig | null>(null);
     const [cargando, setCargando] = useState(true);
@@ -356,11 +366,11 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                 <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0', maxWidth: 380 }}>{errorCarga}</p>
                 <button
                     type="button"
-                    onClick={() => navigate('/panel-eventos/nocturna')}
+                    onClick={() => navigate(vuelta.destino)}
                     className="border-0 rounded-full cursor-pointer mt-6"
                     style={{ height: 48, padding: '0 22px', background: INK, color: '#fff', ...fuente(600, '14px') }}
                 >
-                    Volver a la planilla
+                    {vuelta.largo}
                 </button>
             </div>
         );
@@ -420,7 +430,7 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                     <div className="flex flex-col gap-2 mt-6">
                         <button
                             type="button"
-                            onClick={() => navigate(`/panel-eventos/nocturna/${idDeLaUrl}`)}
+                            onClick={() => navigate(`/panel-eventos/nocturna/${idDeLaUrl}${vuelta.sufijo}`)}
                             className="border-0 rounded-full cursor-pointer"
                             style={{ height: 50, background: INK, color: '#fff', ...fuente(600, '14.5px') }}
                         >
@@ -428,11 +438,11 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                         </button>
                         <button
                             type="button"
-                            onClick={() => navigate('/panel-eventos/nocturna')}
+                            onClick={() => navigate(vuelta.destino)}
                             className="border-0 rounded-full cursor-pointer"
                             style={{ height: 50, background: CAMPO, color: INK, ...fuente(600, '14.5px') }}
                         >
-                            Volver a la planilla
+                            {vuelta.largo}
                         </button>
                     </div>
                 </div>
@@ -472,11 +482,11 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                         </button>
                         <button
                             type="button"
-                            onClick={() => navigate('/panel-eventos/nocturna')}
+                            onClick={() => navigate(vuelta.destino)}
                             className="border-0 rounded-full cursor-pointer"
                             style={{ height: 50, background: CAMPO, color: INK, ...fuente(600, '14.5px') }}
                         >
-                            Volver a la planilla
+                            {vuelta.largo}
                         </button>
                     </div>
                 </div>
@@ -493,7 +503,7 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                     <div className="flex items-center gap-2.5">
                         <button
                             type="button"
-                            onClick={() => navigate(modoEdicion && idDeLaUrl ? `/panel-eventos/nocturna/${idDeLaUrl}` : '/panel-eventos/nocturna')}
+                            onClick={() => navigate(modoEdicion && idDeLaUrl ? `/panel-eventos/nocturna/${idDeLaUrl}${vuelta.sufijo}` : vuelta.destino)}
                             className="border-0 rounded-full flex items-center gap-1.5 cursor-pointer"
                             style={{ height: 40, padding: '0 14px 0 10px', background: CAMPO, color: INK, ...fuente(600, '12.5px') }}
                         >
