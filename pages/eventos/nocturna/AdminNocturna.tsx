@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Loader2, Pencil, Plus, QrCode, Search, Trash2, X } from 'lucide-react';
+import { BarChart3, ChevronLeft, Loader2, Pencil, Plus, QrCode, Search, Trash2, X } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { supabaseService } from '../../../services/supabaseService';
 import { contarEstados, estadoInscripcion } from '../../../src/utils/nocturna';
@@ -491,6 +491,18 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                             >
                                 <QrCode className="w-4 h-4" />
                                 Acreditar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/panel-eventos/nocturna/reportes')}
+                                className="border-0 rounded-full flex items-center justify-center gap-2 flex-1 lg:flex-none cursor-pointer"
+                                style={{ height: 46, padding: '0 16px', background: CAMPO, color: INK, ...fuente(600, '14px'), whiteSpace: 'nowrap' }}
+                            >
+                                {/* El ícono se va en el teléfono: con tres botones en
+                                    la fila, los tres textos y los tres íconos no
+                                    entran a 390 px. */}
+                                <BarChart3 className="w-4 h-4 hidden lg:block" />
+                                Reportes
                             </button>
                             <button
                                 type="button"

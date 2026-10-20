@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Check, ChevronLeft, Loader2, Pencil } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
 import { calcularEdad, contarAcreditados, contarEstados, estadoInscripcion } from '../../../src/utils/nocturna';
 import { NocturnaInscripcion, NocturnaJoven, User } from '../../../types';
 import { COLOR_TRIBU, enLista, etiquetaRestriccion, plata } from './compartido/formulario';
+import { vueltaDeLaUrl } from './compartido/volver';
 import {
     AMBAR,
     AMBAR_INK,
@@ -84,7 +85,15 @@ const quienRetira = (j: NocturnaJoven, adulto: string): string => {
 
 const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { id } = useParams<{ id: string }>();
+
+    /**
+     * A esta ficha se llega desde la planilla del panel y desde el tablero de
+     * reportes, y el botón de volver tiene que devolver a cada uno al suyo.
+     * El origen viaja en la URL: ver compartido/volver.ts.
+     */
+    const vuelta = useMemo(() => vueltaDeLaUrl(location.search), [location.search]);
 
     const [insc, setInsc] = useState<NocturnaInscripcion | null>(null);
     const [cargando, setCargando] = useState(true);
@@ -302,11 +311,11 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                     </button>
                     <button
                         type="button"
-                        onClick={() => navigate('/panel-eventos/nocturna')}
+                        onClick={() => navigate(vuelta.destino)}
                         className="border-0 rounded-full cursor-pointer"
                         style={{ height: 48, background: CAMPO, color: INK, ...fuente(600, '14px') }}
                     >
-                        Volver a la planilla
+                        {vuelta.largo}
                     </button>
                 </div>
             </div>
@@ -327,12 +336,13 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                     <div className="flex items-center gap-2.5 flex-wrap">
                         <button
                             type="button"
-                            onClick={() => salir(() => navigate('/panel-eventos/nocturna'))}
+                            onClick={() => salir(() => navigate(vuelta.destino))}
+                            aria-label={vuelta.largo}
                             className="border-0 rounded-full flex items-center gap-1.5 cursor-pointer"
                             style={{ height: 40, padding: '0 14px 0 10px', background: CAMPO, color: INK, ...fuente(600, '12.5px') }}
                         >
                             <ChevronLeft className="w-4 h-4" strokeWidth={2.3} />
-                            Planilla
+                            {vuelta.corto}
                         </button>
                         <div className="ml-auto flex gap-1.5">
                             {!!insc.comprobantePath && (
@@ -348,7 +358,10 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                             )}
                             <button
                                 type="button"
-                                onClick={() => salir(() => navigate(`/panel-eventos/nocturna/${insc.id}/editar`))}
+                                // El origen se arrastra a la edición: desde ahí
+                                // se vuelve a esta ficha, y de esta ficha hay que
+                                // poder seguir saliendo a donde se entró.
+                                onClick={() => salir(() => navigate(`/panel-eventos/nocturna/${insc.id}/editar${vuelta.sufijo}`))}
                                 className="border-0 rounded-full flex items-center gap-1.5 cursor-pointer"
                                 style={{ height: 40, padding: '0 14px', background: CAMPO, color: INK, ...fuente(600, '12.5px') }}
                             >

@@ -78,6 +78,7 @@ import AdminNocturna from './pages/eventos/nocturna/AdminNocturna';
 import CrearInscripcionNocturna from './pages/eventos/nocturna/CrearInscripcionNocturna';
 import AcreditarNocturna from './pages/eventos/nocturna/AcreditarNocturna';
 import DetalleNocturna from './pages/eventos/nocturna/DetalleNocturna';
+import ReportesNocturna from './pages/eventos/nocturna/ReportesNocturna';
 import DetalleDiaNino from './pages/eventos/dianino/DetalleDiaNino';
 import NuevaDiaNino from './pages/eventos/dianino/NuevaDiaNino';
 import EscanerDiaNino from './pages/eventos/dianino/EscanerDiaNino';
@@ -1238,11 +1239,21 @@ const AppContent: React.FC = () => {
                                         ? <CrearInscripcionNocturna currentUser={user} />
                                         : <SinAcceso />
                                 } />
-                                {/* La ficha y su edición van DESPUÉS de /nueva y de
-                                    /acreditar (esta última vive arriba, fuera del
-                                    Layout): si `:id` se declarara primero, se comería
-                                    esas rutas tomando "nueva" por un identificador.
-                                    Ya pasó en los reportes de GCX. */}
+                                <Route path="/panel-eventos/nocturna/reportes" element={
+                                    (user && hasRole(user, [
+                                        UserRole.SUPER_ADMIN,
+                                        UserRole.PASTOR,
+                                        UserRole.ENCARGADO_EVENTOS,
+                                        UserRole.ACREDITACION,
+                                    ]))
+                                        ? <ReportesNocturna currentUser={user} />
+                                        : <SinAcceso />
+                                } />
+                                {/* La ficha y su edición van DESPUÉS de /nueva, de
+                                    /reportes y de /acreditar (esta última vive arriba,
+                                    fuera del Layout): si `:id` se declarara primero, se
+                                    comería esas rutas tomando "nueva" o "reportes" por
+                                    un identificador. Ya pasó en los reportes de GCX. */}
                                 <Route path="/panel-eventos/nocturna/:id/editar" element={
                                     (user && hasRole(user, [
                                         UserRole.SUPER_ADMIN,
