@@ -28,6 +28,8 @@ interface JovenAcred {
     nombre: string;
     apellido: string;
     edad: number;
+    /** El staff ya preguntó en la puerta y la respuesta fue que no tiene. */
+    sin_celular?: boolean;
     tribu: string;
     /** Su celular, si tiene. */
     telefono: string | null;
@@ -64,6 +66,21 @@ interface InscAcred {
 type Marca = 'no' | 'entra' | 'ausente';
 
 type Panel =
+    /**
+     * Antes de entrar o de salir: faltan teléfonos.
+     *
+     * `siguiente` es exactamente el panel que se habría abierto si no faltara
+     * nada, ya armado. Así este paso no decide nada de la acreditación: sólo
+     * se pone adelante y después deja pasar.
+     */
+    | {
+        tipo: 'datos';
+        insc: InscAcred;
+        jovenes: JovenAcred[];
+        faltaAdulto: boolean;
+        jovenesFaltantes: JovenAcred[];
+        siguiente: Panel;
+    }
     | { tipo: 'familia'; insc: InscAcred; jovenes: JovenAcred[]; marcas: Record<string, Marca> }
     /** Las 6 AM, paso 1: quiénes se van. */
     | { tipo: 'salida'; insc: InscAcred; jovenes: JovenAcred[]; quienes: Record<string, boolean> }
@@ -95,6 +112,141 @@ const pitido = (ok: boolean) => {
     } catch {
         // El navegador puede bloquear el audio sin una interacción previa.
     }
+};
+
+/**
+ * ¿A este adolescente le falta el teléfono?
+ *
+ * No alcanza con que `telefono` esté vacío: el que el staff ya marcó como
+ * "no tiene celular" tiene la respuesta puesta, y volver a pedírsela en cada
+ * escaneo de la noche es hacerle perder el tiempo a la familia y al que está
+ * en la puerta.
+ */
+const faltaElTelefono = (j: JovenAcred): boolean =>
+    !(j.telefono || '').trim() && !j.sin_celular;
+
+/**
+ * Pone el paso de "faltan datos" adelante, si falta alguno.
+ *
+ * Si no falta nada devuelve el panel de siempre tal cual, así el camino
+ * normal —que es el de casi todas las familias— no cambia en nada.
+ */
+const conDatosSiFalta = (insc: InscAcred, jovenes: JovenAcred[], siguiente: Panel): Panel => {
+    const faltaAdulto = !(insc.adulto_telefono || '').trim();
+    const jovenesFaltantes = jovenes.filter(faltaElTelefono);
+    if (!faltaAdulto && jovenesFaltantes.length === 0) return siguiente;
+    return { tipo: 'datos', insc, jovenes, faltaAdulto, jovenesFaltantes, siguiente };
+};
+
+/** "11 2345 6789", para leerlo de un vistazo bajo la luz de la puerta. */
+const agruparTel = (d: string): string => {
+    const partes = d.startsWith('11') ? [2, 4, 4] : [3, 3, 4];
+    const out: string[] = [];
+    let i = 0;
+    for (const n of partes) { if (i >= d.length) break; out.push(d.slice(i, i + n)); i += n; }
+    if (i < d.length) out.push(d.slice(i));
+    return out.join(' ');
+};
+
+/** Los 10 dígitos de un teléfono argentino, o null. La regla de la base. */
+const normalizarTel = (crudo: string): string | null => {
+    let n = (crudo || '').replace(/\D/g, '');
+    if (!n) return null;
+    if (n.startsWith('0054')) n = n.slice(4);
+    if (n.startsWith('54')) n = n.slice(2);
+    if (n.startsWith('9')) n = n.slice(1);
+    if (n.startsWith('0')) n = n.slice(1);
+    const con15 = /^(\d{2,4})15(\d{6,8})$/.exec(n);
+    if (con15) n = con15[1] + con15[2];
+    return /^\d{10}$/.test(n) ? n : null;
+};
+
+/**
+ * Un teléfono que falta, con su nombre.
+ *
+ * Vive a nivel de módulo y no adentro del panel: definido adentro, React lo
+ * toma como un componente distinto en cada dibujo, lo desmonta y lo vuelve a
+ * montar, y el campo pierde el foco a cada tecla. En la puerta, con una mano,
+ * eso es inusable.
+ */
+const CampoDeTelefono: React.FC<{
+    etiqueta: string;
+    valor: string;
+    sinCelular: boolean;
+    mal: boolean;
+    /** El adulto no tiene la opción de "no tiene": su teléfono es obligatorio. */
+    puedeNoTener: boolean;
+    onEscribir: (crudo: string) => void;
+    onSalir: () => void;
+    onAlternar: () => void;
+}> = ({ etiqueta, valor, sinCelular, mal, puedeNoTener, onEscribir, onSalir, onAlternar }) => {
+    const apagado = puedeNoTener && sinCelular;
+    return (
+        <div>
+            <p style={{ ...fuente(600, '14.5px'), color: INK, margin: '0 0 6px' }}>{etiqueta}</p>
+            <div
+                className="flex items-center"
+                style={{
+                    height: 52, borderRadius: 14, padding: '0 14px',
+                    background: apagado ? '#f6f5f2' : CAMPO,
+                    boxShadow: mal ? `inset 0 0 0 2px ${ROJO}` : 'none',
+                    opacity: apagado ? 0.55 : 1,
+                }}
+            >
+                <span style={{ ...fuente(600, '14px'), color: 'rgba(0,0,0,.5)' }}>+54</span>
+                <span aria-hidden="true" style={{ width: 1, height: 22, background: 'rgba(0,0,0,.14)', margin: '0 12px' }} />
+                <input
+                    className="campo campo--desnudo"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    disabled={apagado}
+                    placeholder={apagado ? 'Sin celular' : '11 2345 6789'}
+                    aria-label={etiqueta}
+                    value={agruparTel(valor)}
+                    onChange={e => onEscribir(e.target.value)}
+                    onBlur={onSalir}
+                    style={{ ...fuente(600, '17px'), color: INK, flex: 1, minWidth: 0 }}
+                />
+            </div>
+
+            {puedeNoTener && (
+                /* Casilla y no interruptor: un interruptor se lee como una
+                   preferencia y es lo más fácil de rozar sin querer. Va en su
+                   propia línea, debajo del campo, que no es donde cae el
+                   pulgar al terminar de escribir. */
+                <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={sinCelular}
+                    onClick={onAlternar}
+                    className="flex items-center gap-2.5 border-0 cursor-pointer"
+                    style={{ minHeight: 44, padding: '0 2px', background: 'transparent', marginTop: 4 }}
+                >
+                    <span
+                        aria-hidden="true"
+                        className="flex items-center justify-center flex-none"
+                        style={{
+                            width: 22, height: 22, borderRadius: 7,
+                            background: sinCelular ? INK : 'transparent',
+                            boxShadow: sinCelular ? 'none' : 'inset 0 0 0 2px rgba(0,0,0,.28)',
+                        }}
+                    >
+                        {sinCelular && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                    </span>
+                    <span style={{ ...fuente(600, '14.5px'), color: sinCelular ? INK : 'rgba(0,0,0,.62)' }}>
+                        No tiene celular
+                    </span>
+                </button>
+            )}
+
+            {mal && (
+                <p role="alert" style={{ ...fuente(600, '13px', '1.4'), color: ROJO, margin: '4px 0 0' }}>
+                    Tiene que tener 10 números, con el código de área.
+                </p>
+            )}
+        </div>
+    );
 };
 
 const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
@@ -231,7 +383,7 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         // ya hay gente adentro, desde ahí se pasa a la salida con un botón.
         if (pendientes.length > 0) {
             pitido(true);
-            setPanel({
+            setPanel(conDatosSiFalta(insc, jovenes, {
                 tipo: 'familia',
                 insc,
                 jovenes,
@@ -241,20 +393,20 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                     j.id,
                     j.acreditado_at ? 'entra' : j.ausente_at ? 'ausente' : 'no',
                 ])) as Record<string, Marca>,
-            });
+            }));
             return;
         }
 
         if (adentro.length > 0) {
             pitido(true);
-            setPanel({
+            setPanel(conDatosSiFalta(insc, jovenes, {
                 tipo: 'salida',
                 insc,
                 jovenes,
                 // Arrancan todos marcados: lo normal es que la familia se vaya
                 // junta, y destildar a uno es menos trabajo que tildar a tres.
                 quienes: Object.fromEntries(adentro.map(j => [j.id, true])),
-            });
+            }));
             return;
         }
 
@@ -604,6 +756,227 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
      * junta. Los que ya se fueron no están en la lista: una salida no se
      * deshace desde la puerta.
      */
+    /**
+     * Faltan datos: se piden antes de abrir la puerta (o de dejar salir).
+     *
+     * El estado vive acá adentro y no en `panel`: mientras se escribe, lo que
+     * importa es el teclado, y cada tecla no tiene por qué volver a dibujar el
+     * escáner entero.
+     */
+    const PanelDatos: React.FC<{ panel: Extract<Panel, { tipo: 'datos' }> }> = ({ panel: p }) => {
+        const [tel, setTel] = useState<Record<string, string>>({});
+        const [sinCel, setSinCel] = useState<Record<string, boolean>>({});
+        const [tocado, setTocado] = useState<Record<string, boolean>>({});
+        const [guardando, setGuardando] = useState(false);
+        const [listo, setListo] = useState(false);
+        const [problema, setProblema] = useState<string | null>(null);
+        const [campoMalo, setCampoMalo] = useState<string | null>(null);
+
+        const sinMovimiento = useMemo(
+            () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+            [],
+        );
+
+        const escribir = (clave: string, crudo: string) => {
+            const d = (crudo || '').replace(/\D/g, '').slice(0, 14);
+            setTel(x => ({ ...x, [clave]: normalizarTel(d) ?? d }));
+            setProblema(null);
+            setCampoMalo(null);
+        };
+
+        const campoListo = (clave: string, puedeNoTener: boolean) =>
+            (puedeNoTener && !!sinCel[clave]) || !!normalizarTel(tel[clave] || '');
+
+        /** Rojo: lo rechazó la base, o se escribió algo que no llega a 10. */
+        const estaMal = (clave: string, puedeNoTener: boolean) => {
+            if (campoMalo === clave) return true;
+            if (puedeNoTener && sinCel[clave]) return false;
+            const d = tel[clave] || '';
+            return !!tocado[clave] && d.length > 0 && !normalizarTel(d);
+        };
+
+        const todoListo =
+            (!p.faltaAdulto || campoListo('adulto', false))
+            && p.jovenesFaltantes.every(j => campoListo(j.id, true));
+
+        const guardar = async () => {
+            if (guardando || !todoListo) return;
+            setGuardando(true);
+            setProblema(null);
+            setCampoMalo(null);
+
+            // El segundo completo es a propósito: en la puerta, un guardado que
+            // termina antes de que se vea no deja claro que algo pasó. Si la
+            // base tarda más, el spinner sigue hasta que conteste.
+            const espera = new Promise(r => setTimeout(r, sinMovimiento ? 0 : 1000));
+            const llamada = supabaseService.completarDatosNocturnaStaff(
+                p.insc.id,
+                p.faltaAdulto ? (normalizarTel(tel['adulto'] || '') || '') : null,
+                p.jovenesFaltantes.map(j => (sinCel[j.id]
+                    ? { id: j.id, sinCelular: true }
+                    : { id: j.id, telefono: normalizarTel(tel[j.id] || '') || '' })),
+            );
+
+            const [res] = await Promise.all([llamada, espera]);
+            setGuardando(false);
+
+            if (!res.ok) {
+                // Nada de esto frena la puerta: siempre queda "Completar después".
+                if (res.motivo === 'telefono') {
+                    setCampoMalo(res.campo === 'adulto' ? 'adulto' : (res.campo || null));
+                    setProblema('Ese número no es válido. Revisalo.');
+                } else if (res.motivo === 'sin_permiso') {
+                    setProblema('Tu usuario no puede completar datos. Podés seguir igual.');
+                } else if (res.motivo === 'no_existe') {
+                    setProblema('No encontramos la inscripción. Podés seguir igual.');
+                } else {
+                    setProblema('No se pudo guardar. Probá de nuevo o seguí sin guardar.');
+                }
+                return;
+            }
+
+            // Lo que quedó en la base, para que el panel siguiente lo muestre
+            // al día.
+            const porId = new Map((res.jovenes || []).map(j => [j.id, j]));
+            const jovenes = p.jovenes.map(j => {
+                const n = porId.get(j.id);
+                return n ? { ...j, telefono: n.telefono, sin_celular: n.sin_celular } : j;
+            });
+            const insc = { ...p.insc, adulto_telefono: res.adultoTelefono ?? p.insc.adulto_telefono };
+
+            setListo(true);
+            pitido(true);
+            window.setTimeout(() => {
+                setPanel(() => {
+                    const s = p.siguiente;
+                    if (s && (s.tipo === 'familia' || s.tipo === 'salida')) return { ...s, insc, jovenes };
+                    return s;
+                });
+            }, sinMovimiento ? 0 : 420);
+        };
+
+        const seguirSinGuardar = () => setPanel(p.siguiente);
+
+        return (
+            <>
+                <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                        <p style={{ ...fuente(600, '12px'), letterSpacing: '.04em', color: AMBAR_INK, margin: 0 }}>
+                            FALTAN DATOS · {p.insc.codigo_entrada}
+                        </p>
+                        <h2 style={{ ...fuente(600, '22px', '1.2'), color: INK, letterSpacing: '-.02em', margin: '4px 0 0' }}>
+                            Completá antes de seguir
+                        </h2>
+                        <p style={{ ...fuente(500, '13px', '1.4'), color: 'rgba(0,0,0,.6)', margin: '2px 0 0' }}>
+                            Familia {p.insc.adulto_apellido} · después seguís con {p.siguiente?.tipo === 'salida' ? 'la salida' : 'la entrada'}.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={cerrarPanel}
+                        aria-label="Cerrar sin guardar ni registrar nada"
+                        className="border-0 rounded-full flex items-center justify-center cursor-pointer flex-none"
+                        style={{ width: 44, height: 44, background: CAMPO }}
+                    >
+                        <X className="w-4 h-4" style={{ color: INK }} strokeWidth={2.4} />
+                    </button>
+                </div>
+
+                {p.faltaAdulto && (
+                    <div style={{ marginTop: 18 }}>
+                        <p style={{ ...fuente(600, '11.5px'), letterSpacing: '.06em', color: 'rgba(0,0,0,.45)', margin: '0 0 8px' }}>
+                            ADULTO RESPONSABLE
+                        </p>
+                        <CampoDeTelefono
+                            etiqueta={`${p.insc.adulto_nombre} ${p.insc.adulto_apellido}`}
+                            valor={tel['adulto'] || ''}
+                            sinCelular={false}
+                            puedeNoTener={false}
+                            mal={estaMal('adulto', false)}
+                            onEscribir={v => escribir('adulto', v)}
+                            onSalir={() => setTocado(x => ({ ...x, adulto: true }))}
+                            onAlternar={() => { /* el adulto no tiene esta opción */ }}
+                        />
+                    </div>
+                )}
+
+                {p.jovenesFaltantes.length > 0 && (
+                    <div style={{ marginTop: p.faltaAdulto ? 22 : 18 }}>
+                        <p style={{ ...fuente(600, '11.5px'), letterSpacing: '.06em', color: 'rgba(0,0,0,.45)', margin: '0 0 8px' }}>
+                            {p.jovenesFaltantes.length === 1 ? 'ADOLESCENTE' : 'ADOLESCENTES'}
+                        </p>
+                        {p.jovenesFaltantes.map((j, i) => (
+                            <div
+                                key={j.id}
+                                style={{
+                                    paddingTop: i ? 14 : 0,
+                                    marginTop: i ? 14 : 0,
+                                    borderTop: i ? '1px solid rgba(0,0,0,.08)' : 'none',
+                                }}
+                            >
+                                <CampoDeTelefono
+                                    etiqueta={j.nombre}
+                                    valor={tel[j.id] || ''}
+                                    sinCelular={!!sinCel[j.id]}
+                                    puedeNoTener
+                                    mal={estaMal(j.id, true)}
+                                    onEscribir={v => escribir(j.id, v)}
+                                    onSalir={() => setTocado(x => ({ ...x, [j.id]: true }))}
+                                    onAlternar={() => {
+                                        setSinCel(x => ({ ...x, [j.id]: !x[j.id] }));
+                                        setProblema(null);
+                                        setCampoMalo(null);
+                                    }}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {problema && (
+                    <div role="alert" className="flex items-start gap-2.5" style={{ background: AMBAR, borderRadius: 14, padding: '10px 14px', marginTop: 16 }}>
+                        <span style={{ ...fuente(600, '13.5px', '1.4'), color: '#5c3b0b' }}>{problema}</span>
+                    </div>
+                )}
+
+                {/* Pegado abajo: con el teclado numérico abierto, un botón al
+                    final del scroll queda detrás de las teclas. */}
+                <div
+                    className="sticky"
+                    style={{ bottom: -22, background: '#fff', paddingTop: 14, marginTop: 18 }}
+                >
+                    <button
+                        type="button"
+                        onClick={guardar}
+                        disabled={!todoListo || guardando || listo}
+                        className="w-full border-0 rounded-full flex items-center justify-center gap-2.5 cursor-pointer"
+                        style={{
+                            height: 56,
+                            background: todoListo ? INK : 'rgba(0,0,0,.12)',
+                            color: todoListo ? '#fff' : 'rgba(0,0,0,.45)',
+                            ...fuente(600, '16px'),
+                        }}
+                    >
+                        {listo ? (
+                            <><Check className="w-5 h-5" strokeWidth={3} />Guardado</>
+                        ) : guardando ? (
+                            <><Loader2 className="w-5 h-5 animate-spin" />Guardando</>
+                        ) : 'Guardar'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={seguirSinGuardar}
+                        disabled={guardando || listo}
+                        className="w-full border-0 cursor-pointer"
+                        style={{ minHeight: 44, marginTop: 6, background: 'transparent', ...fuente(600, '14px'), color: 'rgba(0,0,0,.55)' }}
+                    >
+                        Completar después
+                    </button>
+                </div>
+            </>
+        );
+    };
+
     const PanelSalida: React.FC<{ panel: Extract<Panel, { tipo: 'salida' }> }> = ({ panel: p }) => {
         const adentro = p.jovenes.filter(j => j.acreditado_at && !j.retirado_at);
         const elegidos = adentro.filter(j => p.quienes[j.id]);
@@ -1168,6 +1541,8 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                     </button>
                                 )}
                             </>
+                        ) : panel.tipo === 'datos' ? (
+                            <PanelDatos panel={panel} />
                         ) : panel.tipo === 'salida' ? (
                             <PanelSalida panel={panel} />
                         ) : panel.tipo === 'salidaQuien' ? (
