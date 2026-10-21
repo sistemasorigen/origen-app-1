@@ -4,6 +4,7 @@ import { BarChart3, ChevronLeft, Loader2, Pencil, Plus, QrCode, Search, Trash2, 
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { supabaseService } from '../../../services/supabaseService';
 import { contarEstados, estadoInscripcion } from '../../../src/utils/nocturna';
+import { useScrollRecordado } from '../../../src/utils/scrollRecordado';
 import { NocturnaConfig, NocturnaInscripcion, User } from '../../../types';
 import { COLOR_TRIBU, etiquetaRestriccion, plata, sinTildes } from './compartido/formulario';
 import {
@@ -102,6 +103,9 @@ interface VistaComprobante {
     url: string;
 }
 
+/** Dónde estaba el scroll de la planilla, mientras dura la sesión. */
+const CLAVE_SCROLL = 'nocturna.planilla';
+
 const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
     const navigate = useNavigate();
 
@@ -153,6 +157,13 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
     }, []);
 
     useEffect(() => { cargar(); }, [cargar]);
+
+    // Entrar a una ficha y volver desmonta la planilla, y App.tsx manda la
+    // pantalla nueva arriba de todo en cada cambio de ruta. Sin esto, quien
+    // venía revisando la familia número treinta tiene que bajar de nuevo
+    // hasta ahí. Se restaura recién con las inscripciones cargadas: antes la
+    // página no tiene alto y no habría a dónde bajar.
+    useScrollRecordado(CLAVE_SCROLL, !cargando);
 
     useEffect(() => {
         if (!aviso) return;
