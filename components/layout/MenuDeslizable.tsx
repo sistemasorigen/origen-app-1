@@ -1173,6 +1173,15 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             <nav
                 ref={navRef}
                 className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide ${isCollapsed ? 'px-2' : 'px-4'} pb-3 ${isSidebar ? '' : 'contenido-del-overlay'}`}
+                /* Lo mismo que el cuerpo de NeoModal, y por lo mismo: pan-y
+                   deja el scroll vertical en manos del navegador; contain
+                   impide que al llegar a un extremo el sobrante se le pase a
+                   la página de atrás; el de WebKit es el envión de iOS. */
+                style={{
+                    touchAction: 'pan-y',
+                    overscrollBehavior: 'contain',
+                    WebkitOverflowScrolling: 'touch',
+                }}
             >
                 <div ref={listaRef} className="relative">
                     {/* La píldora, por detrás de todo (z-0 contra el z-[1] de
@@ -1365,8 +1374,17 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     return (
         <div className={`fixed inset-0 z-[60] flex justify-start md:hidden ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
             {/* Backdrop */}
+            {/* touchAction none: arrastrar detrás del menú no es un gesto de
+                scroll. Antes esto lo daba `body.style.touchAction = 'none'`,
+                que apagaba los gestos de toda la página (y obligaba al panel
+                a llevar un `auto` de antídoto). Al pasar a useBloqueoDeFondo
+                se perdió, y el arrastre sobre la tapa volvió a ser un scroll
+                de verdad que no tiene a dónde ir: iOS lo resuelve rebotando
+                la página y la lista del menú se queda sin su gesto. El tap
+                para cerrar sigue andando: esto no afecta a los clicks. */}
             <div
                 className={`absolute inset-0 bg-black/[0.42] transition-opacity duration-300 ease-out ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+                style={{ touchAction: 'none' }}
                 onClick={onClose}
             />
 
