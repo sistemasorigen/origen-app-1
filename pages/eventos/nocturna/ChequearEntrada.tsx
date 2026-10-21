@@ -24,7 +24,7 @@ import {
     ESTILOS_NOCTURNA, precargarFuentes, Fondo,
     arch, anillo, LIMA, NEGRO, BLANCO, FUENTE, FUENTE_PALABRA, CURVA,
 } from './estilo';
-import { useBarraDeAppSuelta } from '../../../contexts/BarraDeApp';
+import { useFullBleedHero } from '../../../contexts/HeroContext';
 import {
     chequearCodigo, verEntrada, completarDatos, normalizarTelefono, soloDigitos,
     EntradaNocturna, MotivoNocturna,
@@ -63,7 +63,7 @@ const ANIMACIONES = `
 @keyframes ncRing { 0%,100% { box-shadow:0 0 0 2px ${LIMA} } 50% { box-shadow:0 0 0 5px ${LIMA} } }
 @keyframes ncFade { from { opacity:0 } to { opacity:1 } }
 @media (prefers-reduced-motion: reduce) {
-    #noc-entrada *, #noc-entrada *::before, #noc-entrada *::after {
+    #nocturna-inscripcion *, #nocturna-inscripcion *::before, #nocturna-inscripcion *::after {
         animation-duration: .01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: .01ms !important;
@@ -231,9 +231,42 @@ const ChequearEntrada: React.FC = () => {
 
     useEffect(() => { precargarFuentes(); }, []);
 
-    // La barra de la app, transparente sobre el rosa: esta pantalla se abre
-    // desde un link del email y ocupa el alto entero, como la inscripción.
-    useBarraDeAppSuelta();
+    /**
+     * La barra de la app: fija arriba y transparente, con el logo solo sobre
+     * el rosa.
+     *
+     * El segundo `true` es "siempre transparente": sin él la barra recupera
+     * su fondo blanco al scrollear y queda una franja clara cortando el rosa.
+     * Y NO se usa `useBarraDeAppSuelta`, que la vuelve `relative` y la deja
+     * irse con el contenido: acá tiene que quedarse arriba.
+     */
+    useFullBleedHero(true, true);
+
+    /**
+     * El rosa, hasta el borde de la pantalla.
+     *
+     * El Layout pinta slate-50 y le deja padding abajo a <main>, que quedan
+     * afuera del fondo de esta página: al terminar el scroll —y en el rebote
+     * de iOS— asoma un corte de color. El wrapper del Layout además mide
+     * 100vh mientras esta pantalla mide 100dvh, y la diferencia es justo el
+     * alto de la barra de Safari. Mismo arreglo que InscripcionNocturna; al
+     * desmontarse vuelve todo como estaba.
+     */
+    useEffect(() => {
+        const main = document.getElementById('main-content');
+        const wrapper = main?.closest<HTMLElement>('.min-h-screen') ?? null;
+        const fondoPrevio = document.body.style.backgroundColor;
+        const padPrevio = main ? main.style.paddingBottom : '';
+        const fondoWrapperPrevio = wrapper ? wrapper.style.backgroundColor : '';
+        document.body.style.backgroundColor = '#E04497';
+        if (main) main.style.paddingBottom = '0px';
+        if (wrapper) wrapper.style.backgroundColor = 'transparent';
+        return () => {
+            document.body.style.backgroundColor = fondoPrevio;
+            if (main) main.style.paddingBottom = padPrevio;
+            if (wrapper) wrapper.style.backgroundColor = fondoWrapperPrevio;
+        };
+    }, []);
 
     /**
      * Esta pantalla no se indexa: la URL con ?codigo= es una llave, y un
@@ -543,13 +576,12 @@ const ChequearEntrada: React.FC = () => {
     );
 
     return (
-        <div
-            id="noc-entrada"
-            style={{
-                position: 'fixed', inset: 0, background: '#E04497',
-                fontFamily: FUENTE, color: NEGRO, overflow: 'hidden',
-            }}
-        >
+        // El id es el mismo que el de la inscripción a propósito: TODO
+        // ESTILOS_NOCTURNA está scopeado a #nocturna-inscripcion —el fondo
+        // rosa, el blur de la palabra, las esquinas apagadas y, sobre todo,
+        // las anulaciones de los inputs que index.html pisa con !important—.
+        // Con otro id no se aplicaba nada de eso.
+        <div id="nocturna-inscripcion" style={{ fontFamily: FUENTE, color: NEGRO }}>
             <style>{ESTILOS_NOCTURNA}</style>
             <style>{ANIMACIONES}</style>
 
@@ -559,13 +591,13 @@ const ChequearEntrada: React.FC = () => {
                 desde el email, en un teléfono. */}
             <Fondo etapa={etapa} nitida={paso === 'entrada' || paso === 'valida'} calma="baja" portada={false} />
 
-            <div ref={scroll} style={{ position: 'absolute', inset: 0, overflowY: 'auto', overflowX: 'hidden', zIndex: 3 }}>
+            <div ref={scroll} style={{ position: 'relative', zIndex: 3, minHeight: '100dvh' }}>
                 <div
                     style={{
                         width: '100%', maxWidth: 480, margin: '0 auto',
-                        // Arriba, el alto de la barra de la app: sin esto el
-                        // título queda debajo del logo.
-                        padding: esDesktop ? '88px 0 64px' : '76px 20px 40px',
+                        // La barra mide 64 px y flota encima: el contenido
+                        // arranca abajo de ella.
+                        padding: esDesktop ? '24px 0 64px' : '12px 20px 40px',
                         animation: animacionEntrada,
                     }}
                     key={giro}
