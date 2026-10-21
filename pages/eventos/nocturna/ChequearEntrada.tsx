@@ -25,6 +25,7 @@ import {
     arch, anillo, LIMA, NEGRO, BLANCO, FUENTE, FUENTE_PALABRA, CURVA,
 } from './estilo';
 import { useFullBleedHero } from '../../../contexts/HeroContext';
+import { useBarraDeAppSuelta } from '../../../contexts/BarraDeApp';
 import {
     chequearCodigo, verEntrada, completarDatos, normalizarTelefono, soloDigitos,
     EntradaNocturna, MotivoNocturna,
@@ -232,14 +233,20 @@ const ChequearEntrada: React.FC = () => {
     useEffect(() => { precargarFuentes(); }, []);
 
     /**
-     * La barra de la app: fija arriba y transparente, con el logo solo sobre
-     * el rosa.
+     * La barra de la app: arriba de todo en la página, transparente, y se va
+     * con el scroll.
      *
-     * El segundo `true` es "siempre transparente": sin él la barra recupera
-     * su fondo blanco al scrollear y queda una franja clara cortando el rosa.
-     * Y NO se usa `useBarraDeAppSuelta`, que la vuelve `relative` y la deja
-     * irse con el contenido: acá tiene que quedarse arriba.
+     * Son dos cosas separadas en el Layout y hacen falta las dos:
+     *   · `useBarraDeAppSuelta` la pone `relative` en vez de `sticky top-0`.
+     *     Así queda al principio de la página y sube con el contenido, en vez
+     *     de quedarse pegada arriba tapando lo que se lee.
+     *   · `useFullBleedHero(true, true)` la deja transparente. El segundo
+     *     `true` es "siempre": sin él recupera su fondo blanco al scrollear y
+     *     aparece una franja clara cortando el rosa.
+     * El resultado es el del diseño: sólo el logo sobre el rosa, arriba de
+     * todo, y después la pantalla entera para el trámite.
      */
+    useBarraDeAppSuelta();
     useFullBleedHero(true, true);
 
     /**
