@@ -9937,6 +9937,49 @@ export const supabaseService = {
   },
 
   /**
+   * Completa, desde la puerta, los teléfonos que falten.
+   *
+   * Es el plan B de /nocturna-entrada: la familia que no completó desde el
+   * email lo hace acá, con el staff preguntando. "Sin celular" es una
+   * respuesta que el staff marca a mano, nunca algo que se deduzca.
+   *
+   * La base valida todo antes de escribir: si un teléfono no sirve, no se
+   * guarda ninguno y vuelve el campo que está mal.
+   */
+  async completarDatosNocturnaStaff(
+    inscripcionId: string,
+    adultoTelefono: string | null,
+    jovenes: Array<{ id: string; telefono?: string; sinCelular?: boolean }>,
+  ): Promise<{
+    ok: boolean;
+    adultoTelefono?: string | null;
+    jovenes?: Array<{ id: string; telefono: string | null; sin_celular: boolean }>;
+    motivo?: 'sin_permiso' | 'no_existe' | 'telefono' | 'conexion';
+    campo?: string;
+  }> {
+    try {
+      const { data, error } = await supabase.rpc('nocturna_completar_datos_staff', {
+        p_inscripcion_id: inscripcionId,
+        p_adulto_telefono: adultoTelefono || null,
+        p_jovenes: jovenes.map(j => ({
+          id: j.id,
+          ...(j.sinCelular ? { sin_celular: true } : { telefono: j.telefono || '' }),
+        })),
+      });
+      if (error) throw error;
+
+      if (data?.ok === true) {
+        return { ok: true, adultoTelefono: data?.adulto_telefono ?? null, jovenes: data?.jovenes || [] };
+      }
+      return { ok: false, motivo: data?.motivo, campo: data?.campo };
+    } catch (err) {
+      // Sin el detalle: los argumentos llevan teléfonos de menores.
+      console.error('[Nocturna] completarDatosNocturnaStaff: no se pudo guardar');
+      return { ok: false, motivo: 'conexion' };
+    }
+  },
+
+  /**
    * Fija el estado exacto de acreditación de una familia.
    *
    * La base rechaza los estados que no son reales (un chico sin el adulto) y
