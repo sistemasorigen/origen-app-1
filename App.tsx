@@ -65,6 +65,7 @@ import InscripcionDPadre from './pages/eventos/dpadre/InscripcionDPadre';
 import RankingDPadre from './pages/eventos/dpadre/RankingDPadre';
 import InscripcionDiaNino from './pages/eventos/dianino/InscripcionDiaNino';
 import InscripcionNocturna from './pages/eventos/nocturna/InscripcionNocturna';
+import ChequearEntrada from './pages/eventos/nocturna/ChequearEntrada';
 import CompraVoluntarios from './pages/voluntarios/CompraVoluntarios';
 import InscripcionInfluosDia from './pages/eventos/influos/InscripcionInfluosDia';
 import BuscarInfluosDia from './pages/eventos/influos/BuscarInfluosDia';
@@ -565,6 +566,20 @@ const AppContent: React.FC = () => {
                 lateral, sin campana—: esto es un trámite de principio a fin y
                 ofrecer una salida en medio de un formulario con datos de
                 menores es invitar a abandonarlo. */}
+            {/* Chequear la entrada. Publica y sin barra, como la inscripcion:
+                se entra desde un link del email, muchas veces con el codigo
+                puesto en la URL, y es un tramite de principio a fin. */}
+            <Route path="/nocturna-entrada" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                    sinNavegacion
+                >
+                    <ChequearEntrada />
+                </Layout>
+            } />
             <Route path="/nocturna-inscripcion" element={
                 <Layout
                     userRole={user?.role || null}

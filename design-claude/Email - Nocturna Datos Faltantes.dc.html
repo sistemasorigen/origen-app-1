@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#1a1a1a;font-family:Archivo,system-ui,sans-serif}a{color:#DBE479}a:hover{color:#fff}</style></helmet>
+
+<div style="max-width:1560px; margin:0 auto; padding:36px 28px 72px">
+  <p style="margin:0; font:800 12px Archivo,system-ui,sans-serif; letter-spacing:.08em; color:#DBE479">NOCTURNA // EMAIL DE DATOS FALTANTES</p>
+  <h1 style="margin:10px 0 0; font:900 40px/1 Archivo,system-ui,sans-serif; letter-spacing:-.05em; color:#fff">Te falta un dato para tu entrada a Nocturna</h1>
+  <div style="display:flex; flex-direction:column; gap:4px; margin-top:14px; max-width:820px">
+    <p style="margin:0; font:500 14px/1.55 Archivo,system-ui,sans-serif; color:rgba(255,255,255,.75)"><strong style="color:#fff">Asunto:</strong> Te falta un dato para tu entrada a Nocturna</p>
+    <p style="margin:0; font:500 14px/1.55 Archivo,system-ui,sans-serif; color:rgba(255,255,255,.75)"><strong style="color:#fff">Preencabezado:</strong> Completalo en un minuto con tu código de entrada.</p>
+    <p style="margin:0; font:500 14px/1.55 Archivo,system-ui,sans-serif; color:rgba(255,255,255,.75)"><strong style="color:#fff">Variables:</strong> {nombreAdulto} · {codigoEntrada} · {linkCompletar}</p>
+  </div>
+
+  <div style="display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start; margin-top:36px">
+    <sc-for list="{{ vistas }}" as="v" hint-placeholder-count="3">
+      <div style="width:{{ v.ancho }}; max-width:100%; flex:none">
+        <p style="margin:0 0 4px; font:800 12px Archivo,system-ui,sans-serif; letter-spacing:.08em; color:rgba(255,255,255,.6)">{{ v.grupo }}</p>
+        <p style="margin:0 0 4px; font:800 15px Archivo,system-ui,sans-serif; color:#fff">{{ v.titulo }}</p>
+        <p style="margin:0 0 12px; min-height:40px; font:500 12.5px/1.5 Archivo,system-ui,sans-serif; color:rgba(255,255,255,.62)">{{ v.nota }}</p>
+        <div style="border-radius:{{ v.radio }}; overflow:hidden; background:{{ v.chromeBg }}; box-shadow:0 8px 30px rgba(0,0,0,.4)">
+          <div style="padding:13px 16px 11px; border-bottom:1px solid {{ v.chromeLine }}">
+            <p style="margin:0; font:700 13px Archivo,system-ui,sans-serif; color:{{ v.chromeInk }}">Te falta un dato para tu entrada a Nocturna</p>
+            <p style="margin:3px 0 0; font:600 12px Archivo,system-ui,sans-serif; color:{{ v.chromeSub }}">Origen Iglesia · Completalo en un minuto con tu código de entrada.</p>
+          </div>
+          <iframe title="{{ v.titulo }}" srcDoc="{{ v.doc }}" onLoad="{{ v.onLoad }}" style="display:block; width:100%; height:{{ v.alto }}; border:0; background:#E04497"></iframe>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="margin-top:48px; background:#DBE479; border-radius:24px; padding:24px; max-width:900px">
+    <p style="margin:0; font:900 13px Archivo,system-ui,sans-serif; color:#000">[ DECISIONES ]</p>
+    <div style="display:flex; flex-direction:column; gap:14px; margin-top:16px">
+      <sc-for list="{{ decisiones }}" as="d" hint-placeholder-count="4">
+        <div style="border-top:2px solid #000; padding-top:12px">
+          <p style="margin:0; font:900 15px Archivo,system-ui,sans-serif; letter-spacing:-.02em; color:#000">{{ d.t }}</p>
+          <p style="margin:5px 0 0; font:600 13.5px/1.55 Archivo,system-ui,sans-serif; color:#000">{{ d.x }}</p>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { html: '', altos: {} };
+
+  componentDidMount() {
+    fetch('Email - Nocturna Datos Faltantes.html').then(r => r.text()).then(html => this.setState({ html })).catch(() => {});
+  }
+
+  variante(tipo) {
+    let h = this.state.html;
+    if (!h) return '';
+    const vars = { nombreAdulto: 'María', codigoEntrada: 'K7M4QX', linkCompletar: 'https://app.origeniglesia.org/nocturna/entrada?codigo=K7M4QX' };
+    Object.keys(vars).forEach(k => { h = h.split('{{' + k + '}}').join(vars[k]); });
+    h = h.split('https://app.origeniglesia.org/email/nocturna-cabecera.jpg').join(new URL('assets/email/nocturna-cabecera.jpg', location.href).href);
+    let extra = '<style>body::-webkit-scrollbar{display:none}html{scrollbar-width:none}</style>';
+    if (tipo === 'oscuro') extra += '<style>html{filter:invert(1) hue-rotate(180deg)!important;background:#fff!important}img{filter:invert(1) hue-rotate(180deg)!important}</style>';
+    return h.replace('</head>', extra + '</head>');
+  }
+
+  medir(id) {
+    return e => {
+      try {
+        const alto = Math.ceil(e.target.contentDocument.documentElement.scrollHeight);
+        if (alto && this.state.altos[id] !== alto) this.setState(s => ({ altos: Object.assign({}, s.altos, { [id]: alto }) }));
+      } catch (err) {}
+    };
+  }
+
+  renderVals() {
+    const claro = { chromeBg: '#ffffff', chromeLine: '#e8e8e8', chromeInk: '#111', chromeSub: '#666' };
+    const oscuro = { chromeBg: '#1f1f1f', chromeLine: '#333', chromeInk: '#eee', chromeSub: '#999' };
+    const v = (id, tipo, grupo, titulo, nota, ancho, radio, chrome) => Object.assign({ grupo, titulo, nota, ancho, radio, doc: this.variante(tipo), onLoad: this.medir(id), alto: (this.state.altos[id] || 1300) + 'px' }, chrome);
+    return {
+      vistas: [
+        v('d', 'base', 'ESCRITORIO', 'Gmail web', 'Columna de 600 px centrada sobre el rosa a todo el ancho.', '720px', '14px', claro),
+        v('m', 'base', 'CELULAR', 'iPhone Mail · claro', 'A 375 px el código baja a 38 px y el botón ocupa todo el ancho.', '375px', '28px', claro),
+        v('o', 'oscuro', 'MODO OSCURO', 'Gmail en el celular', 'Simulación de la inversión forzada de Gmail. Apple Mail y Outlook.com respetan el rosa por las meta color-scheme y las reglas de modo oscuro.', '375px', '28px', oscuro)
+      ],
+      decisiones: [
+        { t: 'Mismo troquel que la entrada', x: 'La caja del código repite el marco negro, el blanco y la línea punteada de la entrada. La franja lima de abajo lleva el aviso del DNI, así llegan preparados a la página.' },
+        { t: 'Tipografías de Nocturna solo donde se pueden', x: 'Apple Mail e iOS cargan Bagel Fat One y Archivo. Gmail y Outlook las ignoran y caen a Arial Black y Helvetica, que mantienen el peso. Outlook en Windows fuerza Arial por una regla condicional.' },
+        { t: 'Botón a prueba de Outlook', x: 'En Outlook para Windows el botón se dibuja en VML con las esquinas redondeadas. En el resto es una celda negra con el link adentro. Debajo va el link en texto plano.' },
+        { t: 'Imágenes bloqueadas', x: 'Lo único que es imagen es la cabecera: cae a su texto alternativo. El código, el botón y el plazo son texto, así que el email se entiende igual.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
