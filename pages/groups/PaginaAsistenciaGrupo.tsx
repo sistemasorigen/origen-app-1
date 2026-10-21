@@ -190,53 +190,80 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
         return estabaEnLaFecha(r, selectedDate);
     });
 
-    // Extract members — una fila de registro puede
-    // representar 2 personas (pareja). Se expande
-    // cada fila a 1 o 2 entradas de Member.
-    const members: Member[] = visibles
-        .flatMap((r: any) => {
-            const titular: Member = {
-                id: r.id,
-                name: `${r.first_name || r.firstName || ''} ${r.last_name || r.lastName || ''}`.trim() || 'Sin nombre',
-                email: r.email || ''
-            };
-            const partner = r.partnerData || r.partner_data;
-            if (!partner) return [titular];
-            const parejaMember: Member = {
-                id: `${r.id}-partner`,
-                name: `${partner.firstName || partner.first_name || ''} ${partner.lastName || partner.last_name || ''}`.trim() || 'Sin nombre',
-                email: partner.email || ''
-            };
-            return [titular, parejaMember];
-        });
+    // Una fila de registro puede representar 2 personas (pareja): se expande
+    // a 1 o 2 entradas de Member.
+    const personasDe = (r: any): Member[] => {
+        const titular: Member = {
+            id: r.id,
+            name: `${r.first_name || r.firstName || ''} ${r.last_name || r.lastName || ''}`.trim() || 'Sin nombre',
+            email: r.email || ''
+        };
+        const partner = r.partnerData || r.partner_data;
+        if (!partner) return [titular];
+        const parejaMember: Member = {
+            id: `${r.id}-partner`,
+            name: `${partner.firstName || partner.first_name || ''} ${partner.lastName || partner.last_name || ''}`.trim() || 'Sin nombre',
+            email: partner.email || ''
+        };
+        return [titular, parejaMember];
+    };
+
+    const members: Member[] = visibles.flatMap(personasDe);
+
+    /**
+     * Quienes entraron al grupo DESPUÉS de esta fecha.
+     *
+     * Antes eran una línea de texto que explicaba por qué no estaban, y ahí
+     * terminaba: el anfitrión que cargaba hoy a alguien que vino el miércoles
+     * pasado no tenía cómo marcarlo. Ahora son filas de verdad, en su propio
+     * bloque y desmarcadas.
+     *
+     * No se mezclan con el padrón de la fecha a propósito: mezclados se leen
+     * como ausentes, que es justo lo que la regla del padrón vino a arreglar
+     * —quien entró en la semana 6 figuraba ausente en las cinco anteriores—.
+     *
+     * Marcarlos no rompe ninguna cuenta: el trigger de la base arma
+     * `expected_members` como el padrón de la fecha MÁS los presentes, así
+     * que quien se marca entra también al denominador, y quien queda sin
+     * marcar no entra a ningún lado.
+     */
+    const sumados: any[] = moviendoFecha ? [] : inscripciones.filter((r: any) => {
+        if (String(r.status ?? '').toUpperCase() !== 'APPROVED') return false;
+        if (visibles.some((v: any) => v.id === r.id)) return false;
+        const ingreso = fechaDeIngreso(r);
+        return ingreso !== null && ingreso > selectedDate;
+    });
+
+    const personasSumadas: Member[] = sumados.flatMap(personasDe);
 
     // Las mismas personas, pero agrupadas por inscripción: el diseño muestra
     // la pareja como UNA fila. Los ids no cambian, así que selectedMembers y
     // saveAttendance siguen viendo exactamente lo de antes.
-    const filas: { regId: string; personas: Member[] }[] = visibles
-        .map((r: any) => {
-            const propias = members.filter(m => m.id === r.id || m.id === `${r.id}-partner`);
-            return { regId: r.id, personas: propias };
-        })
+    const aFilas = (lista: any[], sumado: boolean) => lista
+        .map((r: any) => ({ regId: r.id, personas: personasDe(r), sumado }))
         .filter(f => f.personas.length > 0);
+
+    const filas: { regId: string; personas: Member[]; sumado: boolean }[] = [
+        ...aFilas(visibles, false),
+        ...aFilas(sumados, true),
+    ];
 
     // Los contadores miran sólo lo que se ve. selectedMembers puede tener de
     // más —presentes de gente que después se dio de baja— y contarlos daría
     // más presentes que miembros, o un 120%.
-    const presentCount = members.filter(m => selectedMembers.has(m.id)).length;
-    const absentCount = members.length - presentCount;
-    const presentPct = members.length > 0 ? Math.round((presentCount / members.length) * 100) : 0;
+    //
+    // De los sumados después sólo pesa el que esté marcado, igual que en la
+    // base: sin marcar no son de esta reunión, así que no son ausentes ni
+    // agrandan el padrón.
+    const presentesDeLaFecha = members.filter(m => selectedMembers.has(m.id)).length;
+    const presentesSumados = personasSumadas.filter(m => selectedMembers.has(m.id)).length;
+    const presentCount = presentesDeLaFecha + presentesSumados;
+    const absentCount = members.length - presentesDeLaFecha;
+    const padronVisible = members.length + presentesSumados;
+    const presentPct = padronVisible > 0 ? Math.round((presentCount / padronVisible) * 100) : 0;
 
-    // Quiénes quedaron afuera de esta fecha por haberse sumado después. Se
-    // cuenta en personas, igual que "Miembros · N".
-    const idsVisibles = new Set(members.map(m => m.id));
-    const sumadosDespues = inscripciones.reduce((n: number, r: any) => {
-        if (String(r.status ?? '').toUpperCase() !== 'APPROVED') return n;
-        if (idsVisibles.has(r.id)) return n;
-        const ingreso = fechaDeIngreso(r);
-        if (ingreso === null || ingreso <= selectedDate) return n;
-        return n + idsDeInscripcion(r).length;
-    }, 0);
+    /** ¿Hay algo que marcar en esta fecha, del padrón o de los sumados? */
+    const hayFilas = filas.length > 0;
 
     // ¿El grupo tiene miembros, aunque ninguno corresponda a esta fecha? Para
     // distinguir "todavía no hay nadie" de "nadie había entrado todavía".
@@ -357,6 +384,11 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     // —presentes de alguien que después se dio de baja— se guardaron una vez y
     // se siguen guardando. Un "marcar todos" de hoy no puede borrar a quien
     // estuvo en esa reunión.
+    //
+    // "Marcar todos" marca el padrón de la fecha y NO a los sumados después:
+    // darle presente a alguien que capaz no estuvo es peor que un tilde que
+    // falta. "Desmarcar todos" sí los limpia, o quedaría uno marcado sin que
+    // se vea de dónde salió.
     const selectAll = () => setSelectedMembers(prev => {
         const s = new Set(prev);
         members.forEach(m => s.add(m.id));
@@ -364,7 +396,7 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
     });
     const deselectAll = () => setSelectedMembers(prev => {
         const s = new Set(prev);
-        members.forEach(m => s.delete(m.id));
+        [...members, ...personasSumadas].forEach(m => s.delete(m.id));
         return s;
     });
 
@@ -395,7 +427,7 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
         const esAlta = !editingDate;
         const fechaGuardada = selectedDate;
         const presentes = presentCount;
-        const padron = members.length;
+        const padron = padronVisible;
 
         setTituloGuardado(esAlta ? 'Asistencia guardada' : 'Cambios guardados');
         setEstadoGuardado('guardando');
@@ -585,7 +617,7 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                 <>
                     {/* Resumen en vivo, pegado bajo el encabezado: se actualiza
                         mientras se tilda, sin bajar a buscarlo. */}
-                    {members.length > 0 && !yaTomada && (
+                    {hayFilas && !yaTomada && (
                         <div className="sticky top-0 z-20 px-4 pt-3 pb-1 bg-gradient-to-b from-[#f6f6f4] from-[78%] to-transparent dark:from-[#111110]">
                             <div className="max-w-[430px] lg:max-w-[900px] mx-auto bg-[#0a0a0a] dark:bg-white rounded-[24px] px-[18px] py-4">
                                 <div className="flex items-end justify-between">
@@ -641,7 +673,7 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                     Elegir otra fecha
                                 </button>
                             </div>
-                        ) : members.length === 0 ? (
+                        ) : !hayFilas ? (
                             <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px]">
                                 {hayAprobados ? (
                                     // El grupo tiene gente, pero toda entró después de esta
@@ -666,22 +698,13 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                     <p className={rotulo}>Miembros · {members.length}</p>
                                     <button
                                         type="button"
-                                        onClick={presentCount === members.length ? deselectAll : selectAll}
+                                        onClick={presentesDeLaFecha === members.length ? deselectAll : selectAll}
                                         className="text-[13px] font-semibold hover:opacity-70 transition-opacity"
                                     >
-                                        {presentCount === members.length ? 'Desmarcar todos' : 'Marcar todos presentes'}
+                                        {presentesDeLaFecha === members.length ? 'Desmarcar todos' : 'Marcar todos presentes'}
                                     </button>
                                 </div>
 
-                                {/* Por qué la lista es más corta de lo que el anfitrión
-                                    espera. Sin esta línea parecería que faltan personas. */}
-                                {sumadosDespues > 0 && (
-                                    <p className="px-1.5 -mt-1 pb-2.5 text-[12.5px] font-medium text-black/45 dark:text-white/45">
-                                        {sumadosDespues === 1
-                                            ? `1 persona se sumó después del ${formatDate(selectedDate)} y no figura.`
-                                            : `${sumadosDespues} personas se sumaron después del ${formatDate(selectedDate)} y no figuran.`}
-                                    </p>
-                                )}
 
                                 <div className="bg-white dark:bg-[#1b1b1a] rounded-[26px] overflow-hidden">
                                     {filas.map((fila, i) => {
@@ -693,6 +716,18 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
                                         return (
                                             <React.Fragment key={fila.regId}>
                                                 {i > 0 && <div className="h-px bg-black/[.06] dark:bg-white/[.08] mx-4" />}
+
+                                                {/* El corte entre el padrón de la fecha y los que
+                                                    entraron después. Sin esto se leerían como
+                                                    ausentes de una reunión a la que no iban. */}
+                                                {fila.sumado && (i === 0 || !filas[i - 1].sumado) && (
+                                                    <div className="px-4 pt-4 pb-2">
+                                                        <p className={rotulo}>Se sumaron después</p>
+                                                        <p className="mt-1.5 text-[12.5px] font-medium leading-[1.45] text-black/45 dark:text-white/45">
+                                                            Entraron al grupo después del {fechaLarga(selectedDate)}. Marcá sólo a quien haya estado.
+                                                        </p>
+                                                    </div>
+                                                )}
 
                                                 {esPareja ? (
                                                     <>
@@ -797,7 +832,7 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
 
                     {/* Guardar anclado abajo: se toma asistencia parado, con la
                         lista scrolleada. */}
-                    {members.length > 0 && !yaTomada && (
+                    {hayFilas && !yaTomada && (
                         <div className="fixed left-0 right-0 bottom-0 px-4 pt-3.5 pb-5 bg-gradient-to-t from-[#f6f6f4] from-[62%] to-transparent dark:from-[#111110]">
                             <div className="max-w-[430px] lg:max-w-[900px] mx-auto">
                                 <button
