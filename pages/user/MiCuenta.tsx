@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSinLeer } from '../../contexts/NotificationContext';
 import { useInscripcionesDelUsuario } from '../../src/hooks/useInscripcionesDelUsuario';
 import { useBannersDeInicio } from '../../src/hooks/useBannersDeInicio';
+import { versiculoDelDia } from '../../src/config/versiculos';
 import {
     misCompras, misGrupos, misInscripciones,
     type CompraPropia, type GrupoPropio, type InscripcionPropia,
@@ -277,14 +278,12 @@ const MiCuenta: React.FC = () => {
         const elegida = candidatos.find(c => !cerradas.includes(c.caso));
         if (elegida) return elegida;
 
-        // El versículo del día, con la misma rotación que el inicio.
-        const versos = config?.verses;
-        if (versos && versos.length > 0) {
-            const inicioDelAnio = new Date(new Date().getFullYear(), 0, 0).getTime();
-            const diaDelAnio = Math.floor((Date.now() - inicioDelAnio) / 86400000);
-            const v = versos[diaDelAnio % versos.length];
-            return { caso: 'verso', titulo: '', sub: '', cita: { texto: v.text, ref: v.ref } };
-        }
+        // El versículo del día: el de la configuración si hay, y si no el de
+        // respaldo. `app_config.verses` está vacía —y no hay pantalla para
+        // cargarla—, así que sin respaldo la tarjeta desaparecía entera y
+        // quedaba un hueco donde la persona espera encontrar algo.
+        const v = versiculoDelDia(config?.verses);
+        if (v) return { caso: 'verso', titulo: '', sub: '', cita: { texto: v.text, ref: v.ref } };
         return null;
     }, [eventos, compras, faltantes, deGrupos, cerradas, config, navigate, irA]);
 
