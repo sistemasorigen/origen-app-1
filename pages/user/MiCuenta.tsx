@@ -120,6 +120,10 @@ const cuandoEs = (fecha?: string | null, hora?: string | null): string => {
     return hora ? `${texto}, ${hora}` : texto;
 };
 
+/** Dónde quedó el scroll del índice, y si la persona salió para volver. */
+const SCROLL_INDICE = 'scroll.perfil';
+const SCROLL_VUELVE = 'scroll.perfil.vuelve';
+
 const MiCuenta: React.FC = () => {
     const navigate = useNavigate();
     const { seccion: enLaUrl, id } = useParams<{ seccion?: string; id?: string }>();
@@ -186,9 +190,78 @@ const MiCuenta: React.FC = () => {
         anterior.current = enLaUrl;
     }, [enLaUrl]);
 
-    const irA = useCallback((s: SeccionDeMiCuenta) => {
-        navigate(`/perfil/${s}`);
+    // ── Dónde estaba el scroll del índice ───────────────────────────────
+    //
+    // En el teléfono el índice y cada función son rutas distintas, pero el
+    // componente es el mismo y no se desmonta; App.tsx sube al tope en cada
+    // cambio de ruta, así que volver de una función dejaba a la persona
+    // arriba de todo. Se guarda la posición mientras scrollea el índice y,
+    // al irse a una función (o al calendario, a notificaciones…), se marca
+    // que va a volver: sólo en ese caso se restaura. Entrando a /perfil de
+    // nuevo desde el menú arranca arriba, como cualquier pantalla.
+    //
+    // En la compu no hace falta: el índice es una columna fija al costado.
+    const enElIndiceRef = useRef(enElIndice && !esAncha);
+    enElIndiceRef.current = enElIndice && !esAncha;
+
+    useEffect(() => {
+        if (esAncha || !enElIndice) return;
+        let pendiente = 0;
+        const guardar = () => {
+            pendiente = 0;
+            // El ref se actualiza en el render: si ya se navegó a una función,
+            // el scroll que provoca App.tsx al subir no pisa la posición.
+            if (!enElIndiceRef.current) return;
+            try { sessionStorage.setItem(SCROLL_INDICE, String(Math.round(window.scrollY))); } catch { /* sin almacenamiento, no recuerda */ }
+        };
+        const alScrollear = () => { if (!pendiente) pendiente = window.setTimeout(guardar, 150); };
+        window.addEventListener('scroll', alScrollear, { passive: true });
+        return () => {
+            if (pendiente) window.clearTimeout(pendiente);
+            window.removeEventListener('scroll', alScrollear);
+        };
+    }, [esAncha, enElIndice]);
+
+    /** Navegar desde el índice dejando anotado que se va a volver. */
+    const salirDelIndice = useCallback((ruta: string) => {
+        if (enElIndiceRef.current) {
+            try {
+                sessionStorage.setItem(SCROLL_INDICE, String(Math.round(window.scrollY)));
+                sessionStorage.setItem(SCROLL_VUELVE, '1');
+            } catch { /* ídem */ }
+        }
+        navigate(ruta);
     }, [navigate]);
+
+    useEffect(() => {
+        if (esAncha || !enElIndice || cargando) return;
+        let destino = 0;
+        try {
+            if (sessionStorage.getItem(SCROLL_VUELVE) !== '1') return;
+            sessionStorage.removeItem(SCROLL_VUELVE);
+            destino = Number(sessionStorage.getItem(SCROLL_INDICE)) || 0;
+        } catch { return; }
+        if (destino <= 0) return;
+        // Reintentos: le ganan al scrollTo(0, 0) de App.tsx, que corre
+        // después, y esperan a que el índice tenga su alto.
+        const t = [0, 60, 160, 320, 520].map(ms => window.setTimeout(() => {
+            if (Math.abs(window.scrollY - destino) < 4) return;
+            window.scrollTo({ top: destino, behavior: 'instant' as ScrollBehavior });
+        }, ms));
+        return () => t.forEach(x => window.clearTimeout(x));
+    }, [esAncha, enElIndice, cargando]);
+
+    // Si /perfil se deja desde ADENTRO de una función (el menú lateral, por
+    // ejemplo), no se vuelve al índice: la marca se borra para que la próxima
+    // visita arranque arriba.
+    useEffect(() => () => {
+        if (enElIndiceRef.current) return;
+        try { sessionStorage.removeItem(SCROLL_VUELVE); } catch { /* ídem */ }
+    }, []);
+
+    const irA = useCallback((s: SeccionDeMiCuenta) => {
+        salirDelIndice(`/perfil/${s}`);
+    }, [salirDelIndice]);
 
     const volver = useCallback(() => { navigate('/perfil'); }, [navigate]);
 
@@ -240,7 +313,7 @@ const MiCuenta: React.FC = () => {
                 titulo: `Tu entrada a ${proxima.evento}`,
                 sub: cuandoEs(proxima.fecha, proxima.hora),
                 boton: 'Ver mi entrada',
-                onIr: () => navigate(`/perfil/inscripciones/${proxima.id}`),
+                onIr: () => salirDelIndice(`/perfil/inscripciones/${proxima.id}`),
             });
         }
 
@@ -251,7 +324,7 @@ const MiCuenta: React.FC = () => {
                 titulo: <>Tu pedido <span className="whitespace-nowrap">{lista.codigo}</span> está listo</>,
                 sub: 'Retiralo en el Punto de Información',
                 boton: 'Ver pedido',
-                onIr: () => navigate(`/perfil/compras/${lista.id}`),
+                onIr: () => salirDelIndice(`/perfil/compras/${lista.id}`),
             });
         }
 
@@ -271,7 +344,7 @@ const MiCuenta: React.FC = () => {
                 titulo: 'Todavía no estás en un grupo',
                 sub: 'Encontrá el tuyo',
                 boton: 'Ver grupos',
-                onIr: () => navigate('/gcx'),
+                onIr: () => salirDelIndice('/gcx'),
             });
         }
 
@@ -285,7 +358,7 @@ const MiCuenta: React.FC = () => {
         const v = versiculoDelDia(config?.verses);
         if (v) return { caso: 'verso', titulo: '', sub: '', cita: { texto: v.text, ref: v.ref } };
         return null;
-    }, [eventos, compras, faltantes, deGrupos, cerradas, config, navigate, irA]);
+    }, [eventos, compras, faltantes, deGrupos, cerradas, config, salirDelIndice, irA]);
 
     // El estado de los avisos se recalcula con el permiso: pedirlo cambia
     // `permission` y la fila se actualiza sola.
@@ -412,7 +485,7 @@ const MiCuenta: React.FC = () => {
             onCerrarDestacado={cerrarDestacada}
             activa={esAncha ? seccion : null}
             onIr={irA}
-            onIrAfuera={ruta => navigate(ruta)}
+            onIrAfuera={salirDelIndice}
             onCerrarSesion={() => setPanel('salir')}
             onVolver={undefined}
         />

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { volverOA } from '../../src/utils/volver';
 import { supabaseService } from '../../services/supabaseService';
 import { supabase } from '../../services/supabaseClient';
 import { Group, User, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
@@ -229,6 +231,7 @@ const GroupCard: React.FC<{ group: Group; asHost: boolean; pendiente?: boolean }
 
 // ── Main ───────────────────────────────────────────────
 const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => {
+    const navigate = useNavigate();
     const [weekStart, setWeekStart]                   = useState<Date>(getWeekStart(new Date()));
     const [hostGroups, setHostGroups]                 = useState<Group[]>([]);
     const [participantGroups, setParticipantGroups]   = useState<Group[]>([]);
@@ -445,7 +448,19 @@ const CalendarioGCXContent: React.FC<CalendarioGCXProps> = ({ currentUser }) => 
 
                 {/* ── TÍTULO ──────────────────────────────── */}
                 <div className="flex items-center justify-between gap-3 mb-4">
-                    <h1 className={H2}>Mi calendario</h1>
+                    {/* Volver a donde estaba: /perfil casi siempre, o la
+                        inscripción desde la que se abrió. */}
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button
+                            type="button"
+                            onClick={() => volverOA(navigate, '/perfil')}
+                            aria-label="Volver"
+                            className="w-11 h-11 shrink-0 rounded-full flex items-center justify-center bg-[#f2f2f0] dark:bg-[#2a2a28] text-[#0a0a0a] dark:text-[#f4f4f2] transition-colors hover:bg-[#e9e9e6] dark:hover:bg-[#333331] focus:outline-none focus-visible:ring-2 focus-visible:ring-black/25 dark:focus-visible:ring-white/25"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5" /></svg>
+                        </button>
+                        <h1 className={H2}>Mi calendario</h1>
+                    </div>
                     {seasonLabel && (
                         <span className={`${PILL} shrink-0 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400`}>
                             {seasonLabel}

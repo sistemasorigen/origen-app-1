@@ -19,6 +19,7 @@ import {
 import { useNotifications } from '../../hooks/useNotifications';
 import type { AppNotification } from '../../hooks/useNotifications';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
+import { volverOA } from '../../src/utils/volver';
 
 /**
  * El centro de notificaciones (design-claude/Notificaciones.dc).
@@ -586,7 +587,17 @@ const Notifications: React.FC = () => {
 
                 {/* ── Encabezado ─────────────────────────────────────── */}
                 <div className="flex items-start gap-2.5">
-                    <div className="flex-1 min-w-0">
+                    {/* El mismo volver que las funciones de /perfil, de donde
+                        se llega casi siempre. */}
+                    <button
+                        type="button"
+                        onClick={() => volverOA(navigate, '/perfil')}
+                        aria-label="Volver"
+                        className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition-colors hover:bg-[#e9e9e6] dark:hover:bg-[#333331] ${CHIP} ${TINTA} ${FOCO}`}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5" /></svg>
+                    </button>
+                    <div className="flex-1 min-w-0 pt-1">
                         <h1 className="text-[28px] lg:text-[32px] leading-[1.1] font-semibold tracking-[-.025em]">
                             Notificaciones
                         </h1>
