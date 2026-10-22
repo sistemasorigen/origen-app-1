@@ -11,13 +11,14 @@ import {
  * Cuenta y seguridad — design-claude/Mi Cuenta - Preferencias y seguridad.dc.
  *
  * Tres cosas, y ninguna inventa nada del lado de la sesión:
- *   · el email, bloqueado, y CÓMO entrás (Google o contraseña),
+ *   · el email, bloqueado, y CÓMO entrás (Google, Cuenta Origen o las dos),
  *   · cambiar la contraseña, sólo si entrás con contraseña,
  *   · cerrar la sesión en todos los dispositivos.
  *
  * CÓMO SE SABE CON QUÉ ENTRÁS. Por `identities` de la sesión, no por si hay
  * contraseña: una cuenta puede tener las dos cosas. Si entre las identidades
- * hay una de Google, se muestra Google; el formulario de contraseña aparece
+ * hay una de Google, se muestra Google; si hay una `email` (la de "Crear
+ * cuenta"), se muestra Cuenta Origen. El formulario de contraseña aparece
  * sólo cuando hay una identidad de tipo `email`.
  */
 
@@ -151,32 +152,45 @@ export const CuentaYSeguridad: React.FC<CuentaYSeguridadProps> = ({ onVolver, av
 
             <Rotulo className="mt-7 mb-2.5 ml-1.5">CÓMO ENTRÁS</Rotulo>
             <div className={TARJETA} style={ESTILO_TARJETA}>
-                <div className="flex items-center gap-3.5 min-h-[60px] px-4 py-2.5">
-                    {proveedores === null ? (
+                {proveedores === null ? (
+                    <div className="flex items-center gap-3.5 min-h-[60px] px-4 py-2.5">
                         <span className="text-[15px] font-medium" style={{ color: 'var(--mc-m50)' }}>Buscando…</span>
-                    ) : conGoogle ? (
-                        <>
-                            <span className="w-9 h-9 flex-none rounded-full bg-white flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.08)' }}>
-                                <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-                                    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
-                                    <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 7l7.4 5.7c4.3-4 6.9-9.9 6.9-17.2z" />
-                                    <path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.9-6.1z" />
-                                    <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
-                                </svg>
-                            </span>
-                            <span className="flex-1 text-[15px] font-semibold">Con Google</span>
-                        </>
-                    ) : (
-                        <>
-                            <span className="w-9 h-9 flex-none rounded-full flex items-center justify-center"
-                                style={{ background: 'var(--mc-chip)' }}>
-                                <Icono d="M14.5 13.5a5 5 0 10-4.6-3L3.5 17v3.5H7v-2h2v-2h2l1.2-1.2a5 5 0 002.3-1.8zM16.5 7.5v.1" />
-                            </span>
-                            <span className="flex-1 text-[15px] font-semibold">Con email y contraseña</span>
-                        </>
-                    )}
-                </div>
+                    </div>
+                ) : (
+                    <>
+                        {conGoogle && (
+                            <div className="flex items-center gap-3.5 min-h-[60px] px-4 py-2.5">
+                                <span className="w-9 h-9 flex-none rounded-full bg-white flex items-center justify-center"
+                                    style={{ boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.08)' }}>
+                                    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                                        <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
+                                        <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 7l7.4 5.7c4.3-4 6.9-9.9 6.9-17.2z" />
+                                        <path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.9-6.1z" />
+                                        <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
+                                    </svg>
+                                </span>
+                                <span className="flex-1 text-[15px] font-semibold">Con Google</span>
+                            </div>
+                        )}
+                        {/* Cuenta Origen = la que se creó con "Crear cuenta",
+                            email y contraseña. Una cuenta puede tener las dos
+                            filas. Sin Google ni email (no debería pasar) se
+                            muestra ésta, como antes. */}
+                        {(conClave || !conGoogle) && (
+                            <div className="flex items-center gap-3.5 min-h-[60px] px-4 py-2.5"
+                                style={{ borderTop: conGoogle ? '1px solid var(--mc-line)' : '0' }}>
+                                {/* favicon.png es el isotipo negro sobre
+                                    transparente: en oscuro se invierte. */}
+                                <span className="w-9 h-9 flex-none rounded-full flex items-center justify-center"
+                                    style={{ background: 'var(--mc-chip)' }}>
+                                    <img src="/favicon.png" alt="" aria-hidden="true"
+                                        className="w-5 h-5 object-contain dark:invert" />
+                                </span>
+                                <span className="flex-1 text-[15px] font-semibold">Cuenta Origen</span>
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
 
             <Rotulo className="mt-7 mb-2.5 ml-1.5">CONTRASEÑA</Rotulo>

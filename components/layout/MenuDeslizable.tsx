@@ -4,7 +4,6 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
     X,
     Menu,
-    Bell,
     Home,
     BarChart,
     Info,
@@ -18,9 +17,6 @@ import {
     ChevronsLeft,
     LogOut,
     LogIn,
-    Sun,
-    Moon,
-    UserCircle,
     Star,
     Trophy,
     CalendarDays,
@@ -35,7 +31,6 @@ import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import { supabaseService } from '../../services/supabaseService';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
-import { useTema } from '../../contexts/TemaContext';
 import { useSinLeer } from '../../contexts/NotificationContext';
 
 // ══════════════════════════════════════════════════════════════════════
@@ -253,7 +248,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     onToggleCollapse
 }) => {
     const navigate = useNavigate();
-    const { oscuro: temaOscuro, alternar: alternarTema } = useTema();
     const location = useLocation();
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
     const [shouldRender, setShouldRender] = useState(false);
@@ -502,12 +496,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             path: '/gcx',
             exact: true,
             roles: []
-        },
-        {
-            label: 'Mi Calendario',
-            icon: CalendarRange,
-            path: '/gcx/calendario',
-            roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION, UserRole.USUARIO, UserRole.VIEWER]
         },
         {
             label: 'Eventos',
@@ -1305,29 +1293,14 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                     }`}
                                 style={{ animation: sinMovimiento ? 'none' : 'mdAsoma .16s ease-out' }}
                             >
+                                {/* Notificaciones y el modo oscuro viven en Mi
+                                    cuenta (/perfil): acá queda sólo la puerta.
+                                    handleNavigation ya cierra el panel de la
+                                    cuenta y el menú. */}
                                 <FilaCuenta
-                                    icon={UserCircle}
-                                    label="Mi perfil"
+                                    icon={Settings}
+                                    label="Configuración"
                                     onClick={() => handleNavigation('/perfil')}
-                                />
-                                {/* handleNavigation ya cierra el panel de la
-                                    cuenta y el menú: no hace falta pedirlo
-                                    acá, igual que en Mi perfil. */}
-                                <FilaCuenta
-                                    icon={Bell}
-                                    label="Notificaciones"
-                                    insignia={sinLeer}
-                                    etiqueta={sinLeer > 0 ? `Notificaciones, ${sinLeer} sin leer` : 'Notificaciones'}
-                                    onClick={() => handleNavigation('/notificaciones')}
-                                />
-                                {/* El tema sale del contexto y no del prop:
-                                    `onToggleTheme` no lo pasaba nadie, asi que
-                                    esta fila no se dibujaba nunca. Ahora es la
-                                    misma que el interruptor de Mi cuenta. */}
-                                <FilaCuenta
-                                    icon={temaOscuro ? Sun : Moon}
-                                    label={temaOscuro ? 'Modo claro' : 'Modo oscuro'}
-                                    onClick={() => { alternarTema(); setCuentaAbierta(false); }}
                                 />
                                 <div className={`my-1 mx-2.5 h-px ${GUIA}`} />
                                 <FilaCuenta
