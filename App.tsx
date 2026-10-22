@@ -52,7 +52,7 @@ import PastoralCareForm from './pages/audiencia/AudienciaServiciosFormulario';
 import Notifications from './pages/user/Notificaciones';
 import PastoralCareDashboard from './pages/audiencia/AudienciaServiciosPrincipal';
 import AudienciaServicioDetalle from './pages/audiencia/AudienciaServicioDetalle';
-import ProfilePage from './pages/user/PaginaPerfil';
+import MiCuenta from './pages/user/MiCuenta';
 import Prode from './pages/prode/Prode';
 import AdminProde from './pages/prode/AdminProde';
 import ProdeRanking from './pages/prode/ProdeRanking';
@@ -122,6 +122,7 @@ import SinAcceso, { guardarDestino } from './components/auth/SinAcceso';
 import { supabaseService } from './services/supabaseService';
 import { hasRole } from './services/authUtils';
 import { AudioProvider } from './contexts/AudioContext';
+import { ProveedorDeTema } from './contexts/TemaContext';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import ModalActualizacion from './components/ui/ModalActualizacion';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -1440,7 +1441,9 @@ const AppContent: React.FC = () => {
                                         : <SinAcceso />
                                 } />
                                 <Route path="/notificaciones" element={<Notifications />} />
-                                <Route path="/perfil" element={<ProfilePage />} />
+                                <Route path="/perfil" element={<MiCuenta />} />
+                                <Route path="/perfil/:seccion" element={<MiCuenta />} />
+                                <Route path="/perfil/:seccion/:id" element={<MiCuenta />} />
                                 <Route path="*" element={<Navigate to="/" />} />
                             </Routes>
                         </Layout>
@@ -1458,6 +1461,7 @@ const App: React.FC = () => {
 
     return (
         <ErrorBoundary>
+            <ProveedorDeTema>
             <AudioProvider>
                 <AuthProvider>
                     <NotificationProvider>
@@ -1476,6 +1480,7 @@ const App: React.FC = () => {
                     </NotificationProvider>
                 </AuthProvider>
             </AudioProvider>
+            </ProveedorDeTema>
         </ErrorBoundary>
     );
 };

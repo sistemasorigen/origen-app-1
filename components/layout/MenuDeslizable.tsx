@@ -35,6 +35,7 @@ import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import { supabaseService } from '../../services/supabaseService';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
+import { useTema } from '../../contexts/TemaContext';
 import { useSinLeer } from '../../contexts/NotificationContext';
 
 // ══════════════════════════════════════════════════════════════════════
@@ -252,6 +253,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     onToggleCollapse
 }) => {
     const navigate = useNavigate();
+    const { oscuro: temaOscuro, alternar: alternarTema } = useTema();
     const location = useLocation();
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
     const [shouldRender, setShouldRender] = useState(false);
@@ -1318,13 +1320,15 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                     etiqueta={sinLeer > 0 ? `Notificaciones, ${sinLeer} sin leer` : 'Notificaciones'}
                                     onClick={() => handleNavigation('/notificaciones')}
                                 />
-                                {onToggleTheme && (
-                                    <FilaCuenta
-                                        icon={isDarkMode ? Sun : Moon}
-                                        label={isDarkMode ? 'Modo claro' : 'Modo oscuro'}
-                                        onClick={() => { onToggleTheme(); setCuentaAbierta(false); }}
-                                    />
-                                )}
+                                {/* El tema sale del contexto y no del prop:
+                                    `onToggleTheme` no lo pasaba nadie, asi que
+                                    esta fila no se dibujaba nunca. Ahora es la
+                                    misma que el interruptor de Mi cuenta. */}
+                                <FilaCuenta
+                                    icon={temaOscuro ? Sun : Moon}
+                                    label={temaOscuro ? 'Modo claro' : 'Modo oscuro'}
+                                    onClick={() => { alternarTema(); setCuentaAbierta(false); }}
+                                />
                                 <div className={`my-1 mx-2.5 h-px ${GUIA}`} />
                                 <FilaCuenta
                                     icon={LogOut}

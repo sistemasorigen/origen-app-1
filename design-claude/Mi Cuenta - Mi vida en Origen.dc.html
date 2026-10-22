@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@600;700&amp;display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button,input,textarea,select{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes mcR0{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:none}}@keyframes mcR1{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:none}}@keyframes mcL0{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:none}}@keyframes mcL1{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:none}}@keyframes mcF0{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF1{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF2{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF3{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF4{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcFa{from{opacity:0}to{opacity:1}}@keyframes mcZoom{from{opacity:0;transform:scale(.15)}to{opacity:1;transform:none}}@keyframes mcToast{from{opacity:0;transform:translate(-50%,24px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes mcSpin{to{transform:rotate(360deg)}}@keyframes mcPulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes mcLive{0%,100%{box-shadow:0 0 0 0 rgba(52,199,89,.5)}50%{box-shadow:0 0 0 5px rgba(52,199,89,0)}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:12px">
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:10px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">IR A</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center">
+      <sc-for list="{{ pIr }}" as="p" hint-placeholder-count="7"><button onClick="{{ p.ir }}" style="{{ p.st }}">{{ p.t }}</button></sc-for>
+    </div>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:10px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ESTADO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center">
+      <sc-for list="{{ pEstado }}" as="p" hint-placeholder-count="12"><button onClick="{{ p.ir }}" style="{{ p.st }}">{{ p.t }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ outerW }}; height:{{ outerH }}">
+    <div ref="{{ frameRef }}" style="position:absolute; left:0; top:0; width:{{ frameW }}; height:{{ frameH }}; transform:{{ frameTf }}; transform-origin:0 0; overflow:hidden; border-radius:{{ frameR }}; background:{{ t.bg }}; color:{{ t.ink }}; box-shadow:0 6px 28px rgba(0,0,0,.14); display:grid; grid-template-columns:{{ cols }}; transition:background-color .4s ease, color .4s ease">
+
+      <div style="display:{{ leftDisp }}; min-height:0; height:100%; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; border-right:{{ leftBorder }}; animation:{{ leftAnim }}">
+        <div style="padding:{{ leftPad }}">
+          <dc-import name="MiCuentaLista" style="display:block; width:100%" t="{{ t }}" desk="{{ desk }}" dark="{{ dark }}" file="vida" sel="{{ sel }}" loading="{{ false }}" falta="{{ falta }}" notifs="{{ notifs }}" push="off" feat-key="{{ featKey }}" counts="{{ counts }}" on-row="{{ onRow }}" on-dismiss="{{ onDismiss }}" on-push="{{ onPush }}" on-dark="{{ onDark }}" hint-size="100%,1500px"></dc-import>
+        </div>
+      </div>
+
+      <div style="display:{{ rightDisp }}; flex-direction:column; min-height:0; height:100%; min-width:0; animation:{{ rightAnim }}">
+        <div style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none">
+          <div style="max-width:640px; margin:0 auto; padding:{{ rightPad }}">
+            <div style="display:flex; align-items:center; gap:12px; min-height:44px">
+              <sc-if value="{{ hayBack }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ volver }}" aria-label="Volver" style="{{ roundBtn }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"></path></svg></button>
+              </sc-if>
+              <h2 style="margin:0; font-size:{{ h2 }}; line-height:1.15; font-weight:600; letter-spacing:-.025em">{{ titulo }}</h2>
+            </div>
+
+            <sc-if value="{{ cargando }}" hint-placeholder-val="{{ false }}">
+              <div aria-busy="true" style="display:flex; flex-direction:column; gap:12px; margin-top:24px">
+                <sc-for list="{{ skCards }}" as="k" hint-placeholder-count="3">
+                  <div style="{{ card }}; display:flex; gap:14px; padding:16px">
+                    <div style="{{ sk }}; width:56px; height:56px; border-radius:16px; flex:none"></div>
+                    <div style="flex:1"><div style="{{ sk }}; width:{{ k.w1 }}; height:14px"></div><div style="{{ sk }}; width:{{ k.w2 }}; height:11px; margin-top:10px"></div><div style="{{ sk }}; width:30%; height:11px; margin-top:8px"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vacio }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:72px 16px 24px">
+                <span style="width:72px; height:72px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="{{ vac.icon }}"></path></svg></span>
+                <p style="margin:20px 0 0; font-size:18px; line-height:1.3; font-weight:600; letter-spacing:-.015em; text-wrap:balance">{{ vac.t }}</p>
+                <sc-if value="{{ vac.hasSub }}" hint-placeholder-val="{{ false }}"><p style="margin:8px 0 0; max-width:320px; font-size:15px; line-height:1.45; font-weight:500; color:{{ t.m50 }}; text-wrap:pretty">{{ vac.sub }}</p></sc-if>
+                <sc-if value="{{ vac.hasBtn }}" hint-placeholder-val="{{ true }}"><button onClick="{{ vac.go }}" style="{{ primSm }}; margin-top:22px">{{ vac.btn }}</button></sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vGrupos }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:12px; margin-top:24px">
+                <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="2">
+                  <button onClick="{{ g.go }}" style="{{ cardBtn }}" style-hover="background:{{ t.hoverCard }}">
+                    <span style="width:64px; height:64px; flex:none; border-radius:18px; background:{{ g.bg }}; color:{{ g.fg }}; display:flex; align-items:center; justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ g.icon }}"></path></svg></span>
+                    <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; text-align:left">
+                      <span style="font-size:16px; line-height:1.3; font-weight:600; letter-spacing:-.01em">{{ g.n }}</span>
+                      <span style="font-size:13.5px; font-weight:500; color:{{ t.m50 }}">{{ g.rol }} · {{ g.dia }}</span>
+                      <span style="{{ g.pill }}">{{ g.estado }}</span>
+                    </span>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; color:{{ t.m38 }}"><path d="M9.5 5.5L16 12l-6.5 6.5"></path></svg>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vHistorial }}" hint-placeholder-val="{{ false }}">
+              <sc-for list="{{ historial }}" as="h" hint-placeholder-count="3">
+                <p style="{{ rot }}">{{ h.t }}</p>
+                <div style="{{ card }}; padding:6px 16px">
+                  <sc-for list="{{ h.items }}" as="it" hint-placeholder-count="2">
+                    <div style="display:grid; grid-template-columns:20px minmax(0,1fr); gap:12px; padding:14px 0; border-top:{{ it.bt }}">
+                      <div style="position:relative; display:flex; justify-content:center; padding-top:5px"><span style="{{ it.dot }}"></span></div>
+                      <div style="min-width:0">
+                        <p style="margin:0; font-size:15px; line-height:1.3; font-weight:600">{{ it.n }}</p>
+                        <p style="margin:3px 0 0; font-size:13.5px; line-height:1.4; font-weight:500; color:{{ t.m50 }}">{{ it.rol }} · {{ it.fechas }}</p>
+                        <p style="margin:6px 0 0; font-size:13.5px; font-weight:600; color:{{ t.m66 }}">{{ it.fin }}</p>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </sc-if>
+
+            <sc-if value="{{ vCompras }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:12px; margin-top:24px">
+                <button onClick="{{ abrirPedido }}" style="{{ cardBtn }}" style-hover="background:{{ t.hoverCard }}">
+                  <span style="width:48px; height:48px; flex:none; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2zM9 8a3 3 0 016 0"></path></svg></span>
+                  <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; text-align:left">
+                    <span style="font:600 16px 'JetBrains Mono',ui-monospace,monospace; letter-spacing:.03em">VOL-4F7K</span>
+                    <span style="font-size:13.5px; font-weight:500; color:{{ t.m50 }}">16 oct 2026 · 3 productos · $ 68.000</span>
+                    <span style="{{ pedPill }}">{{ pedEstado }}</span>
+                  </span>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; color:{{ t.m38 }}"><path d="M9.5 5.5L16 12l-6.5 6.5"></path></svg>
+                </button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vPedido }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ ticketBox }}">
+                <div style="padding:22px 22px 18px">
+                  <p style="{{ rotIn }}">PEDIDO N.º</p>
+                  <p style="margin:6px 0 0; font:600 32px/1 'JetBrains Mono',ui-monospace,monospace; letter-spacing:.04em">VOL-4F7K</p>
+                </div>
+                <div style="position:relative; height:0; border-top:2px dashed {{ t.dash }}; margin:0 18px">
+                  <span style="position:absolute; left:-30px; top:-12px; width:22px; height:22px; border-radius:999px; background:{{ t.bg }}"></span>
+                  <span style="position:absolute; right:-30px; top:-12px; width:22px; height:22px; border-radius:999px; background:{{ t.bg }}"></span>
+                </div>
+                <div style="padding:16px 22px 30px">
+                  <sc-for list="{{ lineas }}" as="l" hint-placeholder-count="2">
+                    <div style="display:flex; align-items:baseline; gap:8px; padding:6px 0">
+                      <span style="flex:1; min-width:0; font-size:14.5px; line-height:1.4; font-weight:600">{{ l.txt }}</span>
+                      <span style="flex:none; font-size:14.5px; font-weight:600; font-variant-numeric:tabular-nums">{{ l.sub }}</span>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex; align-items:baseline; gap:8px; margin-top:10px; padding-top:12px; border-top:1px solid {{ t.line }}">
+                    <span style="flex:1; font-size:16px; font-weight:700">Total</span>
+                    <span style="font-size:18px; font-weight:700; font-variant-numeric:tabular-nums">$ 68.000</span>
+                  </div>
+                  <p style="margin:10px 0 0; font-size:14px; font-weight:500; color:{{ t.m50 }}">Transferencia · 16 oct 2026 · 15:42</p>
+                  <p style="margin:4px 0 0; font-size:14px; font-weight:600; color:{{ t.m66 }}">Comprobante enviado ✓</p>
+                </div>
+              </div>
+
+              <div style="{{ card }}; margin-top:14px; padding:18px 18px 16px">
+                <p style="{{ rotIn }}">ESTADO</p>
+                <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:14px">
+                  <sc-for list="{{ pasos }}" as="p" hint-placeholder-count="3">
+                    <div style="position:relative; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center">
+                      <span style="{{ p.line }}"></span>
+                      <span style="{{ p.dot }}"><sc-if value="{{ p.done }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>
+                      <span style="{{ p.lbl }}">{{ p.t }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <p style="margin:14px 0 0; font-size:14px; line-height:1.45; font-weight:500; color:{{ t.m66 }}; text-align:center; text-wrap:pretty">{{ pedAyuda }}</p>
+              </div>
+              <sc-if value="{{ puedeMostrar }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ abrirPunto }}" style="{{ primFull }}; margin-top:16px">Mostrar en el Punto</button>
+              </sc-if>
+            </sc-if>
+
+            <sc-if value="{{ vInscripciones }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:12px; margin-top:24px">
+                <button onClick="{{ abrirInsc }}" style="{{ cardBtn }}" style-hover="background:{{ t.hoverCard }}">
+                  <span style="width:56px; flex:none; border-radius:16px; background:{{ t.chip }}; padding:7px 0 8px; display:flex; flex-direction:column; align-items:center; line-height:1">
+                    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:{{ t.m50 }}">VIE</span>
+                    <span style="margin-top:4px; font-size:22px; font-weight:700; letter-spacing:-.02em">30</span>
+                    <span style="margin-top:3px; font-size:11px; font-weight:700; letter-spacing:.07em; color:{{ t.m50 }}">OCT</span>
+                  </span>
+                  <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; text-align:left">
+                    <span style="font-size:16px; line-height:1.3; font-weight:600">Nocturna 2026</span>
+                    <span style="font-size:13.5px; font-weight:500; color:{{ t.m50 }}">Viernes 30 · 22:00 · 2 adolescentes</span>
+                    <span style="{{ inscPill }}"><sc-if value="{{ esHoy }}" hint-placeholder-val="{{ false }}"><span style="width:7px; height:7px; border-radius:999px; background:#34c759; animation:mcLive 1.6s ease-in-out infinite"></span></sc-if>{{ inscEstado }}</span>
+                  </span>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; color:{{ t.m38 }}"><path d="M9.5 5.5L16 12l-6.5 6.5"></path></svg>
+                </button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vInscripcion }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:22px">
+                <span style="{{ inscPill }}"><sc-if value="{{ esHoy }}" hint-placeholder-val="{{ false }}"><span style="width:7px; height:7px; border-radius:999px; background:#34c759; animation:mcLive 1.6s ease-in-out infinite"></span></sc-if>{{ inscEstado }}</span>
+                <p style="margin:10px 0 0; font-size:16px; line-height:1.45; font-weight:600">Viernes 30 de octubre · 22:00</p>
+                <p style="margin:2px 0 0; font-size:15px; line-height:1.45; font-weight:500; color:{{ t.m50 }}">Origen Iglesia · Av. Eva Perón 3932</p>
+              </div>
+
+              <div style="{{ codeBox }}">
+                <p style="{{ rotIn }}">CÓDIGO DE ENTRADA</p>
+                <p style="margin:8px 0 0; font:700 40px/1.05 'JetBrains Mono',ui-monospace,monospace; letter-spacing:.14em">K7M4QX</p>
+              </div>
+
+              <sc-if value="{{ faltaDato }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:14px; background:{{ t.amberBg }}; border-radius:22px; padding:16px; display:flex; gap:12px; align-items:flex-start">
+                  <span style="width:24px; height:24px; flex:none; border-radius:999px; background:{{ t.amberTxt }}; color:{{ t.amberBg }}; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700">!</span>
+                  <div style="flex:1; min-width:0">
+                    <p style="margin:2px 0 0; font-size:15px; font-weight:700; color:{{ t.amberInk }}">Te falta un dato</p>
+                    <p style="margin:3px 0 0; font-size:14px; line-height:1.45; font-weight:500; color:{{ t.amberInk }}">Falta el teléfono de Juan P., que retira a Valentina.</p>
+                    <button onClick="{{ completar }}" style="margin-top:12px; min-height:44px; padding:0 18px; border:0; border-radius:999px; background:{{ t.amberTxt }}; color:{{ t.amberBg }}; font:inherit; font-size:14.5px; font-weight:700; cursor:pointer">Completar</button>
+                  </div>
+                </div>
+              </sc-if>
+
+              <p style="{{ rot }}">ADULTO RESPONSABLE</p>
+              <div style="{{ card }}; display:flex; align-items:center; gap:14px; min-height:64px; padding:12px 16px">
+                <span style="{{ initCircle }}">LF</span>
+                <span style="flex:1; min-width:0; font-size:15px; font-weight:600">Lucía Fernández</span>
+              </div>
+
+              <p style="{{ rot }}">ADOLESCENTES</p>
+              <div style="{{ card }}">
+                <sc-for list="{{ teens }}" as="a" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:14px; min-height:64px; padding:12px 16px; border-top:{{ a.bt }}">
+                    <span style="{{ initCircle }}">{{ a.ini }}</span>
+                    <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px">
+                      <span style="font-size:15px; font-weight:600">{{ a.n }}</span>
+                      <span style="font-size:13.5px; line-height:1.4; font-weight:500; color:{{ t.m50 }}">{{ a.retiro }}</span>
+                    </span>
+                    <sc-if value="{{ a.hasEst }}" hint-placeholder-val="{{ false }}"><span style="{{ a.estSt }}">{{ a.est }}</span></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+
+              <sc-if value="{{ puedeQR }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ abrirQR }}" style="{{ primFull }}; margin-top:20px; gap:10px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"></path></svg>Mostrar QR</button>
+              </sc-if>
+              <sc-if value="{{ yaPaso }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:20px 0 0; text-align:center; font-size:14.5px; font-weight:500; color:{{ t.m50 }}">Este evento ya pasó. Gracias por sumarte.</p>
+              </sc-if>
+            </sc-if>
+
+            <sc-if value="{{ vSirvo }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:12px; margin-top:24px">
+                <sc-for list="{{ roles }}" as="r" hint-placeholder-count="2">
+                  <div style="{{ card }}; padding:18px">
+                    <div style="display:flex; align-items:flex-start; gap:14px">
+                      <span style="width:48px; height:48px; flex:none; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg></span>
+                      <div style="flex:1; min-width:0">
+                        <p style="margin:2px 0 0; font-size:16px; line-height:1.3; font-weight:600; text-wrap:pretty">{{ r.n }}</p>
+                        <p style="margin:4px 0 0; font-size:13.5px; line-height:1.4; font-weight:500; color:{{ t.m50 }}">{{ r.det }}</p>
+                      </div>
+                    </div>
+                    <sc-if value="{{ r.hasPanel }}" hint-placeholder-val="{{ true }}"><button onClick="{{ r.go }}" style="{{ secFull }}; margin-top:16px">Ir al panel</button></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ hayQR }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ cerrarQRFuera }}" style="{{ qrOverlay }}">
+          <div ref="{{ fsRef }}" onClick="{{ stop }}" onPointerDown="{{ fsDown }}" onPointerMove="{{ fsMove }}" onPointerUp="{{ fsUp }}" onPointerCancel="{{ fsUp }}" role="dialog" aria-modal="true" aria-label="QR de tu entrada" style="{{ qrPanel }}">
+            <button onClick="{{ cerrarQR }}" aria-label="Cerrar" style="position:absolute; top:{{ xTop }}; right:16px; width:44px; height:44px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}"><span style="position:absolute; top:14px; left:50%; transform:translateX(-50%); width:40px; height:5px; border-radius:999px; background:rgba(0,0,0,.18)"></span></sc-if>
+            <p style="margin:0; font-size:13px; font-weight:600; letter-spacing:.07em; color:rgba(0,0,0,.55)">VIERNES 30 · 22:00</p>
+            <p style="margin:6px 0 0; font-size:26px; line-height:1.15; font-weight:600; letter-spacing:-.025em; color:#0a0a0a">Nocturna 2026</p>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=560x560&amp;margin=0&amp;data=K7M4QX" alt="QR de la entrada K7M4QX" draggable="false" style="display:block; width:{{ qrSize }}; height:{{ qrSize }}; margin-top:28px; image-rendering:pixelated; pointer-events:none">
+            <p style="margin:22px 0 0; font:700 34px/1 'JetBrains Mono',ui-monospace,monospace; letter-spacing:.16em; color:#0a0a0a">K7M4QX</p>
+            <p style="margin:10px 0 0; font-size:14.5px; font-weight:500; color:rgba(0,0,0,.6)">Lucía Fernández · 2 adolescentes</p>
+            <p style="margin:28px 0 0; display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; color:rgba(0,0,0,.6)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"></path></svg>Subí el brillo de la pantalla</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hayPunto }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ cerrarPuntoFuera }}" style="{{ qrOverlay }}">
+          <div ref="{{ fsRef }}" onClick="{{ stop }}" onPointerDown="{{ fsDown }}" onPointerMove="{{ fsMove }}" onPointerUp="{{ fsUp }}" onPointerCancel="{{ fsUp }}" role="dialog" aria-modal="true" aria-label="Pedido para mostrar en el Punto" style="{{ puntoPanel }}">
+            <button onClick="{{ cerrarPunto }}" aria-label="Cerrar" style="position:absolute; top:{{ xTop }}; right:16px; width:44px; height:44px; border:0; border-radius:999px; background:#f2f2f0; color:#0a0a0a; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            <p style="margin:0; font-size:14px; font-weight:700; letter-spacing:.08em; color:#0a0a0a">PEDIDO N.º</p>
+            <p style="margin:8px 0 0; font:700 54px/1 'JetBrains Mono',ui-monospace,monospace; letter-spacing:.04em; color:#0a0a0a">VOL-4F7K</p>
+            <p style="margin:14px 0 0; display:inline-flex; align-items:center; height:36px; padding:0 16px; border-radius:999px; background:#0a0a0a; color:#fff; font-size:15px; font-weight:700">{{ pedEstado }}</p>
+            <div style="width:100%; margin-top:30px; border-top:3px solid #0a0a0a">
+              <sc-for list="{{ lineas }}" as="l" hint-placeholder-count="2">
+                <div style="display:flex; align-items:baseline; gap:12px; padding:16px 0; border-bottom:1.5px solid rgba(0,0,0,.14)">
+                  <span style="flex:1; min-width:0; font-size:20px; line-height:1.3; font-weight:700; color:#0a0a0a; text-align:left">{{ l.big }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="width:100%; display:flex; align-items:baseline; gap:12px; padding-top:18px">
+              <span style="flex:1; text-align:left; font-size:20px; font-weight:700; color:#0a0a0a">Total pagado</span>
+              <span style="font-size:24px; font-weight:700; color:#0a0a0a; font-variant-numeric:tabular-nums">$ 68.000</span>
+            </div>
+            <p style="margin:10px 0 0; align-self:flex-start; font-size:16px; font-weight:600; color:#0a0a0a">Lucía Fernández · 16 oct 2026</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="position:absolute; left:50%; bottom:40px; z-index:60; transform:translateX(-50%); max-width:calc(100% - 32px); padding:13px 20px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:14.5px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.2); animation:mcToast .28s cubic-bezier(.2,.9,.3,1) both; text-align:center">{{ toastTxt }}</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const theme = dk => {
+  const a = o => (dk ? 'rgba(255,255,255,' : 'rgba(0,0,0,') + o + ')';
+  const t = dk
+    ? { bg: '#111110', card: '#1b1b1a', surf: '#232321', chip: '#2a2a28', hover: '#222220', hoverCard: '#202020', sel: '#2a2a28', ink: '#f4f4f2', prim: '#ffffff', primInk: '#0a0a0a', redTxt: '#ff6b70', line: 'rgba(255,255,255,.07)', dash: 'rgba(255,255,255,.16)', shadow: '0 1px 2px rgba(0,0,0,.3)', skel: '#2a2a28', track: '#3a3a38', amberBg: '#3a2d12', amberTxt: '#f2b84b', amberInk: '#f7dfae', greenBg: '#173322', greenTxt: '#7fdb9c' }
+    : { bg: '#f6f6f4', card: '#ffffff', surf: '#f7f7f5', chip: '#f2f2f0', hover: '#f7f7f5', hoverCard: '#fcfcfb', sel: '#f2f2f0', ink: '#0a0a0a', prim: '#0a0a0a', primInk: '#ffffff', redTxt: '#d1343a', line: 'rgba(0,0,0,.06)', dash: 'rgba(0,0,0,.14)', shadow: '0 1px 2px rgba(0,0,0,.04), 0 1px 1px rgba(0,0,0,.02)', skel: '#ececea', track: '#e5e5e2', amberBg: '#fbefd5', amberTxt: '#8f5c00', amberInk: '#4a3000', greenBg: '#dff3e4', greenTxt: '#1d6a38' };
+  t.m50 = a(.55); t.m38 = a(.42); t.m66 = a(.7); return t;
+};
+const IC = {
+  groups: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2.5 20a6.5 6.5 0 0113 0M16 4.3a3.5 3.5 0 010 6.4M17.5 14a6.5 6.5 0 014 6',
+  hist: 'M4 12a8 8 0 102.4-5.7M4 4.5V9h4.5M12 8v4.5l3 2',
+  bag: 'M5 8h14l-1.2 12H6.2zM9 8a3 3 0 016 0',
+  ticket: 'M3.5 7h17v3.2a1.8 1.8 0 000 3.6V17h-17v-3.2a1.8 1.8 0 000-3.6zM14.5 7v10',
+  serve: 'M12 9.2c-1-1.8-4-1.5-4 .8 0 1.8 4 4 4 4s4-2.2 4-4c0-2.3-3-2.6-4-.8zM3 16h3.5l3.5 3h6.5l4.5-3.5M3 16v4',
+  heart: 'M12 19.5s-7.5-4.6-7.5-10A4.2 4.2 0 0112 7a4.2 4.2 0 017.5 2.5c0 5.4-7.5 10-7.5 10z',
+  spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z',
+  info: 'M12 3.5a8.5 8.5 0 110 17 8.5 8.5 0 010-17zM12 11v5.5M12 7.8v.2'
+};
+const TITLES = { home: 'Mi cuenta', grupos: 'Mis grupos', historial: 'Historial de grupos', compras: 'Mis compras', pedido: 'Detalle del pedido', inscripciones: 'Mis inscripciones', inscripcion: 'Nocturna 2026', sirvo: 'Dónde sirvo' };
+const PARENT = { pedido: 'compras', inscripcion: 'inscripciones' };
+
+class Component extends DCLogic {
+  state = { device: 'm', dark: false, vw: typeof window !== 'undefined' ? window.innerWidth : 1400, stack: ['home'], navN: 0, navDir: '', vacio: false, ped: 'listo', insc: 'proxima', faltaDato: true, cargando: false, fs: null, origin: '50% 50%', dismissed: [], notifs: 3, falta: 0, toast: null };
+  frameRef = React.createRef(); fsRef = React.createRef(); timers = []; fY = null; fDy = 0;
+  componentDidMount() {
+    this.onResize = () => this.setState({ vw: window.innerWidth });
+    window.addEventListener('resize', this.onResize);
+    const h = new URLSearchParams((window.location.hash || '').slice(1)), st = {};
+    if (h.get('m')) st.device = h.get('m') === 'pc' ? 'pc' : 'm';
+    if (h.get('d')) st.dark = h.get('d') === '1';
+    if (h.get('f')) st.falta = +h.get('f');
+    const sc = h.get('s');
+    if (sc && TITLES[sc]) st.stack = PARENT[sc] ? ['home', PARENT[sc], sc] : ['home', sc];
+    else st.stack = st.device === 'pc' ? ['home', 'inscripciones'] : ['home'];
+    this.setState(st);
+  }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); window.removeEventListener('resize', this.onResize); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+  aviso(txt) { const k = Date.now(); this.setState({ toast: { txt, k } }); this.later(() => this.setState(s => s.toast && s.toast.k === k ? { toast: null } : null), 2600); }
+  ir(id) { this.setState(s => ({ stack: PARENT[id] ? ['home', PARENT[id], id] : ['home', id], navN: s.navN + 1, navDir: 'r', fs: null })); this.carga(); }
+  push(id) { this.setState(s => ({ stack: s.stack.concat(id), navN: s.navN + 1, navDir: 'r' })); }
+  back() { this.setState(s => ({ stack: s.stack.length > 1 ? s.stack.slice(0, -1) : s.stack, navN: s.navN + 1, navDir: 'l' })); }
+  carga() { this.setState({ cargando: true }); this.later(() => this.setState({ cargando: false }), 650); }
+  abrirFs(kind, ev) {
+    const f = this.frameRef.current, b = ev && ev.currentTarget;
+    let origin = '50% 50%';
+    if (f && b) { const fr = f.getBoundingClientRect(), br = b.getBoundingClientRect(), k = fr.width / f.offsetWidth; origin = ((br.left + br.width / 2 - fr.left) / k) + 'px ' + ((br.top + br.height / 2 - fr.top) / k) + 'px'; }
+    this.setState({ fs: kind, origin });
+  }
+  renderVals() {
+    const s = this.state, dk = s.dark, desk = s.device === 'pc', mob = !desk, t = theme(dk);
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const chip = on => 'height:32px; padding:0 13px; border:1px solid ' + (on ? '#0a0a0a' : '#e2e0db') + '; border-radius:999px; background:' + (on ? '#0a0a0a' : '#fff') + '; color:' + (on ? '#fff' : '#0a0a0a') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const top = s.stack[s.stack.length - 1];
+    const scr = desk && top === 'home' ? 'inscripciones' : top;
+    const onSub = top !== 'home';
+    const sc = desk ? Math.min(1, (s.vw - 32) / 1440) : Math.min(1, (s.vw - 32) / 390);
+    const fw = desk ? 1440 : 390, fh = desk ? 900 : 844;
+    const anim = dir => mob && s.navN && s.navDir === dir ? 'mc' + (dir === 'r' ? 'R' : 'L') + (s.navN % 2) + ' .32s cubic-bezier(.2,.8,.3,1) both' : 'none';
+    const tr = 'background-color .4s ease, color .4s ease';
+    const card = 'background:' + t.card + '; border-radius:26px; box-shadow:' + t.shadow + '; transition:' + tr;
+    const pill = (bg, fg, extra) => 'align-self:flex-start; display:inline-flex; align-items:center; gap:6px; height:26px; margin-top:6px; padding:0 10px; border-radius:999px; background:' + bg + '; color:' + fg + '; font-size:12.5px; font-weight:700; ' + (extra || '');
+    const btnBase = 'min-height:52px; border-radius:999px; font:inherit; font-size:15.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; border:0';
+    const V = s.vacio, L = s.cargando;
+    const empt = {
+      grupos: { icon: IC.groups, t: 'Todavía no estás en ningún grupo', sub: 'Los GCX son grupos chicos que se juntan cada semana en una casa.', btn: 'Ver grupos', go: () => this.aviso('Abre /gcx · Buscar grupos') },
+      historial: { icon: IC.hist, t: 'Acá vas a ver tu historia en los grupos', sub: 'Cuando termine tu primera temporada en un GCX, va a aparecer en esta lista.' },
+      compras: { icon: IC.bag, t: 'Todavía no compraste nada', sub: 'Las remeras y buzos de voluntarios se compran desde la app.', btn: 'Ver remeras y buzos', go: () => this.aviso('Abre Voluntarios · Compra') },
+      pedido: { icon: IC.bag, t: 'Todavía no compraste nada', sub: '', btn: 'Ver remeras y buzos', go: () => this.aviso('Abre Voluntarios · Compra') },
+      inscripciones: { icon: IC.ticket, t: 'No tenés inscripciones a eventos', sub: 'Cuando inscribas a alguien a un evento, la entrada aparece acá.', btn: 'Ver eventos', go: () => this.aviso('Abre /eventos') },
+      inscripcion: { icon: IC.ticket, t: 'No tenés inscripciones a eventos', sub: '', btn: 'Ver eventos', go: () => this.aviso('Abre /eventos') },
+      sirvo: { icon: IC.serve, t: 'Todavía no servís en ningún área', sub: 'Hay lugar en recepción, alabanza, niños, técnica y más.', btn: '¿Querés sumarte?', go: () => this.aviso('Abre Voluntarios · Sumarme') }
+    }[scr] || { icon: IC.info, t: '', sub: '' };
+    const show = k => scr === k && !V && !L;
+    const pedTxt = { pagado: 'Pagado', listo: 'Listo para retirar', retirado: 'Retirado' }[s.ped];
+    const pedPill = s.ped === 'listo' ? pill(t.greenBg, t.greenTxt) : s.ped === 'pagado' ? pill(t.chip, t.m66) : pill('transparent', t.m50, 'box-shadow:inset 0 0 0 1px ' + t.line);
+    const pi = { pagado: 0, listo: 1, retirado: 2 }[s.ped];
+    const inscTxt = { proxima: 'Próximo · en 8 días', hoy: 'Hoy', pasada: 'Ya pasó' }[s.insc];
+    const inscPill = s.insc === 'hoy' ? pill(t.greenBg, t.greenTxt) : s.insc === 'proxima' ? pill(t.chip, t.ink) : pill('transparent', t.m50, 'box-shadow:inset 0 0 0 1px ' + t.line);
+    const estPill = k => {
+      const m = { in: [t.greenBg, t.greenTxt], out: [t.chip, t.m66], no: ['transparent', t.m50], wait: [t.chip, t.m66] }[k];
+      return 'flex:none; max-width:46%; padding:5px 10px; border-radius:12px; background:' + m[0] + '; color:' + m[1] + '; font-size:12.5px; line-height:1.3; font-weight:700; text-align:right' + (k === 'no' ? '; box-shadow:inset 0 0 0 1px ' + t.line : '');
+    };
+    const est = s.insc === 'hoy' ? [['Adentro desde 22:14', 'in'], ['Todavía no entró', 'wait']] : s.insc === 'pasada' ? [['Se retiró 06:02', 'out'], ['No vino', 'no']] : [null, null];
+    const teens = [['Tomás Fernández', 'TF', 'Lo retira el adulto'], ['Valentina Fernández', 'VF', 'Otra persona: Juan P.']].map((a, i) => ({ n: a[0], ini: a[1], retiro: a[2], bt: i ? '1px solid ' + t.line : '0', hasEst: !!est[i], est: est[i] ? est[i][0] : '', estSt: est[i] ? estPill(est[i][1]) : '' }));
+    const featCand = [!V && s.insc !== 'pasada' && 'entrada', !V && s.ped === 'listo' && 'pedido', s.falta > 0 && 'perfil'].filter(k => k && s.dismissed.indexOf(k) < 0);
+    const fsOpen = !!s.fs;
+    const fsBase = 'position:relative; background:#fff; color:#0a0a0a; display:flex; flex-direction:column; align-items:center; text-align:center; overflow-y:auto; transform-origin:' + s.origin + '; animation:mcZoom .32s cubic-bezier(.2,.9,.3,1) both; ';
+    const ir = (id, label) => ({ t: label, st: chip(scr === id), ir: () => this.ir(id) });
+    return {
+      t, desk, dark: dk, isMobile: mob, frameRef: this.frameRef, fsRef: this.fsRef,
+      verMobile: () => this.setState({ device: 'm' }), verPC: () => this.setState(st => ({ device: 'pc', stack: st.stack.length > 1 ? st.stack : ['home', 'inscripciones'] })),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(mob), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      pIr: [ir('grupos', 'Mis grupos'), ir('historial', 'Historial'), ir('compras', 'Mis compras'), ir('pedido', 'Pedido'), ir('inscripciones', 'Mis inscripciones'), ir('inscripcion', 'Inscripción'), ir('sirvo', 'Dónde sirvo')],
+      pEstado: [
+        ['Con datos', !V, () => this.setState({ vacio: false })], ['Vacío', V, () => this.setState({ vacio: true })],
+        ['Pagado', s.ped === 'pagado', () => this.setState({ ped: 'pagado' })], ['Listo', s.ped === 'listo', () => this.setState({ ped: 'listo' })], ['Retirado', s.ped === 'retirado', () => this.setState({ ped: 'retirado' })],
+        ['Próxima', s.insc === 'proxima', () => this.setState({ insc: 'proxima' })], ['Hoy', s.insc === 'hoy', () => this.setState({ insc: 'hoy' })], ['Pasada', s.insc === 'pasada', () => this.setState({ insc: 'pasada' })],
+        ['Falta un dato', s.faltaDato, () => this.setState(st => ({ faltaDato: !st.faltaDato }))],
+        ['Cargando', L, () => { this.setState({ cargando: true }); this.later(() => this.setState({ cargando: false }), 2400); }],
+        ['QR abierto', s.fs === 'qr', () => this.setState({ vacio: false, insc: s.insc === 'pasada' ? 'proxima' : s.insc, stack: ['home', 'inscripciones', 'inscripcion'], fs: 'qr', origin: '50% 80%' })],
+        ['Mostrar en el Punto', s.fs === 'punto', () => this.setState({ vacio: false, ped: s.ped === 'retirado' ? 'listo' : s.ped, stack: ['home', 'compras', 'pedido'], fs: 'punto', origin: '50% 80%' })]
+      ].map(p => ({ t: p[0], st: chip(p[1]), ir: p[2] })),
+      outerW: fw * sc + 'px', outerH: fh * sc + 'px', frameW: fw + 'px', frameH: fh + 'px', frameTf: 'scale(' + sc + ')', frameR: desk ? '14px' : '40px',
+      cols: desk ? '440px minmax(0,1fr)' : 'minmax(0,1fr)',
+      leftDisp: desk || !onSub ? 'block' : 'none', rightDisp: desk || onSub ? 'flex' : 'none',
+      leftBorder: desk ? '1px solid ' + t.line : '0', leftPad: desk ? '40px 24px 48px 28px' : '58px 16px 48px',
+      leftAnim: anim('l'), rightAnim: anim('r'), rightPad: desk ? '40px 48px 56px' : '58px 16px 48px',
+      sel: PARENT[scr] || scr, falta: s.falta, notifs: s.notifs, featKey: featCand[0] || 'verso',
+      counts: V ? { grupos: 0, compras: 0, inscripciones: 0, sirvo: 0 } : {},
+      onRow: (id, nav) => {
+        if (id === 'volver') return this.aviso('Vuelve a la pantalla anterior');
+        if (id === 'calendario') return this.aviso('Abre /gcx/calendario');
+        if (id === 'buscarGrupos') return this.aviso('Abre /gcx · Buscar grupos');
+        if (id === 'logout') return this.aviso('Cerrar sesión está en «Mi Cuenta - Inicio»');
+        if (TITLES[id]) return this.ir(id);
+        if (nav) nav();
+      },
+      onDismiss: k => this.setState(st => ({ dismissed: st.dismissed.concat(k) })),
+      onPush: () => this.aviso('Los avisos se prueban en «Preferencias y seguridad»'),
+      onDark: () => this.setState(st => ({ dark: !st.dark })),
+      hayBack: mob || !!PARENT[scr], volver: () => desk ? this.setState(st => ({ stack: ['home', PARENT[scr]] })) : this.back(),
+      roundBtn: 'width:44px; height:44px; flex:none; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+      h2: desk ? '28px' : '24px', titulo: TITLES[scr], card,
+      cargando: L, sk: 'background:' + t.skel + '; border-radius:8px; animation:mcPulse 1.2s ease-in-out infinite',
+      skCards: [['58%', '80%'], ['44%', '70%'], ['52%', '64%']].map(w => ({ w1: w[0], w2: w[1] })),
+      vacio: V && !L, vac: { icon: empt.icon, t: empt.t, sub: empt.sub || '', hasSub: !!empt.sub, btn: empt.btn || '', hasBtn: !!empt.btn, go: empt.go || (() => {}) },
+      primSm: btnBase + '; min-height:48px; padding:0 22px; background:' + t.prim + '; color:' + t.primInk,
+      primFull: btnBase + '; width:100%; background:' + t.prim + '; color:' + t.primInk,
+      secFull: btnBase + '; width:100%; min-height:48px; background:' + t.chip + '; color:' + t.ink,
+      cardBtn: card + '; width:100%; display:flex; align-items:center; gap:14px; padding:14px 16px; border:0; color:' + t.ink + '; font:inherit; cursor:pointer',
+      rot: 'margin:26px 0 10px 6px; font-size:12px; font-weight:600; letter-spacing:.07em; color:' + t.m38,
+      rotIn: 'margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:' + t.m50,
+
+      vGrupos: show('grupos'),
+      grupos: [
+        { n: 'Mujeres de Fe', rol: 'Anfitriona', dia: 'Jueves 20:00', estado: 'Aprobado', icon: IC.heart, bg: dk ? '#33222b' : '#f8e3ea', fg: dk ? '#f1a7c0' : '#a3365e', ok: true },
+        { n: 'Jóvenes Norte', rol: 'Miembro', dia: 'Sábado 18:30', estado: 'Esperando aprobación', icon: IC.spark, bg: dk ? '#1a2433' : '#e2ecf8', fg: dk ? '#8fb8ee' : '#2d62a8', ok: false }
+      ].map(g => Object.assign(g, { pill: g.ok ? pill(t.greenBg, t.greenTxt) : pill(t.amberBg, t.amberTxt), go: () => this.aviso('Abre el grupo «' + g.n + '»') })),
+
+      vHistorial: show('historial'),
+      historial: [
+        ['S3 2026', [['Mujeres de Fe', 'Anfitriona', 'ago – nov 2026', 'En curso', true], ['Jóvenes Norte', 'Miembro', 'oct – nov 2026', 'En curso', true]]],
+        ['S2 2026', [['Mujeres de Fe', 'Miembro', 'abr – jul 2026', 'Terminó la temporada'], ['Parejas Centro', 'Miembro', 'abr – may 2026', 'Cambiaste de grupo']]],
+        ['S1 2026', [['Lectura de Juan', 'Miembro', 'feb – mar 2026', 'Te diste de baja']]]
+      ].map(([tt, items]) => ({ t: tt, items: items.map((it, i) => ({ n: it[0], rol: it[1], fechas: it[2], fin: it[3], bt: i ? '1px solid ' + t.line : '0', dot: 'width:10px; height:10px; border-radius:999px; ' + (it[4] ? 'background:#34c759; box-shadow:0 0 0 4px ' + t.greenBg : 'background:' + t.m38) })) })),
+
+      vCompras: show('compras'), abrirPedido: () => desk ? this.setState(st => ({ stack: ['home', 'compras', 'pedido'] })) : this.push('pedido'),
+      pedPill, pedEstado: pedTxt,
+      vPedido: show('pedido'),
+      ticketBox: 'position:relative; margin-top:22px; background:' + t.card + '; color:' + t.ink + '; border-radius:24px 24px 0 0; box-shadow:' + t.shadow + '; -webkit-mask:radial-gradient(circle 7px at 50% 100%, transparent 97%, #000) 50% 100%/18px 100% repeat-x; mask:radial-gradient(circle 7px at 50% 100%, transparent 97%, #000) 50% 100%/18px 100% repeat-x; transition:' + tr,
+      lineas: [['2 × Remera Origen · Talle 3', '$ 36.000', '2 remeras · talle 3'], ['1 × Buzo Origen · Talle 5', '$ 32.000', '1 buzo · talle 5']].map(l => ({ txt: l[0], sub: l[1], big: l[2] })),
+      pasos: ['Pagado', 'Listo', 'Retirado'].map((p, i) => ({ t: p, done: i <= pi,
+        dot: 'position:relative; z-index:1; width:26px; height:26px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:' + (i <= pi ? t.ink : t.card) + '; color:' + t.card + '; box-shadow:inset 0 0 0 2px ' + (i <= pi ? t.ink : t.dash),
+        line: i ? 'position:absolute; top:12px; right:50%; width:100%; height:2px; background:' + (i <= pi ? t.ink : t.dash) : 'display:none',
+        lbl: 'font-size:13px; font-weight:' + (i === pi ? 700 : 600) + '; color:' + (i <= pi ? t.ink : t.m50) })),
+      pedAyuda: { pagado: 'Estamos preparando tu pedido. Te avisamos cuando esté listo.', listo: 'Retiralo en el Punto de Información, los domingos después de cada reunión.', retirado: 'Retiraste este pedido el 19 oct 2026.' }[s.ped],
+      puedeMostrar: s.ped !== 'retirado',
+      abrirPunto: ev => this.abrirFs('punto', ev),
+
+      vInscripciones: show('inscripciones'), abrirInsc: () => desk ? this.setState({ stack: ['home', 'inscripciones', 'inscripcion'] }) : this.push('inscripcion'),
+      inscPill, inscEstado: inscTxt, esHoy: s.insc === 'hoy',
+      vInscripcion: show('inscripcion'),
+      codeBox: 'position:relative; margin-top:18px; padding:22px 20px; text-align:center; background:' + t.card + '; border-radius:22px; box-shadow:' + t.shadow + ', inset 0 0 0 2px ' + t.dash + '; -webkit-mask:radial-gradient(circle 12px at 0 50%, transparent 97%, #000) left/51% 100% no-repeat, radial-gradient(circle 12px at 100% 50%, transparent 97%, #000) right/51% 100% no-repeat; mask:radial-gradient(circle 12px at 0 50%, transparent 97%, #000) left/51% 100% no-repeat, radial-gradient(circle 12px at 100% 50%, transparent 97%, #000) right/51% 100% no-repeat; transition:' + tr,
+      faltaDato: s.faltaDato && s.insc !== 'pasada',
+      completar: () => { window.location.href = encodeURI('Nocturna - Chequear Entrada.dc.html'); },
+      initCircle: 'width:40px; height:40px; flex:none; border-radius:999px; background:' + t.chip + '; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600',
+      teens, puedeQR: s.insc !== 'pasada', yaPaso: s.insc === 'pasada',
+      abrirQR: ev => this.abrirFs('qr', ev),
+
+      vSirvo: show('sirvo'),
+      roles: [
+        { n: 'Anfitriona de GCX · Mujeres de Fe', det: 'Jueves 20:00 · 9 personas en tu grupo', icon: IC.groups, hasPanel: true, go: () => this.aviso('Abre el panel de anfitriona') },
+        { n: 'Voluntaria en Punto de Información', det: 'Domingos · turno de las 11:00', icon: IC.info, hasPanel: true, go: () => this.aviso('Abre el panel del Punto de Información') }
+      ],
+
+      hayQR: s.fs === 'qr', hayPunto: s.fs === 'punto',
+      qrOverlay: 'position:absolute; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; ' + (desk ? 'background:rgba(0,0,0,.55); animation:mcFa .2s ease' : 'background:transparent'),
+      qrPanel: fsBase + (desk ? 'width:600px; max-height:94%; padding:48px 40px 40px; border-radius:32px; box-shadow:0 30px 80px rgba(0,0,0,.35)' : 'position:absolute; inset:0; padding:92px 24px 40px; justify-content:center'),
+      puntoPanel: fsBase + (desk ? 'width:640px; max-height:94%; padding:52px 48px 44px; border-radius:32px; box-shadow:0 30px 80px rgba(0,0,0,.35)' : 'position:absolute; inset:0; padding:96px 24px 40px'),
+      xTop: desk ? '16px' : '52px', qrSize: desk ? '340px' : '300px',
+      cerrarQR: () => this.setState({ fs: null }), cerrarPunto: () => this.setState({ fs: null }),
+      cerrarQRFuera: () => desk && this.setState({ fs: null }), cerrarPuntoFuera: () => desk && this.setState({ fs: null }),
+      stop: ev => ev.stopPropagation(),
+      fsDown: ev => { if (desk || ev.target.closest('button')) return; this.fY = ev.clientY; this.fDy = 0; try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch (x) {} },
+      fsMove: ev => { if (this.fY == null) return; const dy = Math.max(0, ev.clientY - this.fY); this.fDy = dy; const el = this.fsRef.current; if (el) { el.style.animation = 'none'; el.style.transition = 'none'; el.style.transform = 'translateY(' + dy + 'px)'; el.style.opacity = String(1 - Math.min(dy / 500, .5)); } },
+      fsUp: () => { if (this.fY == null) return; const dy = this.fDy; this.fY = null; const el = this.fsRef.current; if (el) { el.style.transition = 'transform .22s ease, opacity .22s ease'; el.style.transform = dy > 120 ? 'translateY(100%)' : ''; el.style.opacity = dy > 120 ? '0' : '1'; } if (dy > 120) this.later(() => this.setState({ fs: null }), 200); },
+      hayToast: !!s.toast, toastTxt: s.toast ? s.toast.txt : ''
+    };
+  }
+}
+</script>
+</body>
+</html>

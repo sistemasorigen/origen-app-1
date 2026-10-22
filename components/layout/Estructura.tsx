@@ -63,6 +63,9 @@ const RUTAS_A_TODO_ANCHO = ['/', '/store', '/gcx', '/ninez', '/alabanza', '/prod
 const COMIENZOS_A_TODO_ANCHO = [
     '/punto-de-informacion', '/coordinators', '/audiencia-servicios',
     '/panel-eventos', '/eventos/admin',
+    // Mi cuenta arma sus dos columnas con su propio ancho: adentro del marco
+    // de 7xl el riel de la izquierda queda angosto y con doble margen.
+    '/perfil',
 ];
 
 const estaEnLaLista = (pathname: string, exactas: string[], comienzos: string[] = []) =>

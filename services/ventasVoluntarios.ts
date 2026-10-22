@@ -123,6 +123,10 @@ export interface VentaDeVoluntario {
     total: number;
     unidades: number;
     comprobantePath: string;
+    /** Cuando el Punto lo marco listo. null = todavia no. */
+    listaAt: string | null;
+    /** Cuando se lo llevaron. null = sigue en el Punto. */
+    retiradaAt: string | null;
 }
 
 export interface ItemDeVenta {
@@ -362,6 +366,8 @@ const mapearVenta = (v: VentaCruda): VentaDeVoluntario => {
         total: Number(v.total ?? 0),
         unidades: Number(v.unidades ?? 0),
         comprobantePath: v.comprobante_path,
+        listaAt: (v as any).lista_at ?? null,
+        retiradaAt: (v as any).retirada_at ?? null,
     };
 };
 

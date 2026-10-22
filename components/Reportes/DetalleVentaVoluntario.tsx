@@ -6,6 +6,7 @@ import { telParaLlamar, telParaWhatsApp, pesos } from '../../services/reportesPu
 import {
     getDetalleVenta, getComprobanteVentaUrl, type DetalleDeVenta,
 } from '../../services/ventasVoluntarios';
+import { estadoDePedido, marcarVenta } from '../../services/miCuenta';
 
 /**
  * La ficha de una compra de /voluntarios: quién compró, qué se llevó, cuánto
@@ -25,6 +26,13 @@ import {
  *
  * El path NUNCA se muestra: nombra la carpeta de quien compró.
  */
+
+/** Lo que dice cada estado de la entrega, en la ficha. */
+const ESTADO_LARGO: Record<string, string> = {
+    Pagado: 'Pagado · todavía no está listo',
+    Listo: 'Listo para retirar',
+    Retirado: 'Retirado',
+};
 
 const VERDE_FONDO = '#eaf6ee';
 const VERDE_TINTA = '#176639';
@@ -46,6 +54,11 @@ const DetalleVentaVoluntario: React.FC<{
     const [fallaUrl, setFallaUrl] = useState(false);
     /** El comprobante a pantalla completa, para leer el monto. */
     const [ampliado, setAmpliado] = useState(false);
+
+    /** La entrega: marcar listo o retirado, con su confirmacion. */
+    const [marcando, setMarcando] = useState(false);
+    const [aConfirmar, setAConfirmar] = useState<null | 'lista' | 'retirada'>(null);
+    const [fallaMarcar, setFallaMarcar] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelado = false;
@@ -249,9 +262,130 @@ const DetalleVentaVoluntario: React.FC<{
                                 No se pudo abrir el comprobante. Probá de nuevo.
                             </p>
                         )}
+
+                        {/* ── La entrega ──
+                            Al marcar listo, la BASE le manda la notificación a
+                            quien compró. Si la persona que mira no atiende el
+                            Punto, la RPC contesta 'sin_permiso' y se dice: los
+                            botones no se esconden antes de tiempo porque el rol
+                            del Punto se otorga de varias formas y adivinarlo
+                            acá sería tener dos reglas distintas. */}
+                        <h3 className="mt-5 mb-2 text-[13px] font-semibold" style={{ color: C.apagado }}>Entrega</h3>
+
+                        <div
+                            className="flex items-center gap-2.5 px-4 py-3 rounded-xl"
+                            style={{ background: C.fondo, border: `1px solid ${C.borde}` }}
+                        >
+                            <span className="flex-1 text-[13.5px] font-semibold" style={{ color: C.tinta }}>
+                                {ESTADO_LARGO[estadoDePedido(v.listaAt, v.retiradaAt)]}
+                            </span>
+                            {v.retiradaAt && (
+                                <span className="text-[12.5px]" style={{ color: C.apagado }}>
+                                    {new Date(v.retiradaAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                </span>
+                            )}
+                        </div>
+
+                        {!v.retiradaAt && (
+                            <div
+                                className="grid gap-2.5 mt-2.5"
+                                style={{ gridTemplateColumns: v.listaAt ? '1fr' : '1fr 1fr' }}
+                            >
+                                {!v.listaAt && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setFallaMarcar(null); setAConfirmar('lista'); }}
+                                        disabled={marcando}
+                                        className="h-12 rounded-[10px] text-[14.5px] font-semibold disabled:opacity-50"
+                                        style={{ background: '#f1f2f4', color: C.tinta }}
+                                    >
+                                        Marcar listo
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => { setFallaMarcar(null); setAConfirmar('retirada'); }}
+                                    disabled={marcando}
+                                    className="h-12 rounded-[10px] text-[14.5px] font-semibold disabled:opacity-50"
+                                    style={{ background: C.tinta, color: '#fff' }}
+                                >
+                                    Marcar retirado
+                                </button>
+                            </div>
+                        )}
+
+                        {fallaMarcar && (
+                            <p role="alert" className="mt-2 m-0 text-[13px] font-medium" style={{ color: '#b42318' }}>
+                                {fallaMarcar}
+                            </p>
+                        )}
                     </>
                 )}
             </HojaDetalle>
+
+            {/* ── Confirmar la entrega ──
+                Marcar retirado le avisa a quien compró y no se deshace desde
+                acá, así que se pregunta antes. */}
+            {aConfirmar && v && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Confirmar la entrega"
+                    className="fixed inset-0 z-[140] flex items-center justify-center p-4"
+                    style={{ background: 'rgba(15,23,42,.5)' }}
+                    onClick={() => setAConfirmar(null)}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        className="w-full max-w-[380px] rounded-2xl bg-white p-5"
+                        style={{ boxShadow: '0 24px 60px rgba(0,0,0,.22)' }}
+                    >
+                        <p className="m-0 text-[17px] font-semibold" style={{ color: C.tinta }}>
+                            {aConfirmar === 'lista'
+                                ? '¿Marcar ' + v.codigo + ' como listo?'
+                                : '¿Entregaste ' + v.codigo + '?'}
+                        </p>
+                        <p className="mt-2 m-0 text-[14px] leading-[1.45]" style={{ color: C.apagado }}>
+                            {aConfirmar === 'lista'
+                                ? 'Le va a llegar un aviso a quien compró para que lo venga a buscar.'
+                                : 'Queda registrado que se lo llevaron.'}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2.5 mt-4">
+                            <button
+                                type="button"
+                                onClick={() => setAConfirmar(null)}
+                                className="h-12 rounded-[10px] text-[14.5px] font-semibold"
+                                style={{ background: '#f1f2f4', color: C.tinta }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                disabled={marcando}
+                                onClick={async () => {
+                                    const que = aConfirmar;
+                                    setMarcando(true);
+                                    const r = await marcarVenta(v.id, que);
+                                    setMarcando(false);
+                                    setAConfirmar(null);
+                                    if (!r.ok) {
+                                        setFallaMarcar(r.motivo === 'sin_permiso'
+                                            ? 'No tenés permiso para marcar entregas.'
+                                            : 'No se pudo marcar. Probá de nuevo.');
+                                        return;
+                                    }
+                                    const nuevo = await getDetalleVenta(v.id);
+                                    if (nuevo) setDetalle(nuevo);
+                                }}
+                                className="h-12 rounded-[10px] text-[14.5px] font-semibold disabled:opacity-50"
+                                style={{ background: C.tinta, color: '#fff' }}
+                            >
+                                {marcando ? 'Guardando…' : 'Confirmar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── El comprobante, a pantalla completa ── */}
             {ampliado && urlComprobante && !pdf && (
