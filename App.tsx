@@ -122,6 +122,7 @@ import SinAcceso, { guardarDestino } from './components/auth/SinAcceso';
 import { supabaseService } from './services/supabaseService';
 import { hasRole } from './services/authUtils';
 import { AudioProvider } from './contexts/AudioContext';
+import { ProveedorDeTema } from './contexts/TemaContext';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import ModalActualizacion from './components/ui/ModalActualizacion';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -1460,6 +1461,7 @@ const App: React.FC = () => {
 
     return (
         <ErrorBoundary>
+            <ProveedorDeTema>
             <AudioProvider>
                 <AuthProvider>
                     <NotificationProvider>
@@ -1478,6 +1480,7 @@ const App: React.FC = () => {
                     </NotificationProvider>
                 </AuthProvider>
             </AudioProvider>
+            </ProveedorDeTema>
         </ErrorBoundary>
     );
 };

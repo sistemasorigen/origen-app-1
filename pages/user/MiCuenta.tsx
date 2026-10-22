@@ -6,12 +6,20 @@ import { useInscripcionesDelUsuario } from '../../src/hooks/useInscripcionesDelU
 import { useBannersDeInicio } from '../../src/hooks/useBannersDeInicio';
 import { misCompras, misInscripciones, type CompraPropia, type InscripcionPropia } from '../../services/miCuenta';
 import {
-    BotonRojo, BotonSecundario, EncabezadoSubpagina, ESTILOS_MI_CUENTA,
+    BotonPrimario, BotonRojo, BotonSecundario, EncabezadoSubpagina, ESTILOS_MI_CUENTA,
     EsqueletoDeSeccion, Panel, TituloDePanel, useAvisoFlotante,
 } from '../../components/miCuenta/piezas';
 import { ESTILOS_DESTACADA, type Destacado } from '../../components/miCuenta/Destacada';
 import ListaMiCuenta, { type SeccionDeMiCuenta } from '../../components/miCuenta/ListaMiCuenta';
+import {
+    ayudaDeAvisos, detalleDeAvisos, estadoDeAvisos,
+    PASOS_ANDROID, PASOS_APAGAR, PASOS_INSTALAR, PASOS_IPHONE_AJUSTES,
+    type EstadoDeAvisos,
+} from '../../components/miCuenta/avisos';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
+import { useTema } from '../../contexts/TemaContext';
 import EditarPerfil, { CAMPOS_REQUERIDOS } from './miCuenta/EditarPerfil';
+import CuentaYSeguridad from './miCuenta/CuentaYSeguridad';
 
 declare const __BUILD_VERSION__: string;
 
@@ -110,6 +118,12 @@ const MiCuenta: React.FC = () => {
     const { inscripciones: deGrupos } = useInscripcionesDelUsuario(user);
     const { config } = useBannersDeInicio();
     const { avisar, Aviso } = useAvisoFlotante();
+    const { permission, isSupported, requestPermission } = usePushNotifications();
+    const { oscuro, alternar } = useTema();
+
+    // Qué panel de ayuda de avisos está abierto, si hay alguno.
+    const [ayudaAvisos, setAyudaAvisos] = useState<null | EstadoDeAvisos>(null);
+    const [pestañaAyuda, setPestañaAyuda] = useState<'android' | 'iphone'>('android');
 
     const [compras, setCompras] = useState<CompraPropia[]>([]);
     const [eventos, setEventos] = useState<InscripcionPropia[]>([]);
@@ -261,6 +275,20 @@ const MiCuenta: React.FC = () => {
         return null;
     }, [eventos, compras, faltantes, deGrupos, cerradas, config, navigate, irA]);
 
+    // El estado de los avisos se recalcula con el permiso: pedirlo cambia
+    // `permission` y la fila se actualiza sola.
+    const estadoAvisos = useMemo(
+        () => estadoDeAvisos(isSupported, permission),
+        [isSupported, permission],
+    );
+
+    const prenderAvisos = async () => {
+        if (estadoAvisos !== 'apagado') return;
+        const resultado = await requestPermission();
+        if (resultado === 'granted') avisar('Te vamos a avisar en este celular');
+        else if (resultado === 'denied') avisar('No diste permiso para los avisos');
+    };
+
     const cerrarDestacada = () => {
         if (!destacado || destacado.caso === 'verso') return;
         const nuevas = [...cerradas, destacado.caso];
@@ -282,7 +310,11 @@ const MiCuenta: React.FC = () => {
             );
         }
 
-        // Prompts 3 a 5. La ruta existe y el título también: lo único que
+        if (seccion === 'seguridad') {
+            return <CuentaYSeguridad onVolver={esAncha ? undefined : volver} avisar={avisar} />;
+        }
+
+        // Prompts 3 y 5. La ruta existe y el título también: lo único que
         // falta es el contenido, y se dice en vez de mostrar una página en
         // blanco que parece rota.
         return (
@@ -310,6 +342,19 @@ const MiCuenta: React.FC = () => {
             faltaTexto={faltantes.length === 1 ? `Falta ${faltantes[0].label.toLowerCase()}` : undefined}
             conteos={conteos}
             sinLeer={sinLeer}
+            avisos={{
+                prendido: estadoAvisos === 'prendido',
+                sePuedePrender: estadoAvisos === 'apagado',
+                detalle: detalleDeAvisos(estadoAvisos),
+                ayuda: ayudaDeAvisos(estadoAvisos),
+                onPrender: prenderAvisos,
+                onAyuda: () => {
+                    setPestañaAyuda(estadoAvisos === 'iphone' ? 'iphone' : 'android');
+                    setAyudaAvisos(estadoAvisos);
+                },
+            }}
+            temaOscuro={oscuro}
+            onAlternarTema={alternar}
             version={version}
             cargando={cargando}
             destacado={destacado}
@@ -370,8 +415,98 @@ const MiCuenta: React.FC = () => {
                 </div>
             </Panel>
 
+            <PanelDeAyuda
+                estado={ayudaAvisos}
+                pestaña={pestañaAyuda}
+                onPestaña={setPestañaAyuda}
+                onCerrar={() => setAyudaAvisos(null)}
+            />
+
             <Aviso />
         </div>
+    );
+};
+
+/**
+ * Los pasos para prender, apagar o instalar, según el caso.
+ *
+ * El de "bloqueado" va con dos pestañas porque los pasos son distintos en
+ * Android y en iPhone, y no hay forma confiable de saber cuál mira quien
+ * está del otro lado: un iPad se presenta como Mac, y una persona puede
+ * estar viendo esto en la compu para arreglarlo en el teléfono.
+ */
+const PanelDeAyuda: React.FC<{
+    estado: EstadoDeAvisos | null;
+    pestaña: 'android' | 'iphone';
+    onPestaña: (p: 'android' | 'iphone') => void;
+    onCerrar: () => void;
+}> = ({ estado, pestaña, onPestaña, onCerrar }) => {
+    if (!estado) return null;
+
+    const esInstalar = estado === 'iphone';
+    const esApagar = estado === 'prendido';
+
+    const titulo = esInstalar ? 'Agregá Origen a tu inicio'
+        : esApagar ? 'Cómo apagar los avisos'
+            : 'Cómo activar los avisos';
+
+    const detalle = esInstalar
+        ? 'En iPhone, los avisos funcionan sólo si abrís Origen desde su ícono.'
+        : esApagar
+            ? 'Los diste permiso en este navegador, así que apagarlos se hace ahí.'
+            : 'Los bloqueaste en el navegador. Para volver a prenderlos:';
+
+    const pasos = esInstalar ? PASOS_INSTALAR
+        : esApagar ? PASOS_APAGAR
+            : (pestaña === 'android' ? PASOS_ANDROID : PASOS_IPHONE_AJUSTES);
+
+    const conPestañas = !esInstalar && !esApagar;
+
+    const pestañaSt = (activa: boolean): React.CSSProperties => ({
+        minHeight: 44,
+        border: 0,
+        borderRadius: 999,
+        background: activa ? 'var(--mc-card)' : 'transparent',
+        color: activa ? 'var(--mc-ink)' : 'var(--mc-m66)',
+        font: 'inherit',
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: 'pointer',
+        boxShadow: activa ? '0 1px 3px rgba(0,0,0,.08)' : 'none',
+    });
+
+    return (
+        <Panel abierto onCerrar={onCerrar} etiqueta={titulo}>
+            <TituloDePanel titulo={titulo} detalle={detalle} />
+
+            {conPestañas && (
+                <div role="tablist" className="grid grid-cols-2 gap-1 mt-[18px] p-1 rounded-full"
+                    style={{ background: 'var(--mc-chip)' }}>
+                    <button role="tab" aria-selected={pestaña === 'android'}
+                        onClick={() => onPestaña('android')} style={pestañaSt(pestaña === 'android')}>
+                        Android (Chrome)
+                    </button>
+                    <button role="tab" aria-selected={pestaña === 'iphone'}
+                        onClick={() => onPestaña('iphone')} style={pestañaSt(pestaña === 'iphone')}>
+                        iPhone
+                    </button>
+                </div>
+            )}
+
+            <ol className="list-none m-0 mt-[18px] p-0 flex flex-col gap-3.5">
+                {pasos.map((paso, i) => (
+                    <li key={paso} className="flex gap-3 items-start">
+                        <span className="w-7 h-7 flex-none rounded-full flex items-center justify-center text-[13.5px] font-bold"
+                            style={{ background: 'var(--mc-chip)' }}>
+                            {i + 1}
+                        </span>
+                        <span className="pt-[3px] text-[15px] leading-[1.45] font-medium text-pretty">{paso}</span>
+                    </li>
+                ))}
+            </ol>
+
+            <BotonPrimario ancho onClick={onCerrar} className="mt-6">Entendido</BotonPrimario>
+        </Panel>
     );
 };
 

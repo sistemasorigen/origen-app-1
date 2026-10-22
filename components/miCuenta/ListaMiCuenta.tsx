@@ -34,6 +34,17 @@ export interface ListaMiCuentaProps {
     faltaTexto?: string;
     conteos: ConteosDeMiCuenta;
     sinLeer: number;
+    /** Los avisos de este celular: su estado, su detalle y su ayuda. */
+    avisos: {
+        prendido: boolean;
+        sePuedePrender: boolean;
+        detalle: string;
+        ayuda: string;
+        onPrender: () => void;
+        onAyuda: () => void;
+    };
+    temaOscuro: boolean;
+    onAlternarTema: () => void;
     version: string;
     cargando?: boolean;
     destacado: Destacado | null;
@@ -89,6 +100,7 @@ const Esqueleto: React.FC = () => (
 
 export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
     nombre, email, avatarUrl, faltan, faltaTexto, conteos, sinLeer, version,
+    avisos, temaOscuro, onAlternarTema,
     cargando, destacado, onCerrarDestacado, activa, onIr, onIrAfuera,
     onCerrarSesion, onVolver,
 }) => {
@@ -180,16 +192,21 @@ export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
                     <GrupoDeFilas titulo="PREFERENCIAS">
                         <Fila primera icono={ICONOS.campana} nombre="Notificaciones" marca={sinLeer}
                             onClick={() => onIrAfuera('/notificaciones')} />
-                        {/* Los dos interruptores se conectan en el prompt 4. Van
-                            apagados y sin responder para que no mientan: un
-                            interruptor que se mueve y no hace nada es peor que
-                            uno que todavía no está. */}
+                        {/* El interruptor se deja tocar SÓLO cuando prenderlo
+                            es posible. Una vez dado el permiso, la página no
+                            puede quitárselo —sólo el navegador—, así que queda
+                            prendido y con su línea de ayuda en vez de fingir
+                            que se apaga. */}
                         <Fila icono={ICONOS.celular} nombre="Avisos en este celular"
-                            detalle="Todavía no se puede prender desde acá."
-                            interruptor={{ prendido: false, apagado: true }} />
+                            detalle={avisos.detalle}
+                            interruptor={{
+                                prendido: avisos.prendido,
+                                apagado: !avisos.sePuedePrender,
+                                onChange: avisos.onPrender,
+                            }}
+                            ayuda={avisos.ayuda ? { texto: avisos.ayuda, onClick: avisos.onAyuda } : undefined} />
                         <Fila icono={ICONOS.luna} nombre="Modo oscuro"
-                            detalle="Por ahora sigue el tema del sistema."
-                            interruptor={{ prendido: false, apagado: true }} />
+                            interruptor={{ prendido: temaOscuro, onChange: onAlternarTema }} />
                     </GrupoDeFilas>
 
                     <GrupoDeFilas titulo="CUENTA Y SEGURIDAD">
