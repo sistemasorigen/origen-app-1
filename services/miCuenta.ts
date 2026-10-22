@@ -175,6 +175,78 @@ export const marcarVenta = async (
 };
 
 // ════════════════════════════════════════════════════════════════════════
+// MIS GRUPOS
+
+export type EstadoEnGrupo = 'aprobado' | 'esperando' | 'no_aprobado';
+
+export interface GrupoPropio {
+    registroId: string;
+    grupoId: string;
+    nombre: string;
+    /** 'Anfitrión/a', 'Co-anfitrión/a' o 'Miembro'. Nunca un código. */
+    rol: string;
+    /** 'Jueves 20:00', o sólo el día si no hay hora. */
+    cuando: string;
+    estado: EstadoEnGrupo;
+    esOnline: boolean;
+    /** Me anotó mi pareja. */
+    esPareja: boolean;
+    /** La temporada ya terminó. */
+    termino: boolean;
+}
+
+const ESTADOS_DE_GRUPO: Record<string, EstadoEnGrupo> = {
+    APPROVED: 'aprobado', PENDING: 'esperando', REJECTED: 'no_aprobado',
+};
+
+/**
+ * Los grupos de esta persona, con qué rol y en qué estado.
+ *
+ * getMiHistorialDeGrupos no alcanza para esta pantalla: trae sólo los
+ * APPROVED y no dice el rol, y acá hay que mostrar también el que está
+ * esperando respuesta, que es justo el que la persona viene a mirar.
+ *
+ * El rol sale del GRUPO y no de los roles de la cuenta: alguien puede ser
+ * anfitrión de uno y miembro de otro, y cada tarjeta tiene que decir lo que
+ * es en ese grupo.
+ */
+export const misGrupos = async (userId: string): Promise<GrupoPropio[]> => {
+    if (!userId) return [];
+    try {
+        const { data, error } = await supabase
+            .from('group_registrations')
+            // groups(*) y no una lista de columnas: nombrar is_hybrid haría
+            // fallar la consulta entera mientras ese SQL no esté corrido.
+            // Mismo criterio que getMiHistorialDeGrupos.
+            .select('id, group_id, user_id, partner_user_id, status, groups(*)')
+            .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`);
+        if (error) throw error;
+
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+
+        return (data || []).map((f: any) => {
+            const g = f.groups || {};
+            const fin = g.end_date ? new Date(`${g.end_date}T00:00:00`) : null;
+            return {
+                registroId: f.id,
+                grupoId: f.group_id,
+                nombre: g.name || 'Grupo',
+                rol: g.host_id === userId ? 'Anfitrión/a'
+                    : g.co_host_id === userId ? 'Co-anfitrión/a' : 'Miembro',
+                cuando: [g.meeting_day, g.meeting_time].filter(Boolean).join(' '),
+                estado: ESTADOS_DE_GRUPO[String(f.status || '').toUpperCase()] || 'esperando',
+                esOnline: !!g.is_online,
+                esPareja: f.user_id !== userId && f.partner_user_id === userId,
+                termino: !!fin && fin < hoy,
+            } as GrupoPropio;
+        }).sort((a, b) => Number(a.termino) - Number(b.termino));
+    } catch (err) {
+        aviso('misGrupos', err);
+        return [];
+    }
+};
+
 // MIS INSCRIPCIONES A EVENTOS
 // ════════════════════════════════════════════════════════════════════════
 
