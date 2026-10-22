@@ -284,8 +284,17 @@ export const Historial: React.FC<{ onVolver?: () => void }> = ({ onVolver }) => 
                                             {it.esPareja ? 'Inscripción compartida' : 'Miembro'}
                                             {it.meetingDay ? ` · ${it.meetingDay}` : ''}
                                         </p>
+                                        {it.anfitriones?.length > 0 && (
+                                            <p className="mb-0 mt-0.5 text-[13.5px] font-medium leading-[1.4]" style={{ color: 'var(--mc-m50)' }}>
+                                                {it.anfitriones.length > 1 ? 'Anfitriones' : 'Anfitrión'}: {it.anfitriones.join(' y ')}
+                                            </p>
+                                        )}
+                                        {/* El año ya está en el rótulo de arriba: acá
+                                            va sólo el número de temporada. */}
                                         <p className="mb-0 mt-1.5 text-[13.5px] font-semibold" style={{ color: 'var(--mc-m66)' }}>
-                                            {vigente(it.endDate) ? 'En curso' : 'Terminó la temporada'}
+                                            {it.temporada
+                                                ? `Temporada ${it.temporada.slice(1)} · ${vigente(it.endDate) ? 'En curso' : 'Terminó'}`
+                                                : vigente(it.endDate) ? 'En curso' : 'Terminó la temporada'}
                                         </p>
                                     </div>
                                 </div>

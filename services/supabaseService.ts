@@ -4174,6 +4174,10 @@ export const supabaseService = {
     isHybrid?: boolean;
     location?: string;
     esPareja: boolean;
+    /** S1/S2/S3 por la fecha de inicio; null si cae fuera de los rangos. */
+    temporada: 'S1' | 'S2' | 'S3' | null;
+    /** Los nombres guardados en el grupo, en el orden anfitrión y co-anfitrión. */
+    anfitriones: string[];
   }>> {
     const { data, error } = await supabase
       .from('group_registrations')
@@ -4201,6 +4205,13 @@ export const supabaseService = {
         location: row.groups?.location || undefined,
         // Distingue "me anoté yo" de "me anotó mi pareja".
         esPareja: row.user_id !== userId && row.partner_user_id === userId,
+        temporada: getSeasonFromDate(row.groups?.start_date),
+        anfitriones: [
+          [row.groups?.leader_name, row.groups?.leader_surname],
+          [row.groups?.co_host_first_name, row.groups?.co_host_last_name],
+        ]
+          .map(partes => partes.filter(Boolean).join(' ').trim())
+          .filter(Boolean),
       }))
       // Más reciente primero. Si falta startDate, al final.
       .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));

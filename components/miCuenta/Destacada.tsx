@@ -48,13 +48,13 @@ export const ESTILOS_DESTACADA = `
 }
 `;
 
-/** Las ilustraciones del .dc, de 96×96. */
-const DIBUJO: Record<CasoDestacado, string> = {
+/** Las ilustraciones del .dc, de 96×96. El versículo va sin dibujo: la cita
+ *  sola, a todo el ancho. */
+const DIBUJO: Record<Exclude<CasoDestacado, 'verso'>, string> = {
     entrada: 'M10 34h76v10a6 6 0 000 12v10H10V56a6 6 0 000-12zM62 34v32M40 41a10 10 0 106 16 8 8 0 11-6-16zM76 14l2 5 5 2-5 2-2 5-2-5-5-2 5-2z',
     pedido: 'M22 36h52l-5 44H27zM36 36v-6a12 12 0 0124 0v6M37 57l8 8 14-15',
     perfil: 'M12 22h58v44H12zM32 44a7 7 0 100-14 7 7 0 000 14zM20 58a12 12 0 0124 0M51 34h10M51 44h10M58 80l22-22 7 7-22 22h-7z',
     grupo: 'M48 46a9 9 0 100-18 9 9 0 000 18zM30 76a18 18 0 0136 0M24 52a7 7 0 100-14 7 7 0 000 14zM10 74a14 14 0 0119-13M72 52a7 7 0 100-14 7 7 0 000 14zM86 74a14 14 0 00-19-13',
-    verso: 'M48 32c-8-6-20-7-32-5v46c12-2 24-1 32 5 8-6 20-7 32-5V27c-12-2-24-1-32 5zM48 32v46M74 8l2 5 5 2-5 2-2 5-2-5-5-2 5-2z',
 };
 
 export const Destacada: React.FC<{ destacado: Destacado; onCerrar?: () => void }> = ({ destacado, onCerrar }) => {
@@ -63,7 +63,7 @@ export const Destacada: React.FC<{ destacado: Destacado; onCerrar?: () => void }
     return (
         <div
             data-caso={destacado.caso}
-            className="mc-destacada relative grid grid-cols-[minmax(0,1fr)_auto] gap-2.5 mt-3.5 pt-5 pr-4 pb-[18px] pl-5 min-h-[150px] rounded-[26px]"
+            className={`mc-destacada relative grid ${esVerso ? 'grid-cols-1' : 'grid-cols-[minmax(0,1fr)_auto]'} gap-2.5 mt-3.5 pt-5 pr-4 pb-[18px] pl-5 min-h-[150px] rounded-[26px]`}
             style={{ background: 'var(--f-bg)', color: 'var(--mc-ink)', transition: 'background-color .4s ease' }}
         >
             <div className="min-w-0 flex flex-col items-start">
@@ -102,13 +102,15 @@ export const Destacada: React.FC<{ destacado: Destacado; onCerrar?: () => void }
                 )}
             </div>
 
-            <svg
-                width="88" height="88" viewBox="0 0 96 96" fill="none"
-                stroke="var(--f-st)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
-                aria-hidden="true" className="self-end flex-none"
-            >
-                <path d={DIBUJO[destacado.caso]} />
-            </svg>
+            {!esVerso && (
+                <svg
+                    width="88" height="88" viewBox="0 0 96 96" fill="none"
+                    stroke="var(--f-st)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
+                    aria-hidden="true" className="self-end flex-none"
+                >
+                    <path d={DIBUJO[destacado.caso]} />
+                </svg>
+            )}
 
             {!esVerso && onCerrar && (
                 <button
