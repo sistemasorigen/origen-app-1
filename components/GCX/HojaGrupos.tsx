@@ -5,17 +5,17 @@ import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
  * El panel de la cartelera /gcx (design-claude/GCX - Tarjetas y pagina):
- * compartir un grupo, el aviso de restricción y la postulación a anfitrión.
+ * compartir un grupo, el aviso de restricción, la postulación a anfitrión y
+ * la inscripción a un grupo (ModalUnirseGrupo, con id `gcx-inscripcion`).
  *
  * En el teléfono no es un modal: sube desde abajo, con agarradera y arrastre
  * para cerrar. En la compu es un modal centrado de 460 px (560 la
  * postulación).
  *
- * Es la técnica de HojaInscripcion y HojaDetalle —medir el ancho en el PRIMER
- * render, bloquear el fondo como lo necesita iOS, Escape, devolver el foco,
- * prefers-reduced-motion—. No se reutiliza HojaInscripcion porque no se toca
- * (es el panel de inscripción), no arrastra, tiene un ancho fijo de 520 y su
- * id `gcx-inscripcion` le pintaría los campos a la postulación.
+ * Misma técnica que HojaDetalle —medir el ancho en el PRIMER render, bloquear
+ * el fondo como lo necesita iOS, Escape, devolver el foco,
+ * prefers-reduced-motion—. Reemplazó a la vieja HojaInscripcion, que no
+ * arrastraba y tenía un ancho fijo de 520.
  */
 
 interface Props {

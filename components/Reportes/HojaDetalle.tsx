@@ -14,7 +14,7 @@ import { C, FUENTE } from './PiezasTablero';
  * se cierra con el pulgar. En la compu es un modal centrado de 580px con su
  * cruz arriba a la derecha.
  *
- * La técnica es la de components/GCX/HojaInscripcion.tsx —medir el ancho en
+ * La técnica es la de components/GCX/HojaGrupos.tsx —medir el ancho en
  * el PRIMER render, bloquear el fondo como lo necesita iOS, Escape, devolver
  * el foco, respetar prefers-reduced-motion—, pero con los tokens de Reportes
  * y SIN el id `gcx-inscripcion`: esta hoja no tiene que heredar nada de la
@@ -45,8 +45,8 @@ const HojaDetalle: React.FC<Props> = ({ abierta, onCerrar, sub, titulo, children
     /**
      * Se mide en el PRIMER render, no en un efecto: si arranca en `false`, en
      * un teléfono la hoja monta con el `initial` de escritorio y la animación
-     * queda varada a mitad de camino (el mismo problema que documenta
-     * HojaInscripcion).
+     * queda varada a mitad de camino (el mismo problema que documentaba la
+     * vieja HojaInscripcion).
      */
     const [esMovil, setEsMovil] = useState(
         () => typeof window !== 'undefined' && window.innerWidth < 768,

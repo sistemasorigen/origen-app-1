@@ -276,9 +276,6 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
     const titular = `${group.leaderName || ''} ${group.leaderSurname || ''}`.trim();
     const coAnfitrion = hasCoHost ? `${group.coHostFirstName || ''} ${group.coHostLastName || ''}`.trim() : '';
     const anfitriones = [titular, coAnfitrion].filter(Boolean);
-    const nombreAnfitriones = anfitriones.length > 1
-        ? anfitriones.map(n => n.split(/\s+/)[0]).join(' y ')
-        : anfitriones[0] || '';
     const COLORES_AVATAR = ['var(--g-av1)', 'var(--g-av2)', 'var(--g-av3)'];
 
     const donde = dondeSeReune(group);
@@ -464,9 +461,14 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
                                 <span className="text-[12.5px] font-medium" style={{ color: 'var(--g-m50)' }}>
                                     {anfitriones.length > 1 ? 'Anfitriones' : 'Anfitrión'}
                                 </span>
-                                <span className="text-[14.5px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {nombreAnfitriones}
-                                </span>
+                                {/* Nombre y apellido completos, uno por renglón:
+                                    sólo los nombres de pila no alcanzaban para
+                                    saber quién es, y en una línea se cortaban. */}
+                                {anfitriones.map((n, j) => (
+                                    <span key={j} className="text-[14.5px] leading-[1.35] font-semibold [overflow-wrap:anywhere]">
+                                        {n}
+                                    </span>
+                                ))}
                             </div>
                         </div>
                     )}

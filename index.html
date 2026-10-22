@@ -355,6 +355,14 @@
       outline-offset: 2px;
     }
 
+    /* El panel (HojaGrupos) recibe el foco al abrir sólo para meter el
+       teclado adentro; un anillo alrededor de todo el panel no dice nada, y
+       WebKit le pintaba el suyo, azul. */
+    .gcx-m [role="dialog"][tabindex="-1"]:focus,
+    .gcx-m [role="dialog"][tabindex="-1"]:focus-visible {
+      outline: none !important;
+    }
+
     @keyframes gcxIn { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: none } }
     @keyframes gcxShim { from { background-position: 120% 0 } to { background-position: -120% 0 } }
     @keyframes gcxZoom { from { opacity: 0; transform: scale(.95) } to { opacity: 1; transform: none } }
@@ -732,25 +740,19 @@
       color: #ffffff !important;
     }
 
-    /* Modales de inscripción a GCX (design-claude/JoinFlow). El override
-       global de arriba le pone a todo campo fondo blanco, borde slate y un
-       anillo de foco azul; en esta hoja el campo va gris sin borde visible y
-       el foco es negro, o rosa en el tramo de la pareja. Scopeado por id, que
-       le gana al !important global por especificidad. */
+    /* Modales de inscripción a GCX (design-claude/JoinFlow, con la estética
+       de /gcx). El override global de arriba le pone a todo campo fondo
+       blanco, borde slate y un anillo de foco azul; acá van los tokens de
+       .gcx-m. Scopeado por id, que le gana al !important global. */
     /* Para ganarle al override global hay que repetir su cadena de :not(),
        y eso le da a la regla base más especificidad que a cualquier regla de
        estado escrita con un selector más corto: el foco nunca llegaría a
        pintarse. Por eso la base consume variables y cada estado solo las
        redefine; las variables se resuelven por herencia, no por especificidad. */
     #gcx-inscripcion {
-      --insc-campo-fondo: #f4f4f5;
-      --insc-campo-tinta: #0a0a0a;
-      --insc-campo-borde: transparent;
-    }
-
-    .dark #gcx-inscripcion {
-      --insc-campo-fondo: #26262a;
-      --insc-campo-tinta: #f7f7f8;
+      --insc-campo-fondo: var(--g-field);
+      --insc-campo-tinta: var(--g-ink);
+      --insc-campo-borde: var(--g-line);
     }
 
     #gcx-inscripcion input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]) {
@@ -758,24 +760,18 @@
       color: var(--insc-campo-tinta) !important;
       border: 1.5px solid var(--insc-campo-borde) !important;
       border-radius: 16px !important;
-      padding: 15px 16px;
-      font-weight: 600;
+      padding: 0 16px;
+      font-weight: 500;
       /* 16px es el mínimo que no dispara el zoom automático de iOS al enfocar */
       font-size: 16px;
       outline: none !important;
       box-shadow: none !important;
     }
 
-    /* El foco se ve por el borde y el fondo: el campo pasa de gris sin borde a
-       blanco con borde negro, o rosa en el tramo de la pareja. */
+    /* Desde el rediseño de /gcx el campo es el de la postulación: blanco con
+       borde suave, y el foco lo oscurece a la tinta (rosa en la pareja). */
     #gcx-inscripcion input:focus {
-      --insc-campo-fondo: #ffffff;
-      --insc-campo-borde: #0a0a0a;
-    }
-
-    .dark #gcx-inscripcion input:focus {
-      --insc-campo-fondo: #1c1c1f;
-      --insc-campo-borde: #f7f7f8;
+      --insc-campo-borde: var(--g-ink);
     }
 
     #gcx-inscripcion input.campo-pareja:focus {
@@ -789,31 +785,17 @@
       --insc-campo-fondo: #fef3f2;
     }
 
-    #gcx-inscripcion input:disabled {
-      --insc-campo-fondo: #f0f0f1;
-      --insc-campo-tinta: #9a9aa0;
+    .dark #gcx-inscripcion input.campo-error {
+      --insc-campo-fondo: rgba(217, 45, 32, .12);
     }
 
-    .dark #gcx-inscripcion input:disabled {
-      --insc-campo-fondo: #26262a;
-      --insc-campo-tinta: #6e6e73;
+    #gcx-inscripcion input:disabled {
+      --insc-campo-fondo: var(--g-chip);
+      --insc-campo-tinta: var(--g-m38);
     }
 
     #gcx-inscripcion ::placeholder {
-      color: #9a9aa0 !important;
-    }
-
-    .dark #gcx-inscripcion ::placeholder {
-      color: #7a7a80 !important;
-    }
-
-    /* index.css tiene un "modo foco": mientras hay un modal abierto esconde
-       todo <header> y <nav> de la página para que no se vean por detrás. Esa
-       regla alcanzaba también a la cabecera de esta hoja, que vive adentro del
-       modal: quedaba con altura 0 y sin título ni barra de pasos. Se exceptúa
-       por id, que le gana en especificidad. */
-    body[data-modal-active="true"] #gcx-inscripcion header {
-      display: flex !important;
+      color: var(--g-m38) !important;
     }
 
     /* Entrada de la app, cuando el velo de carga se va.

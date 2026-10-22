@@ -2,6 +2,11 @@
 -- Que los datos del perfil lleguen a donde ya se habían copiado
 -- ════════════════════════════════════════════════════════════════════════════
 --
+-- ⛔ NO CORRER (2026-10-22). Nunca se aplicó y quedó reemplazado:
+--    · inscripciones → sql/sincronizar_inscripciones_con_el_perfil.sql (trigger)
+--    · grupos        → sql/sincronizar_nombre_anfitriones.sql (aplicado)
+--    Se deja por la explicación de qué se sincroniza y qué no.
+--
 -- EL PROBLEMA
 --
 -- Cuando alguien se inscribe a un GCX, el formulario autocompleta su nombre,
