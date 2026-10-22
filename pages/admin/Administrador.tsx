@@ -22,6 +22,7 @@ import ConfiguracionApp, { SubSeccion } from './ConfiguracionApp';
 import BandejaDeDatos from './BandejaDeDatos';
 import ReportesSistemas from './ReportesSistemas';
 import { reportesSistemas } from '../../services/miCuenta';
+import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
  * Administración general (design-claude/Admin General).
@@ -93,6 +94,15 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     const [reportesTotal, setReportesTotal] = useState<number | null>(null);
     const [sub, setSub] = useState<SubSeccion>('identidad');
     const [menuSistema, setMenuSistema] = useState(false);
+    // Mobile: los dos selectores abren una hoja desde abajo con su grupo.
+    const [hoja, setHoja] = useState<null | 'personas' | 'sistema'>(null);
+    useBloqueoDeFondo(hoja !== null);
+    useEffect(() => {
+        if (!hoja) return;
+        const alEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') setHoja(null); };
+        document.addEventListener('keydown', alEscape);
+        return () => document.removeEventListener('keydown', alEscape);
+    }, [hoja]);
     const menuRef = useRef<HTMLDivElement>(null);
 
     const [usuarios, setUsuarios] = useState<User[]>([]);
@@ -146,6 +156,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     const irA = useCallback((destino: Seccion) => {
         setSeccion(destino);
         setMenuSistema(false);
+        setHoja(null);
         setAbierto(null);
         setCreando(false);
         if (destino === 'reportes') { navigate('/panel-admin/reportes'); return; }
@@ -355,6 +366,25 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     // ── Cabecera ──────────────────────
     const enPersonas = seccion === 'usuarios' || seccion === 'directorio' || seccion === 'reportes';
     const enSistema = seccion === 'config' || seccion === 'auditoria';
+    // En el teléfono "Sistema" junta las tres: configuración, registro y datos.
+    const enSistemaMovil = enSistema || seccion === 'datos';
+
+    const NOMBRE: Record<Seccion, string> = {
+        usuarios: 'Usuarios', directorio: 'Directorio', reportes: 'Reportes',
+        config: 'Configuración', auditoria: 'Registro de cambios', datos: 'Solicitudes de datos',
+    };
+    const DETALLE: Partial<Record<Seccion, string>> = {
+        usuarios: 'Cuentas, roles y permisos.',
+        directorio: 'Quién es responsable de cada área.',
+        reportes: 'Los problemas que reporta la gente.',
+        config: 'Identidad, banners, música y pies. Lo ve toda la iglesia.',
+        auditoria: 'Quién tocó qué y cuándo.',
+        datos: 'Pedidos de acceso, corrección o baja (Ley 25.326).',
+    };
+    const GRUPO: Record<'personas' | 'sistema', Seccion[]> = {
+        personas: ['usuarios', 'directorio', 'reportes'],
+        sistema: ['config', 'auditoria', 'datos'],
+    };
 
     const titulo = seccion === 'reportes' ? 'Reportes de problemas'
         : seccion === 'usuarios'
@@ -397,7 +427,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             )}
                         </div>
 
-                        <div className="relative flex-none" ref={menuRef}>
+                        <div className="relative hidden flex-none md:block" ref={menuRef}>
                             <button
                                 onClick={() => setMenuSistema(v => !v)}
                                 aria-expanded={menuSistema}
@@ -448,8 +478,53 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                         </div>
                     </div>
 
-                    {/* Navegación */}
-                    <div className="flex items-center gap-1.5 pb-4 pt-3.5 md:gap-2">
+                    {/* Navegación — mobile: dos selectores del mismo tamaño, uno
+                        abajo del otro (el patrón del Panel GCX). Fila de pastillas
+                        no: en 390 px no entraban y empujaban la página de costado. */}
+                    <div className="flex flex-col gap-2 pb-4 pt-3.5 md:hidden">
+                        {([
+                            {
+                                grupo: 'personas' as const, activo: enPersonas,
+                                texto: enPersonas ? NOMBRE[seccion] : 'Personas',
+                                icono: <><circle cx="9" cy="8.5" r="3.2" /><path d="M3.5 19a5.5 5.5 0 0111 0M16 5.6a3.2 3.2 0 010 5.8M17.5 13.6A5.5 5.5 0 0120.5 19" /></>,
+                            },
+                            {
+                                grupo: 'sistema' as const, activo: enSistemaMovil,
+                                texto: enSistemaMovil ? NOMBRE[seccion] : 'Configuración',
+                                icono: <><circle cx="12" cy="12" r="3.1" /><path d="M19.4 14.6l1.5 1.2-1.8 3.1-1.8-.7a7.6 7.6 0 01-2.6 1.5l-.3 2.3h-3.6l-.3-2.3a7.6 7.6 0 01-2.6-1.5l-1.8.7-1.8-3.1 1.5-1.2a7.6 7.6 0 010-3l-1.5-1.2 1.8-3.1 1.8.7a7.6 7.6 0 012.6-1.5l.3-2.3h3.6l.3 2.3a7.6 7.6 0 012.6 1.5l1.8-.7 1.8 3.1-1.5 1.2a7.6 7.6 0 010 3z" /></>,
+                            },
+                        ]).map(b => (
+                            <button
+                                key={b.grupo}
+                                type="button"
+                                onClick={() => setHoja(b.grupo)}
+                                aria-haspopup="dialog"
+                                aria-expanded={hoja === b.grupo}
+                                className={`flex h-[52px] w-full items-center gap-2.5 rounded-full pl-[18px] pr-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${b.activo ? 'bg-[#0a0a0a] text-white' : 'bg-[#f2f2f0] text-[#0a0a0a]'}`}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none">
+                                    {b.icono}
+                                </svg>
+                                <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{b.texto}</span>
+                                {b.grupo === 'personas' && seccion === 'usuarios' && (
+                                    <span className="flex h-[22px] items-center rounded-full bg-white/20 px-[9px] text-[12px] font-semibold">{usuarios.length}</span>
+                                )}
+                                {b.grupo === 'personas' && reportesNuevos > 0 && seccion !== 'reportes' && (
+                                    <span aria-label={`${reportesNuevos} reportes nuevos`} className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[#d93025] px-[7px] text-[12px] font-bold text-white">
+                                        {reportesNuevos}
+                                    </span>
+                                )}
+                                <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-full ${b.activo ? 'bg-white/15' : 'bg-white'}`}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M6 9l6 6 6-6" />
+                                    </svg>
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Navegación — compu */}
+                    <div className="hidden items-center gap-2 pb-4 pt-3.5 md:flex">
                         {enPersonas ? (
                             <>
                                 <button onClick={() => irA('usuarios')} className={botonNav(seccion === 'usuarios')}>
@@ -502,6 +577,58 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                     </div>
                 </div>
             </header>
+
+            {/* Hoja de secciones — mobile */}
+            {hoja && (
+                <div className="fixed inset-0 z-[120] md:hidden">
+                    <div className="absolute inset-0 bg-[rgba(10,10,10,.42)]" onClick={() => setHoja(null)} />
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={hoja === 'personas' ? 'Personas' : 'Sistema'}
+                        className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-auto rounded-t-[28px] bg-white px-4 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2.5"
+                    >
+                        <span aria-hidden="true" className="mx-auto mb-4 block h-[5px] w-10 rounded-full bg-black/[.14]" />
+                        <p className="mx-1.5 mb-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.58]">
+                            {hoja === 'personas' ? 'Personas' : 'Sistema'}
+                        </p>
+                        {GRUPO[hoja].map(id => {
+                            const activa = seccion === id;
+                            return (
+                                <button
+                                    key={id}
+                                    type="button"
+                                    onClick={() => irA(id)}
+                                    aria-current={activa ? 'page' : undefined}
+                                    className={`mb-[7px] flex min-h-[60px] w-full items-center gap-2.5 rounded-2xl px-[18px] py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${activa ? 'bg-[#0a0a0a] text-white' : 'bg-[#f7f7f5] text-[#0a0a0a]'}`}
+                                >
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-[15px] font-semibold">{NOMBRE[id]}</span>
+                                        {DETALLE[id] && (
+                                            <span className={`mt-0.5 block text-[12.5px] font-medium leading-[1.4] ${activa ? 'text-white/65' : 'text-black/[.55]'}`}>{DETALLE[id]}</span>
+                                        )}
+                                    </span>
+                                    {id === 'usuarios' && (
+                                        <span className={`flex h-[22px] flex-none items-center rounded-full px-[9px] text-[11.5px] font-semibold ${activa ? 'bg-white/20 text-white' : 'bg-[#eceae6] text-black/[.62]'}`}>
+                                            {usuarios.length}
+                                        </span>
+                                    )}
+                                    {id === 'reportes' && reportesNuevos > 0 && (
+                                        <span aria-label={`${reportesNuevos} nuevos`} className="flex h-[22px] min-w-[22px] flex-none items-center justify-center rounded-full bg-[#d93025] px-[7px] text-[12px] font-bold text-white">
+                                            {reportesNuevos}
+                                        </span>
+                                    )}
+                                    {activa && (
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none">
+                                            <path d="M5 12.5l4.5 4.5L19 7.5" />
+                                        </svg>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             <div className="mx-auto max-w-[1360px] px-3.5 pb-[26px] pt-3.5 md:px-[26px] md:pb-[30px] md:pt-[18px]">
 

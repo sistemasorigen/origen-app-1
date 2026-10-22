@@ -58,8 +58,12 @@ const UsuariosAdmin: React.FC<Props> = ({
 
     return (
         <>
-            <div className="flex flex-wrap items-center gap-2.5">
-                <div className="flex h-11 w-full min-w-0 items-center gap-2.5 rounded-full bg-white pl-[17px] pr-2 md:w-auto md:min-w-[190px] md:flex-1">
+            {/* Buscar y crear en la misma fila, también en el teléfono: el
+                botón queda a la vista arriba de la lista, donde se empieza a
+                buscar o a sumar a alguien, y no se come una fila entera. En el
+                teléfono dice "Nuevo"; el resto lo dice el ícono. */}
+            <div className="flex items-center gap-2 md:gap-2.5">
+                <div className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-white pl-[17px] pr-2 md:min-w-[190px]">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.58)" strokeWidth={2.2} strokeLinecap="round" className="flex-none">
                         <circle cx="11" cy="11" r="6.5" />
                         <path d="M16 16l4 4" />
@@ -85,12 +89,14 @@ const UsuariosAdmin: React.FC<Props> = ({
                 </div>
                 <button
                     onClick={onNuevo}
-                    className="flex h-11 flex-none items-center gap-2 rounded-full bg-[#0a0a0a] px-[18px] text-[13.5px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                    aria-label="Nuevo usuario"
+                    className="flex h-11 flex-none items-center gap-1.5 rounded-full bg-[#0a0a0a] pl-3.5 pr-4 text-[13.5px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 md:gap-2 md:px-[18px]"
                 >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
                         <path d="M12 5v14M5 12h14" />
                     </svg>
-                    Nuevo usuario
+                    <span className="md:hidden">Nuevo</span>
+                    <span className="hidden md:inline">Nuevo usuario</span>
                 </button>
             </div>
 

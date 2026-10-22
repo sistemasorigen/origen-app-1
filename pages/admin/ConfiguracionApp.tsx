@@ -65,7 +65,7 @@ const ConfiguracionApp: React.FC<Props> = ({
     musicaSlides, onGuardarMusica, onBorrarMusica, guardandoMusica, pedirConfirmacion, avisar,
 }) => (
     <>
-        <div className="-mx-3.5 flex gap-[7px] overflow-x-auto px-3.5 pb-0.5 md:mx-0 md:px-0">
+        <div className="flex flex-wrap gap-[7px] md:flex-nowrap md:overflow-x-auto md:pb-0.5">
             {SUB_SECCIONES.map(s => (
                 <button
                     key={s.id}
