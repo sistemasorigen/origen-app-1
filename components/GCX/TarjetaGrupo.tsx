@@ -245,15 +245,6 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
         setIsDescriptionExpanded(!isDescriptionExpanded);
     };
 
-    // --- FECHA DE INICIO ---
-    const monthNames = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-    const badgeMonth = startDate ? monthNames[startDate.getMonth()] : null;
-    const badgeDay = startDate ? String(startDate.getDate()).padStart(2, '0') : null;
-    const fechaLarga = startDate
-        ? startDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
-        : '';
-    const yaEmpezo = status === 'IN_PROGRESS' || status === 'FINISHED';
-
     // --- ESTADO ---
     const ESTADOS = {
         AVAILABLE: { label: 'Abierto', color: 'var(--g-grn)', latido: true },
@@ -359,24 +350,9 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, tags, categories, onJoin, 
 
             {/* ── CUERPO ── */}
             <div className="px-3 pb-3 flex flex-col flex-1">
-                {startDate && (
-                    <div className="relative -mt-[26px] flex items-end gap-3">
-                        <div
-                            aria-label={`${yaEmpezo ? 'Empezó' : 'Empieza'} el ${fechaLarga}`}
-                            role="img"
-                            className="w-14 h-[60px] flex-none rounded-2xl flex flex-col items-center justify-center"
-                            style={{ background: 'var(--g-card)', boxShadow: '0 2px 10px rgba(0,0,0,.12)' }}
-                        >
-                            <span className="text-[22px] leading-none font-bold tracking-[-.03em]">{badgeDay}</span>
-                            <span className="mt-[3px] text-[11px] font-bold tracking-[.07em]" style={{ color: 'var(--g-m50)' }}>{badgeMonth}</span>
-                        </div>
-                        <span aria-hidden="true" className="pb-1 text-[12px] font-semibold tracking-[.07em]" style={{ color: 'var(--g-m38)' }}>
-                            {yaEmpezo ? 'EMPEZÓ' : 'EMPIEZA'}
-                        </span>
-                    </div>
-                )}
-
-                <h3 className={`${startDate ? 'mt-3.5' : 'mt-[18px]'} mb-0 text-[19px] leading-[1.25] font-semibold tracking-[-.02em] line-clamp-2 [text-wrap:pretty]`}>
+                {/* Sin el bloque de fecha del diseño (EMPIEZA / EMPEZÓ): se
+                    sacó a pedido. La fecha sigue decidiendo el estado. */}
+                <h3 className={`mt-[18px] mb-0 text-[19px] leading-[1.25] font-semibold tracking-[-.02em] line-clamp-2 [text-wrap:pretty]`}>
                     {group.name}
                 </h3>
 
