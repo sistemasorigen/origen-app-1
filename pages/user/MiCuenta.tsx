@@ -4,7 +4,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSinLeer } from '../../contexts/NotificationContext';
 import { useInscripcionesDelUsuario } from '../../src/hooks/useInscripcionesDelUsuario';
 import { useBannersDeInicio } from '../../src/hooks/useBannersDeInicio';
-import { misCompras, misInscripciones, type CompraPropia, type InscripcionPropia } from '../../services/miCuenta';
+import {
+    misCompras, misGrupos, misInscripciones,
+    type CompraPropia, type GrupoPropio, type InscripcionPropia,
+} from '../../services/miCuenta';
 import {
     BotonPrimario, BotonRojo, BotonSecundario, EncabezadoSubpagina, ESTILOS_MI_CUENTA,
     EsqueletoDeSeccion, Panel, TituloDePanel, useAvisoFlotante,
@@ -132,6 +135,7 @@ const MiCuenta: React.FC = () => {
     const [pestañaAyuda, setPestañaAyuda] = useState<'android' | 'iphone'>('android');
 
     const [compras, setCompras] = useState<CompraPropia[]>([]);
+    const [gruposPropios, setGruposPropios] = useState<GrupoPropio[]>([]);
     const [eventos, setEventos] = useState<InscripcionPropia[]>([]);
     const [cargando, setCargando] = useState(true);
     const [cerradas, setCerradas] = useState<string[]>(leerCerradas);
@@ -154,8 +158,8 @@ const MiCuenta: React.FC = () => {
     useEffect(() => {
         let vigente = true;
         setCargando(true);
-        Promise.all([misCompras(), misInscripciones()])
-            .then(([c, e]) => { if (vigente) { setCompras(c); setEventos(e); } })
+        Promise.all([misCompras(), misInscripciones(), user?.id ? misGrupos(user.id) : Promise.resolve([])])
+            .then(([c, e, g]) => { if (vigente) { setCompras(c); setEventos(e); setGruposPropios(g); } })
             .finally(() => { if (vigente) setCargando(false); });
         return () => { vigente = false; };
     }, [user?.id]);
@@ -188,8 +192,11 @@ const MiCuenta: React.FC = () => {
     const volver = useCallback(() => { navigate('/perfil'); }, [navigate]);
 
     // ── Los números de las filas ────────────────────────────────────────
+    /** Los GCX que dirige. "Mis grupos" es de anfitriones, no de miembros. */
+    const dirigidos = useMemo(() => gruposPropios.filter(g => g.loDirige), [gruposPropios]);
+
     const conteos = useMemo(() => ({
-        grupos: deGrupos.filter(r => r.status === 'APPROVED').length,
+        grupos: dirigidos.length,
         compras: compras.length,
         inscripciones: eventos.length,
         // Por ahora, las áreas de voluntariado más el rol de anfitrión. La
@@ -199,7 +206,7 @@ const MiCuenta: React.FC = () => {
         // texto: tipar el array no significa que la base lo respete.
         servicio: (user?.volunteerRoles?.length || 0)
             + (esAnfitrion(user) ? 1 : 0),
-    }), [deGrupos, compras, eventos, user]);
+    }), [dirigidos, compras, eventos, user]);
 
     const faltantes = useMemo(() => {
         if (!user) return [];
@@ -399,6 +406,7 @@ const MiCuenta: React.FC = () => {
             }}
             temaOscuro={oscuro}
             onAlternarTema={alternar}
+            dirigeGrupos={dirigidos.length > 0 || esAnfitrion(user)}
             version={version}
             cargando={cargando}
             destacado={destacado}

@@ -45,6 +45,8 @@ export interface ListaMiCuentaProps {
     };
     temaOscuro: boolean;
     onAlternarTema: () => void;
+    /** "Mis grupos" es de anfitriones: sin grupos a cargo, la fila no va. */
+    dirigeGrupos: boolean;
     version: string;
     cargando?: boolean;
     destacado: Destacado | null;
@@ -100,7 +102,7 @@ const Esqueleto: React.FC = () => (
 
 export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
     nombre, email, avatarUrl, faltan, faltaTexto, conteos, sinLeer, version,
-    avisos, temaOscuro, onAlternarTema,
+    avisos, temaOscuro, onAlternarTema, dirigeGrupos,
     cargando, destacado, onCerrarDestacado, activa, onIr, onIrAfuera,
     onCerrarSesion, onVolver,
 }) => {
@@ -175,9 +177,11 @@ export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
                     {destacado && <Destacada destacado={destacado} onCerrar={onCerrarDestacado} />}
 
                     <GrupoDeFilas titulo="MI VIDA EN ORIGEN">
-                        <Fila primera icono={ICONOS.grupos} nombre="Mis grupos" valor={cuenta(conteos.grupos)}
-                            activa={activa === 'grupos'} onClick={() => onIr('grupos')} />
-                        <Fila icono={ICONOS.calendario} nombre="Mi calendario" externa
+                        {dirigeGrupos && (
+                            <Fila primera icono={ICONOS.grupos} nombre="Mis grupos" valor={cuenta(conteos.grupos)}
+                                activa={activa === 'grupos'} onClick={() => onIr('grupos')} />
+                        )}
+                        <Fila primera={!dirigeGrupos} icono={ICONOS.calendario} nombre="Mi calendario" externa
                             onClick={() => onIrAfuera('/gcx/calendario')} />
                         <Fila icono={ICONOS.historial} nombre="Historial de grupos"
                             activa={activa === 'historial'} onClick={() => onIr('historial')} />

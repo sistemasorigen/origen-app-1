@@ -155,12 +155,26 @@ const iniciales = (n: string) => (n || '').split(/\s+/).filter(Boolean).slice(0,
 
 // ── Mis grupos ──────────────────────────────────────────────────────────
 
+/**
+ * Mis grupos: los GCX que esta persona DIRIGE.
+ *
+ * No es "los grupos a los que voy". Quien es miembro de seis grupos no
+ * necesita una lista de seis tarjetas que no puede administrar; quien dirige
+ * uno necesita entrar ahí rápido. Por eso la fila ni aparece en el índice si
+ * no dirige ninguno, y acá se filtra por `loDirige` —que sale del grupo y no
+ * del rol de la cuenta: se puede ser anfitrión de uno y miembro de otro—.
+ *
+ * El punto dice si la temporada sigue. Es lo primero que un anfitrión mira
+ * cuando tiene dos grupos y uno ya terminó.
+ */
 export const MisGrupos: React.FC<{ onVolver?: () => void }> = ({ onVolver }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [grupos, setGrupos] = useState<GrupoPropio[] | null>(null);
+    const [todos, setTodos] = useState<GrupoPropio[] | null>(null);
 
-    useEffect(() => { if (user?.id) misGrupos(user.id).then(setGrupos); }, [user?.id]);
+    useEffect(() => { if (user?.id) misGrupos(user.id).then(setTodos); }, [user?.id]);
+
+    const grupos = todos === null ? null : todos.filter(g => g.loDirige);
 
     return (
         <>
@@ -169,15 +183,15 @@ export const MisGrupos: React.FC<{ onVolver?: () => void }> = ({ onVolver }) => 
                 : grupos.length === 0 ? (
                     <Vacio
                         icono={ICONOS.grupos}
-                        titulo="Todavía no estás en ningún grupo"
-                        detalle="Los GCX son grupos chicos que se juntan cada semana en una casa."
+                        titulo="No tenes ningun grupo a cargo"
+                        detalle="Acá aparecen los GCX que dirigís como anfitrión o co-anfitrión."
                         accion={{ texto: 'Ver grupos', onClick: () => navigate('/gcx') }}
                     />
                 ) : (
                     <div className="mt-6 flex flex-col gap-3">
                         {grupos.map(g => (
                             <button
-                                key={g.registroId}
+                                key={g.grupoId}
                                 type="button"
                                 onClick={() => navigate(`/mis-grupos/${g.grupoId}`)}
                                 className={`${TARJETA} flex w-full items-center gap-3.5 border-0 p-4 text-left`}
@@ -192,13 +206,19 @@ export const MisGrupos: React.FC<{ onVolver?: () => void }> = ({ onVolver }) => 
                                     <span className="text-[13.5px] font-medium" style={{ color: 'var(--mc-m50)' }}>
                                         {g.rol}{g.cuando ? ` · ${g.cuando}` : ''}
                                     </span>
-                                    <span style={g.estado === 'aprobado'
-                                        ? pastilla('var(--mc-green-bg)', 'var(--mc-green-ink)')
-                                        : g.estado === 'esperando'
-                                            ? pastilla('var(--mc-amber-bg)', 'var(--mc-amber-ink)')
-                                            : pastilla('var(--mc-chip)', 'var(--mc-m66)')}>
-                                        {g.estado === 'aprobado' ? (g.termino ? 'Terminó la temporada' : 'Aprobado')
-                                            : g.estado === 'esperando' ? 'Esperando aprobación' : 'No aprobado'}
+                                    {/* Verde = la temporada sigue. Gris = terminó.
+                                        El punto va junto al texto y no suelto: un
+                                        color solo no se lee, y hay gente que no
+                                        distingue verde de gris. */}
+                                    <span style={g.termino
+                                        ? pastilla('var(--mc-chip)', 'var(--mc-m66)')
+                                        : pastilla('var(--mc-green-bg)', 'var(--mc-green-ink)')}>
+                                        <span
+                                            aria-hidden="true"
+                                            className="h-2 w-2 flex-none rounded-full"
+                                            style={{ background: g.termino ? 'var(--mc-m38)' : '#34c759' }}
+                                        />
+                                        {g.termino ? 'Terminó la temporada' : 'Temporada en curso'}
                                     </span>
                                 </span>
                                 <Icono d={ICONOS.flecha} tam={17} grosor={2} />

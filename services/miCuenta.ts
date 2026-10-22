@@ -177,73 +177,81 @@ export const marcarVenta = async (
 // ════════════════════════════════════════════════════════════════════════
 // MIS GRUPOS
 
-export type EstadoEnGrupo = 'aprobado' | 'esperando' | 'no_aprobado';
-
 export interface GrupoPropio {
-    registroId: string;
     grupoId: string;
     nombre: string;
-    /** 'Anfitrión/a', 'Co-anfitrión/a' o 'Miembro'. Nunca un código. */
+    /** 'Anfitrión/a' o 'Co-anfitrión/a'. Nunca un código. */
     rol: string;
     /** 'Jueves 20:00', o sólo el día si no hay hora. */
     cuando: string;
-    estado: EstadoEnGrupo;
     esOnline: boolean;
-    /** Me anotó mi pareja. */
-    esPareja: boolean;
     /** La temporada ya terminó. */
     termino: boolean;
+    /** El grupo todavía no lo aprobó el equipo de GCX. */
+    esperandoAprobacion: boolean;
+    /** Siempre true: esta consulta sólo trae los que dirige. */
+    loDirige: boolean;
 }
 
-const ESTADOS_DE_GRUPO: Record<string, EstadoEnGrupo> = {
-    APPROVED: 'aprobado', PENDING: 'esperando', REJECTED: 'no_aprobado',
-};
-
 /**
- * Los grupos de esta persona, con qué rol y en qué estado.
+ * Los GCX que esta persona DIRIGE, como anfitrión/a o co-anfitrión/a.
  *
- * getMiHistorialDeGrupos no alcanza para esta pantalla: trae sólo los
- * APPROVED y no dice el rol, y acá hay que mostrar también el que está
- * esperando respuesta, que es justo el que la persona viene a mirar.
+ * SE LEE DE `groups` Y NO DE `group_registrations`. Parece el mismo dato y no
+ * lo es: un anfitrión no siempre está inscripto en su propio grupo, así que
+ * buscar por inscripción le dejaba la lista vacía justo a quien más la
+ * necesita. Lo que define que dirige un grupo es ser su host o su co-host,
+ * y eso vive en la fila del grupo.
  *
- * El rol sale del GRUPO y no de los roles de la cuenta: alguien puede ser
- * anfitrión de uno y miembro de otro, y cada tarjeta tiene que decir lo que
- * es en ese grupo.
+ * `co_host_id` puede no existir todavía en algunos proyectos, así que si la
+ * consulta por las dos columnas falla se reintenta sólo por host_id: es
+ * preferible mostrar los propios que no mostrar ninguno.
  */
 export const misGrupos = async (userId: string): Promise<GrupoPropio[]> => {
     if (!userId) return [];
-    try {
-        const { data, error } = await supabase
-            .from('group_registrations')
-            // groups(*) y no una lista de columnas: nombrar is_hybrid haría
-            // fallar la consulta entera mientras ese SQL no esté corrido.
-            // Mismo criterio que getMiHistorialDeGrupos.
-            .select('id, group_id, user_id, partner_user_id, status, groups(*)')
-            .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`);
-        if (error) throw error;
 
+    const armar = (filas: any[]): GrupoPropio[] => {
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
-
-        return (data || []).map((f: any) => {
-            const g = f.groups || {};
+        return filas.map((g: any) => {
             const fin = g.end_date ? new Date(`${g.end_date}T00:00:00`) : null;
             return {
-                registroId: f.id,
-                grupoId: f.group_id,
+                grupoId: g.id,
                 nombre: g.name || 'Grupo',
-                rol: g.host_id === userId ? 'Anfitrión/a'
-                    : g.co_host_id === userId ? 'Co-anfitrión/a' : 'Miembro',
+                rol: g.host_id === userId ? 'Anfitrión/a' : 'Co-anfitrión/a',
                 cuando: [g.meeting_day, g.meeting_time].filter(Boolean).join(' '),
-                estado: ESTADOS_DE_GRUPO[String(f.status || '').toUpperCase()] || 'esperando',
                 esOnline: !!g.is_online,
-                esPareja: f.user_id !== userId && f.partner_user_id === userId,
                 termino: !!fin && fin < hoy,
-            } as GrupoPropio;
-        }).sort((a, b) => Number(a.termino) - Number(b.termino));
+                esperandoAprobacion: String(g.status || '').toLowerCase() === 'pending',
+                loDirige: true,
+            };
+        })
+            // Los que siguen, primero: es lo que el anfitrión viene a abrir.
+            .sort((a, b) => Number(a.termino) - Number(b.termino)
+                || a.nombre.localeCompare(b.nombre, 'es'));
+    };
+
+    const columnas = 'id, name, meeting_day, meeting_time, end_date, is_online, status, host_id, co_host_id';
+
+    try {
+        const { data, error } = await supabase
+            .from('groups')
+            .select(columnas)
+            .or(`host_id.eq.${userId},co_host_id.eq.${userId}`);
+        if (error) throw error;
+        return armar(data || []);
     } catch (err) {
         aviso('misGrupos', err);
-        return [];
+        try {
+            const { data, error } = await supabase
+                .from('groups')
+                .select(columnas)
+                .eq('host_id', userId);
+            if (error) throw error;
+            return armar(data || []);
+        } catch (err2) {
+            aviso('misGrupos(solo host)', err2);
+            return [];
+        }
     }
 };
 
