@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@600;700&amp;display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button,input,textarea,select{font-family:inherit}input::placeholder{color:rgba(128,128,128,.8)}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes mcR0{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:none}}@keyframes mcR1{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:none}}@keyframes mcL0{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:none}}@keyframes mcL1{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:none}}@keyframes mcF0{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF1{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF2{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF3{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF4{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcFa{from{opacity:0}to{opacity:1}}@keyframes mcSheet{from{transform:translateY(100%)}to{transform:none}}@keyframes mcPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}@keyframes mcToast{from{opacity:0;transform:translate(-50%,24px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes mcSpin{to{transform:rotate(360deg)}}@keyframes mcPulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes mcCheck{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:none}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:14px">
+
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:10px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:10px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">DESTACADA</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center">
+      <sc-for list="{{ pFeat }}" as="p" hint-placeholder-count="5"><button onClick="{{ p.ir }}" style="{{ p.st }}">{{ p.t }}</button></sc-for>
+    </div>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:10px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ESTADO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center">
+      <sc-for list="{{ pEstado }}" as="p" hint-placeholder-count="10"><button onClick="{{ p.ir }}" style="{{ p.st }}">{{ p.t }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ outerW }}; height:{{ outerH }}">
+    <div style="position:absolute; left:0; top:0; width:{{ frameW }}; height:{{ frameH }}; transform:{{ frameTf }}; transform-origin:0 0; overflow:hidden; border-radius:{{ frameR }}; background:{{ t.bg }}; color:{{ t.ink }}; box-shadow:0 6px 28px rgba(0,0,0,.14); display:grid; grid-template-columns:{{ cols }}; transition:background-color .4s ease, color .4s ease">
+
+      <div style="display:{{ leftDisp }}; min-height:0; height:100%; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; border-right:{{ leftBorder }}; animation:{{ leftAnim }}">
+        <div style="padding:{{ leftPad }}">
+          <dc-import name="MiCuentaLista" style="display:block; width:100%" t="{{ t }}" desk="{{ desk }}" dark="{{ dark }}" file="inicio" sel="{{ sel }}" loading="{{ loading }}" falta="{{ falta }}" falta-txt="{{ faltaTxt }}" notifs="{{ notifs }}" push="{{ push }}" feat-key="{{ featKey }}" counts="{{ counts }}" foto="{{ foto }}" nombre="{{ savedNombre }}" on-row="{{ onRow }}" on-dismiss="{{ onDismiss }}" on-push="{{ onPush }}" on-dark="{{ onDark }}" hint-size="100%,1500px"></dc-import>
+        </div>
+      </div>
+
+      <div style="display:{{ rightDisp }}; flex-direction:column; min-height:0; height:100%; min-width:0; animation:{{ rightAnim }}">
+        <div style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none">
+          <div style="max-width:640px; margin:0 auto; padding:{{ rightPad }}">
+            <div style="display:flex; align-items:center; gap:12px; min-height:44px">
+              <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ volverEdit }}" aria-label="Volver" style="{{ roundBtn }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"></path></svg></button>
+              </sc-if>
+              <h2 style="margin:0; font-size:{{ h2 }}; line-height:1.15; font-weight:600; letter-spacing:-.025em">Editar perfil</h2>
+            </div>
+
+            <div style="display:flex; flex-direction:column; align-items:center; margin-top:26px">
+              <div style="position:relative; width:112px; height:112px">
+                <div style="{{ bigAvatar }}">
+                  <sc-if value="{{ hayFoto }}" hint-placeholder-val="{{ false }}"><div role="img" aria-label="Tu foto" style="width:100%; height:100%; background:center/cover no-repeat {{ fotoBg }}"></div></sc-if>
+                  <sc-if value="{{ sinFoto }}" hint-placeholder-val="{{ true }}">{{ iniciales }}</sc-if>
+                </div>
+                <sc-if value="{{ subiendo }}" hint-placeholder-val="{{ false }}">
+                  <div aria-live="polite" aria-label="Subiendo foto" style="position:absolute; inset:0; border-radius:999px; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; animation:mcFa .2s ease">
+                    <span style="width:30px; height:30px; border-radius:999px; border:3px solid rgba(255,255,255,.35); border-top-color:#fff; animation:mcSpin .7s linear infinite"></span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ fotoOk }}" hint-placeholder-val="{{ false }}">
+                  <span aria-label="Foto lista" style="position:absolute; right:0; bottom:2px; width:32px; height:32px; border-radius:999px; background:#34c759; color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 3px {{ t.bg }}; animation:mcCheck .4s ease both"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+                </sc-if>
+              </div>
+              <sc-if value="{{ fotoErr }}" hint-placeholder-val="{{ false }}">
+                <div role="alert" style="display:flex; align-items:center; gap:8px; margin-top:14px; font-size:14px; font-weight:600; animation:mcFa .2s ease">
+                  <span style="{{ errDot }}">!</span>No pudimos subir la foto.
+                  <button onClick="{{ reintentarFoto }}" style="min-height:44px; padding:0 4px; border:0; background:transparent; color:{{ t.ink }}; font:inherit; font-size:14px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer">Reintentar</button>
+                </div>
+              </sc-if>
+              <button onClick="{{ abrirFoto }}" disabled="{{ subiendo }}" style="{{ secBtnSm }}; margin-top:14px">{{ fotoBtnTxt }}</button>
+            </div>
+
+            <div style="{{ card }}; margin-top:24px; padding:6px 16px 18px">
+              <div style="padding-top:14px">
+                <div style="{{ labelRow }}"><label for="mc-nombre" style="{{ label }}">Nombre y apellido</label><sc-if value="{{ d.nombre }}" hint-placeholder-val="{{ false }}"><span aria-label="Sin guardar" style="{{ dirtyDot }}"></span></sc-if></div>
+                <input id="mc-nombre" value="{{ fNombre }}" onChange="{{ onNombre }}" onBlur="{{ blurNombre }}" autocomplete="name" style="{{ inNombre }}">
+                <sc-if value="{{ eNombre }}" hint-placeholder-val="{{ false }}"><p role="alert" style="{{ errTxt }}"><span style="{{ errDot }}">!</span>Escribí tu nombre y apellido.</p></sc-if>
+              </div>
+              <div style="padding-top:18px">
+                <div style="{{ labelRow }}"><label for="mc-tel" style="{{ label }}">Teléfono</label><sc-if value="{{ faltaTel }}" hint-placeholder-val="{{ false }}"><span style="{{ faltaPill }}">Falta</span></sc-if><sc-if value="{{ d.tel }}" hint-placeholder-val="{{ false }}"><span aria-label="Sin guardar" style="{{ dirtyDot }}"></span></sc-if></div>
+                <input id="mc-tel" value="{{ fTel }}" onChange="{{ onTel }}" onBlur="{{ blurTel }}" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="11 4567 8901" style="{{ inTel }}">
+                <sc-if value="{{ eTel }}" hint-placeholder-val="{{ false }}"><p role="alert" style="{{ errTxt }}"><span style="{{ errDot }}">!</span>Revisá el número: son 10 dígitos con el código de área, sin 0 ni 15.</p></sc-if>
+              </div>
+              <div style="padding-top:18px">
+                <div style="{{ labelRow }}"><label for="mc-nac" style="{{ label }}">Fecha de nacimiento</label><sc-if value="{{ faltaNac }}" hint-placeholder-val="{{ false }}"><span style="{{ faltaPill }}">Falta</span></sc-if><sc-if value="{{ d.nac }}" hint-placeholder-val="{{ false }}"><span aria-label="Sin guardar" style="{{ dirtyDot }}"></span></sc-if></div>
+                <input id="mc-nac" value="{{ fNac }}" onChange="{{ onNac }}" onBlur="{{ blurNac }}" type="date" max="2026-10-22" style="{{ inNac }}">
+                <sc-if value="{{ hayEdad }}" hint-placeholder-val="{{ true }}"><p style="margin:8px 0 0 4px; font-size:13.5px; font-weight:600; color:{{ t.m50 }}">{{ edad }}</p></sc-if>
+                <sc-if value="{{ eNac }}" hint-placeholder-val="{{ false }}"><p role="alert" style="{{ errTxt }}"><span style="{{ errDot }}">!</span>La fecha no puede ser posterior a hoy.</p></sc-if>
+              </div>
+              <div style="padding-top:18px">
+                <div style="{{ labelRow }}"><span style="{{ label }}">Sexo</span></div>
+                <div style="{{ locked }}"><span>Femenino</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Bloqueado"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3"></path></svg></div>
+                <p style="margin:2px 0 0 4px; display:flex; align-items:center; gap:4px; font-size:13.5px; font-weight:500; color:{{ t.m50 }}">Para cambiarlo,<button onClick="{{ escribinos }}" style="min-height:44px; padding:0 2px; border:0; background:transparent; color:{{ t.ink }}; font:inherit; font-size:13.5px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer">escribinos</button></p>
+              </div>
+              <div style="padding-top:8px">
+                <div style="{{ labelRow }}"><span style="{{ label }}">Email</span></div>
+                <div style="{{ locked }}"><span style="min-width:0; overflow-wrap:anywhere">lucia.fernandez@gmail.com</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Bloqueado" style="flex:none"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3"></path></svg></div>
+                <p style="margin:8px 0 0 4px; font-size:13.5px; font-weight:500; color:{{ t.m50 }}">Es el de tu cuenta.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:none; background:{{ t.bg }}; border-top:1px solid {{ t.line }}; padding:{{ footPad }}; transition:background-color .4s ease">
+          <div style="max-width:640px; margin:0 auto; display:flex; gap:10px; flex-direction:{{ footDir }}">
+            <button onClick="{{ cancelar }}" style="{{ secBtn }}">Cancelar</button>
+            <button onClick="{{ guardar }}" disabled="{{ noGuardar }}" style="{{ primBtn }}">
+              <sc-if value="{{ guardando }}" hint-placeholder-val="{{ false }}"><span style="width:18px; height:18px; border-radius:999px; border:2.5px solid {{ spinTrack }}; border-top-color:{{ t.primInk }}; animation:mcSpin .7s linear infinite"></span></sc-if>
+              <sc-if value="{{ guardado }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation:mcCheck .35s ease both"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+              <span>{{ guardarTxt }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ haySheet }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ cerrarSheet }}" style="{{ overlay }}">
+          <div ref="{{ sheetRef }}" onClick="{{ stop }}" role="dialog" aria-modal="true" style="{{ panel }}">
+            <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+              <div onPointerDown="{{ dragStart }}" onPointerMove="{{ dragMove }}" onPointerUp="{{ dragEnd }}" onPointerCancel="{{ dragEnd }}" style="display:flex; justify-content:center; padding:10px 0 14px; cursor:grab; touch-action:none"><span style="width:40px; height:5px; border-radius:999px; background:{{ t.m38 }}"></span></div>
+            </sc-if>
+
+            <sc-if value="{{ shLogout }}" hint-placeholder-val="{{ false }}">
+              <p style="{{ shTitle }}">¿Cerrar sesión?</p>
+              <p style="{{ shSub }}">Para volver a entrar vas a usar tu cuenta de Google.</p>
+              <div style="display:flex; flex-direction:column; gap:10px; margin-top:22px">
+                <button onClick="{{ confirmarLogout }}" style="{{ dangerBtn }}">Cerrar sesión</button>
+                <button onClick="{{ cerrarSheet }}" style="{{ chipBtn }}">Cancelar</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ shDiscard }}" hint-placeholder-val="{{ false }}">
+              <p style="{{ shTitle }}">¿Salir sin guardar?</p>
+              <p style="{{ shSub }}">Los cambios que hiciste en tu perfil se van a perder.</p>
+              <div style="display:flex; flex-direction:column; gap:10px; margin-top:22px">
+                <button onClick="{{ descartar }}" style="{{ dangerBtn }}">Salir sin guardar</button>
+                <button onClick="{{ cerrarSheet }}" style="{{ chipBtn }}">Seguir editando</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ shFoto }}" hint-placeholder-val="{{ false }}">
+              <p style="{{ shTitle }}">Foto de perfil</p>
+              <div style="display:flex; flex-direction:column; gap:4px; margin-top:14px">
+                <label style="{{ shItem }}"><span style="{{ shIcon }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4zM4 15l4.5-4.5 4 4 3-3L20 16M15.5 9.5v.1"></path></svg></span>Elegir de la galería<input type="file" accept="image/*" onChange="{{ onFile }}" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none"></label>
+                <label style="{{ shItem }}"><span style="{{ shIcon }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h4l1.5-2.5h6L16.5 8h4v11h-17zM12 16.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z"></path></svg></span>Sacar una foto<input type="file" accept="image/*" capture="user" onChange="{{ onFile }}" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none"></label>
+                <button onClick="{{ usarEjemplo }}" style="{{ shItem }}"><span style="{{ shIcon }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4.5 20a7.5 7.5 0 0115 0"></path></svg></span>Usar una foto de ejemplo</button>
+                <sc-if value="{{ hayFoto }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ quitarFoto }}" style="{{ shItemRed }}"><span style="{{ shIcon }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"></path></svg></span>Quitar foto</button>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ shCrop }}" hint-placeholder-val="{{ false }}">
+              <p style="{{ shTitle }}">Recortá tu foto</p>
+              <p style="{{ shSub }}">Arrastrá para acomodarla y usá la barra para acercar.</p>
+              <div style="display:flex; justify-content:center; margin-top:20px">
+                <div onPointerDown="{{ cropDown }}" onPointerMove="{{ cropMove }}" onPointerUp="{{ cropUp }}" onPointerCancel="{{ cropUp }}" style="position:relative; width:240px; height:240px; border-radius:999px; overflow:hidden; background:{{ t.chip }}; cursor:grab; touch-action:none; box-shadow:0 0 0 4px {{ t.card }}, 0 0 0 5px {{ t.line }}">
+                  <div style="{{ cropImg }}"></div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; margin-top:20px; padding:0 8px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none; color:{{ t.m50 }}"><path d="M6 12h12"></path></svg>
+                <input type="range" min="1" max="3" step="0.01" value="{{ cropZ }}" onChange="{{ onZoom }}" aria-label="Acercar" style="flex:1; min-width:0; height:44px; accent-color:{{ t.ink }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none; color:{{ t.m50 }}"><path d="M6 12h12M12 6v12"></path></svg>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px">
+                <button onClick="{{ usarRecorte }}" style="{{ primFull }}">Usar esta foto</button>
+                <button onClick="{{ cerrarSheet }}" style="{{ chipBtn }}">Cancelar</button>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="position:absolute; left:50%; bottom:{{ toastBottom }}; z-index:60; transform:translateX(-50%); max-width:calc(100% - 32px); padding:13px 20px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:14.5px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.2); animation:mcToast .28s cubic-bezier(.2,.9,.3,1) both; text-align:center">{{ toastTxt }}</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const HOY = new Date(2026, 9, 22);
+const theme = dk => {
+  const a = o => (dk ? 'rgba(255,255,255,' : 'rgba(0,0,0,') + o + ')';
+  const t = dk
+    ? { bg: '#111110', card: '#1b1b1a', surf: '#232321', chip: '#2a2a28', hover: '#222220', hoverCard: '#202020', sel: '#2a2a28', ink: '#f4f4f2', prim: '#ffffff', primInk: '#0a0a0a', redTxt: '#ff6b70', line: 'rgba(255,255,255,.07)', shadow: '0 1px 2px rgba(0,0,0,.3)', skel: '#2a2a28', track: '#3a3a38', amberBg: '#3a2d12', amberTxt: '#f2b84b', overlay: 'rgba(0,0,0,.6)' }
+    : { bg: '#f6f6f4', card: '#ffffff', surf: '#f7f7f5', chip: '#f2f2f0', hover: '#f7f7f5', hoverCard: '#fcfcfb', sel: '#f2f2f0', ink: '#0a0a0a', prim: '#0a0a0a', primInk: '#ffffff', redTxt: '#d1343a', line: 'rgba(0,0,0,.06)', shadow: '0 1px 2px rgba(0,0,0,.04), 0 1px 1px rgba(0,0,0,.02)', skel: '#ececea', track: '#e5e5e2', amberBg: '#fbefd5', amberTxt: '#8f5c00', overlay: 'rgba(0,0,0,.42)' };
+  t.m50 = a(.55); t.m38 = a(.42); t.m66 = a(.7); return t;
+};
+const PERFIL = { nombre: 'Lucía Fernández', tel: '11 4567 8901', nac: '1992-03-14' };
+
+class Component extends DCLogic {
+  state = { device: 'm', dark: false, vw: typeof window !== 'undefined' ? window.innerWidth : 1400, screen: 'home', navN: 0, navDir: '', loading: false, notifs: 3, push: 'off',
+    flags: { entrada: true, pedido: true, grupo: false }, dismissed: [], saved: Object.assign({}, PERFIL), form: Object.assign({}, PERFIL), touched: {}, saveSt: 'idle',
+    foto: null, fotoSt: 'none', pendingFoto: null, fallaFoto: false, crop: null, sheet: null, pending: null, toast: null };
+  sheetRef = React.createRef(); timers = []; dY = null; dDy = 0; cDrag = null;
+  componentDidMount() {
+    this.onResize = () => this.setState({ vw: window.innerWidth });
+    window.addEventListener('resize', this.onResize);
+    const h = new URLSearchParams((window.location.hash || '').slice(1));
+    const st = {};
+    if (h.get('m')) st.device = h.get('m') === 'pc' ? 'pc' : 'm';
+    if (h.get('d')) st.dark = h.get('d') === '1';
+    const f = +(h.get('f') || 0);
+    if (f) { const sv = Object.assign({}, PERFIL, { tel: '' }, f > 1 ? { nac: '' } : {}); st.saved = sv; st.form = Object.assign({}, sv); }
+    if (h.get('s') === 'perfil') st.screen = 'edit';
+    if (Object.keys(st).length) this.setState(st);
+  }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); window.removeEventListener('resize', this.onResize); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+  aviso(txt) { const k = Date.now(); this.setState({ toast: { txt, k } }); this.later(() => this.setState(s => s.toast && s.toast.k === k ? { toast: null } : null), 2600); }
+  dirty(s) { s = s || this.state; return ['nombre', 'tel', 'nac'].some(k => s.form[k] !== s.saved[k]); }
+  errs(f) {
+    const dig = (f.tel || '').replace(/\D/g, '');
+    return { nombre: !f.nombre.trim() || f.nombre.trim().split(/\s+/).length < 2, tel: !!f.tel && dig.length !== 10, nac: !!f.nac && new Date(f.nac + 'T00:00') > HOY };
+  }
+  falta(sv) { return (sv.tel ? 0 : 1) + (sv.nac ? 0 : 1); }
+  goHome() { this.setState(s => ({ screen: 'home', navN: s.navN + 1, navDir: 'l', sheet: null, pending: null })); }
+  openEdit() { this.setState(s => s.device === 'pc' ? { sheet: null } : { screen: 'edit', navN: s.navN + 1, navDir: 'r' }); }
+  guard(fn) { if (this.dirty()) this.setState({ sheet: 'discard', pending: fn }); else fn(); }
+  setPerfil(sv) { this.setState({ saved: sv, form: Object.assign({}, sv), touched: {}, saveSt: 'idle' }); }
+  preset(k) {
+    const base = { sheet: null, loading: false, dismissed: [] };
+    const fl = (e, p, g) => ({ entrada: e, pedido: p, grupo: g });
+    if (k === 'fEntrada') this.setState(Object.assign(base, { flags: fl(true, true, false) }));
+    if (k === 'fPedido') this.setState(Object.assign(base, { flags: fl(false, true, false) }));
+    if (k === 'fPerfil') { this.setState(Object.assign(base, { flags: fl(false, false, false) })); this.setPerfil(Object.assign({}, PERFIL, { tel: '', nac: '' })); }
+    if (k === 'fGrupo') { this.setState(Object.assign(base, { flags: fl(false, false, true) })); this.setPerfil(Object.assign({}, PERFIL)); }
+    if (k === 'fVerso') { this.setState(Object.assign(base, { flags: fl(false, false, false) })); this.setPerfil(Object.assign({}, PERFIL)); }
+    if (k === 'pComp') this.setPerfil(Object.assign({}, PERFIL));
+    if (k === 'pUno') this.setPerfil(Object.assign({}, PERFIL, { tel: '' }));
+    if (k === 'pDos') this.setPerfil(Object.assign({}, PERFIL, { tel: '', nac: '' }));
+    if (k === 'nCon') this.setState({ notifs: 3 });
+    if (k === 'nSin') this.setState({ notifs: 0 });
+    if (k === 'cargando') { this.setState({ loading: true, screen: 'home' }); this.later(() => this.setState({ loading: false }), 2600); }
+    if (k === 'editar') this.setState(s => ({ screen: 'edit', navN: s.navN + 1, navDir: 'r', sheet: null }));
+    if (k === 'errores') this.setState(s => ({ screen: 'edit', navN: s.navN + 1, navDir: 'r', sheet: null, form: Object.assign({}, s.saved, { tel: '11 4567', nac: '2027-02-10' }), touched: { tel: true, nac: true } }));
+    if (k === 'salir') this.setState(s => ({ screen: 'edit', form: Object.assign({}, s.saved, { tel: '11 2233 4455' }), sheet: 'discard', pending: () => this.goHome() }));
+    if (k === 'logout') this.setState({ sheet: 'logout' });
+    if (k === 'fallaFoto') this.setState(s => ({ fallaFoto: !s.fallaFoto }));
+  }
+  ejemplo() {
+    const c = document.createElement('canvas'); c.width = c.height = 400; const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 400, 400); g.addColorStop(0, '#e9d7c3'); g.addColorStop(1, '#c9a98a'); x.fillStyle = g; x.fillRect(0, 0, 400, 400);
+    x.fillStyle = '#5a3b2a'; x.beginPath(); x.ellipse(200, 168, 92, 104, 0, 0, Math.PI * 2); x.fill();
+    x.fillStyle = '#f0c9a6'; x.beginPath(); x.ellipse(200, 178, 64, 78, 0, 0, Math.PI * 2); x.fill();
+    x.fillStyle = '#3d5a6c'; x.beginPath(); x.ellipse(200, 410, 150, 130, 0, 0, Math.PI * 2); x.fill();
+    return c.toDataURL('image/jpeg', .9);
+  }
+  abrirCrop(src) {
+    const img = new Image();
+    img.onload = () => this.setState({ sheet: 'crop', crop: { src, w: img.naturalWidth, h: img.naturalHeight, z: 1, x: 0, y: 0 } });
+    img.src = src;
+  }
+  geo(c) { const b = 240 / Math.min(c.w, c.h), s = b * c.z, w = c.w * s, h = c.h * s; return { w, h, mx: (w - 240) / 2, my: (h - 240) / 2 }; }
+  subir(src) {
+    this.setState({ sheet: null, fotoSt: 'uploading', pendingFoto: src });
+    this.later(() => {
+      if (this.state.fallaFoto) { this.setState({ fotoSt: 'error' }); return; }
+      this.setState({ fotoSt: 'ok', foto: src, pendingFoto: null }); this.aviso('Foto actualizada');
+      this.later(() => this.setState(s => s.fotoSt === 'ok' ? { fotoSt: 'none' } : null), 1800);
+    }, 1500);
+  }
+  renderVals() {
+    const s = this.state, dk = s.dark, desk = s.device === 'pc', t = theme(dk);
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const chip = on => 'height:32px; padding:0 13px; border:1px solid ' + (on ? '#0a0a0a' : '#e2e0db') + '; border-radius:999px; background:' + (on ? '#0a0a0a' : '#fff') + '; color:' + (on ? '#fff' : '#0a0a0a') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const falta = this.falta(s.saved);
+    const cand = [s.flags.entrada && 'entrada', s.flags.pedido && 'pedido', falta > 0 && 'perfil', s.flags.grupo && 'grupo'].filter(k => k && s.dismissed.indexOf(k) < 0);
+    const featKey = cand[0] || 'verso';
+    const sc = desk ? Math.min(1, (s.vw - 32) / 1440) : Math.min(1, (s.vw - 32) / 390);
+    const fw = desk ? 1440 : 390, fh = desk ? 900 : 844;
+    const mob = !desk, onEdit = s.screen === 'edit';
+    const anim = (dir) => mob && s.navN && s.navDir === dir ? 'mc' + (dir === 'r' ? 'R' : 'L') + (s.navN % 2) + ' .32s cubic-bezier(.2,.8,.3,1) both' : 'none';
+    const e = this.errs(s.form), touched = s.touched, dirty = this.dirty();
+    const showE = k => e[k] && (touched[k] || s.saveSt === 'tried');
+    const invalid = e.nombre || e.tel || e.nac;
+    const tr = 'background-color .4s ease, color .4s ease';
+    const card = 'background:' + t.card + '; border-radius:26px; box-shadow:' + t.shadow + '; transition:' + tr;
+    const inp = err => 'width:100%; height:52px; margin-top:8px; padding:0 16px; border-radius:16px; border:2px solid ' + (err ? t.ink : 'transparent') + '; background:' + t.surf + '; color:' + t.ink + '; font:inherit; font-size:16px; font-weight:500; outline:none; color-scheme:' + (dk ? 'dark' : 'light') + '; transition:' + tr;
+    const nac = s.form.nac ? new Date(s.form.nac + 'T00:00') : null;
+    let edad = '';
+    if (nac && !e.nac) { let y = HOY.getFullYear() - nac.getFullYear(); if (HOY.getMonth() < nac.getMonth() || (HOY.getMonth() === nac.getMonth() && HOY.getDate() < nac.getDate())) y--; edad = y + (y === 1 ? ' año' : ' años'); }
+    const set = k => ev => { const v = ev.target.value; this.setState(st => ({ form: Object.assign({}, st.form, { [k]: v }), saveSt: st.saveSt === 'tried' ? 'tried' : 'idle' })); };
+    const blur = k => () => this.setState(st => ({ touched: Object.assign({}, st.touched, { [k]: true }) }));
+    const nombre = s.saved.nombre, ini = nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    const fotoShow = s.fotoSt === 'uploading' || s.fotoSt === 'error' ? s.pendingFoto : s.foto;
+    const btnBase = 'min-height:52px; border-radius:999px; font:inherit; font-size:15.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:background-color .2s ease, opacity .2s ease';
+    const cropG = s.crop ? this.geo(s.crop) : null;
+    const item = c => 'position:relative; width:100%; min-height:56px; display:flex; align-items:center; gap:14px; padding:8px 12px; border:0; border-radius:18px; background:transparent; color:' + c + '; font:inherit; font-size:15.5px; font-weight:600; cursor:pointer; text-align:left';
+    return {
+      t, desk, dark: dk, isMobile: mob,
+      verMobile: () => this.setState({ device: 'm' }), verPC: () => this.setState({ device: 'pc', screen: 'edit' }),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(mob), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      pFeat: [['fEntrada', '1 · Entrada', featKey === 'entrada'], ['fPedido', '2 · Pedido listo', featKey === 'pedido'], ['fPerfil', '3 · Perfil incompleto', featKey === 'perfil'], ['fGrupo', '4 · Sin grupo', featKey === 'grupo'], ['fVerso', '5 · Versículo', featKey === 'verso']].map(p => ({ t: p[1], st: chip(p[2]), ir: () => this.preset(p[0]) })),
+      pEstado: [['pComp', 'Perfil completo', falta === 0], ['pUno', 'Falta 1 dato', falta === 1], ['pDos', 'Faltan 2 datos', falta === 2], ['nCon', 'Con notificaciones', s.notifs > 0], ['nSin', 'Sin notificaciones', s.notifs === 0], ['cargando', 'Cargando', s.loading], ['editar', 'Editar perfil', false], ['errores', 'Errores en línea', false], ['salir', '¿Salir sin guardar?', false], ['logout', 'Cerrar sesión', false], ['fallaFoto', 'Falla al subir foto', s.fallaFoto]].map(p => ({ t: p[1], st: chip(p[2]), ir: () => this.preset(p[0]) })),
+      outerW: fw * sc + 'px', outerH: fh * sc + 'px', frameW: fw + 'px', frameH: fh + 'px', frameTf: 'scale(' + sc + ')', frameR: desk ? '14px' : '40px',
+      cols: desk ? '440px minmax(0,1fr)' : 'minmax(0,1fr)',
+      leftDisp: desk || !onEdit ? 'block' : 'none', rightDisp: desk || onEdit ? 'flex' : 'none',
+      leftBorder: desk ? '1px solid ' + t.line : '0', leftPad: desk ? '40px 24px 48px 28px' : '58px 16px 48px',
+      leftAnim: anim('l'), rightAnim: anim('r'), rightPad: desk ? '40px 48px 40px' : '58px 16px 32px',
+      sel: 'perfil', loading: s.loading, falta, faltaTxt: falta === 1 ? (s.saved.tel ? 'Falta tu fecha de nacimiento' : 'Falta tu teléfono') : '', notifs: s.notifs, push: s.push, featKey,
+      counts: { grupos: s.flags.grupo ? 0 : 2 }, foto: s.foto, savedNombre: nombre,
+      onRow: (id, nav) => {
+        if (id === 'volver') return this.aviso('Vuelve a la pantalla anterior');
+        if (id === 'perfil') return this.openEdit();
+        if (id === 'calendario') return this.aviso('Abre /gcx/calendario');
+        if (id === 'buscarGrupos') return this.aviso('Abre /gcx · Buscar grupos');
+        if (id === 'logout') return this.setState({ sheet: 'logout' });
+        if (nav) this.guard(nav);
+      },
+      onDismiss: k => this.setState(st => ({ dismissed: st.dismissed.concat(k) })),
+      onPush: () => { if (s.push === 'on') { this.setState({ push: 'off' }); this.aviso('Apagaste los avisos en este celular'); } else { this.setState({ push: 'on' }); this.aviso('Te vamos a avisar en este celular'); } },
+      onDark: () => this.setState(st => ({ dark: !st.dark })),
+      roundBtn: 'width:44px; height:44px; flex:none; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+      volverEdit: () => this.guard(() => this.goHome()),
+      h2: desk ? '28px' : '24px', card,
+      bigAvatar: 'width:112px; height:112px; border-radius:999px; overflow:hidden; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; font-size:38px; font-weight:600; letter-spacing:.02em; transition:' + tr,
+      hayFoto: !!fotoShow, sinFoto: !fotoShow, fotoBg: fotoShow ? 'url("' + fotoShow + '")' : 'transparent', iniciales: ini,
+      subiendo: s.fotoSt === 'uploading', fotoOk: s.fotoSt === 'ok', fotoErr: s.fotoSt === 'error',
+      fotoBtnTxt: s.fotoSt === 'uploading' ? 'Subiendo…' : 'Cambiar foto',
+      reintentarFoto: () => this.subir(s.pendingFoto),
+      abrirFoto: () => this.setState({ sheet: 'foto' }),
+      secBtnSm: 'min-height:44px; padding:0 20px; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; font:inherit; font-size:14.5px; font-weight:600; cursor:pointer; opacity:' + (s.fotoSt === 'uploading' ? .5 : 1),
+      errDot: 'width:20px; height:20px; flex:none; border-radius:999px; background:' + t.ink + '; color:' + t.bg + '; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700',
+      labelRow: 'display:flex; align-items:center; gap:8px; padding-left:4px; min-height:22px',
+      label: 'font-size:13.5px; font-weight:600; color:' + t.m66,
+      dirtyDot: 'width:7px; height:7px; border-radius:999px; background:' + t.ink,
+      faltaPill: 'height:22px; padding:0 8px; border-radius:999px; background:' + t.amberBg + '; color:' + t.amberTxt + '; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center',
+      d: { nombre: s.form.nombre !== s.saved.nombre, tel: s.form.tel !== s.saved.tel, nac: s.form.nac !== s.saved.nac },
+      fNombre: s.form.nombre, fTel: s.form.tel, fNac: s.form.nac,
+      onNombre: set('nombre'), onTel: set('tel'), onNac: set('nac'), blurNombre: blur('nombre'), blurTel: blur('tel'), blurNac: blur('nac'),
+      inNombre: inp(showE('nombre')), inTel: inp(showE('tel')), inNac: inp(showE('nac')),
+      eNombre: showE('nombre'), eTel: showE('tel'), eNac: showE('nac'),
+      faltaTel: !s.saved.tel && !s.form.tel, faltaNac: !s.saved.nac && !s.form.nac,
+      hayEdad: !!edad, edad,
+      errTxt: 'display:flex; align-items:flex-start; gap:8px; margin:9px 0 0 4px; font-size:13.5px; line-height:1.45; font-weight:600; color:' + t.ink,
+      locked: 'display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:52px; margin-top:8px; padding:12px 16px; border-radius:16px; background:' + t.surf + '; color:' + t.m50 + '; font-size:16px; font-weight:500; transition:' + tr,
+      escribinos: () => this.guard(() => { window.location.href = encodeURI('Mi Cuenta - Privacidad y ayuda.dc.html') + '#s=contacto&m=' + (desk ? 'pc' : 'm') + '&d=' + (dk ? 1 : 0); }),
+      footPad: desk ? '16px 48px' : '12px 16px 28px', footDir: desk ? 'row-reverse' : 'row-reverse',
+      cancelar: () => { if (dirty) { this.setState(st => ({ form: Object.assign({}, st.saved), touched: {}, saveSt: 'idle' })); this.aviso('Descartaste los cambios'); } else if (mob) this.goHome(); },
+      secBtn: btnBase + '; flex:1; padding:0 20px; border:0; background:' + t.chip + '; color:' + t.ink + (desk ? '; flex:none; min-width:140px' : ''),
+      primBtn: btnBase + '; flex:2; padding:0 24px; border:0; background:' + t.prim + '; color:' + t.primInk + '; opacity:' + ((!dirty && s.saveSt === 'idle') || s.saveSt === 'saving' ? .35 : 1) + (desk ? '; flex:none; min-width:200px' : '') + '; cursor:' + (dirty ? 'pointer' : 'default'),
+      noGuardar: (!dirty && s.saveSt !== 'done') || s.saveSt === 'saving',
+      guardar: () => {
+        if (!dirty || s.saveSt === 'saving') return;
+        if (invalid) { this.setState({ saveSt: 'tried' }); return; }
+        this.setState({ saveSt: 'saving' });
+        this.later(() => { this.setState(st => ({ saveSt: 'done', saved: Object.assign({}, st.form), touched: {} })); this.aviso('Perfil actualizado'); }, 1000);
+        this.later(() => this.setState(st => st.saveSt === 'done' ? { saveSt: 'idle' } : null), 2200);
+      },
+      guardando: s.saveSt === 'saving', guardado: s.saveSt === 'done',
+      guardarTxt: s.saveSt === 'saving' ? 'Guardando…' : s.saveSt === 'done' ? 'Guardado' : 'Guardar cambios',
+      spinTrack: dk ? 'rgba(0,0,0,.25)' : 'rgba(255,255,255,.3)',
+
+      haySheet: !!s.sheet, sheetRef: this.sheetRef,
+      shLogout: s.sheet === 'logout', shDiscard: s.sheet === 'discard', shFoto: s.sheet === 'foto', shCrop: s.sheet === 'crop',
+      overlay: 'position:absolute; inset:0; z-index:40; background:' + t.overlay + '; display:flex; animation:mcFa .2s ease; ' + (desk ? 'align-items:center; justify-content:center' : 'align-items:flex-end'),
+      panel: 'max-height:92%; overflow-y:auto; background:' + t.card + '; color:' + t.ink + '; ' + (desk ? 'width:460px; border-radius:28px; padding:28px 24px 24px; box-shadow:0 24px 60px rgba(0,0,0,.22); animation:mcPop .2s ease-out' : 'width:100%; border-radius:28px 28px 0 0; padding:0 16px 30px; animation:mcSheet .3s cubic-bezier(.2,.9,.3,1)'),
+      shTitle: 'margin:0; font-size:20px; line-height:1.25; font-weight:600; letter-spacing:-.02em; text-align:' + (desk ? 'left' : 'center'),
+      shSub: 'margin:8px 0 0; font-size:15px; line-height:1.45; font-weight:500; color:' + t.m50 + '; text-wrap:pretty; text-align:' + (desk ? 'left' : 'center'),
+      dangerBtn: btnBase + '; width:100%; border:0; background:' + t.chip + '; color:' + t.redTxt,
+      chipBtn: btnBase + '; width:100%; border:0; background:transparent; color:' + t.ink,
+      primFull: btnBase + '; width:100%; border:0; background:' + t.prim + '; color:' + t.primInk,
+      shItem: item(t.ink), shItemRed: item(t.redTxt),
+      shIcon: 'width:36px; height:36px; flex:none; border-radius:999px; background:' + t.chip + '; display:flex; align-items:center; justify-content:center',
+      confirmarLogout: () => { this.setState({ sheet: null }); this.aviso('Cerraste sesión · vuelve al login'); },
+      descartar: () => { const fn = s.pending; this.setState(st => ({ form: Object.assign({}, st.saved), touched: {}, saveSt: 'idle', sheet: null, pending: null })); if (fn) fn(); },
+      onFile: ev => { const f = ev.target.files && ev.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => this.abrirCrop(r.result); r.readAsDataURL(f); ev.target.value = ''; },
+      usarEjemplo: () => this.abrirCrop(this.ejemplo()),
+      quitarFoto: () => { this.setState({ foto: null, sheet: null, fotoSt: 'none' }); this.aviso('Quitaste tu foto'); },
+      cropSrc: s.crop ? s.crop.src : '', cropZ: s.crop ? s.crop.z : 1,
+      cropImg: cropG ? 'position:absolute; left:' + ((240 - cropG.w) / 2 + s.crop.x) + 'px; top:' + ((240 - cropG.h) / 2 + s.crop.y) + 'px; width:' + cropG.w + 'px; height:' + cropG.h + 'px; background:center/100% 100% no-repeat url("' + s.crop.src + '"); pointer-events:none' : '',
+      onZoom: ev => { const z = +ev.target.value; this.setState(st => { const c = Object.assign({}, st.crop, { z }), g = this.geo(c); c.x = Math.max(-g.mx, Math.min(g.mx, c.x)); c.y = Math.max(-g.my, Math.min(g.my, c.y)); return { crop: c }; }); },
+      cropDown: ev => { this.cDrag = { x: ev.clientX, y: ev.clientY, ox: s.crop.x, oy: s.crop.y }; try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch (x) {} },
+      cropMove: ev => { const d = this.cDrag; if (!d) return; this.setState(st => { const c = Object.assign({}, st.crop), g = this.geo(c); c.x = Math.max(-g.mx, Math.min(g.mx, d.ox + ev.clientX - d.x)); c.y = Math.max(-g.my, Math.min(g.my, d.oy + ev.clientY - d.y)); return { crop: c }; }); },
+      cropUp: () => { this.cDrag = null; },
+      usarRecorte: () => {
+        const c = s.crop, g = this.geo(c), k = 360 / 240, cv = document.createElement('canvas'); cv.width = cv.height = 360;
+        const img = new Image(); img.onload = () => { cv.getContext('2d').drawImage(img, ((240 - g.w) / 2 + c.x) * k, ((240 - g.h) / 2 + c.y) * k, g.w * k, g.h * k); this.subir(cv.toDataURL('image/jpeg', .9)); }; img.src = c.src;
+      },
+      cerrarSheet: () => this.setState({ sheet: null, pending: null }), stop: ev => ev.stopPropagation(),
+      dragStart: ev => { this.dY = ev.clientY; this.dDy = 0; try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch (x) {} if (this.sheetRef.current) this.sheetRef.current.style.transition = 'none'; },
+      dragMove: ev => { if (this.dY == null) return; const dy = Math.max(0, ev.clientY - this.dY); this.dDy = dy; if (this.sheetRef.current) this.sheetRef.current.style.transform = 'translateY(' + dy + 'px)'; },
+      dragEnd: () => { if (this.dY == null) return; const dy = this.dDy; this.dY = null; const el = this.sheetRef.current; if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = dy > 90 ? 'translateY(100%)' : ''; } if (dy > 90) this.later(() => this.setState({ sheet: null, pending: null }), 180); },
+      hayToast: !!s.toast, toastTxt: s.toast ? s.toast.txt : '', toastBottom: desk ? '96px' : '104px'
+    };
+  }
+}
+</script>
+</body>
+</html>

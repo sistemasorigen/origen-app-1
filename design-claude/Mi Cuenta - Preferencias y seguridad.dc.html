@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button,input{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes mcR0{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:none}}@keyframes mcR1{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:none}}@keyframes mcL0{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:none}}@keyframes mcL1{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:none}}@keyframes mcF0{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF1{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF2{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF3{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF4{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcFa{from{opacity:0}to{opacity:1}}@keyframes mcSheet{from{transform:translateY(100%)}to{transform:none}}@keyframes mcPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}@keyframes mcDrop{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}@keyframes mcToast{from{opacity:0;transform:translate(-50%,24px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes mcSpin{to{transform:rotate(360deg)}}@keyframes mcPulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes mcTap{0%,100%{box-shadow:0 0 0 0 rgba(10,132,255,.45)}50%{box-shadow:0 0 0 7px rgba(10,132,255,0)}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:12px">
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:10px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">AVISOS</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center">
+      <sc-for list="{{ pPush }}" as="p" hint-placeholder-count="6"><button onClick="{{ p.ir }}" style="{{ p.st }}">{{ p.t }}</button></sc-for>
+    </div>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:10px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">CUENTA</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center">
+      <sc-for list="{{ pCuenta }}" as="p" hint-placeholder-count="7"><button onClick="{{ p.ir }}" style="{{ p.st }}">{{ p.t }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ outerW }}; height:{{ outerH }}">
+    <div style="position:absolute; left:0; top:0; width:{{ frameW }}; height:{{ frameH }}; transform:{{ frameTf }}; transform-origin:0 0; overflow:hidden; border-radius:{{ frameR }}; background:{{ t.bg }}; color:{{ t.ink }}; box-shadow:0 6px 28px rgba(0,0,0,.14); display:grid; grid-template-columns:{{ cols }}; transition:background-color .4s ease, color .4s ease">
+
+      <div style="display:{{ leftDisp }}; min-height:0; height:100%; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; border-right:{{ leftBorder }}; animation:{{ leftAnim }}">
+        <div style="padding:{{ leftPad }}">
+          <dc-import name="MiCuentaLista" style="display:block; width:100%" t="{{ t }}" desk="{{ desk }}" dark="{{ dark }}" file="pref" sel="{{ sel }}" loading="{{ false }}" falta="{{ falta }}" notifs="{{ notifs }}" push="{{ push }}" feat-key="{{ featKey }}" on-row="{{ onRow }}" on-dismiss="{{ onDismiss }}" on-push="{{ onPush }}" on-dark="{{ onDark }}" hint-size="100%,1500px"></dc-import>
+        </div>
+      </div>
+
+      <div style="display:{{ rightDisp }}; flex-direction:column; min-height:0; height:100%; min-width:0; animation:{{ rightAnim }}">
+        <div style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none">
+          <div style="max-width:640px; margin:0 auto; padding:{{ rightPad }}">
+            <div style="display:flex; align-items:center; gap:12px; min-height:44px">
+              <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ volver }}" aria-label="Volver" style="{{ roundBtn }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"></path></svg></button>
+              </sc-if>
+              <h2 style="margin:0; font-size:{{ h2 }}; line-height:1.15; font-weight:600; letter-spacing:-.025em">{{ titulo }}</h2>
+            </div>
+
+            <sc-if value="{{ vNotifs }}" hint-placeholder-val="{{ false }}">
+              <div aria-busy="true" style="margin-top:22px">
+                <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); padding:4px; border-radius:999px; background:{{ t.chip }}"><div style="height:40px; border-radius:999px; background:{{ t.card }}"></div><div></div></div>
+                <div style="{{ sk }}; width:60px; height:11px; margin:26px 0 10px 6px"></div>
+                <div style="{{ card }}">
+                  <sc-for list="{{ skRows }}" as="k" hint-placeholder-count="4">
+                    <div style="display:flex; gap:12px; padding:16px; border-top:{{ k.bt }}">
+                      <div style="{{ sk }}; width:40px; height:40px; border-radius:999px; flex:none"></div>
+                      <div style="flex:1; padding-top:3px"><div style="{{ sk }}; width:{{ k.w1 }}; height:13px"></div><div style="{{ sk }}; width:{{ k.w2 }}; height:11px; margin-top:10px"></div></div>
+                    </div>
+                  </sc-for>
+                </div>
+                <p style="margin:18px 0 0; text-align:center; font-size:13.5px; font-weight:600; color:{{ t.m50 }}">Abriendo el centro de notificaciones…</p>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vSeg }}" hint-placeholder-val="{{ true }}">
+              <p style="{{ rot }}">EMAIL</p>
+              <div style="{{ card }}">
+                <div style="{{ rowSt }}">
+                  <span style="{{ circle }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6h17v12h-17zM3.5 7l8.5 6.5L20.5 7"></path></svg></span>
+                  <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px">
+                    <span style="font-size:15px; font-weight:600; overflow-wrap:anywhere">lucia.fernandez@gmail.com</span>
+                    <span style="font-size:13px; font-weight:500; color:{{ t.m50 }}">Es el email de tu cuenta y no se puede cambiar</span>
+                  </span>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Bloqueado" style="flex:none; color:{{ t.m50 }}"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3"></path></svg>
+                </div>
+              </div>
+
+              <p style="{{ rot }}">CÓMO ENTRÁS</p>
+              <div style="{{ card }}">
+                <div style="{{ rowSt }}">
+                  <sc-if value="{{ conGoogle }}" hint-placeholder-val="{{ true }}">
+                    <span style="{{ circleWhite }}"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 7l7.4 5.7c4.3-4 6.9-9.9 6.9-17.2z"></path><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.9-6.1z"></path><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"></path></svg></span>
+                    <span style="flex:1; font-size:15px; font-weight:600">Con Google</span>
+                  </sc-if>
+                  <sc-if value="{{ conEmail }}" hint-placeholder-val="{{ false }}">
+                    <span style="{{ circle }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 13.5a5 5 0 10-4.6-3L3.5 17v3.5H7v-2h2v-2h2l1.2-1.2a5 5 0 002.3-1.8zM16.5 7.5v.1"></path></svg></span>
+                    <span style="flex:1; font-size:15px; font-weight:600">Con email y contraseña</span>
+                  </sc-if>
+                </div>
+              </div>
+
+              <p style="{{ rot }}">CONTRASEÑA</p>
+              <sc-if value="{{ conGoogle }}" hint-placeholder-val="{{ true }}">
+                <div style="{{ card }}; padding:16px 18px">
+                  <p style="margin:0; font-size:15px; line-height:1.5; font-weight:500; color:{{ t.m66 }}; text-wrap:pretty">Entrás con Google: tu contraseña la maneja Google.</p>
+                </div>
+              </sc-if>
+              <sc-if value="{{ conEmail }}" hint-placeholder-val="{{ false }}">
+                <div style="{{ card }}; padding:6px 16px 18px">
+                  <div style="padding-top:14px">
+                    <label for="mc-p1" style="{{ label }}">Contraseña nueva</label>
+                    <div style="position:relative; margin-top:8px">
+                      <input id="mc-p1" type="{{ pType }}" value="{{ p1 }}" onChange="{{ onP1 }}" autocomplete="new-password" style="{{ inP1 }}">
+                      <button onClick="{{ toggleVer }}" aria-label="{{ verAria }}" style="{{ eyeBtn }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ eyeIcon }}"></path></svg></button>
+                    </div>
+                  </div>
+                  <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-top:12px" aria-hidden="true">
+                    <sc-for list="{{ meter }}" as="m" hint-placeholder-count="4"><span style="{{ m.st }}"></span></sc-for>
+                  </div>
+                  <p aria-live="polite" style="margin:8px 0 0 2px; font-size:13px; font-weight:600; color:{{ t.m66 }}">{{ fuerza }}</p>
+                  <div style="display:flex; flex-direction:column; gap:6px; margin-top:12px">
+                    <sc-for list="{{ reqs }}" as="r" hint-placeholder-count="3">
+                      <div style="display:flex; align-items:center; gap:10px; font-size:14px; font-weight:500; color:{{ r.c }}">
+                        <span style="{{ r.dot }}"><sc-if value="{{ r.ok }}" hint-placeholder-val="{{ false }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></span>{{ r.t }}
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="padding-top:18px">
+                    <label for="mc-p2" style="{{ label }}">Repetila</label>
+                    <input id="mc-p2" type="{{ pType }}" value="{{ p2 }}" onChange="{{ onP2 }}" autocomplete="new-password" style="{{ inP2 }}; margin-top:8px">
+                    <sc-if value="{{ eMatch }}" hint-placeholder-val="{{ false }}"><p role="alert" style="{{ errTxt }}"><span style="{{ errDot }}">!</span>Las dos contraseñas no coinciden.</p></sc-if>
+                    <sc-if value="{{ eReq }}" hint-placeholder-val="{{ false }}"><p role="alert" style="{{ errTxt }}"><span style="{{ errDot }}">!</span>Te falta cumplir algún requisito de arriba.</p></sc-if>
+                  </div>
+                  <button onClick="{{ guardarPass }}" disabled="{{ passVacia }}" style="{{ primFull }}; margin-top:18px">
+                    <sc-if value="{{ guardandoPass }}" hint-placeholder-val="{{ false }}"><span style="width:18px; height:18px; border-radius:999px; border:2.5px solid {{ spinTrack }}; border-top-color:{{ t.primInk }}; animation:mcSpin .7s linear infinite"></span></sc-if>
+                    <span>{{ passBtnTxt }}</span>
+                  </button>
+                </div>
+              </sc-if>
+
+              <p style="{{ rot }}">SESIONES</p>
+              <div style="{{ card }}">
+                <button onClick="{{ pedirCerrarTodo }}" style="{{ rowBtn }}" style-hover="background:{{ t.hover }}">
+                  <span style="{{ circle }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5h13v9h-13zM7 18h6M10 14v4M15.5 10h5v10h-5z"></path></svg></span>
+                  <span style="flex:1; min-width:0; text-align:left; display:flex; flex-direction:column; gap:2px">
+                    <span style="font-size:15px; font-weight:600">Cerrar sesión en todos mis dispositivos</span>
+                    <span style="font-size:13px; font-weight:500; color:{{ t.m50 }}">Estás conectada en 3 dispositivos</span>
+                  </span>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; color:{{ t.m38 }}"><path d="M9.5 5.5L16 12l-6.5 6.5"></path></svg>
+                </button>
+              </div>
+
+              <div style="{{ card }}; margin-top:28px">
+                <button onClick="{{ eliminar }}" style="{{ rowBtn }}; color:{{ t.redTxt }}" style-hover="background:{{ t.hover }}">
+                  <span style="{{ circle }}; color:{{ t.redTxt }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"></path></svg></span>
+                  <span style="flex:1; text-align:left; font-size:15px; font-weight:600">Eliminar mi cuenta</span>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; opacity:.6"><path d="M9.5 5.5L16 12l-6.5 6.5"></path></svg>
+                </button>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ hayPrompt }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; inset:0; z-index:45; background:rgba(0,0,0,.25); animation:mcFa .2s ease">
+          <div role="dialog" aria-label="Permiso del navegador" style="{{ promptBox }}">
+            <p style="margin:0; font-size:13px; font-weight:600; color:#5f6368">origen.app quiere</p>
+            <div style="display:flex; align-items:center; gap:12px; margin-top:10px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#202124" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 0112 0v5.5l1.5 2h-15zM10 20.5a2 2 0 004 0"></path></svg>
+              <span style="font-size:15px; font-weight:500; color:#202124">Mostrar notificaciones</span>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px">
+              <button onClick="{{ bloquear }}" style="min-height:44px; padding:0 18px; border:1px solid #dadce0; border-radius:999px; background:#fff; color:#1a73e8; font:inherit; font-size:14px; font-weight:600; cursor:pointer">Bloquear</button>
+              <button onClick="{{ permitir }}" style="min-height:44px; padding:0 18px; border:0; border-radius:999px; background:#1a73e8; color:#fff; font:inherit; font-size:14px; font-weight:600; cursor:pointer">Permitir</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ haySheet }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ cerrarSheet }}" style="{{ overlay }}">
+          <div ref="{{ sheetRef }}" onClick="{{ stop }}" role="dialog" aria-modal="true" style="{{ panel }}">
+            <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+              <div onPointerDown="{{ dragStart }}" onPointerMove="{{ dragMove }}" onPointerUp="{{ dragEnd }}" onPointerCancel="{{ dragEnd }}" style="display:flex; justify-content:center; padding:10px 0 14px; cursor:grab; touch-action:none"><span style="width:40px; height:5px; border-radius:999px; background:{{ t.m38 }}"></span></div>
+            </sc-if>
+
+            <sc-if value="{{ shTodo }}" hint-placeholder-val="{{ false }}">
+              <p style="{{ shTitle }}">¿Cerrar sesión en todos lados?</p>
+              <p style="{{ shSub }}">Se va a cerrar tu sesión en todos los celulares y computadoras, incluido este.</p>
+              <div style="display:flex; flex-direction:column; gap:10px; margin-top:22px">
+                <button onClick="{{ cerrarTodo }}" style="{{ dangerBtn }}">Cerrar en todos</button>
+                <button onClick="{{ cerrarSheet }}" style="{{ ghostBtn }}">Cancelar</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ shHelp }}" hint-placeholder-val="{{ false }}">
+              <p style="{{ shTitle }}">Cómo activar los avisos</p>
+              <p style="{{ shSub }}">Los bloqueaste en el navegador. Para volver a prenderlos:</p>
+              <div role="tablist" style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; margin-top:18px; padding:4px; border-radius:999px; background:{{ t.chip }}">
+                <button role="tab" aria-selected="{{ ariaAnd }}" onClick="{{ verAnd }}" style="{{ tabAnd }}">Android (Chrome)</button>
+                <button role="tab" aria-selected="{{ ariaIos }}" onClick="{{ verIos }}" style="{{ tabIos }}">iPhone</button>
+              </div>
+              <ol style="list-style:none; margin:18px 0 0; padding:0; display:flex; flex-direction:column; gap:14px">
+                <sc-for list="{{ pasosHelp }}" as="p" hint-placeholder-count="3">
+                  <li style="display:flex; gap:12px; align-items:flex-start">
+                    <span style="{{ numSt }}">{{ p.n }}</span>
+                    <span style="padding-top:3px; font-size:15px; line-height:1.45; font-weight:500; text-wrap:pretty">{{ p.t }}</span>
+                  </li>
+                </sc-for>
+              </ol>
+              <button onClick="{{ cerrarSheet }}" style="{{ primFull }}; margin-top:24px">Entendido</button>
+            </sc-if>
+
+            <sc-if value="{{ shIos }}" hint-placeholder-val="{{ false }}">
+              <p style="{{ shTitle }}">Agregá Origen a tu inicio</p>
+              <p style="{{ shSub }}">En iPhone, los avisos funcionan solo si abrís Origen desde su ícono.</p>
+              <div aria-hidden="true" style="margin-top:20px; padding:18px 16px; border-radius:22px; background:{{ t.surf }}; display:flex; align-items:center; justify-content:center; gap:12px">
+                <div style="flex:1; max-width:150px; border-radius:16px; background:#f9f9f9; box-shadow:0 1px 3px rgba(0,0,0,.12); padding:10px 12px; display:flex; justify-content:space-between; align-items:center; color:#0a84ff">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"></path></svg>
+                  <span style="width:32px; height:32px; border-radius:999px; display:flex; align-items:center; justify-content:center; animation:mcTap 1.6s ease-in-out infinite"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4M6 11H5v10h14V11h-1"></path></svg></span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14v14H5zM5 9h14"></path></svg>
+                </div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; color:{{ t.m50 }}"><path d="M5 12h13M13 6l6 6-6 6"></path></svg>
+                <div style="flex:1; max-width:170px; border-radius:14px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.12); display:flex; align-items:center; justify-content:space-between; gap:8px; padding:11px 12px; color:#0a0a0a">
+                  <span style="font-size:13px; font-weight:600">Agregar a inicio</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 4.5h15v15h-15zM12 8.5v7M8.5 12h7"></path></svg>
+                </div>
+              </div>
+              <ol style="list-style:none; margin:18px 0 0; padding:0; display:flex; flex-direction:column; gap:14px">
+                <sc-for list="{{ pasosIos }}" as="p" hint-placeholder-count="4">
+                  <li style="display:flex; gap:12px; align-items:flex-start">
+                    <span style="{{ numSt }}">{{ p.n }}</span>
+                    <span style="padding-top:3px; font-size:15px; line-height:1.45; font-weight:500; text-wrap:pretty">{{ p.t }}</span>
+                  </li>
+                </sc-for>
+              </ol>
+              <button onClick="{{ cerrarSheet }}" style="{{ primFull }}; margin-top:24px">Entendido</button>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="position:absolute; left:50%; bottom:40px; z-index:60; transform:translateX(-50%); max-width:calc(100% - 32px); padding:13px 20px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:14.5px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.2); animation:mcToast .28s cubic-bezier(.2,.9,.3,1) both; text-align:center">{{ toastTxt }}</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const theme = dk => {
+  const a = o => (dk ? 'rgba(255,255,255,' : 'rgba(0,0,0,') + o + ')';
+  const t = dk
+    ? { bg: '#111110', card: '#1b1b1a', surf: '#232321', chip: '#2a2a28', hover: '#222220', hoverCard: '#202020', sel: '#2a2a28', ink: '#f4f4f2', prim: '#ffffff', primInk: '#0a0a0a', redTxt: '#ff6b70', line: 'rgba(255,255,255,.07)', dash: 'rgba(255,255,255,.16)', shadow: '0 1px 2px rgba(0,0,0,.3)', skel: '#2a2a28', track: '#3a3a38', amberBg: '#3a2d12', amberTxt: '#f2b84b', overlay: 'rgba(0,0,0,.6)' }
+    : { bg: '#f6f6f4', card: '#ffffff', surf: '#f7f7f5', chip: '#f2f2f0', hover: '#f7f7f5', hoverCard: '#fcfcfb', sel: '#f2f2f0', ink: '#0a0a0a', prim: '#0a0a0a', primInk: '#ffffff', redTxt: '#d1343a', line: 'rgba(0,0,0,.06)', dash: 'rgba(0,0,0,.14)', shadow: '0 1px 2px rgba(0,0,0,.04), 0 1px 1px rgba(0,0,0,.02)', skel: '#ececea', track: '#e5e5e2', amberBg: '#fbefd5', amberTxt: '#8f5c00', overlay: 'rgba(0,0,0,.42)' };
+  t.m50 = a(.55); t.m38 = a(.42); t.m66 = a(.7); return t;
+};
+const EYE = 'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 15a3 3 0 100-6 3 3 0 000 6z';
+const EYE_OFF = 'M3 3l18 18M10.6 6a9.7 9.7 0 011.4-.1c6 0 9.5 6.1 9.5 6.1a17 17 0 01-2.7 3.4M6.4 6.9C3.9 8.6 2.5 12 2.5 12s3.5 6.5 9.5 6.5a9 9 0 004.3-1.1M9.9 9.9a3 3 0 004.2 4.2';
+
+class Component extends DCLogic {
+  state = { device: 'm', dark: false, vw: typeof window !== 'undefined' ? window.innerWidth : 1400, screen: 'home', navN: 0, navDir: '', push: 'off', prompt: false, cuenta: 'google', p1: '', p2: '', ver: false, passSt: 'idle', sheet: null, helpTab: 'and', dismissed: [], falta: 0, toast: null };
+  sheetRef = React.createRef(); timers = []; dY = null; dDy = 0;
+  componentDidMount() {
+    this.onResize = () => this.setState({ vw: window.innerWidth });
+    window.addEventListener('resize', this.onResize);
+    const h = new URLSearchParams((window.location.hash || '').slice(1)), st = {};
+    if (h.get('m')) st.device = h.get('m') === 'pc' ? 'pc' : 'm';
+    if (h.get('d')) st.dark = h.get('d') === '1';
+    if (h.get('f')) st.falta = +h.get('f');
+    const sc = h.get('s');
+    if (sc === 'seguridad') st.screen = 'seguridad';
+    if (sc === 'pushHelp') { st.push = 'blocked'; st.sheet = 'help'; }
+    if (sc === 'iosHelp') { st.push = 'ios'; st.sheet = 'ios'; }
+    this.setState(st, () => { if (sc === 'notifs') this.abrirNotifs(); });
+  }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); window.removeEventListener('resize', this.onResize); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+  aviso(txt) { const k = Date.now(); this.setState({ toast: { txt, k } }); this.later(() => this.setState(s => s.toast && s.toast.k === k ? { toast: null } : null), 2600); }
+  ir(scr) { this.setState(s => ({ screen: scr, navN: s.navN + 1, navDir: 'r', sheet: null, prompt: false })); }
+  abrirNotifs() {
+    this.ir('notifs');
+    const d = this.state;
+    this.later(() => { if (this.state.screen === 'notifs') window.location.href = encodeURI('Notificaciones.dc.html'); }, 1400);
+  }
+  reqs(p) { return [p.length >= 8, /[A-ZÁÉÍÓÚÑ]/.test(p), /\d/.test(p)]; }
+  renderVals() {
+    const s = this.state, dk = s.dark, desk = s.device === 'pc', mob = !desk, t = theme(dk);
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const chip = on => 'height:32px; padding:0 13px; border:1px solid ' + (on ? '#0a0a0a' : '#e2e0db') + '; border-radius:999px; background:' + (on ? '#0a0a0a' : '#fff') + '; color:' + (on ? '#fff' : '#0a0a0a') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const scr = desk && s.screen === 'home' ? 'seguridad' : s.screen, onSub = s.screen !== 'home';
+    const sc = desk ? Math.min(1, (s.vw - 32) / 1440) : Math.min(1, (s.vw - 32) / 390);
+    const fw = desk ? 1440 : 390, fh = desk ? 900 : 844;
+    const anim = dir => mob && s.navN && s.navDir === dir ? 'mc' + (dir === 'r' ? 'R' : 'L') + (s.navN % 2) + ' .32s cubic-bezier(.2,.8,.3,1) both' : 'none';
+    const tr = 'background-color .4s ease, color .4s ease';
+    const card = 'background:' + t.card + '; border-radius:26px; box-shadow:' + t.shadow + '; overflow:hidden; transition:' + tr;
+    const btnBase = 'min-height:52px; border-radius:999px; font:inherit; font-size:15.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; border:0';
+    const r = this.reqs(s.p1), nOk = r.filter(Boolean).length, score = !s.p1 ? 0 : Math.min(4, nOk + (s.p1.length >= 12 && nOk === 3 ? 1 : 0));
+    const tried = s.passSt === 'tried';
+    const eMatch = tried && nOk === 3 && s.p1 !== s.p2, eReq = tried && nOk < 3;
+    const inp = err => 'width:100%; height:52px; padding:0 52px 0 16px; border-radius:16px; border:2px solid ' + (err ? t.ink : 'transparent') + '; background:' + t.surf + '; color:' + t.ink + '; font:inherit; font-size:16px; font-weight:500; outline:none; transition:' + tr;
+    const meterC = ['#e5484d', '#e8a23a', '#c9b63a', '#34c759'][Math.max(0, score - 1)];
+    const tab = on => 'min-height:44px; border:0; border-radius:999px; background:' + (on ? t.card : 'transparent') + '; color:' + (on ? t.ink : t.m66) + '; font:inherit; font-size:14px; font-weight:600; cursor:pointer; box-shadow:' + (on ? '0 1px 3px rgba(0,0,0,.08)' : 'none');
+    const setPush = p => this.setState({ push: p, prompt: false, sheet: null });
+    return {
+      t, desk, dark: dk, isMobile: mob,
+      verMobile: () => this.setState({ device: 'm' }), verPC: () => this.setState({ device: 'pc' }),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(mob), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      pPush: [['Apagado', s.push === 'off' && !s.prompt, () => setPush('off')], ['Pidiendo permiso', s.prompt, () => this.setState({ push: 'off', prompt: true, sheet: null })], ['Prendido', s.push === 'on', () => setPush('on')], ['Bloqueado', s.push === 'blocked', () => setPush('blocked')], ['iPhone sin instalar', s.push === 'ios', () => setPush('ios')], ['No soportado', s.push === 'unsupported', () => setPush('unsupported')]].map(p => ({ t: p[0], st: chip(p[1]), ir: p[2] })),
+      pCuenta: [
+        ['Notificaciones (transición)', scr === 'notifs', () => this.abrirNotifs()],
+        ['Con Google', s.cuenta === 'google', () => { this.setState({ cuenta: 'google', passSt: 'idle' }); if (s.screen === 'home') this.ir('seguridad'); }],
+        ['Con email', s.cuenta === 'email', () => { this.setState({ cuenta: 'email', passSt: 'idle', p1: '', p2: '' }); if (s.screen === 'home') this.ir('seguridad'); }],
+        ['Contraseña con errores', false, () => { this.setState({ cuenta: 'email', p1: 'origen2026', p2: 'Origen2026', passSt: 'tried', screen: 'seguridad', sheet: null }); }],
+        ['Contraseña sin coincidir', false, () => { this.setState({ cuenta: 'email', p1: 'Origen2026', p2: 'Origen2025', passSt: 'tried', screen: 'seguridad', sheet: null }); }],
+        ['Contraseña con éxito', false, () => { this.setState({ cuenta: 'email', p1: 'Fuente.De.Vida26', p2: 'Fuente.De.Vida26', passSt: 'idle', screen: 'seguridad', sheet: null }); }],
+        ['Cerrar todo', s.sheet === 'todo', () => this.setState({ sheet: 'todo', screen: desk ? s.screen : 'seguridad' })],
+        ['Ayuda bloqueados', s.sheet === 'help', () => this.setState({ push: 'blocked', sheet: 'help' })],
+        ['Ayuda iPhone', s.sheet === 'ios', () => this.setState({ push: 'ios', sheet: 'ios' })]
+      ].map(p => ({ t: p[0], st: chip(p[1]), ir: p[2] })),
+      outerW: fw * sc + 'px', outerH: fh * sc + 'px', frameW: fw + 'px', frameH: fh + 'px', frameTf: 'scale(' + sc + ')', frameR: desk ? '14px' : '40px',
+      cols: desk ? '440px minmax(0,1fr)' : 'minmax(0,1fr)',
+      leftDisp: desk || !onSub ? 'block' : 'none', rightDisp: desk || onSub ? 'flex' : 'none',
+      leftBorder: desk ? '1px solid ' + t.line : '0', leftPad: desk ? '40px 24px 48px 28px' : '58px 16px 48px',
+      leftAnim: anim('l'), rightAnim: anim('r'), rightPad: desk ? '40px 48px 56px' : '58px 16px 48px',
+      sel: scr, falta: s.falta, notifs: 3, push: s.push, featKey: ['entrada', 'pedido'].filter(k => s.dismissed.indexOf(k) < 0)[0] || 'verso',
+      onRow: (id, nav) => {
+        if (id === 'volver') return this.aviso('Vuelve a la pantalla anterior');
+        if (id === 'calendario') return this.aviso('Abre /gcx/calendario');
+        if (id === 'logout') return this.aviso('Cerrar sesión está en «Mi Cuenta - Inicio»');
+        if (id === 'notifs') return this.abrirNotifs();
+        if (id === 'seguridad') return this.ir('seguridad');
+        if (id === 'pushHelp') return this.setState({ sheet: 'help' });
+        if (id === 'iosHelp') return this.setState({ sheet: 'ios' });
+        if (nav) nav();
+      },
+      onDismiss: k => this.setState(st => ({ dismissed: st.dismissed.concat(k) })),
+      onPush: () => {
+        if (s.push === 'on') { this.setState({ push: 'off' }); this.aviso('Apagaste los avisos solo en este celular'); }
+        else if (s.push === 'off') this.setState({ prompt: true });
+      },
+      onDark: () => this.setState(st => ({ dark: !st.dark })),
+      hayPrompt: s.prompt,
+      promptBox: 'position:absolute; left:' + (desk ? '24px' : '12px') + '; top:' + (desk ? '12px' : '50px') + '; width:' + (desk ? '340px' : 'calc(100% - 24px)') + '; padding:16px 16px 14px; border-radius:18px; background:#fff; box-shadow:0 10px 30px rgba(0,0,0,.22); animation:mcDrop .25s ease-out both',
+      permitir: () => { this.setState({ prompt: false, push: 'on' }); this.aviso('Te vamos a avisar en este celular'); },
+      bloquear: () => this.setState({ prompt: false, push: 'blocked' }),
+      volver: () => this.setState(st => ({ screen: 'home', navN: st.navN + 1, navDir: 'l' })),
+      roundBtn: 'width:44px; height:44px; flex:none; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+      h2: desk ? '28px' : '24px', titulo: scr === 'notifs' ? 'Notificaciones' : 'Cuenta y seguridad', card,
+      vNotifs: scr === 'notifs', vSeg: scr === 'seguridad',
+      sk: 'background:' + t.skel + '; border-radius:8px; animation:mcPulse 1.2s ease-in-out infinite',
+      skRows: [['62%', '88%'], ['48%', '70%'], ['55%', '80%'], ['40%', '64%']].map((w, i) => ({ w1: w[0], w2: w[1], bt: i ? '1px solid ' + t.line : '0' })),
+      rot: 'margin:28px 0 10px 6px; font-size:12px; font-weight:600; letter-spacing:.07em; color:' + t.m38,
+      rowSt: 'display:flex; align-items:center; gap:14px; min-height:60px; padding:10px 16px',
+      rowBtn: 'width:100%; min-height:60px; display:flex; align-items:center; gap:14px; padding:10px 16px; border:0; background:transparent; color:' + t.ink + '; font:inherit; cursor:pointer',
+      circle: 'width:36px; height:36px; flex:none; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center',
+      circleWhite: 'width:36px; height:36px; flex:none; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); display:flex; align-items:center; justify-content:center',
+      conGoogle: s.cuenta === 'google', conEmail: s.cuenta === 'email',
+      label: 'display:block; padding-left:4px; font-size:13.5px; font-weight:600; color:' + t.m66,
+      pType: s.ver ? 'text' : 'password', p1: s.p1, p2: s.p2,
+      onP1: e => this.setState({ p1: e.target.value, passSt: s.passSt === 'tried' ? 'tried' : 'idle' }),
+      onP2: e => this.setState({ p2: e.target.value, passSt: s.passSt === 'tried' ? 'tried' : 'idle' }),
+      inP1: inp(eReq), inP2: inp(eMatch).replace('padding:0 52px 0 16px', 'padding:0 16px'),
+      toggleVer: () => this.setState(st => ({ ver: !st.ver })), verAria: s.ver ? 'Ocultar contraseña' : 'Mostrar contraseña', eyeIcon: s.ver ? EYE_OFF : EYE,
+      eyeBtn: 'position:absolute; right:4px; top:4px; width:44px; height:44px; border:0; border-radius:999px; background:transparent; color:' + t.m66 + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+      meter: [0, 1, 2, 3].map(i => ({ st: 'height:5px; border-radius:999px; background:' + (i < score ? meterC : t.chip) + '; transition:background-color .25s ease' })),
+      fuerza: !s.p1 ? 'Seguridad de la contraseña' : ['Muy débil', 'Débil', 'Aceptable', 'Buena', 'Fuerte'][score],
+      reqs: ['Al menos 8 caracteres', 'Una mayúscula', 'Un número'].map((x, i) => ({ t: x, ok: r[i], c: r[i] ? t.ink : t.m66,
+        dot: 'width:20px; height:20px; flex:none; border-radius:999px; display:flex; align-items:center; justify-content:center; transition:background-color .2s ease; background:' + (r[i] ? '#34c759' : 'transparent') + '; color:#fff; box-shadow:' + (r[i] ? 'none' : 'inset 0 0 0 1.5px ' + t.m38) })),
+      eMatch, eReq,
+      errTxt: 'display:flex; align-items:flex-start; gap:8px; margin:9px 0 0 4px; font-size:13.5px; line-height:1.45; font-weight:600; color:' + t.ink,
+      errDot: 'width:20px; height:20px; flex:none; border-radius:999px; background:' + t.ink + '; color:' + t.bg + '; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700',
+      passVacia: !s.p1 || !s.p2 || s.passSt === 'saving',
+      primFull: btnBase + '; width:100%; background:' + t.prim + '; color:' + t.primInk + '; opacity:' + (scr === 'seguridad' && s.cuenta === 'email' && (!s.p1 || !s.p2) && !s.sheet ? .35 : 1),
+      guardandoPass: s.passSt === 'saving', spinTrack: dk ? 'rgba(0,0,0,.25)' : 'rgba(255,255,255,.3)',
+      passBtnTxt: s.passSt === 'saving' ? 'Guardando…' : 'Guardar contraseña',
+      guardarPass: () => {
+        if (nOk < 3 || s.p1 !== s.p2) { this.setState({ passSt: 'tried' }); return; }
+        this.setState({ passSt: 'saving' });
+        this.later(() => { this.setState({ passSt: 'idle', p1: '', p2: '', ver: false }); this.aviso('Contraseña actualizada'); }, 1100);
+      },
+      pedirCerrarTodo: () => this.setState({ sheet: 'todo' }),
+      cerrarTodo: () => { this.setState({ sheet: null }); this.aviso('Cerramos tu sesión en todos los dispositivos'); },
+      eliminar: () => { window.location.href = encodeURI('Mi Cuenta - Privacidad y ayuda.dc.html') + '#s=eliminar&m=' + (desk ? 'pc' : 'm') + '&d=' + (dk ? 1 : 0); },
+
+      haySheet: !!s.sheet, sheetRef: this.sheetRef,
+      shTodo: s.sheet === 'todo', shHelp: s.sheet === 'help', shIos: s.sheet === 'ios',
+      overlay: 'position:absolute; inset:0; z-index:40; background:' + t.overlay + '; display:flex; animation:mcFa .2s ease; ' + (desk ? 'align-items:center; justify-content:center' : 'align-items:flex-end'),
+      panel: 'max-height:92%; overflow-y:auto; background:' + t.card + '; color:' + t.ink + '; ' + (desk ? 'width:480px; border-radius:28px; padding:28px 24px 24px; box-shadow:0 24px 60px rgba(0,0,0,.22); animation:mcPop .2s ease-out' : 'width:100%; border-radius:28px 28px 0 0; padding:0 18px 30px; animation:mcSheet .3s cubic-bezier(.2,.9,.3,1)'),
+      shTitle: 'margin:0; font-size:20px; line-height:1.25; font-weight:600; letter-spacing:-.02em',
+      shSub: 'margin:8px 0 0; font-size:15px; line-height:1.45; font-weight:500; color:' + t.m50 + '; text-wrap:pretty',
+      dangerBtn: btnBase + '; width:100%; background:' + t.chip + '; color:' + t.redTxt,
+      ghostBtn: btnBase + '; width:100%; background:transparent; color:' + t.ink,
+      ariaAnd: s.helpTab === 'and' ? 'true' : 'false', ariaIos: s.helpTab === 'ios' ? 'true' : 'false',
+      verAnd: () => this.setState({ helpTab: 'and' }), verIos: () => this.setState({ helpTab: 'ios' }),
+      tabAnd: tab(s.helpTab === 'and'), tabIos: tab(s.helpTab === 'ios'),
+      pasosHelp: (s.helpTab === 'and'
+        ? ['Tocá el candado que está a la izquierda de la dirección, arriba.', 'Entrá a «Permisos» y después a «Notificaciones».', 'Elegí «Permitir» y volvé a Origen. El interruptor se va a poder prender.']
+        : ['Abrí la app Ajustes del iPhone y entrá a «Notificaciones».', 'Buscá «Origen» en la lista de apps.', 'Prendé «Permitir notificaciones» y volvé a Origen.']).map((x, i) => ({ n: i + 1, t: x })),
+      pasosIos: ['Abrí origen.app en Safari.', 'Tocá el botón Compartir, el cuadrado con la flecha hacia arriba.', 'Bajá y elegí «Agregar a inicio».', 'Abrí Origen desde el ícono nuevo y prendé los avisos desde Mi cuenta.'].map((x, i) => ({ n: i + 1, t: x })),
+      numSt: 'width:28px; height:28px; flex:none; border-radius:999px; background:' + t.chip + '; display:flex; align-items:center; justify-content:center; font-size:13.5px; font-weight:700',
+      cerrarSheet: () => this.setState({ sheet: null }), stop: e => e.stopPropagation(),
+      dragStart: ev => { this.dY = ev.clientY; this.dDy = 0; try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch (x) {} if (this.sheetRef.current) this.sheetRef.current.style.transition = 'none'; },
+      dragMove: ev => { if (this.dY == null) return; const dy = Math.max(0, ev.clientY - this.dY); this.dDy = dy; if (this.sheetRef.current) this.sheetRef.current.style.transform = 'translateY(' + dy + 'px)'; },
+      dragEnd: () => { if (this.dY == null) return; const dy = this.dDy; this.dY = null; const el = this.sheetRef.current; if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = dy > 90 ? 'translateY(100%)' : ''; } if (dy > 90) this.later(() => this.setState({ sheet: null }), 180); },
+      hayToast: !!s.toast, toastTxt: s.toast ? s.toast.txt : ''
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@600&amp;display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button,input,textarea{font-family:inherit}textarea::placeholder,input::placeholder{color:rgba(128,128,128,.85)}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes mcR0{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:none}}@keyframes mcR1{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:none}}@keyframes mcL0{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:none}}@keyframes mcL1{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:none}}@keyframes mcF0{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF1{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF2{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF3{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcF4{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes mcFa{from{opacity:0}to{opacity:1}}@keyframes mcSheet{from{transform:translateY(100%)}to{transform:none}}@keyframes mcPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}@keyframes mcToast{from{opacity:0;transform:translate(-50%,24px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes mcSpin{to{transform:rotate(360deg)}}@keyframes mcCheck{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.12);opacity:1}100%{transform:none}}@keyframes mcStepA{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}@keyframes mcStepB{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:12px">
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:10px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verMobile }}" style="{{ bMobile }}">Mobile 390</button>
+      <button onClick="{{ verPC }}" style="{{ bPC }}">PC 1440</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:999px; padding:3px">
+      <button onClick="{{ verClaro }}" style="{{ bClaro }}">Claro</button>
+      <button onClick="{{ verOscuro }}" style="{{ bOscuro }}">Oscuro</button>
+    </div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">IR A</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center">
+      <sc-for list="{{ pIr }}" as="p" hint-placeholder-count="7"><button onClick="{{ p.ir }}" style="{{ p.st }}">{{ p.t }}</button></sc-for>
+    </div>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:10px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ESTADO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center">
+      <sc-for list="{{ pEstado }}" as="p" hint-placeholder-count="12"><button onClick="{{ p.ir }}" style="{{ p.st }}">{{ p.t }}</button></sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ outerW }}; height:{{ outerH }}">
+    <div style="position:absolute; left:0; top:0; width:{{ frameW }}; height:{{ frameH }}; transform:{{ frameTf }}; transform-origin:0 0; overflow:hidden; border-radius:{{ frameR }}; background:{{ t.bg }}; color:{{ t.ink }}; box-shadow:0 6px 28px rgba(0,0,0,.14); display:grid; grid-template-columns:{{ cols }}; transition:background-color .4s ease, color .4s ease">
+
+      <div style="display:{{ leftDisp }}; min-height:0; height:100%; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; border-right:{{ leftBorder }}; animation:{{ leftAnim }}">
+        <div style="padding:{{ leftPad }}">
+          <dc-import name="MiCuentaLista" style="display:block; width:100%" t="{{ t }}" desk="{{ desk }}" dark="{{ dark }}" file="priv" sel="{{ sel }}" loading="{{ false }}" falta="{{ falta }}" notifs="{{ notifs }}" push="off" feat-key="{{ featKey }}" on-row="{{ onRow }}" on-dismiss="{{ onDismiss }}" on-push="{{ onPush }}" on-dark="{{ onDark }}" hint-size="100%,1500px"></dc-import>
+        </div>
+      </div>
+
+      <div style="position:relative; display:{{ rightDisp }}; flex-direction:column; min-height:0; height:100%; min-width:0; animation:{{ rightAnim }}">
+        <div ref="{{ scrollRef }}" onScroll="{{ onScroll }}" style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none">
+          <div style="max-width:640px; margin:0 auto; padding:{{ rightPad }}">
+            <div style="display:flex; align-items:center; gap:12px; min-height:44px">
+              <sc-if value="{{ hayBack }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ volver }}" aria-label="Volver" style="{{ roundBtn }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"></path></svg></button>
+              </sc-if>
+              <h2 style="margin:0; font-size:{{ h2 }}; line-height:1.15; font-weight:600; letter-spacing:-.025em">{{ titulo }}</h2>
+            </div>
+
+            <sc-if value="{{ vPriv }}" hint-placeholder-val="{{ true }}">
+              <p style="margin:12px 0 0; font-size:15.5px; line-height:1.55; font-weight:500; color:{{ t.m66 }}; text-wrap:pretty">Qué datos tenemos de vos, para qué los usamos y cómo pedirnos una copia, una corrección o que los borremos. Así lo pide la Ley 25.326 de Protección de Datos Personales.</p>
+
+              <p style="{{ rot }}">RESPONSABLE DE TUS DATOS</p>
+              <div style="{{ card }}; padding:18px">
+                <p style="margin:0; font-size:16px; line-height:1.4; font-weight:600">Asociación Civil Fuente de Vida (Origen Iglesia)</p>
+                <p style="margin:4px 0 0; font-size:14.5px; font-weight:500; color:{{ t.m66 }}">CUIT 30-70705090-6</p>
+                <a href="mailto:contacto@origeniglesia.org" style="display:inline-flex; align-items:center; gap:8px; min-height:44px; margin-top:6px; font-size:15px; font-weight:600; color:{{ t.ink }}; text-decoration:underline; text-underline-offset:3px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6h17v12h-17zM3.5 7l8.5 6.5L20.5 7"></path></svg>contacto@origeniglesia.org</a>
+              </div>
+
+              <p style="{{ rot }}">QUÉ DATOS TENEMOS DE VOS</p>
+              <div style="{{ card }}">
+                <sc-for list="{{ cats }}" as="c" hint-placeholder-count="6">
+                  <div style="border-top:{{ c.bt }}">
+                    <button onClick="{{ c.toggle }}" aria-expanded="{{ c.aria }}" style="{{ rowBtn }}" style-hover="background:{{ t.hover }}">
+                      <span style="{{ circle }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg></span>
+                      <span style="flex:1; min-width:0; text-align:left; display:flex; flex-direction:column; gap:2px">
+                        <span style="font-size:15px; font-weight:600">{{ c.n }}</span>
+                        <span style="font-size:13px; line-height:1.4; font-weight:500; color:{{ t.m50 }}">{{ c.res }}</span>
+                      </span>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ c.chev }}"><path d="M6 9.5l6 6 6-6"></path></svg>
+                    </button>
+                    <sc-if value="{{ c.open }}" hint-placeholder-val="{{ false }}">
+                      <div style="padding:2px 18px 18px 66px; display:flex; flex-direction:column; gap:12px; animation:mcFa .2s ease">
+                        <div><p style="{{ miniRot }}">QUÉ GUARDAMOS</p><p style="{{ body }}">{{ c.que }}</p></div>
+                        <div><p style="{{ miniRot }}">PARA QUÉ</p><p style="{{ body }}">{{ c.para }}</p></div>
+                        <div><p style="{{ miniRot }}">QUIÉN LO VE</p><p style="{{ body }}">{{ c.quien }}</p></div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+
+              <p style="{{ rot }}">TUS DERECHOS</p>
+              <div style="display:flex; flex-direction:column; gap:12px">
+                <div style="{{ card }}; padding:18px">
+                  <p style="{{ miniRot }}">ACCESO</p>
+                  <p style="margin:6px 0 0; font-size:16.5px; line-height:1.35; font-weight:600">Pedí una copia de todos tus datos</p>
+                  <p style="margin:6px 0 0; font-size:14px; line-height:1.5; font-weight:500; color:{{ t.m66 }}">Es gratis, cada 6 meses. Te respondemos en hasta 10 días corridos.</p>
+                  <button onClick="{{ pedirAcceso }}" style="{{ secBtn }}; margin-top:14px">Pedir mis datos</button>
+                </div>
+                <div style="{{ card }}; padding:18px">
+                  <p style="{{ miniRot }}">RECTIFICACIÓN</p>
+                  <p style="margin:6px 0 0; font-size:16.5px; line-height:1.35; font-weight:600">Corregí lo que esté mal</p>
+                  <p style="margin:6px 0 0; font-size:14px; line-height:1.5; font-weight:500; color:{{ t.m66 }}">Casi todo lo podés cambiar vos. Para lo demás, te respondemos en hasta 5 días hábiles.</p>
+                  <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:14px">
+                    <button onClick="{{ editarPerfil }}" style="{{ secBtn }}">Editar perfil</button>
+                    <button onClick="{{ pedirCorreccion }}" style="{{ secBtn }}">Pedir una corrección</button>
+                  </div>
+                </div>
+                <div style="{{ card }}; padding:18px">
+                  <p style="{{ miniRot }}">SUPRESIÓN</p>
+                  <p style="margin:6px 0 0; font-size:16.5px; line-height:1.35; font-weight:600">Pedí que borremos tus datos</p>
+                  <p style="margin:6px 0 0; font-size:14px; line-height:1.5; font-weight:500; color:{{ t.m66 }}">Te respondemos en hasta 5 días hábiles.</p>
+                  <button onClick="{{ irEliminar }}" style="{{ secBtnRed }}; margin-top:14px">Eliminar mi cuenta</button>
+                </div>
+              </div>
+
+              <p style="{{ rot }}">MIS SOLICITUDES</p>
+              <sc-if value="{{ haySolic }}" hint-placeholder-val="{{ true }}">
+                <div style="{{ card }}">
+                  <sc-for list="{{ solic }}" as="q" hint-placeholder-count="2">
+                    <div style="display:flex; align-items:center; gap:14px; min-height:64px; padding:12px 16px; border-top:{{ q.bt }}; animation:{{ q.anim }}">
+                      <span style="flex:none; font:600 13.5px 'JetBrains Mono',ui-monospace,monospace; color:{{ t.m66 }}">N.º {{ q.n }}</span>
+                      <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px">
+                        <span style="font-size:15px; font-weight:600">{{ q.tipo }}</span>
+                        <span style="font-size:13px; font-weight:500; color:{{ t.m50 }}">{{ q.fecha }}</span>
+                      </span>
+                      <span style="{{ q.pill }}">{{ q.est }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ sinSolic }}" hint-placeholder-val="{{ false }}">
+                <div style="{{ card }}; padding:18px"><p style="margin:0; font-size:14.5px; line-height:1.5; font-weight:500; color:{{ t.m66 }}">Todavía no hiciste ninguna solicitud. Cuando hagas una, vas a ver acá en qué estado está.</p></div>
+              </sc-if>
+
+              <div style="margin-top:28px; padding:18px; border-radius:22px; box-shadow:inset 0 0 0 1px {{ t.dash }}">
+                <p style="margin:0; font-size:14px; line-height:1.6; font-weight:500; color:{{ t.legal }}; text-wrap:pretty">La AGENCIA DE ACCESO A LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que interpongan quienes resulten afectados en sus derechos por incumplimiento de las normas vigentes en materia de protección de datos personales.</p>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vElim }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ elimProgreso }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex; align-items:center; gap:10px; margin-top:16px">
+                  <div style="flex:1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px">
+                    <sc-for list="{{ elimBar }}" as="b" hint-placeholder-count="3"><span style="{{ b.st }}"></span></sc-for>
+                  </div>
+                  <span style="flex:none; font-size:13px; font-weight:600; color:{{ t.m50 }}">Paso {{ elimPaso }} de 3</span>
+                </div>
+              </sc-if>
+              <div style="animation:{{ stepAnim }}">
+                <sc-if value="{{ e1 }}" hint-placeholder-val="{{ true }}">
+                  <p style="margin:22px 0 0; font-size:20px; line-height:1.3; font-weight:600; letter-spacing:-.02em">Qué pasa si eliminás tu cuenta</p>
+                  <div style="{{ card }}; margin-top:16px; padding:6px 16px">
+                    <sc-for list="{{ consecuencias }}" as="c" hint-placeholder-count="3">
+                      <div style="display:flex; gap:12px; align-items:flex-start; padding:14px 0; border-top:{{ c.bt }}">
+                        <span style="{{ circle }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg></span>
+                        <div style="min-width:0; padding-top:2px"><p style="margin:0; font-size:15px; line-height:1.35; font-weight:600">{{ c.t }}</p><p style="margin:3px 0 0; font-size:13.5px; line-height:1.45; font-weight:500; color:{{ t.m66 }}">{{ c.d }}</p></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="margin-top:14px; padding:18px; border-radius:22px; background:{{ t.surf }}; box-shadow:inset 0 0 0 1px {{ t.line }}">
+                    <p style="{{ miniRot }}">LO QUE GUARDAMOS IGUAL, Y POR QUÉ</p>
+                    <sc-for list="{{ conserva }}" as="c" hint-placeholder-count="2">
+                      <div style="margin-top:12px"><p style="margin:0; font-size:15px; line-height:1.35; font-weight:600">{{ c.t }}</p><p style="margin:3px 0 0; font-size:13.5px; line-height:1.45; font-weight:500; color:{{ t.m66 }}">{{ c.d }}</p></div>
+                    </sc-for>
+                  </div>
+                  <button onClick="{{ elimSig }}" style="{{ primFull }}; margin-top:20px">Continuar</button>
+                </sc-if>
+
+                <sc-if value="{{ e2 }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin:22px 0 0; font-size:20px; line-height:1.3; font-weight:600; letter-spacing:-.02em">¿Nos contás por qué?</p>
+                  <p style="margin:6px 0 0; font-size:15px; line-height:1.45; font-weight:500; color:{{ t.m50 }}">Es opcional. Nos ayuda a mejorar.</p>
+                  <div role="radiogroup" style="{{ card }}; margin-top:16px">
+                    <sc-for list="{{ motivos }}" as="m" hint-placeholder-count="5">
+                      <button role="radio" aria-checked="{{ m.aria }}" onClick="{{ m.pick }}" style="{{ rowBtn }}; border-top:{{ m.bt }}" style-hover="background:{{ t.hover }}">
+                        <span style="{{ m.radio }}"><span style="{{ m.inner }}"></span></span>
+                        <span style="flex:1; text-align:left; font-size:15px; font-weight:600">{{ m.t }}</span>
+                      </button>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ esOtro }}" hint-placeholder-val="{{ false }}">
+                    <textarea value="{{ otroTxt }}" onChange="{{ onOtro }}" placeholder="Contanos con tus palabras" rows="3" aria-label="Otro motivo" style="{{ area }}; margin-top:12px"></textarea>
+                  </sc-if>
+                  <div style="display:flex; gap:10px; margin-top:20px">
+                    <button onClick="{{ elimSig }}" style="{{ ghostBtn }}; flex:1">Saltar</button>
+                    <button onClick="{{ elimSig }}" style="{{ primFull }}; flex:2">Continuar</button>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ e3 }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin:22px 0 0; font-size:20px; line-height:1.3; font-weight:600; letter-spacing:-.02em">Confirmá que querés eliminarla</p>
+                  <p style="margin:6px 0 0; font-size:15px; line-height:1.5; font-weight:500; color:{{ t.m66 }}; text-wrap:pretty">Vamos a revisar tu pedido y te escribimos a lucia.fernandez@gmail.com para confirmarlo.</p>
+                  <label for="mc-elim" style="display:block; margin-top:20px; padding-left:4px; font-size:13.5px; font-weight:600; color:{{ t.m66 }}">Escribí ELIMINAR para confirmar</label>
+                  <input id="mc-elim" value="{{ elimTxt }}" onChange="{{ onElim }}" autocomplete="off" autocapitalize="characters" spellcheck="false" style="{{ elimInput }}">
+                  <button onClick="{{ solicitarElim }}" disabled="{{ elimNo }}" style="{{ redBtn }}; margin-top:16px">
+                    <sc-if value="{{ elimEnviando }}" hint-placeholder-val="{{ false }}"><span style="width:18px; height:18px; border-radius:999px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; animation:mcSpin .7s linear infinite"></span></sc-if>
+                    <span>{{ elimBtnTxt }}</span>
+                  </button>
+                  <button onClick="{{ cancelarElim }}" style="{{ ghostBtn }}; width:100%; margin-top:8px">Cancelar</button>
+                </sc-if>
+
+                <sc-if value="{{ e4 }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:48px 8px 0">
+                    <span style="width:72px; height:72px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; animation:mcCheck .45s ease both"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+                    <p style="margin:22px 0 0; font-size:22px; line-height:1.25; font-weight:600; letter-spacing:-.02em">Recibimos tu pedido</p>
+                    <p style="margin:8px 0 0; font:600 15px 'JetBrains Mono',ui-monospace,monospace; color:{{ t.m66 }}">N.º {{ elimN }}</p>
+                    <p style="margin:14px 0 0; max-width:360px; font-size:15.5px; line-height:1.5; font-weight:500; color:{{ t.m66 }}; text-wrap:pretty">Te escribimos en hasta 5 días hábiles para confirmarlo. Hasta entonces, tu cuenta sigue activa.</p>
+                    <button onClick="{{ volverPriv }}" style="{{ secBtn }}; margin-top:24px">Volver a Privacidad</button>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vTerm }}" hint-placeholder-val="{{ false }}">
+              <p style="margin:10px 0 0; font-size:14px; font-weight:600; color:{{ t.m50 }}">Última actualización: 1 de octubre de 2026</p>
+              <nav aria-label="Índice" style="{{ card }}; margin-top:18px; padding:8px">
+                <sc-for list="{{ secTerm }}" as="x" hint-placeholder-count="7">
+                  <button onClick="{{ x.jump }}" style="width:100%; min-height:44px; display:flex; align-items:center; gap:12px; padding:0 12px; border:0; border-radius:14px; background:transparent; color:{{ t.ink }}; font:inherit; font-size:15px; font-weight:600; text-align:left; cursor:pointer" style-hover="background:{{ t.hover }}"><span style="width:20px; flex:none; font-size:13px; color:{{ t.m50 }}">{{ x.n }}</span>{{ x.t }}</button>
+                </sc-for>
+              </nav>
+              <sc-for list="{{ secTerm }}" as="x" hint-placeholder-count="7">
+                <section id="{{ x.id }}" style="padding-top:34px">
+                  <h3 style="margin:0; font-size:20px; line-height:1.3; font-weight:600; letter-spacing:-.015em">{{ x.n }}. {{ x.t }}</h3>
+                  <sc-for list="{{ x.ps }}" as="p" hint-placeholder-count="2">
+                    <p style="margin:12px 0 0; font-size:16px; line-height:1.65; font-weight:500; color:{{ t.m66 }}; text-wrap:pretty">{{ p }}</p>
+                  </sc-for>
+                </section>
+              </sc-for>
+              <button onClick="{{ arriba }}" style="{{ secBtn }}; margin-top:32px">Volver arriba</button>
+            </sc-if>
+
+            <sc-if value="{{ vTut }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ card }}; margin-top:22px">
+                <sc-for list="{{ tuts }}" as="u" hint-placeholder-count="5">
+                  <button onClick="{{ u.go }}" style="{{ rowBtn }}; border-top:{{ u.bt }}" style-hover="background:{{ t.hover }}">
+                    <span style="{{ circle }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ u.icon }}"></path></svg></span>
+                    <span style="flex:1; min-width:0; text-align:left; display:flex; flex-direction:column; gap:2px">
+                      <span style="font-size:15px; line-height:1.3; font-weight:600">{{ u.t }}</span>
+                      <span style="font-size:13px; font-weight:500; color:{{ t.m50 }}">{{ u.dur }}</span>
+                    </span>
+                    <sc-if value="{{ u.visto }}" hint-placeholder-val="{{ false }}"><span style="{{ vistoPill }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Visto</span></sc-if>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; color:{{ t.m38 }}"><path d="M9.5 5.5L16 12l-6.5 6.5"></path></svg>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vCont }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid; grid-template-columns:{{ contCols }}; gap:12px; margin-top:22px">
+                <button onClick="{{ abrirWa }}" style="{{ contCard }}" style-hover="background:{{ t.hoverCard }}">
+                  <span style="width:44px; height:44px; border-radius:999px; background:#25d366; color:#fff; display:flex; align-items:center; justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-4A8 8 0 1112 20a8 8 0 01-3.9-1z"></path><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-.8.8a3.5 3.5 0 01-2-2l.8-.8-1-2z"></path></svg></span>
+                  <span style="margin-top:14px; font-size:16px; font-weight:600">WhatsApp</span>
+                  <span style="margin-top:3px; font-size:14px; font-weight:500; color:{{ t.m66 }}">+54 9 11 0000 0000</span>
+                  <span style="margin-top:12px; font-size:14px; font-weight:700; text-decoration:underline; text-underline-offset:3px">Abrir el chat</span>
+                </button>
+                <button onClick="{{ abrirMail }}" style="{{ contCard }}" style-hover="background:{{ t.hoverCard }}">
+                  <span style="width:44px; height:44px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6h17v12h-17zM3.5 7l8.5 6.5L20.5 7"></path></svg></span>
+                  <span style="margin-top:14px; font-size:16px; font-weight:600">Email</span>
+                  <span style="margin-top:3px; font-size:14px; font-weight:500; color:{{ t.m66 }}; overflow-wrap:anywhere">contacto@origeniglesia.org</span>
+                  <span style="margin-top:12px; font-size:14px; font-weight:700; text-decoration:underline; text-underline-offset:3px">Escribir un correo</span>
+                </button>
+              </div>
+              <p style="{{ rot }}">HORARIO DE ATENCIÓN</p>
+              <div style="{{ card }}; padding:6px 18px">
+                <div style="display:flex; justify-content:space-between; gap:12px; padding:13px 0"><span style="font-size:15px; font-weight:600">Lunes a viernes</span><span style="font-size:15px; font-weight:500; color:{{ t.m66 }}">10 a 18 h</span></div>
+                <div style="display:flex; justify-content:space-between; gap:12px; padding:13px 0; border-top:1px solid {{ t.line }}"><span style="font-size:15px; font-weight:600">Domingos</span><span style="font-size:15px; font-weight:500; color:{{ t.m66 }}; text-align:right">En el Punto de Información</span></div>
+              </div>
+              <p style="{{ rot }}">DÓNDE ESTAMOS</p>
+              <div style="{{ card }}; padding:18px; display:flex; align-items:center; gap:14px">
+                <span style="{{ circle }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0113 0c0 5-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"></path></svg></span>
+                <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px"><span style="font-size:15px; font-weight:600">Av. Eva Perón 3932</span><span style="font-size:13.5px; font-weight:500; color:{{ t.m50 }}">Ciudad de Buenos Aires</span></span>
+                <button onClick="{{ comoLlegar }}" style="{{ secBtnSm }}">Cómo llegar</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vRep }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ repOk }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:64px 8px 0">
+                  <span style="width:72px; height:72px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; animation:mcCheck .45s ease both"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+                  <p style="margin:22px 0 0; font-size:22px; line-height:1.25; font-weight:600; letter-spacing:-.02em">Gracias, Lucía. Lo vamos a revisar.</p>
+                  <p style="margin:10px 0 0; max-width:340px; font-size:15px; line-height:1.5; font-weight:500; color:{{ t.m66 }}">Si necesitamos más datos, te escribimos a tu email.</p>
+                  <button onClick="{{ otroReporte }}" style="{{ secBtn }}; margin-top:24px">Reportar otra cosa</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ repForm }}" hint-placeholder-val="{{ true }}">
+                <div style="{{ card }}; margin-top:22px; padding:6px 16px 18px">
+                  <div style="padding-top:14px">
+                    <label for="mc-que" style="display:block; padding-left:4px; font-size:13.5px; font-weight:600; color:{{ t.m66 }}">¿Qué pasó?</label>
+                    <textarea id="mc-que" value="{{ repTxt }}" onChange="{{ onRep }}" rows="4" placeholder="Contanos qué estabas haciendo y qué viste" style="{{ repArea }}; margin-top:8px"></textarea>
+                    <sc-if value="{{ eRep }}" hint-placeholder-val="{{ false }}"><p role="alert" style="{{ errTxt }}"><span style="{{ errDot }}">!</span>Contanos un poco más, así lo podemos encontrar.</p></sc-if>
+                  </div>
+                  <div style="padding-top:18px">
+                    <p style="margin:0; padding-left:4px; font-size:13.5px; font-weight:600; color:{{ t.m66 }}">¿En qué pantalla?</p>
+                    <div role="radiogroup" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px">
+                      <sc-for list="{{ pantallas }}" as="p" hint-placeholder-count="6"><button role="radio" aria-checked="{{ p.aria }}" onClick="{{ p.pick }}" style="{{ p.st }}">{{ p.t }}</button></sc-for>
+                    </div>
+                  </div>
+                  <div style="padding-top:18px">
+                    <p style="margin:0; padding-left:4px; font-size:13.5px; font-weight:600; color:{{ t.m66 }}">Captura de pantalla (opcional)</p>
+                    <sc-if value="{{ sinCaptura }}" hint-placeholder-val="{{ true }}">
+                      <label style="{{ dropZone }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5M7.5 9.5L12 5l4.5 4.5M5 19h14"></path></svg>Adjuntar una captura<input type="file" accept="image/*" onChange="{{ onCaptura }}" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none"></label>
+                    </sc-if>
+                    <sc-if value="{{ hayCaptura }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex; align-items:center; gap:12px; margin-top:10px; padding:10px; border-radius:16px; background:{{ t.surf }}">
+                        <div role="img" aria-label="Captura adjunta" style="width:48px; height:64px; border-radius:8px; flex:none; background:center/cover no-repeat {{ capturaBg }}"></div>
+                        <span style="flex:1; min-width:0; font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ capturaNombre }}</span>
+                        <button onClick="{{ quitarCaptura }}" style="min-height:44px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:{{ t.ink }}; font:inherit; font-size:14px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer">Quitar</button>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+                <div style="margin-top:14px; padding:16px 18px; border-radius:22px; background:{{ t.chip }}">
+                  <p style="margin:0; font-size:14px; font-weight:700">Esto se envía automáticamente</p>
+                  <p style="margin:6px 0 0; font-size:14px; line-height:1.5; font-weight:500; color:{{ t.m66 }}">Versión de la app (2.14.0), tu celular y navegador (Android 14 · Chrome 130). Nos ayuda a reproducir el problema. No mandamos nada más.</p>
+                </div>
+                <sc-if value="{{ repFalla }}" hint-placeholder-val="{{ false }}">
+                  <div role="alert" style="display:flex; gap:10px; align-items:flex-start; margin-top:14px; padding:14px 16px; border-radius:18px; box-shadow:inset 0 0 0 2px {{ t.ink }}; animation:mcFa .2s ease">
+                    <span style="{{ errDot }}">!</span>
+                    <p style="margin:0; font-size:14.5px; line-height:1.45; font-weight:600">No pudimos enviarlo. Revisá tu conexión y probá de nuevo.</p>
+                  </div>
+                </sc-if>
+                <button onClick="{{ enviarRep }}" style="{{ primFull }}; margin-top:16px">
+                  <sc-if value="{{ repEnviando }}" hint-placeholder-val="{{ false }}"><span style="width:18px; height:18px; border-radius:999px; border:2.5px solid {{ spinTrack }}; border-top-color:{{ t.primInk }}; animation:mcSpin .7s linear infinite"></span></sc-if>
+                  <span>{{ repBtnTxt }}</span>
+                </button>
+              </sc-if>
+            </sc-if>
+
+            <sc-if value="{{ vSobre }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding-top:30px">
+                <span style="width:96px; height:96px; border-radius:28px; background:{{ t.card }}; box-shadow:{{ t.shadow }}; display:flex; align-items:center; justify-content:center"><img src="assets/origen-arbol.png" alt="Logo de Origen" style="width:62px; height:auto"></span>
+                <p style="margin:18px 0 0; font-size:22px; font-weight:600; letter-spacing:-.02em">Origen App</p>
+                <p style="margin:4px 0 0; font-size:14.5px; font-weight:500; color:{{ t.m50 }}">Versión {{ version }}</p>
+              </div>
+              <div style="{{ card }}; margin-top:24px; padding:18px; display:flex; flex-direction:column; align-items:center; text-align:center">
+                <sc-if value="{{ updIdle }}" hint-placeholder-val="{{ true }}"><p style="margin:0; font-size:14.5px; font-weight:500; color:{{ t.m66 }}">Buscamos si hay una versión más nueva.</p></sc-if>
+                <sc-if value="{{ updBuscando }}" hint-placeholder-val="{{ false }}"><p aria-live="polite" style="margin:0; display:flex; align-items:center; gap:10px; font-size:15px; font-weight:600"><span style="width:18px; height:18px; border-radius:999px; border:2.5px solid {{ t.chip }}; border-top-color:{{ t.ink }}; animation:mcSpin .7s linear infinite"></span>Buscando…</p></sc-if>
+                <sc-if value="{{ updUltima }}" hint-placeholder-val="{{ false }}"><p aria-live="polite" style="margin:0; display:flex; align-items:center; gap:8px; font-size:15px; font-weight:600; animation:mcFa .2s ease"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Estás en la última versión</p></sc-if>
+                <sc-if value="{{ updNueva }}" hint-placeholder-val="{{ false }}"><div style="animation:mcFa .2s ease"><p style="margin:0; font-size:15.5px; font-weight:600">Hay una versión nueva · 2.15</p><p style="margin:4px 0 0; font-size:14px; font-weight:500; color:{{ t.m66 }}">Mejoras en las inscripciones y en los avisos.</p></div></sc-if>
+                <sc-if value="{{ updError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin:0; display:flex; align-items:center; gap:8px; font-size:15px; font-weight:600; animation:mcFa .2s ease"><span style="{{ errDot }}">!</span>No pudimos buscar. Revisá tu conexión.</p></sc-if>
+                <sc-if value="{{ updBtnShow }}" hint-placeholder-val="{{ true }}"><button onClick="{{ buscarUpd }}" style="{{ secBtn }}; margin-top:14px">{{ updBtnTxt }}</button></sc-if>
+                <sc-if value="{{ updNueva }}" hint-placeholder-val="{{ false }}"><button onClick="{{ actualizar }}" style="{{ primSm }}; margin-top:14px">Actualizar</button></sc-if>
+              </div>
+              <p style="margin:24px 0 0; text-align:center; font-size:14px; line-height:1.6; font-weight:500; color:{{ t.m66 }}; text-wrap:pretty">Hecha por el equipo de tecnología de Origen Iglesia, con la ayuda de voluntarios.<br>© 2026 Asociación Civil Fuente de Vida</p>
+            </sc-if>
+          </div>
+        </div>
+        <sc-if value="{{ hayArriba }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ arriba }}" aria-label="Volver arriba" style="position:absolute; right:20px; bottom:24px; z-index:5; height:44px; padding:0 16px; border:0; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font:inherit; font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; box-shadow:0 6px 18px rgba(0,0,0,.18); cursor:pointer; animation:mcFa .2s ease"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>Arriba</button>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ haySheet }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ cerrarSheet }}" style="{{ overlay }}">
+          <div ref="{{ sheetRef }}" onClick="{{ stop }}" role="dialog" aria-modal="true" style="{{ panel }}">
+            <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+              <div onPointerDown="{{ dragStart }}" onPointerMove="{{ dragMove }}" onPointerUp="{{ dragEnd }}" onPointerCancel="{{ dragEnd }}" style="display:flex; justify-content:center; padding:10px 0 14px; cursor:grab; touch-action:none"><span style="width:40px; height:5px; border-radius:999px; background:{{ t.m38 }}"></span></div>
+            </sc-if>
+            <sc-if value="{{ solForm }}" hint-placeholder-val="{{ true }}">
+              <p style="margin:0; font-size:20px; line-height:1.25; font-weight:600; letter-spacing:-.02em">Nueva solicitud</p>
+              <span style="display:inline-flex; align-items:center; height:32px; margin-top:12px; padding:0 14px; border-radius:999px; background:{{ t.chip }}; font-size:14px; font-weight:600">{{ solTipo }}</span>
+              <p style="margin:12px 0 0; font-size:14.5px; line-height:1.5; font-weight:500; color:{{ t.m66 }}">{{ solAyuda }}</p>
+              <label for="mc-sol" style="display:block; margin-top:16px; padding-left:4px; font-size:13.5px; font-weight:600; color:{{ t.m66 }}">Contanos qué necesitás (opcional)</label>
+              <textarea id="mc-sol" value="{{ solTxt }}" onChange="{{ onSol }}" rows="3" style="{{ area }}; margin-top:8px"></textarea>
+              <button onClick="{{ enviarSol }}" style="{{ primFull }}; margin-top:16px">
+                <sc-if value="{{ solEnviando }}" hint-placeholder-val="{{ false }}"><span style="width:18px; height:18px; border-radius:999px; border:2.5px solid {{ spinTrack }}; border-top-color:{{ t.primInk }}; animation:mcSpin .7s linear infinite"></span></sc-if>
+                <span>{{ solBtnTxt }}</span>
+              </button>
+              <button onClick="{{ cerrarSheet }}" style="{{ ghostBtn }}; width:100%; margin-top:8px">Cancelar</button>
+            </sc-if>
+            <sc-if value="{{ solOk }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 0 4px">
+                <span style="width:64px; height:64px; border-radius:999px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; animation:mcCheck .45s ease both"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+                <p style="margin:18px 0 0; font-size:20px; line-height:1.3; font-weight:600; letter-spacing:-.02em">Solicitud N.º {{ solN }} recibida</p>
+                <p style="margin:8px 0 0; font-size:15px; line-height:1.5; font-weight:500; color:{{ t.m66 }}; overflow-wrap:anywhere">Te respondemos a lucia.fernandez@gmail.com</p>
+                <button onClick="{{ cerrarSheet }}" style="{{ primFull }}; margin-top:22px">Listo</button>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hayToast }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="position:absolute; left:50%; bottom:40px; z-index:60; transform:translateX(-50%); max-width:calc(100% - 32px); padding:13px 20px; border-radius:999px; background:{{ t.prim }}; color:{{ t.primInk }}; font-size:14.5px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.2); animation:mcToast .28s cubic-bezier(.2,.9,.3,1) both; text-align:center">{{ toastTxt }}</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const theme = dk => {
+  const a = o => (dk ? 'rgba(255,255,255,' : 'rgba(0,0,0,') + o + ')';
+  const t = dk
+    ? { bg: '#111110', card: '#1b1b1a', surf: '#232321', chip: '#2a2a28', hover: '#222220', hoverCard: '#202020', sel: '#2a2a28', ink: '#f4f4f2', prim: '#ffffff', primInk: '#0a0a0a', redTxt: '#ff6b70', redBtn: '#e5484d', line: 'rgba(255,255,255,.07)', dash: 'rgba(255,255,255,.16)', shadow: '0 1px 2px rgba(0,0,0,.3)', skel: '#2a2a28', track: '#3a3a38', amberBg: '#3a2d12', amberTxt: '#f2b84b', greenBg: '#173322', greenTxt: '#7fdb9c', overlay: 'rgba(0,0,0,.6)', legal: '#e6e6e3' }
+    : { bg: '#f6f6f4', card: '#ffffff', surf: '#f7f7f5', chip: '#f2f2f0', hover: '#f7f7f5', hoverCard: '#fcfcfb', sel: '#f2f2f0', ink: '#0a0a0a', prim: '#0a0a0a', primInk: '#ffffff', redTxt: '#d1343a', redBtn: '#d1343a', line: 'rgba(0,0,0,.06)', dash: 'rgba(0,0,0,.14)', shadow: '0 1px 2px rgba(0,0,0,.04), 0 1px 1px rgba(0,0,0,.02)', skel: '#ececea', track: '#e5e5e2', amberBg: '#fbefd5', amberTxt: '#8f5c00', greenBg: '#dff3e4', greenTxt: '#1d6a38', overlay: 'rgba(0,0,0,.42)', legal: '#2b2b2a' };
+  t.m50 = a(.55); t.m38 = a(.42); t.m66 = a(.7); return t;
+};
+const IC = {
+  user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4.5 20a7.5 7.5 0 0115 0',
+  key: 'M3.5 6h17v12h-17zM3.5 7l8.5 6.5L20.5 7',
+  groups: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2.5 20a6.5 6.5 0 0113 0M16 4.3a3.5 3.5 0 010 6.4M17.5 14a6.5 6.5 0 014 6',
+  ticket: 'M3.5 7h17v3.2a1.8 1.8 0 000 3.6V17h-17v-3.2a1.8 1.8 0 000-3.6zM14.5 7v10',
+  bag: 'M5 8h14l-1.2 12H6.2zM9 8a3 3 0 016 0',
+  serve: 'M12 9.2c-1-1.8-4-1.5-4 .8 0 1.8 4 4 4 4s4-2.2 4-4c0-2.3-3-2.6-4-.8zM3 16h3.5l3.5 3h6.5l4.5-3.5M3 16v4',
+  out: 'M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10',
+  play: 'M12 3.5a8.5 8.5 0 110 17 8.5 8.5 0 010-17zM10 8.8v6.4l5.2-3.2z',
+  bell: 'M6 16.5V11a6 6 0 0112 0v5.5l1.5 2h-15zM10 20.5a2 2 0 004 0'
+};
+const SCR = { privacidad: 'Privacidad y mis datos', eliminar: 'Eliminar mi cuenta', terminos: 'Términos y privacidad', tutoriales: 'Tutoriales', contacto: 'Escribile a la iglesia', reportar: 'Reportar un problema', sobre: 'Sobre la app' };
+const CATS = [
+  ['Cuenta', IC.key, 'Email y cómo entrás', 'Tu email y cómo entrás a la app (con Google o con contraseña).', 'Para que puedas entrar y para avisarte cosas importantes de tu cuenta.', 'Solo vos y el equipo técnico de la app.'],
+  ['Perfil', IC.user, 'Nombre, teléfono, nacimiento, sexo y foto', 'Nombre y apellido, teléfono, fecha de nacimiento, sexo y foto.', 'Para que tus anfitriones y coordinadores te conozcan y te puedan contactar, y para armar grupos por edad.', 'Vos, los anfitriones de tus grupos y los coordinadores de GCX.'],
+  ['Grupos', IC.groups, 'Inscripciones y asistencia', 'A qué grupos te sumaste, con qué rol, y tu asistencia a cada encuentro.', 'Para organizar los grupos y acompañarte durante la temporada.', 'Los anfitriones de tus grupos y los coordinadores de GCX.'],
+  ['Eventos', IC.ticket, 'Inscripciones y datos de menores', 'Tus inscripciones a eventos. Si inscribiste menores: su nombre, edad, quién los retira y un teléfono de contacto.', 'Para tu entrada, para cuidar a los chicos y para comunicarnos con vos durante el evento.', 'El equipo del evento y el área de acreditación.'],
+  ['Compras', IC.bag, 'Pedidos y comprobantes', 'Tus pedidos y el comprobante de cada transferencia.', 'Para preparar y entregar tu pedido, y porque la ley contable nos pide guardarlos.', 'El equipo del Punto de Información y administración.'],
+  ['Servicio', IC.serve, 'Áreas donde servís', 'Las áreas donde servís y tus turnos.', 'Para organizar los equipos de voluntarios.', 'Los líderes de cada área.']
+];
+const TERM = [
+  ['Quiénes somos', ['Origen App es la aplicación de Origen Iglesia, a cargo de la Asociación Civil Fuente de Vida, CUIT 30-70705090-6, con domicilio en Av. Eva Perón 3932, Ciudad de Buenos Aires.', 'Al usar la app aceptás estos términos. Si algo no te queda claro, escribinos a contacto@origeniglesia.org.']],
+  ['Qué datos usamos', ['Usamos los datos que nos das al crear tu cuenta y completar tu perfil, y los que se generan cuando usás la app: grupos, inscripciones, compras y áreas de servicio.', 'No usamos tu ubicación ni accedemos a tus contactos.']],
+  ['Para qué', ['Para que puedas usar la app, organizar los grupos y eventos, preparar tus pedidos y comunicarnos con vos.', 'No vendemos tus datos ni los usamos para publicidad.']],
+  ['Con quién se comparten', ['Dentro de la iglesia, solo con las personas que los necesitan para su tarea: anfitriones, coordinadores, líderes de área y el equipo de cada evento.', 'Fuera de la iglesia, solo con los servicios técnicos que hacen funcionar la app, como el alojamiento de los datos y el envío de emails.']],
+  ['Datos de menores', ['Cuando inscribís a un menor a un evento, nos das sus datos como su adulto responsable. Los usamos solo para ese evento y para su cuidado.', 'Solo los ve el equipo del evento y el área de acreditación.']],
+  ['Tus derechos (Ley 25.326)', ['Podés pedir una copia de tus datos, corregirlos o pedir que los borremos, desde «Privacidad y mis datos».', 'El acceso es gratis cada 6 meses y te respondemos en hasta 10 días corridos. Las correcciones y la supresión, en hasta 5 días hábiles.']],
+  ['Contacto', ['Para cualquier consulta sobre tus datos o estos términos, escribinos a contacto@origeniglesia.org o por WhatsApp al +54 9 11 0000 0000.']]
+];
+
+class Component extends DCLogic {
+  state = { device: 'm', dark: false, vw: typeof window !== 'undefined' ? window.innerWidth : 1400, stack: ['home'], navN: 0, navDir: '', open: {}, solic: [{ n: '0041', tipo: 'Corrección', fecha: '2 oct 2026', est: 'en' }, { n: '0039', tipo: 'Acceso a mis datos', fecha: '12 abr 2026', est: 'ok' }], nextN: 42, sheet: null, solTipo: 'acceso', solTxt: '', solSt: 'form', solN: '', elim: 1, elimN: 0, stepN: 0, motivo: null, otroTxt: '', elimTxt: '', elimSt: 'idle', repTxt: '', repPant: null, captura: null, capturaNombre: '', repSt: 'idle', repTried: false, fallaRep: false, upd: 'idle', updResp: 'ultima', version: '2.14.0', vistos: { 0: true, 1: true }, scrollY: 0, dismissed: [], falta: 0, toast: null };
+  sheetRef = React.createRef(); scrollRef = React.createRef(); timers = []; dY = null; dDy = 0;
+  componentDidMount() {
+    this.onResize = () => this.setState({ vw: window.innerWidth });
+    window.addEventListener('resize', this.onResize);
+    const h = new URLSearchParams((window.location.hash || '').slice(1)), st = {};
+    if (h.get('m')) st.device = h.get('m') === 'pc' ? 'pc' : 'm';
+    if (h.get('d')) st.dark = h.get('d') === '1';
+    if (h.get('f')) st.falta = +h.get('f');
+    const sc = h.get('s');
+    if (sc && SCR[sc]) st.stack = sc === 'eliminar' ? ['home', 'privacidad', 'eliminar'] : ['home', sc];
+    else if (st.device === 'pc') st.stack = ['home', 'privacidad'];
+    this.setState(st);
+  }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); window.removeEventListener('resize', this.onResize); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+  aviso(txt) { const k = Date.now(); this.setState({ toast: { txt, k } }); this.later(() => this.setState(s => s.toast && s.toast.k === k ? { toast: null } : null), 2600); }
+  top0() { const el = this.scrollRef.current; if (el) el.scrollTop = 0; }
+  ir(id, extra) { this.setState(s => Object.assign({ stack: id === 'eliminar' ? ['home', 'privacidad', 'eliminar'] : ['home', id], navN: s.navN + 1, navDir: 'r', sheet: null, scrollY: 0 }, extra || {})); this.later(() => this.top0(), 0); }
+  pushE() { this.setState(s => ({ stack: ['home', 'privacidad', 'eliminar'], elim: 1, elimTxt: '', motivo: null, elimSt: 'idle', navN: s.navN + 1, navDir: 'r', scrollY: 0 })); this.later(() => this.top0(), 0); }
+  back() { this.setState(s => ({ stack: s.stack.length > 1 ? s.stack.slice(0, -1) : s.stack, navN: s.navN + 1, navDir: 'l', scrollY: 0 })); this.later(() => this.top0(), 0); }
+  paso(n) { this.setState(s => ({ elim: n, stepN: s.stepN + 1 })); this.later(() => this.top0(), 0); }
+  abrirSol(tipo) { this.setState({ sheet: 'sol', solTipo: tipo, solTxt: '', solSt: 'form' }); }
+  renderVals() {
+    const s = this.state, dk = s.dark, desk = s.device === 'pc', mob = !desk, t = theme(dk);
+    const seg = on => 'height:32px; padding:0 13px; border:0; border-radius:999px; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const chip = on => 'height:32px; padding:0 13px; border:1px solid ' + (on ? '#0a0a0a' : '#e2e0db') + '; border-radius:999px; background:' + (on ? '#0a0a0a' : '#fff') + '; color:' + (on ? '#fff' : '#0a0a0a') + '; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap';
+    const top = s.stack[s.stack.length - 1];
+    const scr = desk && top === 'home' ? 'privacidad' : top, onSub = top !== 'home';
+    const sc = desk ? Math.min(1, (s.vw - 32) / 1440) : Math.min(1, (s.vw - 32) / 390);
+    const fw = desk ? 1440 : 390, fh = desk ? 900 : 844;
+    const anim = dir => mob && s.navN && s.navDir === dir ? 'mc' + (dir === 'r' ? 'R' : 'L') + (s.navN % 2) + ' .32s cubic-bezier(.2,.8,.3,1) both' : 'none';
+    const tr = 'background-color .4s ease, color .4s ease';
+    const card = 'background:' + t.card + '; border-radius:26px; box-shadow:' + t.shadow + '; overflow:hidden; transition:' + tr;
+    const btnBase = 'min-height:52px; border-radius:999px; font:inherit; font-size:15.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; border:0';
+    const pill = (bg, fg, x) => 'flex:none; display:inline-flex; align-items:center; height:26px; padding:0 10px; border-radius:999px; background:' + bg + '; color:' + fg + '; font-size:12.5px; font-weight:700; ' + (x || '');
+    const estPill = { rec: pill(t.chip, t.ink), en: pill(t.amberBg, t.amberTxt), ok: pill(t.greenBg, t.greenTxt) };
+    const estTxt = { rec: 'Recibida', en: 'En curso', ok: 'Resuelta' };
+    const allOpen = CATS.every((c, i) => s.open[i]);
+    const elimOk = s.elimTxt.trim().toUpperCase() === 'ELIMINAR';
+    const motivos = ['Ya no voy a Origen', 'Me cambié de iglesia', 'No uso la app', 'Me preocupa mi privacidad', 'Otro'];
+    const repErr = s.repTried && s.repTxt.trim().length < 10;
+    const area = 'width:100%; min-height:96px; padding:14px 16px; border-radius:16px; border:2px solid transparent; background:' + t.surf + '; color:' + t.ink + '; font:inherit; font-size:16px; line-height:1.45; font-weight:500; outline:none; resize:vertical; transition:' + tr;
+    const ir = (id, label) => ({ t: label, st: chip(scr === id), ir: () => id === 'eliminar' ? this.pushE() : this.ir(id) });
+    const solic = s.solic;
+    return {
+      t, desk, dark: dk, isMobile: mob, scrollRef: this.scrollRef, sheetRef: this.sheetRef,
+      verMobile: () => this.setState({ device: 'm' }), verPC: () => this.setState(st => ({ device: 'pc', stack: st.stack.length > 1 ? st.stack : ['home', 'privacidad'] })),
+      verClaro: () => this.setState({ dark: false }), verOscuro: () => this.setState({ dark: true }),
+      bMobile: seg(mob), bPC: seg(desk), bClaro: seg(!dk), bOscuro: seg(dk),
+      pIr: [ir('privacidad', 'Privacidad'), ir('eliminar', 'Eliminar cuenta'), ir('terminos', 'Términos'), ir('tutoriales', 'Tutoriales'), ir('contacto', 'Escribile'), ir('reportar', 'Reportar'), ir('sobre', 'Sobre la app')],
+      pEstado: [
+        ['Categorías desplegadas', allOpen, () => this.setState({ stack: ['home', 'privacidad'], open: allOpen ? {} : CATS.reduce((o, c, i) => (o[i] = true, o), {}) })],
+        ['Solicitud enviada', s.sheet === 'sol' && s.solSt === 'ok', () => this.setState(st => ({ stack: ['home', 'privacidad'], sheet: 'sol', solTipo: 'acceso', solSt: 'ok', solN: String(st.nextN).padStart(4, '0'), solic: [{ n: String(st.nextN).padStart(4, '0'), tipo: 'Acceso a mis datos', fecha: '22 oct 2026', est: 'rec', nuevo: true }].concat(st.solic), nextN: st.nextN + 1 }))],
+        ['Sin solicitudes', !solic.length, () => this.setState(st => ({ stack: ['home', 'privacidad'], solic: st.solic.length ? [] : [{ n: '0041', tipo: 'Corrección', fecha: '2 oct 2026', est: 'en' }, { n: '0039', tipo: 'Acceso a mis datos', fecha: '12 abr 2026', est: 'ok' }] }))],
+        ['Eliminar 1', scr === 'eliminar' && s.elim === 1, () => this.setState(st => ({ stack: ['home', 'privacidad', 'eliminar'], elim: 1, stepN: st.stepN + 1 }))],
+        ['Eliminar 2', scr === 'eliminar' && s.elim === 2, () => this.setState(st => ({ stack: ['home', 'privacidad', 'eliminar'], elim: 2, stepN: st.stepN + 1 }))],
+        ['Eliminar 3', scr === 'eliminar' && s.elim === 3, () => this.setState(st => ({ stack: ['home', 'privacidad', 'eliminar'], elim: 3, elimTxt: '', elimSt: 'idle', stepN: st.stepN + 1 }))],
+        ['Eliminar 4', scr === 'eliminar' && s.elim === 4, () => this.setState(st => ({ stack: ['home', 'privacidad', 'eliminar'], elim: 4, elimN: st.elimN || st.nextN, nextN: st.elimN ? st.nextN : st.nextN + 1, stepN: st.stepN + 1 }))],
+        ['Reportar con error', s.fallaRep, () => this.setState(st => ({ stack: ['home', 'reportar'], fallaRep: !st.fallaRep, repSt: 'idle' }))],
+        ['Reportar con éxito', s.repSt === 'ok', () => this.setState({ stack: ['home', 'reportar'], repSt: 'ok', fallaRep: false })],
+        ['Actualización: última', s.updResp === 'ultima', () => this.setState({ stack: ['home', 'sobre'], updResp: 'ultima', upd: 'idle' })],
+        ['Actualización: nueva', s.updResp === 'nueva', () => this.setState({ stack: ['home', 'sobre'], updResp: 'nueva', upd: 'idle' })],
+        ['Actualización: error', s.updResp === 'error', () => this.setState({ stack: ['home', 'sobre'], updResp: 'error', upd: 'idle' })]
+      ].map(p => ({ t: p[0], st: chip(p[1]), ir: p[2] })),
+      outerW: fw * sc + 'px', outerH: fh * sc + 'px', frameW: fw + 'px', frameH: fh + 'px', frameTf: 'scale(' + sc + ')', frameR: desk ? '14px' : '40px',
+      cols: desk ? '440px minmax(0,1fr)' : 'minmax(0,1fr)',
+      leftDisp: desk || !onSub ? 'block' : 'none', rightDisp: desk || onSub ? 'flex' : 'none',
+      leftBorder: desk ? '1px solid ' + t.line : '0', leftPad: desk ? '40px 24px 48px 28px' : '58px 16px 48px',
+      leftAnim: anim('l'), rightAnim: anim('r'), rightPad: desk ? '40px 48px 64px' : '58px 16px 56px',
+      sel: scr === 'eliminar' ? 'privacidad' : scr, falta: s.falta, notifs: 3, featKey: ['entrada', 'pedido'].filter(k => s.dismissed.indexOf(k) < 0)[0] || 'verso',
+      onRow: (id, nav) => {
+        if (id === 'volver') return this.aviso('Vuelve a la pantalla anterior');
+        if (id === 'calendario') return this.aviso('Abre /gcx/calendario');
+        if (id === 'logout') return this.aviso('Cerrar sesión está en «Mi Cuenta - Inicio»');
+        if (SCR[id]) return this.ir(id);
+        if (nav) nav();
+      },
+      onDismiss: k => this.setState(st => ({ dismissed: st.dismissed.concat(k) })),
+      onPush: () => this.aviso('Los avisos se prueban en «Preferencias y seguridad»'),
+      onDark: () => this.setState(st => ({ dark: !st.dark })),
+      hayBack: mob || scr === 'eliminar',
+      volver: () => { if (scr === 'eliminar' && s.elim > 1 && s.elim < 4) return this.paso(s.elim - 1); if (desk) return this.ir('privacidad'); this.back(); },
+      roundBtn: 'width:44px; height:44px; flex:none; border:0; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center; cursor:pointer',
+      h2: desk ? '28px' : '24px', titulo: SCR[scr] || '', card,
+      rot: 'margin:30px 0 10px 6px; font-size:12px; font-weight:600; letter-spacing:.07em; color:' + t.m38,
+      miniRot: 'margin:0; font-size:11.5px; font-weight:700; letter-spacing:.07em; color:' + t.m50,
+      body: 'margin:4px 0 0; font-size:14.5px; line-height:1.5; font-weight:500; color:' + t.ink + '; text-wrap:pretty',
+      circle: 'width:36px; height:36px; flex:none; border-radius:999px; background:' + t.chip + '; color:' + t.ink + '; display:flex; align-items:center; justify-content:center',
+      rowBtn: 'width:100%; min-height:60px; display:flex; align-items:center; gap:14px; padding:10px 16px; border:0; background:transparent; color:' + t.ink + '; font:inherit; cursor:pointer',
+      secBtn: btnBase + '; min-height:48px; padding:0 20px; background:' + t.chip + '; color:' + t.ink,
+      secBtnSm: btnBase + '; flex:none; min-height:44px; padding:0 16px; font-size:14px; background:' + t.chip + '; color:' + t.ink,
+      secBtnRed: btnBase + '; min-height:48px; padding:0 20px; background:' + t.chip + '; color:' + t.redTxt,
+      primFull: btnBase + '; width:100%; background:' + t.prim + '; color:' + t.primInk,
+      primSm: btnBase + '; min-height:48px; padding:0 24px; background:' + t.prim + '; color:' + t.primInk,
+      ghostBtn: btnBase + '; background:transparent; color:' + t.ink,
+      spinTrack: dk ? 'rgba(0,0,0,.25)' : 'rgba(255,255,255,.3)',
+      errTxt: 'display:flex; align-items:flex-start; gap:8px; margin:9px 0 0 4px; font-size:13.5px; line-height:1.45; font-weight:600; color:' + t.ink,
+      errDot: 'width:20px; height:20px; flex:none; border-radius:999px; background:' + t.ink + '; color:' + t.bg + '; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700',
+      area,
+
+      vPriv: scr === 'privacidad',
+      cats: CATS.map((c, i) => ({ n: c[0], icon: c[1], res: c[2], que: c[3], para: c[4], quien: c[5], open: !!s.open[i], aria: s.open[i] ? 'true' : 'false', bt: i ? '1px solid ' + t.line : '0',
+        chev: 'flex:none; color:' + t.m50 + '; transition:transform .25s ease; transform:rotate(' + (s.open[i] ? 180 : 0) + 'deg)',
+        toggle: () => this.setState(st => ({ open: Object.assign({}, st.open, { [i]: !st.open[i] }) })) })),
+      pedirAcceso: () => this.abrirSol('acceso'), pedirCorreccion: () => this.abrirSol('rect'),
+      editarPerfil: () => { window.location.href = encodeURI('Mi Cuenta - Inicio.dc.html') + '#s=perfil&m=' + (desk ? 'pc' : 'm') + '&d=' + (dk ? 1 : 0); },
+      irEliminar: () => this.pushE(),
+      haySolic: solic.length > 0, sinSolic: !solic.length,
+      solic: solic.map((q, i) => ({ n: q.n, tipo: q.tipo, fecha: q.fecha, est: estTxt[q.est], pill: estPill[q.est], bt: i ? '1px solid ' + t.line : '0', anim: q.nuevo ? 'mcFa .4s ease' : 'none' })),
+
+      vElim: scr === 'eliminar', elimProgreso: s.elim < 4, elimPaso: Math.min(s.elim, 3),
+      elimBar: [1, 2, 3].map(i => ({ st: 'height:5px; border-radius:999px; transition:background-color .3s ease; background:' + (i <= s.elim ? t.ink : t.chip) })),
+      stepAnim: s.stepN ? 'mcStep' + (s.stepN % 2 ? 'A' : 'B') + ' .3s ease both' : 'none',
+      e1: s.elim === 1, e2: s.elim === 2, e3: s.elim === 3, e4: s.elim === 4,
+      consecuencias: [[IC.groups, 'Salís de tus grupos', 'Tus anfitriones dejan de verte en la lista de Mujeres de Fe y Jóvenes Norte.'], [IC.ticket, 'Se cancelan tus inscripciones a eventos que no pasaron', 'Incluye la de Nocturna 2026 de Tomás y Valentina.'], [IC.out, 'Perdés el acceso a la app', 'No vas a poder entrar con esta cuenta ni ver tu historial.']].map((c, i) => ({ icon: c[0], t: c[1], d: c[2], bt: i ? '1px solid ' + t.line : '0' })),
+      conserva: [['Registros de compras y comprobantes', 'La ley contable y fiscal nos obliga a guardarlos hasta 10 años. Quedan separados de tu cuenta y solo los ve administración.'], ['El número de esta solicitud', 'Como constancia de que pediste la eliminación y de cuándo la resolvimos.']].map(c => ({ t: c[0], d: c[1] })),
+      elimSig: () => this.paso(s.elim + 1),
+      motivos: motivos.map((m, i) => ({ t: m, aria: s.motivo === i ? 'true' : 'false', bt: i ? '1px solid ' + t.line : '0', pick: () => this.setState({ motivo: i }),
+        radio: 'width:22px; height:22px; flex:none; border-radius:999px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 2px ' + (s.motivo === i ? t.ink : t.m38),
+        inner: 'width:10px; height:10px; border-radius:999px; background:' + t.ink + '; transition:transform .18s ease; transform:scale(' + (s.motivo === i ? 1 : 0) + ')' })),
+      esOtro: s.motivo === 4, otroTxt: s.otroTxt, onOtro: e => this.setState({ otroTxt: e.target.value }),
+      elimTxt: s.elimTxt, onElim: e => this.setState({ elimTxt: e.target.value }),
+      elimInput: 'width:100%; height:56px; margin-top:8px; padding:0 16px; border-radius:16px; border:2px solid ' + (elimOk ? t.redTxt : 'transparent') + '; background:' + t.surf + '; color:' + t.ink + '; font:600 18px \'JetBrains Mono\',ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; outline:none',
+      elimNo: !elimOk || s.elimSt === 'sending',
+      redBtn: btnBase + '; width:100%; background:' + t.redBtn + '; color:#fff; opacity:' + (elimOk ? 1 : .35) + '; cursor:' + (elimOk ? 'pointer' : 'default'),
+      elimEnviando: s.elimSt === 'sending', elimBtnTxt: s.elimSt === 'sending' ? 'Enviando…' : 'Solicitar eliminación',
+      solicitarElim: () => {
+        if (!elimOk) return;
+        this.setState({ elimSt: 'sending' });
+        this.later(() => this.setState(st => { const n = String(st.nextN).padStart(4, '0'); return { elimSt: 'idle', elim: 4, stepN: st.stepN + 1, elimN: st.nextN, nextN: st.nextN + 1, solic: [{ n, tipo: 'Eliminar mi cuenta', fecha: '22 oct 2026', est: 'rec', nuevo: true }].concat(st.solic) }; }), 1200);
+      },
+      cancelarElim: () => desk ? this.ir('privacidad') : this.back(),
+      elimN: String(s.elimN || s.nextN).padStart(4, '0'),
+      volverPriv: () => desk ? this.ir('privacidad') : this.back(),
+
+      vTerm: scr === 'terminos',
+      secTerm: TERM.map((x, i) => ({ n: i + 1, t: x[0], ps: x[1], id: 'mc-t' + i,
+        jump: () => { const c = this.scrollRef.current, el = c && c.querySelector('#mc-t' + i); if (c && el) c.scrollTo({ top: el.offsetTop - 12, behavior: 'smooth' }); } })),
+      arriba: () => { const c = this.scrollRef.current; if (c) c.scrollTo({ top: 0, behavior: 'smooth' }); },
+      onScroll: e => { const y = e.currentTarget.scrollTop; if ((y > 500) !== (s.scrollY > 500)) this.setState({ scrollY: y }); },
+      hayArriba: scr === 'terminos' && s.scrollY > 500,
+
+      vTut: scr === 'tutoriales',
+      tuts: [['Cómo encontrar tu GCX', '2 min', IC.groups], ['Inscribir a tus hijos a un evento', '3 min', IC.ticket], ['Comprar remeras y buzos', '2 min', IC.bag], ['Activar los avisos en tu celular', '1 min', IC.bell], ['Si sos anfitrión: tomar asistencia', '4 min', IC.play]].map((u, i) => ({ t: u[0], dur: u[1], icon: u[2], visto: !!s.vistos[i], bt: i ? '1px solid ' + t.line : '0',
+        go: () => { this.aviso('Abre el tutorial «' + u[0] + '»'); this.later(() => this.setState(st => ({ vistos: Object.assign({}, st.vistos, { [i]: true }) })), 600); } })),
+      vistoPill: pill(t.greenBg, t.greenTxt, 'gap:4px'),
+
+      vCont: scr === 'contacto', contCols: desk ? 'repeat(2,minmax(0,1fr))' : 'minmax(0,1fr)',
+      contCard: card + '; display:flex; flex-direction:column; align-items:flex-start; padding:18px; border:0; color:' + t.ink + '; font:inherit; text-align:left; cursor:pointer',
+      abrirWa: () => this.aviso('Abre WhatsApp con +54 9 11 0000 0000'), abrirMail: () => this.aviso('Abre el correo a contacto@origeniglesia.org'), comoLlegar: () => this.aviso('Abre el mapa con Av. Eva Perón 3932'),
+
+      vRep: scr === 'reportar', repOk: s.repSt === 'ok', repForm: s.repSt !== 'ok',
+      repTxt: s.repTxt, onRep: e => this.setState({ repTxt: e.target.value }), eRep: repErr,
+      repArea: area.replace('border:2px solid transparent', 'border:2px solid ' + (repErr ? t.ink : 'transparent')),
+      pantallas: ['Inicio', 'Grupos', 'Eventos', 'Compras', 'Mi cuenta', 'Otra'].map((p, i) => ({ t: p, aria: s.repPant === i ? 'true' : 'false', pick: () => this.setState({ repPant: i }),
+        st: 'min-height:44px; padding:0 16px; border:0; border-radius:999px; background:' + (s.repPant === i ? t.prim : t.chip) + '; color:' + (s.repPant === i ? t.primInk : t.ink) + '; font:inherit; font-size:14.5px; font-weight:600; cursor:pointer; transition:background-color .15s ease' })),
+      sinCaptura: !s.captura, hayCaptura: !!s.captura, capturaBg: s.captura ? 'url("' + s.captura + '")' : 'transparent', capturaNombre: s.capturaNombre,
+      dropZone: 'position:relative; display:flex; align-items:center; justify-content:center; gap:8px; min-height:56px; margin-top:10px; border-radius:16px; box-shadow:inset 0 0 0 1.5px ' + t.dash + '; color:' + t.ink + '; font-size:14.5px; font-weight:600; cursor:pointer',
+      onCaptura: e => { const f = e.target.files && e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => this.setState({ captura: r.result, capturaNombre: f.name }); r.readAsDataURL(f); e.target.value = ''; },
+      quitarCaptura: () => this.setState({ captura: null, capturaNombre: '' }),
+      repFalla: s.repSt === 'error', repEnviando: s.repSt === 'sending', repBtnTxt: s.repSt === 'sending' ? 'Enviando…' : s.repSt === 'error' ? 'Probar de nuevo' : 'Enviar',
+      enviarRep: () => {
+        if (s.repTxt.trim().length < 10) { this.setState({ repTried: true }); return; }
+        this.setState({ repSt: 'sending' });
+        this.later(() => this.setState(st => st.fallaRep ? { repSt: 'error' } : { repSt: 'ok', repTxt: '', repPant: null, captura: null, repTried: false }), 1200);
+      },
+      otroReporte: () => this.setState({ repSt: 'idle' }),
+
+      vSobre: scr === 'sobre', version: s.version,
+      updIdle: s.upd === 'idle', updBuscando: s.upd === 'buscando', updUltima: s.upd === 'ultima', updNueva: s.upd === 'nueva', updError: s.upd === 'error',
+      updBtnShow: s.upd !== 'buscando' && s.upd !== 'nueva', updBtnTxt: s.upd === 'error' ? 'Probar de nuevo' : 'Buscar actualización',
+      buscarUpd: () => { this.setState({ upd: 'buscando' }); this.later(() => this.setState(st => ({ upd: st.updResp })), 1400); },
+      actualizar: () => { this.setState({ upd: 'buscando' }); this.later(() => { this.setState({ upd: 'ultima', updResp: 'ultima', version: '2.15.0' }); this.aviso('Listo, ya tenés la versión 2.15'); }, 1600); },
+
+      haySheet: !!s.sheet,
+      overlay: 'position:absolute; inset:0; z-index:40; background:' + t.overlay + '; display:flex; animation:mcFa .2s ease; ' + (desk ? 'align-items:center; justify-content:center' : 'align-items:flex-end'),
+      panel: 'max-height:92%; overflow-y:auto; background:' + t.card + '; color:' + t.ink + '; ' + (desk ? 'width:480px; border-radius:28px; padding:28px 24px 24px; box-shadow:0 24px 60px rgba(0,0,0,.22); animation:mcPop .2s ease-out' : 'width:100%; border-radius:28px 28px 0 0; padding:0 18px 30px; animation:mcSheet .3s cubic-bezier(.2,.9,.3,1)'),
+      solForm: s.solSt !== 'ok', solOk: s.solSt === 'ok', solN: s.solN,
+      solTipo: s.solTipo === 'acceso' ? 'Acceso a mis datos' : 'Corrección de datos',
+      solAyuda: s.solTipo === 'acceso' ? 'Te mandamos una copia de todos tus datos. Te respondemos en hasta 10 días corridos.' : 'Contanos qué dato está mal y cuál es el correcto. Te respondemos en hasta 5 días hábiles.',
+      solTxt: s.solTxt, onSol: e => this.setState({ solTxt: e.target.value }),
+      solEnviando: s.solSt === 'sending', solBtnTxt: s.solSt === 'sending' ? 'Enviando…' : 'Enviar solicitud',
+      enviarSol: () => {
+        if (s.solSt === 'sending') return;
+        this.setState({ solSt: 'sending' });
+        this.later(() => this.setState(st => { const n = String(st.nextN).padStart(4, '0'); return { solSt: 'ok', solN: n, nextN: st.nextN + 1, solic: [{ n, tipo: st.solTipo === 'acceso' ? 'Acceso a mis datos' : 'Corrección', fecha: '22 oct 2026', est: 'rec', nuevo: true }].concat(st.solic) }; }), 1100);
+      },
+      cerrarSheet: () => this.setState({ sheet: null }), stop: e => e.stopPropagation(),
+      dragStart: ev => { this.dY = ev.clientY; this.dDy = 0; try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch (x) {} if (this.sheetRef.current) this.sheetRef.current.style.transition = 'none'; },
+      dragMove: ev => { if (this.dY == null) return; const dy = Math.max(0, ev.clientY - this.dY); this.dDy = dy; if (this.sheetRef.current) this.sheetRef.current.style.transform = 'translateY(' + dy + 'px)'; },
+      dragEnd: () => { if (this.dY == null) return; const dy = this.dDy; this.dY = null; const el = this.sheetRef.current; if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = dy > 90 ? 'translateY(100%)' : ''; } if (dy > 90) this.later(() => this.setState({ sheet: null }), 180); },
+      hayToast: !!s.toast, toastTxt: s.toast ? s.toast.txt : ''
+    };
+  }
+}
+</script>
+</body>
+</html>
