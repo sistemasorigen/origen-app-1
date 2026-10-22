@@ -19,6 +19,7 @@ import UsuariosAdmin from './UsuariosAdmin';
 import FichaUsuarioAdmin, { AreaVoluntario, DatosCuenta } from './FichaUsuarioAdmin';
 import DirectorioAdmin from './DirectorioAdmin';
 import ConfiguracionApp, { SubSeccion } from './ConfiguracionApp';
+import BandejaDeDatos from './BandejaDeDatos';
 
 /**
  * Administración general (design-claude/Admin General).
@@ -33,7 +34,7 @@ import ConfiguracionApp, { SubSeccion } from './ConfiguracionApp';
  * solo cambia por dónde se llega a ellas.
  */
 
-type Seccion = 'usuarios' | 'directorio' | 'config' | 'auditoria';
+type Seccion = 'usuarios' | 'directorio' | 'config' | 'auditoria' | 'datos';
 
 const safeUUID = () => {
     // Respaldo para contextos no seguros (http://IP), donde crypto.randomUUID
@@ -116,6 +117,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             leaders: 'directorio', directorio: 'directorio',
             config: 'config',
             logs: 'auditoria', auditoria: 'auditoria',
+            datos: 'datos',
         };
         if (tab && equivalencias[tab]) setSeccion(equivalencias[tab]);
     }, [searchParams]);
@@ -447,6 +449,9 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                 <button onClick={() => irA('auditoria')} className={botonNav(seccion === 'auditoria')}>
                                     Auditoría
                                 </button>
+                                <button onClick={() => irA('datos')} className={botonNav(seccion === 'datos')}>
+                                    Datos y reportes
+                                </button>
                             </>
                         )}
                     </div>
@@ -454,6 +459,8 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             </header>
 
             <div className="mx-auto max-w-[1360px] px-3.5 pb-[26px] pt-3.5 md:px-[26px] md:pb-[30px] md:pt-[18px]">
+
+                {seccion === 'datos' && <BandejaDeDatos userId={currentUser?.id} />}
 
                 {seccion === 'usuarios' && !abierto && !creando && (
                     <UsuariosAdmin

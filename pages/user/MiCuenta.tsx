@@ -20,6 +20,12 @@ import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useTema } from '../../contexts/TemaContext';
 import EditarPerfil, { CAMPOS_REQUERIDOS } from './miCuenta/EditarPerfil';
 import CuentaYSeguridad from './miCuenta/CuentaYSeguridad';
+import Privacidad from './miCuenta/Privacidad';
+import { Contacto, Reportar, SobreLaApp, Terminos, Tutoriales } from './miCuenta/Ayuda';
+import {
+    DetalleCompra, DetalleInscripcion, DondeSirvo, Historial, MisCompras,
+    MisGrupos, MisInscripciones,
+} from './miCuenta/MiVida';
 
 declare const __BUILD_VERSION__: string;
 
@@ -314,8 +320,46 @@ const MiCuenta: React.FC = () => {
             return <CuentaYSeguridad onVolver={esAncha ? undefined : volver} avisar={avisar} />;
         }
 
-        // Prompts 3 y 5. La ruta existe y el título también: lo único que
-        // falta es el contenido, y se dice en vez de mostrar una página en
+        if (seccion === 'privacidad') {
+            // El flujo de baja cuelga de Privacidad y viaja en la URL, asi que
+            // recargar en el medio no devuelve a una pantalla que no existe.
+            return (
+                <Privacidad
+                    modo={id === 'eliminar' ? 'eliminar' : 'privacidad'}
+                    onVolver={esAncha && id !== 'eliminar' ? undefined : volver}
+                    avisar={avisar}
+                    onIrAEliminar={() => navigate('/perfil/privacidad/eliminar')}
+                    onVolverAPrivacidad={() => navigate('/perfil/privacidad')}
+                />
+            );
+        }
+
+        if (seccion === 'grupos') return <MisGrupos onVolver={esAncha ? undefined : volver} />;
+        if (seccion === 'historial') return <Historial onVolver={esAncha ? undefined : volver} />;
+        if (seccion === 'servicio') return <DondeSirvo onVolver={esAncha ? undefined : volver} />;
+
+        if (seccion === 'compras') {
+            return id
+                ? <DetalleCompra id={id} onVolver={() => navigate('/perfil/compras')} />
+                : <MisCompras onVolver={esAncha ? undefined : volver}
+                    onAbrir={c => navigate(`/perfil/compras/${c}`)} />;
+        }
+
+        if (seccion === 'inscripciones') {
+            return id
+                ? <DetalleInscripcion id={id} onVolver={() => navigate('/perfil/inscripciones')} />
+                : <MisInscripciones onVolver={esAncha ? undefined : volver}
+                    onAbrir={i => navigate(`/perfil/inscripciones/${i}`)} />;
+        }
+
+        if (seccion === 'terminos') return <Terminos onVolver={esAncha ? undefined : volver} />;
+        if (seccion === 'tutoriales') return <Tutoriales onVolver={esAncha ? undefined : volver} />;
+        if (seccion === 'contacto') return <Contacto onVolver={esAncha ? undefined : volver} />;
+        if (seccion === 'reportar') return <Reportar onVolver={esAncha ? undefined : volver} avisar={avisar} />;
+        if (seccion === 'app') return <SobreLaApp onVolver={esAncha ? undefined : volver} />;
+
+        // Las cinco de "Mi vida en Origen" todavía no están. La ruta existe
+        // y el título también: se dice, en vez de mostrar una página en
         // blanco que parece rota.
         return (
             <>
