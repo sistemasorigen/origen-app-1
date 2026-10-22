@@ -52,7 +52,7 @@ import PastoralCareForm from './pages/audiencia/AudienciaServiciosFormulario';
 import Notifications from './pages/user/Notificaciones';
 import PastoralCareDashboard from './pages/audiencia/AudienciaServiciosPrincipal';
 import AudienciaServicioDetalle from './pages/audiencia/AudienciaServicioDetalle';
-import ProfilePage from './pages/user/PaginaPerfil';
+import MiCuenta from './pages/user/MiCuenta';
 import Prode from './pages/prode/Prode';
 import AdminProde from './pages/prode/AdminProde';
 import ProdeRanking from './pages/prode/ProdeRanking';
@@ -1440,7 +1440,9 @@ const AppContent: React.FC = () => {
                                         : <SinAcceso />
                                 } />
                                 <Route path="/notificaciones" element={<Notifications />} />
-                                <Route path="/perfil" element={<ProfilePage />} />
+                                <Route path="/perfil" element={<MiCuenta />} />
+                                <Route path="/perfil/:seccion" element={<MiCuenta />} />
+                                <Route path="/perfil/:seccion/:id" element={<MiCuenta />} />
                                 <Route path="*" element={<Navigate to="/" />} />
                             </Routes>
                         </Layout>
