@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../services/supabaseClient';
-import { codigoReporte, crearReporte, describirDispositivo } from '../../../services/miCuenta';
+import {
+    codigoReporte, crearReporte, describirDispositivo, LIMITE_REPORTES_POR_DIA, reportesDeHoy,
+} from '../../../services/miCuenta';
 import {
     BotonPrimario, BotonSecundario, EncabezadoSubpagina, ESTILO_TARJETA,
     Girito, Icono, ICONOS, Panel, Rotulo, TARJETA,
@@ -222,7 +224,14 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
     // La confirmación con el código (design-claude/Panel Admin - Reportes,
     // "Confirmación al usuario"). Con el código la persona puede referirse a
     // su reporte si después escribe por WhatsApp.
-    const [confirmado, setConfirmado] = useState<{ codigo: string; sinCaptura: boolean } | null>(null);
+    const [confirmado, setConfirmado] = useState<{ codigo: string; sinCaptura: boolean; restantes: number } | null>(null);
+    // Cuántos mandó hoy. Hay un tope de 3 por día (sql/reportes_limite_diario.sql):
+    // se avisa antes, para que nadie escriba todo y recién ahí se entere.
+    // null = todavía no se sabe; el tope igual lo hace cumplir la base.
+    const [deHoy, setDeHoy] = useState<number | null>(null);
+    useEffect(() => { reportesDeHoy().then(setDeHoy); }, []);
+    const restantes = deHoy === null ? null : Math.max(0, LIMITE_REPORTES_POR_DIA - deHoy);
+    const sinCupo = restantes === 0;
     const [codigoCopiado, setCodigoCopiado] = useState(false);
     const campoTexto = useRef<HTMLTextAreaElement>(null);
 
@@ -240,6 +249,7 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
     const corta = estado === 'intentado' && texto.trim().length < 10;
 
     const enviar = async () => {
+        if (sinCupo) return;
         if (texto.trim().length < 10) { setEstado('intentado'); return; }
         setEstado('enviando');
         const r = await crearReporte({
@@ -251,13 +261,23 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
             dispositivo,
         });
         // Con error no hay panel: el texto queda donde estaba.
-        if (!r.ok) { setEstado('error'); return; }
+        if (!r.ok) {
+            // El tope lo decidió la base: se muestra el aviso del límite, no
+            // un error de conexión.
+            if (r.motivo === 'limite_diario') { setDeHoy(LIMITE_REPORTES_POR_DIA); setEstado('quieto'); return; }
+            setEstado('error');
+            return;
+        }
+        const quedan = typeof r.datos?.restantes === 'number'
+            ? r.datos.restantes
+            : Math.max(0, LIMITE_REPORTES_POR_DIA - ((deHoy ?? 0) + 1));
+        setDeHoy(LIMITE_REPORTES_POR_DIA - quedan);
         setEstado('quieto');
         // El formulario se vacía ya: cerrar el panel de cualquier forma no
         // puede dejar el mismo reporte listo para mandarse otra vez.
         setTexto(''); setPantalla(null); setCaptura(null); setNombreCaptura(''); setVistaCaptura(null);
         setCodigoCopiado(false);
-        setConfirmado({ codigo: codigoReporte(r.datos!.numero), sinCaptura: !!r.datos?.sinCaptura });
+        setConfirmado({ codigo: codigoReporte(r.datos!.numero), sinCaptura: !!r.datos?.sinCaptura, restantes: quedan });
     };
 
     const copiarCodigo = async () => {
@@ -382,6 +402,23 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
                 </p>
             </div>
 
+            {sinCupo ? (
+                <div role="alert" className="flex gap-2.5 items-start mt-3.5 px-4 py-3.5 rounded-[18px]"
+                    style={{ background: 'var(--mc-amber-bg)', color: 'var(--mc-amber-ink)' }}>
+                    <Icono d="M12 4l9 16H3zM12 10v4M12 17h.01" tam={18} grosor={2} />
+                    <p className="m-0 text-[14.5px] leading-[1.45] font-semibold">
+                        Ya mandaste {LIMITE_REPORTES_POR_DIA} reportes hoy, que es el máximo por día. Mañana podés mandar otro.
+                    </p>
+                </div>
+            ) : (
+                <p className="mt-3.5 mb-0 px-1 text-[13.5px] leading-[1.45] font-medium" style={{ color: 'var(--mc-m66)' }}>
+                    Podés mandar hasta {LIMITE_REPORTES_POR_DIA} reportes por día
+                    {restantes !== null && restantes < LIMITE_REPORTES_POR_DIA
+                        ? `. Hoy te ${restantes === 1 ? 'queda 1' : `quedan ${restantes}`}.`
+                        : '.'}
+                </p>
+            )}
+
             {estado === 'error' && (
                 <div role="alert" className="flex gap-2.5 items-start mt-3.5 px-4 py-3.5 rounded-[18px]"
                     style={{ boxShadow: 'inset 0 0 0 2px var(--mc-ink)' }}>
@@ -393,7 +430,7 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
                 </div>
             )}
 
-            <BotonPrimario ancho onClick={enviar} disabled={estado === 'enviando'} className="mt-4">
+            <BotonPrimario ancho onClick={enviar} disabled={estado === 'enviando' || sinCupo} className="mt-4">
                 {estado === 'enviando' && <Girito sobreOscuro />}
                 {estado === 'enviando' ? 'Enviando…' : estado === 'error' ? 'Probar de nuevo' : 'Enviar'}
             </BotonPrimario>
@@ -432,9 +469,16 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
                         <p className="mt-4 mb-0 max-w-[340px] text-[15px] leading-[1.5] [text-wrap:pretty]" style={{ color: 'var(--mc-m66)' }}>
                             Lo vamos a revisar. Si necesitamos más datos, te escribimos.
                         </p>
+                        <p className="mt-2 mb-0 max-w-[340px] text-[13.5px] leading-[1.45] font-medium" style={{ color: 'var(--mc-m50)' }}>
+                            {confirmado.restantes === 0
+                                ? `Ya usaste los ${LIMITE_REPORTES_POR_DIA} reportes de hoy. Mañana podés mandar más.`
+                                : `Hoy te ${confirmado.restantes === 1 ? 'queda 1 reporte' : `quedan ${confirmado.restantes} reportes`} (máximo ${LIMITE_REPORTES_POR_DIA} por día).`}
+                        </p>
                         <div className="mt-6 w-full flex flex-col gap-2">
                             <BotonPrimario ancho onClick={listo}>Listo</BotonPrimario>
-                            <BotonSecundario ancho onClick={enviarOtro}>Enviar otro</BotonSecundario>
+                            {confirmado.restantes > 0 && (
+                                <BotonSecundario ancho onClick={enviarOtro}>Enviar otro</BotonSecundario>
+                            )}
                         </div>
                     </div>
                 )}

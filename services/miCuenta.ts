@@ -511,7 +511,7 @@ export const crearReporte = async (opciones: {
     userId: string;
     versionApp?: string | null;
     dispositivo?: string | null;
-}): Promise<Resultado<{ id: string; numero: string; sinCaptura?: boolean }>> => {
+}): Promise<Resultado<{ id: string; numero: string; sinCaptura?: boolean; restantes?: number }>> => {
     const { descripcion, pantalla, captura, userId, versionApp, dispositivo } = opciones;
     let path: string | null = null;
     let sinCaptura = false;
@@ -531,13 +531,35 @@ export const crearReporte = async (opciones: {
             p_dispositivo: dispositivo ?? null,
         });
         if (error) throw error;
-        const r = deLaRpc<{ id: string; numero: string }>(data);
-        if (!r.ok) return r as Resultado<{ id: string; numero: string; sinCaptura?: boolean }>;
+        const r = deLaRpc<{ id: string; numero: string; restantes?: number }>(data);
+        if (!r.ok) {
+            // Rechazado (por ejemplo, el tope de 3 por día): la captura ya
+            // subió y no va a tener reporte. Se borra para no dejarla huérfana.
+            if (path) await supabase.storage.from(BUCKET_CAPTURAS).remove([path]).catch(() => { /* queda, no rompe nada */ });
+            return r as Resultado<{ id: string; numero: string; sinCaptura?: boolean; restantes?: number }>;
+        }
         return { ok: true, datos: { ...r.datos!, sinCaptura } };
     } catch (err) {
         aviso('crearReporte', err);
         return falla('sin_conexion');
     }
+};
+
+/** Cuántos reportes por día puede mandar una persona (crear_reporte_problema). */
+export const LIMITE_REPORTES_POR_DIA = 3;
+
+/** La fecha de hoy en Argentina, "2026-10-22": el día del tope. */
+const diaArgentino = (d: Date) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+
+/**
+ * Cuántos reportes mandó hoy la persona. Es sólo para avisarle antes: el
+ * tope lo hace cumplir la base (sql/reportes_limite_diario.sql).
+ */
+export const reportesDeHoy = async (): Promise<number> => {
+    const hoy = diaArgentino(new Date());
+    const mios = await misReportes();
+    return mios.filter(r => diaArgentino(new Date(r.createdAt)) === hoy).length;
 };
 
 /** Lo que el navegador puede contar de sí mismo, para el reporte. */
