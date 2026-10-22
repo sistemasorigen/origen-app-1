@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:28px 28px 64px; display:flex; flex-direction:column; gap:22px">
+  <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; background:#fff; border-radius:24px; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1100px">
+    <div style="display:flex; flex-direction:column; gap:3px; min-width:0; flex:1 1 320px">
+      <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ASUNTO</span>
+      <span style="font-size:15px; font-weight:600; color:#0a0a0a">{{ asunto }}</span>
+      <span style="font-size:13px; font-weight:500; color:rgba(0,0,0,.55); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ pre }}</span>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px">
+      <button onClick="{{ setCorto }}" style="{{ bCorto }}">Texto normal</button>
+      <button onClick="{{ setLargo }}" style="{{ bLargo }}">Texto muy largo</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px">
+      <button onClick="{{ setCap }}" style="{{ bCap }}">Con captura</button>
+      <button onClick="{{ setSinCap }}" style="{{ bSinCap }}">Sin captura</button>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px">
+      <button onClick="{{ setDatos }}" style="{{ bDatos }}">Datos de ejemplo</button>
+      <button onClick="{{ setVars }}" style="{{ bVars }}">Variables</button>
+    </div>
+    <button onClick="{{ copiarHtml }}" style="height:40px; padding:0 16px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer">{{ copyLbl }}</button>
+  </div>
+
+  <div style="display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start">
+    <sc-for list="{{ vistas }}" as="v" hint-placeholder-count="3">
+      <div style="display:flex; flex-direction:column; gap:10px; flex:none">
+        <div style="display:flex; align-items:center; gap:8px">
+          <span style="height:26px; padding:0 10px; border-radius:999px; background:#0a0a0a; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center">{{ v.id }}</span>
+          <span style="font-size:13px; font-weight:600; color:rgba(0,0,0,.62)">{{ v.t }}</span>
+        </div>
+        <iframe title="{{ v.t }}" srcDoc="{{ v.html }}" onLoad="{{ fitFrame }}" style="width:{{ v.w }}; height:900px; border:0; border-radius:{{ v.r }}; background:#e9e7e3; box-shadow:0 6px 24px rgba(0,0,0,.12); display:block"></iframe>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+const MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Courier New',monospace";
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const br = s => esc(s).replace(/\n/g,'<br>');
+const CORTO = 'No me deja tomar asistencia el jueves. Toco "Guardar" y queda cargando un rato largo, después dice que no se pudo guardar.\n\nPasó en el grupo Mujeres de Fe. Probé dos veces, cerré la app y volví a entrar y sigue igual.';
+const LARGO = 'Hola, quería avisarles de algo que me pasó el domingo en el Punto de Información.\n\nFui a retirar el kit de bienvenida y la chica que me atendió buscó mi nombre en la app pero no me encontraba. Yo me había registrado el miércoles con mi cuenta de Google y en mi celular figura todo bien, incluso tengo la foto y los datos completos.\n\nDespués de un rato probamos con mi email y ahí sí apareció, pero con otro apellido (el de mi mamá, que es con el que me anotaron cuando era chica en el grupo de adolescentes). O sea que creo que hay dos cuentas mías: una vieja y la nueva.\n\nNo sé si se pueden unir o si tengo que borrar una. Tampoco sé cuál es la que tiene mi historial de grupos. Les mando una captura de cómo me aparece en el perfil.\n\nGracias por todo lo que hacen, la app está buenísima.';
+
+function emailHtml(d, forceDark){
+  const row = (k, v, first) => `<tr><td class="lbl muted" width="112" valign="top" style="padding:${first?'0':'12px'} 12px 0 0;width:112px;font-family:${SANS};font-size:11px;line-height:18px;mso-line-height-rule:exactly;letter-spacing:0.07em;font-weight:700;color:#6f6d68;text-transform:uppercase">${k}</td><td class="val ink" valign="top" style="padding:${first?'0':'12px'} 0 0;font-family:${SANS};font-size:14.5px;line-height:20px;mso-line-height-rule:exactly;font-weight:600;color:#0a0a0a;word-break:break-word">${v}</td></tr>`;
+  const capTxt = d.tieneCaptura===true ? 'Captura: sí, adjunta en el panel' : d.tieneCaptura===false ? 'Sin captura' : d.tieneCaptura;
+  const contacto = `${esc(d.nombre)}<br><a href="mailto:${esc(d.email)}" class="ink" style="color:#0a0a0a;font-weight:500;text-decoration:underline">${esc(d.email)}</a>${d.telefono ? `<br><span class="muted" style="font-weight:500;color:#6f6d68">${esc(d.telefono)}</span>` : `<br><span class="muted" style="font-weight:500;color:#6f6d68">Sin teléfono</span>`}`;
+  return `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">
+<title>Nuevo reporte ${esc(d.codigo)} · ${esc(d.pantalla)}</title>
+<!--[if mso]><style>body,table,td,a,p{font-family:Arial,Helvetica,sans-serif !important}</style><![endif]-->
+<style>
+:root{color-scheme:light dark;supported-color-schemes:light dark}
+@media (max-width:620px){.px{padding-left:20px !important;padding-right:20px !important}.code{font-size:30px !important;line-height:36px !important}.lbl{width:92px !important}}
+@media (prefers-color-scheme:dark){.canvas,.canvas td.canvas{background-color:#141413 !important}td.card,.card{background-color:#1c1c1a !important}td.soft,.soft{background-color:#262624 !important}.ink{color:#f4f3f0 !important}.muted{color:#a8a6a1 !important}td.btn,.btn{background-color:#f4f3f0 !important}.btn a{color:#0a0a0a !important}td.tag,.tag{background-color:#3a1f1c !important}.tagink{color:#ff9d92 !important}.rule{border-top-color:#2f2f2c !important}}
+${forceDark ? `.canvas,.canvas td.canvas{background-color:#141413 !important}td.card,.card{background-color:#1c1c1a !important}td.soft,.soft{background-color:#262624 !important}.ink{color:#f4f3f0 !important}.muted{color:#a8a6a1 !important}td.btn,.btn{background-color:#f4f3f0 !important}.btn a{color:#0a0a0a !important}td.tag,.tag{background-color:#3a1f1c !important}.tagink{color:#ff9d92 !important}.rule{border-top-color:#2f2f2c !important}` : ''}
+</style></head>
+<body class="canvas" bgcolor="#e9e7e3" style="margin:0;padding:0;background-color:#e9e7e3;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%">
+<span style="display:none !important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;max-height:0;overflow:hidden;mso-hide:all">${esc(d.preheader)}</span>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" class="canvas" bgcolor="#e9e7e3" style="background-color:#e9e7e3;width:100%"><tr><td class="canvas" align="center" style="padding:24px 12px 40px;background-color:#e9e7e3">
+<!--[if mso]><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600"><tr><td><![endif]-->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px">
+<tr><td class="px" style="padding:0 8px 14px">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+    <td class="ink" style="font-family:${SANS};font-size:16px;line-height:20px;font-weight:700;letter-spacing:-0.01em;color:#0a0a0a">Origen</td>
+    <td align="right" class="muted" style="font-family:${SANS};font-size:12px;line-height:16px;font-weight:600;color:#6f6d68">Sistemas · Reportes</td>
+  </tr></table>
+</td></tr>
+<tr><td class="card" bgcolor="#ffffff" style="background-color:#ffffff;border-radius:22px">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr><td class="px" style="padding:28px 32px 0">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td class="tag tagink" bgcolor="#fdecea" style="padding:6px 12px;background-color:#fdecea;border-radius:999px;font-family:${SANS};font-size:11px;line-height:14px;letter-spacing:0.07em;font-weight:700;color:#a8231a">NUEVO REPORTE</td></tr></table>
+    </td></tr>
+    <tr><td class="px code ink" style="padding:14px 32px 0;font-family:${MONO};font-size:36px;line-height:42px;mso-line-height-rule:exactly;font-weight:700;letter-spacing:-0.01em;color:#0a0a0a">${esc(d.codigo)}</td></tr>
+    <tr><td class="px muted" style="padding:6px 32px 0;font-family:${SANS};font-size:14px;line-height:20px;font-weight:500;color:#6f6d68">${esc(d.pantalla)} · ${esc(d.fecha)}</td></tr>
+    <tr><td class="px" style="padding:22px 32px 0">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" class="soft" bgcolor="#f2f2f0" style="background-color:#f2f2f0;border-radius:16px"><tr><td class="soft" style="padding:18px 18px;background-color:#f2f2f0;border-radius:16px">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+          ${row('Enviado por', contacto, true)}${row('Pantalla', esc(d.pantalla))}${row('Fecha y hora', esc(d.fecha))}${row('Versión', `<span style="font-family:${MONO};font-size:13px;font-weight:500">${esc(d.version)}</span>`)}${row('Dispositivo', `<span style="font-family:${MONO};font-size:13px;font-weight:500">${esc(d.dispositivo)}</span>`)}
+        </table>
+      </td></tr></table>
+    </td></tr>
+    <tr><td class="px muted" style="padding:26px 32px 0;font-family:${SANS};font-size:11px;line-height:14px;letter-spacing:0.07em;font-weight:700;color:#6f6d68">QUÉ PASÓ</td></tr>
+    <tr><td class="px ink" style="padding:10px 32px 0;font-family:${SANS};font-size:16px;line-height:25px;mso-line-height-rule:exactly;font-weight:400;color:#0a0a0a;word-break:break-word">${d.descripcionHtml}</td></tr>
+    <tr><td class="px" style="padding:22px 32px 0"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td class="rule" style="border-top:1px solid #ecebe8;font-size:0;line-height:0">&nbsp;</td></tr></table></td></tr>
+    <tr><td class="px ink" style="padding:16px 32px 0;font-family:${SANS};font-size:14.5px;line-height:20px;font-weight:600;color:#0a0a0a">${esc(capTxt)}</td></tr>
+    <tr><td class="px" style="padding:24px 32px 32px">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td class="btn" bgcolor="#0a0a0a" style="background-color:#0a0a0a;border-radius:999px">
+        <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${esc(d.linkPanel)}" style="height:50px;v-text-anchor:middle;width:220px" arcsize="50%" fillcolor="#0a0a0a" stroke="f"><center style="color:#ffffff;font-family:Arial;font-size:15px;font-weight:bold">Ver en el panel</center></v:roundrect><![endif]-->
+        <!--[if !mso]><!--><a href="${esc(d.linkPanel)}" style="display:inline-block;padding:15px 28px;font-family:${SANS};font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:999px">Ver en el panel &rarr;</a><!--<![endif]-->
+      </td></tr></table>
+    </td></tr>
+  </table>
+</td></tr>
+<tr><td class="px muted" align="center" style="padding:18px 20px 0;font-family:${SANS};font-size:12.5px;line-height:18px;font-weight:500;color:#6f6d68">Te llega porque sos parte de Sistemas de Origen.</td></tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+</td></tr></table>
+</body></html>`;
+}
+
+class Component extends DCLogic {
+  state = { largo:false, cap:true, vars:false, copied:false };
+  componentWillUnmount(){ clearTimeout(this.ct); }
+  data(){
+    const s = this.state;
+    if (s.vars) return { codigo:'{{codigo}}', nombre:'{{nombre}}', email:'{{email}}', telefono:'{{telefono}}', pantalla:'{{pantalla}}', fecha:'{{fecha}}', version:'{{version}}', dispositivo:'{{dispositivo}}', descripcionHtml:'{{descripcion}}', tieneCaptura:'{{#tieneCaptura}}Captura: sí, adjunta en el panel{{/tieneCaptura}}{{^tieneCaptura}}Sin captura{{/tieneCaptura}}', linkPanel:'{{linkPanel}}', preheader:'{{descripcion}}' };
+    const txt = s.largo ? LARGO : CORTO;
+    const base = s.largo
+      ? { codigo:'REP-0038', nombre:'Valentina Ruiz', email:'valen.ruiz@gmail.com', telefono:'11 2233 4455', pantalla:'Punto de Información', fecha:'19 oct 2026 · 13:22', version:'v2.14.0 (214)', dispositivo:'Xiaomi Redmi Note 12 · Android 13 · Chrome 128' }
+      : { codigo:'REP-0042', nombre:'Lucía Fernández', email:'lucia.fernandez@gmail.com', telefono:'11 4321 7766', pantalla:'Mis grupos', fecha:'22 oct 2026 · 11:05', version:'v2.14.0 (214)', dispositivo:'Samsung Galaxy A54 · Android 14 · Chrome 129' };
+    return { ...base, descripcionHtml:br(txt), tieneCaptura:s.cap, linkPanel:`https://app.origeniglesia.org/panel-admin/reportes?rep=${base.codigo}`, preheader: txt.replace(/\s+/g,' ').slice(0,110) + '…' };
+  }
+  renderVals(){
+    const s = this.state, d = this.data();
+    const seg = on => `height:32px; padding:0 12px; border:0; border-radius:15px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; font-family:Manrope; background:${on?'#0a0a0a':'transparent'}; color:${on?'#fff':'rgba(0,0,0,.62)'}`;
+    const light = emailHtml(d, false), dark = emailHtml(d, true);
+    return {
+      asunto:`Nuevo reporte ${d.codigo} · ${d.pantalla}`, pre: s.vars ? 'Preencabezado: primeras palabras de {{descripcion}}' : `Preencabezado: ${d.preheader}`,
+      bCorto:seg(!s.largo), bLargo:seg(s.largo), bCap:seg(s.cap), bSinCap:seg(!s.cap), bDatos:seg(!s.vars), bVars:seg(s.vars),
+      setCorto:()=>this.setState({largo:false}), setLargo:()=>this.setState({largo:true}), setCap:()=>this.setState({cap:true}), setSinCap:()=>this.setState({cap:false}), setDatos:()=>this.setState({vars:false}), setVars:()=>this.setState({vars:true}),
+      vistas:[ { id:'A', t:'Escritorio · 680 px', w:'680px', r:'14px', html:light }, { id:'B', t:'Celular · 390 px', w:'390px', r:'36px', html:light }, { id:'C', t:'Modo oscuro · 390 px', w:'390px', r:'36px', html:dark } ],
+      fitFrame: e => { try { const f = e.target, h = f.contentDocument.documentElement.scrollHeight; f.style.height = Math.max(400, h) + 'px'; } catch(err){} },
+      copyLbl: s.copied ? '¡HTML copiado!' : 'Copiar HTML (variables)',
+      copiarHtml:()=>{ const v = emailHtml({ ...this.data(), ...(this.state.vars ? {} : {}) }, false); const html = this.state.vars ? v : emailHtml((()=>{ const p = this.state.vars; this.state.vars = true; const x = this.data(); this.state.vars = p; return x; })(), false);
+        try { navigator.clipboard && navigator.clipboard.writeText(html); } catch(err){} this.setState({copied:true}); clearTimeout(this.ct); this.ct = setTimeout(()=>this.setState({copied:false}), 2000); },
+    };
+  }
+}
+</script>
+</body>
+</html>

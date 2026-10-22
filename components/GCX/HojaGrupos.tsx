@@ -67,7 +67,7 @@ const HojaGrupos: React.FC<Props> = ({ abierta, onCerrar, etiquetadaPor, ancha, 
     useEffect(() => {
         if (!abierta) return;
         focoPrevio.current = document.activeElement as HTMLElement;
-        const t = window.setTimeout(() => hojaRef.current?.focus(), 0);
+        const t = window.setTimeout(() => hojaRef.current?.focus({ preventScroll: true }), 0);
         const alTeclear = (e: KeyboardEvent) => {
             if (e.key === 'Escape') { cerrarRef.current(); return; }
             if (e.key !== 'Tab' || !hojaRef.current) return;

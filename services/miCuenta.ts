@@ -422,6 +422,17 @@ export const crearSolicitudDatos = async (
 
 export type EstadoDeReporte = 'nuevo' | 'visto' | 'resuelto';
 
+/**
+ * 'REP-0042'. Mismo formato que codigo_reporte() en SQL y que el email
+ * (supabase/functions/send-reporte-problema/armado.ts): cuatro dígitos como
+ * mínimo, y del 10000 en adelante el número entero. Acepta el número tal
+ * como lo devuelve crear_reporte_problema ('0042') o como entero.
+ */
+export const codigoReporte = (numero: number | string): string => {
+    const s = String(Number(numero));
+    return 'REP-' + (s.length >= 4 ? s : s.padStart(4, '0'));
+};
+
 export interface ReportePropio {
     id: string;
     numero: string;
@@ -550,14 +561,6 @@ export interface SolicitudAdmin extends SolicitudPropia {
     resueltaPor: string | null;
 }
 
-export interface ReporteAdmin extends ReportePropio {
-    userId: string;
-    capturaPath: string | null;
-    versionApp: string | null;
-    dispositivo: string | null;
-    notaInterna: string | null;
-}
-
 /**
  * Las solicitudes, todas. La RLS ya exige SUPER_ADMIN: si quien mira no lo es,
  * vuelve vacío en vez de error, que es lo correcto —no hay nada que contarle.
@@ -614,47 +617,92 @@ export const actualizarSolicitud = async (
     }
 };
 
-export const reportesAdmin = async (): Promise<ReporteAdmin[]> => {
+// ── /panel-admin/reportes ──────────────────────────────────────────────
+
+export interface ReporteSistemas {
+    id: string;
+    numero: number;
+    codigo: string;
+    descripcion: string;
+    pantalla: string | null;
+    capturaPath: string | null;
+    versionApp: string | null;
+    dispositivo: string | null;
+    estado: EstadoDeReporte;
+    notaInterna: string | null;
+    createdAt: string;
+    vistoAt: string | null;
+    resueltoAt: string | null;
+    reabiertoAt: string | null;
+    notaEditadaAt: string | null;
+    emailEnviadoAt: string | null;
+    /** Quién lo mandó. Los trae reportes_admin(), que sólo responde a SUPER_ADMIN. */
+    nombre: string | null;
+    email: string | null;
+    telefono: string | null;
+    /** Nombre de pila de quien lo gestionó, para el historial. */
+    vistoPor: string | null;
+    resueltoPor: string | null;
+    reabiertoPor: string | null;
+}
+
+/**
+ * Los reportes para Sistemas, con el contacto de quien los mandó
+ * (sql/reportes_sistemas.sql). `null` es "no se pudo traer", que no es lo
+ * mismo que una lista vacía: la pantalla muestra el error con Reintentar.
+ */
+export const reportesSistemas = async (): Promise<ReporteSistemas[] | null> => {
     try {
-        const { data, error } = await supabase
-            .from('reportes_problemas')
-            .select('*')
-            .order('created_at', { ascending: false });
+        const { data, error } = await supabase.rpc('reportes_admin');
         if (error) throw error;
-        return (data || []).map((r: any) => ({
+        return (Array.isArray(data) ? data : []).map((r: any) => ({
             id: r.id,
-            numero: String(r.numero).padStart(4, '0'),
-            descripcion: r.descripcion,
+            numero: Number(r.numero),
+            codigo: r.codigo || codigoReporte(r.numero),
+            descripcion: r.descripcion || '',
             pantalla: r.pantalla ?? null,
-            estado: r.estado,
-            createdAt: r.created_at,
-            userId: r.user_id,
             capturaPath: r.captura_path ?? null,
             versionApp: r.version_app ?? null,
             dispositivo: r.dispositivo ?? null,
+            estado: r.estado,
             notaInterna: r.nota_interna ?? null,
+            createdAt: r.created_at,
+            vistoAt: r.visto_at ?? null,
+            resueltoAt: r.resuelto_at ?? null,
+            reabiertoAt: r.reabierto_at ?? null,
+            notaEditadaAt: r.nota_editada_at ?? null,
+            emailEnviadoAt: r.email_enviado_at ?? null,
+            nombre: r.nombre ?? null,
+            email: r.email ?? null,
+            telefono: r.telefono ?? null,
+            vistoPor: r.visto_por || null,
+            resueltoPor: r.resuelto_por || null,
+            reabiertoPor: r.reabierto_por || null,
         }));
     } catch (err) {
-        aviso('reportesAdmin', err);
-        return [];
+        aviso('reportesSistemas', err);
+        return null;
     }
 };
 
-export const actualizarReporte = async (
+export type AccionDeReporte = 'visto' | 'resuelto' | 'reabrir' | 'nota';
+
+/** visto · resuelto · reabrir · nota. La RPC exige SUPER_ADMIN. */
+export const gestionarReporte = async (
     id: string,
-    cambios: { estado?: EstadoDeReporte; notaInterna?: string | null },
+    accion: AccionDeReporte,
+    nota?: string,
 ): Promise<boolean> => {
     try {
-        const fila: Record<string, unknown> = {};
-        if (cambios.estado !== undefined) fila.estado = cambios.estado;
-        if (cambios.notaInterna !== undefined) fila.nota_interna = cambios.notaInterna;
-        if (Object.keys(fila).length === 0) return true;
-
-        const { error } = await supabase.from('reportes_problemas').update(fila).eq('id', id);
+        const { data, error } = await supabase.rpc('gestionar_reporte', {
+            p_id: id,
+            p_accion: accion,
+            p_nota: nota ?? null,
+        });
         if (error) throw error;
-        return true;
+        return data?.ok === true;
     } catch (err) {
-        aviso('actualizarReporte', err);
+        aviso('gestionarReporte', err);
         return false;
     }
 };

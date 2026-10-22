@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../services/supabaseClient';
-import { crearReporte, describirDispositivo } from '../../../services/miCuenta';
+import { codigoReporte, crearReporte, describirDispositivo } from '../../../services/miCuenta';
 import {
     BotonPrimario, BotonSecundario, EncabezadoSubpagina, ESTILO_TARJETA,
-    Girito, Icono, ICONOS, Rotulo, TARJETA,
+    Girito, Icono, ICONOS, Panel, Rotulo, TARJETA,
 } from '../../../components/miCuenta/piezas';
 import {
     COMO_LLEGAR, RESPONSABLE, TERMINOS, ULTIMA_ACTUALIZACION, WHATSAPP,
@@ -218,7 +218,13 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
     const [captura, setCaptura] = useState<File | null>(null);
     const [nombreCaptura, setNombreCaptura] = useState('');
     const [vistaCaptura, setVistaCaptura] = useState<string | null>(null);
-    const [estado, setEstado] = useState<'quieto' | 'intentado' | 'enviando' | 'listo' | 'error'>('quieto');
+    const [estado, setEstado] = useState<'quieto' | 'intentado' | 'enviando' | 'error'>('quieto');
+    // La confirmación con el código (design-claude/Panel Admin - Reportes,
+    // "Confirmación al usuario"). Con el código la persona puede referirse a
+    // su reporte si después escribe por WhatsApp.
+    const [confirmado, setConfirmado] = useState<{ codigo: string; sinCaptura: boolean } | null>(null);
+    const [codigoCopiado, setCodigoCopiado] = useState(false);
+    const campoTexto = useRef<HTMLTextAreaElement>(null);
 
     const version = typeof __BUILD_VERSION__ === 'string' ? __BUILD_VERSION__.slice(0, 7) : 'dev';
     const dispositivo = describirDispositivo();
@@ -244,32 +250,38 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
             versionApp: version,
             dispositivo,
         });
+        // Con error no hay panel: el texto queda donde estaba.
         if (!r.ok) { setEstado('error'); return; }
-        setEstado('listo');
+        setEstado('quieto');
+        // El formulario se vacía ya: cerrar el panel de cualquier forma no
+        // puede dejar el mismo reporte listo para mandarse otra vez.
         setTexto(''); setPantalla(null); setCaptura(null); setNombreCaptura(''); setVistaCaptura(null);
-        if (r.datos?.sinCaptura) avisar('Lo enviamos, pero la captura no se pudo subir');
+        setCodigoCopiado(false);
+        setConfirmado({ codigo: codigoReporte(r.datos!.numero), sinCaptura: !!r.datos?.sinCaptura });
     };
 
-    if (estado === 'listo') {
-        return (
-            <>
-                <EncabezadoSubpagina titulo="Reportar un problema" onVolver={onVolver} />
-                <div className="flex flex-col items-center text-center pt-16 px-2">
-                    <span className="w-[72px] h-[72px] rounded-full flex items-center justify-center"
-                        style={{ background: 'var(--mc-chip)', animation: 'mcTilde .45s ease both' }}>
-                        <Icono d={ICONOS.tilde} tam={32} grosor={2.4} />
-                    </span>
-                    <p className="mt-[22px] mb-0 text-[22px] leading-[1.25] font-semibold tracking-[-.02em] text-balance">
-                        Gracias. Lo vamos a revisar.
-                    </p>
-                    <p className="mt-2.5 mb-0 max-w-[340px] text-[15px] leading-[1.5] font-medium" style={{ color: 'var(--mc-m66)' }}>
-                        Si necesitamos más datos, te escribimos al email de tu cuenta.
-                    </p>
-                    <BotonSecundario onClick={() => setEstado('quieto')} className="mt-6">Reportar otra cosa</BotonSecundario>
-                </div>
-            </>
-        );
-    }
+    const copiarCodigo = async () => {
+        if (!confirmado) return;
+        let ok = false;
+        try {
+            if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(confirmado.codigo); ok = true; }
+        } catch { /* cae al respaldo */ }
+        if (!ok) {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = confirmado.codigo; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.focus(); ta.select();
+                ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+            } catch { ok = false; }
+        }
+        if (ok) { setCodigoCopiado(true); window.setTimeout(() => setCodigoCopiado(false), 2000); }
+        else avisar('No se pudo copiar el código');
+    };
+
+    // "Listo" vuelve a Mi cuenta; "Enviar otro" deja el formulario a mano.
+    const listo = () => { setConfirmado(null); onVolver?.(); };
+    const enviarOtro = () => { setConfirmado(null); window.setTimeout(() => campoTexto.current?.focus(), 250); };
 
     return (
         <>
@@ -282,6 +294,7 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
                     </label>
                     <textarea
                         id="mc-que-paso"
+                        ref={campoTexto}
                         className={`mc-campo mt-2 ${corta ? 'mc-campo--mal' : ''}`}
                         rows={4}
                         placeholder="Contanos qué estabas haciendo y qué viste"
@@ -375,7 +388,7 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
                     <span className="w-5 h-5 flex-none rounded-full inline-flex items-center justify-center text-[12px] font-bold"
                         style={{ background: 'var(--mc-ink)', color: 'var(--mc-bg)' }}>!</span>
                     <p className="m-0 text-[14.5px] leading-[1.45] font-semibold">
-                        No pudimos enviarlo. Revisá tu conexión y probá de nuevo.
+                        No se pudo enviar. Tu texto sigue acá: probá de nuevo.
                     </p>
                 </div>
             )}
@@ -384,6 +397,48 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
                 {estado === 'enviando' && <Girito sobreOscuro />}
                 {estado === 'enviando' ? 'Enviando…' : estado === 'error' ? 'Probar de nuevo' : 'Enviar'}
             </BotonPrimario>
+
+            <Panel abierto={!!confirmado} onCerrar={listo} etiqueta="¡Gracias por avisarnos!">
+                {confirmado && (
+                    <div className="flex flex-col items-center text-center">
+                        <span className="w-[76px] h-[76px] rounded-full flex items-center justify-center"
+                            style={{ background: 'var(--mc-green-bg)', color: 'var(--mc-green-ink)', animation: 'mcTilde .45s ease both' }}>
+                            <Icono d={ICONOS.tilde} tam={34} grosor={2.4} />
+                        </span>
+                        <h2 className="mt-5 mb-0 text-[25px] leading-[1.15] font-semibold tracking-[-.03em]">¡Gracias por avisarnos!</h2>
+                        <p className="mt-4 mb-0 text-[15px] font-medium" style={{ color: 'var(--mc-m50)' }}>Tu reporte es el</p>
+                        <div className="mt-2 w-full h-16 pl-5 pr-2 rounded-[20px] flex items-center gap-2.5" style={{ background: 'var(--mc-chip)' }}>
+                            <span className="flex-1 text-left text-[24px] font-semibold tracking-[.01em]"
+                                style={{ fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                                {confirmado.codigo}
+                            </span>
+                            <button type="button" onClick={copiarCodigo}
+                                className="h-12 px-4 border-0 rounded-full flex items-center gap-1.5 text-[14px] font-semibold cursor-pointer font-[inherit]"
+                                style={{
+                                    background: codigoCopiado ? 'var(--mc-green-bg)' : 'var(--mc-card)',
+                                    color: codigoCopiado ? 'var(--mc-green-ink)' : 'var(--mc-ink)',
+                                    transition: 'background .2s',
+                                }}>
+                                {codigoCopiado && <Icono d={ICONOS.tilde} tam={14} grosor={2.6} />}
+                                <span aria-live="polite">{codigoCopiado ? '¡Copiado!' : 'Copiar'}</span>
+                            </button>
+                        </div>
+                        {confirmado.sinCaptura && (
+                            <p className="mt-3 mb-0 w-full px-3.5 py-[11px] rounded-2xl text-[14px] font-semibold text-left"
+                                style={{ background: 'var(--mc-amber-bg)', color: 'var(--mc-amber-ink)' }}>
+                                Lo enviamos, pero la captura no se pudo subir.
+                            </p>
+                        )}
+                        <p className="mt-4 mb-0 max-w-[340px] text-[15px] leading-[1.5] [text-wrap:pretty]" style={{ color: 'var(--mc-m66)' }}>
+                            Lo vamos a revisar. Si necesitamos más datos, te escribimos.
+                        </p>
+                        <div className="mt-6 w-full flex flex-col gap-2">
+                            <BotonPrimario ancho onClick={listo}>Listo</BotonPrimario>
+                            <BotonSecundario ancho onClick={enviarOtro}>Enviar otro</BotonSecundario>
+                        </div>
+                    </div>
+                )}
+            </Panel>
         </>
     );
 };

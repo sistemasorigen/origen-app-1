@@ -751,6 +751,14 @@ const AppContent: React.FC = () => {
                                         ? <Admin currentUser={user} onConfigUpdate={refreshConfig} />
                                         : <SinAcceso />
                                 } />
+                                {/* Reportes de problemas: el link del email a Sistemas
+                                    y de la notificación (?id=<reporte>). Mismo
+                                    permiso y mismo layout que /panel-admin. */}
+                                <Route path="/panel-admin/reportes" element={
+                                    isSuperAdmin(user)
+                                        ? <Admin currentUser={user} onConfigUpdate={refreshConfig} />
+                                        : <SinAcceso />
+                                } />
                                 <Route path="/store" element={<Store currentUser={user} />} />
                                 <Route path="/alabanza" element={<Alabanza currentUser={user} onLoginRequest={handleLogin} />} />
                                 <Route path="/reportes" element={

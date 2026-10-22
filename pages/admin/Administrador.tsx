@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { db } from '../../services/dbService';
 import { supabaseService } from '../../services/supabaseService';
 import {
@@ -20,6 +20,8 @@ import FichaUsuarioAdmin, { AreaVoluntario, DatosCuenta } from './FichaUsuarioAd
 import DirectorioAdmin from './DirectorioAdmin';
 import ConfiguracionApp, { SubSeccion } from './ConfiguracionApp';
 import BandejaDeDatos from './BandejaDeDatos';
+import ReportesSistemas from './ReportesSistemas';
+import { reportesSistemas } from '../../services/miCuenta';
 
 /**
  * Administración general (design-claude/Admin General).
@@ -34,7 +36,7 @@ import BandejaDeDatos from './BandejaDeDatos';
  * solo cambia por dónde se llega a ellas.
  */
 
-type Seccion = 'usuarios' | 'directorio' | 'config' | 'auditoria' | 'datos';
+type Seccion = 'usuarios' | 'directorio' | 'config' | 'auditoria' | 'datos' | 'reportes';
 
 const safeUUID = () => {
     // Respaldo para contextos no seguros (http://IP), donde crypto.randomUUID
@@ -79,8 +81,16 @@ interface AdminProps {
 
 const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     const [searchParams, setSearchParams] = useSearchParams();
+    const location = useLocation();
+    const navigate = useNavigate();
+    // /panel-admin/reportes es su propia ruta (el link del email y de la
+    // notificación); el resto de las secciones siguen en /panel-admin?tab=.
+    const enRutaDeReportes = location.pathname === '/panel-admin/reportes';
 
-    const [seccion, setSeccion] = useState<Seccion>('usuarios');
+    const [seccion, setSeccion] = useState<Seccion>(enRutaDeReportes ? 'reportes' : 'usuarios');
+    // La pastilla de "Reportes" en la navegación y el resumen de la cabecera.
+    const [reportesNuevos, setReportesNuevos] = useState(0);
+    const [reportesTotal, setReportesTotal] = useState<number | null>(null);
     const [sub, setSub] = useState<SubSeccion>('identidad');
     const [menuSistema, setMenuSistema] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -119,18 +129,31 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             logs: 'auditoria', auditoria: 'auditoria',
             datos: 'datos',
         };
-        if (tab && equivalencias[tab]) setSeccion(equivalencias[tab]);
-    }, [searchParams]);
+        if (enRutaDeReportes) setSeccion('reportes');
+        else if (tab && equivalencias[tab]) setSeccion(equivalencias[tab]);
+        else if (seccion === 'reportes') setSeccion('usuarios');
+    }, [searchParams, enRutaDeReportes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // La pastilla de nuevos se ve desde cualquier sección.
+    useEffect(() => {
+        reportesSistemas().then(l => {
+            if (!l) return;
+            setReportesNuevos(l.filter(r => r.estado === 'nuevo').length);
+            setReportesTotal(l.length);
+        });
+    }, []);
 
     const irA = useCallback((destino: Seccion) => {
         setSeccion(destino);
         setMenuSistema(false);
         setAbierto(null);
         setCreando(false);
+        if (destino === 'reportes') { navigate('/panel-admin/reportes'); return; }
+        if (enRutaDeReportes) { navigate(`/panel-admin?tab=${destino}`); return; }
         const params = new URLSearchParams(searchParams);
         params.set('tab', destino);
         setSearchParams(params, { replace: true });
-    }, [searchParams, setSearchParams]);
+    }, [searchParams, setSearchParams, navigate, enRutaDeReportes]);
 
     // Cerrar el menú de sistema al tocar afuera.
     useEffect(() => {
@@ -330,10 +353,11 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     };
 
     // ── Cabecera ──────────────────────
-    const enPersonas = seccion === 'usuarios' || seccion === 'directorio';
+    const enPersonas = seccion === 'usuarios' || seccion === 'directorio' || seccion === 'reportes';
     const enSistema = seccion === 'config' || seccion === 'auditoria';
 
-    const titulo = seccion === 'usuarios'
+    const titulo = seccion === 'reportes' ? 'Reportes de problemas'
+        : seccion === 'usuarios'
         ? (creando ? 'Nueva cuenta' : abierto ? `Roles de ${(abierto.name || '').split(' ')[0] || 'la cuenta'}` : 'Usuarios y permisos')
         : seccion === 'directorio' ? 'Directorio de responsables'
             : seccion === 'auditoria' ? 'Registro de cambios'
@@ -359,11 +383,18 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                     <div className="flex items-start gap-3.5">
                         <div className="min-w-0 flex-1">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-black/[.52]">
-                                Administración general
+                                {seccion === 'reportes' ? 'Sistemas' : 'Administración general'}
                             </p>
                             <h1 className="mt-[5px] text-[19px] font-semibold tracking-[-0.018em] text-[#0a0a0a] md:text-[21px]">
                                 {titulo}
                             </h1>
+                            {seccion === 'reportes' && reportesTotal !== null && (
+                                <p className="mt-1 text-[13.5px] font-medium text-black/[.56]">
+                                    {reportesTotal === 0
+                                        ? 'Sin reportes'
+                                        : `${reportesNuevos} ${reportesNuevos === 1 ? 'nuevo' : 'nuevos'} · ${reportesTotal} en total`}
+                                </p>
+                            )}
                         </div>
 
                         <div className="relative flex-none" ref={menuRef}>
@@ -430,6 +461,20 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                 <button onClick={() => irA('directorio')} className={botonNav(seccion === 'directorio')}>
                                     Directorio
                                 </button>
+                                {/* design-claude/Panel Admin - Reportes: el bicho y la
+                                    pastilla roja de los nuevos, vista desde cualquier
+                                    sección. */}
+                                <button onClick={() => irA('reportes')} className={botonNav(seccion === 'reportes')}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <rect x="7" y="7" width="10" height="13" rx="5" /><path d="M9.5 7a2.5 2.5 0 015 0M12 11v9M7 12H3.5M20.5 12H17M7.5 17l-3 2M16.5 17l3 2M7.5 9l-3-2M16.5 9l3-2" />
+                                    </svg>
+                                    Reportes
+                                    {reportesNuevos > 0 && (
+                                        <span aria-label={`${reportesNuevos} nuevos`} className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[#d93025] px-[7px] text-[12px] font-bold text-white">
+                                            {reportesNuevos}
+                                        </span>
+                                    )}
+                                </button>
                             </>
                         ) : (
                             <>
@@ -450,7 +495,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     Auditoría
                                 </button>
                                 <button onClick={() => irA('datos')} className={botonNav(seccion === 'datos')}>
-                                    Datos y reportes
+                                    Solicitudes de datos
                                 </button>
                             </>
                         )}
@@ -461,6 +506,13 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             <div className="mx-auto max-w-[1360px] px-3.5 pb-[26px] pt-3.5 md:px-[26px] md:pb-[30px] md:pt-[18px]">
 
                 {seccion === 'datos' && <BandejaDeDatos userId={currentUser?.id} />}
+
+                {seccion === 'reportes' && (
+                    <ReportesSistemas
+                        miNombre={(currentUser?.name || '').trim().split(/\s+/)[0] || 'Sistemas'}
+                        onResumen={(n, t) => { setReportesNuevos(n); setReportesTotal(t); }}
+                    />
+                )}
 
                 {seccion === 'usuarios' && !abierto && !creando && (
                     <UsuariosAdmin

@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button,input,textarea,select{font-family:inherit}input:focus,textarea:focus{outline:none}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes rpIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes rpSlide{from{transform:translateX(100%)}to{transform:none}}@keyframes rpUp{from{transform:translateY(100%)}to{transform:none}}@keyframes rpZoom{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}@keyframes rpFade{from{opacity:0}to{opacity:1}}@keyframes rpShim{from{background-position:120% 0}to{background-position:-120% 0}}@keyframes rpSpin{to{transform:rotate(360deg)}}@keyframes rpDraw{from{stroke-dashoffset:24}to{stroke-dashoffset:0}}@keyframes rpPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.06);opacity:1}100%{transform:scale(1)}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:center; gap:14px">
+
+  <div style="display:flex; flex-direction:column; gap:8px; background:#fff; border-radius:24px; padding:12px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1180px; width:100%">
+    <sc-for list="{{ toolbar }}" as="row" hint-placeholder-count="6">
+      <div style="display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center">
+        <span style="width:92px; flex:none; font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">{{ row.label }}</span>
+        <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px">
+          <sc-for list="{{ row.items }}" as="it" hint-placeholder-count="3"><button onClick="{{ it.go }}" style="{{ it.style }}">{{ it.t }}</button></sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="width:{{ outerW }}; height:{{ outerH }}; flex:none">
+  <div style="position:relative; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; transform:scale({{ scale }}); transform-origin:0 0; border-radius:{{ frameR }}; background:{{ t.bg }}; color:{{ t.ink }}; box-shadow:0 6px 28px rgba(0,0,0,.14); display:flex; flex-direction:column">
+
+    <sc-if value="{{ isPanel }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:none; background:{{ t.card }}; border-bottom:1px solid {{ t.line }}; padding:{{ headPad }}">
+        <div style="max-width:1300px; margin:0 auto">
+          <div style="display:flex; align-items:center; gap:{{ navGap }}; overflow-x:auto">
+            <sc-for list="{{ nav }}" as="n" hint-placeholder-count="3">
+              <button onClick="{{ n.go }}" style="height:44px; padding:0 16px; border:0; border-radius:999px; background:{{ n.bg }}; color:{{ n.ink }}; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap; flex:none">
+                <sc-if value="{{ n.bug }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="13" rx="5"></rect><path d="M9.5 7a2.5 2.5 0 015 0M12 11v9M7 12H3.5M20.5 12H17M7.5 17l-3 2M16.5 17l3 2M7.5 9l-3-2M16.5 9l3-2"></path></svg></sc-if>
+                <span>{{ n.t }}</span>
+                <sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="min-width:22px; height:22px; padding:0 7px; border-radius:999px; background:{{ t.red }}; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center">{{ n.badge }}</span></sc-if>
+                <sc-if value="{{ n.count }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; font-weight:600; color:{{ n.cInk }}">{{ n.count }}</span></sc-if>
+              </button>
+            </sc-for>
+          </div>
+          <div style="margin-top:{{ titleMt }}">
+            <p style="margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">SISTEMAS</p>
+            <h1 style="margin:6px 0 0; font-size:{{ h1 }}; line-height:1.1; font-weight:600; letter-spacing:-.03em">Reportes de problemas</h1>
+            <p style="margin:6px 0 0; font-size:14.5px; font-weight:500; color:{{ t.m55 }}">{{ resumen }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1; min-height:0; display:flex; position:relative">
+        <div style="flex:1; min-width:0; overflow-y:auto; overflow-x:hidden; padding:{{ bodyPad }}">
+          <div style="max-width:1300px; margin:0 auto">
+            <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center">
+              <div style="flex:1 1 280px; min-width:0; height:48px; border-radius:999px; background:{{ t.card }}; box-shadow:{{ t.shadow }}; display:flex; align-items:center; gap:10px; padding:0 6px 0 18px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="flex:none; color:{{ t.m55 }}"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+                <input type="search" value="{{ q }}" onInput="{{ onQ }}" aria-label="Buscar reportes" placeholder="Buscar por código, nombre o texto" style="flex:1; min-width:0; border:0; background:transparent; color:{{ t.ink }}; font-size:15px; font-weight:500"></input>
+                <sc-if value="{{ q }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearQ }}" aria-label="Borrar búsqueda" style="width:36px; height:36px; flex:none; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></sc-if>
+              </div>
+              <div style="position:relative; flex:none">
+                <button onClick="{{ togglePant }}" aria-expanded="{{ pantOpenS }}" style="height:48px; padding:0 16px 0 18px; border:0; border-radius:999px; background:{{ t.card }}; box-shadow:{{ t.shadow }}; color:{{ t.ink }}; display:flex; align-items:center; gap:10px; font-size:14.5px; font-weight:600; cursor:pointer; white-space:nowrap">
+                  <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:{{ t.m42 }}">PANTALLA</span><span>{{ pantLbl }}</span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+                </button>
+                <sc-if value="{{ pantOpen }}" hint-placeholder-val="{{ false }}">
+                  <div role="listbox" style="position:absolute; top:54px; {{ pantSide }}:0; z-index:15; width:240px; background:{{ t.card }}; border-radius:20px; padding:6px; box-shadow:0 14px 40px rgba(0,0,0,.18); animation:rpIn .18s ease both">
+                    <sc-for list="{{ pantallas }}" as="p" hint-placeholder-count="8">
+                      <button role="option" aria-selected="{{ p.onS }}" onClick="{{ p.go }}" style="width:100%; height:44px; padding:0 12px; border:0; border-radius:14px; background:{{ p.bg }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:space-between; font-size:14.5px; font-weight:{{ p.fw }}; cursor:pointer" style-hover="background:{{ t.chip }}">
+                        <span>{{ p.t }}</span>
+                        <sc-if value="{{ p.on }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <div role="tablist" style="margin-top:12px; display:flex; gap:6px; overflow-x:auto; padding-bottom:2px">
+              <sc-for list="{{ filtros }}" as="f" hint-placeholder-count="4">
+                <button role="tab" aria-selected="{{ f.onS }}" onClick="{{ f.go }}" style="height:44px; padding:0 16px; flex:none; border:0; border-radius:999px; background:{{ f.bg }}; color:{{ f.ink }}; display:flex; align-items:center; gap:7px; font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap">
+                  <span>{{ f.t }}</span>
+                  <sc-if value="{{ f.n }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; font-weight:700; color:{{ f.nInk }}">{{ f.n }}</span></sc-if>
+                </button>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ cargando }}" hint-placeholder-val="{{ false }}">
+              <div aria-busy="true" style="margin-top:16px; background:{{ t.card }}; border-radius:26px; box-shadow:{{ t.shadow }}; padding:8px 0">
+                <sc-for list="{{ skel }}" as="k" hint-placeholder-count="6">
+                  <div style="display:flex; align-items:center; gap:16px; padding:16px 22px; border-top:{{ k.bt }}">
+                    <div style="{{ shim }}; width:74px; height:14px; border-radius:7px; flex:none"></div>
+                    <div style="{{ shim }}; width:32px; height:32px; border-radius:50%; flex:none"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:8px"><div style="{{ shim }}; width:45%; height:14px; border-radius:7px"></div><div style="{{ shim }}; width:70%; height:12px; border-radius:6px"></div></div>
+                    <div style="{{ shim }}; width:70px; height:26px; border-radius:99px; flex:none"></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ hayVacio }}" hint-placeholder-val="{{ false }}">
+              <div role="{{ ve.role }}" style="margin-top:16px; background:{{ t.card }}; border-radius:26px; box-shadow:{{ t.shadow }}; padding:56px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; animation:rpIn .3s ease both">
+                <div style="width:80px; height:80px; border-radius:50%; background:{{ t.chip }}; color:{{ t.m55 }}; display:flex; align-items:center; justify-content:center">
+                  <sc-if value="{{ ve.empty }}" hint-placeholder-val="{{ false }}"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l2.5-7h11L20 13v5a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 18z"></path><path d="M4 13h4.5l1 2h5l1-2H20"></path></svg></sc-if>
+                  <sc-if value="{{ ve.search }}" hint-placeholder-val="{{ false }}"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4M8.5 11h5"></path></svg></sc-if>
+                  <sc-if value="{{ ve.error }}" hint-placeholder-val="{{ false }}"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"></path><path d="M12 10v4M12 17h.01"></path></svg></sc-if>
+                </div>
+                <h3 style="margin:20px 0 0; font-size:20px; font-weight:600; letter-spacing:-.02em">{{ ve.t }}</h3>
+                <p style="margin:8px 0 0; max-width:360px; font-size:15px; line-height:1.5; color:{{ t.m55 }}; text-wrap:pretty">{{ ve.s }}</p>
+                <sc-if value="{{ ve.cta }}" hint-placeholder-val="{{ false }}"><button onClick="{{ ve.go }}" style="margin-top:22px; height:48px; padding:0 24px; border:0; border-radius:999px; background:{{ ve.ctaBg }}; color:{{ ve.ctaInk }}; font-size:15px; font-weight:600; cursor:pointer">{{ ve.cta }}</button></sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ tablaPC }}" hint-placeholder-val="{{ false }}">
+              <div role="table" aria-label="Reportes" style="margin-top:16px; background:{{ t.card }}; border-radius:26px; box-shadow:{{ t.shadow }}; overflow:hidden">
+                <div role="row" style="display:grid; grid-template-columns:{{ cols }}; gap:16px; padding:14px 22px; border-bottom:1px solid {{ t.line }}; font-size:11.5px; font-weight:700; letter-spacing:.07em; color:{{ t.m42 }}">
+                  <span role="columnheader">CÓDIGO</span><span role="columnheader">NOMBRE Y APELLIDO</span><span role="columnheader">PANTALLA</span><span role="columnheader">FECHA Y HORA</span><span role="columnheader">ESTADO</span><span role="columnheader"></span>
+                </div>
+                <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+                  <div role="row" onClick="{{ r.open }}" style="display:grid; grid-template-columns:{{ cols }}; gap:16px; align-items:center; min-height:64px; padding:8px 22px; border-top:{{ r.bt }}; background:{{ r.bg }}; cursor:pointer; transition:background .15s; animation:rpIn .3s ease both; animation-delay:{{ r.delay }}" style-hover="background:{{ t.hover }}">
+                    <span role="cell" style="font-family:'JetBrains Mono',ui-monospace,monospace; font-size:13.5px; font-weight:600; color:{{ r.codeInk }}">{{ r.code }}</span>
+                    <span role="cell" style="display:flex; align-items:center; gap:10px; min-width:0">
+                      <span style="width:32px; height:32px; flex:none; border-radius:50%; background:{{ r.avBg }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700">{{ r.ini }}</span>
+                      <span style="min-width:0; display:flex; flex-direction:column">
+                        <span style="font-size:14.5px; font-weight:{{ r.fw }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ r.nombre }}</span>
+                        <span style="font-size:13px; font-weight:500; color:{{ t.m55 }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ r.snip }}</span>
+                      </span>
+                    </span>
+                    <span role="cell" style="font-size:14px; font-weight:{{ r.fw }}; color:{{ r.cellInk }}">{{ r.pantalla }}</span>
+                    <span role="cell" style="font-size:14px; font-weight:{{ r.fw }}; color:{{ r.cellInk }}; white-space:nowrap">{{ r.fecha }}</span>
+                    <span role="cell"><span style="height:28px; padding:0 11px; border-radius:999px; background:{{ r.st.bg }}; color:{{ r.st.ink }}; display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700; transition:background .5s ease, color .5s ease"><sc-if value="{{ r.st.dot }}" hint-placeholder-val="{{ false }}"><span style="width:7px; height:7px; border-radius:50%; background:{{ t.red }}"></span></sc-if>{{ r.st.t }}</span></span>
+                    <span role="cell" style="display:flex; justify-content:flex-end"><button onClick="{{ r.open }}" style="height:40px; padding:0 14px; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap">Ver detalles</button></span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ tablaMob }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px; display:flex; flex-direction:column; gap:10px">
+                <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+                  <article style="background:{{ t.card }}; border-radius:24px; box-shadow:{{ t.shadow }}; padding:16px 16px 12px; animation:rpIn .3s ease both; animation-delay:{{ r.delay }}">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px">
+                      <span style="font-family:'JetBrains Mono',ui-monospace,monospace; font-size:13.5px; font-weight:600; color:{{ r.codeInk }}">{{ r.code }}</span>
+                      <span style="height:28px; padding:0 11px; border-radius:999px; background:{{ r.st.bg }}; color:{{ r.st.ink }}; display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700; transition:background .5s ease, color .5s ease"><sc-if value="{{ r.st.dot }}" hint-placeholder-val="{{ false }}"><span style="width:7px; height:7px; border-radius:50%; background:{{ t.red }}"></span></sc-if>{{ r.st.t }}</span>
+                    </div>
+                    <p style="margin:10px 0 0; font-size:16px; font-weight:{{ r.fw }}">{{ r.nombre }}</p>
+                    <p style="margin:3px 0 0; font-size:13.5px; font-weight:500; color:{{ t.m55 }}">{{ r.pantalla }} · {{ r.fecha }}</p>
+                    <p style="margin:8px 0 0; font-size:14.5px; line-height:1.45; color:{{ t.m62 }}; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden">{{ r.texto }}</p>
+                    <button onClick="{{ r.open }}" style="margin:8px 0 0 -12px; height:44px; padding:0 12px; border:0; background:transparent; color:{{ t.ink }}; display:flex; align-items:center; gap:6px; font-size:14.5px; font-weight:700; cursor:pointer">Ver detalles<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+                  </article>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ hayPag }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px; display:flex; align-items:center; justify-content:space-between; gap:12px">
+                <span style="font-size:13.5px; font-weight:500; color:{{ t.m55 }}">{{ pagTxt }}</span>
+                <div style="display:flex; gap:6px">
+                  <button onClick="{{ pagPrev }}" aria-label="Página anterior" aria-disabled="{{ prevDisS }}" style="width:44px; height:44px; border:0; border-radius:999px; background:{{ t.card }}; box-shadow:{{ t.shadow }}; color:{{ prevInk }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+                  <sc-for list="{{ pages }}" as="p" hint-placeholder-count="2"><button onClick="{{ p.go }}" aria-current="{{ p.cur }}" style="width:44px; height:44px; border:0; border-radius:999px; background:{{ p.bg }}; color:{{ p.ink }}; box-shadow:{{ t.shadow }}; font-size:14px; font-weight:700; cursor:pointer">{{ p.n }}</button></sc-for>
+                  <button onClick="{{ pagNext }}" aria-label="Página siguiente" aria-disabled="{{ nextDisS }}" style="width:44px; height:44px; border:0; border-radius:999px; background:{{ t.card }}; box-shadow:{{ t.shadow }}; color:{{ nextInk }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <sc-if value="{{ det.open }}" hint-placeholder-val="{{ false }}">
+          <aside role="dialog" aria-label="{{ det.aria }}" style="position:absolute; top:0; right:0; bottom:0; z-index:20; width:{{ detW }}; background:{{ t.card }}; box-shadow:{{ detShadow }}; display:flex; flex-direction:column; animation:rpSlide .32s cubic-bezier(.2,.8,.3,1) both">
+            <div style="flex:none; display:flex; align-items:center; gap:6px; padding:12px 14px; border-bottom:1px solid {{ t.line }}">
+              <button onClick="{{ closeDet }}" aria-label="{{ closeAria }}" style="width:44px; height:44px; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer">
+                <sc-if value="{{ isMob }}" hint-placeholder-val="{{ false }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></sc-if>
+                <sc-if value="{{ isPC }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></sc-if>
+              </button>
+              <span style="flex:1; font-size:13px; font-weight:600; color:{{ t.m55 }}; padding-left:6px">{{ det.pos }}</span>
+              <button onClick="{{ det.prev }}" aria-label="Reporte anterior" aria-disabled="{{ det.prevDisS }}" style="height:44px; padding:0 14px; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ det.prevInk }}; display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg><sc-if value="{{ isPC }}" hint-placeholder-val="{{ true }}"><span>Anterior</span></sc-if></button>
+              <button onClick="{{ det.next }}" aria-label="Reporte siguiente" aria-disabled="{{ det.nextDisS }}" style="height:44px; padding:0 14px; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ det.nextInk }}; display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; cursor:pointer"><sc-if value="{{ isPC }}" hint-placeholder-val="{{ true }}"><span>Siguiente</span></sc-if><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+            </div>
+
+            <div style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding:{{ detPad }}">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
+                <h2 style="margin:0; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:{{ codeSize }}; font-weight:600; letter-spacing:-.02em">{{ det.code }}</h2>
+                <span style="height:32px; padding:0 13px; border-radius:999px; background:{{ det.st.bg }}; color:{{ det.st.ink }}; display:inline-flex; align-items:center; gap:7px; font-size:13.5px; font-weight:700; transition:background .6s ease, color .6s ease"><sc-if value="{{ det.st.dot }}" hint-placeholder-val="{{ false }}"><span style="width:7px; height:7px; border-radius:50%; background:{{ t.red }}"></span></sc-if>{{ det.st.t }}</span>
+              </div>
+              <p style="margin:6px 0 0; font-size:14.5px; font-weight:500; color:{{ t.m55 }}">{{ det.recibido }}</p>
+
+              <p style="margin:28px 0 10px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">QUIÉN LO ENVIÓ</p>
+              <div style="background:{{ t.chip }}; border-radius:22px; padding:16px">
+                <div style="display:flex; align-items:center; gap:12px">
+                  <span style="width:46px; height:46px; flex:none; border-radius:50%; background:{{ det.avBg }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700">{{ det.ini }}</span>
+                  <span style="min-width:0; display:flex; flex-direction:column; gap:2px">
+                    <span style="font-size:16.5px; font-weight:600">{{ det.nombre }}</span>
+                    <span style="font-size:14px; font-weight:500; color:{{ t.m62 }}; overflow-wrap:anywhere">{{ det.email }}</span>
+                    <span style="font-size:14px; font-weight:500; color:{{ det.telInk }}">{{ det.telTxt }}</span>
+                  </span>
+                </div>
+                <div style="margin-top:14px; display:grid; grid-template-columns:{{ det.btnCols }}; gap:8px">
+                  <sc-if value="{{ det.tel }}" hint-placeholder-val="{{ true }}"><button onClick="{{ det.wa }}" style="height:46px; border:0; border-radius:999px; background:{{ t.card }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; font-weight:600; cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-4A8 8 0 1112 20a8 8 0 01-3.9-1z"></path></svg>Escribir por WhatsApp</button></sc-if>
+                  <button onClick="{{ det.copyMail }}" style="height:46px; border:0; border-radius:999px; background:{{ t.card }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; font-weight:600; cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="3"></rect><path d="M16 8V6.5A2.5 2.5 0 0013.5 4h-7A2.5 2.5 0 004 6.5v7A2.5 2.5 0 006.5 16H8"></path></svg>Copiar email</button>
+                </div>
+              </div>
+
+              <p style="margin:26px 0 10px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">QUÉ PASÓ</p>
+              <p style="margin:0; font-size:16px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere">{{ det.texto }}</p>
+
+              <p style="margin:26px 0 10px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">DÓNDE</p>
+              <span style="height:36px; padding:0 14px; border-radius:999px; background:{{ t.chip }}; display:inline-flex; align-items:center; gap:8px; font-size:14.5px; font-weight:600"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="3" width="11" height="18" rx="3"></rect><path d="M11 18h2"></path></svg>{{ det.pantalla }}</span>
+
+              <p style="margin:26px 0 10px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">CAPTURA</p>
+              <sc-if value="{{ det.capOk }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ openLb }}" aria-label="Ver la captura en pantalla completa" style="position:relative; width:100%; height:300px; border:0; border-radius:22px; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; cursor:zoom-in; overflow:hidden; padding:0" style-hover="filter:brightness(.97)">
+                  <div style="width:150px; height:300px; display:flex; align-items:center; justify-content:center; transform:scale(.86)">
+                    <div style="width:150px; height:310px; flex:none; border-radius:22px; background:#f6f6f4; border:4px solid #0a0a0a; overflow:hidden; display:flex; flex-direction:column; padding:12px 10px; gap:6px; text-align:left">
+                      <span style="font-size:7px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.45)">MUJERES DE FE</span>
+                      <span style="font-size:12px; font-weight:700; color:#0a0a0a">Tomar asistencia</span>
+                      <span style="height:20px; border-radius:6px; background:#fff"></span><span style="height:20px; border-radius:6px; background:#fff"></span><span style="height:20px; border-radius:6px; background:#fff"></span><span style="height:20px; border-radius:6px; background:#fff"></span>
+                      <span style="margin-top:auto; padding:6px 8px; border-radius:8px; background:#d93025; color:#fff; font-size:7.5px; font-weight:700">No se pudo guardar. Probá de nuevo.</span>
+                      <span style="height:22px; border-radius:99px; background:#0a0a0a"></span>
+                    </div>
+                  </div>
+                  <span style="position:absolute; right:12px; bottom:12px; height:34px; padding:0 12px; border-radius:999px; background:rgba(10,10,10,.78); color:#fff; display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"></path></svg>Ampliar</span>
+                </button>
+              </sc-if>
+              <sc-if value="{{ det.capNo }}" hint-placeholder-val="{{ false }}">
+                <div style="height:64px; border-radius:20px; border:1.5px dashed {{ t.lineS }}; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14.5px; font-weight:500; color:{{ t.m55 }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="3"></rect><path d="M3.5 15l4.5-4 4 3.5 3-2.5 5 4"></path></svg>No adjuntó captura</div>
+              </sc-if>
+              <sc-if value="{{ det.capFail }}" hint-placeholder-val="{{ false }}">
+                <div style="min-height:64px; padding:14px 16px; border-radius:20px; background:{{ t.ambBg }}; color:{{ t.amb }}; display:flex; align-items:center; gap:10px; font-size:14.5px; font-weight:600"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4l9 16H3z"></path><path d="M12 10v4M12 17h.01"></path></svg>La captura no se pudo subir</div>
+              </sc-if>
+
+              <div style="margin:26px 0 10px; display:flex; align-items:center; justify-content:space-between; gap:10px">
+                <p style="margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">DATOS TÉCNICOS</p>
+                <button onClick="{{ copyAll }}" style="height:40px; padding:0 14px; border:0; border-radius:999px; background:{{ copyBg }}; color:{{ copyInk }}; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; transition:background .2s">
+                  <sc-if value="{{ copiado }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                  <span>{{ copyLbl }}</span>
+                </button>
+              </div>
+              <div style="background:{{ t.chip }}; border-radius:18px; padding:14px 16px; display:flex; flex-direction:column; gap:7px; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:12.5px; font-weight:500; line-height:1.5">
+                <sc-for list="{{ det.tec }}" as="x" hint-placeholder-count="4"><div style="display:grid; grid-template-columns:92px minmax(0,1fr); gap:10px"><span style="color:{{ t.m55 }}">{{ x.k }}</span><span style="overflow-wrap:anywhere">{{ x.v }}</span></div></sc-for>
+              </div>
+
+              <p style="margin:28px 0 10px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">GESTIÓN</p>
+              <div style="display:grid; grid-template-columns:{{ det.gCols }}; gap:8px">
+                <sc-for list="{{ det.acciones }}" as="a" hint-placeholder-count="2">
+                  <button onClick="{{ a.go }}" aria-disabled="{{ a.disS }}" style="height:50px; padding:0 14px; border:0; border-radius:999px; background:{{ a.bg }}; color:{{ a.ink }}; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14.5px; font-weight:600; cursor:{{ a.cur }}; white-space:nowrap" style-active="transform:scale(.98)">
+                    <sc-if value="{{ a.check }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                    <sc-if value="{{ a.eye }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.8"></circle></svg></sc-if>
+                    <sc-if value="{{ a.undo }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4.5 11.5 9 16"></path><path d="M5 11.5h9a5.5 5.5 0 010 11h-2"></path></svg></sc-if>
+                    <span>{{ a.t }}</span>
+                  </button>
+                </sc-for>
+              </div>
+
+              <div style="margin-top:14px; background:{{ t.chip }}; border-radius:22px; padding:14px">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 4px">
+                  <span style="display:flex; align-items:center; gap:7px; font-size:14px; font-weight:600"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="3"></rect><path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5"></path></svg>Nota interna</span>
+                  <span style="font-size:12.5px; font-weight:500; color:{{ t.m55 }}">{{ det.notaMeta }}</span>
+                </div>
+                <textarea value="{{ nota }}" onInput="{{ onNota }}" rows="3" aria-label="Nota interna, solo la ve Sistemas" placeholder="Solo la ve Sistemas. Qué revisaste, qué falta…" style="margin-top:10px; width:100%; min-height:96px; padding:12px 14px; border:0; border-radius:16px; background:{{ t.card }}; color:{{ t.ink }}; font-size:15px; line-height:1.5; resize:vertical"></textarea>
+                <div style="margin-top:10px; display:flex; justify-content:flex-end">
+                  <button onClick="{{ saveNota }}" aria-disabled="{{ notaDisS }}" style="height:44px; padding:0 18px; border:0; border-radius:999px; background:{{ notaBg }}; color:{{ notaInk }}; font-size:14px; font-weight:600; cursor:pointer">Guardar nota</button>
+                </div>
+              </div>
+
+              <p style="margin:28px 0 12px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">HISTORIAL</p>
+              <ol style="margin:0; padding:0; list-style:none; display:flex; flex-direction:column">
+                <sc-for list="{{ det.hist }}" as="h" hint-placeholder-count="2">
+                  <li style="display:flex; gap:12px; animation:rpIn .3s ease both">
+                    <span style="display:flex; flex-direction:column; align-items:center; flex:none; width:12px"><span style="width:9px; height:9px; margin-top:5px; border-radius:50%; background:{{ h.dot }}"></span><span style="flex:1; width:1.5px; background:{{ h.line }}"></span></span>
+                    <span style="padding-bottom:14px; font-size:14px; font-weight:500; color:{{ t.m62 }}"><b style="font-weight:600; color:{{ t.ink }}">{{ h.t }}</b> · {{ h.h }}</span>
+                  </li>
+                </sc-for>
+              </ol>
+            </div>
+          </aside>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isUser }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding:{{ uPad }}">
+        <div style="max-width:620px; margin:0 auto">
+          <div style="display:flex; align-items:center; gap:12px">
+            <button aria-label="Volver" style="width:44px; height:44px; flex:none; border:0; border-radius:999px; background:{{ t.card }}; color:{{ t.ink }}; box-shadow:{{ t.shadow }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+            <span style="font-size:13px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">MI CUENTA · AYUDA</span>
+          </div>
+          <h1 style="margin:22px 0 0; font-size:{{ uH1 }}; line-height:1.1; font-weight:600; letter-spacing:-.03em">Reportar un problema</h1>
+          <p style="margin:8px 0 0; font-size:15.5px; line-height:1.5; color:{{ t.m62 }}; text-wrap:pretty">Contanos qué pasó. Lo lee el equipo de Sistemas.</p>
+
+          <div style="margin-top:22px; background:{{ t.card }}; border-radius:26px; box-shadow:{{ t.shadow }}; padding:18px 16px">
+            <label style="display:flex; flex-direction:column; gap:8px">
+              <span style="font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">QUÉ PASÓ</span>
+              <textarea value="{{ uTxt }}" onInput="{{ onUTxt }}" rows="5" style="width:100%; min-height:140px; padding:14px 16px; border:0; border-radius:18px; background:{{ t.chip }}; color:{{ t.ink }}; font-size:16px; line-height:1.5; resize:vertical"></textarea>
+            </label>
+            <p style="margin:18px 0 8px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">EN QUÉ PANTALLA</p>
+            <div style="display:flex; flex-wrap:wrap; gap:6px">
+              <sc-for list="{{ uPants }}" as="p" hint-placeholder-count="8"><button onClick="{{ p.go }}" aria-pressed="{{ p.onS }}" style="height:44px; padding:0 15px; border:0; border-radius:999px; background:{{ p.bg }}; color:{{ p.ink }}; font-size:14px; font-weight:600; cursor:pointer">{{ p.t }}</button></sc-for>
+            </div>
+            <p style="margin:18px 0 8px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m42 }}">CAPTURA (OPCIONAL)</p>
+            <div style="height:60px; padding:0 8px 0 16px; border-radius:18px; background:{{ t.chip }}; display:flex; align-items:center; gap:10px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect x="3.5" y="5" width="17" height="14" rx="3"></rect><path d="M3.5 15l4.5-4 4 3.5 3-2.5 5 4"></path></svg>
+              <span style="flex:1; min-width:0; font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">captura-asistencia.png</span>
+              <button aria-label="Quitar captura" style="width:44px; height:44px; flex:none; border:0; border-radius:999px; background:{{ t.card }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            </div>
+            <p style="margin:12px 2px 0; font-size:13px; line-height:1.45; color:{{ t.m55 }}">Sumamos solos la versión de la app, tu celular y el navegador.</p>
+          </div>
+
+          <sc-if value="{{ uErr }}" hint-placeholder-val="{{ false }}">
+            <div role="alert" style="margin-top:14px; padding:14px 16px; border-radius:20px; background:{{ t.redBg }}; color:{{ t.redInk }}; display:flex; gap:10px; font-size:14.5px; font-weight:600; line-height:1.45; animation:rpIn .25s ease both"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:1px"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 8v4.5M12 16h.01"></path></svg><span>No se pudo enviar. Tu texto sigue acá: probá de nuevo.</span></div>
+          </sc-if>
+
+          <button onClick="{{ uEnviar }}" aria-busy="{{ uSendingS }}" style="margin-top:16px; width:100%; height:56px; border:0; border-radius:999px; background:{{ t.ink }}; color:{{ t.inv }}; display:flex; align-items:center; justify-content:center; gap:10px; font-size:16px; font-weight:600; cursor:pointer" style-active="transform:scale(.98)">
+            <sc-if value="{{ uSending }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width:18px; height:18px; border-radius:50%; border:2.4px solid {{ t.spinTrack }}; border-top-color:{{ t.inv }}; animation:rpSpin .8s linear infinite"></span><span>Enviando…</span></sc-if>
+            <sc-if value="{{ uIdle }}" hint-placeholder-val="{{ true }}"><span>Enviar</span></sc-if>
+          </button>
+        </div>
+      </div>
+
+      <sc-if value="{{ uOk }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ uListo }}" style="position:absolute; inset:0; z-index:40; background:rgba(0,0,0,.42); display:flex; align-items:{{ sheetAlign }}; justify-content:center; animation:rpFade .2s ease both">
+          <div role="dialog" aria-modal="true" aria-labelledby="okT" onClick="{{ stop }}" style="width:100%; max-width:{{ sheetW }}; max-height:92%; overflow-y:auto; background:{{ t.card }}; color:{{ t.ink }}; border-radius:{{ sheetR }}; padding:{{ sheetPad }}; display:flex; flex-direction:column; align-items:center; text-align:center; animation:{{ sheetAnim }}">
+            <sc-if value="{{ isMob }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width:40px; height:5px; border-radius:9px; background:{{ t.lineS }}; margin:-8px 0 18px"></span></sc-if>
+            <span style="width:76px; height:76px; border-radius:50%; background:{{ t.grnBg }}; color:{{ t.grn }}; display:flex; align-items:center; justify-content:center; animation:rpPop .45s cubic-bezier(.2,.8,.3,1) both"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" stroke-dasharray="24" style="animation:rpDraw .5s .25s ease-out both"></path></svg></span>
+            <h2 id="okT" style="margin:20px 0 0; font-size:25px; line-height:1.15; font-weight:600; letter-spacing:-.03em">¡Gracias por avisarnos!</h2>
+            <p style="margin:16px 0 0; font-size:15px; font-weight:500; color:{{ t.m55 }}">Tu reporte es el</p>
+            <div style="margin-top:8px; width:100%; height:64px; padding:0 8px 0 20px; border-radius:20px; background:{{ t.chip }}; display:flex; align-items:center; gap:10px">
+              <span style="flex:1; text-align:left; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:24px; font-weight:600; letter-spacing:.01em">{{ uCode }}</span>
+              <button onClick="{{ uCopy }}" style="height:48px; padding:0 16px; border:0; border-radius:999px; background:{{ uCopyBg }}; color:{{ uCopyInk }}; display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; cursor:pointer; transition:background .2s">
+                <sc-if value="{{ uCopied }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                <span>{{ uCopyLbl }}</span>
+              </button>
+            </div>
+            <sc-if value="{{ uCapFail }}" hint-placeholder-val="{{ false }}">
+              <p style="margin:12px 0 0; width:100%; padding:11px 14px; border-radius:16px; background:{{ t.ambBg }}; color:{{ t.amb }}; font-size:14px; font-weight:600; text-align:left">Lo enviamos, pero la captura no se pudo subir.</p>
+            </sc-if>
+            <p style="margin:16px 0 0; max-width:340px; font-size:15px; line-height:1.5; color:{{ t.m62 }}; text-wrap:pretty">Lo vamos a revisar. Si necesitamos más datos, te escribimos.</p>
+            <div style="margin-top:24px; width:100%; display:flex; flex-direction:column; gap:8px">
+              <button onClick="{{ uListo }}" style="height:54px; border:0; border-radius:999px; background:{{ t.ink }}; color:{{ t.inv }}; font-size:16px; font-weight:600; cursor:pointer">Listo</button>
+              <button onClick="{{ uOtro }}" style="height:54px; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; font-size:16px; font-weight:600; cursor:pointer">Enviar otro</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ lb }}" hint-placeholder-val="{{ false }}">
+      <div role="dialog" aria-modal="true" aria-label="Captura en pantalla completa" style="position:absolute; inset:0; z-index:60; background:rgba(8,8,8,.94); display:flex; flex-direction:column; animation:rpFade .2s ease both">
+        <div style="flex:none; display:flex; justify-content:space-between; align-items:center; padding:14px 16px; color:#fff">
+          <span style="font-family:'JetBrains Mono',ui-monospace,monospace; font-size:14px; font-weight:600">{{ det.code }} · captura</span>
+          <div style="display:flex; gap:8px">
+            <button onClick="{{ toggleZoom }}" aria-label="{{ zoomAria }}" style="width:44px; height:44px; border:0; border-radius:999px; background:rgba(255,255,255,.14); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4M8 11h6"></path><sc-if value="{{ zoomOut }}" hint-placeholder-val="{{ true }}"><path d="M11 8v6"></path></sc-if></svg></button>
+            <button onClick="{{ closeLb }}" aria-label="Cerrar captura" style="width:44px; height:44px; border:0; border-radius:999px; background:rgba(255,255,255,.14); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+          </div>
+        </div>
+        <div onClick="{{ toggleZoom }}" style="flex:1; min-height:0; overflow:auto; display:flex; align-items:safe center; justify-content:safe center; cursor:{{ zoomCur }}">
+          <div style="flex:none; width:{{ lbW }}; height:{{ lbH }}; display:flex; align-items:center; justify-content:center; transition:width .3s, height .3s">
+            <div style="width:150px; height:310px; flex:none; border-radius:22px; background:#f6f6f4; border:4px solid #0a0a0a; overflow:hidden; display:flex; flex-direction:column; padding:12px 10px; gap:6px; transform:scale({{ lbScale }}); transition:transform .3s cubic-bezier(.2,.8,.3,1)">
+              <span style="font-size:7px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.45)">MUJERES DE FE</span>
+              <span style="font-size:12px; font-weight:700; color:#0a0a0a">Tomar asistencia</span>
+              <span style="height:20px; border-radius:6px; background:#fff"></span><span style="height:20px; border-radius:6px; background:#fff"></span><span style="height:20px; border-radius:6px; background:#fff"></span><span style="height:20px; border-radius:6px; background:#fff"></span>
+              <span style="margin-top:auto; padding:6px 8px; border-radius:8px; background:#d93025; color:#fff; font-size:7.5px; font-weight:700">No se pudo guardar. Probá de nuevo.</span>
+              <span style="height:22px; border-radius:99px; background:#0a0a0a"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position:absolute; left:50%; bottom:24px; transform:translateX(-50%); z-index:70; max-width:calc(100% - 32px); padding:14px 20px; border-radius:999px; background:{{ t.ink }}; color:{{ t.inv }}; font-size:14.5px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.2); animation:rpIn .25s ease both; text-align:center">{{ toast }}</div>
+    </sc-if>
+  </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const PANT = ['Inicio','GCX','Mis grupos','Mi cuenta','Eventos','Nocturna','Punto de Información','Otra'];
+const TEC = (v, d, n) => ({ version:v, disp:d, nav:n });
+const R0 = [
+  { n:42, st:'nuevo', nombre:'Lucía Fernández', email:'lucia.fernandez@gmail.com', tel:'11 4321 7766', pant:'Mis grupos', dia:22, mes:'oct', h:'11:05', cap:'ok', tec:TEC('v2.14.0 (214)','Samsung Galaxy A54 · Android 14','Chrome 129'),
+    texto:'No me deja tomar asistencia el jueves. Toco "Guardar" y queda cargando un rato largo, después dice que no se pudo guardar.\n\nPasó en el grupo Mujeres de Fe. Probé dos veces, cerré la app y volví a entrar y sigue igual.' },
+  { n:41, st:'nuevo', nombre:'Tomás Ríos', email:'tomas.rios@hotmail.com', tel:'11 6012 3345', pant:'Eventos', dia:22, mes:'oct', h:'09:48', cap:'no', tec:TEC('v2.14.0 (214)','iPhone 13 · iOS 18.0','Safari 18'),
+    texto:'Compré una entrada para la Nocturna con Mercado Pago, me llegó el mail pero en "Mis entradas" no aparece nada.' },
+  { n:40, st:'visto', nombre:'Sofía Paz', email:'sofipaz@gmail.com', tel:'11 3456 9087', pant:'GCX', dia:21, mes:'oct', h:'18:30', cap:'ok', tec:TEC('v2.13.2 (209)','MacBook Air · macOS 14.6','Safari 17.6'),
+    texto:'Filtro por "Online" y me siguen apareciendo grupos presenciales.', nota:'Es el filtro de modalidad en Safari: no se aplica si el día está vacío. Lo arreglo con el cambio de buscador.', notaF:'21 oct · 19:02', hist:[['Visto por Ignacio','21 oct · 18:52']] },
+  { n:39, st:'resuelto', nombre:'Diego Herrera', email:'diego.herrera@gmail.com', tel:'11 5566 1122', pant:'Mi cuenta', dia:20, mes:'oct', h:'21:14', cap:'ok', tec:TEC('v2.13.2 (209)','Motorola G84 · Android 14','Chrome 129'),
+    texto:'No puedo cambiar la foto de perfil, queda girando y no termina nunca.', nota:'Las fotos de más de 8 MB fallaban. Subimos el límite y comprimimos antes de subir.', notaF:'21 oct · 10:40', hist:[['Visto por Ignacio','21 oct · 09:15'],['Resuelto por Ignacio','21 oct · 14:02']] },
+  { n:38, st:'nuevo', nombre:'Valentina Ruiz', email:'valen.ruiz@gmail.com', tel:'11 2233 4455', pant:'Punto de Información', dia:19, mes:'oct', h:'13:22', cap:'fail', tec:TEC('v2.14.0 (214)','Xiaomi Redmi Note 12 · Android 13','Chrome 128'),
+    texto:'Hola, quería avisarles de algo que me pasó el domingo en el Punto de Información.\n\nFui a retirar el kit de bienvenida y la chica que me atendió buscó mi nombre en la app pero no me encontraba. Yo me había registrado el miércoles con mi cuenta de Google y en mi celular figura todo bien, incluso tengo la foto y los datos completos.\n\nDespués de un rato probamos con mi email y ahí sí apareció, pero con otro apellido (el de mi mamá, que es con el que me anotaron cuando era chica en el grupo de adolescentes). O sea que creo que hay dos cuentas mías: una vieja y la nueva.\n\nNo sé si se pueden unir o si tengo que borrar una. Tampoco sé cuál es la que tiene mi historial de grupos. Les mando una captura de cómo me aparece en el perfil.\n\nGracias por todo lo que hacen, la app está buenísima.' },
+  { n:37, st:'visto', nombre:'Martín Acosta', email:'martin.acosta@gmail.com', tel:null, pant:'Inicio', dia:18, mes:'oct', h:'08:10', cap:'no', tec:TEC('v2.13.2 (209)','iPhone 15 · iOS 18.0','App'),
+    texto:'El versículo del día aparece repetido dos veces en la pantalla de inicio.', hist:[['Visto por Ignacio','18 oct · 10:30']] },
+  { n:36, st:'resuelto', nombre:'Carla Méndez', email:'carla.mendez@yahoo.com', tel:'11 7788 9900', pant:'Nocturna', dia:16, mes:'oct', h:'22:47', cap:'no', tec:TEC('v2.13.1 (207)','Samsung Galaxy S23 · Android 14','Chrome 129'), texto:'El QR de la entrada se ve cortado en modo oscuro.', hist:[['Visto por Ignacio','17 oct · 09:00'],['Resuelto por Ignacio','17 oct · 16:20']] },
+  { n:35, st:'visto', nombre:'Andrés Gómez', email:'andres.gomez@gmail.com', tel:'11 4455 6677', pant:'Otra', dia:15, mes:'oct', h:'17:05', cap:'no', tec:TEC('v2.13.1 (207)','Windows 11','Edge 129'), texto:'No me llegan los mails de recuperar contraseña.', hist:[['Visto por Ignacio','15 oct · 18:40']] },
+  { n:34, st:'resuelto', nombre:'Paula Gómez', email:'paula.gomez@gmail.com', tel:'11 4455 6678', pant:'Eventos', dia:14, mes:'oct', h:'12:31', cap:'ok', tec:TEC('v2.13.1 (207)','iPhone 12 · iOS 17.6','Safari 17'), texto:'El mapa del evento abre en otra ciudad.', hist:[['Visto por Ignacio','14 oct · 13:00'],['Resuelto por Ignacio','15 oct · 11:10']] },
+  { n:33, st:'resuelto', nombre:'Juan Pérez', email:'juanperez@gmail.com', tel:'11 9988 7766', pant:'Inicio', dia:12, mes:'oct', h:'10:02', cap:'no', tec:TEC('v2.13.0 (205)','Motorola E13 · Android 13','Chrome 127'), texto:'La app tarda mucho en abrir con datos móviles.', hist:[['Visto por Ignacio','12 oct · 11:30'],['Resuelto por Ignacio','14 oct · 09:45']] },
+  { n:32, st:'resuelto', nombre:'Ana Giménez', email:'ana.gimenez@gmail.com', tel:'11 3322 1100', pant:'GCX', dia:10, mes:'oct', h:'19:58', cap:'no', tec:TEC('v2.13.0 (205)','iPad · iPadOS 17','Safari 17'), texto:'El botón Unirme no hace nada en el iPad.', hist:[['Visto por Ignacio','11 oct · 09:20'],['Resuelto por Ignacio','11 oct · 15:00']] },
+  { n:31, st:'resuelto', nombre:'Federico Luna', email:'fede.luna@gmail.com', tel:'11 6677 8899', pant:'Mi cuenta', dia:8, mes:'oct', h:'15:40', cap:'no', tec:TEC('v2.13.0 (205)','Pixel 7 · Android 14','Chrome 129'), texto:'No puedo cambiar mi teléfono en el perfil.', hist:[['Visto por Ignacio','8 oct · 16:00'],['Resuelto por Ignacio','9 oct · 10:15']] },
+];
+const MESES = { oct:'octubre' };
+const code = n => 'REP-' + String(n).padStart(4,'0');
+const ini = s => s.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const PER = 8;
+
+class Component extends DCLogic {
+  state = { view:'pc', dark:false, mode:'panel', grid:'ok', q:'', filtro:'todos', pant:null, pantOpen:false, page:0, reps:R0.map(r=>({...r, hist:r.hist||[]})), sel:null, nota:'', copied:false, lb:false, zoom:false, toast:null, fit:1,
+    uSt:'idle', uFailNext:false, uCapFail:false, uCopied:false, uTxt:'No me deja tomar asistencia el jueves. Toco "Guardar" y queda cargando, después dice que no se pudo guardar.', uPant:'Mis grupos', uN:43 };
+
+  componentDidMount(){
+    this.onR = () => this.setState({ fit: Math.min(1, (window.innerWidth - 32) / (this.state.view==='pc'?1440:390)) });
+    window.addEventListener('resize', this.onR); this.onR();
+    try { const s = JSON.parse(localStorage.getItem('panelReportes')||'{}'); if (s.view) this.setState({view:s.view, dark:!!s.dark}, this.onR); } catch(e){}
+  }
+  componentWillUnmount(){ window.removeEventListener('resize', this.onR); ['tt','ct','lt','st','vt','uct'].forEach(k=>clearTimeout(this[k])); }
+  save(){ try { localStorage.setItem('panelReportes', JSON.stringify({view:this.state.view, dark:this.state.dark})); } catch(e){} }
+  toast(t){ clearTimeout(this.tt); this.setState({toast:t}); this.tt = setTimeout(()=>this.setState({toast:null}), 2200); }
+  copy(txt){ try { navigator.clipboard && navigator.clipboard.writeText(txt); } catch(e){} }
+
+  theme(d){
+    return d ? { bg:'#111110', card:'#1b1b1a', chip:'#2a2a28', hover:'#222221', selRow:'#262624', ink:'#f4f4f2', inv:'#0a0a0a', m62:'rgba(255,255,255,.68)', m55:'rgba(255,255,255,.58)', m42:'rgba(255,255,255,.46)', line:'rgba(255,255,255,.08)', lineS:'rgba(255,255,255,.18)', shadow:'0 1px 2px rgba(0,0,0,.4)', red:'#f26b5e', redBg:'rgba(242,107,94,.15)', redInk:'#ff9d92', grn:'#4cc77c', grnBg:'rgba(76,199,124,.15)', amb:'#f0b45a', ambBg:'rgba(240,180,90,.14)', spinTrack:'rgba(0,0,0,.2)', av:['#2f3a33','#3a3330','#30343c','#3a3036'] }
+      : { bg:'#f6f6f4', card:'#ffffff', chip:'#f2f2f0', hover:'#fafaf8', selRow:'#f2f2f0', ink:'#0a0a0a', inv:'#ffffff', m62:'rgba(0,0,0,.64)', m55:'rgba(0,0,0,.56)', m42:'rgba(0,0,0,.46)', line:'rgba(0,0,0,.07)', lineS:'rgba(0,0,0,.16)', shadow:'0 1px 2px rgba(0,0,0,.04), 0 2px 10px rgba(0,0,0,.03)', red:'#d93025', redBg:'#fdecea', redInk:'#a8231a', grn:'#118f46', grnBg:'#e7f4eb', amb:'#8a5200', ambBg:'#fdf1dc', spinTrack:'rgba(255,255,255,.3)', av:['#e3ece5','#efe6dc','#e2e6ee','#efe2e8'] };
+  }
+  pill(st, t){ return st==='nuevo' ? {t:'Nuevo', bg:t.redBg, ink:t.redInk, dot:true} : st==='visto' ? {t:'Visto', bg:t.chip, ink:t.m62} : {t:'Resuelto', bg:t.grnBg, ink:t.grn}; }
+  setRep(n, fn){ this.setState(s=>({reps:s.reps.map(r=>r.n===n?fn(r):r)})); }
+  filtered(){
+    const s = this.state, q = s.q.trim().toLowerCase();
+    if (s.grid==='empty') return [];
+    return s.reps.filter(r => (s.filtro==='todos' || r.st===s.filtro) && (!s.pant || r.pant===s.pant) &&
+      (!q || code(r.n).toLowerCase().includes(q) || r.nombre.toLowerCase().includes(q) || r.texto.toLowerCase().includes(q)));
+  }
+  open(n){
+    const r = this.state.reps.find(x=>x.n===n); if (!r) return;
+    this.setState({sel:n, nota:r.nota||'', copied:false, lb:false, zoom:false, pantOpen:false});
+    clearTimeout(this.vt);
+    if (r.st==='nuevo') this.vt = setTimeout(()=>this.setRep(n, x=>x.st==='nuevo' ? {...x, st:'visto', hist:[...x.hist, ['Visto por Ignacio','ahora']]} : x), 700);
+  }
+  reload(){ this.setState({grid:'load', sel:null}); clearTimeout(this.lt); this.lt = setTimeout(()=>this.setState({grid:'ok'}), 1300); }
+  reportText(r){
+    return `${code(r.n)} · ${r.pant}\nEnviado por: ${r.nombre} · ${r.email}${r.tel?' · '+r.tel:''}\nFecha: ${r.dia} ${r.mes} 2026 · ${r.h}\nEstado: ${this.pill(r.st,this.theme(false)).t}\n\nQué pasó:\n${r.texto}\n\nCaptura: ${r.cap==='ok'?'sí (en el panel)':r.cap==='fail'?'falló la subida':'no'}\nVersión: ${r.tec.version}\nDispositivo: ${r.tec.disp}\nNavegador: ${r.tec.nav}${r.nota?'\n\nNota interna: '+r.nota:''}`;
+  }
+  uEnviar(){
+    if (this.state.uSt==='sending') return;
+    this.setState({uSt:'sending'}); clearTimeout(this.st);
+    this.st = setTimeout(()=>this.setState(s => s.uFailNext ? {uSt:'error'} : {uSt:'ok', uCopied:false}), 1400);
+  }
+
+  renderVals(){
+    const s = this.state, t = this.theme(s.dark), mob = s.view==='mobile';
+    const set = o => () => this.setState(o, ()=>{ this.save(); this.onR(); });
+    const opt = on => `height:32px; padding:0 12px; border:0; border-radius:15px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; font-family:Manrope; background:${on?'#0a0a0a':'transparent'}; color:${on?'#fff':'rgba(0,0,0,.62)'}`;
+    const it = (tx, on, go) => ({t:tx, style:opt(on), go});
+    const P = o => () => this.setState({mode:'panel', ...o});
+    const toolbar = [
+      { label:'VISTA', items:[it('PC 1440', !mob, set({view:'pc'})), it('Mobile 390', mob, set({view:'mobile'}))] },
+      { label:'TEMA', items:[it('Claro', !s.dark, set({dark:false})), it('Oscuro', s.dark, set({dark:true}))] },
+      { label:'SECCIÓN', items:[it('Panel de Sistemas', s.mode==='panel', P({})), it('Confirmación al usuario', s.mode==='user', ()=>this.setState({mode:'user', sel:null}))] },
+      { label:'PLANILLA', items:[
+        it('Con datos', s.mode==='panel'&&s.grid==='ok'&&!s.q, P({grid:'ok', q:'', sel:null})),
+        it('Vacía', s.grid==='empty', P({grid:'empty', q:'', filtro:'todos', pant:null, sel:null})),
+        it('Cargando', s.grid==='load', ()=>{ this.setState({mode:'panel'}); this.reload(); }),
+        it('Búsqueda sin resultados', s.grid==='ok'&&s.q==='impresora', P({grid:'ok', q:'impresora', filtro:'todos', pant:null, sel:null, page:0})),
+        it('Error', s.grid==='err', P({grid:'err', sel:null})) ] },
+      { label:'DETALLE', items:[
+        it('Con captura', s.sel===42, ()=>{ this.setState({mode:'panel', grid:'ok', q:''}); this.open(42); }),
+        it('Sin captura', s.sel===41, ()=>{ this.setState({mode:'panel', grid:'ok', q:''}); this.open(41); }),
+        it('Captura fallida', s.sel===38, ()=>{ this.setState({mode:'panel', grid:'ok', q:''}); this.open(38); }),
+        it('Nota editada', s.sel===40, ()=>{ this.setState({mode:'panel', grid:'ok', q:''}); this.open(40); }),
+        it('Resuelto', s.sel===39, ()=>{ this.setState({mode:'panel', grid:'ok', q:''}); this.open(39); }),
+        it('Reiniciar datos', false, ()=>this.setState({reps:R0.map(r=>({...r, hist:r.hist||[]})), sel:null})) ] },
+      { label:'USUARIO', items:[
+        it('Formulario', s.mode==='user'&&s.uSt==='idle', ()=>this.setState({mode:'user', uSt:'idle', uFailNext:false})),
+        it('Enviando', s.mode==='user'&&s.uSt==='sending', ()=>{ clearTimeout(this.st); this.setState({mode:'user', uSt:'sending'}); }),
+        it('Confirmación', s.mode==='user'&&s.uSt==='ok'&&!s.uCapFail, ()=>this.setState({mode:'user', uSt:'ok', uCapFail:false, uCopied:false})),
+        it('Captura fallida', s.mode==='user'&&s.uSt==='ok'&&s.uCapFail, ()=>this.setState({mode:'user', uSt:'ok', uCapFail:true, uCopied:false})),
+        it('Error al enviar', s.mode==='user'&&s.uSt==='error', ()=>this.setState({mode:'user', uSt:'error', uFailNext:true})) ] },
+    ];
+
+    const nNuevos = s.reps.filter(r=>r.st==='nuevo').length, total = s.grid==='empty' ? 0 : s.reps.length;
+    const list = this.filtered(), pages = Math.max(1, Math.ceil(list.length/PER)), page = Math.min(s.page, pages-1);
+    const vis = list.slice(page*PER, page*PER+PER);
+    const rows = vis.map((r,i) => {
+      const nu = r.st==='nuevo', sel = s.sel===r.n;
+      return { code:code(r.n), nombre:r.nombre, ini:ini(r.nombre), avBg:t.av[r.n%4], pantalla:r.pant, fecha:`${r.dia} ${r.mes} · ${r.h}`, texto:r.texto.replace(/\n+/g,' '), snip:r.texto.replace(/\n+/g,' '),
+        st:this.pill(r.st,t), fw: nu ? 700 : 500, codeInk: nu ? t.ink : t.m62, cellInk: nu ? t.ink : t.m62,
+        bt: i ? `1px solid ${t.line}` : '0', bg: sel ? t.selRow : 'transparent', delay:`${i*35}ms`,
+        open: e => { e && e.stopPropagation && e.stopPropagation(); this.open(r.n); } };
+    });
+    const fCount = k => s.grid==='empty' ? 0 : s.reps.filter(r=>r.st===k).length;
+    const filtros = [['todos','Todos',null],['nuevo','Nuevos',fCount('nuevo')],['visto','Vistos',null],['resuelto','Resueltos',null]].map(([k,tx,n])=>{ const on = s.filtro===k;
+      return { t:tx, n: n||null, onS:String(on), bg: on ? t.ink : t.card, ink: on ? t.inv : t.ink, nInk: on ? t.inv : t.red, go:()=>this.setState({filtro:k, page:0}) }; });
+    const pantallas = [null, ...PANT].map(p=>({ t:p||'Todas', on:s.pant===p, onS:String(s.pant===p), bg: s.pant===p ? t.chip : 'transparent', fw: s.pant===p ? 700 : 500, go:()=>this.setState({pant:p, pantOpen:false, page:0}) }));
+
+    const qOn = !!s.q.trim();
+    const VE = s.grid==='err' ? { t:'No pudimos cargar los reportes', s:'Revisá la conexión y probá de nuevo.', cta:'Reintentar', error:true, role:'alert', go:()=>this.reload(), ctaBg:t.ink, ctaInk:t.inv }
+      : s.grid==='empty' ? { t:'No hay reportes todavía', s:'Cuando alguien reporte un problema desde Mi cuenta, va a aparecer acá.', empty:true }
+      : (s.grid==='ok' && !list.length) ? { t:'Ningún reporte coincide', s: qOn ? `No encontramos nada con “${s.q.trim()}”. Probá con un código, un nombre u otra palabra.` : 'Probá con otro estado o pantalla.', cta:'Limpiar búsqueda', search:true, go:()=>this.setState({q:'', filtro:'todos', pant:null}), ctaBg:t.chip, ctaInk:t.ink } : null;
+
+    const r = s.sel!=null ? s.reps.find(x=>x.n===s.sel) : null;
+    const idx = r ? list.findIndex(x=>x.n===r.n) : -1;
+    const go = d => () => { const nx = list[idx+d]; if (nx) { this.open(nx.n); this.setState({page:Math.floor((idx+d)/PER)}); } };
+    let det = { open:false, st:{}, tec:[], hist:[], acciones:[] };
+    if (r && s.mode==='panel') {
+      const res = r.st==='resuelto';
+      det = { open:true, aria:`Detalle del reporte ${code(r.n)}`, code:code(r.n), st:this.pill(r.st,t), recibido:`Recibido el ${r.dia} de ${MESES[r.mes]} de 2026 a las ${r.h}`,
+        pos: idx>=0 ? `${idx+1} de ${list.length}` : '', prev:go(-1), next:go(1),
+        prevDisS:String(idx<=0), nextDisS:String(idx<0||idx>=list.length-1), prevInk: idx<=0 ? t.m42 : t.ink, nextInk: (idx<0||idx>=list.length-1) ? t.m42 : t.ink,
+        nombre:r.nombre, ini:ini(r.nombre), avBg:t.av[r.n%4], email:r.email, tel:r.tel, telTxt: r.tel || 'Sin teléfono cargado', telInk: r.tel ? t.m62 : t.m42,
+        btnCols: r.tel && !mob ? '1fr 1fr' : '1fr',
+        wa:()=>this.toast(`Abriría WhatsApp con ${r.tel}`), copyMail:()=>{ this.copy(r.email); this.toast('Email copiado'); },
+        texto:r.texto, pantalla:r.pant, capOk:r.cap==='ok', capNo:r.cap==='no', capFail:r.cap==='fail',
+        tec:[{k:'Versión',v:r.tec.version},{k:'Dispositivo',v:r.tec.disp},{k:'Navegador',v:r.tec.nav},{k:'Código',v:code(r.n)}],
+        gCols: mob ? '1fr' : '1fr 1fr',
+        acciones: res ? [{ t:'Resuelto', check:true, bg:t.grnBg, ink:t.grn, disS:'true', cur:'default', go:()=>{} }, { t:'Volver a abrir', undo:true, bg:t.chip, ink:t.ink, disS:'false', cur:'pointer', go:()=>{ this.setRep(r.n, x=>({...x, st:'visto', hist:[...x.hist, ['Reabierto por Ignacio','ahora']]})); this.toast(`${code(r.n)} volvió a abrirse`); } }]
+          : [{ t: r.st==='visto' ? 'Visto' : 'Marcar como visto', eye:true, bg:t.chip, ink: r.st==='visto' ? t.m42 : t.ink, disS:String(r.st==='visto'), cur: r.st==='visto' ? 'default' : 'pointer', go:()=>{ if (r.st!=='visto') this.setRep(r.n, x=>({...x, st:'visto', hist:[...x.hist, ['Visto por Ignacio','ahora']]})); } },
+             { t:'Marcar como resuelto', check:true, bg:t.ink, ink:t.inv, disS:'false', cur:'pointer', go:()=>{ this.setRep(r.n, x=>({...x, st:'resuelto', hist:[...x.hist, ['Resuelto por Ignacio','ahora']]})); this.toast(`${code(r.n)} marcado como resuelto`); } }],
+        notaMeta: r.notaF ? `Editada ${r.notaF}` : 'Sin nota',
+        hist: [['Recibido', `${r.dia} ${r.mes} · ${r.h}`], ...r.hist].map((h,i,a)=>({ t:h[0], h:h[1], dot: i===a.length-1 ? t.ink : t.lineS, line: i<a.length-1 ? t.lineS : 'transparent' })),
+      };
+    }
+    const notaDirty = r && (s.nota.trim() !== (r.nota||'').trim());
+
+    const uPants = PANT.map(p=>({ t:p, onS:String(s.uPant===p), bg: s.uPant===p ? t.ink : t.chip, ink: s.uPant===p ? t.inv : t.ink, go:()=>this.setState({uPant:p}) }));
+    const lbScale = s.zoom ? (mob ? 2.4 : 4) : (mob ? 1.7 : 2.3);
+
+    return {
+      toolbar, t, isMob:mob, isPC:!mob, isPanel:s.mode==='panel', isUser:s.mode==='user',
+      scale:s.fit, outerW:`${(mob?390:1440)*s.fit}px`, outerH:`${(mob?844:900)*s.fit}px`, frameW: mob?'390px':'1440px', frameH: mob?'844px':'900px', frameR: mob?'44px':'18px',
+      headPad: mob ? '14px 16px 18px' : '14px 40px 22px', navGap:'4px', titleMt: mob ? '14px' : '18px', h1: mob ? '28px' : '36px', bodyPad: mob ? '16px 16px 40px' : '24px 40px 48px',
+      resumen: total ? `${nNuevos} ${nNuevos===1?'nuevo':'nuevos'} · ${total} en total` : 'Sin reportes',
+      nav:[ {t:'Usuarios', count:'412', bg:'transparent', ink:t.m62, cInk:t.m42, go:()=>this.toast('Abriría Usuarios en Admin General')}, {t:'Directorio', bg:'transparent', ink:t.m62, go:()=>this.toast('Abriría Directorio en Admin General')}, {t:'Reportes', bug:true, badge: nNuevos && s.grid!=='empty' ? String(nNuevos) : null, bg:t.chip, ink:t.ink, go:()=>this.setState({sel:null})} ],
+      q:s.q, onQ:e=>this.setState({q:e.target.value, page:0}), clearQ:()=>this.setState({q:''}),
+      togglePant:()=>this.setState({pantOpen:!s.pantOpen}), pantOpen:s.pantOpen, pantOpenS:String(s.pantOpen), pantLbl:s.pant||'Todas', pantallas, pantSide: mob ? 'right' : 'left',
+      filtros, cargando:s.grid==='load', skel:[0,1,2,3,4,5].map(i=>({bt: i ? `1px solid ${t.line}` : '0'})),
+      shim:`background:linear-gradient(90deg, ${t.chip} 30%, ${s.dark?'#33332f':'#fafaf8'} 50%, ${t.chip} 70%); background-size:300% 100%; animation:rpShim 1.4s linear infinite`,
+      hayVacio:!!VE, ve:VE||{}, tablaPC: !mob && s.grid==='ok' && list.length>0, tablaMob: mob && s.grid==='ok' && list.length>0, rows,
+      cols:'110px minmax(0,2.2fr) minmax(0,1fr) 140px 120px 120px',
+      hayPag: s.grid==='ok' && list.length>0, pagTxt:`${page*PER+1}–${Math.min(list.length,(page+1)*PER)} de ${list.length}`,
+      pages: Array.from({length:pages},(_,i)=>({ n:String(i+1), cur: i===page ? 'page' : 'false', bg: i===page ? t.ink : t.card, ink: i===page ? t.inv : t.ink, go:()=>this.setState({page:i}) })),
+      pagPrev:()=>page>0 && this.setState({page:page-1}), pagNext:()=>page<pages-1 && this.setState({page:page+1}),
+      prevDisS:String(page===0), nextDisS:String(page>=pages-1), prevInk: page===0 ? t.m42 : t.ink, nextInk: page>=pages-1 ? t.m42 : t.ink,
+      det, detW: mob ? '100%' : '560px', detShadow: mob ? 'none' : '-12px 0 40px rgba(0,0,0,.10)', detPad: mob ? '20px 16px 40px' : '26px 28px 40px', codeSize: mob ? '28px' : '34px',
+      closeDet:()=>this.setState({sel:null}), closeAria: mob ? 'Volver a la lista' : 'Cerrar detalle',
+      copiado:s.copied, copyLbl: s.copied ? '¡Copiado!' : 'Copiar todo', copyBg: s.copied ? t.grnBg : t.chip, copyInk: s.copied ? t.grn : t.ink,
+      copyAll:()=>{ if (!r) return; this.copy(this.reportText(r)); this.setState({copied:true}); clearTimeout(this.ct); this.ct = setTimeout(()=>this.setState({copied:false}), 2000); },
+      nota:s.nota, onNota:e=>this.setState({nota:e.target.value}), notaDisS:String(!notaDirty), notaBg: notaDirty ? t.ink : t.card, notaInk: notaDirty ? t.inv : t.m42,
+      saveNota:()=>{ if (!notaDirty) return; this.setRep(r.n, x=>({...x, nota:s.nota.trim(), notaF:'hoy · ahora'})); this.toast('Nota guardada'); },
+      lb:s.lb && !!r, openLb:()=>this.setState({lb:true, zoom:false}), closeLb:()=>this.setState({lb:false}), toggleZoom:()=>this.setState({zoom:!s.zoom}),
+      zoomOut:!s.zoom, zoomAria: s.zoom ? 'Alejar' : 'Acercar', zoomCur: s.zoom ? 'zoom-out' : 'zoom-in', lbScale, lbW:`${150*lbScale}px`, lbH:`${310*lbScale}px`,
+      toast:s.toast, stop:e=>e.stopPropagation(),
+      uPad: mob ? '16px 16px 40px' : '40px 40px 56px', uH1: mob ? '28px' : '36px',
+      uTxt:s.uTxt, onUTxt:e=>this.setState({uTxt:e.target.value}), uPants,
+      uErr:s.uSt==='error', uSending:s.uSt==='sending', uSendingS:String(s.uSt==='sending'), uIdle:s.uSt!=='sending', uEnviar:()=>this.uEnviar(),
+      uOk:s.uSt==='ok', uCode:code(s.uN), uCapFail:s.uCapFail,
+      sheetAlign: mob ? 'flex-end' : 'center', sheetW: mob ? '100%' : '460px', sheetR: mob ? '28px 28px 0 0' : '28px', sheetPad: mob ? '18px 20px 30px' : '32px 32px 28px', sheetAnim: mob ? 'rpUp .38s cubic-bezier(.2,.8,.3,1) both' : 'rpZoom .28s cubic-bezier(.2,.8,.3,1) both',
+      uCopied:s.uCopied, uCopyLbl: s.uCopied ? '¡Copiado!' : 'Copiar', uCopyBg: s.uCopied ? t.grnBg : t.card, uCopyInk: s.uCopied ? t.grn : t.ink,
+      uCopy:()=>{ this.copy(code(s.uN)); this.setState({uCopied:true}); clearTimeout(this.uct); this.uct = setTimeout(()=>this.setState({uCopied:false}), 2000); },
+      uListo:()=>this.setState({uSt:'idle'}), uOtro:()=>this.setState(x=>({uSt:'idle', uTxt:'', uN:x.uN+1, uCapFail:false})),
+    };
+  }
+}
+</script>
+</body>
+</html>
