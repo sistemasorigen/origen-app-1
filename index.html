@@ -280,6 +280,158 @@
       font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
 
+    /* /gcx con la estética nueva (design-claude/GCX - Tarjetas y pagina).
+       .gcx-m va en cada pieza rediseñada —franja, encabezado, grilla, tarjeta,
+       paneles— y NO en toda la página: el banner y el buscador quedan como
+       estaban, con su Plus Jakarta. `.groups-original-fonts .gcx-m *` es
+       (0,2,0) y le gana al (0,1,1) de los h1-h4 de arriba; fuera de /gcx (el
+       carrusel del Home) alcanza con `.gcx-m *`. */
+    .gcx-m,
+    .gcx-m *,
+    .groups-original-fonts .gcx-m,
+    .groups-original-fonts .gcx-m * {
+      font-family: 'Manrope', system-ui, sans-serif !important;
+    }
+
+    .gcx-m {
+      --g-bg: #f6f6f4;
+      --g-card: #ffffff;
+      --g-chip: #f2f2f0;
+      --g-chip-h: #e9e9e6;
+      --g-field: #ffffff;
+      --g-ink: #0a0a0a;
+      --g-inv: #ffffff;
+      --g-m62: rgba(0, 0, 0, .62);
+      --g-m50: rgba(0, 0, 0, .55);
+      --g-m38: rgba(0, 0, 0, .42);
+      --g-line: rgba(0, 0, 0, .14);
+      --g-line2: rgba(0, 0, 0, .07);
+      --g-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 2px 10px rgba(0, 0, 0, .03);
+      --g-shadowH: 0 14px 36px rgba(0, 0, 0, .10);
+      --g-glass: rgba(255, 255, 255, .78);
+      --g-dots: rgba(0, 0, 0, .07);
+      --g-grn: #118f46;
+      --g-grnBg: #e7f4eb;
+      --g-amb: #9a5a00;
+      --g-ambBg: #fdf1dc;
+      --g-shim: #fafaf8;
+      --g-av1: #e3ece5;
+      --g-av2: #efe6dc;
+      --g-av3: #e2e6ee;
+      color: var(--g-ink);
+    }
+
+    .dark .gcx-m {
+      --g-bg: #111110;
+      --g-card: #1b1b1a;
+      --g-chip: #2a2a28;
+      --g-chip-h: #333331;
+      --g-field: #222221;
+      --g-ink: #f4f4f2;
+      --g-inv: #0a0a0a;
+      --g-m62: rgba(255, 255, 255, .66);
+      --g-m50: rgba(255, 255, 255, .55);
+      --g-m38: rgba(255, 255, 255, .42);
+      --g-line: rgba(255, 255, 255, .16);
+      --g-line2: rgba(255, 255, 255, .08);
+      --g-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+      --g-shadowH: 0 14px 36px rgba(0, 0, 0, .5);
+      --g-glass: rgba(27, 27, 26, .72);
+      --g-dots: rgba(255, 255, 255, .08);
+      --g-grn: #4cc77c;
+      --g-grnBg: rgba(76, 199, 124, .14);
+      --g-amb: #f0b45a;
+      --g-ambBg: rgba(240, 180, 90, .14);
+      --g-shim: #33332f;
+      --g-av1: #2f3a33;
+      --g-av2: #3a3330;
+      --g-av3: #30343c;
+    }
+
+    /* El foco no lo define el .dc: anillo de la tinta, que se invierte sola
+       en oscuro, separado 2px para que se lea también sobre botones negros. */
+    .gcx-m :focus-visible {
+      outline: 2px solid var(--g-ink);
+      outline-offset: 2px;
+    }
+
+    @keyframes gcxIn { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: none } }
+    @keyframes gcxShim { from { background-position: 120% 0 } to { background-position: -120% 0 } }
+    @keyframes gcxZoom { from { opacity: 0; transform: scale(.95) } to { opacity: 1; transform: none } }
+    @keyframes gcxDot { 0%, 100% { box-shadow: 0 0 0 0 rgba(17, 143, 70, .5) } 50% { box-shadow: 0 0 0 5px rgba(17, 143, 70, 0) } }
+    @keyframes gcxRing { 0% { opacity: 0 } 12% { opacity: 1 } 30% { opacity: .1 } 48% { opacity: 1 } 70% { opacity: .5 } 100% { opacity: 0 } }
+
+    .gcx-latido { animation: gcxDot 2.4s ease-in-out infinite; }
+    .gcx-brillo {
+      background: linear-gradient(90deg, var(--g-chip) 30%, var(--g-shim) 50%, var(--g-chip) 70%);
+      background-size: 300% 100%;
+      animation: gcxShim 1.4s linear infinite;
+    }
+
+    /* La tarjeta entra con `backwards` y no con `both`: un fill que quedara
+       pegado en transform:none le ganaría al levantarse del hover. */
+    .gcx-tarjeta {
+      position: relative;
+      background: var(--g-card);
+      box-shadow: var(--g-shadow);
+      transition: transform .25s ease, box-shadow .25s ease;
+      animation: gcxIn .45s cubic-bezier(.2, .7, .3, 1) backwards;
+    }
+    .gcx-tarjeta .gcx-foto { transition: transform .6s cubic-bezier(.2, .7, .3, 1); }
+    @media (hover: hover) {
+      .gcx-tarjeta:hover { transform: translateY(-4px); box-shadow: var(--g-shadowH); }
+      .gcx-tarjeta:hover .gcx-foto { transform: scale(1.04); }
+      .gcx-m .gcx-hover-chip:hover { background: var(--g-chip-h); }
+      .gcx-m .gcx-hover-tinta:hover { opacity: .88; }
+    }
+
+    /* La franja "¿Querés ser anfitrión?": en el teléfono el botón comparte
+       renglón con el título; en la compu ocupa la columna de la derecha. */
+    .gcx-franja { grid-template-areas: "rot rot" "tit btn" "txt txt"; }
+    @media (min-width: 768px) {
+      .gcx-franja { grid-template-areas: "rot btn" "tit btn" "txt btn"; }
+    }
+
+    /* El resaltado de un link /gcx?groupId=… (lo agrega el efecto de Grupos). */
+    .gcx-resaltada::after {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 33px;
+      border: 2.5px solid var(--g-ink);
+      pointer-events: none;
+      animation: gcxRing 2.6s ease-out forwards;
+    }
+
+    /* Postulación a anfitrión. Mismo recurso que #gcx-inscripcion: la base
+       repite la cadena de :not() del override global y consume variables, y
+       el borde del campo repetido llega por --pf-borde desde el componente. */
+    #gcx-postulacion input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="image"]),
+    #gcx-postulacion textarea {
+      background-color: var(--g-field) !important;
+      color: var(--g-ink) !important;
+      border: 1.5px solid var(--pf-borde, var(--g-line)) !important;
+      border-radius: 16px !important;
+      outline: none !important;
+    }
+    #gcx-postulacion textarea { border-radius: 18px !important; }
+    #gcx-postulacion input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="image"]):focus,
+    #gcx-postulacion textarea:focus {
+      border-color: var(--g-ink) !important;
+    }
+    #gcx-postulacion ::placeholder { color: var(--g-m38) !important; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .gcx-m,
+      .gcx-m *,
+      .gcx-m *::before,
+      .gcx-m *::after,
+      .gcx-resaltada::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
     /* Base transitions */
     body,
     div,

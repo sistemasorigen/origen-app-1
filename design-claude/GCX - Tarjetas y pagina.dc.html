@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button,input,textarea{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}@keyframes gIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}@keyframes gShim{from{background-position:120% 0}to{background-position:-120% 0}}@keyframes gFade{from{opacity:0}to{opacity:1}}@keyframes gUp{from{transform:translateY(100%)}to{transform:none}}@keyframes gZoom{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}@keyframes gDot{0%,100%{box-shadow:0 0 0 0 rgba(17,143,70,.5)}50%{box-shadow:0 0 0 5px rgba(17,143,70,0)}}@keyframes gBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}@keyframes gRing{0%{opacity:0}12%{opacity:1}30%{opacity:.1}48%{opacity:1}70%{opacity:.5}100%{opacity:0}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:center; gap:14px">
+
+  <div style="display:flex; flex-direction:column; gap:8px; background:#fff; border-radius:24px; padding:12px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1180px; width:100%">
+    <sc-for list="{{ toolbar }}" as="row" hint-placeholder-count="6">
+      <div style="display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center">
+        <span style="width:96px; flex:none; font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">{{ row.label }}</span>
+        <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px">
+          <sc-for list="{{ row.items }}" as="it" hint-placeholder-count="3"><button onClick="{{ it.go }}" style="{{ it.style }}">{{ it.t }}</button></sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="width:{{ outerW }}; height:{{ outerH }}; flex:none">
+  <div style="position:relative; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; transform:scale({{ scale }}); transform-origin:0 0; border-radius:{{ frameR }}; background:{{ t.bg }}; box-shadow:0 6px 28px rgba(0,0,0,.14); color:{{ t.ink }}">
+    <div ref="{{ scrollRef }}" style="position:absolute; inset:0; overflow-y:auto; overflow-x:hidden">
+
+      <div style="position:sticky; top:0; z-index:5; background:{{ t.bg }}; padding:{{ navPad }}">
+        <div style="max-width:1360px; margin:0 auto; height:60px; display:flex; align-items:center; gap:12px">
+          <button aria-label="Abrir el menú" style="width:44px; height:44px; flex:none; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+          <span style="font-size:17px; font-weight:700; letter-spacing:-.02em">Origen</span>
+        </div>
+      </div>
+
+      <div style="max-width:1360px; margin:0 auto; padding:{{ pad }}; display:flex; flex-direction:column">
+
+        <div style="height:{{ bannerH }}; border-radius:28px; background:{{ t.chip }}; border:1.5px dashed {{ t.line }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; padding:16px">
+          <span style="font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}">REFERENCIA · SIN CAMBIOS</span>
+          <span style="font-size:15px; font-weight:600; color:{{ t.m50 }}">Banner (carrusel) actual</span>
+        </div>
+
+        <section aria-label="Postulaciones a anfitrión" style="margin-top:16px; background:{{ t.card }}; border-radius:28px; padding:{{ franjaPad }}; box-shadow:{{ t.shadow }}; display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-areas:{{ franjaAreas }}; gap:{{ franjaGap }}; align-items:center">
+          <p style="grid-area:rot; margin:0; display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}"><span style="width:7px; height:7px; border-radius:50%; background:{{ t.grn }}; animation:gDot 2.4s ease-in-out infinite"></span>POSTULACIONES ABIERTAS</p>
+          <h2 style="grid-area:tit; margin:0; font-size:{{ franjaH }}; line-height:1.15; font-weight:600; letter-spacing:-.025em">¿Querés ser anfitrión?</h2>
+          <p style="grid-area:txt; margin:0; max-width:560px; font-size:15px; line-height:1.5; color:{{ t.m62 }}; text-wrap:pretty">Si sentís el llamado a servir y guiar a otros en comunidad, nos encantaría conocerte.</p>
+          <button onClick="{{ fr.go }}" style="grid-area:btn; justify-self:end; height:{{ franjaBtnH }}; padding:0 {{ franjaBtnPad }}; border:0; border-radius:999px; background:{{ fr.bg }}; color:{{ fr.ink }}; display:flex; align-items:center; gap:8px; font-size:{{ franjaBtnFs }}; font-weight:600; white-space:nowrap; cursor:pointer" style-active="transform:scale(.98)">
+            <sc-if value="{{ fr.clock }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg></sc-if>
+            <sc-if value="{{ fr.check }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+            <span>{{ fr.t }}</span>
+          </button>
+        </section>
+
+        <div style="margin-top:{{ gapHead }}">
+          <p style="margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}">GRUPOS DE CONEXIÓN</p>
+          <h1 style="margin:10px 0 0; font-size:{{ h1 }}; line-height:1.02; font-weight:600; letter-spacing:-.035em">Encontrá tu grupo</h1>
+          <p style="margin:10px 0 0; font-size:15.5px; font-weight:500; color:{{ t.m50 }}">{{ conteo }}</p>
+        </div>
+
+        <div style="margin-top:20px; height:{{ buscH }}; border-radius:28px; background:{{ t.chip }}; border:1.5px dashed {{ t.line }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; padding:16px">
+          <span style="font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}">REFERENCIA · SIN CAMBIOS</span>
+          <span style="font-size:15px; font-weight:600; color:{{ t.m50 }}">Buscador y filtros actuales</span>
+        </div>
+
+        <sc-if value="{{ cargando }}" hint-placeholder-val="{{ false }}">
+          <div aria-busy="true" aria-label="Cargando grupos" style="margin-top:20px; display:grid; grid-template-columns:{{ gridCols }}; gap:{{ gridGap }}">
+            <sc-for list="{{ skel }}" as="k" hint-placeholder-count="3">
+              <div style="background:{{ t.card }}; border-radius:28px; padding:8px; box-shadow:{{ t.shadow }}">
+                <div style="{{ shim }}; aspect-ratio:4/3; border-radius:20px"></div>
+                <div style="padding:18px 12px 12px; display:flex; flex-direction:column; gap:12px">
+                  <div style="{{ shim }}; width:72%; height:20px; border-radius:8px"></div>
+                  <div style="{{ shim }}; width:46%; height:14px; border-radius:7px"></div>
+                  <div style="{{ shim }}; width:56%; height:14px; border-radius:7px"></div>
+                  <div style="{{ shim }}; width:92%; height:14px; border-radius:7px"></div>
+                  <div style="display:flex; gap:10px; margin-top:8px"><div style="{{ shim }}; width:52px; height:52px; border-radius:999px; flex:none"></div><div style="{{ shim }}; flex:1; height:52px; border-radius:999px"></div></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hayVacio }}" hint-placeholder-val="{{ false }}">
+          <div role="{{ ve.role }}" style="margin-top:20px; background:{{ t.card }}; border-radius:28px; padding:56px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; box-shadow:{{ t.shadow }}; animation:gIn .4s ease both">
+            <div style="width:88px; height:88px; border-radius:50%; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; color:{{ t.m50 }}">
+              <sc-if value="{{ ve.search }}" hint-placeholder-val="{{ false }}"><svg width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="21" cy="21" r="12"></circle><path d="M30 30l9 9M16 21h10" stroke-dasharray="0"></path></svg></sc-if>
+              <sc-if value="{{ ve.error }}" hint-placeholder-val="{{ false }}"><svg width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 19a23 23 0 0132 0M14 25.5a14 14 0 0120 0M20.5 32a5 5 0 017 0"></path><path d="M9 9l30 30"></path></svg></sc-if>
+              <sc-if value="{{ ve.season }}" hint-placeholder-val="{{ false }}"><svg width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="11" width="30" height="28" rx="6"></rect><path d="M9 20h30M17 7v8M31 7v8M20 29h8"></path></svg></sc-if>
+            </div>
+            <h3 style="margin:22px 0 0; font-size:21px; font-weight:600; letter-spacing:-.02em">{{ ve.t }}</h3>
+            <p style="margin:8px 0 0; max-width:320px; font-size:15px; line-height:1.5; color:{{ t.m50 }}">{{ ve.s }}</p>
+            <sc-if value="{{ ve.cta }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ ve.go }}" style="margin-top:24px; height:50px; padding:0 26px; border:0; border-radius:999px; background:{{ t.ink }}; color:{{ t.inv }}; font-size:15px; font-weight:600; cursor:pointer" style-active="transform:scale(.98)">{{ ve.cta }}</button>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hayGrupos }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top:20px; display:grid; grid-template-columns:{{ gridCols }}; gap:{{ gridGap }}; align-items:start">
+            <sc-for list="{{ cards }}" as="c" hint-placeholder-count="3">
+              <article data-gid="{{ c.id }}" onMouseEnter="{{ c.enter }}" onMouseLeave="{{ c.leave }}" style="position:relative; background:{{ t.card }}; border-radius:28px; padding:8px; box-shadow:{{ c.shadow }}; transform:{{ c.lift }}; transition:transform .25s ease, box-shadow .25s ease; animation:gIn .45s cubic-bezier(.2,.7,.3,1) both; animation-delay:{{ c.delay }}">
+                <sc-if value="{{ c.ring }}" hint-placeholder-val="{{ false }}"><div aria-hidden="true" style="position:absolute; inset:-5px; border-radius:33px; border:2.5px solid {{ t.ink }}; pointer-events:none; animation:gRing 2.6s ease-out forwards"></div></sc-if>
+
+                <div style="position:relative; aspect-ratio:4/3; border-radius:20px; overflow:hidden; background:{{ c.tone }}">
+                  <sc-if value="{{ c.foto }}" hint-placeholder-val="{{ true }}"><div role="img" aria-label="{{ c.alt }}" style="position:absolute; inset:0; background-image:{{ c.foto }}; background-size:cover; background-position:center; transform:scale({{ c.zoom }}); transition:transform .6s cubic-bezier(.2,.7,.3,1)"></div></sc-if>
+                  <sc-if value="{{ c.sinFoto }}" hint-placeholder-val="{{ false }}">
+                    <div aria-hidden="true" style="position:absolute; inset:0; background-image:radial-gradient({{ t.dots }} 1.2px, transparent 1.4px); background-size:16px 16px; display:flex; align-items:center; justify-content:center; transform:scale({{ c.zoom }}); transition:transform .6s ease">
+                      <span style="font-size:64px; font-weight:700; letter-spacing:-.04em; color:{{ t.m38 }}">{{ c.ini }}</span>
+                    </div>
+                  </sc-if>
+                  <div style="position:absolute; top:12px; left:12px; right:12px; display:flex; justify-content:space-between; gap:8px; align-items:flex-start">
+                    <span style="height:30px; padding:0 12px; border-radius:999px; background:{{ t.glass }}; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:600; color:{{ c.stColor }}">
+                      <sc-if value="{{ c.abierto }}" hint-placeholder-val="{{ false }}"><span style="width:7px; height:7px; border-radius:50%; background:{{ t.grn }}; animation:gDot 2.4s ease-in-out infinite"></span></sc-if>
+                      <span>{{ c.status }}</span>
+                    </span>
+                    <span style="height:30px; padding:0 12px; border-radius:999px; background:{{ t.glass }}; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); display:inline-flex; align-items:center; font-size:13px; font-weight:600; color:{{ t.ink }}; white-space:nowrap">{{ c.cat }}</span>
+                  </div>
+                </div>
+
+                <div style="padding:0 12px 12px; display:flex; flex-direction:column">
+                  <div style="display:flex; align-items:flex-end; gap:12px; margin-top:-26px; position:relative">
+                    <div aria-label="{{ c.fechaLarga }}" style="width:56px; height:60px; flex:none; border-radius:16px; background:{{ t.card }}; box-shadow:0 2px 10px rgba(0,0,0,.12); display:flex; flex-direction:column; align-items:center; justify-content:center">
+                      <span style="font-size:22px; line-height:1; font-weight:700; letter-spacing:-.03em">{{ c.dia }}</span>
+                      <span style="margin-top:3px; font-size:11px; font-weight:700; letter-spacing:.07em; color:{{ t.m50 }}">{{ c.mes }}</span>
+                    </div>
+                    <span style="padding-bottom:4px; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}">{{ c.inicioLbl }}</span>
+                  </div>
+
+                  <h3 style="margin:14px 0 0; font-size:19px; line-height:1.25; font-weight:600; letter-spacing:-.02em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-wrap:pretty">{{ c.nombre }}</h3>
+
+                  <div style="margin-top:12px; display:flex; flex-direction:column; gap:7px; font-size:14.5px; font-weight:500; color:{{ t.m62 }}">
+                    <div style="display:flex; align-items:center; gap:9px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span>{{ c.cuando }}</span></div>
+                    <div style="display:flex; align-items:center; gap:9px">
+                      <sc-if value="{{ c.esOnline }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect x="3" y="6.5" width="12.5" height="11" rx="3"></rect><path d="M15.5 10.5l5-3v9l-5-3"></path></svg></sc-if>
+                      <sc-if value="{{ c.esPres }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0114 0C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg></sc-if>
+                      <sc-if value="{{ c.esHib }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 11l8-6.5 8 6.5M6.5 9.5V19h11V9.5"></path><path d="M10 14.5h4"></path></svg></sc-if>
+                      <span>{{ c.donde }}</span>
+                    </div>
+                  </div>
+
+                  <div style="margin-top:14px">
+                    <p id="{{ c.descId }}" style="margin:0; font-size:15px; line-height:1.5; color:{{ t.m62 }}; text-wrap:pretty; overflow:hidden; max-height:{{ c.descMax }}; transition:max-height .4s cubic-bezier(.3,.7,.3,1)">{{ c.desc }}</p>
+                    <sc-if value="{{ c.largo }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ c.toggleDesc }}" aria-expanded="{{ c.descOpen }}" aria-controls="{{ c.descId }}" style="margin:-4px 0 -10px -10px; height:44px; padding:0 10px; border:0; background:transparent; color:{{ t.ink }}; font-size:14.5px; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:3px; text-decoration-color:{{ t.line }}">{{ c.descLbl }}</button>
+                    </sc-if>
+                  </div>
+
+                  <div style="margin-top:14px; display:flex; flex-wrap:wrap; gap:6px; align-items:center">
+                    <sc-for list="{{ c.tags }}" as="tg" hint-placeholder-count="3"><span style="height:32px; padding:0 12px; border-radius:999px; background:{{ t.chip }}; display:inline-flex; align-items:center; font-size:13px; font-weight:600; color:{{ t.m62 }}; white-space:nowrap">{{ tg }}</span></sc-for>
+                    <sc-for list="{{ c.extraVis }}" as="tg" hint-placeholder-count="0"><span style="height:32px; padding:0 12px; border-radius:999px; background:{{ t.chip }}; display:inline-flex; align-items:center; font-size:13px; font-weight:600; color:{{ t.m62 }}; white-space:nowrap; animation:gIn .3s ease both">{{ tg }}</span></sc-for>
+                    <sc-if value="{{ c.masN }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ c.toggleTags }}" aria-expanded="{{ c.tagsOpen }}" aria-label="{{ c.masAria }}" style="height:44px; margin:-6px 0; padding:0; border:0; background:transparent; cursor:pointer; display:inline-flex; align-items:center"><span style="height:32px; padding:0 12px; border-radius:999px; border:1.5px solid {{ t.line }}; display:inline-flex; align-items:center; font-size:13px; font-weight:700; color:{{ t.ink }}">{{ c.masLbl }}</span></button>
+                    </sc-if>
+                  </div>
+
+                  <div style="margin-top:18px; display:flex; align-items:center; gap:10px">
+                    <div style="display:flex; flex:none">
+                      <sc-for list="{{ c.avs }}" as="av" hint-placeholder-count="1"><span style="width:36px; height:36px; border-radius:50%; background:{{ av.bg }}; color:{{ av.ink }}; border:2px solid {{ t.card }}; margin-left:{{ av.ml }}; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:700">{{ av.ini }}</span></sc-for>
+                    </div>
+                    <div style="min-width:0; display:flex; flex-direction:column">
+                      <span style="font-size:12.5px; font-weight:500; color:{{ t.m50 }}">{{ c.hostRol }}</span>
+                      <span style="font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ c.host }}</span>
+                    </div>
+                  </div>
+
+
+                  <div style="margin-top:18px; display:flex; gap:8px">
+                    <button onClick="{{ c.share }}" aria-label="{{ c.shareAria }}" style="width:52px; height:52px; flex:none; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer" style-active="transform:scale(.96)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"></path><path d="M5 13v4.5A2.5 2.5 0 007.5 20h9a2.5 2.5 0 002.5-2.5V13"></path></svg></button>
+                    <button onClick="{{ c.b.go }}" aria-disabled="{{ c.b.dis }}" aria-describedby="{{ c.whyId }}" style="flex:1; min-width:0; height:52px; padding:0 18px; border:0; border-radius:999px; background:{{ c.b.bg }}; color:{{ c.b.ink }}; display:flex; align-items:center; justify-content:center; gap:8px; font-size:15px; font-weight:600; cursor:{{ c.b.cur }}; white-space:nowrap; overflow:hidden" style-active="{{ c.b.act }}">
+                      <sc-if value="{{ c.b.lock }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect x="5" y="10.5" width="14" height="10" rx="3"></rect><path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5"></path></svg></sc-if>
+                      <sc-if value="{{ c.b.clock }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg></sc-if>
+                      <sc-if value="{{ c.b.check }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                      <span style="overflow:hidden; text-overflow:ellipsis">{{ c.b.t }}</span>
+                      <sc-if value="{{ c.b.arrow }}" hint-placeholder-val="{{ true }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></sc-if>
+                    </button>
+                  </div>
+                  <sc-if value="{{ c.b.why }}" hint-placeholder-val="{{ false }}">
+                    <p id="{{ c.whyId }}" style="margin:10px 0 0; text-align:center; font-size:13px; font-weight:500; color:{{ t.m50 }}">{{ c.b.why }}</p>
+                  </sc-if>
+                </div>
+              </article>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position:absolute; left:50%; bottom:24px; transform:translateX(-50%); z-index:30; max-width:calc(100% - 32px); padding:14px 20px; border-radius:999px; background:{{ t.ink }}; color:{{ t.inv }}; font-size:14.5px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.2); animation:gIn .3s ease both; text-align:center">{{ toast }}</div>
+    </sc-if>
+
+    <sc-if value="{{ ov.open }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ close }}" style="position:absolute; inset:0; z-index:20; background:rgba(0,0,0,.42); animation:gFade .25s ease both; display:flex; align-items:{{ ov.align }}; justify-content:center; padding:{{ ov.pad }}">
+        <div role="dialog" aria-modal="true" aria-labelledby="ovTitle" onClick="{{ stop }}" style="position:relative; width:100%; max-width:{{ ov.maxW }}; max-height:{{ ov.maxH }}; height:{{ ov.h }}; background:{{ t.card }}; color:{{ t.ink }}; border-radius:{{ ov.radius }}; display:flex; flex-direction:column; overflow:hidden; animation:{{ ov.anim }}; box-shadow:0 20px 60px rgba(0,0,0,.25)">
+          <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}"><div aria-hidden="true" style="flex:none; width:40px; height:5px; border-radius:9px; background:{{ t.line }}; margin:10px auto 0"></div></sc-if>
+          <button onClick="{{ close }}" aria-label="Cerrar" style="position:absolute; top:14px; right:14px; z-index:2; width:44px; height:44px; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+
+          <div style="flex:1; min-height:0; overflow-y:auto; padding:{{ ov.inner }}">
+
+            <sc-if value="{{ isShare }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column">
+                <p style="margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}">COMPARTIR GRUPO</p>
+                <h2 id="ovTitle" style="margin:8px 56px 0 0; font-size:24px; line-height:1.2; font-weight:600; letter-spacing:-.025em">{{ sh.nombre }}</h2>
+                <p style="margin:6px 0 0; font-size:14.5px; color:{{ t.m50 }}">{{ sh.sub }}</p>
+                <div style="margin:22px auto 0; padding:18px; border-radius:24px; background:#fff; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)">{{ qr }}</div>
+                <p style="margin:12px 0 0; text-align:center; font-size:13.5px; font-weight:500; color:{{ t.m50 }}">Escaneá para abrir el grupo</p>
+                <div style="margin-top:20px; height:52px; border-radius:18px; background:{{ t.chip }}; display:flex; align-items:center; gap:10px; padding:0 6px 0 16px">
+                  <span style="flex:1; min-width:0; font-size:14px; font-weight:500; color:{{ t.m62 }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ sh.url }}</span>
+                  <button onClick="{{ copiar }}" style="height:44px; padding:0 16px; border:0; border-radius:999px; background:{{ copyBg }}; color:{{ copyInk }}; font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap; transition:background .2s">
+                    <sc-if value="{{ copiado }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                    <span>{{ copyLbl }}</span>
+                  </button>
+                </div>
+                <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px">
+                  <button onClick="{{ wpp }}" style="height:54px; border:0; border-radius:999px; background:{{ t.ink }}; color:{{ t.inv }}; font-size:15.5px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer" style-active="transform:scale(.98)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-3.9A8 8 0 1112 20a8 8 0 01-3.9-1z"></path><path d="M9 9.5c.3 2 1.8 3.8 4 4.6l1.2-1.2 2 1-.4 1.4c-3.6.2-7.4-3.3-7.5-7l1.4-.5 1 2z"></path></svg>Compartir por WhatsApp</button>
+                  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ nativo }}" style="height:54px; border:0; border-radius:999px; background:{{ t.chip }}; color:{{ t.ink }}; font-size:15.5px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="18" cy="12" r="1.8"></circle></svg>Más opciones</button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isRestr }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding-top:12px">
+                <div style="width:76px; height:76px; border-radius:50%; background:{{ t.chip }}; color:{{ t.m62 }}; display:flex; align-items:center; justify-content:center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="3"></rect><path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5"></path></svg></div>
+                <p style="margin:20px 0 0; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}">{{ rs.nombre }}</p>
+                <h2 id="ovTitle" style="margin:8px 0 0; max-width:340px; font-size:23px; line-height:1.25; font-weight:600; letter-spacing:-.025em; text-wrap:balance">{{ rs.motivo }}</h2>
+                <p style="margin:10px 0 0; max-width:340px; font-size:15px; line-height:1.5; color:{{ t.m50 }}; text-wrap:pretty">Hay otros grupos que se juntan en días y lugares parecidos. Seguí buscando el tuyo.</p>
+                <button onClick="{{ close }}" style="margin-top:26px; width:100%; height:54px; border:0; border-radius:999px; background:{{ t.ink }}; color:{{ t.inv }}; font-size:15.5px; font-weight:600; cursor:pointer" style-active="transform:scale(.98)">Ver otros grupos</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isJoin }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 0 4px">
+                <p style="margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}">REFERENCIA · SIN CAMBIOS</p>
+                <h2 id="ovTitle" style="margin:10px 0 0; font-size:22px; font-weight:600; letter-spacing:-.02em">{{ jn.t }}</h2>
+                <p style="margin:8px 0 0; max-width:340px; font-size:15px; line-height:1.5; color:{{ t.m50 }}">{{ jn.s }}</p>
+                <div style="margin-top:20px; width:100%; height:180px; border-radius:24px; background:{{ t.chip }}; border:1.5px dashed {{ t.line }}"></div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isForm }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column">
+                <p style="margin:0; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}">POSTULACIÓN · ANFITRIÓN</p>
+                <h2 id="ovTitle" style="margin:8px 56px 0 0; font-size:26px; line-height:1.15; font-weight:600; letter-spacing:-.03em">¿Querés ser anfitrión?</h2>
+                <p style="margin:8px 0 0; font-size:15px; line-height:1.5; color:{{ t.m50 }}; text-wrap:pretty">Contanos un poco de vos. Lo lee el equipo de GCX y te escribimos.</p>
+
+                <sc-if value="{{ session }}" hint-placeholder-val="{{ true }}">
+                  <div style="margin-top:18px; padding:12px 14px; border-radius:18px; background:{{ t.chip }}; display:flex; align-items:center; gap:10px; font-size:14px; font-weight:500; color:{{ t.m62 }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="8.5" r="3.5"></circle><path d="M5 20a7 7 0 0114 0"></path></svg><span>Traemos los datos de tu cuenta. Podés cambiarlos.</span></div>
+                </sc-if>
+
+                <div style="margin-top:18px; display:grid; grid-template-columns:{{ formCols }}; gap:12px">
+                  <sc-for list="{{ campos }}" as="f" hint-placeholder-count="4">
+                    <label style="display:flex; flex-direction:column; gap:6px; grid-column:{{ f.span }}">
+                      <span style="font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}">{{ f.lbl }}</span>
+                      <input value="{{ f.val }}" onInput="{{ f.set }}" type="{{ f.type }}" autocomplete="{{ f.ac }}" placeholder="{{ f.ph }}" style="height:52px; padding:0 16px; border-radius:16px; border:1.5px solid {{ f.border }}; background:{{ t.field }}; color:{{ t.ink }}; font-size:16px; font-weight:500; outline:none; width:100%; min-width:0" style-focus="border-color:currentColor"></input>
+                    </label>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ emailDup }}" hint-placeholder-val="{{ false }}">
+                  <div role="alert" style="margin-top:10px; padding:12px 14px; border-radius:16px; background:{{ t.ambBg }}; color:{{ t.amb }}; display:flex; gap:10px; font-size:14px; font-weight:500; line-height:1.45"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:1px"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 8v4.5M12 16h.01"></path></svg><span>Ya hay una postulación con este email. Si querés actualizarla, escribinos a gcx@origeniglesia.org.</span></div>
+                </sc-if>
+
+                <div style="margin-top:26px; display:flex; flex-direction:column; gap:20px">
+                  <sc-for list="{{ preguntas }}" as="q" hint-placeholder-count="4">
+                    <fieldset style="margin:0; padding:0; border:0; display:flex; flex-direction:column; gap:10px">
+                      <legend style="padding:0; font-size:16px; line-height:1.35; font-weight:600; letter-spacing:-.01em">{{ q.t }}</legend>
+                      <div role="radiogroup" style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+                        <sc-for list="{{ q.ops }}" as="o" hint-placeholder-count="2">
+                          <button role="radio" aria-checked="{{ o.on }}" onClick="{{ o.go }}" style="height:56px; border-radius:18px; border:1.5px solid {{ o.border }}; background:{{ o.bg }}; color:{{ o.ink }}; font-size:15.5px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; transition:background .15s, border-color .15s">
+                            <sc-if value="{{ o.on }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                            <span>{{ o.t }}</span>
+                          </button>
+                        </sc-for>
+                      </div>
+                    </fieldset>
+                  </sc-for>
+                  <label style="display:flex; flex-direction:column; gap:8px">
+                    <span style="font-size:16px; font-weight:600; letter-spacing:-.01em">Contanos un poco más <span style="font-weight:500; color:{{ t.m50 }}">(opcional)</span></span>
+                    <textarea value="{{ mas }}" onInput="{{ setMas }}" rows="4" placeholder="Cómo llegaste a Origen, qué grupo te gustaría abrir, en qué zona…" style="padding:14px 16px; border-radius:18px; border:1.5px solid {{ t.line }}; background:{{ t.field }}; color:{{ t.ink }}; font-size:16px; line-height:1.5; resize:vertical; outline:none; min-height:120px"></textarea>
+                  </label>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isSent }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; padding-top:8px">
+                <div style="width:76px; height:76px; border-radius:50%; background:{{ t.grnBg }}; color:{{ t.grn }}; display:flex; align-items:center; justify-content:center; animation:gZoom .4s ease both"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+                <h2 id="ovTitle" style="margin:22px 0 0; font-size:28px; line-height:1.1; font-weight:600; letter-spacing:-.03em">¡Tu postulación llegó!</h2>
+                <p style="margin:10px 0 0; font-size:15.5px; line-height:1.5; color:{{ t.m50 }}; text-wrap:pretty">Gracias por querer servir. Te mandamos una copia a {{ emailEnviado }}.</p>
+                <p style="margin:28px 0 0; font-size:12px; font-weight:600; letter-spacing:.07em; color:{{ t.m38 }}">PRÓXIMOS PASOS</p>
+                <ol style="margin:12px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:14px">
+                  <sc-for list="{{ pasos }}" as="p" hint-placeholder-count="3">
+                    <li style="display:flex; gap:14px; align-items:flex-start">
+                      <span style="width:32px; height:32px; flex:none; border-radius:50%; background:{{ t.chip }}; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700">{{ p.n }}</span>
+                      <span style="display:flex; flex-direction:column; gap:2px; padding-top:5px"><span style="font-size:15.5px; font-weight:600">{{ p.t }}</span><span style="font-size:14px; line-height:1.45; color:{{ t.m50 }}">{{ p.s }}</span></span>
+                    </li>
+                  </sc-for>
+                </ol>
+              </div>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ isForm }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:none; padding:{{ ov.foot }}; border-top:1px solid {{ t.line2 }}; display:flex; flex-direction:column; gap:8px">
+              <button onClick="{{ enviar }}" aria-disabled="{{ noEnviar }}" style="height:56px; border:0; border-radius:999px; background:{{ envBg }}; color:{{ envInk }}; font-size:16px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer" style-active="transform:scale(.98)"><span>Enviar postulación</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+              <sc-if value="{{ faltan }}" hint-placeholder-val="{{ false }}"><p style="margin:0; text-align:center; font-size:13px; font-weight:500; color:{{ t.m50 }}">{{ faltan }}</p></sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isSent }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:none; padding:{{ ov.foot }}"><button onClick="{{ close }}" style="width:100%; height:56px; border:0; border-radius:999px; background:{{ t.ink }}; color:{{ t.inv }}; font-size:16px; font-weight:600; cursor:pointer">Volver a los grupos</button></div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const PH = id => `url(https://images.unsplash.com/photo-${id}?w=900&q=70&auto=format&fit=crop)`;
+const GROUPS = [
+  { id:'mujeres-de-fe', nombre:'Mujeres de Fe', status:'Abierto', cat:'La FEMME', dia:'06', mes:'OCT', diaSem:'Jueves', hora:'20:00', modo:'pres', donde:'Villa Urquiza', min:18, max:35, gen:'F', cupo:[8,12], tone:'#e6ddd3', foto:PH('1529156069898-49953e39b3ac'), hosts:['Lucía Fernández'], rol:'Anfitriona',
+    desc:'Un espacio para mujeres que quieren crecer en la fe, compartir la semana y orar juntas. Nos juntamos en casa de Lucía con mate y algo rico.', tags:['18 a 35 años','Estudio bíblico','Mates'] },
+  { id:'jovenes-norte', nombre:'Jóvenes Norte', status:'Abierto', cat:'Jóvenes', dia:'10', mes:'OCT', diaSem:'Viernes', hora:'21:00', modo:'online', donde:'Online · Zoom', min:18, max:30, cupo:[10,12], tone:'#d9dde6', foto:PH('1522202176988-66273c2fd55f'), hosts:['Tomás Ríos','Sofía Paz'], rol:'Anfitriones',
+    desc:'Charlas sin vueltas sobre fe, vocación y vida diaria. Cada viernes por Zoom, con cámara prendida y buena onda.', tags:['18 a 30 años','Online','Charla'] },
+  { id:'parejas-en-camino', nombre:'Parejas en camino', status:'Lleno', cat:'Parejas', dia:'04', mes:'OCT', diaSem:'Sábado', hora:'19:30', modo:'pres', donde:'Belgrano', min:25, max:45, cupo:[12,12], tone:'#e4dccf', foto:PH('1511632765486-a01980e01a18'), hosts:['Andrés y Paula Gómez'], rol:'Anfitriones',
+    desc:'Para matrimonios y parejas que quieren construir sobre la Palabra. Cena compartida y una charla guiada.', tags:['Parejas','Cena'] },
+  { id:'finanzas-con-proposito', nombre:'Finanzas con propósito', status:'En curso', cat:'Finanzas', dia:'22', mes:'SEP', diaSem:'Martes', hora:'20:30', modo:'hib', donde:'Híbrido · Palermo', min:21, max:60, user:'miembro', tone:'#dfe3da', foto:PH('1543269865-cbf427effbad'), hosts:['Diego Herrera'], rol:'Anfitrión',
+    desc:'Ocho encuentros para ordenar la economía de casa desde principios bíblicos: presupuesto, deudas y generosidad.', tags:['Finanzas','Taller'] },
+  { id:'hombres-de-valor', nombre:'Hombres de valor', status:'Abierto', cat:'Hombres', dia:'08', mes:'OCT', diaSem:'Miércoles', hora:'07:00', modo:'pres', donde:'Colegiales', min:18, max:65, gen:'M', user:'pendiente', cupo:[6,10], tone:'#d6d9dc', foto:PH('1517486808906-6ca8b3f04846'), hosts:['Martín Acosta'], rol:'Anfitrión',
+    desc:'Desayuno temprano antes del trabajo. Lectura, oración y rendición de cuentas entre hermanos.', tags:['Desayuno','Oración'] },
+  { id:'alfa-otono', nombre:'Alfa · Temporada otoño', status:'Finalizado', cat:'Alfa', dia:'14', mes:'ABR', diaSem:'Lunes', hora:'20:00', modo:'pres', donde:'Sede Núñez', min:18, max:99, tone:'#e2ded8', foto:PH('1491438590914-bc09fcaaf77a'), hosts:['Equipo Alfa'], rol:'Anfitriones',
+    desc:'El curso Alfa de otoño. La próxima edición abre con la nueva temporada.', tags:['Alfa','Primeros pasos'] },
+  { id:'cafe-y-biblia', nombre:'Café y Biblia Saavedra', status:'Abierto', cat:'Mixto', dia:'12', mes:'OCT', diaSem:'Domingo', hora:'17:00', modo:'pres', donde:'Saavedra', min:18, max:99, cupo:[4,14], tone:'#ece4d6', foto:null, hosts:['Carla Méndez'], rol:'Anfitriona',
+    desc:'Domingos a la tarde, después del culto. Leemos un pasaje y lo charlamos con café.', tags:['Todas las edades','Café'] },
+  { id:'arte-y-adoracion', nombre:'Arte y adoración: creatividad que nace en comunidad', status:'Abierto', cat:'Artes', dia:'09', mes:'OCT', diaSem:'Jueves', hora:'19:00', modo:'online', donde:'Online · Meet', min:16, max:40, cupo:[7,15], tone:'#e5dde3', foto:PH('1528605248644-14dd04022da1'), hosts:['Valentina Ruiz'], rol:'Anfitriona',
+    desc:'Un grupo para músicos, ilustradores, escritores y cualquiera que sienta que su manera de adorar pasa por crear. Cada semana compartimos algo que hicimos, leemos un salmo y charlamos sobre cómo se cruzan el arte y la fe. Algunos encuentros son talleres cortos (lettering, composición, fotografía con el celular) y otros son simplemente un rato para crear juntos con música de fondo. No hace falta experiencia, solo ganas.', tags:['16 a 40 años','Música','Ilustración','Escritura','Fotografía','Talleres','Online'] },
+];
+const BTN_OVR = ['auto','unir','lleno','pend','miembro','fin','genero','edad'];
+const BTN_LBL = ['Auto','Unirme','Lleno','Pendiente','Miembro','Finalizado','Género','Edad'];
+const PERFILES = { m:{gen:'M', edad:34, nombre:'Martín', apellido:'Acosta', email:'martin.acosta@gmail.com', tel:'11 5432 1098'}, f:{gen:'F', edad:24, nombre:'Lucía', apellido:'Fernández', email:'lucia.fernandez@gmail.com', tel:'11 4321 7766'} };
+const PREG = ['¿Sos parte de Origen hace más de 6 meses?','¿Participaste de un GCX como miembro?','¿Tenés disponibilidad para encontrarte una vez por semana?','¿Podés abrir tu casa para recibir al grupo?'];
+
+function qrSvg(seed, size){
+  const n = 25, cell = size/n; let h = 0; for (const ch of seed) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+  const rnd = () => { h ^= h << 13; h >>>= 0; h ^= h >> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
+  const fin = (x,y) => { const r = [[x,y],[x+n-7,y],[x,y+n-7]]; return r; };
+  const inF = (i,j) => (i<8&&j<8)||(i>n-9&&j<8)||(i<8&&j>n-9);
+  const rects = [];
+  for (let i=0;i<n;i++) for (let j=0;j<n;j++){ if (inF(i,j)) continue; if (rnd()<.47) rects.push(React.createElement('rect',{key:i+'-'+j,x:i*cell,y:j*cell,width:cell+.3,height:cell+.3})); }
+  [[0,0],[n-7,0],[0,n-7]].forEach(([x,y],k)=>{
+    rects.push(React.createElement('rect',{key:'o'+k,x:x*cell+cell/2,y:y*cell+cell/2,width:cell*6,height:cell*6,rx:cell*1.6,fill:'none',stroke:'#0a0a0a',strokeWidth:cell}));
+    rects.push(React.createElement('rect',{key:'i'+k,x:(x+2)*cell,y:(y+2)*cell,width:cell*3,height:cell*3,rx:cell*.8}));
+  });
+  return React.createElement('svg',{width:size,height:size,viewBox:`0 0 ${size} ${size}`,fill:'#0a0a0a',role:'img','aria-label':'Código QR del link del grupo',style:{display:'block'}},rects);
+}
+
+class Component extends DCLogic {
+  state = { view:'mobile', dark:false, grid:'ok', session:true, perfil:'m', franja:'post', ovr:'auto', hover:null, desc:{}, tagsO:{}, ov:null, shareId:null, restrId:null, copied:false, toast:null, ring:null, form:null, ans:{}, mas:'', emailEnviado:'', fit:1, cascade:0, ringKey:0 };
+  scrollRef = React.createRef();
+
+  componentDidMount(){
+    this.onR = () => this.setState({ fit: Math.min(1, (window.innerWidth - 32) / (this.state.view==='pc'?1440:390)) });
+    window.addEventListener('resize', this.onR); this.onR();
+    try { const s = JSON.parse(localStorage.getItem('gcxTarjetas')||'{}'); if (s.view) this.setState({view:s.view, dark:!!s.dark}, this.onR); } catch(e){}
+    if (/[?&#]grupo=/.test(location.href)) setTimeout(()=>this.resaltar('jovenes-norte'), 600);
+  }
+  componentWillUnmount(){ window.removeEventListener('resize', this.onR); clearTimeout(this.tt); clearTimeout(this.ct); clearTimeout(this.lt); }
+  save(){ try { localStorage.setItem('gcxTarjetas', JSON.stringify({view:this.state.view, dark:this.state.dark})); } catch(e){} }
+  showToast(t){ clearTimeout(this.tt); this.setState({toast:t}); this.tt = setTimeout(()=>this.setState({toast:null}), 2400); }
+
+  theme(d){
+    return d ? { bg:'#111110', card:'#1b1b1a', chip:'#2a2a28', field:'#222221', ink:'#f4f4f2', inv:'#0a0a0a', m62:'rgba(255,255,255,.66)', m50:'rgba(255,255,255,.55)', m38:'rgba(255,255,255,.42)', line:'rgba(255,255,255,.16)', line2:'rgba(255,255,255,.08)', shadow:'0 1px 2px rgba(0,0,0,.4)', shadowH:'0 14px 36px rgba(0,0,0,.5)', glass:'rgba(27,27,26,.72)', dots:'rgba(255,255,255,.08)', grn:'#4cc77c', grnBg:'rgba(76,199,124,.14)', amb:'#f0b45a', ambBg:'rgba(240,180,90,.14)', tones:'#262624', av:['#2f3a33','#3a3330','#30343c'] }
+      : { bg:'#f6f6f4', card:'#ffffff', chip:'#f2f2f0', field:'#ffffff', ink:'#0a0a0a', inv:'#ffffff', m62:'rgba(0,0,0,.62)', m50:'rgba(0,0,0,.55)', m38:'rgba(0,0,0,.42)', line:'rgba(0,0,0,.14)', line2:'rgba(0,0,0,.07)', shadow:'0 1px 2px rgba(0,0,0,.04), 0 2px 10px rgba(0,0,0,.03)', shadowH:'0 14px 36px rgba(0,0,0,.10)', glass:'rgba(255,255,255,.78)', dots:'rgba(0,0,0,.07)', grn:'#118f46', grnBg:'#e7f4eb', amb:'#9a5a00', ambBg:'#fdf1dc', av:['#e3ece5','#efe6dc','#e2e6ee'] };
+  }
+
+  btnKey(g, i){
+    const s = this.state; if (i===0 && s.ovr!=='auto') return s.ovr;
+    if (g.status==='Finalizado') return 'fin';
+    const full = g.status==='Lleno' || (g.cupo && g.cupo[0]>=g.cupo[1]);
+    if (!s.session) return full ? 'lleno' : 'unir';
+    if (g.user==='miembro') return 'miembro';
+    if (g.user==='pendiente' && PERFILES[s.perfil].gen===g.gen) return 'pend';
+    const p = PERFILES[s.perfil];
+    if (g.gen && g.gen!==p.gen) return 'genero';
+    if (p.edad<g.min || p.edad>g.max) return 'edad';
+    return full ? 'lleno' : 'unir';
+  }
+  ageTxt(g){ return g.max>=99 ? `mayores de ${g.min}` : `${g.min} a ${g.max} años`; }
+
+  resaltar(id){
+    this.setState(s=>({grid:'ok', ring:id, ringKey:s.ringKey+1}), ()=>{
+      requestAnimationFrame(()=>{ const sc = this.scrollRef.current; const el = sc && sc.querySelector(`[data-gid="${id}"]`); if (!el) return;
+        const top = (el.getBoundingClientRect().top - sc.getBoundingClientRect().top)/this.state.fit + sc.scrollTop;
+        sc.scrollTo({ top: Math.max(0, top - Math.max(0,(sc.clientHeight - el.offsetHeight)/2)), behavior:'smooth' }); });
+      clearTimeout(this.ct); this.ct = setTimeout(()=>this.setState({ring:null}), 2800);
+    });
+  }
+  openForm(variant){
+    const p = PERFILES[this.state.perfil], ses = this.state.session;
+    const form = ses ? {nombre:p.nombre, apellido:p.apellido, email:variant==='dup'?'ana.gimenez@gmail.com':p.email, tel:p.tel} : {nombre:'',apellido:'',email:'',tel:''};
+    this.setState({ ov: variant==='sent' ? 'sent' : 'form', form, ans:{}, mas:'', emailEnviado: form.email || 'tu email' });
+  }
+  reload(){ this.setState({grid:'load'}); clearTimeout(this.lt); this.lt = setTimeout(()=>this.setState(s=>({grid:'ok', cascade:s.cascade+1})), 1400); }
+
+  renderVals(){
+    const s = this.state, t = this.theme(s.dark), mob = s.view==='mobile', set = o => () => this.setState(o, ()=>{ this.save(); this.onR && this.onR(); });
+    const opt = (cur, val) => `height:32px; padding:0 12px; border:0; border-radius:15px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; font-family:Manrope; background:${cur===val?'#0a0a0a':'transparent'}; color:${cur===val?'#fff':'rgba(0,0,0,.62)'}`;
+    const row = (label, key, pairs, extra) => ({ label, items: pairs.map(([v,tx]) => ({ t:tx, style:opt(s[key], v), go: extra ? () => extra(v) : set({[key]:v}) })) });
+    const toolbar = [
+      row('VISTA','view',[['mobile','Mobile 390'],['pc','PC 1440']]),
+      row('TEMA','dark',[[false,'Claro'],[true,'Oscuro']]),
+      row('GRILLA','grid',[['ok','Grupos'],['load','Cargando'],['none','Sin resultados'],['err','Error'],['season','Sin temporada']], v => v==='load' ? this.reload() : this.setState(x=>({grid:v, cascade:x.cascade+1}))),
+      row('SESIÓN','session',[[true,'Con sesión'],[false,'Sin sesión']]),
+      row('PERFIL','perfil',[['m','Varón · 34'],['f','Mujer · 24']]),
+      row('TARJETA 1','ovr',BTN_OVR.map((v,i)=>[v,BTN_LBL[i]])),
+      row('FRANJA','franja',[['post','Postularme'],['rev','En revisión'],['ok','Aprobada']]),
+      { label:'ABRIR', items:[
+        { t:'Resaltada (link)', style:opt(0,1), go:()=>this.resaltar('jovenes-norte') },
+        { t:'Compartir', style:opt(s.ov,'share'), go:()=>this.setState({ov:'share', shareId:'mujeres-de-fe', copied:false}) },
+        { t:'Restricción', style:opt(s.ov,'restr'), go:()=>this.setState({ov:'restr', restrId:'jovenes-norte'}) },
+        { t:'Postulación', style:opt(s.ov,'form'), go:()=>this.openForm('new') },
+        { t:'Email repetido', style:opt(0,1), go:()=>this.openForm('dup') },
+        { t:'Enviada', style:opt(s.ov,'sent'), go:()=>this.openForm('sent') },
+        { t:'Expandir tarjeta 8', style:opt(0,1), go:()=>{ this.setState({desc:{...s.desc,'arte-y-adoracion':true}, tagsO:{...s.tagsO,'arte-y-adoracion':true}}); this.resaltarScroll('arte-y-adoracion'); } },
+      ]},
+    ];
+
+    const B = {
+      unir:{t:'Unirme', bg:t.ink, ink:t.inv, arrow:true, act:'transform:scale(.98)'},
+      lleno:{t:'Lleno', bg:t.chip, ink:t.m38, lock:true, dis:true, why:'No quedan lugares en este grupo'},
+      pend:{t:'Solicitud enviada', bg:t.chip, ink:t.m62, clock:true},
+      miembro:{t:'Sos miembro', bg:t.grnBg, ink:t.grn, check:true},
+      fin:{t:'Finalizado', bg:t.chip, ink:t.m38, dis:true, why:'Este grupo terminó su temporada'},
+      genero:{lock:true, bg:t.chip, ink:t.m50, dis:true, restr:true},
+      edad:{t:'Fuera de tu rango de edad', lock:true, bg:t.chip, ink:t.m50, dis:true, restr:true},
+    };
+    const cards = GROUPS.map((g,i) => {
+      const k = this.btnKey(g,i), b = {...B[k]};
+      if (k==='genero') { const f = g.gen ? g.gen : (PERFILES[s.perfil].gen==='M'?'F':'M'); b.t = f==='F'?'Solo para mujeres':'Solo para hombres'; b.why = f==='F'?'Este grupo es solo para mujeres':'Este grupo es solo para hombres'; }
+      if (k==='edad') b.why = `Este grupo es para ${this.ageTxt(g)}`;
+      b.cur = (b.dis && !b.restr) ? 'default' : 'pointer';
+      b.act = b.act || '';
+      b.go = () => {
+        if (b.restr) return this.setState({ov:'restr', restrId:g.id, restrKey:k});
+        if (b.dis) return;
+        if (k==='unir') return this.setState({ov:'join', joinId:g.id});
+        if (k==='pend') return this.showToast('Tu solicitud está pendiente de aprobación');
+        if (k==='miembro') return this.showToast('Abriría el detalle del grupo');
+      };
+      const hov = s.hover===g.id && !mob, dOpen = !!s.desc[g.id], tOpen = !!s.tagsO[g.id], largo = g.desc.length > 150;
+      const left = g.cupo ? g.cupo[1]-g.cupo[0] : null, pocos = left!==null && left>0 && left<=2;
+      const hostIni = g.hosts.length>1 ? g.hosts.map(h=>h.split(' ').map(w=>w[0]).join('').slice(0,2)) : [g.hosts[0].replace(/^Equipo /,'E ').split(' ').filter(w=>w!=='y').map(w=>w[0]).join('').slice(0,2)];
+      const stColor = g.status==='Abierto' ? t.grn : (g.status==='En curso' ? t.ink : t.m62);
+      return {
+        id:g.id, nombre:g.nombre, cat:g.cat, status:g.status, abierto:g.status==='Abierto', stColor,
+        tone: g.foto ? g.tone : (s.dark ? t.tones : g.tone), foto:g.foto, sinFoto:!g.foto, alt:`Foto del grupo ${g.nombre}`,
+        ini: g.nombre.split(' ').filter(w=>w.length>2).slice(0,2).map(w=>w[0]).join('').toUpperCase(),
+        zoom: hov ? 1.04 : 1, lift: hov ? 'translateY(-4px)' : 'none', shadow: hov ? t.shadowH : t.shadow,
+        enter:()=>this.setState({hover:g.id}), leave:()=>this.setState({hover:null}),
+        delay: `${Math.min(i,8)*60}ms`, barDelay: `${Math.min(i,8)*60+300}ms`,
+        ring: s.ring===g.id, dia:g.dia, mes:g.mes, fechaLarga:`Empieza el ${g.dia} ${g.mes}`, inicioLbl: g.status==='Finalizado' ? 'EMPEZÓ' : (g.status==='En curso' ? 'EMPEZÓ' : 'EMPIEZA'),
+        cuando:`${g.diaSem} · ${g.hora} hs`, donde:g.donde, esOnline:g.modo==='online', esPres:g.modo==='pres', esHib:g.modo==='hib',
+        desc:g.desc, descId:`d-${g.id}`, largo, descOpen:String(dOpen), descMax: (!largo || dOpen) ? '40em' : '4.5em', descLbl: dOpen ? 'Ver menos' : 'Ver más',
+        toggleDesc:()=>this.setState(x=>({desc:{...x.desc,[g.id]:!x.desc[g.id]}})),
+        tags:g.tags.slice(0,3), extraVis: tOpen ? g.tags.slice(3) : [], masN:g.tags.length>3, masLbl: tOpen ? 'Menos' : `+${g.tags.length-3}`, masAria: tOpen ? 'Ver menos etiquetas' : `Ver ${g.tags.length-3} etiquetas más`, tagsOpen:String(tOpen), tagsRows: tOpen ? '1fr' : '0fr',
+        toggleTags:()=>this.setState(x=>({tagsO:{...x.tagsO,[g.id]:!x.tagsO[g.id]}})),
+        avs: hostIni.map((ini,j)=>({ini, bg:t.av[(i+j)%3], ink:t.ink, ml: j? '-10px':'0'})),
+        hostRol:g.rol, host: g.hosts.length>1 ? g.hosts.map(h=>h.split(' ')[0]).join(' y ') : g.hosts[0],
+        cupo: g.cupo ? (left<=0 ? `${g.cupo[1]} de ${g.cupo[1]} lugares · completo` : (pocos ? `Quedan ${left} lugares` : `${g.cupo[0]} de ${g.cupo[1]} lugares`)) : null,
+        cupoPct: g.cupo ? `${Math.round(g.cupo[0]/g.cupo[1]*100)}%` : '0%', cupoColor: pocos ? t.amb : t.m50, cupoBar: pocos ? t.amb : (left<=0 ? t.m38 : t.ink),
+        share:()=>this.setState({ov:'share', shareId:g.id, copied:false}), shareAria:`Compartir ${g.nombre}`,
+        b:{...b, dis:String(!!b.dis)}, whyId:`w-${g.id}`,
+      };
+    });
+
+    const frameW = mob ? 390 : 1440, frameH = mob ? 844 : 900, sc = s.fit;
+    const shim = `background:linear-gradient(90deg, ${t.chip} 30%, ${s.dark?'#33332f':'#fafaf8'} 50%, ${t.chip} 70%); background-size:300% 100%; animation:gShim 1.4s linear infinite`;
+    const VE = { none:{t:'Ningún grupo coincide', s:'Probá con otros días o sacá algún filtro.', cta:'Limpiar filtros', search:true, go:()=>this.setState(x=>({grid:'ok',cascade:x.cascade+1}))},
+      err:{t:'No pudimos cargar los grupos', s:'Revisá la conexión y probá de nuevo.', cta:'Reintentar', error:true, role:'alert', go:()=>this.reload()},
+      season:{t:'Todavía no hay grupos abiertos', s:'La próxima temporada arranca pronto.', season:true} };
+    const FR = { post:{t:'Postularme', bg:t.ink, ink:t.inv, go:()=>this.openForm('new')}, rev:{t:mob?'En revisión':'Postulación en revisión', bg:t.chip, ink:t.m62, clock:true, go:()=>this.showToast('Tu postulación está en revisión')}, ok:{t:mob?'Aprobada':'Postulación aprobada', bg:t.grnBg, ink:t.grn, check:true, go:()=>this.showToast('¡Ya sos anfitrión! Te contactamos por WhatsApp')} };
+    const fr = FR[s.session ? s.franja : 'post'];
+
+    const shG = GROUPS.find(g=>g.id===s.shareId) || GROUPS[0], rsG = GROUPS.find(g=>g.id===s.restrId) || GROUPS[1];
+    const rk = s.ov==='restr' ? (s.restrKey || (rsG.gen ? 'genero' : 'edad')) : null;
+    const motivo = rk==='genero' ? (rsG.gen==='F' ? 'Este grupo es solo para mujeres' : 'Este grupo es solo para hombres') : `Este grupo es para personas de ${this.ageTxt(rsG)}`;
+    const jG = GROUPS.find(g=>g.id===s.joinId) || GROUPS[0];
+
+    const f = s.form || {}, dupEmail = (f.email||'').trim().toLowerCase()==='ana.gimenez@gmail.com';
+    const setF = k => e => this.setState({form:{...this.state.form, [k]:e.target.value}});
+    const campos = [['nombre','NOMBRE','text','given-name','Tu nombre'],['apellido','APELLIDO','text','family-name','Tu apellido'],['email','EMAIL','email','email','nombre@mail.com'],['tel','TELÉFONO','tel','tel','11 1234 5678']]
+      .map(([k,lbl,type,ac,ph])=>({lbl,type,ac,ph,val:f[k]||'',set:setF(k), span: mob ? '1 / -1' : (k==='email'||k==='tel' ? '1 / -1' : 'auto'), border: k==='email'&&dupEmail ? t.amb : t.line}));
+    const preguntas = PREG.map((q,qi)=>({ t:q, ops:[['si','Sí'],['no','No']].map(([v,tx])=>{ const on = s.ans[qi]===v; return { t:tx, on, border: on ? t.ink : t.line, bg: on ? t.ink : 'transparent', ink: on ? t.inv : t.ink, go:()=>this.setState(x=>({ans:{...x.ans,[qi]:v}})) }; }) }));
+    const nAns = Object.keys(s.ans).length, datosOk = f.nombre && f.apellido && /\S+@\S+\.\S+/.test(f.email||'') && f.tel;
+    const faltan = !datosOk ? 'Completá tus datos para enviar' : (nAns<PREG.length ? `Te ${PREG.length-nAns===1?'falta 1 pregunta':'faltan '+(PREG.length-nAns)+' preguntas'}` : (dupEmail ? 'Usá otro email para enviar' : null));
+
+    const ov = mob
+      ? { align:'flex-end', pad:'0', maxW:'100%', maxH:'92%', h: s.ov==='form' ? '92%' : 'auto', radius:'28px 28px 0 0', anim:'gUp .38s cubic-bezier(.2,.8,.3,1) both', inner:'18px 20px 24px', foot:'12px 20px 28px' }
+      : { align:'center', pad:'40px', maxW: s.ov==='form'||s.ov==='sent' ? '560px' : '460px', maxH:'calc(100% - 80px)', h:'auto', radius:'28px', anim:'gZoom .28s cubic-bezier(.2,.8,.3,1) both', inner:'32px 32px 28px', foot:'16px 32px 24px' };
+    ov.open = !!s.ov;
+
+    return {
+      toolbar, t, isMobile:mob, session:s.session,
+      scale:sc, outerW:`${frameW*sc}px`, outerH:`${frameH*sc}px`, frameW:`${frameW}px`, frameH:`${frameH}px`, frameR: mob ? '44px' : '16px',
+      scrollRef:this.scrollRef, navPad: mob ? '4px 16px 0' : '8px 40px 0', pad: mob ? '8px 16px 48px' : '16px 40px 72px',
+      bannerH: mob ? '200px' : '360px', buscH: mob ? '132px' : '96px',
+      franjaPad: mob ? '20px 20px 22px' : '28px 32px', franjaAreas: mob ? '"rot rot" "tit btn" "txt txt"' : '"rot btn" "tit btn" "txt btn"', franjaGap: mob ? '10px 12px' : '8px 32px',
+      franjaH: mob ? '20px' : '28px', franjaBtnH: mob ? '44px' : '52px', franjaBtnPad: mob ? '16px' : '24px', franjaBtnFs: mob ? '14px' : '15px', fr,
+      gapHead: mob ? '36px' : '56px', h1: mob ? '34px' : '52px', conteo: s.grid==='ok' ? `${GROUPS.length} grupos disponibles` : (s.grid==='none' ? '0 grupos con estos filtros' : (s.grid==='load' ? 'Buscando grupos…' : '—')),
+      gridCols: mob ? 'minmax(0,1fr)' : 'repeat(3, minmax(0,1fr))', gridGap: mob ? '14px' : '20px',
+      cargando: s.grid==='load', skel: mob ? [1,2] : [1,2,3,4,5,6], shim,
+      hayVacio: !!VE[s.grid], ve: VE[s.grid] || {}, hayGrupos: s.grid==='ok', cards,
+      toast:s.toast, ov, close:()=>this.setState({ov:null}), stop:e=>e.stopPropagation(),
+      isShare:s.ov==='share', isRestr:s.ov==='restr', isJoin:s.ov==='join', isForm:s.ov==='form', isSent:s.ov==='sent',
+      sh:{ nombre:shG.nombre, sub:`${shG.diaSem} · ${shG.hora} hs · ${shG.donde}`, url:`origeniglesia.org/gcx?grupo=${shG.id}` },
+      qr: s.ov==='share' ? qrSvg(shG.id, mob?200:220) : null,
+      copiado:s.copied, copyLbl: s.copied ? '¡Copiado!' : 'Copiar link', copyBg: s.copied ? t.grnBg : t.card, copyInk: s.copied ? t.grn : t.ink,
+      copiar:()=>{ try{ navigator.clipboard && navigator.clipboard.writeText(`https://origeniglesia.org/gcx?grupo=${shG.id}`); }catch(e){} this.setState({copied:true}); clearTimeout(this.cpt); this.cpt=setTimeout(()=>this.setState({copied:false}),2000); },
+      wpp:()=>this.showToast('Abriría WhatsApp con el link'), nativo:()=>{ if (navigator.share) navigator.share({title:shG.nombre, url:`https://origeniglesia.org/gcx?grupo=${shG.id}`}).catch(()=>{}); else this.showToast('Abriría el menú de compartir del celular'); },
+      rs:{ nombre:rsG.nombre.toUpperCase(), motivo },
+      jn: s.session ? { t:'Panel de inscripción (JoinFlow)', s:`Se abre el panel que ya existe para unirse a ${jG.nombre}.` } : { t:'Iniciar sesión', s:'Sin sesión, “Unirme” lleva al login actual y vuelve a este grupo.' },
+      campos, formCols: mob ? 'minmax(0,1fr)' : 'repeat(2, minmax(0,1fr))', emailDup:dupEmail, preguntas, mas:s.mas, setMas:e=>this.setState({mas:e.target.value}),
+      faltan, noEnviar:String(!!faltan), envBg: faltan ? t.chip : t.ink, envInk: faltan ? t.m38 : t.inv,
+      enviar:()=>{ if (faltan) return; this.setState({ov:'sent', franja:'rev', emailEnviado:f.email}); },
+      emailEnviado:s.emailEnviado,
+      pasos:[{n:'1',t:'Revisamos tu postulación',s:'El equipo de GCX la lee en los próximos 7 días.'},{n:'2',t:'Te escribimos para charlar',s:'Coordinamos un café o una llamada por WhatsApp.'},{n:'3',t:'Capacitación de anfitriones',s:'Un encuentro antes de que arranque la temporada.'}],
+    };
+  }
+  resaltarScroll(id){ requestAnimationFrame(()=>{ const sc=this.scrollRef.current, el=sc&&sc.querySelector(`[data-gid="${id}"]`); if(el) sc.scrollTo({top: (el.getBoundingClientRect().top - sc.getBoundingClientRect().top)/this.state.fit + sc.scrollTop - 80, behavior:'smooth'}); }); }
+}
+</script>
+</body>
+</html>

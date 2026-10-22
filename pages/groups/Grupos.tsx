@@ -6,11 +6,12 @@ import { db } from '../../services/dbService';
 import { supabaseService, insertGroupDirect, updateGroupDirect, deleteGroupDirect, toggleGroupCapacityLock, toggleGroupVisibility } from '../../services/supabaseService';
 import { hasRole } from '../../services/authUtils';
 import { User, Group, GroupCategory, GroupTag, AppConfig, UserRole, BannerSlide, SystemNotification, GroupRegistration, SeasonSettings, DEFAULT_SEASON_SETTINGS } from '../../types';
-import { Search, Calendar, CalendarClock, MapPin, Users, X, ArrowRight, Clock, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Loader2, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Lock, Instagram, Facebook, Youtube, Music, WifiOff } from 'lucide-react';
+import { Search, Calendar, CalendarClock, MapPin, Users, X, Bell, Edit2, Trash2, Save, Image as ImageIcon, Phone, Mail, Plus, Info, Tag, Layers, Check, Filter, SlidersHorizontal, HeartHandshake, Heart, CheckCircle, Eye, ClipboardCheck, RotateCcw, MailMinus, BarChart3, MoreVertical, Menu, Shield, Instagram, Facebook, Youtube, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeroCarousel, { HeroSlideData } from '../../components/ui/CarruselHero';
 import ImageUpload from '../../components/media/SubidaImagen';
-import GroupCard from '../../components/GCX/TarjetaGrupo';
+import GroupCard, { paraQuienEsLaEdad } from '../../components/GCX/TarjetaGrupo';
+import HojaGrupos from '../../components/GCX/HojaGrupos';
 import { useInscripcionesDelUsuario } from '../../src/hooks/useInscripcionesDelUsuario';
 import JoinGroupModal from '../../components/GCX/ModalUnirseGrupo';
 import AdminGroupReviewModal from '../../components/admin/ModalRevisionGrupoAdmin';
@@ -295,6 +296,45 @@ const GroupsNavbar: React.FC<GroupsNavbarProps> = ({
 
 // --- imported GroupCard will be used ---
 
+/**
+ * Sin resultados, error y sin grupos — design-claude/GCX - Tarjetas y pagina.
+ * El cargando es el esqueleto de la grilla y vive en la página.
+ */
+const EstadoDeLaGrilla: React.FC<{
+    icono: 'busqueda' | 'error' | 'temporada';
+    titulo: string;
+    detalle: string;
+    accion?: string;
+    onAccion?: () => void;
+    alerta?: boolean;
+}> = ({ icono, titulo, detalle, accion, onAccion, alerta }) => (
+    <div
+        role={alerta ? 'alert' : undefined}
+        className="gcx-m mt-5 rounded-[28px] px-6 py-14 flex flex-col items-center text-center"
+        style={{ background: 'var(--g-card)', boxShadow: 'var(--g-shadow)', animation: 'gcxIn .4s ease both' }}
+    >
+        <div className="w-[88px] h-[88px] rounded-full flex items-center justify-center" style={{ background: 'var(--g-chip)', color: 'var(--g-m50)' }}>
+            <svg width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                {icono === 'busqueda' && <><circle cx="21" cy="21" r="12" /><path d="M30 30l9 9M16 21h10" /></>}
+                {icono === 'error' && <><path d="M8 19a23 23 0 0132 0M14 25.5a14 14 0 0120 0M20.5 32a5 5 0 017 0" /><path d="M9 9l30 30" /></>}
+                {icono === 'temporada' && <><rect x="9" y="11" width="30" height="28" rx="6" /><path d="M9 20h30M17 7v8M31 7v8M20 29h8" /></>}
+            </svg>
+        </div>
+        <h3 className="mt-[22px] mb-0 text-[21px] font-semibold tracking-[-.02em]">{titulo}</h3>
+        <p className="mt-2 mb-0 max-w-[320px] text-[15px] leading-[1.5]" style={{ color: 'var(--g-m50)' }}>{detalle}</p>
+        {accion && onAccion && (
+            <button
+                type="button"
+                onClick={onAccion}
+                className="gcx-hover-tinta mt-6 h-[50px] px-[26px] rounded-full border-0 text-[15px] font-semibold cursor-pointer active:scale-[.98]"
+                style={{ background: 'var(--g-ink)', color: 'var(--g-inv)' }}
+            >
+                {accion}
+            </button>
+        )}
+    </div>
+);
+
 const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     // --- NAVIGATION ---
     const navigate = useNavigate();
@@ -377,6 +417,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
     const [successModalMessage, setSuccessModalMessage] = useState('');
     const [userApplicationStatus, setUserApplicationStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | null>(null);
     const [isPostulationModalOpen, setIsPostulationModalOpen] = useState(false);
+    // Sólo visual: qué preguntas de la postulación ya tocó la persona. Las que
+    // no tocó no se pintan, pero se envían en false como siempre.
+    const [preguntasRespondidas, setPreguntasRespondidas] = useState<string[]>([]);
+    useEffect(() => { if (isPostulationModalOpen) setPreguntasRespondidas([]); }, [isPostulationModalOpen]);
     const [postulationForm, setPostulationForm] = useState({
         firstName: '', lastName: '', email: '', phone: '',
         completedLeaderCourse: false,
@@ -503,18 +547,20 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         }
 
         if (!genderCompatible) {
-            const groupType = target.targetGender?.includes('Hombre') ? 'sólo para hombres' : 'sólo para mujeres';
-            restriction = `No puedes inscribirte porque este grupo es ${groupType}.`;
+            const groupType = target.targetGender?.includes('Hombre') ? 'solo para hombres' : 'solo para mujeres';
+            restriction = `Este grupo es ${groupType}`;
         }
 
         // 2. Age Validation
         if (!restriction && currentUser.age) {
             const minAge = target.minAge || 0;
             const maxAge = target.maxAge || 100;
+            // Las dos ramas dicen lo mismo desde el rediseño: el rango del
+            // grupo, que sirve tanto al que no llega como al que se pasa.
             if (currentUser.age < minAge) {
-                restriction = `No puedes inscribirte porque debes tener al menos ${minAge} años.`;
+                restriction = `Este grupo es para ${paraQuienEsLaEdad(target.minAge, target.maxAge)}`;
             } else if (currentUser.age > maxAge) {
-                restriction = `No puedes inscribirte porque la edad máxima es ${maxAge} años.`;
+                restriction = `Este grupo es para ${paraQuienEsLaEdad(target.minAge, target.maxAge)}`;
             }
         }
 
@@ -522,10 +568,11 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
             const el = document.getElementById(`group-card-${targetId}`);
             if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.classList.add('ring-4', 'ring-black', 'ring-offset-2');
+                // El anillo que titila del diseño (index.html, .gcx-resaltada).
+                el.classList.add('gcx-resaltada');
                 setTimeout(() => {
-                    el.classList.remove('ring-4', 'ring-black', 'ring-offset-2');
-                }, 2000);
+                    el.classList.remove('gcx-resaltada');
+                }, 2600);
             }
             setSelectedGroup(target);
             
@@ -1432,34 +1479,38 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         : defaultSlides;
 
     /**
-     * El botón de la franja de postulación — design-claude/GCX Franja Anfitrion.
+     * El botón de la franja de postulación — design-claude/GCX - Tarjetas y
+     * pagina (antes GCX Franja Anfitrion).
      *
-     * Cuatro estados con la misma forma de píldora. Los avisos al tocar son
-     * los de siempre; lo que cambia es que el estado ahora se ve sin tocar:
-     * quien ya mandó su postulación no tiene por qué apretar un botón que
-     * dice "Postularme" para enterarse de que está en revisión.
+     * Los estados y los avisos al tocar son los de siempre; cambia cómo se
+     * ven. "Ya sos anfitrión" no está en el diseño y toma la forma de
+     * "Aprobada", que es lo que es.
      *
-     * El texto del estado en revisión se acorta en el teléfono ("En
-     * revisión"), donde comparte renglón con el título.
+     * El texto de los estados largos se acorta en el teléfono, donde el botón
+     * comparte renglón con el título.
      */
-    const pildora = 'inline-flex h-10 md:h-11 flex-none items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap rounded-full px-3.5 md:px-5 text-[13px] md:text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#118f46] focus-visible:ring-offset-2';
+    const pildora = '[grid-area:btn] justify-self-end inline-flex h-11 md:h-[52px] flex-none items-center justify-center gap-2 whitespace-nowrap rounded-full border-0 px-4 md:px-6 text-[14px] md:text-[15px] font-semibold cursor-pointer active:scale-[.98]';
+    const iconoTilde = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
+    const iconoReloj = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>;
 
     const botonPostulacion = isAnfitrion ? (
         <button
             type="button"
             onClick={() => showToast("Ya eres anfitrión", 'info')}
-            className={`${pildora} border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white`}
+            className={pildora}
+            style={{ background: 'var(--g-grnBg)', color: 'var(--g-grn)' }}
         >
-            <Check className="w-4 h-4 flex-none text-[#118f46]" strokeWidth={2.6} />
+            {iconoTilde}
             Ya sos anfitrión
         </button>
     ) : userApplicationStatus === 'PENDING' ? (
         <button
             type="button"
             onClick={() => showToast("Ya tienes una postulación en revisión", 'info')}
-            className={`${pildora} border border-amber-200 bg-[#FDF6E7] text-[#8A5B12] hover:bg-[#FBF0D9] dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200`}
+            className={`${pildora} gcx-hover-chip`}
+            style={{ background: 'var(--g-chip)', color: 'var(--g-m62)' }}
         >
-            <Clock className="w-4 h-4 flex-none" strokeWidth={2.4} />
+            {iconoReloj}
             <span className="md:hidden">En revisión</span>
             <span className="hidden md:inline">Postulación en revisión</span>
         </button>
@@ -1467,9 +1518,10 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         <button
             type="button"
             onClick={() => showToast("Tu postulación ya fue aprobada", 'success')}
-            className={`${pildora} border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white`}
+            className={pildora}
+            style={{ background: 'var(--g-grnBg)', color: 'var(--g-grn)' }}
         >
-            <Check className="w-4 h-4 flex-none text-[#118f46]" strokeWidth={2.6} />
+            {iconoTilde}
             <span className="md:hidden">Aprobada</span>
             <span className="hidden md:inline">Postulación aprobada</span>
         </button>
@@ -1477,15 +1529,28 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
         <button
             type="button"
             onClick={() => setIsPostulationModalOpen(true)}
-            className={`${pildora} bg-[#118f46] text-white hover:bg-[#0e7538] active:scale-[0.98]`}
+            className={`${pildora} gcx-hover-tinta`}
+            style={{ background: 'var(--g-ink)', color: 'var(--g-inv)' }}
         >
             Postularme
-            <ArrowRight className="w-4 h-4 flex-none" strokeWidth={2.4} />
         </button>
     );
 
+    // Los cuatro estados de la grilla (design-claude/GCX - Tarjetas y pagina).
+    // "Sin resultados" y "todavía no hay grupos" se separan por si hay algún
+    // filtro puesto; el botón de limpiar sigue apareciendo y limpiando lo
+    // mismo que antes.
+    const hayFiltros = selectedCategory !== 'ALL' || selectedTag !== 'ALL' || !!searchTerm || selectedDays.length > 0 || selectedSlots.length > 0;
+    const conteoDeGrupos = isLoading
+        ? 'Buscando grupos…'
+        : fallóLaCarga
+            ? '—'
+            : filteredGroups.length === 0
+                ? (hayFiltros ? '0 grupos con estos filtros' : '—')
+                : filteredGroups.length === 1 ? '1 grupo disponible' : `${filteredGroups.length} grupos disponibles`;
+
     return (
-        <div className="min-h-screen bg-white font-sans pb-20 groups-original-fonts">
+        <div className={`min-h-screen font-sans pb-20 groups-original-fonts ${view === 'public' ? 'bg-[#f6f6f4] dark:bg-[#111110]' : 'bg-white'}`}>
             {/* STICKY WRAPPER for navbar only — visible in admin mode */}
             {view === 'admin' && (
                 <div className={`relative z-40 bg-white shadow-sm transition-transform duration-300`}>
@@ -1561,47 +1626,36 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                         El contenedor repite el ancho y los costados de la
                         grilla de abajo para que las dos queden alineadas. */}
                     <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 xl:px-20">
-                        <div
+                        <section
                             id="leader-postulation-card"
-                            className="mt-8 md:mt-10 rounded-2xl border border-emerald-100 bg-[#F1FBF4] p-5 md:p-6 dark:border-emerald-900/40 dark:bg-emerald-950/25"
+                            aria-label="Postulaciones a anfitrión"
+                            className="gcx-m gcx-franja mt-4 rounded-[28px] grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 md:gap-x-8 md:gap-y-2 px-5 pt-5 pb-[22px] md:px-8 md:py-7"
+                            style={{ background: 'var(--g-card)', boxShadow: 'var(--g-shadow)' }}
                         >
-                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-8">
-                                <div className="min-w-0 md:flex-none">
-                                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.08em] text-[#118f46]">
-                                        <span className="h-[7px] w-[7px] flex-none rounded-full bg-[#118f46]" />
-                                        Postulaciones abiertas
-                                    </p>
-                                    {/* En el teléfono el botón comparte renglón con el
-                                        título: es lo que mantiene la franja en tres
-                                        líneas en vez de cinco. En escritorio se va a la
-                                        derecha del todo y este renglón queda solo. */}
-                                    <div className="mt-2 flex items-center justify-between gap-3 md:justify-start">
-                                        <h3 className="m-0 min-w-0 text-[17.5px] md:text-xl font-bold leading-[1.2] tracking-[-.01em] text-slate-900 dark:text-white">
-                                            ¿Querés ser anfitrión?
-                                        </h3>
-                                        <div className="md:hidden">{botonPostulacion}</div>
-                                    </div>
-                                </div>
-
-                                <p className="m-0 text-[13.5px] md:text-sm font-medium leading-[1.5] text-slate-600 md:flex-1 dark:text-zinc-300">
-                                    Si sentís el llamado a servir y guiar a otros en comunidad, nos encantaría conocerte.
-                                </p>
-
-                                <div className="hidden md:block">{botonPostulacion}</div>
-                            </div>
-                        </div>
+                            <p className="[grid-area:rot] m-0 flex items-center gap-2 text-[12px] font-semibold tracking-[.07em]" style={{ color: 'var(--g-m38)' }}>
+                                <span className="gcx-latido w-[7px] h-[7px] flex-none rounded-full" style={{ background: 'var(--g-grn)' }} />
+                                POSTULACIONES ABIERTAS
+                            </p>
+                            <h2 className="[grid-area:tit] m-0 text-[20px] md:text-[28px] leading-[1.15] font-semibold tracking-[-.025em]">
+                                ¿Querés ser anfitrión?
+                            </h2>
+                            <p className="[grid-area:txt] m-0 max-w-[560px] text-[15px] leading-[1.5] [text-wrap:pretty]" style={{ color: 'var(--g-m62)' }}>
+                                Si sentís el llamado a servir y guiar a otros en comunidad, nos encantaría conocerte.
+                            </p>
+                            {botonPostulacion}
+                        </section>
                     </div>
 
                     {/* BENTO GRID */}
-                    <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 xl:px-20 py-12 md:py-16 lg:py-20 font-['Helvetica_Neue',sans-serif]">
-                        {/* Section Header */}
-                        <div className="mb-8 md:mb-12 pb-4 border-b-4 border-black">
-                            <p className="text-sm lg:text-base font-medium italic text-[#118f46] mb-2">// grupos de conexión //</p>
-                            <h2 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold uppercase tracking-tight text-black">
-                                ENCONTRÁ TU GRUPO
-                            </h2>
-                            <p className="text-sm lg:text-base font-medium uppercase tracking-wide mt-2 text-black/50">
-                                {filteredGroups.length} grupos disponibles
+                    <div className="max-w-[1920px] mx-auto px-4 md:px-6 lg:px-12 xl:px-20 pt-9 md:pt-14 pb-12 md:pb-16 lg:pb-20 font-['Helvetica_Neue',sans-serif]">
+                        {/* Encabezado de la grilla */}
+                        <div className="gcx-m mb-5">
+                            <p className="m-0 text-[12px] font-semibold tracking-[.07em]" style={{ color: 'var(--g-m38)' }}>GRUPOS DE CONEXIÓN</p>
+                            <h1 className="mt-2.5 mb-0 text-[34px] md:text-[52px] leading-[1.02] font-semibold tracking-[-.035em]">
+                                Encontrá tu grupo
+                            </h1>
+                            <p aria-live="polite" className="mt-2.5 mb-0 text-[15.5px] font-medium" style={{ color: 'var(--g-m50)' }}>
+                                {conteoDeGrupos}
                             </p>
                         </div>
 
@@ -1942,15 +1996,38 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                         </div>
 
                         {isLoading ? (
-                            <div className="flex justify-center items-center py-32 border-4 border-dashed border-black/10">
-                                <Loader2 className="w-12 h-12 animate-spin text-black/20" />
+                            /* Esqueleto: dos filas en cada ancho (1, 2, 3 y 4 columnas). */
+                            <div aria-busy="true" aria-label="Cargando grupos" className="gcx-m grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 md:gap-5">
+                                {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
+                                    <div
+                                        key={i}
+                                        className={`rounded-[28px] p-2 ${i >= 6 ? 'hidden xl:block' : i >= 4 ? 'hidden lg:block' : i >= 2 ? 'hidden sm:block' : ''}`}
+                                        style={{ background: 'var(--g-card)', boxShadow: 'var(--g-shadow)' }}
+                                    >
+                                        <div className="gcx-brillo aspect-[4/3] rounded-[20px]" />
+                                        <div className="px-3 pt-[18px] pb-3 flex flex-col gap-3">
+                                            <div className="gcx-brillo w-[72%] h-5 rounded-lg" />
+                                            <div className="gcx-brillo w-[46%] h-3.5 rounded-[7px]" />
+                                            <div className="gcx-brillo w-[56%] h-3.5 rounded-[7px]" />
+                                            <div className="gcx-brillo w-[92%] h-3.5 rounded-[7px]" />
+                                            <div className="flex gap-2.5 mt-2">
+                                                <div className="gcx-brillo w-[52px] h-[52px] rounded-full flex-none" />
+                                                <div className="gcx-brillo flex-1 h-[52px] rounded-full" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            /* items-start como en el diseño: cada tarjeta mide lo
+                               suyo y abrir la descripción de una no estira a las
+                               vecinas de la fila. */
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 md:gap-5 items-start">
                                 {filteredGroups.map((group, index) => (
                                     <GroupCard
                                         key={group.id}
                                         id={`group-card-${group.id}`}
+                                        orden={index}
                                         group={group}
                                         tags={tags}
                                         categories={categories}
@@ -1970,47 +2047,36 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                         )}
 
                         {!isLoading && fallóLaCarga && (
-                            <div className="text-center py-32 border-4 border-dashed" style={{ borderColor: '#000000' }}>
-                                <WifiOff className="w-16 h-16 mx-auto mb-4" strokeWidth={1} style={{ color: 'rgba(0,0,0,0.2)' }} />
-                                <p className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-2" style={{ color: 'rgba(0,0,0,0.4)' }}>
-                                    NO PUDIMOS CARGAR LOS GRUPOS
-                                </p>
-                                <p className="text-sm font-bold uppercase tracking-widest mb-6" style={{ color: 'rgba(0,0,0,0.2)' }}>
-                                    Revisá la conexión y probá de nuevo
-                                </p>
-                                <button
-                                    onClick={fetchGroups}
-                                    className="px-6 py-3 text-xs font-bold uppercase tracking-wide transition-all border-b-2 border-transparent hover:border-slate-900 dark:hover:border-white"
-                                    style={{ backgroundColor: '#ffffff', color: '#000000' }}
-                                >
-                                    REINTENTAR
-                                </button>
-                            </div>
+                            <EstadoDeLaGrilla
+                                alerta
+                                icono="error"
+                                titulo="No pudimos cargar los grupos"
+                                detalle="Revisá la conexión y probá de nuevo."
+                                accion="Reintentar"
+                                onAccion={fetchGroups}
+                            />
                         )}
 
                         {!isLoading && !fallóLaCarga && filteredGroups.length === 0 && (
-                            <div className="text-center py-32 border-4 border-dashed" style={{ borderColor: '#000000' }}>
-                                <Users className="w-16 h-16 mx-auto mb-4" strokeWidth={1} style={{ color: 'rgba(0,0,0,0.2)' }} />
-                                <p className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-2" style={{ color: 'rgba(0,0,0,0.4)' }}>
-                                    NO SE ENCONTRARON GRUPOS
-                                </p>
-                                <p className="text-sm font-bold uppercase tracking-widest mb-6" style={{ color: 'rgba(0,0,0,0.2)' }}>
-                                    Probá ajustando los filtros de búsqueda
-                                </p>
-                                {(selectedCategory !== 'ALL' || selectedTag !== 'ALL' || searchTerm) && (
-                                    <button
-                                        onClick={() => {
-                                            setSelectedCategory('ALL');
-                                            setSelectedTag('ALL');
-                                            setSearchTerm('');
-                                        }}
-                                        className="px-6 py-3 text-xs font-bold uppercase tracking-wide transition-all border-b-2 border-transparent hover:border-slate-900 dark:hover:border-white"
-                                        style={{ backgroundColor: '#ffffff', color: '#000000' }}
-                                    >
-                                        LIMPIAR FILTROS
-                                    </button>
-                                )}
-                            </div>
+                            hayFiltros ? (
+                                <EstadoDeLaGrilla
+                                    icono="busqueda"
+                                    titulo="Ningún grupo coincide"
+                                    detalle="Probá con otros días o sacá algún filtro."
+                                    accion={(selectedCategory !== 'ALL' || selectedTag !== 'ALL' || searchTerm) ? 'Limpiar filtros' : undefined}
+                                    onAccion={() => {
+                                        setSelectedCategory('ALL');
+                                        setSelectedTag('ALL');
+                                        setSearchTerm('');
+                                    }}
+                                />
+                            ) : (
+                                <EstadoDeLaGrilla
+                                    icono="temporada"
+                                    titulo="Todavía no hay grupos abiertos"
+                                    detalle="La próxima temporada arranca pronto."
+                                />
+                            )
                         )}
 
                     </div>
@@ -2543,100 +2609,156 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                 />
             )}
 
-            {isPostulationModalOpen && (
-                <NeoModal
-                    isOpen={isPostulationModalOpen}
-                    onClose={() => setIsPostulationModalOpen(false)}
-                    title="Postulación a Anfitrión"
-                >
-                    <form onSubmit={handlePostulationSubmit} className="space-y-6">
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div><label className="text-xs font-bold uppercase text-slate-500">Nombre</label><input type="text" required value={postulationForm.firstName} onChange={e => setPostulationForm({ ...postulationForm, firstName: e.target.value })} className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-black text-sm" /></div>
-                                <div><label className="text-xs font-bold uppercase text-slate-500">Apellido</label><input type="text" required value={postulationForm.lastName} onChange={e => setPostulationForm({ ...postulationForm, lastName: e.target.value })} className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-black text-sm" /></div>
-                            </div>
-                            <div><label className="text-xs font-bold uppercase text-slate-500">Email</label><input type="email" required value={postulationForm.email} onChange={e => setPostulationForm({ ...postulationForm, email: e.target.value })} className={`w-full p-3 border rounded-lg outline-none text-sm ${existingApplications.some(a => postulationForm.email?.toLowerCase().trim() && a.email === postulationForm.email?.toLowerCase().trim()) ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-black'}`} /></div>
-                            <div><label className="text-xs font-bold uppercase text-slate-500">Teléfono</label><input type="tel" required value={postulationForm.phone} onChange={e => setPostulationForm({ ...postulationForm, phone: e.target.value })} className={`w-full p-3 border rounded-lg outline-none text-sm ${existingApplications.some(a => postulationForm.phone?.trim() && a.phone === postulationForm.phone?.trim()) ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-black'}`} /></div>
-                        </div>
+            {/* Postulación a anfitrión — design-claude/GCX - Tarjetas y pagina.
+                Panel desde abajo en el teléfono, modal en la compu. Los datos,
+                el chequeo de postulaciones repetidas y el envío son los de
+                siempre (handlePostulationSubmit, existingApplications). */}
+            {(() => {
+                const email = postulationForm.email?.toLowerCase().trim();
+                const telefono = postulationForm.phone?.trim();
+                const emailMatch = !!email && existingApplications.some(a => a.email === email);
+                const phoneMatch = !!telefono && existingApplications.some(a => a.phone === telefono);
+                const nameMatch = !!(postulationForm.firstName?.trim() && postulationForm.lastName?.trim() && existingApplications.some(a =>
+                    a.firstName === postulationForm.firstName?.toLowerCase().trim() &&
+                    a.lastName === postulationForm.lastName?.toLowerCase().trim()
+                ));
+                const isDuplicate = emailMatch || phoneMatch || nameMatch;
+                const datosCompletos = !!(postulationForm.firstName.trim() && postulationForm.lastName.trim() && postulationForm.email.trim() && postulationForm.phone.trim());
+                const faltan = !datosCompletos
+                    ? 'Completá tus datos para enviar'
+                    : isDuplicate
+                        ? (emailMatch ? 'Usá otro email para enviar' : phoneMatch ? 'Usá otro teléfono para enviar' : 'Ya hay una postulación a tu nombre')
+                        : null;
+                const avisoRepetido = nameMatch ? 'Ya hay una postulación con este nombre y apellido.'
+                    : emailMatch && phoneMatch ? 'Ya hay una postulación con este email y este teléfono.'
+                        : emailMatch ? 'Ya hay una postulación con este email.'
+                            : 'Ya hay una postulación con este teléfono.';
 
-                        <div className="space-y-3 pt-4 border-t border-slate-100">
-                            <div className="flex items-center gap-3">
-                                <input type="checkbox" checked={postulationForm.attendsOrigen} onChange={e => setPostulationForm({ ...postulationForm, attendsOrigen: e.target.checked })} className="w-5 h-5 accent-black" />
-                                <label className="text-sm font-bold text-slate-700">¿Asistes regularmente a Origen?</label>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <input type="checkbox" checked={postulationForm.completedHicisteCrecer} onChange={e => setPostulationForm({ ...postulationForm, completedHicisteCrecer: e.target.checked })} className="w-5 h-5 accent-black" />
-                                <label className="text-sm font-bold text-slate-700">¿Hiciste crecer?</label>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <input type="checkbox" checked={postulationForm.completedVolunteerTraining} onChange={e => setPostulationForm({ ...postulationForm, completedVolunteerTraining: e.target.checked })} className="w-5 h-5 accent-black" />
-                                <label className="text-sm font-bold text-slate-700">¿Hiciste Entrenamiento de Voluntarios?</label>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <input type="checkbox" checked={postulationForm.completedLeaderCourse} onChange={e => setPostulationForm({ ...postulationForm, completedLeaderCourse: e.target.checked })} className="w-5 h-5 accent-black" />
-                                <label className="text-sm font-bold text-slate-700">¿Realizaste el Curso de Anfitrión?</label>
-                            </div>
-                        </div>
+                const AMBAR = 'var(--g-amb)';
+                const campos: { clave: 'firstName' | 'lastName' | 'email' | 'phone'; rotulo: string; tipo: string; auto: string; ph: string; ancho: boolean; repetido: boolean }[] = [
+                    { clave: 'firstName', rotulo: 'NOMBRE', tipo: 'text', auto: 'given-name', ph: 'Tu nombre', ancho: false, repetido: false },
+                    { clave: 'lastName', rotulo: 'APELLIDO', tipo: 'text', auto: 'family-name', ph: 'Tu apellido', ancho: false, repetido: false },
+                    { clave: 'email', rotulo: 'EMAIL', tipo: 'email', auto: 'email', ph: 'nombre@mail.com', ancho: true, repetido: emailMatch },
+                    { clave: 'phone', rotulo: 'TELÉFONO', tipo: 'tel', auto: 'tel', ph: '11 1234 5678', ancho: true, repetido: phoneMatch },
+                ];
+                // Las cuatro preguntas son las de siempre y siguen guardándose
+                // como sí/no. Sin tocar no se marca ninguna, pero se envía
+                // "no", igual que la casilla sin tildar de antes.
+                const preguntas: { clave: 'attendsOrigen' | 'completedHicisteCrecer' | 'completedVolunteerTraining' | 'completedLeaderCourse'; texto: string }[] = [
+                    { clave: 'attendsOrigen', texto: '¿Asistes regularmente a Origen?' },
+                    { clave: 'completedHicisteCrecer', texto: '¿Hiciste crecer?' },
+                    { clave: 'completedVolunteerTraining', texto: '¿Hiciste Entrenamiento de Voluntarios?' },
+                    { clave: 'completedLeaderCourse', texto: '¿Realizaste el Curso de Anfitrión?' },
+                ];
 
-                        {/* Duplicate Warning */}
-                        {(() => {
-                            const emailMatch = postulationForm.email?.toLowerCase().trim() && existingApplications.some(a => a.email === postulationForm.email?.toLowerCase().trim());
-                            const phoneMatch = postulationForm.phone?.trim() && existingApplications.some(a => a.phone === postulationForm.phone?.trim());
-                            const nameMatch = postulationForm.firstName?.trim() && postulationForm.lastName?.trim() && existingApplications.some(a =>
-                                a.firstName === postulationForm.firstName?.toLowerCase().trim() &&
-                                a.lastName === postulationForm.lastName?.toLowerCase().trim()
-                            );
-                            const isDuplicate = emailMatch || phoneMatch || nameMatch;
-
-                            if (isDuplicate) {
-                                return (
-                                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-                                        <Info className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="text-sm font-bold text-red-700">Ya existe una postulación con estos datos</p>
-                                            <p className="text-xs text-red-600 mt-1">
-                                                {nameMatch ? 'Este nombre y apellido ya tienen una postulación.' :
-                                                    emailMatch && phoneMatch ? 'El email y teléfono ya están registrados.' :
-                                                        emailMatch ? 'Este email ya tiene una postulación.' :
-                                                            'Este teléfono ya tiene una postulación.'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                );
-                            }
-                            return null;
-                        })()}
-
-                        <div className="flex md:justify-end">
+                return (
+                    <HojaGrupos
+                        abierta={isPostulationModalOpen}
+                        onCerrar={() => setIsPostulationModalOpen(false)}
+                        etiquetadaPor="gcx-postulacion-titulo"
+                        id="gcx-postulacion"
+                        ancha
+                        alta
+                        pieConLinea
+                        pie={<>
                             <button
                                 type="submit"
-                                disabled={(() => {
-                                    const emailMatch = postulationForm.email?.toLowerCase().trim() && existingApplications.some(a => a.email === postulationForm.email?.toLowerCase().trim());
-                                    const phoneMatch = postulationForm.phone?.trim() && existingApplications.some(a => a.phone === postulationForm.phone?.trim());
-                                    const nameMatch = postulationForm.firstName?.trim() && postulationForm.lastName?.trim() && existingApplications.some(a =>
-                                        a.firstName === postulationForm.firstName?.toLowerCase().trim() &&
-                                        a.lastName === postulationForm.lastName?.toLowerCase().trim()
-                                    );
-                                    return emailMatch || phoneMatch || nameMatch;
-                                })()}
-                                className={`w-full md:w-auto md:px-10 py-4 font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg ${(() => {
-                                    const emailMatch = postulationForm.email?.toLowerCase().trim() && existingApplications.some(a => a.email === postulationForm.email?.toLowerCase().trim());
-                                    const phoneMatch = postulationForm.phone?.trim() && existingApplications.some(a => a.phone === postulationForm.phone?.trim());
-                                    const nameMatch = postulationForm.firstName?.trim() && postulationForm.lastName?.trim() && existingApplications.some(a =>
-                                        a.firstName === postulationForm.firstName?.toLowerCase().trim() &&
-                                        a.lastName === postulationForm.lastName?.toLowerCase().trim()
-                                    );
-                                    return (emailMatch || phoneMatch || nameMatch) ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-black text-white hover:bg-slate-800';
-                                })()}`}
+                                form="gcx-postulacion-form"
+                                disabled={isDuplicate}
+                                aria-describedby={faltan ? 'gcx-postulacion-falta' : undefined}
+                                className={`h-14 rounded-full border-0 text-[16px] font-semibold flex items-center justify-center gap-2 ${isDuplicate ? 'cursor-default' : 'cursor-pointer active:scale-[.98]'} ${faltan ? '' : 'gcx-hover-tinta'}`}
+                                style={faltan
+                                    ? { background: 'var(--g-chip)', color: 'var(--g-m38)' }
+                                    : { background: 'var(--g-ink)', color: 'var(--g-inv)' }}
                             >
-                                Enviar Postulación
+                                <span>Enviar postulación</span>
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                             </button>
-                        </div>
-                    </form>
-                </NeoModal>
-            )}
+                            {faltan && (
+                                <p id="gcx-postulacion-falta" className="m-0 text-center text-[13px] font-medium" style={{ color: 'var(--g-m50)' }}>{faltan}</p>
+                            )}
+                        </>}
+                    >
+                        <form id="gcx-postulacion-form" onSubmit={handlePostulationSubmit} className="flex flex-col">
+                            <p className="m-0 text-[12px] font-semibold tracking-[.07em]" style={{ color: 'var(--g-m38)' }}>POSTULACIÓN · ANFITRIÓN</p>
+                            <h2 id="gcx-postulacion-titulo" className="mt-2 mr-14 mb-0 text-[26px] leading-[1.15] font-semibold tracking-[-.03em]">
+                                ¿Querés ser anfitrión?
+                            </h2>
+                            <p className="mt-2 mb-0 text-[15px] leading-[1.5] [text-wrap:pretty]" style={{ color: 'var(--g-m50)' }}>
+                                Contanos un poco de vos. Lo lee el equipo de GCX y te escribimos.
+                            </p>
 
+                            {currentUser && (
+                                <div className="mt-[18px] px-3.5 py-3 rounded-[18px] flex items-center gap-2.5 text-[14px] font-medium" style={{ background: 'var(--g-chip)', color: 'var(--g-m62)' }}>
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20a7 7 0 0114 0" /></svg>
+                                    <span>Traemos los datos de tu cuenta. Podés cambiarlos.</span>
+                                </div>
+                            )}
 
+                            <div className="mt-[18px] grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {campos.map(c => (
+                                    <label key={c.clave} className={`flex flex-col gap-1.5 ${c.ancho ? 'md:col-span-2' : ''}`}>
+                                        <span className="text-[12px] font-semibold tracking-[.07em]" style={{ color: 'var(--g-m38)' }}>{c.rotulo}</span>
+                                        <input
+                                            type={c.tipo}
+                                            required
+                                            autoComplete={c.auto}
+                                            placeholder={c.ph}
+                                            value={postulationForm[c.clave]}
+                                            onChange={e => setPostulationForm({ ...postulationForm, [c.clave]: e.target.value })}
+                                            aria-invalid={c.repetido || undefined}
+                                            className="w-full min-w-0 h-[52px] px-4 text-[16px] font-medium"
+                                            style={c.repetido ? { ['--pf-borde' as string]: AMBAR } : undefined}
+                                        />
+                                    </label>
+                                ))}
+                            </div>
+
+                            {isDuplicate && (
+                                <div role="alert" className="mt-2.5 px-3.5 py-3 rounded-2xl flex gap-2.5 text-[14px] font-medium leading-[1.45]" style={{ background: 'var(--g-ambBg)', color: 'var(--g-amb)' }}>
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none', marginTop: 1 }}><circle cx="12" cy="12" r="8.5" /><path d="M12 8v4.5M12 16h.01" /></svg>
+                                    <span>{avisoRepetido}</span>
+                                </div>
+                            )}
+
+                            <div className="mt-[26px] flex flex-col gap-5">
+                                {preguntas.map(q => (
+                                    <fieldset key={q.clave} className="m-0 p-0 border-0 flex flex-col gap-2.5">
+                                        <legend className="p-0 mb-2.5 text-[16px] leading-[1.35] font-semibold tracking-[-.01em]">{q.texto}</legend>
+                                        <div role="radiogroup" aria-label={q.texto} className="grid grid-cols-2 gap-2">
+                                            {([[true, 'Sí'], [false, 'No']] as const).map(([valor, texto]) => {
+                                                const on = preguntasRespondidas.includes(q.clave) && postulationForm[q.clave] === valor;
+                                                return (
+                                                    <button
+                                                        key={texto}
+                                                        type="button"
+                                                        role="radio"
+                                                        aria-checked={on}
+                                                        onClick={() => {
+                                                            setPostulationForm({ ...postulationForm, [q.clave]: valor });
+                                                            setPreguntasRespondidas(prev => prev.includes(q.clave) ? prev : [...prev, q.clave]);
+                                                        }}
+                                                        className={`h-14 rounded-[18px] text-[15.5px] font-semibold flex items-center justify-center gap-2 cursor-pointer ${on ? '' : 'gcx-hover-chip'}`}
+                                                        style={{
+                                                            border: `1.5px solid ${on ? 'var(--g-ink)' : 'var(--g-line)'}`,
+                                                            background: on ? 'var(--g-ink)' : 'transparent',
+                                                            color: on ? 'var(--g-inv)' : 'var(--g-ink)',
+                                                            transition: 'background .15s, border-color .15s',
+                                                        }}
+                                                    >
+                                                        {on && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
+                                                        <span>{texto}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </fieldset>
+                                ))}
+                            </div>
+                        </form>
+                    </HojaGrupos>
+                );
+            })()}
 
             {/* Edit Group Modal */}
             {isEditModalOpen && (
@@ -3105,60 +3227,65 @@ const Groups: React.FC<GroupsProps> = ({ currentUser, onLoginRequest }) => {
                 }}
             />
 
-            {/* Success Modal */}
-            <NeoModal
-                isOpen={isSuccessModalOpen}
-                onClose={() => setIsSuccessModalOpen(false)}
-                maxWidth="max-w-md"
+            {/* Postulación enviada — design-claude/GCX - Tarjetas y pagina. */}
+            <HojaGrupos
+                abierta={isSuccessModalOpen}
+                onCerrar={() => setIsSuccessModalOpen(false)}
+                etiquetadaPor="gcx-enviada-titulo"
+                pie={
+                    <button
+                        type="button"
+                        onClick={() => setIsSuccessModalOpen(false)}
+                        className="gcx-hover-tinta w-full h-14 rounded-full border-0 text-[16px] font-semibold cursor-pointer"
+                        style={{ background: 'var(--g-ink)', color: 'var(--g-inv)' }}
+                    >
+                        Volver a los grupos
+                    </button>
+                }
             >
-                <div className="flex flex-col items-center justify-center p-6 text-center space-y-6">
-                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center shadow-inner">
-                        <Check className="w-8 h-8" />
+                <div className="flex flex-col pt-2">
+                    <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center" style={{ background: 'var(--g-grnBg)', color: 'var(--g-grn)', animation: 'gcxZoom .4s ease both' }}>
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
                     </div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight text-black dark:text-white">
-                        ¡Postulación Enviada!
-                    </h3>
-                    <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                        {successModalMessage}
+                    <h2 id="gcx-enviada-titulo" className="mt-[22px] mb-0 text-[28px] leading-[1.1] font-semibold tracking-[-.03em]">¡Tu postulación llegó!</h2>
+                    <p className="mt-2.5 mb-0 text-[15.5px] leading-[1.5] [text-wrap:pretty]" style={{ color: 'var(--g-m50)' }}>
+                        Gracias por querer servir. {successModalMessage}
+                    </p>
+                </div>
+            </HojaGrupos>
+
+            {/* Aviso de restricción (link a un grupo que no es para vos) —
+                design-claude/GCX - Tarjetas y pagina. */}
+            <HojaGrupos
+                abierta={restrictionModal.isOpen}
+                onCerrar={() => setRestrictionModal({ isOpen: false, message: '' })}
+                etiquetadaPor="gcx-restriccion-titulo"
+            >
+                <div className="flex flex-col items-center text-center pt-3">
+                    <div className="w-[76px] h-[76px] rounded-full flex items-center justify-center" style={{ background: 'var(--g-chip)', color: 'var(--g-m62)' }}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3" /><path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5" /></svg>
+                    </div>
+                    {selectedGroup && (
+                        <p className="mt-5 mb-0 text-[12px] font-semibold tracking-[.07em]" style={{ color: 'var(--g-m38)' }}>
+                            {selectedGroup.name.toUpperCase()}
+                        </p>
+                    )}
+                    <h2 id="gcx-restriccion-titulo" className="mt-2 mb-0 max-w-[340px] text-[23px] leading-[1.25] font-semibold tracking-[-.025em] [text-wrap:balance]">
+                        {restrictionModal.message}
+                    </h2>
+                    <p className="mt-2.5 mb-0 max-w-[340px] text-[15px] leading-[1.5] [text-wrap:pretty]" style={{ color: 'var(--g-m50)' }}>
+                        Hay otros grupos que se juntan en días y lugares parecidos. Seguí buscando el tuyo.
                     </p>
                     <button
-                        onClick={() => setIsSuccessModalOpen(false)}
-                        className="mt-4 w-full py-4 bg-[#118f46] text-white font-black uppercase tracking-widest rounded-xl hover:bg-[#0d7036] transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1"
-                    >
-                        Entendido
-                    </button>
-                </div>
-            </NeoModal>
-
-            {/* Restriction Modal */}
-            <NeoModal
-                isOpen={restrictionModal.isOpen}
-                onClose={() => setRestrictionModal({ isOpen: false, message: '' })}
-                maxWidth="max-w-md"
-            >
-                <div className="flex flex-col items-center justify-center p-8 md:p-10 text-center space-y-6">
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-10"></div>
-                        <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center shadow-inner border-4 border-red-100 dark:border-red-900/30 relative z-10">
-                            <Lock className="w-10 h-10" strokeWidth={2.5} />
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-black dark:text-white">
-                            Acceso Restringido
-                        </h3>
-                        <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed text-lg max-w-sm mx-auto">
-                            {restrictionModal.message}
-                        </p>
-                    </div>
-                    <button
+                        type="button"
                         onClick={() => setRestrictionModal({ isOpen: false, message: '' })}
-                        className="mt-6 w-full py-4 bg-black text-white font-black uppercase tracking-widest rounded-2xl hover:bg-neutral-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-y-1 text-sm"
+                        className="gcx-hover-tinta mt-[26px] w-full h-[54px] rounded-full border-0 text-[15.5px] font-semibold cursor-pointer active:scale-[.98]"
+                        style={{ background: 'var(--g-ink)', color: 'var(--g-inv)' }}
                     >
-                        Entendido
+                        Ver otros grupos
                     </button>
                 </div>
-            </NeoModal>
+            </HojaGrupos>
 
             {/* Toast Notification */}
             {notification.show && (

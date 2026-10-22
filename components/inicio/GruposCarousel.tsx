@@ -45,7 +45,7 @@ const GruposCarousel: React.FC<{
                 ref={scrollRef}
                 className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide pb-1 items-stretch"
             >
-                {groups.map(g => (
+                {groups.map((g, i) => (
                     /* [&>*]:h-full es lo que iguala las alturas. El riel estira
                        cada slide hasta el más alto (items-stretch), pero la
                        tarjeta de adentro seguía midiendo lo que mide su
@@ -64,6 +64,7 @@ const GruposCarousel: React.FC<{
                     >
                         <GroupCard
                             group={g}
+                            orden={i}
                             tags={tags}
                             categories={categories}
                             onJoin={onJoin}
