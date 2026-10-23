@@ -21,6 +21,8 @@ import { createPortal } from 'react-dom';
 import { getEventosGeneralPublic } from '../../services/supabaseService';
 import { EventoGeneral } from '../../types';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
+import { faqNocturnaVisible } from '../../src/contenido/faqNocturna';
+import FaqNocturna, { irAlFaqNocturna } from './FaqNocturna';
 import {
     T, rotulo, hoyIso, fechaCorta, horario, linkValido, IconoCalendario,
 } from './general/piezas';
@@ -75,6 +77,25 @@ const cuantoFalta = (f: string, hoy = hoyIso()): string => {
     if (dias === 1) return 'Mañana';
     return `En ${dias} días`;
 };
+
+/** Si es el evento de Nocturna: por el nombre, sin mirar mayúsculas ni tildes. */
+const esNocturna = (ev: EventoGeneral): boolean =>
+    (ev.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes('nocturna');
+
+/**
+ * El link de la tarjeta de Nocturna que baja a sus preguntas frecuentes.
+ * Es un botón y no un <a href="#…">: la app navega por hash, y un ancla
+ * cambiaría de ruta en vez de bajar.
+ */
+const LinkFaq: React.FC<{ className?: string }> = ({ className = '' }) => (
+    <button
+        type="button"
+        onClick={irAlFaqNocturna}
+        className={`h-11 p-0 border-0 bg-transparent text-[14px] font-bold underline underline-offset-[3px] cursor-pointer ${T.tinta} ${T.foco} rounded-lg ${className}`}
+    >
+        Preguntas frecuentes ↓
+    </button>
+);
 
 /** "Sáb 7 nov · 20:00–22:30". */
 const cuando = (ev: EventoGeneral): string => {
@@ -465,6 +486,8 @@ const Eventos: React.FC = () => {
     const [leer, setLeer] = useState<Record<string, boolean>>({});
     const [abierta, setAbierta] = useState<string | null>(null);
     const esMovil = useEsMovil();
+    // Se decide al entrar: el FAQ deja de verse cuando termina Nocturna.
+    const conFaq = useMemo(() => faqNocturnaVisible(), []);
 
     const cargar = useCallback(() => {
         setCargando(true);
@@ -614,6 +637,8 @@ const Eventos: React.FC = () => {
                                     />
                                 )}
 
+                                {conFaq && esNocturna(destacado) && <LinkFaq className="mt-1 block" />}
+
                                 {linkDe(destacado) && (
                                     <Inscribirme link={linkDe(destacado)!} alto="h-[58px]" className="mt-[18px]" />
                                 )}
@@ -677,6 +702,8 @@ const Eventos: React.FC = () => {
                                                                 />
                                                             )}
 
+                                                            {conFaq && esNocturna(ev) && <LinkFaq className="mt-1 block" />}
+
                                                             {linkDe(ev) && (
                                                                 <Inscribirme link={linkDe(ev)!} alto="h-[52px]" className="mt-3" />
                                                             )}
@@ -691,6 +718,10 @@ const Eventos: React.FC = () => {
                         )}
                     </>
                 )}
+
+                {/* Las preguntas de Nocturna no dependen de la lista: se ven
+                    también con la agenda vacía o si falló la carga. */}
+                {conFaq && <FaqNocturna />}
             </div>
 
             {evAbierta && (
