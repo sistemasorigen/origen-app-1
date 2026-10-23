@@ -1,9 +1,9 @@
 
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { AppProvider, useStore } from '../../store';
 import { ViewState, User, UserRole } from '../../types';
 import { hasRole, puedeEntrarAlPunto } from '../../services/authUtils';
@@ -19,7 +19,6 @@ import Baptisms from '../punto-informacion/Bautismos';
 import ChildPresentations from '../punto-informacion/PresentacionNinos';
 import Search from '../punto-informacion/Busqueda';
 import AdminPanel from '../punto-informacion/PanelAdministrador';
-import MobileHeader from '../punto-informacion/EncabezadoMovil';
 import SinAcceso from '../../components/auth/SinAcceso';
 import InfoPointMenu from '../punto-informacion/MenuPuntoInformacion';
 
@@ -83,6 +82,11 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
         }
         setCurrentView(view as ViewState);
     }, [searchParams, setSearchParams]);
+
+    // Cada función arranca arriba. App.tsx vuelve al tope cuando cambia la
+    // ruta, pero acá sólo cambia el ?view=: sin esto, entrar a una función
+    // desde la mitad del menú la abría por la mitad.
+    useLayoutEffect(() => { window.scrollTo(0, 0); }, [currentView]);
 
     const canAccessAdminPanel = !!authorizedUser && hasRole(authorizedUser, [
         UserRole.SUPER_ADMIN,
@@ -184,37 +188,39 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
     /** ¿Lo que se está mostrando es el menú de funciones? */
     const esElMenu = currentView === 'PANEL' || currentView === 'SUMMARY';
 
+    // El panel usa el scroll de la página, como las pantallas sueltas del
+    // Punto (Reportar, Nuevo movimiento): así la barra de la app queda pegada
+    // arriba mientras se baja. Antes cada función scrolleaba en una caja
+    // propia y la página se movía igual unos píxeles más, lo justo para
+    // meter la cabecera del panel debajo de la barra.
     return (
-        <div className="flex flex-col md:flex-row h-screen md:h-[calc(100vh-64px)] bg-slate-50 overflow-hidden relative">
+        <div className="min-h-[calc(100dvh-64px)] bg-slate-50">
+            {esElMenu ? (
+                renderView()
+            ) : (
+                <div className="px-4 pt-4 pb-20 md:p-8">
+                    {/* La cabecera de las funciones, igual que la de Reportar:
+                        de dónde se vuelve y dónde estás, alineados a la
+                        izquierda y yéndose con el contenido. */}
+                    <button
+                        type="button"
+                        onClick={() => irA('PANEL')}
+                        className="flex items-center gap-2 h-11 -ml-1 px-1 rounded-lg text-sm font-semibold text-slate-500 hover:text-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Punto de Información
+                    </button>
+                    <h1 className="mt-2 mb-6 text-[26px] font-bold tracking-tight text-black leading-none">
+                        {getViewTitle(currentView)}
+                    </h1>
 
-            {/* --- MOBILE LAYOUT --- */}
-            <div className="md:hidden fixed inset-x-0 top-16 bottom-0 z-30 flex flex-col bg-slate-50 overflow-hidden">
-                {/* Header solo en sub-vistas (back + título + dropdown).
-                    En la raíz del panel (PANEL) no hay barra: el toggle
-                    Web/Panel se eliminó. */}
-                {!esElMenu && (
-                    <header className="flex-none z-40 bg-white border-b border-slate-200 select-none overflow-hidden" style={{ touchAction: 'none' }}>
-                        <MobileHeader
-                            title={getViewTitle(currentView)}
-                            isRoot={false}
-                            onBack={() => irA('PANEL')}
-                            currentView={currentView}
-                            onNavigate={irA}
-                            currentUser={authorizedUser}
-                        />
-                    </header>
-                )}
+                    {renderView()}
+                </div>
+            )}
 
-                <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-slate-50">
-                    {esElMenu ? (
-                        renderView()
-                    ) : (
-                        <div className="pb-20 px-4 pt-4">
-                            {renderView()}
-                        </div>
-                    )}
-                </main>
-
+            {/* Sólo en el teléfono, como antes: en la compu dibuja una barra
+                lateral propia que acá no va. */}
+            <div className="md:hidden">
                 <NeoSidebar
                     currentView={currentView}
                     setView={irA}
@@ -225,54 +231,19 @@ const InfoPointContent: React.FC<InfoPointProps> = ({ currentUser }) => {
                 />
             </div>
 
-            {/* --- DESKTOP LAYOUT --- */}
-            <div className="hidden md:flex flex-col flex-1 h-full overflow-hidden relative">
-
-                {/* La cabecera del panel en la compu: dónde estás y cómo
-                    volver al menú. Antes eran dos flechas que iban a la
-                    función anterior y a la siguiente, en un orden que sólo
-                    conocía el código: para llegar a Préstamos había que pasar
-                    por las otras seis. Ahora se elige en el menú, que es una
-                    lista con los nombres a la vista.
-                    En el menú no hay cabecera: esa pantalla trae su título. */}
-                {!esElMenu && (
-                    <header className="flex-none border-b border-slate-200 bg-white">
-                        <div className="flex items-center gap-4 px-8 py-5">
-                            <button
-                                type="button"
-                                onClick={() => irA('PANEL')}
-                                className="shrink-0 inline-flex items-center gap-1.5 h-10 px-3 -ml-3 rounded-full text-sm font-semibold text-slate-500 hover:text-black hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                                Punto de Información
-                            </button>
-                            <h1 className="flex-1 text-2xl font-bold tracking-tight text-black text-center leading-none">
-                                {getViewTitle(currentView)}
-                            </h1>
-                            {/* Espaciador: mantiene el título centrado. */}
-                            <div className="shrink-0 w-[196px]" aria-hidden="true" />
-                        </div>
-                    </header>
-                )}
-
-                <main className={`flex-1 overflow-y-auto relative bg-slate-50 ${esElMenu ? '' : 'p-8'}`}>
-                    {renderView()}
-
-                    {/* Global Notification Toast */}
-                    {notification.show && (
-                        <div className={`fixed top-24 right-8 z-[100] px-6 py-4 rounded-lg shadow-xl flex items-center gap-3 animate-slideIn ${notification.type === 'success' ? 'bg-[#118f46] text-white' : 'bg-red-600 text-white'}`}>
-                            <div className="p-1 bg-white/20 rounded-full">
-                                {notification.type === 'success' ? (
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                                ) : (
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
-                                )}
-                            </div>
-                            <span className="font-bold text-sm">{notification.message}</span>
-                        </div>
-                    )}
-                </main>
-            </div>
+            {/* Global Notification Toast */}
+            {notification.show && (
+                <div className={`hidden md:flex fixed top-24 right-8 z-[100] px-6 py-4 rounded-lg shadow-xl items-center gap-3 animate-slideIn ${notification.type === 'success' ? 'bg-[#118f46] text-white' : 'bg-red-600 text-white'}`}>
+                    <div className="p-1 bg-white/20 rounded-full">
+                        {notification.type === 'success' ? (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                        ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                        )}
+                    </div>
+                    <span className="font-bold text-sm">{notification.message}</span>
+                </div>
+            )}
         </div>
     );
 };

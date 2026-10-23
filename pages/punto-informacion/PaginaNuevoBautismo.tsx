@@ -8,7 +8,7 @@ import SinAcceso from '../../components/auth/SinAcceso';
 import { PendingStatus } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
 import {
-    PantallaFormulario, Campo, ParDeCampos, BotonGuardar, campo,
+    PantallaFormulario, Campo, ParDeCampos, BarraDeRevisar, HojaDeRevision, campo,
 } from '../../components/info-point/FormularioDelPunto';
 
 const VOLVER = '/punto-de-informacion?view=BAPTISMS';
@@ -21,6 +21,8 @@ const PaginaNuevoBautismoContent: React.FC = () => {
     const { baptisms, addBaptism, updateBaptism, showNotification } = useStore();
     const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '' });
     const [guardando, setGuardando] = useState(false);
+    const [revisando, setRevisando] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!editId) return;
@@ -35,9 +37,17 @@ const PaginaNuevoBautismoContent: React.FC = () => {
         }
     }, [editId, baptisms]);
 
-    const guardar = async (e: React.FormEvent) => {
+    // Enviar el formulario no guarda: abre la revisión. Los obligatorios ya
+    // los frenó el navegador.
+    const revisar = (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
+        setRevisando(true);
+    };
+
+    const guardar = async () => {
         setGuardando(true);
+        setError(null);
         try {
             if (editId) {
                 const existente = baptisms.find(b => b.id === editId);
@@ -56,10 +66,15 @@ const PaginaNuevoBautismoContent: React.FC = () => {
                 showNotification(`${form.firstName} quedó en la lista de espera.`);
             }
             navigate(VOLVER);
+        } catch (err) {
+            console.error('[Punto] bautismo:', err);
+            setError('No se pudo guardar. Revisá la conexión y probá de nuevo: los datos siguen acá.');
         } finally {
             setGuardando(false);
         }
     };
+
+    const nombre = `${form.firstName} ${form.lastName}`.trim();
 
     return (
         <PantallaFormulario
@@ -68,7 +83,7 @@ const PaginaNuevoBautismoContent: React.FC = () => {
             titulo={editId ? 'Editar el registro' : 'Anotar un bautismo'}
             bajada={editId ? undefined : 'Queda en la lista de espera hasta que lo marques como realizado.'}
         >
-            <form onSubmit={guardar} className="space-y-4">
+            <form id="form-bautismo" onSubmit={revisar} className="space-y-4">
                 <ParDeCampos>
                     <Campo etiqueta="Nombre" para="bautismo-nombre">
                         <input
@@ -110,12 +125,28 @@ const PaginaNuevoBautismoContent: React.FC = () => {
                     />
                 </Campo>
 
-                <div className="pt-2">
-                    <BotonGuardar guardando={guardando}>
-                        {editId ? 'Guardar los cambios' : 'Anotar el bautismo'}
-                    </BotonGuardar>
-                </div>
             </form>
+
+            <BarraDeRevisar
+                form="form-bautismo"
+                resumen={nombre || 'Anotar un bautismo'}
+                detalle={nombre ? (editId ? 'Cambios sin guardar' : 'Para la lista de espera') : 'Completá los datos'}
+            />
+            <HojaDeRevision
+                abierta={revisando}
+                titulo={editId ? 'Revisá los cambios' : 'Revisá el bautismo'}
+                bajada="Leéselos a la persona antes de guardar."
+                grupos={[{ filas: [
+                    { etiqueta: 'Nombre', valor: nombre },
+                    { etiqueta: 'Teléfono', valor: form.phone.trim() },
+                    { etiqueta: 'Email', valor: form.email.trim() },
+                ] }]}
+                textoConfirmar={editId ? 'Guardar los cambios' : 'Anotar el bautismo'}
+                guardando={guardando}
+                error={error}
+                onCorregir={() => setRevisando(false)}
+                onConfirmar={guardar}
+            />
         </PantallaFormulario>
     );
 };

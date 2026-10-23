@@ -8,7 +8,7 @@ import SinAcceso from '../../components/auth/SinAcceso';
 import { ProductType, INFO_POINT_SIZES } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
 import {
-    PantallaFormulario, Campo, ParDeCampos, BotonGuardar, Opciones, campo,
+    PantallaFormulario, Campo, ParDeCampos, BarraDeRevisar, HojaDeRevision, Opciones, campo,
 } from '../../components/info-point/FormularioDelPunto';
 
 const VOLVER = '/punto-de-informacion?view=LOANS';
@@ -23,10 +23,19 @@ const PaginaNuevoPrestamoContent: React.FC = () => {
         itemSize: '1',
     });
     const [guardando, setGuardando] = useState(false);
+    const [revisando, setRevisando] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const guardar = async (e: React.FormEvent) => {
+    // Enviar el formulario no guarda: abre la revisión.
+    const revisar = (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
+        setRevisando(true);
+    };
+
+    const guardar = async () => {
         setGuardando(true);
+        setError(null);
         try {
             await addLoan({
                 id: safeUUID(),
@@ -36,13 +45,16 @@ const PaginaNuevoPrestamoContent: React.FC = () => {
             });
             showNotification(`${form.itemType} talle ${form.itemSize} para ${form.lenderName}.`);
             navigate(VOLVER);
-        } catch (error) {
-            console.error(error);
-            showNotification('No se pudo registrar el préstamo.', 'error');
+        } catch (err) {
+            console.error('[Punto] préstamo:', err);
+            setError('No se pudo guardar. Revisá la conexión y probá de nuevo: los datos siguen acá.');
         } finally {
             setGuardando(false);
         }
     };
+
+    const nombre = `${form.lenderName} ${form.lenderSurname}`.trim();
+    const prenda = `${form.itemType} talle ${form.itemSize}`;
 
     return (
         <PantallaFormulario
@@ -51,7 +63,7 @@ const PaginaNuevoPrestamoContent: React.FC = () => {
             titulo="Prestar una prenda"
             bajada="Queda anotada como no devuelta hasta que vuelva al mostrador."
         >
-            <form onSubmit={guardar} className="space-y-4">
+            <form id="form-prestamo" onSubmit={revisar} className="space-y-4">
                 <ParDeCampos>
                     <Campo etiqueta="Nombre" para="prestamo-nombre">
                         <input
@@ -94,10 +106,27 @@ const PaginaNuevoPrestamoContent: React.FC = () => {
                     </select>
                 </Campo>
 
-                <div className="pt-2">
-                    <BotonGuardar guardando={guardando}>Anotar el préstamo</BotonGuardar>
-                </div>
             </form>
+
+            <BarraDeRevisar
+                form="form-prestamo"
+                resumen={prenda}
+                detalle={nombre ? `Para ${nombre}` : 'Completá a quién se la prestás'}
+            />
+            <HojaDeRevision
+                abierta={revisando}
+                titulo="Revisá el préstamo"
+                bajada="Queda como no devuelta hasta que vuelva al mostrador."
+                grupos={[{ filas: [
+                    { etiqueta: 'Se la lleva', valor: nombre },
+                    { etiqueta: 'Prenda', valor: prenda },
+                ] }]}
+                textoConfirmar="Anotar el préstamo"
+                guardando={guardando}
+                error={error}
+                onCorregir={() => setRevisando(false)}
+                onConfirmar={guardar}
+            />
         </PantallaFormulario>
     );
 };

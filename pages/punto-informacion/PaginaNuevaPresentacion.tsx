@@ -9,7 +9,7 @@ import { PendingStatus } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
 import { formatDateForInput } from '../../services/dateUtils';
 import {
-    PantallaFormulario, Campo, ParDeCampos, BotonGuardar, campo,
+    PantallaFormulario, Campo, ParDeCampos, BarraDeRevisar, HojaDeRevision, fechaParaRevisar, campo,
 } from '../../components/info-point/FormularioDelPunto';
 
 const VOLVER = '/punto-de-informacion?view=PRESENTATIONS';
@@ -28,6 +28,8 @@ const PaginaNuevaPresentacionContent: React.FC = () => {
         scheduledDate: formatDateForInput(new Date().toISOString()),
     });
     const [guardando, setGuardando] = useState(false);
+    const [revisando, setRevisando] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!editId) return;
@@ -43,9 +45,16 @@ const PaginaNuevaPresentacionContent: React.FC = () => {
         }
     }, [editId, presentations]);
 
-    const guardar = async (e: React.FormEvent) => {
+    // Enviar el formulario no guarda: abre la revisión.
+    const revisar = (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
+        setRevisando(true);
+    };
+
+    const guardar = async () => {
         setGuardando(true);
+        setError(null);
         try {
             if (editId) {
                 const existente = presentations.find(p => p.id === editId);
@@ -63,10 +72,16 @@ const PaginaNuevaPresentacionContent: React.FC = () => {
                 showNotification(`${form.childName} quedó en la agenda.`);
             }
             navigate(VOLVER);
+        } catch (err) {
+            console.error('[Punto] presentación:', err);
+            setError('No se pudo guardar. Revisá la conexión y probá de nuevo: los datos siguen acá.');
         } finally {
             setGuardando(false);
         }
     };
+
+    const nene = `${form.childName} ${form.childSurname}`.trim();
+    const fecha = fechaParaRevisar(form.scheduledDate);
 
     return (
         <PantallaFormulario
@@ -75,7 +90,7 @@ const PaginaNuevaPresentacionContent: React.FC = () => {
             titulo={editId ? 'Editar la presentación' : 'Agendar una presentación'}
             bajada={editId ? undefined : 'Queda en la agenda hasta que la marques como realizada.'}
         >
-            <form onSubmit={guardar} className="space-y-6">
+            <form id="form-presentacion" onSubmit={revisar} className="space-y-6">
                 <div className="space-y-4">
                     <ParDeCampos>
                         <Campo etiqueta="Nombre del nene o la nena" para="pres-nombre">
@@ -168,10 +183,35 @@ const PaginaNuevaPresentacionContent: React.FC = () => {
                     </Campo>
                 </div>
 
-                <BotonGuardar guardando={guardando}>
-                    {editId ? 'Guardar los cambios' : 'Agendar la presentación'}
-                </BotonGuardar>
             </form>
+
+            <BarraDeRevisar
+                form="form-presentacion"
+                resumen={nene || 'Agendar una presentación'}
+                detalle={fecha ? fecha.charAt(0).toUpperCase() + fecha.slice(1) : 'Completá los datos'}
+            />
+            <HojaDeRevision
+                abierta={revisando}
+                titulo={editId ? 'Revisá los cambios' : 'Revisá la presentación'}
+                bajada="Leéselos a la familia antes de guardar."
+                grupos={[
+                    { titulo: 'La presentación', filas: [
+                        { etiqueta: 'Nene o nena', valor: nene },
+                        { etiqueta: 'Fecha', valor: fecha },
+                    ] },
+                    { titulo: 'Los papás', filas: [
+                        { etiqueta: 'Mamá', valor: `${form.motherName} ${form.motherSurname}`.trim() },
+                        { etiqueta: 'Papá', valor: `${form.fatherName} ${form.fatherSurname}`.trim() },
+                        { etiqueta: 'Teléfono', valor: form.phone.trim() },
+                        { etiqueta: 'Email', valor: form.email.trim() },
+                    ] },
+                ]}
+                textoConfirmar={editId ? 'Guardar los cambios' : 'Agendar'}
+                guardando={guardando}
+                error={error}
+                onCorregir={() => setRevisando(false)}
+                onConfirmar={guardar}
+            />
         </PantallaFormulario>
     );
 };
