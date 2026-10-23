@@ -5,7 +5,7 @@ import { safeUUID } from './uuidUtils';
 import { comprimirImagen } from '../src/utils/nocturna';
 import { padronDeReunion } from '../src/utils/asistencia';
 import type { CompromisoGCX } from '../src/utils/gruposMismoDia';
-import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado, NocturnaGrupo, NocturnaAgregadoResultado, NocturnaComprobanteExtra } from '../types';
+import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado, NocturnaGrupo, NocturnaAgregadoResultado, NocturnaComprobanteExtra, NocturnaTribu } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
 const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
@@ -9991,6 +9991,43 @@ export const supabaseService = {
   },
 
   /**
+   * La tribu que el staff elige en la puerta para un adolescente "Sin tribu".
+   *
+   * `desde` es la tribu que la pantalla tenía: si en la base ya es otra (otro
+   * escáner la eligió en el medio), no se pisa y vuelve `motivo: 'cambio'`
+   * con la actual. La que eligió la familia al inscribirse no se toca
+   * (`ya_tiene`). Ver sql/nocturna_tribu_en_puerta.sql.
+   */
+  async asignarTribuNocturna(
+    jovenId: string,
+    tribu: NocturnaTribu,
+    desde: string,
+  ): Promise<{
+    ok: boolean;
+    tribu?: NocturnaTribu;
+    enPuerta?: boolean;
+    motivo?: 'sin_permiso' | 'no_existe' | 'tribu' | 'ya_tiene' | 'cambio' | 'conexion';
+  }> {
+    try {
+      const { data, error } = await supabase.rpc('nocturna_asignar_tribu', {
+        p_joven_id: jovenId,
+        p_tribu: tribu,
+        p_desde: desde,
+      });
+      if (error) throw error;
+      return {
+        ok: data?.ok === true,
+        tribu: data?.tribu,
+        enPuerta: data?.en_puerta,
+        motivo: data?.ok === true ? undefined : data?.motivo,
+      };
+    } catch (err) {
+      console.error('[Nocturna] asignarTribuNocturna: no se pudo guardar');
+      return { ok: false, motivo: 'conexion' };
+    }
+  },
+
+  /**
    * Fija el estado exacto de acreditación de una familia.
    *
    * La base rechaza los estados que no son reales (un chico sin el adulto) y
@@ -10210,17 +10247,36 @@ export const supabaseService = {
         .single();
       if (errorLectura) throw errorLectura;
 
-      if (fila?.comprobante_path) {
-        const { error: errorArchivo } = await supabase.storage
-          .from('nocturna-comprobantes')
-          .remove([fila.comprobante_path]);
-        if (errorArchivo) {
-          console.error('[Nocturna] quedó un comprobante sin borrar:', fila.comprobante_path, errorArchivo);
-        }
+      // Los comprobantes de los chicos sumados después viven en otra tabla:
+      // se leen antes, porque al borrar la inscripción se van con ella.
+      const { data: extras } = await supabase
+        .from('nocturna_comprobantes')
+        .select('path')
+        .eq('inscripcion_id', id);
+
+      // Primero la fila, y después los archivos. Al revés, una cuenta sin
+      // permiso para borrar (la de la puerta) se quedaba con la inscripción
+      // pero sin el comprobante. `.select` porque la RLS no da error: sin
+      // permiso, simplemente no borra nada.
+      const { data: borradas, error } = await supabase
+        .from('nocturna_inscripciones')
+        .delete()
+        .eq('id', id)
+        .select('id');
+      if (error) throw error;
+      if (!borradas?.length) {
+        return { ok: false, error: 'Tu usuario no puede eliminar inscripciones. Pedíselo a quien coordina el evento.' };
       }
 
-      const { error } = await supabase.from('nocturna_inscripciones').delete().eq('id', id);
-      if (error) throw error;
+      const archivos = [fila?.comprobante_path, ...(extras || []).map(e => e.path)].filter(Boolean) as string[];
+      if (archivos.length) {
+        const { error: errorArchivo } = await supabase.storage
+          .from('nocturna-comprobantes')
+          .remove(archivos);
+        if (errorArchivo) {
+          console.error('[Nocturna] quedaron comprobantes sin borrar:', archivos.length, errorArchivo);
+        }
+      }
       return { ok: true };
     } catch (err) {
       console.error('[Nocturna] deleteNocturnaInscripcion:', err);

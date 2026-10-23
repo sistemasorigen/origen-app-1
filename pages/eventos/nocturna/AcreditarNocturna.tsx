@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Check, ChevronLeft, Flashlight, Keyboard, Loader2, X } from 'lucide-react';
 import { useEscanerQR, useMantenerPantallaEncendida } from '../../../hooks/useEscanerQR';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
-import { User } from '../../../types';
-import { enLista } from './compartido/formulario';
+import { NocturnaTribu, User } from '../../../types';
+import { COLOR_TRIBU, enLista } from './compartido/formulario';
 import { esCodigoDeEntrada, esLecturaRepetida, esUUID, normalizarCodigo, UltimaLectura } from './compartido/lecturaQR';
 import { AMBAR, AMBAR_INK, CAMPO, ESTILOS_PANEL, fuente, INK, ROJO, ROJO_FONDO, VERDE, VERDE_PUNTO } from './compartido/estilos';
 
@@ -31,6 +31,11 @@ interface JovenAcred {
     /** El staff ya preguntó en la puerta y la respuesta fue que no tiene. */
     sin_celular?: boolean;
     tribu: string;
+    /**
+     * La tribu la eligió el staff en la puerta (no la familia). Mientras sea
+     * así se puede corregir desde acá; la de la inscripción, no.
+     */
+    tribu_en_puerta?: boolean;
     /** Su celular, si tiene. */
     telefono: string | null;
     acreditado_at: string | null;
@@ -86,8 +91,22 @@ type Panel =
     | { tipo: 'salida'; insc: InscAcred; jovenes: JovenAcred[]; quienes: Record<string, boolean> }
     /** Las 6 AM, paso 2: con quién se van. */
     | { tipo: 'salidaQuien'; insc: InscAcred; jovenes: JovenAcred[]; ids: string[] }
-    | { tipo: 'aviso'; clase: 'otroEvento' | 'eliminada' | 'yaEntraron' | 'sinPermiso'; titulo: string; rotulo: string; texto: string; lista?: { nombre: string; hora: string }[] }
+    | { tipo: 'aviso'; clase: 'otroEvento' | 'eliminada' | 'yaEntraron' | 'sinPermiso'; titulo: string; rotulo: string; texto: string; lista?: FilaAviso[] }
     | null;
+
+/**
+ * Lo que el escáner está registrando. Lo elige quien está en la puerta, no la
+ * hora ni el estado de la familia: con hermanos que llegan en distintos
+ * momentos, adivinarlo llevaba a abrir la salida de uno cuando llegaba el otro.
+ */
+type Modo = 'entrada' | 'salida';
+const CLAVE_MODO = 'nocturna.puerta.modo';
+const leerModo = (): Modo => {
+    try { return localStorage.getItem(CLAVE_MODO) === 'salida' ? 'salida' : 'entrada'; } catch { return 'entrada'; }
+};
+
+/** Una fila de la lista de un aviso: quién y en qué quedó. */
+interface FilaAviso { nombre: string; estado: string; tono: 'verde' | 'rojo' | 'violeta' | 'gris' }
 
 const soloHora = (iso: string | null): string => {
     if (!iso) return '';
@@ -96,6 +115,14 @@ const soloHora = (iso: string | null): string => {
     // peor que "23:00" cuando hay que compararlo con la hora del reloj.
     return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
 };
+
+const filaDe = (j: JovenAcred): FilaAviso => ({
+    nombre: `${j.nombre} ${j.apellido}`,
+    ...(j.retirado_at ? { estado: `Salió a las ${soloHora(j.retirado_at)}`, tono: 'violeta' as const }
+        : j.acreditado_at ? { estado: `Entró a las ${soloHora(j.acreditado_at)}`, tono: 'verde' as const }
+            : j.ausente_at ? { estado: 'No vino', tono: 'rojo' as const }
+                : { estado: 'Todavía no entró', tono: 'gris' as const }),
+});
 
 const pitido = (ok: boolean) => {
     try {
@@ -260,6 +287,10 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
     const [adentro, setAdentro] = useState<number | null>(null);
     const [tecladoAbierto, setTecladoAbierto] = useState(false);
     const [codigoManual, setCodigoManual] = useState('');
+    // La tribu que se está guardando ("id + tribu") y el error de la última.
+    const [tribuGuardando, setTribuGuardando] = useState<string | null>(null);
+    const [tribuError, setTribuError] = useState<{ id: string; texto: string } | null>(null);
+    const [modo, setModoEstado] = useState<Modo>(leerModo);
 
     // Espejos de lo que `procesarCodigo` necesita leer. Son refs y no estados
     // porque el callback de la cámara se crea una sola vez: si leyera el
@@ -268,6 +299,12 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
     const procesandoRef = useRef(false);
     const ultimoCodigoRef = useRef<UltimaLectura | null>(null);
     useEffect(() => { panelRef.current = panel; }, [panel]);
+    const modoRef = useRef<Modo>(modo);
+    const setModo = (m: Modo) => {
+        modoRef.current = m;
+        setModoEstado(m);
+        try { localStorage.setItem(CLAVE_MODO, m); } catch { /* sin almacenamiento: dura la sesión */ }
+    };
 
     const pantallaSostenida = useMantenerPantallaEncendida(true);
 
@@ -372,15 +409,46 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         const insc = res.inscripcion as InscAcred;
         const jovenes = (res.jovenes || []) as JovenAcred[];
 
-        // El mismo QR sirve toda la noche: a las 23 para entrar y a las 6 para
-        // salir. Cuál de los dos aparece lo decide en qué estado está la
-        // familia, no la hora —el reloj del celular no es un dato confiable, y
-        // siempre hay alguien que llega tarde—.
-        const pendientes = jovenes.filter(j => !j.acreditado_at && !j.ausente_at);
+        // El mismo QR sirve toda la noche: para entrar y para salir. Qué se
+        // registra lo dice el modo que eligió quien está en la puerta.
         const adentro = jovenes.filter(j => j.acreditado_at && !j.retirado_at);
+        const retirados = jovenes.filter(j => j.retirado_at);
 
-        // Mientras quede alguien por marcar, la puerta es lo que importa; si
-        // ya hay gente adentro, desde ahí se pasa a la salida con un botón.
+        if (modoRef.current === 'salida') {
+            if (adentro.length > 0) {
+                pitido(true);
+                setPanel(conDatosSiFalta(insc, jovenes, {
+                    tipo: 'salida',
+                    insc,
+                    jovenes,
+                    // Arrancan todos marcados: lo normal es que la familia se vaya
+                    // junta, y destildar a uno es menos trabajo que tildar a tres.
+                    quienes: Object.fromEntries(adentro.map(j => [j.id, true])),
+                }));
+                return;
+            }
+            pitido(false);
+            setPanel(retirados.length === jovenes.length && jovenes.length > 0
+                ? {
+                    tipo: 'aviso', clase: 'yaEntraron', rotulo: 'YA SE RETIRARON',
+                    titulo: `La familia ${insc.adulto_apellido} ya se fue`,
+                    texto: 'Ya registraron la salida de todos. Esta entrada no sirve para volver a entrar.',
+                    lista: jovenes.map(filaDe),
+                }
+                : {
+                    tipo: 'aviso', clase: 'yaEntraron', rotulo: 'NADIE ADENTRO',
+                    titulo: `Nadie de la familia ${insc.adulto_apellido} está adentro`,
+                    texto: 'No hay a quién registrarle la salida. Si están llegando, cambiá el escáner a Entrada.',
+                    lista: jovenes.map(filaDe),
+                });
+            return;
+        }
+
+        // Entrada. Se puede marcar a quien todavía no entró, y también a quien
+        // figuraba que no vino: si llegó tarde, entra. Quien ya salió, no: una
+        // salida registrada cierra la entrada de ese chico.
+        const pendientes = jovenes.filter(j => !j.acreditado_at && !j.retirado_at);
+
         if (pendientes.length > 0) {
             pitido(true);
             setPanel(conDatosSiFalta(insc, jovenes, {
@@ -397,34 +465,20 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
             return;
         }
 
-        if (adentro.length > 0) {
-            pitido(true);
-            setPanel(conDatosSiFalta(insc, jovenes, {
-                tipo: 'salida',
-                insc,
-                jovenes,
-                // Arrancan todos marcados: lo normal es que la familia se vaya
-                // junta, y destildar a uno es menos trabajo que tildar a tres.
-                quienes: Object.fromEntries(adentro.map(j => [j.id, true])),
-            }));
-            return;
-        }
-
-        // No queda nadie adentro: o ya se fueron todos, o no vino ninguno.
-        const retirados = jovenes.filter(j => j.retirado_at);
+        // No queda nadie por entrar: o ya están todos adentro, o ya se fueron.
         pitido(false);
-        setPanel(retirados.length > 0
+        setPanel(adentro.length > 0
             ? {
-                tipo: 'aviso', clase: 'yaEntraron', rotulo: 'YA SE RETIRARON',
-                titulo: `La familia ${insc.adulto_apellido} ya se fue`,
-                texto: 'Esta entrada no tiene a nadie adentro. Si alguien vuelve a entrar, consultá con un coordinador.',
-                lista: retirados.map(j => ({ nombre: `${j.nombre} ${j.apellido}`, hora: soloHora(j.retirado_at) })),
+                tipo: 'aviso', clase: 'yaEntraron', rotulo: 'YA ENTRARON',
+                titulo: `La familia ${insc.adulto_apellido} ya está adentro`,
+                texto: 'No queda nadie por entrar. Si se están yendo, cambiá el escáner a Salida.',
+                lista: jovenes.map(filaDe),
             }
             : {
-                tipo: 'aviso', clase: 'yaEntraron', rotulo: 'NADIE ENTRÓ',
-                titulo: `La familia ${insc.adulto_apellido} figura ausente`,
-                texto: 'Están todos marcados como que no vinieron. Si alguno llegó igual, desmarcalo desde la ficha de la inscripción.',
-                lista: jovenes.map(j => ({ nombre: `${j.nombre} ${j.apellido}`, hora: soloHora(j.ausente_at) })),
+                tipo: 'aviso', clase: 'yaEntraron', rotulo: 'YA SE RETIRARON',
+                titulo: `La familia ${insc.adulto_apellido} ya se fue`,
+                texto: 'Ya registraron la salida de todos. Esta entrada no sirve para volver a entrar.',
+                lista: jovenes.map(filaDe),
             });
     }, []);
 
@@ -474,10 +528,8 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         const nuevosAusentes = familia.jovenes.filter(j => marca(j) === 'ausente' && !j.ausente_at).length;
         const vuelve = familia.jovenes.some(j => j.acreditado_at || j.ausente_at);
         const faltanPorMarcar = familia.jovenes.some(j => marca(j) === 'no');
-        // Ya hay gente adentro: desde la puerta se puede pasar a la salida.
-        const hayAdentro = familia.jovenes.some(j => j.acreditado_at && !j.retirado_at);
         return {
-            total, marcados, ausentes, nuevos, vuelve, faltanPorMarcar, hayAdentro,
+            total, marcados, ausentes, nuevos, vuelve, faltanPorMarcar,
             habilitado: nuevos + nuevosAusentes > 0,
         };
     }, [familia]);
@@ -490,6 +542,7 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
     const cerrarPanel = () => {
         setPanel(null);
         setErrorConfirmar(null);
+        setTribuError(null);
         // La ventana del "mismo código" arranca al cerrar, no al leer: la
         // familia todavía está enfrente.
         if (ultimoCodigoRef.current) ultimoCodigoRef.current.at = Date.now();
@@ -506,10 +559,15 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         setPanel(p => {
             if (p?.tipo !== 'familia') return p;
             // Lo que la base ya tiene no se deshace desde acá: desacreditar y
-            // despintar una ausencia van en la ficha, no en la puerta a las 23.
+            // deshacer una salida van en la ficha, no en la puerta a las 23.
             const joven = p.jovenes.find(j => j.id === clave);
-            if (!joven || joven.acreditado_at || joven.ausente_at) return p;
-            const sigue: Record<Marca, Marca> = { no: 'entra', entra: 'ausente', ausente: 'no' };
+            if (!joven || joven.acreditado_at || joven.retirado_at) return p;
+            // El que figuraba que no vino y llegó: un toque lo hace entrar, otro
+            // lo devuelve a "no vino". Sin pasar por "sin marcar", que para él
+            // ya no existe.
+            const sigue: Record<Marca, Marca> = joven.ausente_at
+                ? { no: 'entra', entra: 'ausente', ausente: 'entra' }
+                : { no: 'entra', entra: 'ausente', ausente: 'no' };
             return { ...p, marcas: { ...p.marcas, [clave]: sigue[p.marcas[clave] || 'no'] } };
         });
     };
@@ -524,18 +582,46 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         }));
     };
 
-    /** De la puerta a la salida, sin tener que volver a escanear. */
-    const irALaSalida = () => {
-        setPanel(p => {
-            if (p?.tipo !== 'familia') return p;
-            const adentro = p.jovenes.filter(j => j.acreditado_at && !j.retirado_at);
-            if (!adentro.length) return p;
-            return {
-                tipo: 'salida', insc: p.insc, jovenes: p.jovenes,
-                quienes: Object.fromEntries(adentro.map(j => [j.id, true])),
-            };
-        });
-        setErrorConfirmar(null);
+    /**
+     * La tribu de un "Sin tribu", elegida por quien acredita.
+     *
+     * Se guarda al tocar, aparte de la acreditación: no depende de que el
+     * chico entre ahora, y un error acá no tiene por qué frenar la puerta.
+     * Tocar la que ya está elegida la saca (vuelve a "Sin tribu"): es la forma
+     * de corregir un dedo equivocado.
+     */
+    const elegirTribu = async (j: JovenAcred, t: NocturnaTribu) => {
+        if (tribuGuardando) return;
+        const destino: NocturnaTribu = j.tribu === t ? 'Sin tribu' : t;
+        setTribuGuardando(j.id + t);
+        setTribuError(null);
+        const res = await supabaseService.asignarTribuNocturna(j.id, destino, j.tribu);
+        setTribuGuardando(null);
+
+        // Con 'cambio' o 'ya_tiene' la base dice cuál tiene de verdad: la
+        // pantalla se pone al día igual, para no seguir mostrando otra.
+        if (res.tribu) {
+            const tribu = res.tribu;
+            const enPuerta = !!res.enPuerta;
+            setPanel(p => (p?.tipo !== 'familia' ? p : {
+                ...p,
+                jovenes: p.jovenes.map(x => (x.id === j.id ? { ...x, tribu, tribu_en_puerta: enPuerta } : x)),
+            }));
+        }
+        if (res.ok) return;
+
+        const texto = res.motivo === 'cambio'
+            ? (res.tribu === 'Sin tribu'
+                ? 'Otra persona del staff le acaba de sacar la tribu. Elegí de nuevo.'
+                : `Otra persona del staff le acaba de poner ${res.tribu}. Quedó esa.`)
+            : res.motivo === 'ya_tiene'
+                ? `Ya tenía ${res.tribu} desde la inscripción. Eso se cambia desde la ficha.`
+                : res.motivo === 'sin_permiso'
+                    ? 'Tu usuario no puede elegir tribus.'
+                    : res.motivo === 'no_existe'
+                        ? 'Este adolescente ya no está en la inscripción.'
+                        : 'Se cortó la conexión y no se guardó. Probá de nuevo.';
+        setTribuError({ id: j.id, texto });
     };
 
     const confirmar = async () => {
@@ -629,6 +715,40 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
      * permiso falla justo esa noche, sin esto la puerta queda sin ninguna
      * forma de acreditar. El código de 6 caracteres está impreso en el email.
      */
+    /**
+     * Entrada o Salida. Lo elige quien está en la puerta y queda elegido en
+     * este celular. Va en las dos pantallas desde las que se escanea: sobre la
+     * cámara, y en la de "sin cámara", donde se sigue con el código.
+     */
+    const SelectorModo: React.FC<{ oscuro?: boolean }> = ({ oscuro }) => (
+        <div
+            role="radiogroup"
+            aria-label="Qué registra el escáner"
+            className="grid grid-cols-2 gap-1"
+            style={{ padding: 4, borderRadius: 999, background: oscuro ? 'rgba(255,255,255,.12)' : CAMPO }}
+        >
+            {([['entrada', 'Entrada', '#16a34a'], ['salida', 'Salida', '#6366f1']] as [Modo, string, string][]).map(([m, texto, color]) => (
+                <button
+                    key={m}
+                    type="button"
+                    role="radio"
+                    aria-checked={modo === m}
+                    onClick={() => setModo(m)}
+                    className="border-0 rounded-full flex items-center justify-center gap-2 cursor-pointer"
+                    style={{
+                        height: 48,
+                        background: modo === m ? (oscuro ? '#fff' : INK) : 'transparent',
+                        color: modo === m ? (oscuro ? INK : '#fff') : (oscuro ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.62)'),
+                        ...fuente(600, '15px'),
+                    }}
+                >
+                    <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: modo === m ? color : (oscuro ? 'rgba(255,255,255,.4)' : 'rgba(0,0,0,.25)') }} />
+                    {texto}
+                </button>
+            ))}
+        </div>
+    );
+
     const BuscadorManual: React.FC<{ oscuro?: boolean }> = ({ oscuro }) => (
         tecladoAbierto ? (
             <form onSubmit={enviarManual} className="flex gap-2">
@@ -689,8 +809,10 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         /** Lo que la base ya tiene: la fila queda fija y no rota más. */
         fijado: { texto: string; rojo?: boolean } | null;
         sinFoto?: boolean;
+        /** Lo que dice debajo del nombre cuando está en "no vino". */
+        textoAusente?: string;
         onClick: () => void;
-    }> = ({ nombre, sub, marca, fijado, sinFoto, onClick }) => {
+    }> = ({ nombre, sub, marca, fijado, sinFoto, textoAusente, onClick }) => {
         const entra = marca === 'entra';
         const ausente = marca === 'ausente';
         const color = ausente ? ROJO : VERDE_PUNTO;
@@ -734,7 +856,7 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                             marginTop: 3,
                         }}
                     >
-                        {fijado ? fijado.texto : ausente ? 'No vino' : sub}
+                        {fijado ? fijado.texto : ausente ? (textoAusente || 'No vino') : sub}
                     </span>
                 </span>
                 {sinFoto && (
@@ -1273,17 +1395,22 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                             })}
                     </div>
                     <div className="absolute left-0 right-0 text-center px-8 pointer-events-none" style={{ top: '53%' }}>
-                        <p style={{ ...fuente(600, '17px'), color: '#fff', margin: 0 }}>Apuntá al QR de la entrada</p>
+                        <p style={{ ...fuente(600, '17px'), color: '#fff', margin: 0 }}>
+                            {modo === 'salida' ? 'Registrando salidas' : 'Registrando entradas'}
+                        </p>
                         <p style={{ ...fuente(500, '13.5px'), color: 'rgba(255,255,255,.66)', margin: '6px 0 0' }}>
-                            Uno por familia. Se lee solo.
+                            Apuntá al QR de la entrada. Uno por familia, se lee solo.
                         </p>
                     </div>
                 </>
             )}
 
-            {/* Teclado manual: el mismo camino que la cámara. */}
+            {/* Qué se registra, y el teclado manual (el mismo camino que la
+                cámara). El modo va acá abajo, donde cae el pulgar, y no se ve
+                con un panel abierto: se cambia entre familia y familia. */}
             {!escaner.error && !escaner.permisoDenegado && !panel && (
                 <div className="absolute left-0 right-0 bottom-0 p-4 z-10">
+                    <div className="mb-2.5"><SelectorModo oscuro /></div>
                     <BuscadorManual oscuro />
                 </div>
             )}
@@ -1381,6 +1508,7 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                             <p style={{ ...fuente(500, '13px', '1.5'), color: 'rgba(0,0,0,.6)', margin: '4px 0 12px' }}>
                                 Pediles el email de la entrada: abajo del QR está el código.
                             </p>
+                            <div className="mb-2.5"><SelectorModo /></div>
                             <BuscadorManual />
                         </div>
                     </div>
@@ -1450,20 +1578,68 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
 
                                 <div className="flex flex-col gap-2 mt-3.5">
                                     {familia.jovenes.map(j => (
-                                        <Persona
-                                            key={j.id}
-                                            nombre={`${j.nombre} ${j.apellido}`}
-                                            sub={`${j.edad} años · ${j.tribu}`}
-                                            marca={familia.marcas[j.id] || 'no'}
-                                            fijado={
-                                                j.retirado_at ? { texto: `Se retiró a las ${soloHora(j.retirado_at)}` }
-                                                    : j.acreditado_at ? { texto: `Ya entró a las ${soloHora(j.acreditado_at)}` }
-                                                        : j.ausente_at ? { texto: 'Marcado como que no vino', rojo: true }
+                                        <div key={j.id}>
+                                            <Persona
+                                                nombre={`${j.nombre} ${j.apellido}`}
+                                                sub={`${j.edad} años · ${j.tribu}`}
+                                                marca={familia.marcas[j.id] || 'no'}
+                                                fijado={
+                                                    j.retirado_at ? { texto: `Se retiró a las ${soloHora(j.retirado_at)}` }
+                                                        : j.acreditado_at ? { texto: `Ya entró a las ${soloHora(j.acreditado_at)}` }
                                                             : null
-                                            }
-                                            sinFoto={!familia.insc.acepta_fotos}
-                                            onClick={() => alternarPersona(j.id)}
-                                        />
+                                                }
+                                                sinFoto={!familia.insc.acepta_fotos}
+                                                textoAusente={j.ausente_at ? 'No vino · tocá si llegó' : undefined}
+                                                onClick={() => alternarPersona(j.id)}
+                                            />
+                                            {/* La tribu de los que llegan sin una. La
+                                                decide quien acredita, y no es
+                                                obligatoria: se puede acreditar sin
+                                                elegir. Afuera de la fila y no adentro:
+                                                la fila entera ya es un botón. */}
+                                            {!j.retirado_at && (j.tribu === 'Sin tribu' || j.tribu_en_puerta) && (
+                                                <div role="group" aria-label={`Tribu de ${j.nombre}`} className="flex items-center gap-2" style={{ padding: '8px 0 2px 14px' }}>
+                                                    <span className="flex-1 min-w-0" style={{ ...fuente(600, '13px', '1.3'), color: 'rgba(0,0,0,.6)' }}>
+                                                        {j.tribu === 'Sin tribu' ? 'Elegí su tribu' : 'Tribu elegida'}
+                                                    </span>
+                                                    {(['Garra', 'Trueno'] as NocturnaTribu[]).map(t => {
+                                                        const elegida = j.tribu === t;
+                                                        const guardando = tribuGuardando === j.id + t;
+                                                        return (
+                                                            <button
+                                                                key={t}
+                                                                type="button"
+                                                                onClick={() => elegirTribu(j, t)}
+                                                                disabled={!!tribuGuardando}
+                                                                aria-pressed={elegida}
+                                                                className="border-0 rounded-full flex items-center justify-center gap-2 flex-none"
+                                                                style={{
+                                                                    height: 44, minWidth: 104, padding: '0 16px',
+                                                                    background: elegida ? COLOR_TRIBU[t] : '#fff',
+                                                                    color: elegida ? '#fff' : INK,
+                                                                    boxShadow: elegida ? 'none' : '0 0 0 1.5px #dcdbd7 inset',
+                                                                    ...fuente(600, '14.5px'),
+                                                                    cursor: tribuGuardando ? 'wait' : 'pointer',
+                                                                    opacity: tribuGuardando && !guardando ? 0.55 : 1,
+                                                                }}
+                                                            >
+                                                                {guardando
+                                                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                    : elegida
+                                                                        ? <Check className="w-4 h-4" strokeWidth={3} />
+                                                                        : <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: COLOR_TRIBU[t] }} />}
+                                                                {t}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                            {tribuError?.id === j.id && (
+                                                <p role="alert" style={{ ...fuente(600, '12.5px', '1.45'), color: ROJO, margin: '6px 4px 0 14px' }}>
+                                                    {tribuError.texto}
+                                                </p>
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
                                 <p className="text-center" style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.5)', margin: '8px 2px 0' }}>
@@ -1526,20 +1702,6 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                                 : 'Acreditar'}
                                 </button>
 
-                                {/* Ya hay gente adentro de esta familia: se puede
-                                    registrar una salida sin volver a escanear.
-                                    Aparece abajo del todo, y apagado, porque a
-                                    las 23 el botón que importa es el de arriba. */}
-                                {cuentas.hayAdentro && (
-                                    <button
-                                        type="button"
-                                        onClick={irALaSalida}
-                                        className="w-full border-0 rounded-full cursor-pointer mt-2.5"
-                                        style={{ height: 52, background: CAMPO, color: INK, ...fuente(600, '15px') }}
-                                    >
-                                        Registrar una salida
-                                    </button>
-                                )}
                             </>
                         ) : panel.tipo === 'datos' ? (
                             <PanelDatos panel={panel} />
@@ -1574,7 +1736,7 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                         {panel.lista.map((l, i) => (
                                             <div key={i} className="flex justify-between gap-3" style={{ padding: '11px 0', borderBottom: i === panel.lista!.length - 1 ? 'none' : '1px solid #ecebe8' }}>
                                                 <span style={{ ...fuente(600, '14px'), color: INK }}>{l.nombre}</span>
-                                                <span style={{ ...fuente(600, '13px'), color: VERDE }}>Entró {l.hora}</span>
+                                                <span className="flex-none" style={{ ...fuente(600, '13px'), color: l.tono === 'verde' ? VERDE : l.tono === 'rojo' ? ROJO : l.tono === 'violeta' ? '#3730a3' : 'rgba(0,0,0,.5)' }}>{l.estado}</span>
                                             </div>
                                         ))}
                                     </div>

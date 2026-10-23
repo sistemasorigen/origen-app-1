@@ -1873,8 +1873,13 @@ export interface NocturnaJovenPayload {
     dni: string;
     fechaNacimiento: string;
     tribu: NocturnaTribu;
-    /** Su celular. Si no viaja, la base guarda NULL: "no tiene". */
+    /** Su celular. Si no viaja, la base guarda NULL. */
     telefono?: string;
+    /**
+     * La familia (o el staff al cargar) contestó que no tiene celular. La base
+     * lo guarda como sin_celular_at y nadie se lo vuelve a pedir.
+     */
+    sinCelular?: boolean;
     retiroTipo: NocturnaRetiroTipo;
     retiroNombre?: string;
     retiroApellido?: string;

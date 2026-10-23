@@ -242,9 +242,12 @@ export const armarPayloadNocturna = (opciones: {
         dni: c.dni.trim(),
         fechaNacimiento: c.nac,
         tribu: (c.tribu || 'Sin tribu') as NocturnaTribu,
-        // Sólo si dijo que tiene. Con 'no' no viaja y la base guarda NULL,
-        // que es como se lee "no tiene".
+        // Sólo si dijo que tiene. Con 'no' viaja la respuesta: la base la
+        // guarda como "sin celular" y ni la página de la entrada ni la puerta
+        // se lo vuelven a pedir. Al editar desde la ficha la base no la toma
+        // (ver sql/nocturna_puerta_y_celular.sql).
         ...(c.tieneCelular === 'si' && c.telefono.trim() ? { telefono: c.telefono.trim() } : {}),
+        ...(c.tieneCelular === 'no' ? { sinCelular: true } : {}),
         restriccion: c.restriccion || 'ninguna',
     }));
 

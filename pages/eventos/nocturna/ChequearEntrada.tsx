@@ -844,7 +844,16 @@ const ChequearEntrada: React.FC = () => {
                                                     : 'Te falta un dato para completar tu entrada'}
                                             </p>
                                             <p style={{ margin: '4px 0 0', ...arch(600, '14px', '1.4'), color: NEGRO }}>
-                                                {faltantes.map(f => (f.esAdulto ? 'Tu teléfono' : `El de ${entrada.jovenes.find(j => j.id === f.clave)?.nombre || ''}`)).join(' y ')}.
+                                                {/* "Tu teléfono, el de Tomas y el de Lucia". Mayúscula sólo
+                                                    en lo que abre la oración: si el primero es un chico,
+                                                    se nombra entero. */}
+                                                {faltantes
+                                                    .map((f, i) => {
+                                                        if (f.esAdulto) return i === 0 ? 'Tu teléfono' : 'el tuyo';
+                                                        const nombre = entrada.jovenes.find(j => j.id === f.clave)?.nombre || '';
+                                                        return i === 0 ? `El teléfono de ${nombre}` : `el de ${nombre}`;
+                                                    })
+                                                    .reduce((frase, parte, i, todas) => (i === 0 ? parte : `${frase}${i === todas.length - 1 ? ' y ' : ', '}${parte}`), '')}.
                                             </p>
                                         </div>
                                     </div>

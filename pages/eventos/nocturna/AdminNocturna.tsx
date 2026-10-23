@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, ChevronLeft, Loader2, Pencil, Plus, QrCode, Search, Trash2, X } from 'lucide-react';
+import { BarChart3, ChevronDown, ChevronLeft, Loader2, Pencil, Plus, QrCode, Search, Trash2, X } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
+import { hasRole } from '../../../services/authUtils';
 import { supabaseService } from '../../../services/supabaseService';
 import { contarEstados, estadoInscripcion } from '../../../src/utils/nocturna';
 import { useScrollRecordado } from '../../../src/utils/scrollRecordado';
-import { NocturnaConfig, NocturnaInscripcion, User } from '../../../types';
+import { NocturnaConfig, NocturnaInscripcion, NocturnaTribu, User, UserRole } from '../../../types';
 import { COLOR_TRIBU, etiquetaRestriccion, plata, sinTildes } from './compartido/formulario';
 import {
     AMBAR,
@@ -108,6 +109,10 @@ const CLAVE_SCROLL = 'nocturna.planilla';
 
 const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
     const navigate = useNavigate();
+    // Borrar es de coordinación. La gente de la puerta (ACREDITACION) ve y
+    // carga, pero no borra: la base tampoco se lo deja
+    // (sql/nocturna_puerta_y_celular.sql).
+    const puedeEliminar = hasRole(currentUser, [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS]);
 
     const [inscripciones, setInscripciones] = useState<NocturnaInscripcion[]>([]);
     const [config, setConfig] = useState<NocturnaConfig | null>(null);
@@ -120,6 +125,9 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
     const [editandoPrecio, setEditandoPrecio] = useState(false);
     const [precioBorrador, setPrecioBorrador] = useState('');
     const [guardandoPrecio, setGuardandoPrecio] = useState(false);
+    // La pestaña de la inscripción pública arranca cerrada: se mira seguido,
+    // se toca poco. Cerrada ya muestra el estado y el precio.
+    const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
 
     const [overlay, setOverlay] = useState<Overlay>(null);
     const [ocupado, setOcupado] = useState<string | null>(null);
@@ -207,7 +215,16 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
         const sinFotos = inscripciones.filter(i => !i.aceptaFotos)
             .reduce((a, i) => a + (i.jovenes?.length || 0), 0);
         const sinEmail = inscripciones.filter(i => !i.emailEnviadoAt).length;
-        return { chicos, aprobadas, sinFotos, sinEmail, familias: inscripciones.length };
+        // Adolescentes por tribu, de todas las inscripciones. Una tribu que no
+        // sea ninguna de las dos cuenta como "Sin tribu": así las tres suman
+        // siempre lo mismo que `chicos`.
+        const tribus: Record<NocturnaTribu, number> = { Garra: 0, Trueno: 0, 'Sin tribu': 0 };
+        for (const i of inscripciones) {
+            for (const j of i.jovenes || []) {
+                tribus[j.tribu === 'Garra' || j.tribu === 'Trueno' ? j.tribu : 'Sin tribu'] += 1;
+            }
+        }
+        return { chicos, aprobadas, sinFotos, sinEmail, tribus, familias: inscripciones.length };
     }, [inscripciones]);
 
     // ── Acciones ──────────────────────────────────────────────────────────
@@ -481,8 +498,12 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                         Panel de eventos
                     </button>
 
-                    <div className="flex items-start gap-3 flex-wrap">
-                        <div className="flex-1" style={{ minWidth: 160 }}>
+                    {/* Título y acciones. En el teléfono: Reportes y Crear en dos
+                        columnas iguales y Acreditar abajo, con el ancho de los
+                        dos juntos — es el que se usa la noche del evento. En la
+                        compu, todo en una línea: Acreditar, Reportes, Crear. */}
+                    <div className="grid grid-cols-2 gap-2 lg:flex lg:items-center">
+                        <div className="col-span-2 min-w-0 mb-1.5 lg:mb-0 lg:flex-none">
                             <h1 className="text-[22px] lg:text-[26px]" style={{ ...fuente(600, 'inherit'), color: INK, letterSpacing: '-.02em', margin: 0 }}>
                                 Nocturna
                             </h1>
@@ -490,52 +511,233 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                 Nocturna {config?.edicion ?? ''}
                             </p>
                         </div>
-                        {/* En mobile los botones bajan a su propia línea: al lado
-                            del título no entran y, como no pueden encogerse por
-                            debajo de su texto, empujaban la planilla a lo ancho. */}
-                        <div className="flex gap-2 w-full lg:w-auto lg:flex-none" style={{ minWidth: 0 }}>
-                            <button
-                                type="button"
-                                onClick={() => navigate('/panel-eventos/nocturna/acreditar')}
-                                className="border-0 rounded-full flex items-center justify-center gap-2 flex-1 lg:flex-none cursor-pointer"
-                                style={{ height: 46, padding: '0 18px', background: CAMPO, color: INK, ...fuente(600, '14px') }}
-                            >
-                                <QrCode className="w-4 h-4" />
-                                Acreditar
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => navigate('/panel-eventos/nocturna/reportes')}
-                                className="border-0 rounded-full flex items-center justify-center gap-2 flex-1 lg:flex-none cursor-pointer"
-                                style={{ height: 46, padding: '0 16px', background: CAMPO, color: INK, ...fuente(600, '14px'), whiteSpace: 'nowrap' }}
-                            >
-                                {/* El ícono se va en el teléfono: con tres botones en
-                                    la fila, los tres textos y los tres íconos no
-                                    entran a 390 px. */}
-                                <BarChart3 className="w-4 h-4 hidden lg:block" />
-                                Reportes
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => navigate('/panel-eventos/nocturna/nueva')}
-                                className="border-0 rounded-full flex items-center justify-center gap-1.5 flex-1 lg:flex-none cursor-pointer"
-                                style={{ height: 46, padding: '0 16px', background: INK, color: '#fff', ...fuente(600, '14px'), whiteSpace: 'nowrap' }}
-                            >
-                                <Plus className="w-4 h-4 flex-none" strokeWidth={2.4} />
-                                {/* En un celular de 390px los dos botones con el texto
-                                    largo no entran, y `nowrap` impide que se encojan:
-                                    la planilla terminaba con scroll horizontal. */}
-                                <span className="lg:hidden">Crear</span>
-                                <span className="hidden lg:inline">Crear una inscripción</span>
-                            </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/panel-eventos/nocturna/reportes')}
+                            className="border-0 rounded-full flex items-center justify-center gap-2 cursor-pointer lg:order-3 lg:flex-none"
+                            style={{ height: 46, padding: '0 18px', background: CAMPO, color: INK, ...fuente(600, '14px'), whiteSpace: 'nowrap' }}
+                        >
+                            <BarChart3 className="w-4 h-4 flex-none" />
+                            Reportes
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/panel-eventos/nocturna/nueva')}
+                            className="border-0 rounded-full flex items-center justify-center gap-1.5 cursor-pointer lg:order-4 lg:flex-none"
+                            style={{ height: 46, padding: '0 18px 0 16px', background: INK, color: '#fff', ...fuente(600, '14px'), whiteSpace: 'nowrap' }}
+                        >
+                            <Plus className="w-4 h-4 flex-none" strokeWidth={2.4} />
+                            <span className="lg:hidden">Crear</span>
+                            <span className="hidden lg:inline">Crear una inscripción</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/panel-eventos/nocturna/acreditar')}
+                            className="col-span-2 border-0 rounded-full flex items-center justify-center gap-2 cursor-pointer lg:order-2 lg:flex-none"
+                            style={{ height: 46, padding: '0 18px', background: CAMPO, color: INK, ...fuente(600, '14px'), whiteSpace: 'nowrap' }}
+                        >
+                            <QrCode className="w-4 h-4 flex-none" />
+                            Acreditar
+                        </button>
+
+                        {/* Adolescentes por tribu. Los tres números y, abajo, una
+                            sola barra partida en los colores de cada tribu: de un
+                            vistazo se ve si están parejas. Teléfono: debajo de
+                            Acreditar, a todo el ancho. Compu: en el hueco entre
+                            el título y los botones. */}
+                        <div
+                            role="group"
+                            aria-label="Adolescentes por tribu"
+                            className="col-span-2 mt-1.5 lg:mt-0 lg:order-1 lg:ml-6 lg:mr-auto lg:w-[360px]"
+                            style={{ borderRadius: 22, background: CAMPO, padding: '12px 16px 14px' }}
+                        >
+                            <div className="grid grid-cols-3">
+                                {(['Garra', 'Trueno', 'Sin tribu'] as NocturnaTribu[]).map((t, n) => (
+                                    <div
+                                        key={t}
+                                        className="min-w-0"
+                                        style={{
+                                            paddingLeft: n === 0 ? 0 : 14,
+                                            borderLeft: n === 0 ? 'none' : '1px solid rgba(0,0,0,.08)',
+                                        }}
+                                    >
+                                        <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: 'rgba(0,0,0,.62)' }}>
+                                            <span aria-hidden="true" className="flex-none" style={{ width: 7, height: 7, borderRadius: 999, background: COLOR_TRIBU[t] }} />
+                                            <span className="truncate">{t}</span>
+                                        </span>
+                                        <span
+                                            className="block"
+                                            style={{ ...fuente(600, '24px', '1.15'), color: INK, letterSpacing: '-.02em', fontVariantNumeric: 'tabular-nums', marginTop: 3 }}
+                                        >
+                                            {resumen.tribus[t]}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div aria-hidden="true" className="flex overflow-hidden" style={{ height: 6, borderRadius: 999, marginTop: 11, gap: resumen.chicos ? 2 : 0, background: resumen.chicos ? 'transparent' : 'rgba(0,0,0,.08)' }}>
+                                {resumen.chicos > 0 && (['Garra', 'Trueno', 'Sin tribu'] as NocturnaTribu[])
+                                    .filter(t => resumen.tribus[t] > 0)
+                                    .map(t => (
+                                        <span key={t} style={{ flexGrow: resumen.tribus[t], flexBasis: 0, background: COLOR_TRIBU[t] }} />
+                                    ))}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Buscador y precio */}
-                    <div className="flex gap-2 mt-3.5 flex-wrap">
+                    {/* La inscripción pública y el buscador. Teléfono: primero la
+                        pestaña de ajustes y el buscador abajo, pegado a la lista
+                        que filtra. Compu: el buscador a la izquierda y la
+                        pestaña a la derecha; al abrirse crece hacia abajo. */}
+                    <div className="flex flex-col gap-2.5 mt-3.5 lg:flex-row lg:items-start">
+                        {/* Los dos ajustes de /nocturna-inscripcion juntos —si
+                            toma gente y a qué precio— en una pestaña que arranca
+                            cerrada. Cerrada ya dice el estado y el precio, que es
+                            lo que se mira; abierta deja cambiarlos. */}
+                        <div className="lg:order-last lg:flex-none lg:w-[400px]" style={{ borderRadius: 22, background: CAMPO }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (ajustesAbiertos) setEditandoPrecio(false);
+                                    setAjustesAbiertos(a => !a);
+                                }}
+                                aria-expanded={ajustesAbiertos}
+                                aria-controls="nocturna-ajustes"
+                                className="border-0 bg-transparent flex items-center gap-2.5 cursor-pointer text-left w-full"
+                                style={{ minHeight: 56, padding: '0 10px 0 16px', borderRadius: 22 }}
+                            >
+                                <span
+                                    aria-hidden="true"
+                                    className="flex-none"
+                                    style={{ width: 8, height: 8, borderRadius: 999, background: config?.inscripcionesAbiertas ? '#16a34a' : '#a8a7a2' }}
+                                />
+                                <span className="flex-1 min-w-0 truncate" style={{ ...fuente(600, '14px'), color: config?.inscripcionesAbiertas ? VERDE : INK }}>
+                                    {cambiandoEstado
+                                        ? 'Cambiando…'
+                                        : config?.inscripcionesAbiertas ? 'Inscripciones abiertas' : 'Inscripciones cerradas'}
+                                </span>
+                                <span className="flex-none" style={{ ...fuente(600, '13.5px'), color: 'rgba(0,0,0,.6)' }}>
+                                    {plata(precio)}
+                                </span>
+                                <span className="flex items-center justify-center flex-none" style={{ width: 34, height: 34, borderRadius: 999, background: CARTA }}>
+                                    <ChevronDown
+                                        className="w-4 h-4 transition-transform duration-200 motion-reduce:transition-none"
+                                        style={{ color: INK, transform: ajustesAbiertos ? 'rotate(180deg)' : 'none' }}
+                                        strokeWidth={2.4}
+                                    />
+                                </span>
+                            </button>
+
+                            {/* 0fr → 1fr: la pestaña se despliega con su alto
+                                real. Cerrada queda `inert` para que el tab no
+                                entre a los botones escondidos. */}
+                            <div
+                                id="nocturna-ajustes"
+                                className="grid transition-[grid-template-rows] duration-200 motion-reduce:transition-none"
+                                style={{ gridTemplateRows: ajustesAbiertos ? '1fr' : '0fr' }}
+                                inert={!ajustesAbiertos}
+                            >
+                                <div className="min-h-0 overflow-hidden">
+                                    <span aria-hidden="true" className="block h-px mx-4" style={{ background: 'rgba(0,0,0,.08)' }} />
+
+                                    {/* El interruptor que decide si /nocturna-inscripcion
+                                        toma gente o avisa que no. */}
+                                    <button
+                                        type="button"
+                                        onClick={alternarInscripciones}
+                                        disabled={cambiandoEstado}
+                                        role="switch"
+                                        aria-checked={!!config?.inscripcionesAbiertas}
+                                        className="border-0 bg-transparent flex items-center gap-3 cursor-pointer text-left w-full"
+                                        style={{ minHeight: 60, padding: '10px 12px 10px 16px', borderRadius: 22 }}
+                                    >
+                                        <span className="flex-1 min-w-0">
+                                            <span className="block" style={{ ...fuente(600, '14px'), color: INK }}>
+                                                Tomar inscripciones
+                                            </span>
+                                            <span className="block" style={{ ...fuente(500, '12.5px', '1.45'), color: 'rgba(0,0,0,.58)', marginTop: 2 }}>
+                                                {config?.inscripcionesAbiertas
+                                                    ? 'El link público toma inscripciones.'
+                                                    : 'El link público avisa que no se toman más. Las entradas ya emitidas siguen valiendo.'}
+                                            </span>
+                                        </span>
+                                        <span
+                                            className="flex items-center flex-none"
+                                            style={{
+                                                width: 48, height: 30, borderRadius: 999,
+                                                background: config?.inscripcionesAbiertas ? '#16a34a' : '#c9c8c4',
+                                                padding: 3,
+                                                justifyContent: config?.inscripcionesAbiertas ? 'flex-end' : 'flex-start',
+                                            }}
+                                        >
+                                            <span style={{ width: 24, height: 24, borderRadius: 999, background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,.18)' }} />
+                                        </span>
+                                    </button>
+
+                                    <span aria-hidden="true" className="block h-px mx-4" style={{ background: 'rgba(0,0,0,.08)' }} />
+
+                                    {!editandoPrecio ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => { setPrecioBorrador(String(precio)); setEditandoPrecio(true); }}
+                                            // Sin esto el nombre accesible queda "Entrada $40.000
+                                            // Editar": las tres partes del botón leídas de corrido.
+                                            aria-label="Editar el precio de la entrada"
+                                            className="border-0 bg-transparent flex items-center gap-2.5 cursor-pointer w-full"
+                                            style={{ minHeight: 60, padding: '0 12px 0 16px', borderRadius: 22 }}
+                                        >
+                                            <span className="flex-1 text-left" style={{ ...fuente(500, '13.5px'), color: 'rgba(0,0,0,.6)' }}>Entrada</span>
+                                            <span style={{ ...fuente(600, '15px'), color: INK }}>{plata(precio)}</span>
+                                            <span className="flex items-center" style={{ height: 32, padding: '0 14px', borderRadius: 999, background: CARTA, ...fuente(600, '12.5px'), color: INK }}>
+                                                Editar
+                                            </span>
+                                        </button>
+                                    ) : (
+                                        <div className="flex items-center gap-1.5 w-full" style={{ minHeight: 60, padding: '0 10px' }}>
+                                            <div
+                                                className="flex items-center gap-1 flex-1 min-w-0"
+                                                style={{ height: 40, padding: '0 12px', borderRadius: 999, background: CARTA, boxShadow: `0 0 0 1.5px ${INK} inset` }}
+                                            >
+                                                <span style={{ ...fuente(600, '14px'), color: INK }}>$</span>
+                                                <input
+                                                    className="campo campo--desnudo"
+                                                    style={{ width: 84, minWidth: 0, flex: 1 }}
+                                                    value={precioBorrador}
+                                                    inputMode="numeric"
+                                                    aria-label="Precio de la entrada"
+                                                    onChange={e => setPrecioBorrador(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditandoPrecio(false)}
+                                                className="border-0 rounded-full cursor-pointer flex-none"
+                                                style={{ height: 40, padding: '0 14px', background: CARTA, ...fuente(600, '12.5px'), color: INK }}
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={guardarPrecio}
+                                                disabled={guardandoPrecio}
+                                                className="border-0 rounded-full cursor-pointer flex-none"
+                                                style={{ height: 40, padding: '0 14px', background: INK, ...fuente(600, '12.5px'), color: '#fff' }}
+                                            >
+                                                {guardandoPrecio ? 'Guardando…' : 'Guardar'}
+                                            </button>
+                                        </div>
+                                    )}
+                                    {editandoPrecio && (
+                                        <p style={{ ...fuente(500, '12.5px', '1.5'), color: 'rgba(0,0,0,.58)', margin: 0, padding: '0 16px 14px' }}>
+                                            Cambia lo que va a pagar quien se inscriba de ahora en más. Cada familia ya anotada conserva el precio que pagó.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                         <div
-                            className="flex items-center gap-2.5 flex-1"
-                            style={{ minWidth: 200, height: 44, borderRadius: 999, background: CAMPO, padding: '0 8px 0 16px' }}
+                            className="flex items-center gap-2.5 h-12 lg:h-14 lg:flex-1"
+                            style={{ minWidth: 0, minHeight: 48, borderRadius: 999, background: CAMPO, padding: '0 8px 0 16px' }}
                         >
                             <Search className="w-4 h-4 flex-none" style={{ color: 'rgba(0,0,0,.55)' }} strokeWidth={2.2} />
                             <input
@@ -557,99 +759,8 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                 </button>
                             )}
                         </div>
-
-                        {!editandoPrecio ? (
-                            <button
-                                type="button"
-                                onClick={() => { setPrecioBorrador(String(precio)); setEditandoPrecio(true); }}
-                                // Sin esto el nombre accesible queda "Entrada $40.000
-                                // Editar": las tres partes del botón leídas de corrido.
-                                aria-label="Editar el precio de la entrada"
-                                className="border-0 rounded-full flex items-center gap-2.5 cursor-pointer flex-none"
-                                style={{ height: 44, padding: '0 8px 0 16px', background: CAMPO }}
-                            >
-                                <span style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.6)' }}>Entrada</span>
-                                <span style={{ ...fuente(600, '14px'), color: INK }}>{plata(precio)}</span>
-                                <span className="flex items-center" style={{ height: 30, padding: '0 12px', borderRadius: 999, background: CARTA, ...fuente(600, '12px'), color: INK }}>
-                                    Editar
-                                </span>
-                            </button>
-                        ) : (
-                            <div
-                                className="flex items-center gap-1.5 flex-none"
-                                style={{ height: 44, padding: '0 6px 0 16px', borderRadius: 999, background: CARTA, boxShadow: `0 0 0 1.5px ${INK} inset` }}
-                            >
-                                <span style={{ ...fuente(600, '14px'), color: INK }}>$</span>
-                                <input
-                                    className="campo campo--desnudo"
-                                    style={{ width: 84 }}
-                                    value={precioBorrador}
-                                    inputMode="numeric"
-                                    aria-label="Precio de la entrada"
-                                    onChange={e => setPrecioBorrador(e.target.value.replace(/\D/g, '').slice(0, 9))}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setEditandoPrecio(false)}
-                                    className="border-0 rounded-full cursor-pointer"
-                                    style={{ height: 32, padding: '0 12px', background: CAMPO, ...fuente(600, '12px'), color: INK }}
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={guardarPrecio}
-                                    disabled={guardandoPrecio}
-                                    className="border-0 rounded-full cursor-pointer"
-                                    style={{ height: 32, padding: '0 12px', background: INK, ...fuente(600, '12px'), color: '#fff' }}
-                                >
-                                    {guardandoPrecio ? 'Guardando…' : 'Guardar'}
-                                </button>
-                            </div>
-                        )}
                     </div>
 
-                    {editandoPrecio && (
-                        <p style={{ ...fuente(500, '12.5px', '1.5'), color: 'rgba(0,0,0,.58)', margin: '8px 2px 0' }}>
-                            Cambia lo que va a pagar quien se inscriba de ahora en más. Cada familia ya anotada conserva el precio que pagó.
-                        </p>
-                    )}
-
-                    {/* Abrir y cerrar la inscripción pública. Es el interruptor que
-                        decide si /nocturna-inscripcion toma gente o avisa que no. */}
-                    <div className="flex items-center gap-3 mt-3 flex-wrap">
-                        <button
-                            type="button"
-                            onClick={alternarInscripciones}
-                            disabled={cambiandoEstado}
-                            role="switch"
-                            aria-checked={!!config?.inscripcionesAbiertas}
-                            className="border-0 rounded-full flex items-center gap-2.5 cursor-pointer flex-none"
-                            style={{ height: 40, padding: '0 14px 0 6px', background: config?.inscripcionesAbiertas ? VERDE_FONDO : CAMPO }}
-                        >
-                            <span
-                                className="flex items-center flex-none"
-                                style={{
-                                    width: 44, height: 28, borderRadius: 999,
-                                    background: config?.inscripcionesAbiertas ? '#16a34a' : '#c9c8c4',
-                                    padding: 3,
-                                    justifyContent: config?.inscripcionesAbiertas ? 'flex-end' : 'flex-start',
-                                }}
-                            >
-                                <span style={{ width: 22, height: 22, borderRadius: 999, background: '#fff' }} />
-                            </span>
-                            <span style={{ ...fuente(600, '13px'), color: config?.inscripcionesAbiertas ? VERDE : 'rgba(0,0,0,.62)' }}>
-                                {cambiandoEstado
-                                    ? 'Cambiando…'
-                                    : config?.inscripcionesAbiertas ? 'Inscripciones abiertas' : 'Inscripciones cerradas'}
-                            </span>
-                        </button>
-                        <span style={{ ...fuente(500, '12.5px', '1.5'), color: 'rgba(0,0,0,.58)' }}>
-                            {config?.inscripcionesAbiertas
-                                ? 'El link público toma inscripciones.'
-                                : 'El link público avisa que no se toman más. Las entradas ya emitidas siguen valiendo.'}
-                        </span>
-                    </div>
 
                     {/* Resumen */}
                     <div className="flex gap-4 mt-3 flex-wrap">
@@ -762,6 +873,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                                     <div className="flex items-center gap-2 mt-3 flex-wrap">
                                                         <Comprobante insc={insc} bloque />
                                                         {botonVerDetalles(insc.id, 38)}
+                                                        {puedeEliminar && (
                                                         <button
                                                             type="button"
                                                             onClick={() => setOverlay({ tipo: 'eliminar', insc })}
@@ -772,6 +884,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" style={{ color: ROJO }} />
                                                         </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -842,6 +955,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
 
                                                 <div className="flex justify-end gap-1.5" style={{ padding: '13px 20px 13px 6px' }}>
                                                     {botonVerDetalles(insc.id)}
+                                                    {puedeEliminar && (
                                                     <button
                                                         type="button"
                                                         onClick={() => setOverlay({ tipo: 'eliminar', insc })}
@@ -852,6 +966,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" style={{ color: ROJO }} />
                                                     </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
