@@ -1229,7 +1229,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 la vista — nadie abre un desplegable para buscar cómo entrar. */}
             <div
                 ref={cuentaRef}
-                className={`relative shrink-0 border-t ${LINEA} ${isSidebar ? 'px-4 pt-3 pb-[18px]' : 'px-3 pt-2.5 pb-[34px]'} ${isCollapsed ? 'flex flex-col items-center px-2' : ''}`}
+                className={`relative shrink-0 border-t ${LINEA} ${isSidebar ? 'px-4 pt-3 pb-[18px]' : 'px-3 pt-2 pb-[max(12px,env(safe-area-inset-bottom))]'} ${isCollapsed ? 'flex flex-col items-center px-2' : ''}`}
             >
                 {currentUser ? (
                     <>
@@ -1245,13 +1245,13 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 ? `Cuenta de ${currentUser.name}, ${sinLeer} ${sinLeer === 1 ? 'notificación sin leer' : 'notificaciones sin leer'}`
                                 : isCollapsed ? `Cuenta de ${currentUser.name}` : undefined}
                             title={isCollapsed ? currentUser.name : undefined}
-                            className={`w-full flex items-center rounded-[22px] ${TARJETA} ${TINTA} shadow-[0_1px_3px_rgba(0,0,0,.05)] dark:shadow-none transition-colors duration-150 hover:bg-[#fbfbfa] dark:hover:bg-[#222220] ${FOCO} ${isCollapsed ? 'justify-center p-1.5' : isSidebar ? 'p-2' : 'py-1.5 pl-1.5 pr-2.5'
+                            className={`w-full flex items-center rounded-[22px] ${TARJETA} ${TINTA} shadow-[0_1px_3px_rgba(0,0,0,.05)] dark:shadow-none transition-colors duration-150 hover:bg-[#fbfbfa] dark:hover:bg-[#222220] ${FOCO} ${isCollapsed ? 'justify-center p-1.5' : isSidebar ? 'p-2' : 'py-1 pl-1 pr-2.5'
                                 }`}
                         >
                             {/* La marca va afuera del círculo: adentro la
                                 recortaría el overflow-hidden de la foto. */}
                             <div className="relative shrink-0">
-                                <div className={`${isSidebar ? 'w-8 h-8' : 'w-10 h-10'} rounded-full overflow-hidden ${PASTILLA}`}>
+                                <div className={`${isSidebar ? 'w-8 h-8' : 'w-[34px] h-[34px]'} rounded-full overflow-hidden ${PASTILLA}`}>
                                     {currentUser.avatarUrl ? (
                                         <img
                                             src={currentUser.avatarUrl}
@@ -1270,8 +1270,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 )}
                             </div>
                             <div className={`${textoQueSeVa} flex flex-col items-start`} style={estiloTexto}>
-                                <span className={`max-w-full text-sm font-semibold truncate ${TINTA}`}>{currentUser.name}</span>
-                                <span className={`max-w-full mt-px text-[12.5px] font-medium truncate ${M55}`}>{currentUser.email}</span>
+                                <span className={`max-w-full text-sm leading-[1.2] font-semibold truncate ${TINTA}`}>{currentUser.name}</span>
+                                <span className={`max-w-full text-[12px] leading-[1.25] font-medium truncate ${M55}`}>{currentUser.email}</span>
                             </div>
                             {!isCollapsed && (
                                 <ChevronUp
