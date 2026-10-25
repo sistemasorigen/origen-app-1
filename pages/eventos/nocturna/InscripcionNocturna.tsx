@@ -8,7 +8,7 @@ import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { useBarraDeAppSuelta } from '../../../contexts/BarraDeApp';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
-import { calcularEdad, QUIENES_ENTRAN } from '../../../src/utils/nocturna';
+import { calcularEdad, precioDelChico, QUIENES_ENTRAN } from '../../../src/utils/nocturna';
 import {
     ADULTO_VACIO,
     AdultoForm,
@@ -35,6 +35,7 @@ import {
     TRIBUS,
     VERSION_DECLARACIONES,
 } from './compartido/formulario';
+import CartelPromo from './CartelPromo';
 import {
     BotonNoc,
     BotonTribu,
@@ -486,6 +487,16 @@ const InscripcionNocturna: React.FC = () => {
 
     useEffect(() => () => { if (vistaPrevia) URL.revokeObjectURL(vistaPrevia); }, [vistaPrevia]);
 
+    // Al llegar al pago se vuelven a pedir los precios: si la página quedó
+    // abierta de un día para el otro, el total a transferir tiene que ser el
+    // de ahora (la promo pudo terminar, la entrada pudo subir).
+    useEffect(() => {
+        if (pantalla !== 7) return;
+        let vivo = true;
+        supabaseService.getNocturnaConfig().then(cfg => { if (vivo && cfg) setConfig(cfg); });
+        return () => { vivo = false; };
+    }, [pantalla]);
+
     // ── Derivados ─────────────────────────────────────────────────────────
     /**
      * Sumando chicos, no se crea nada: se le agregan a la inscripción que ya
@@ -495,12 +506,25 @@ const InscripcionNocturna: React.FC = () => {
     const agregando = !!grupo?.verificado;
     const yaAnotados = grupo?.chicos ?? [];
 
-    // Al que suma un hermano se le cobra el precio que pagó cuando se
-    // inscribió, no el de hoy: es lo mismo que hace la base al rehacer el
-    // total, y si la pantalla dijera otra cosa estaría mintiendo.
-    const precio = (agregando ? grupo?.precioUnitario : config?.precioEntrada) ?? 0;
+    // Cada chico tiene su precio: la promo de 12 años es por chico. Al que
+    // suma un hermano se le cobra lo que pagó cuando se inscribió (o la promo,
+    // si le toca y es menos): es lo mismo que hace la base, y si la pantalla
+    // dijera otra cosa estaría mintiendo.
+    const precioDe = (c: ChicoForm) => precioDelChico(
+        c.nac,
+        { general: config?.precioEntrada ?? 0, promo: config?.promo },
+        agregando ? (grupo?.precioUnitario ?? 0) : null,
+    );
     const cantidad = chicos.length;
-    const total = precio * cantidad;
+    const total = chicos.reduce((suma, c) => suma + precioDe(c), 0);
+    /** "2 adolescentes × $50.000", o "1 × $40.000 + 1 × $50.000" si no pagan lo mismo. */
+    const detalleDelTotal = (sustantivo: (n: number) => string): string => {
+        const porPrecio = new Map<number, number>();
+        chicos.forEach(c => { const p = precioDe(c); porPrecio.set(p, (porPrecio.get(p) || 0) + 1); });
+        const grupos = [...porPrecio.entries()].sort((a, b) => a[0] - b[0]);
+        if (grupos.length <= 1) return `${cantidad} ${sustantivo(cantidad)} × ${plata(grupos[0]?.[0] ?? 0)}`;
+        return grupos.map(([p, n]) => `${n} × ${plata(p)}`).join(' + ');
+    };
     const varios = cantidad > 1;
     const nombres = chicos.map(c => c.nombre.trim() || 'un adolescente');
 
@@ -1038,7 +1062,7 @@ const InscripcionNocturna: React.FC = () => {
             case 2: return [
                 plata(total),
                 cantidad
-                    ? `${cantidad} ${agregando ? (cantidad === 1 ? 'nuevo' : 'nuevos') : (cantidad === 1 ? 'adolescente' : 'adolescentes')} × ${plata(precio)}`
+                    ? detalleDelTotal(n => agregando ? (n === 1 ? 'nuevo' : 'nuevos') : (n === 1 ? 'adolescente' : 'adolescentes'))
                     : agregando ? 'Sumá al menos uno nuevo' : 'Agregá al menos un adolescente',
             ];
             case 3: return ['Retiro 6 AM', ok3 ? retiroTexto : 'Falta responder'];
@@ -1161,6 +1185,8 @@ const InscripcionNocturna: React.FC = () => {
                             <br />
                             <Corchetes>{EVENTO.lugar}</Corchetes>
                         </p>
+
+                        <CartelPromo config={config} />
 
                         <div style={{ marginTop: 22, background: LIMA, borderRadius: 30, boxShadow: anillo(), padding: 20 }}>
                             {user ? (
@@ -1370,7 +1396,8 @@ const InscripcionNocturna: React.FC = () => {
                                                     <span style={{ display: 'block', marginTop: 3, ...arch(700, '13px'), letterSpacing: '-.01em', textTransform: 'uppercase' }}>
                                                         {falt.length
                                                             ? `Falta: ${falt.join(', ')}`
-                                                            : fueraDeEdad ? 'No entra en la edad de Nocturna' : `${edad} años // ${c.tribu}`}
+                                                            : fueraDeEdad ? 'No entra en la edad de Nocturna'
+                                                                : `${edad} años // ${c.tribu}${precioDe(c) < (agregando ? (grupo?.precioUnitario ?? 0) : (config?.precioEntrada ?? 0)) ? ` // promo ${plata(precioDe(c))}` : ''}`}
                                                     </span>
                                                 </span>
                                                 <span aria-hidden="true" style={{ flex: 'none', ...arch(800, '13px'), letterSpacing: '-.02em', textTransform: 'uppercase' }}>
@@ -1783,7 +1810,7 @@ const InscripcionNocturna: React.FC = () => {
                             <p style={{ margin: 0, ...arch(800, '11.5px'), letterSpacing: '.05em', color: LIMA, textTransform: 'uppercase' }}>Total a transferir</p>
                             <p className="noc-total">{plata(total)}</p>
                             <p style={{ margin: '10px 0 0', ...arch(700, '13.5px', '1.4'), color: LIMA }}>
-                                {cantidad} {cantidad === 1 ? 'adolescente' : 'adolescentes'} × {plata(precio)}
+                                {detalleDelTotal(n => (n === 1 ? 'adolescente' : 'adolescentes'))}
                             </p>
                             {/* Sumando, el monto es sólo por los nuevos y al precio
                                 que pagó esta familia. Sin esta línea, quien ya pagó
@@ -1791,7 +1818,7 @@ const InscripcionNocturna: React.FC = () => {
                                 cobrando todo de nuevo. */}
                             {agregando && (
                                 <p style={{ margin: '10px 0 0', ...arch(600, '13px', '1.5'), color: LIMA }}>
-                                    Es sólo por {cantidad === 1 ? 'el que suma' : 'los que suma'}s ahora, al mismo precio que pagaste al inscribirte. Lo que ya pagaste no se vuelve a cobrar.
+                                    Es sólo por {cantidad === 1 ? 'el que suma' : 'los que suma'}s ahora, al mismo precio que pagaste al inscribirte{config?.promo ? ' (o el de la promo, si tiene ' + config.promo.edad + ' años)' : ''}. Lo que ya pagaste no se vuelve a cobrar.
                                 </p>
                             )}
                         </div>

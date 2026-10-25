@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Check, ChevronLeft, Loader2 } from 'lucide-react';
 import { supabaseService } from '../../../services/supabaseService';
 import { safeUUID } from '../../../services/uuidUtils';
-import { calcularEdad } from '../../../src/utils/nocturna';
+import { calcularEdad, precioDelChico } from '../../../src/utils/nocturna';
 import { NocturnaAltaResultado, NocturnaConfig, NocturnaEdicionResultado, User } from '../../../types';
 import {
     ADULTO_VACIO,
@@ -105,6 +105,10 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
     const [precioOriginal, setPrecioOriginal] = useState<number | null>(null);
     const [emailOriginal, setEmailOriginal] = useState('');
     const [chicosOriginales, setChicosOriginales] = useState(0);
+    // Lo que pagó cada chico que ya estaba, y el total de antes: con la promo
+    // de 12 años no todos pagan lo mismo.
+    const [preciosOriginales, setPreciosOriginales] = useState<Record<string, number>>({});
+    const [totalOriginal, setTotalOriginal] = useState(0);
     const [guardado, setGuardado] = useState<NocturnaEdicionResultado | null>(null);
     const [reenviando, setReenviando] = useState(false);
     const [reenviado, setReenviado] = useState(false);
@@ -185,6 +189,8 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                 setPrecioOriginal(i.precioUnitario);
                 setEmailOriginal(i.adultoEmail);
                 setChicosOriginales((i.jovenes || []).length);
+                setPreciosOriginales(Object.fromEntries((i.jovenes || []).map(j => [j.id, j.precio ?? i.precioUnitario])));
+                setTotalOriginal(i.total);
             }
 
             setCargando(false);
@@ -193,11 +199,16 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
     }, [modoEdicion, idDeLaUrl]);
 
     // ── Derivados ─────────────────────────────────────────────────────────
-    // En edición vale el precio que pagó esta familia, no el de hoy: es lo
-    // mismo que recalcula la base.
+    // Cargando, cada chico paga el precio de hoy (con la promo si le toca).
+    // Editando, el que ya estaba conserva lo que pagó y uno nuevo paga el
+    // precio de esta familia: es lo mismo que recalcula la base.
     const precio = modoEdicion ? (precioOriginal ?? 0) : (config?.precioEntrada ?? 0);
+    const precioDe = (c: { id: string; existente?: boolean; nac: string }) => modoEdicion
+        ? (c.existente && preciosOriginales[c.id] != null ? preciosOriginales[c.id] : (precioOriginal ?? 0))
+        : precioDelChico(c.nac, { general: config?.precioEntrada ?? 0, promo: config?.promo });
     const cantidad = chicos.length;
-    const total = precio * cantidad;
+    const total = chicos.reduce((suma, c) => suma + precioDe(c), 0);
+    const todosIgual = chicos.every(c => precioDe(c) === precioDe(chicos[0]));
     const adultoMenor = adultoEsMenorDeEdad(adulto);
 
     const ok = adultoCompleto(adulto)
@@ -811,17 +822,19 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
                                 <p style={{ ...fuente(600, '11px'), letterSpacing: '.07em', color: 'rgba(0,0,0,.55)', margin: 0 }}>5 · PAGO</p>
                                 <p style={{ ...fuente(600, '32px'), color: INK, letterSpacing: '-.03em', margin: '12px 0 0' }}>{plata(total)}</p>
                                 <p style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.6)', margin: '2px 0 0' }}>
-                                    {cantidad} {cantidad === 1 ? 'entrada' : 'entradas'} × {plata(precio)}
-                                    {modoEdicion && ' · el precio que pagó esta familia'}
+                                    {todosIgual
+                                        ? `${cantidad} ${cantidad === 1 ? 'entrada' : 'entradas'} × ${plata(cantidad ? precioDe(chicos[0]) : precio)}`
+                                        : `${cantidad} entradas · con promo de ${config?.promo?.edad ?? 12} años`}
+                                    {modoEdicion && ' · lo que pagó esta familia'}
                                 </p>
 
                                 {modoEdicion ? (
-                                    cantidad !== chicosOriginales && (
+                                    total !== totalOriginal && (
                                         <div className="rounded-[14px] mt-4" style={{ background: AMBAR, padding: '12px 14px' }}>
                                             <p style={{ ...fuente(600, '13.5px'), color: '#5c3b0b', margin: 0 }}>
-                                                {cantidad > chicosOriginales
-                                                    ? `Hay que cobrar ${plata((cantidad - chicosOriginales) * precio)} más`
-                                                    : `Hay que devolver ${plata((chicosOriginales - cantidad) * precio)}`}
+                                                {total > totalOriginal
+                                                    ? `Hay que cobrar ${plata(total - totalOriginal)} más`
+                                                    : `Hay que devolver ${plata(totalOriginal - total)}`}
                                             </p>
                                             <p style={{ ...fuente(500, '12.5px', '1.5'), color: '#5c3b0b', margin: '4px 0 0' }}>
                                                 Pasa de {chicosOriginales} a {cantidad} {cantidad === 1 ? 'entrada' : 'entradas'}. El cobro se hace aparte.

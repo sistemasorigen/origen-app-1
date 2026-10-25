@@ -614,7 +614,22 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                             <Carta titulo="Pago">
                                 <div className="mt-2">
                                     <Fila k="Se inscribió" v={fechaLarga(insc.createdAt)} />
-                                    <Fila k="Entrada" v={plata(insc.precioUnitario)} />
+                                    {/* Con la promo de 12 años, cada chico puede haber pagado
+                                        distinto: se dice cuánto cada uno. */}
+                                    <Fila
+                                        k="Entrada"
+                                        v={(() => {
+                                            const porPrecio = new Map<number, number>();
+                                            jovenes.forEach(j => {
+                                                const p = j.precio ?? insc.precioUnitario;
+                                                porPrecio.set(p, (porPrecio.get(p) || 0) + 1);
+                                            });
+                                            const grupos = [...porPrecio.entries()].sort((a, b) => a[0] - b[0]);
+                                            return grupos.length <= 1
+                                                ? plata(grupos[0]?.[0] ?? insc.precioUnitario)
+                                                : grupos.map(([p, n]) => `${n} × ${plata(p)}`).join(' + ');
+                                        })()}
+                                    />
                                     <Fila k="Total" v={plata(insc.total)} />
                                     <Fila
                                         k="Comprobante"

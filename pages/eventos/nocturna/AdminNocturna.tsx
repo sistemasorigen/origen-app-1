@@ -729,7 +729,27 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                     {editandoPrecio && (
                                         <p style={{ ...fuente(500, '12.5px', '1.5'), color: 'rgba(0,0,0,.58)', margin: 0, padding: '0 16px 14px' }}>
                                             Cambia lo que va a pagar quien se inscriba de ahora en más. Cada familia ya anotada conserva el precio que pagó.
+                                            {config?.proximo && ` El aumento a ${plata(config.proximo.precio)} sigue programado.`}
                                         </p>
+                                    )}
+                                    {/* Lo programado: la promo por edad y el próximo precio.
+                                        Lo calcula la base (sql/nocturna_promo_12.sql); acá se
+                                        dice, para que nadie se sorprenda el martes. */}
+                                    {!editandoPrecio && (config?.promo || config?.proximo) && (
+                                        <div style={{ padding: '0 16px 14px' }}>
+                                            {config?.promo && (
+                                                <p style={{ ...fuente(500, '12.5px', '1.5'), color: 'rgba(0,0,0,.62)', margin: 0 }}>
+                                                    <span style={{ ...fuente(600, '12.5px'), color: INK }}>Promo {config.promo.edad} años: {plata(config.promo.precio)}</span>
+                                                    {' '}hasta el {new Date(Date.parse(config.promo.hasta) - 60000).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' })} a las {new Date(Date.parse(config.promo.hasta) - 60000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Argentina/Buenos_Aires' })}.
+                                                </p>
+                                            )}
+                                            {config?.proximo && (
+                                                <p style={{ ...fuente(500, '12.5px', '1.5'), color: 'rgba(0,0,0,.62)', margin: config?.promo ? '2px 0 0' : 0 }}>
+                                                    <span style={{ ...fuente(600, '12.5px'), color: INK }}>Pasa a {plata(config.proximo.precio)}</span>
+                                                    {' '}el {new Date(config.proximo.desde).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' })} a las {new Date(config.proximo.desde).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Argentina/Buenos_Aires' })}, automáticamente.
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>

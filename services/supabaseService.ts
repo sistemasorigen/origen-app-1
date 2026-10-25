@@ -9549,6 +9549,7 @@ export const supabaseService = {
       dni: row.dni,
       fechaNacimiento: row.fecha_nacimiento,
       tribu: row.tribu,
+      precio: row.precio != null ? Number(row.precio) : null,
       // null es "no tiene": la pregunta del formulario es si tiene celular, y
       // la respuesta "no" no guarda número.
       telefono: row.telefono ?? null,
@@ -9637,10 +9638,24 @@ export const supabaseService = {
         .eq('id', 1)
         .single();
       if (error) throw error;
+
+      // Los precios con la hora del servidor: la entrada de ahora, la promo
+      // si sigue y el próximo aumento. Si la función no responde se sigue con
+      // el precio de la tabla, que es lo que había antes de la promo.
+      const { data: precios } = await supabase.rpc('nocturna_precios');
+      const promo = precios?.promo
+        ? { precio: Number(precios.promo.precio), edad: Number(precios.promo.edad), hasta: String(precios.promo.hasta) }
+        : null;
+      const proximo = precios?.proximo
+        ? { precio: Number(precios.proximo.precio), desde: String(precios.proximo.desde) }
+        : null;
+
       return {
         edicion: data.edicion,
-        precioEntrada: Number(data.precio_entrada),
+        precioEntrada: precios?.general != null ? Number(precios.general) : Number(data.precio_entrada),
         inscripcionesAbiertas: data.inscripciones_abiertas,
+        promo,
+        proximo,
       };
     } catch (err) {
       console.error('[Nocturna] getNocturnaConfig:', err);

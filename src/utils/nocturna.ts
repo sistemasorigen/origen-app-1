@@ -83,6 +83,28 @@ export const EDAD_MAXIMA = 18;
 export const QUIENES_ENTRAN = 'adolescentes nacidos hasta el 30 de junio de 2014, con 18 años como máximo';
 
 /** La edad que va a tener esa noche. `null` si la fecha no es válida. */
+/**
+ * Lo que paga un chico. La misma regla que nocturna_precio_para y
+ * nocturna_precio_sumado en la base (sql/nocturna_promo_12.sql), que es la
+ * que cobra de verdad: esto es para mostrarlo.
+ *
+ * `precioFamilia`: al sumar un hermano se cobra lo que pagó la familia al
+ * inscribirse. La promo por edad, si le toca y es menos, gana igual.
+ */
+export const precioDelChico = (
+    fechaNacimiento: string,
+    precios: { general: number; promo?: { precio: number; edad: number; hasta: string } | null },
+    precioFamilia: number | null = null,
+    ahora: number = Date.now(),
+): number => {
+    const base = precioFamilia ?? precios.general;
+    const promo = precios.promo;
+    if (promo && ahora < Date.parse(promo.hasta) && fechaNacimiento && edadEnElEvento(fechaNacimiento) === promo.edad) {
+        return Math.min(promo.precio, base);
+    }
+    return base;
+};
+
 export const edadEnElEvento = (fechaNacimiento: string): number | null =>
     calcularEdad(
         fechaNacimiento,

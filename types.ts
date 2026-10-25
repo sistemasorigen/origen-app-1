@@ -1803,12 +1803,19 @@ export interface NocturnaRetiro {
 
 export interface NocturnaConfig {
     edicion: number;
+    /** La entrada general de AHORA (con el aumento programado ya aplicado si pasó). */
     precioEntrada: number;
     inscripcionesAbiertas: boolean;
+    /** La promo por edad, sólo mientras está vigente. Ver sql/nocturna_promo_12.sql. */
+    promo?: { precio: number; edad: number; hasta: string } | null;
+    /** El próximo precio de la entrada general, si hay uno programado. */
+    proximo?: { precio: number; desde: string } | null;
 }
 
 export interface NocturnaJoven {
     id: string;
+    /** Lo que se cobró por este chico (la promo de 12 años es por chico). */
+    precio?: number | null;
     inscripcionId?: string;
     nombre: string;
     apellido: string;
