@@ -324,19 +324,31 @@ const Esqueleto: React.FC = () => (
  */
 const FLECHA = 'absolute -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md items-center justify-center text-slate-600 dark:text-zinc-300 opacity-0 group-hover/riel:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-slate-50 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white z-10';
 
-/** El riel del teléfono y la grilla de la compu, en un solo árbol. */
-const FILA = 'flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1 items-start';
+/**
+ * El riel del teléfono y la grilla de la compu, en un solo árbol.
+ *
+ * En el teléfono el riel llega a los bordes de la pantalla (el -mx-4 se come
+ * el px-4 de la página) y lleva 44px de relleno a cada lado: con la tarjeta
+ * de 100vw-88px, la que está quieta queda centrada y de las de al lado se
+ * ven 32px (44 menos el espacio de 12). Así se nota que hay más.
+ *
+ * El `relative` es para que el offsetLeft de cada tarjeta se mida desde el
+ * riel, y no cambie con lo que se deslizó.
+ */
+const FILA = 'relative flex gap-3 sm:gap-4 -mx-4 px-[44px] sm:mx-0 sm:px-0 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1 items-start';
 
 /**
- * El ancho de una tarjeta. Las cuentas son las que hacen que entren justo:
- * dos tarjetas y un espacio de 16px, o tres y dos espacios.
+ * El ancho de una tarjeta. En el teléfono, el de la pantalla menos los dos
+ * rellenos de FILA, y frena centrada. En la compu las cuentas son las que
+ * hacen que entren justo: dos tarjetas y un espacio de 16px, o tres y dos
+ * espacios, y frena al principio.
  *
  * Cuando hay más de las que entran se les restan 26px, y esos 26px son los
  * que deja asomar a la siguiente. Sin eso, en la compu tres tarjetas llenan
  * la fila exacta y nada dice que haya una cuarta.
  */
-const JUSTAS = 'snap-start shrink-0 w-[90%] sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]';
-const CON_ASOMO = 'snap-start shrink-0 w-[90%] sm:w-[calc((100%-1rem)/2-26px)] lg:w-[calc((100%-2rem)/3-26px)]';
+const JUSTAS = 'snap-center sm:snap-start shrink-0 w-[calc(100vw-88px)] sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]';
+const CON_ASOMO = 'snap-center sm:snap-start shrink-0 w-[calc(100vw-88px)] sm:w-[calc((100%-1rem)/2-26px)] lg:w-[calc((100%-2rem)/3-26px)]';
 
 /**
  * Cuántas veces se dibuja la lista para que el riel no tenga punta. Son
@@ -347,9 +359,10 @@ const CON_ASOMO = 'snap-start shrink-0 w-[90%] sm:w-[calc((100%-1rem)/2-26px)] l
 const COPIAS = 3;
 
 /**
- * El espacio entre tarjetas, el mismo que pone `gap-4` en FILA. Va acá
+ * El espacio entre tarjetas, el mismo que pone `sm:gap-4` en FILA. Va acá
  * porque la flecha corre "una tarjeta", y una tarjeta es su ancho más el
- * espacio que la separa de la siguiente.
+ * espacio que la separa de la siguiente. Las flechas son sólo de la compu,
+ * así que el gap-3 del teléfono no entra en la cuenta.
  */
 const ESPACIO = 16;
 
@@ -409,11 +422,31 @@ const SeccionDeEnlaces: React.FC = () => {
         return () => observador.disconnect();
     }, [lista.length, enRonda]);
 
-    /** Al entrar en ronda, el riel arranca en la copia del medio. */
+    /**
+     * Lo que mide una copia entera, de la primera tarjeta de una a la primera
+     * de la siguiente. scrollWidth / COPIAS no sirve: suma el relleno del
+     * riel y le falta un espacio, y con eso el salto dejaba la tarjeta corrida
+     * unos píxeles del centro.
+     */
+    const anchoDeCopia = (el: HTMLElement) => {
+        const a = el.querySelector<HTMLElement>('[data-copia="0"]');
+        const b = el.querySelector<HTMLElement>('[data-copia="1"]');
+        return a && b ? b.offsetLeft - a.offsetLeft : el.scrollWidth / COPIAS;
+    };
+
+    /**
+     * Al entrar en ronda, el riel arranca en la primera tarjeta de la copia
+     * del medio: centrada en el teléfono, pegada al borde en la compu.
+     */
     useLayoutEffect(() => {
         const el = rielRef.current;
         if (!el || !enRonda) return;
-        el.scrollLeft = el.scrollWidth / COPIAS;
+        const tarjeta = el.querySelector<HTMLElement>('[data-copia="1"]');
+        if (!tarjeta) return;
+        const centrada = getComputedStyle(tarjeta).scrollSnapAlign.includes('center');
+        el.scrollLeft = centrada
+            ? tarjeta.offsetLeft - (el.clientWidth - tarjeta.offsetWidth) / 2
+            : tarjeta.offsetLeft;
     }, [enRonda, lista.length]);
 
     /**
@@ -425,7 +458,7 @@ const SeccionDeEnlaces: React.FC = () => {
     const volverAlMedio = () => {
         const el = rielRef.current;
         if (!el || !enRonda) return;
-        const unaCopia = el.scrollWidth / COPIAS;
+        const unaCopia = anchoDeCopia(el);
         if (el.scrollLeft > unaCopia * 1.75) el.scrollLeft -= unaCopia;
         else if (el.scrollLeft < unaCopia * 0.25) el.scrollLeft += unaCopia;
     };
