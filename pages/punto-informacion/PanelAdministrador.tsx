@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useStore } from '../../store';
 import { ProductType, PuntoInfoBannerSlide } from '../../types';
+
+/** Los tipos con precio propio. La Servolución copia el de las remeras. */
+const CON_PRECIO_PROPIO = [ProductType.REMERA, ProductType.BUZO];
 import { useToast } from './context/ContextoToast';
 import {
     Download, Image as ImageIcon, Plus, Pencil, Trash2, X, Loader2, Play,
@@ -54,6 +57,7 @@ const precio = (valor: number) => `$${(valor ?? 0).toLocaleString('es-AR')}`;
 const PALABRAS = {
     [ProductType.REMERA]: { articulo: 'las', todas: 'todas', una: 'la remera', singular: 'remera', plural: 'remeras' },
     [ProductType.BUZO]: { articulo: 'los', todas: 'todos', una: 'el buzo', singular: 'buzo', plural: 'buzos' },
+    [ProductType.SERVOLUCION]: { articulo: 'las', todas: 'todas', una: 'la remera Servolución', singular: 'remera Servolución', plural: 'remeras Servolución' },
 };
 
 /** La tarjeta de cada trabajo: un título, qué hace, y una acción si tiene. */
@@ -312,14 +316,14 @@ const AdminPanel: React.FC = () => {
             {/* ── Precios ──────────────────────────────────────────────── */}
             <Tarjeta
                 titulo="Precios"
-                bajada="Un mismo precio para todas las remeras o para todos los buzos."
+                bajada="Un mismo precio para todas las remeras o para todos los buzos. Las remeras Servolución llevan siempre el precio de las remeras."
             >
                 <div className="px-5 sm:px-6 pb-5 space-y-4 border-t border-slate-100 pt-5">
                     <Campo etiqueta="Qué productos">
                         <Opciones
                             etiquetaGrupo="Remeras o buzos"
                             valor={tipo}
-                            opciones={Object.values(ProductType).map(t => ({ valor: t }))}
+                            opciones={CON_PRECIO_PROPIO.map(t => ({ valor: t }))}
                             onElegir={v => setTipo(v as ProductType)}
                         />
                     </Campo>

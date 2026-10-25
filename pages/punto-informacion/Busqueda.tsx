@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store';
-import { ProductType, INFO_POINT_SIZES } from '../../types';
+import { ProductType, INFO_POINT_SIZES, codigoDeProducto } from '../../types';
 import { Search as SearchIcon, Package } from 'lucide-react';
 
 const Search: React.FC = () => {
@@ -9,7 +9,7 @@ const Search: React.FC = () => {
     const [selectedSize, setSelectedSize] = useState('1');
 
     // Find specific stock
-    const targetCode = `${selectedType.toUpperCase()}-${selectedSize}`;
+    const targetCode = codigoDeProducto(selectedType, selectedSize);
     const product = products.find(p => p.code === targetCode);
     const stock = product ? product.stock : 0;
 

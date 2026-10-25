@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store';
-import { ProductType, INFO_POINT_SIZES } from '../../types';
+import { ProductType, INFO_POINT_SIZES, NOMBRE_CORTO_DE_TIPO, codigoDeProducto } from '../../types';
 import { useToast } from './context/ContextoToast';
 import {
     Campo, ParDeCampos, BarraDeRevisar, HojaDeRevision, Opciones, campo,
@@ -31,8 +31,20 @@ const NewProduct: React.FC = () => {
         return Number.isNaN(n) ? 0 : n;
     };
 
-    const codigo = `${form.type.toUpperCase()}-${form.size}`;
+    const codigo = codigoDeProducto(form.type, form.size);
     const yaExiste = products.some(p => p.code === codigo);
+
+    // La Servolución no tiene precio propio: lleva el de las remeras, y la
+    // base lo pone sola al crearla y lo actualiza cuando cambian las remeras.
+    // Acá sólo se muestra, para que nadie escriba un precio que no va a quedar.
+    const sigueARemeras = form.type === ProductType.SERVOLUCION;
+    const precioDeRemeras = (() => {
+        const cuenta = new Map<number, number>();
+        products.filter(p => p.type === ProductType.REMERA)
+            .forEach(p => cuenta.set(p.price ?? 0, (cuenta.get(p.price ?? 0) || 0) + 1));
+        return [...cuenta.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] ?? 0;
+    })();
+    const precioFinal = sigueARemeras ? precioDeRemeras : form.price;
 
     // Enviar el formulario no crea: abre la revisión.
     const revisar = (e: React.FormEvent) => {
@@ -49,7 +61,7 @@ const NewProduct: React.FC = () => {
         setGuardando(true);
         setError(null);
         try {
-            await addProduct({ ...form, code: codigo, name: `${form.type} Talle ${form.size}` });
+            await addProduct({ ...form, price: precioFinal, code: codigo, name: `${form.type} Talle ${form.size}` });
             toast.success(`${form.type} talle ${form.size} creado.`);
             setForm({ type: ProductType.REMERA, size: '1', price: 0, stock: 0, minStock: 5 });
             setRevisando(false);
@@ -66,15 +78,15 @@ const NewProduct: React.FC = () => {
         <div id="punto-formulario" className="animate-fadeIn pb-24">
             <div className="w-full max-w-lg mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
                 <p className="text-sm text-slate-500 mb-6">
-                    Un talle de remera o de buzo. El nombre y el código se arman solos.
+                    Un talle de remera, de buzo o de remera Servolución. El nombre y el código se arman solos.
                 </p>
 
                 <form id="form-producto" onSubmit={revisar} className="space-y-4">
                     <Campo etiqueta="Qué es">
                         <Opciones
-                            etiquetaGrupo="Remera o buzo"
+                            etiquetaGrupo="Qué prenda"
                             valor={form.type}
-                            opciones={Object.values(ProductType).map(t => ({ valor: t }))}
+                            opciones={Object.values(ProductType).map(t => ({ valor: t, etiqueta: NOMBRE_CORTO_DE_TIPO[t] }))}
                             onElegir={v => setForm({ ...form, type: v as ProductType })}
                         />
                     </Campo>
@@ -90,13 +102,19 @@ const NewProduct: React.FC = () => {
                         </select>
                     </Campo>
 
-                    <Campo etiqueta="Precio" para="producto-precio">
+                    <Campo
+                        etiqueta="Precio"
+                        para="producto-precio"
+                        ayuda={sigueARemeras ? 'Sigue al precio de las remeras: cambia cuando cambian ellas.' : undefined}
+                    >
                         <input
                             id="producto-precio" type="number" inputMode="numeric" min={0} required
                             placeholder="15000"
-                            value={form.price}
-                            onChange={e => setForm({ ...form, price: numero(e.target.value) })}
-                            className={campo}
+                            value={precioFinal}
+                            readOnly={sigueARemeras}
+                            aria-readonly={sigueARemeras}
+                            onChange={e => { if (!sigueARemeras) setForm({ ...form, price: numero(e.target.value) }); }}
+                            className={`${campo} ${sigueARemeras ? 'text-slate-500' : ''}`}
                         />
                     </Campo>
 
@@ -130,7 +148,7 @@ const NewProduct: React.FC = () => {
             <BarraDeRevisar
                 form="form-producto"
                 resumen={`${form.type} talle ${form.size}`}
-                detalle={yaExiste ? 'Ya existe' : `${form.stock} en stock · $${form.price.toLocaleString('es-AR')}`}
+                detalle={yaExiste ? 'Ya existe' : `${form.stock} en stock · $${precioFinal.toLocaleString('es-AR')}`}
                 deshabilitado={yaExiste}
             />
             <HojaDeRevision
@@ -140,7 +158,7 @@ const NewProduct: React.FC = () => {
                 grupos={[{ filas: [
                     { etiqueta: 'Producto', valor: `${form.type} talle ${form.size}` },
                     { etiqueta: 'Código', valor: codigo },
-                    { etiqueta: 'Precio', valor: `$${form.price.toLocaleString('es-AR')}` },
+                    { etiqueta: 'Precio', valor: `$${precioFinal.toLocaleString('es-AR')}${sigueARemeras ? ' (el de las remeras)' : ''}` },
                     { etiqueta: 'Cuántos hay', valor: String(form.stock) },
                     { etiqueta: 'Avisar con', valor: `${form.minStock} o menos` },
                 ] }]}

@@ -103,8 +103,8 @@ const SelectorDeTalle: React.FC<{
                     >
                         <div className="p-4 space-y-3 border-t border-slate-100">
                             <Desplegable
-                                etiqueta="Remeras o buzos"
-                                vacio="Remeras o buzos"
+                                etiqueta="Prenda"
+                                vacio="Qué prenda"
                                 valor={clase}
                                 opciones={clasesConProductos.map(c => ({ valor: c }))}
                                 abierto={abierta === 'nuevo-clase'}
@@ -556,7 +556,9 @@ const ReportarStockContent: React.FC = () => {
                                             {porPreguntar.map(g => (
                                                 <div key={g.clase} className="rounded-xl bg-amber-50 border border-amber-200 p-4">
                                                     <p className="text-sm font-semibold text-amber-900">
-                                                        ¿No hay ningún {g.clase === ProductType.REMERA ? 'remera' : 'buzo'}, o no los contaste?
+                                                        {g.clase === ProductType.BUZO
+                                                            ? '¿No hay ningún buzo, o no los contaste?'
+                                                            : `¿No hay ninguna ${g.clase === ProductType.SERVOLUCION ? 'remera Servolución' : 'remera'}, o no las contaste?`}
                                                     </p>
                                                     <div className="grid grid-cols-2 gap-2 mt-3">
                                                         <button

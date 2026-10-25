@@ -116,8 +116,8 @@ const SelectorDeProducto: React.FC<{
                     >
                         <div className="p-4 space-y-3 border-t border-slate-100">
                             <Desplegable
-                                etiqueta="Remeras o buzos"
-                                vacio="Remeras o buzos"
+                                etiqueta="Prenda"
+                                vacio="Qué prenda"
                                 valor={clase}
                                 opciones={clasesConProductos.map(c => ({ valor: c }))}
                                 abierto={abierta === 'nuevo-clase'}

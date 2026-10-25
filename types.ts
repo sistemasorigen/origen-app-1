@@ -193,8 +193,34 @@ export interface AlabanzaConfig {
 
 export enum ProductType {
     REMERA = 'Remeras',
-    BUZO = 'Buzos'
+    BUZO = 'Buzos',
+    /**
+     * Una remera aparte, con su propio stock y sus propios talles. Su precio
+     * sigue al de las remeras: lo copia la base (sql/punto_remeras_servolucion.sql).
+     */
+    SERVOLUCION = 'Remeras Servolución',
 }
+
+/**
+ * Cómo se llama cada tipo en un botón angosto. "Remeras Servolución" no entra
+ * en un tercio de pantalla de teléfono.
+ */
+export const NOMBRE_CORTO_DE_TIPO: Record<ProductType, string> = {
+    [ProductType.REMERA]: 'Remeras',
+    [ProductType.BUZO]: 'Buzos',
+    [ProductType.SERVOLUCION]: 'Servolución',
+};
+
+/**
+ * El código de un producto: "REMERAS-3", "BUZOS-3", "SERVOLUCION-3".
+ *
+ * Antes se armaba con `type.toUpperCase()`, que para la Servolución da un
+ * código con espacio y tilde. Remeras y Buzos quedan iguales que siempre.
+ */
+export const codigoDeProducto = (tipo: ProductType, talle: string): string => {
+    const prefijo = tipo === ProductType.SERVOLUCION ? 'SERVOLUCION' : tipo.toUpperCase();
+    return `${prefijo}-${talle}`;
+};
 
 export const INFO_POINT_SIZES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 

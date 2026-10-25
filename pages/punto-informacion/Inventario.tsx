@@ -22,7 +22,7 @@ import { Trash2, Plus, Search, Package, ChevronDown } from 'lucide-react';
  * ver veinte filas y buscar. El que necesita el detalle, lo despliega.
  */
 
-const CLASES = [ProductType.REMERA, ProductType.BUZO];
+const CLASES = [ProductType.REMERA, ProductType.BUZO, ProductType.SERVOLUCION];
 
 /** Del talle 1 al más alto. El talle es texto: se compara como número. */
 const porTalle = (a: InfoPointProduct, b: InfoPointProduct) =>
@@ -53,7 +53,7 @@ const Inventory: React.FC = () => {
             ? previos.filter(c => c !== clase)
             : [...previos, clase]);
 
-    // Remeras primero, buzos después, y adentro del 1 al más alto.
+    // Remeras, buzos y Servolución —cada una su grupo—, y adentro del 1 al más alto.
     const grupos = useMemo(
         () => CLASES
             .map(clase => ({

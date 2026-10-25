@@ -26,7 +26,10 @@ import { supabase } from './supabaseClient';
 export interface Rango { desde: string; hasta: string; }
 
 export type TipoDeMovimiento = 'Entrada' | 'Salida' | 'Ajuste';
-export type ClaseDeProducto = 'Remeras' | 'Buzos';
+export type ClaseDeProducto = 'Remeras' | 'Buzos' | 'Remeras Servolución';
+
+/** El orden de todo el Punto: remeras, buzos, Servolución. */
+export const CLASES_DE_PRODUCTO: ClaseDeProducto[] = ['Remeras', 'Buzos', 'Remeras Servolución'];
 export type TipoDeSolicitud = 'bautismos' | 'presentaciones';
 export type EstadoDeSolicitud = 'Pendiente' | 'Realizado' | 'Cancelado';
 
@@ -91,6 +94,9 @@ export interface NovedadesCompletas {
 export interface KpisPuntoInfo {
     remeras: { enStock: number; bajoMinimo: number };
     buzos: { enStock: number; bajoMinimo: number };
+    servolucion: { enStock: number; bajoMinimo: number };
+    /** Si hay algún talle de Servolución cargado: sin ninguno, la pantalla no la muestra. */
+    hayServolucion: boolean;
     bautismos: { pendientes: number; diasDeEspera: number | null };
     presentaciones: { pendientes: number; diasDeEspera: number | null };
 }
@@ -110,6 +116,8 @@ export interface FilaDeTalle {
 export interface InventarioDelPunto {
     remeras: FilaDeTalle[];
     buzos: FilaDeTalle[];
+    servolucion: FilaDeTalle[];
+    hayServolucion: boolean;
 }
 
 export interface PendienteDelPunto {
@@ -247,8 +255,9 @@ export const diasDeEspera = (fecha: string | null | undefined, ahora: Date = new
 
 // ── Las frases de las novedades ─────────────────────────────────────────
 
-const SINGULAR: Record<ClaseDeProducto, string> = { Remeras: 'remera', Buzos: 'buzo' };
-const ARTICULO: Record<ClaseDeProducto, string> = { Remeras: 'una', Buzos: 'un' };
+const SINGULAR: Record<ClaseDeProducto, string> = { Remeras: 'remera', Buzos: 'buzo', 'Remeras Servolución': 'remera Servolución' };
+const PLURAL: Record<ClaseDeProducto, string> = { Remeras: 'remeras', Buzos: 'buzos', 'Remeras Servolución': 'remeras Servolución' };
+const ARTICULO: Record<ClaseDeProducto, string> = { Remeras: 'una', Buzos: 'un', 'Remeras Servolución': 'una' };
 
 interface MovimientoCrudo {
     id: string;
@@ -300,7 +309,7 @@ export const fraseDeMovimiento = (
 ): string => {
     const clase = producto || 'Remeras';
     const sing = SINGULAR[clase];
-    const plural = clase.toLowerCase();
+    const plural = PLURAL[clase];
     const cola = talle ? ` talle ${talle}` : '';
 
     if (tipo === 'Entrada') {
@@ -329,20 +338,18 @@ export const resumenDePrendas = (
     prendas: { producto: ClaseDeProducto | null; cantidad: number }[],
     union: ' y ' | ', ' = ' y ',
 ): string => {
-    const SINGULAR: Record<string, string> = { Remeras: 'remera', Buzos: 'buzo' };
     const porClase = new Map<string, number>();
     prendas.forEach(p => {
         const clase = p.producto || 'Remeras';
         porClase.set(clase, (porClase.get(clase) || 0) + (p.cantidad || 0));
     });
 
-    // Las remeras primero, como en todo el resto del Punto.
-    const orden: ClaseDeProducto[] = ['Remeras', 'Buzos'];
-    const partes = orden
+    // En el orden de todo el resto del Punto.
+    const partes = CLASES_DE_PRODUCTO
         .filter(c => (porClase.get(c) || 0) > 0)
         .map(c => {
             const n = porClase.get(c) as number;
-            return `${n} ${n === 1 ? SINGULAR[c] : c.toLowerCase()}`;
+            return `${n} ${n === 1 ? SINGULAR[c] : PLURAL[c]}`;
         });
 
     if (partes.length === 0) return 'sin prendas';
@@ -358,9 +365,11 @@ export const talleDe = (code: string | null, nombre: string | null): number | nu
     return porCodigo ? Number(porCodigo[1]) : null;
 };
 
-/** "REMERAS-3" o "Remeras Talle 3" → 'Remeras'. */
+/** "REMERAS-3" o "Remeras Talle 3" → 'Remeras'. "SERVOLUCION-3" → 'Remeras Servolución'. */
 export const claseDe = (code: string | null, nombre: string | null): ClaseDeProducto | null => {
     const texto = `${code || ''} ${nombre || ''}`.toLowerCase();
+    // Antes que "remera": "Remeras Servolución" también dice remera.
+    if (texto.includes('servoluci')) return 'Remeras Servolución';
     if (texto.includes('remera')) return 'Remeras';
     if (texto.includes('buzo')) return 'Buzos';
     return null;
@@ -739,6 +748,8 @@ export const getKpisPuntoInfo = async (): Promise<KpisPuntoInfo | null> => {
     return {
         remeras: resumen('Remeras'),
         buzos: resumen('Buzos'),
+        servolucion: resumen('Remeras Servolución'),
+        hayServolucion: (prods.data || []).some(p => p.type === 'Remeras Servolución'),
         bautismos: {
             pendientes: (bauts.data || []).length,
             diasDeEspera: masVieja((bauts.data || []).map(b => b.registration_date)),
@@ -813,6 +824,8 @@ export const getInventarioPuntoInfo = async (rango: Rango): Promise<InventarioDe
     return {
         remeras: armarFilasDeTalle('Remeras', productos, movimientos),
         buzos: armarFilasDeTalle('Buzos', productos, movimientos),
+        servolucion: armarFilasDeTalle('Remeras Servolución', productos, movimientos),
+        hayServolucion: productos.some(p => p.type === 'Remeras Servolución'),
     };
 };
 

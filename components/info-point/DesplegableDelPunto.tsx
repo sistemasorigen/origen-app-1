@@ -19,10 +19,11 @@ export interface Opcion {
     bloqueada?: boolean;
 }
 
-export const CLASES = [ProductType.REMERA, ProductType.BUZO];
+/** Los tipos de producto, en el orden en que se muestran en todo el Punto. */
+export const CLASES = [ProductType.REMERA, ProductType.BUZO, ProductType.SERVOLUCION];
 
 /**
- * Remeras antes que buzos, y adentro de cada uno del talle 1 al más alto.
+ * Remeras, buzos y Servolución, y adentro de cada uno del talle 1 al más alto.
  * El talle es texto en la base ('1'…'10'), así que se compara como número: si
  * no, el 10 queda entre el 1 y el 2.
  */

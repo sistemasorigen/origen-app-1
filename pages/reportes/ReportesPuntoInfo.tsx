@@ -169,7 +169,7 @@ const ReportesPuntoInfo: React.FC = () => {
     const [cargandoPeriodo, setCargandoPeriodo] = useState(true);
     const [fallaPeriodo, setFallaPeriodo] = useState(false);
 
-    const [modo, setModo] = useState<Record<ClaseDeProducto, 'stock' | 'periodo'>>({ Remeras: 'stock', Buzos: 'stock' });
+    const [modo, setModo] = useState<Record<ClaseDeProducto, 'stock' | 'periodo'>>({ Remeras: 'stock', Buzos: 'stock', 'Remeras Servolución': 'stock' });
     /** El tooltip que se abre al tocar una fila en el teléfono. */
     const [tocado, setTocado] = useState<{ clase: ClaseDeProducto; talle: number } | null>(null);
     /** El reporte de stock que se está mirando, abierto desde Novedades. */
@@ -234,7 +234,11 @@ const ReportesPuntoInfo: React.FC = () => {
             'Se vendieron (período)': f.vendieron,
         }));
         descargarExcel(
-            [{ nombre: 'Remeras', filas: hoja(inventario.remeras) }, { nombre: 'Buzos', filas: hoja(inventario.buzos) }],
+            [
+                { nombre: 'Remeras', filas: hoja(inventario.remeras) },
+                { nombre: 'Buzos', filas: hoja(inventario.buzos) },
+                ...(inventario.hayServolucion ? [{ nombre: 'Remeras Servolución', filas: hoja(inventario.servolucion) }] : []),
+            ],
             `Reportes-Punto-Inventario-${rango.desde}-a-${rango.hasta}.xlsx`,
         );
     };
@@ -720,7 +724,9 @@ const ReportesPuntoInfo: React.FC = () => {
                         <p className="mt-7 mb-2.5 m-0 text-[12.5px]" style={{ color: C.tenue }}>
                             Estos números son de hoy: no cambian con el período.
                         </p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {/* La Servolución entra sólo si hay algún talle cargado: un
+                            cero de algo que todavía no existe se lee como faltante. */}
+                        <div className={`grid grid-cols-2 gap-3 ${kpis.hayServolucion ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
                             <KpiDelPunto
                                 label="Remeras en stock" valor={kpis.remeras.enStock} alerta={kpis.remeras.bajoMinimo > 0}
                                 nota={kpis.remeras.bajoMinimo > 0
@@ -733,6 +739,14 @@ const ReportesPuntoInfo: React.FC = () => {
                                     ? `${kpis.buzos.bajoMinimo} ${kpis.buzos.bajoMinimo === 1 ? 'talle' : 'talles'} por debajo del mínimo`
                                     : 'Todos los talles sobre el mínimo'}
                             />
+                            {kpis.hayServolucion && (
+                                <KpiDelPunto
+                                    label="Servolución en stock" valor={kpis.servolucion.enStock} alerta={kpis.servolucion.bajoMinimo > 0}
+                                    nota={kpis.servolucion.bajoMinimo > 0
+                                        ? `${kpis.servolucion.bajoMinimo} ${kpis.servolucion.bajoMinimo === 1 ? 'talle' : 'talles'} por debajo del mínimo`
+                                        : 'Todos los talles sobre el mínimo'}
+                                />
+                            )}
                             <KpiDelPunto
                                 label="Bautismos pendientes" valor={kpis.bautismos.pendientes}
                                 nota={kpis.bautismos.pendientes > 0 && kpis.bautismos.diasDeEspera !== null
@@ -761,6 +775,9 @@ const ReportesPuntoInfo: React.FC = () => {
                                 <>
                                     <TarjetaDeProducto clase="Remeras" filas={inventario.remeras} />
                                     <TarjetaDeProducto clase="Buzos" filas={inventario.buzos} />
+                                    {inventario.hayServolucion && (
+                                        <TarjetaDeProducto clase="Remeras Servolución" filas={inventario.servolucion} />
+                                    )}
                                 </>
                             )}
                         </div>

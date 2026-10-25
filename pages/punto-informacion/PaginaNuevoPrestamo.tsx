@@ -5,7 +5,7 @@ import { AppProvider, useStore } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { puedeEntrarAlPunto } from '../../services/authUtils';
 import SinAcceso from '../../components/auth/SinAcceso';
-import { ProductType, INFO_POINT_SIZES } from '../../types';
+import { ProductType, INFO_POINT_SIZES, NOMBRE_CORTO_DE_TIPO } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
 import {
     PantallaFormulario, Campo, ParDeCampos, BarraDeRevisar, HojaDeRevision, Opciones, campo,
@@ -88,9 +88,9 @@ const PaginaNuevoPrestamoContent: React.FC = () => {
                 {/* Dos opciones: se tocan, no se despliegan. */}
                 <Campo etiqueta="Qué se lleva">
                     <Opciones
-                        etiquetaGrupo="Remera o buzo"
+                        etiquetaGrupo="Qué prenda"
                         valor={form.itemType}
-                        opciones={Object.values(ProductType).map(t => ({ valor: t }))}
+                        opciones={Object.values(ProductType).map(t => ({ valor: t, etiqueta: NOMBRE_CORTO_DE_TIPO[t] }))}
                         onElegir={v => setForm({ ...form, itemType: v as ProductType })}
                     />
                 </Campo>

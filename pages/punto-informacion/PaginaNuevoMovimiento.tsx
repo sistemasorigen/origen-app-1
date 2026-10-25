@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppProvider, useStore } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
-import { MovementType, ProductType, INFO_POINT_SIZES } from '../../types';
+import { MovementType, ProductType, INFO_POINT_SIZES, codigoDeProducto } from '../../types';
 import { safeUUID } from '../../services/uuidUtils';
 import { puedeEntrarAlPunto } from '../../services/authUtils';
 import SinAcceso from '../../components/auth/SinAcceso';
@@ -29,7 +29,7 @@ const PaginaNuevoMovimientoContent: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const targetCode = `${form.type.toUpperCase()}-${form.size}`;
+        const targetCode = codigoDeProducto(form.type, form.size);
         const product = products.find(p => p.code === targetCode);
 
         if (!product) {
