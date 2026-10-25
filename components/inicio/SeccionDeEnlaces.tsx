@@ -65,6 +65,12 @@ const FORMA = 'aspect-[4/3] min-h-[232px]';
  * Un enlace SIN bajada no tiene nada que desplegar: ahí la tarjeta es un
  * link y el botón dice "Ir al enlace" desde el principio.
  *
+ * Se despliegan todas juntas: al abrir una, el riel entero queda abierto y
+ * se puede seguir deslizando para leer las demás sin tocar cada una. Las que
+ * no tienen bajada también pasan a la forma abierta (portada arriba, título
+ * abajo), para que la fila se vea pareja. Abierta, un toque en cualquier
+ * tarjeta las vuelve a cerrar a todas.
+ *
  * Al desplegarse, la tarjeta deja de tener la imagen de fondo y pasa a
  * tenerla de portada, arriba, como la tarjeta de un grupo de GCX. No es un
  * capricho: estirar una tarjeta con la imagen de fondo la deforma, y un
@@ -84,10 +90,9 @@ export const TarjetaDeLink: React.FC<{
     /** En el panel la tarjeta se mira, no se toca: ni foco ni clicks. */
     vistaPrevia?: boolean;
     /**
-     * Abierta o cerrada lo decide la sección, no la tarjeta. En el riel
-     * infinito cada enlace está dibujado tres veces: si cada copia llevara
-     * su propio estado, desplegar una y seguir deslizando mostraría la
-     * misma tarjeta cerrada un rato después.
+     * Abierta o cerrada lo decide la sección, no la tarjeta: se abren y se
+     * cierran todas juntas. Además, en el riel infinito cada enlace está
+     * dibujado tres veces, y las tres copias tienen que coincidir.
      */
     abierta?: boolean;
     onAlternar?: () => void;
@@ -120,13 +125,16 @@ export const TarjetaDeLink: React.FC<{
     // cualquier otro caso la tarjeta es blanca y el texto, oscuro.
     const sobreLaFoto = conImagen && !abierta;
 
+    /** Abierta, cualquier tarjeta pliega; cerrada, sólo las que tienen bajada despliegan. */
+    const alterna = abierta || hayDetalles;
+
     const alTocarLaTarjeta = () => {
         if (vistaPrevia) return;
-        if (hayDetalles && onAlternar) onAlternar();
+        if (alterna && onAlternar) onAlternar();
         else onAbrir();
     };
 
-    const etiqueta = hayDetalles
+    const etiqueta = alterna
         ? `${link.titulo}, ${abierta ? 'ocultar' : 'ver'} los detalles`
         : etiquetaDeLink(link);
 
@@ -135,8 +143,8 @@ export const TarjetaDeLink: React.FC<{
             layout={!vistaPrevia}
             transition={transicion}
             data-enlace
-            role={vistaPrevia ? undefined : hayDetalles ? 'button' : 'link'}
-            aria-expanded={hayDetalles ? abierta : undefined}
+            role={vistaPrevia ? undefined : alterna ? 'button' : 'link'}
+            aria-expanded={alterna ? abierta : undefined}
             tabIndex={vistaPrevia ? undefined : 0}
             aria-label={vistaPrevia ? undefined : etiqueta}
             aria-hidden={vistaPrevia || undefined}
@@ -152,7 +160,7 @@ export const TarjetaDeLink: React.FC<{
                     alTocarLaTarjeta();
                 }
             }}
-            className={`relative overflow-hidden ${abierta ? '' : FORMA} rounded-2xl dark:shadow-none ${sobreLaFoto ? 'bg-slate-900' : 'bg-white dark:bg-zinc-900'} ${conImagen
+            className={`relative overflow-hidden ${abierta ? 'h-full flex flex-col' : FORMA} rounded-2xl dark:shadow-none ${sobreLaFoto ? 'bg-slate-900' : 'bg-white dark:bg-zinc-900'} ${conImagen
                 // Con imagen NO lleva borde, ni siquiera transparente: un
                 // borde corre la portada un píxel para adentro al abrir, y
                 // entonces el recorte deja de ser el mismo. La sombra alcanza
@@ -192,7 +200,7 @@ export const TarjetaDeLink: React.FC<{
             <motion.div
                 layout={!vistaPrevia}
                 transition={transicion}
-                className={`flex flex-col p-[18px] ${abierta ? 'relative' : 'absolute inset-0'}`}
+                className={`flex flex-col p-[18px] ${abierta ? 'relative flex-1' : 'absolute inset-0'}`}
             >
                 {/* La única pastilla que queda es la del cierre, que avisa
                     algo que no se sabe de otra forma. La de "Link externo" /
@@ -334,8 +342,12 @@ const FLECHA = 'absolute -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-
  *
  * El `relative` es para que el offsetLeft de cada tarjeta se mida desde el
  * riel, y no cambie con lo que se deslizó.
+ *
+ * La alineación vertical la pone quien lo usa: cerradas van arriba;
+ * desplegadas se estiran todas a la altura de la más larga, para que los
+ * botones queden en la misma línea al deslizar.
  */
-const FILA = 'relative flex gap-3 sm:gap-4 -mx-4 px-[44px] sm:mx-0 sm:px-0 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1 items-start';
+const FILA = 'relative flex gap-3 sm:gap-4 -mx-4 px-[44px] sm:mx-0 sm:px-0 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1';
 
 /**
  * El ancho de una tarjeta. En el teléfono, el de la pantalla menos los dos
@@ -381,8 +393,8 @@ const SeccionDeEnlaces: React.FC = () => {
      * `min-h` de FORMA, que gana en pantallas muy angostas.
      */
     const [altoCerrada, setAltoCerrada] = useState(232);
-    /** Abierta o cerrada: lo sabe la sección, porque cada enlace se dibuja tres veces. */
-    const [abiertoId, setAbiertoId] = useState<string | null>(null);
+    /** Todas abiertas o todas cerradas: se despliegan juntas. */
+    const [desplegados, setDesplegados] = useState(false);
 
     // null = todavía no llegaron, o no se pudieron traer. Las dos cosas se
     // ven igual: la sección no aparece y el resto del inicio sigue.
@@ -492,7 +504,7 @@ const SeccionDeEnlaces: React.FC = () => {
             <div className="lg:col-span-3" aria-busy="true">
                 <div className="h-5 w-[170px] rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
                 <div className="mt-3 h-[13px] w-[280px] max-w-full rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
-                <div className={`${FILA} mt-4`}>
+                <div className={`${FILA} items-start mt-4`}>
                     {[0, 1, 2].map(i => (
                         <div key={i} className={JUSTAS}><Esqueleto /></div>
                     ))}
@@ -513,7 +525,7 @@ const SeccionDeEnlaces: React.FC = () => {
             </p>
 
             <div className="relative group/riel">
-                <div ref={rielRef} onScroll={alDeslizar} className={FILA}>
+                <div ref={rielRef} onScroll={alDeslizar} className={`${FILA} ${desplegados ? 'items-stretch' : 'items-start'}`}>
                     {Array.from({ length: enRonda ? COPIAS : 1 }).map((_, copia) =>
                         lista.map(l => (
                             <div
@@ -528,8 +540,8 @@ const SeccionDeEnlaces: React.FC = () => {
                                 <TarjetaDeLink
                                     link={l}
                                     onAbrir={() => abrirLink(l, navigate)}
-                                    abierta={abiertoId === l.id}
-                                    onAlternar={() => setAbiertoId(a => (a === l.id ? null : l.id))}
+                                    abierta={desplegados}
+                                    onAlternar={() => setDesplegados(d => !d)}
                                 />
                             </div>
                         )),
