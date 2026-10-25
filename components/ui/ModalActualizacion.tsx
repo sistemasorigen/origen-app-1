@@ -4,7 +4,11 @@ import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 interface ModalActualizacionProps {
     onConfirm: () => void;
-    /** "Ahora no". Sin esto el cartel sería una pared sin salida. */
+    /**
+     * Seguir con la versión vieja. Sólo se ofrece cuando la actualización ya
+     * falló: ahí "Probar de nuevo" vuelve a traer el mismo bundle viejo, y
+     * sin esta salida la app quedaría tapada sin forma de usarla.
+     */
     onPosponer: () => void;
     /** Un reload anterior ya se intentó y volvió con la misma versión. */
     fallido?: boolean;
@@ -45,17 +49,18 @@ const ModalActualizacion: React.FC<ModalActualizacionProps> = ({ onConfirm, onPo
                     <RefreshCw className={`w-4 h-4 ${reloading ? 'animate-spin' : ''}`} />
                     {reloading ? 'Actualizando...' : fallido ? 'Probar de nuevo' : 'Actualizar ahora'}
                 </button>
-                {/* La salida. Actualizar es lo recomendado —por eso es el botón
-                    negro—, pero nadie tiene que quedarse encerrado: puede estar
-                    cargando la inscripción de sus hijos o escaneando entradas en
-                    la puerta con fila. */}
-                <button
-                    onClick={onPosponer}
-                    disabled={reloading}
-                    className="w-full py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors disabled:opacity-60"
-                >
-                    Seguir usando esta versión
-                </button>
+                {/* Con una versión nueva no hay "ahora no": se actualiza. La
+                    salida queda sólo cuando el reload ya se probó y el
+                    servidor sigue entregando la anterior. */}
+                {fallido && (
+                    <button
+                        onClick={onPosponer}
+                        disabled={reloading}
+                        className="w-full py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors disabled:opacity-60"
+                    >
+                        Seguir usando esta versión
+                    </button>
+                )}
             </div>
         </div>
     );

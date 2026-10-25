@@ -43,13 +43,11 @@ const RESET_STORAGE_KEY = 'origen_version_reset';
 const MAX_RESET_ATTEMPTS = 3;
 
 /**
- * La versión que esta persona decidió no instalar ahora.
+ * La versión que esta persona dejó de lado.
  *
- * El aviso tapa la app entera, y hay momentos en los que eso es peor que
- * quedarse una versión atrás: alguien cargando la inscripción de sus hijos,
- * o el que está escaneando entradas en la puerta con fila. Sin forma de
- * posponerlo, el único camino era recargar en el medio de lo que estaba
- * haciendo —y si el reload no traía la versión nueva, el cartel volvía—.
+ * Con una versión nueva el cartel no deja seguir: se actualiza. La única
+ * salida es cuando la actualización ya falló (ver FALLO_STORAGE_KEY), y
+ * entonces esto evita que el cartel vuelva a tapar la app enseguida.
  *
  * En sessionStorage y no en localStorage a propósito: vale para esta
  * pestaña y hasta cerrarla, no para siempre.
@@ -292,7 +290,10 @@ export function useVersionCheck() {
         } catch { /* sin storage */ }
     }, []);
 
-    /** "Ahora no": sigue con esta versión y no vuelve a preguntar en esta pestaña. */
+    /**
+     * Sigue con esta versión y no vuelve a preguntar en esta pestaña. El
+     * cartel lo ofrece sólo cuando la actualización ya falló.
+     */
     const posponer = () => {
         try {
             if (pendingVersionRef.current) {
