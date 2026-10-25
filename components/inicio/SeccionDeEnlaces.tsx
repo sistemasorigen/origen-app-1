@@ -2,7 +2,8 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { getMediaFrameStyle } from '../ui/CarruselHero';
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Share } from 'lucide-react';
+import ModalCompartirQR from '../modals/ModalCompartirQR';
 import {
     getLinksPublicos,
     abrirLink,
@@ -101,6 +102,13 @@ export const TarjetaDeLink: React.FC<{
      * publicada.
      */
     const hayDetalles = !!link.descripcion;
+    const [compartiendo, setCompartiendo] = useState(false);
+    /** El link que se comparte: el de afuera tal cual, o la pantalla de la app con su #. */
+    const linkParaCompartir = esExterno
+        ? link.destino
+        : `${typeof window !== 'undefined' ? window.location.origin : 'https://app.origeniglesia.org'}/#${link.destino}`;
+    /** Compartir va al lado de "Ir al enlace", y sólo cuando el botón dice eso. */
+    const conCompartir = abierta || !hayDetalles;
 
     const sinMovimiento = useReducedMotion();
 
@@ -226,7 +234,23 @@ export const TarjetaDeLink: React.FC<{
                 {/* El envoltorio es el que empuja: el botón queda pegado al pie
                     con 18px de aire, y así los botones de la fila quedan a la
                     misma altura aunque los textos midan distinto. */}
-                <span className={`block w-full pt-[18px] ${sobreLaFoto ? '' : 'mt-auto'}`}>
+                <span className={`flex w-full gap-2 pt-[18px] ${sobreLaFoto ? '' : 'mt-auto'}`}>
+                    {/* Compartir, a la izquierda y más chico: lo principal
+                        sigue siendo ir. Abre el mismo panel que los grupos
+                        (QR, copiar el link, WhatsApp). */}
+                    {conCompartir && (
+                        <button
+                            type="button"
+                            onClick={vistaPrevia ? undefined : e => { e.stopPropagation(); setCompartiendo(true); }}
+                            tabIndex={vistaPrevia ? -1 : 0}
+                            aria-label={`Compartir ${link.titulo}`}
+                            className={`shrink-0 w-[46px] h-[46px] rounded-xl flex items-center justify-center transition-colors ${sobreLaFoto
+                                ? 'bg-white/20 text-white backdrop-blur-sm hover:bg-white/30'
+                                : 'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white`}
+                        >
+                            <Share className="w-[18px] h-[18px]" strokeWidth={2.1} />
+                        </button>
+                    )}
                     <button
                         type="button"
                         // Cerrada, el botón hace lo mismo que la tarjeta y el
@@ -236,7 +260,7 @@ export const TarjetaDeLink: React.FC<{
                         onClick={abierta ? e => { e.stopPropagation(); onAbrir(); } : undefined}
                         tabIndex={abierta ? 0 : -1}
                         aria-hidden={abierta ? undefined : true}
-                        className={`w-full h-[46px] rounded-xl flex items-center justify-center gap-2 text-[14.5px] font-semibold ${sobreLaFoto
+                        className={`flex-1 min-w-0 h-[46px] rounded-xl flex items-center justify-center gap-2 text-[14.5px] font-semibold ${sobreLaFoto
                             ? 'bg-white text-slate-900'
                             : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'}`}
                     >
@@ -256,6 +280,22 @@ export const TarjetaDeLink: React.FC<{
                     </button>
                 </span>
             </motion.div>
+
+            {/* El panel se dibuja afuera (portal), pero en React sus clicks
+                suben igual hasta la tarjeta: sin este freno, "Copiar link"
+                la plegaba. `contents`: el envoltorio no ocupa lugar. */}
+            {!vistaPrevia && (
+                <span className="contents" onClick={e => e.stopPropagation()}>
+                <ModalCompartirQR
+                    isOpen={compartiendo}
+                    onClose={() => setCompartiendo(false)}
+                    title={link.titulo}
+                    link={linkParaCompartir}
+                    rotulo="COMPARTIR ENLACE"
+                    queAbre="el enlace"
+                />
+                </span>
+            )}
         </motion.div>
     );
 };

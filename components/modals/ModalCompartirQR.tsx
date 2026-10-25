@@ -12,6 +12,8 @@ interface ModalCompartirQRProps {
     subtitle?: string;
     /** El rótulo de arriba del título. */
     rotulo?: string;
+    /** Qué abre el QR, para la leyenda: "el grupo", "el enlace". */
+    queAbre?: string;
 }
 
 /**
@@ -25,7 +27,7 @@ interface ModalCompartirQRProps {
  * opciones" es el compartir del sistema: sólo aparece si el navegador lo
  * tiene, y como en el diseño, sólo en el teléfono.
  */
-const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, title, link, subtitle, rotulo = 'COMPARTIR GRUPO' }) => {
+const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, title, link, subtitle, rotulo = 'COMPARTIR GRUPO', queAbre = 'el grupo' }) => {
     const [isCopied, setIsCopied] = useState(false);
     const [esMovil, setEsMovil] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
     const hayCompartirDelSistema = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
@@ -97,12 +99,12 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
                         fgColor="#0a0a0a"
                         bgColor="#ffffff"
                         role="img"
-                        aria-label="Código QR del link del grupo"
+                        aria-label={`Código QR del link de ${queAbre.replace(/^el /, '')}`}
                         style={{ display: 'block' }}
                     />
                 </div>
                 <p className="mt-3 mb-0 text-center text-[13.5px] font-medium" style={{ color: 'var(--g-m50)' }}>
-                    Escaneá para abrir el grupo
+                    Escaneá para abrir {queAbre}
                 </p>
 
                 <div className="mt-5 h-[52px] rounded-[18px] flex items-center gap-2.5 pl-4 pr-1.5" style={{ background: 'var(--g-chip)' }}>
