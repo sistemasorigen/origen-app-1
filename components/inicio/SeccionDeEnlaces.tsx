@@ -1,8 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { getMediaFrameStyle } from '../ui/CarruselHero';
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Share } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, ExternalLink, Share } from 'lucide-react';
 import ModalCompartirQR from '../modals/ModalCompartirQR';
 import {
     getLinksPublicos,
@@ -48,30 +48,20 @@ const FORMA = 'aspect-[4/3]';
 
 
 /**
+ * La tarjeta se ve siempre entera: portada arriba y limpia, título, bajada y
+ * los botones de compartir e ir. No se despliega ni se pliega: probamos con
+ * "Ver detalles", primero de a una y después todas juntas, y era un toque
+ * de más para leer algo que entra igual.
+ *
  * Qué hace cada toque:
  *
- *   · la tarjeta entera —y su botón "Ver detalles"— la despliega;
- *   · ya desplegada, abajo de todo aparece "Ir al enlace", que es lo único
- *     que lleva afuera.
+ *   · la tarjeta entera —o "Ir al enlace"— lleva al enlace;
+ *   · compartir abre el mismo panel que los grupos (QR, copiar el link,
+ *     WhatsApp), y no lleva a ningún lado.
  *
- * Son dos pasos y no uno a propósito: la bajada no entra en una tarjeta
- * cerrada, y mandar a alguien a un formulario sin que haya podido leer de
- * qué se trata es pedirle que adivine.
- *
- * Un enlace SIN bajada no tiene nada que desplegar: ahí la tarjeta es un
- * link y el botón dice "Ir al enlace" desde el principio.
- *
- * Se despliegan todas juntas: al abrir una, el riel entero queda abierto y
- * se puede seguir deslizando para leer las demás sin tocar cada una. Las que
- * no tienen bajada también pasan a la forma abierta (portada arriba, título
- * abajo), para que la fila se vea pareja. Abierta, un toque en cualquier
- * tarjeta las vuelve a cerrar a todas.
- *
- * La imagen va siempre de portada, arriba y limpia, y el título y el botón
- * debajo, sobre blanco. Antes, cerrada, la imagen ocupaba toda la tarjeta
- * con el título, un velo oscuro y el botón encima: las artes de Origen ya
- * traen su propio título, y la mitad de abajo quedaba tapada. Al desplegar
- * la portada no se mueve: sólo aparece la bajada.
+ * Las artes de Origen ya traen su propio título: por eso la imagen va sola
+ * arriba y el texto debajo, sobre blanco. Con el texto encima, la mitad de
+ * abajo del arte quedaba tapada.
  *
  * También la usa el panel como vista previa mientras se carga un link
  * (pages/admin/EnlacesOrigen.tsx). Es la misma tarjeta, no una copia: lo que
@@ -82,71 +72,37 @@ export const TarjetaDeLink: React.FC<{
     onAbrir: () => void;
     /** En el panel la tarjeta se mira, no se toca: ni foco ni clicks. */
     vistaPrevia?: boolean;
-    /**
-     * Abierta o cerrada lo decide la sección, no la tarjeta: se abren y se
-     * cierran todas juntas. Además, en el riel infinito cada enlace está
-     * dibujado tres veces, y las tres copias tienen que coincidir.
-     */
-    abierta?: boolean;
-    onAlternar?: () => void;
-}> = ({ link, onAbrir, vistaPrevia = false, abierta = false, onAlternar }) => {
+}> = ({ link, onAbrir, vistaPrevia = false }) => {
     const esExterno = link.tipoDestino === 'externo';
     const cierra = textoDeVencimiento(link.vence);
     const conImagen = !!link.imagenUrl;
-    /**
-     * Sin bajada no hay nada que desplegar: la tarjeta va derecho al link.
-     * En la vista previa del panel también vale, aunque ahí no se pueda
-     * tocar: lo que se muestra tiene que decir lo mismo que va a decir
-     * publicada.
-     */
-    const hayDetalles = !!link.descripcion;
     const [compartiendo, setCompartiendo] = useState(false);
     /** El link que se comparte: el de afuera tal cual, o la pantalla de la app con su #. */
     const linkParaCompartir = esExterno
         ? link.destino
         : `${typeof window !== 'undefined' ? window.location.origin : 'https://app.origeniglesia.org'}/#${link.destino}`;
-    /** Compartir va al lado de "Ir al enlace", y sólo cuando el botón dice eso. */
-    const conCompartir = abierta || !hayDetalles;
 
-    const sinMovimiento = useReducedMotion();
-
-    const transicion = sinMovimiento
-        ? { duration: 0 }
-        : { duration: 0.32, ease: [0.16, 1, 0.3, 1] as const };
-
-    /** Abierta, cualquier tarjeta pliega; cerrada, sólo las que tienen bajada despliegan. */
-    const alterna = abierta || hayDetalles;
-
-    const alTocarLaTarjeta = () => {
-        if (vistaPrevia) return;
-        if (alterna && onAlternar) onAlternar();
-        else onAbrir();
+    const abrir = () => {
+        if (!vistaPrevia) onAbrir();
     };
 
-    const etiqueta = alterna
-        ? `${link.titulo}, ${abierta ? 'ocultar' : 'ver'} los detalles`
-        : etiquetaDeLink(link);
-
     return (
-        <motion.div
-            layout={!vistaPrevia}
-            transition={transicion}
+        <div
             data-enlace
-            role={vistaPrevia ? undefined : alterna ? 'button' : 'link'}
-            aria-expanded={alterna ? abierta : undefined}
+            role={vistaPrevia ? undefined : 'link'}
             tabIndex={vistaPrevia ? undefined : 0}
-            aria-label={vistaPrevia ? undefined : etiqueta}
+            aria-label={vistaPrevia ? undefined : etiquetaDeLink(link)}
             aria-hidden={vistaPrevia || undefined}
-            onClick={alTocarLaTarjeta}
+            onClick={abrir}
             onKeyDown={vistaPrevia ? undefined : e => {
                 // Sólo cuando el foco está en la tarjeta: si está en el botón
-                // de adentro, el Enter es de él.
+                // de compartir, el Enter es de él.
                 if (e.target !== e.currentTarget) return;
-                // Un div no recibe el Enter del navegador: hay que atender las
-                // dos teclas a mano, como haría un <a> o un <button>.
-                if (e.key === 'Enter' || e.key === ' ') {
+                // Un div no recibe el Enter del navegador: hay que atenderlo a
+                // mano, como haría un <a>.
+                if (e.key === 'Enter') {
                     e.preventDefault();
-                    alTocarLaTarjeta();
+                    abrir();
                 }
             }}
             // h-full: el riel estira todas a la altura de la más alta, y así
@@ -156,15 +112,11 @@ export const TarjetaDeLink: React.FC<{
                 // borde corre la portada un píxel para adentro, y entonces el
                 // recorte deja de ser el del panel. La sombra alcanza para
                 // despegarla del fondo.
-                ? (abierta ? 'shadow-[0_4px_16px_rgba(15,23,42,0.08)]' : 'shadow-[0_1px_2px_rgba(15,23,42,0.04)]')
+                ? 'shadow-[0_4px_16px_rgba(15,23,42,0.08)]'
                 : 'border border-slate-200 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${vistaPrevia ? '' : 'cursor-pointer hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)] dark:hover:border-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-zinc-950'}`}
         >
             {conImagen && (
-                <motion.div
-                    layout={!vistaPrevia}
-                    transition={transicion}
-                    className={`relative w-full shrink-0 ${FORMA}`}
-                >
+                <div className={`relative w-full shrink-0 ${FORMA}`}>
                     {/* El encuadre sale de la misma función que dibuja los
                         banners de la home: lo que se eligió en el panel es
                         exactamente lo que se ve acá. */}
@@ -175,14 +127,10 @@ export const TarjetaDeLink: React.FC<{
                         className="w-full h-full object-cover pointer-events-none select-none"
                         style={getMediaFrameStyle(link)}
                     />
-                </motion.div>
+                </div>
             )}
 
-            <motion.div
-                layout={!vistaPrevia}
-                transition={transicion}
-                className="relative flex-1 flex flex-col p-[18px]"
-            >
+            <div className="relative flex-1 flex flex-col p-[18px]">
                 {/* La única pastilla que queda es la del cierre, que avisa
                     algo que no se sabe de otra forma. La de "Link externo" /
                     "En Origen" se fue: el ícono del botón ya dice si se abre
@@ -200,21 +148,10 @@ export const TarjetaDeLink: React.FC<{
                     <p className="mb-0 text-[17.5px] leading-[1.3] font-bold tracking-[-0.01em] line-clamp-2 [overflow-wrap:anywhere] text-slate-900 dark:text-white">
                         {link.titulo}
                     </p>
-
-                    {/* La bajada aparece recién al desplegar. Cerrada, la
-                        tarjeta es la portada, el título y poco más: con la
-                        bajada, una fila de tarjetas cerradas sería una pared
-                        de texto. Entra con un poco de atraso para llegar
-                        a una superficie que ya existe, no junto con ella. */}
-                    {abierta && link.descripcion && (
-                        <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={sinMovimiento ? { duration: 0 } : { duration: 0.2, delay: 0.1 }}
-                            className="mt-1.5 mb-0 text-sm leading-[1.5] [overflow-wrap:anywhere] text-slate-500 dark:text-zinc-400"
-                        >
+                    {link.descripcion && (
+                        <p className="mt-1.5 mb-0 text-sm leading-[1.5] [overflow-wrap:anywhere] text-slate-500 dark:text-zinc-400">
                             {link.descripcion}
-                        </motion.p>
+                        </p>
                     )}
                 </div>
 
@@ -223,55 +160,33 @@ export const TarjetaDeLink: React.FC<{
                     misma altura aunque los textos midan distinto. */}
                 <span className="flex w-full gap-2 pt-[18px] mt-auto">
                     {/* Compartir, a la izquierda y más chico: lo principal
-                        sigue siendo ir. Abre el mismo panel que los grupos
-                        (QR, copiar el link, WhatsApp). */}
-                    {conCompartir && (
-                        <button
-                            type="button"
-                            onClick={vistaPrevia ? undefined : e => { e.stopPropagation(); setCompartiendo(true); }}
-                            tabIndex={vistaPrevia ? -1 : 0}
-                            aria-label={`Compartir ${link.titulo}`}
-                            className="shrink-0 w-[46px] h-[46px] rounded-xl flex items-center justify-center transition-colors bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white"
-                        >
-                            <Share className="w-[18px] h-[18px]" strokeWidth={2.1} />
-                        </button>
-                    )}
+                        sigue siendo ir. */}
                     <button
                         type="button"
-                        // Cerrada, el botón hace lo mismo que la tarjeta y el
-                        // click sube solo. Desplegada es el único que lleva
-                        // afuera, así que ahí sí frena el click: si subiera,
-                        // la tarjeta se cerraría en el mismo toque.
-                        onClick={abierta ? e => { e.stopPropagation(); onAbrir(); } : undefined}
-                        tabIndex={abierta ? 0 : -1}
-                        aria-hidden={abierta ? undefined : true}
-                        // "Ver detalles" va claro e "Ir al enlace" negro: en
-                        // una fila de tarjetas cerradas, diez botones negros
-                        // pesan más que las portadas.
-                        className={`flex-1 min-w-0 h-[46px] rounded-xl flex items-center justify-center gap-2 text-[14.5px] font-semibold ${abierta || !hayDetalles
-                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                            : 'bg-slate-100 text-slate-900 dark:bg-zinc-800 dark:text-white'}`}
+                        onClick={vistaPrevia ? undefined : e => { e.stopPropagation(); setCompartiendo(true); }}
+                        tabIndex={vistaPrevia ? -1 : 0}
+                        aria-label={`Compartir ${link.titulo}`}
+                        className="shrink-0 w-[46px] h-[46px] rounded-xl flex items-center justify-center transition-colors bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white"
                     >
-                        {abierta || !hayDetalles ? (
-                            <>
-                                Ir al enlace
-                                {esExterno
-                                    ? <ExternalLink className="w-[15px] h-[15px]" strokeWidth={2.2} />
-                                    : <ArrowRight className="w-4 h-4" strokeWidth={2.2} />}
-                            </>
-                        ) : (
-                            <>
-                                Ver detalles
-                                <ChevronDown className="w-4 h-4" strokeWidth={2.4} />
-                            </>
-                        )}
+                        <Share className="w-[18px] h-[18px]" strokeWidth={2.1} />
                     </button>
+                    {/* Hace lo mismo que la tarjeta: el click sube solo. Fuera
+                        del orden del teclado, porque la tarjeta ya es el link. */}
+                    <span
+                        aria-hidden="true"
+                        className="flex-1 min-w-0 h-[46px] rounded-xl flex items-center justify-center gap-2 text-[14.5px] font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+                    >
+                        Ir al enlace
+                        {esExterno
+                            ? <ExternalLink className="w-[15px] h-[15px]" strokeWidth={2.2} />
+                            : <ArrowRight className="w-4 h-4" strokeWidth={2.2} />}
+                    </span>
                 </span>
-            </motion.div>
+            </div>
 
             {/* El panel se dibuja afuera (portal), pero en React sus clicks
                 suben igual hasta la tarjeta: sin este freno, "Copiar link"
-                la plegaba. `contents`: el envoltorio no ocupa lugar. */}
+                abría el enlace. `contents`: el envoltorio no ocupa lugar. */}
             {!vistaPrevia && (
                 <span className="contents" onClick={e => e.stopPropagation()}>
                 <ModalCompartirQR
@@ -284,7 +199,7 @@ export const TarjetaDeLink: React.FC<{
                 />
                 </span>
             )}
-        </motion.div>
+        </div>
     );
 };
 
@@ -306,9 +221,8 @@ const Esqueleto: React.FC = () => (
  * Las dos flechas de la compu. Redondas, chicas y por fuera del riel, como
  * las del carrusel de grupos.
  *
- * El `top` lo pone la sección, medido: no puede ser la mitad del riel porque
- * con una tarjeta desplegada el riel se estira y las flechas se irían para
- * abajo, lejos de las tarjetas cerradas.
+ * El `top` lo pone la sección, medido: van a la mitad de la portada y no de
+ * la tarjeta, que con el texto debajo es bastante más alta.
  */
 const FLECHA = 'absolute -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md items-center justify-center text-slate-600 dark:text-zinc-300 opacity-0 group-hover/riel:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-slate-50 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white z-10';
 
@@ -365,15 +279,10 @@ const SeccionDeEnlaces: React.FC = () => {
     /** Sólo tiene sentido dar la vuelta si lo que hay no entra en pantalla. */
     const [enRonda, setEnRonda] = useState(false);
     /**
-     * El alto de la portada, para poner las flechas a su mitad.
-     *
-     * Se calcula con el ancho —que es el que manda, por la proporción 4:3 de
-     * FORMA— y no se mide la tarjeta: desplegada se estira, y entonces las
-     * flechas se moverían al abrirla.
+     * El alto de la portada, para poner las flechas a su mitad. Se calcula
+     * con el ancho, que es el que manda por la proporción 4:3 de FORMA.
      */
-    const [altoCerrada, setAltoCerrada] = useState(232);
-    /** Todas abiertas o todas cerradas: se despliegan juntas. */
-    const [desplegados, setDesplegados] = useState(false);
+    const [altoPortada, setAltoPortada] = useState(232);
 
     // null = todavía no llegaron, o no se pudieron traer. Las dos cosas se
     // ven igual: la sección no aparece y el resto del inicio sigue.
@@ -405,7 +314,7 @@ const SeccionDeEnlaces: React.FC = () => {
             const unaCopia = el.scrollWidth / (enRonda ? COPIAS : 1);
             setEnRonda(unaCopia > el.clientWidth + 8);
             const tarjeta = el.querySelector<HTMLElement>('[data-copia]');
-            if (tarjeta) setAltoCerrada((tarjeta.offsetWidth * 3) / 4);
+            if (tarjeta) setAltoPortada((tarjeta.offsetWidth * 3) / 4);
         };
         medir();
         const observador = new ResizeObserver(medir);
@@ -519,8 +428,6 @@ const SeccionDeEnlaces: React.FC = () => {
                                 <TarjetaDeLink
                                     link={l}
                                     onAbrir={() => abrirLink(l, navigate)}
-                                    abierta={desplegados}
-                                    onAlternar={() => setDesplegados(d => !d)}
                                 />
                             </div>
                         )),
@@ -537,7 +444,7 @@ const SeccionDeEnlaces: React.FC = () => {
                             type="button"
                             onClick={() => correr(-1)}
                             aria-label="Enlaces anteriores"
-                            style={{ top: altoCerrada / 2 }}
+                            style={{ top: altoPortada / 2 }}
                             className={`hidden sm:flex -left-3 ${FLECHA}`}
                         >
                             <ChevronLeft className="w-4 h-4" strokeWidth={2.2} />
@@ -546,7 +453,7 @@ const SeccionDeEnlaces: React.FC = () => {
                             type="button"
                             onClick={() => correr(1)}
                             aria-label="Más enlaces"
-                            style={{ top: altoCerrada / 2 }}
+                            style={{ top: altoPortada / 2 }}
                             className={`hidden sm:flex -right-3 ${FLECHA}`}
                         >
                             <ChevronRight className="w-4 h-4" strokeWidth={2.2} />
