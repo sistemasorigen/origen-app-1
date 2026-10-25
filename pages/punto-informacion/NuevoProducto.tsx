@@ -15,19 +15,20 @@ import {
 const NewProduct: React.FC = () => {
     const { addProduct, products } = useStore();
     const toast = useToast();
-    const [form, setForm] = useState({
-        type: ProductType.REMERA,
-        size: '1',
-        price: 0,
-        stock: 0,
-        minStock: 5,
-    });
+    // Los números se guardan como TEXTO mientras se escriben. Como número, un
+    // campo borrado volvía a 0 en el acto y no se podía dejar vacío para
+    // escribir otro valor. Se convierten recién para mostrar y guardar.
+    const VACIO = { type: ProductType.REMERA, size: '1', price: '', stock: '0', minStock: '1' };
+    const [form, setForm] = useState(VACIO);
     const [guardando, setGuardando] = useState(false);
     const [revisando, setRevisando] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    /** Sólo dígitos: lo que se escribe en el campo. */
+    const digitos = (texto: string) => texto.replace(/[^0-9]/g, '').slice(0, 7);
+    /** El valor como número, para mostrar y guardar. Vacío es 0. */
     const numero = (texto: string) => {
-        const n = parseInt(texto.replace(/[^0-9]/g, ''), 10);
+        const n = parseInt(texto, 10);
         return Number.isNaN(n) ? 0 : n;
     };
 
@@ -44,7 +45,9 @@ const NewProduct: React.FC = () => {
             .forEach(p => cuenta.set(p.price ?? 0, (cuenta.get(p.price ?? 0) || 0) + 1));
         return [...cuenta.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] ?? 0;
     })();
-    const precioFinal = sigueARemeras ? precioDeRemeras : form.price;
+    const precioFinal = sigueARemeras ? precioDeRemeras : numero(form.price);
+    const stock = numero(form.stock);
+    const minimo = numero(form.minStock);
 
     // Enviar el formulario no crea: abre la revisión.
     const revisar = (e: React.FormEvent) => {
@@ -61,9 +64,12 @@ const NewProduct: React.FC = () => {
         setGuardando(true);
         setError(null);
         try {
-            await addProduct({ ...form, price: precioFinal, code: codigo, name: `${form.type} Talle ${form.size}` });
+            await addProduct({
+                type: form.type, size: form.size, price: precioFinal, stock, minStock: minimo,
+                code: codigo, name: `${form.type} Talle ${form.size}`,
+            });
             toast.success(`${form.type} talle ${form.size} creado.`);
-            setForm({ type: ProductType.REMERA, size: '1', price: 0, stock: 0, minStock: 5 });
+            setForm(VACIO);
             setRevisando(false);
         } catch (err) {
             console.error('[Punto] producto:', err);
@@ -108,12 +114,12 @@ const NewProduct: React.FC = () => {
                         ayuda={sigueARemeras ? 'Sigue al precio de las remeras: cambia cuando cambian ellas.' : undefined}
                     >
                         <input
-                            id="producto-precio" type="number" inputMode="numeric" min={0} required
+                            id="producto-precio" type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off" required
                             placeholder="15000"
-                            value={precioFinal}
+                            value={sigueARemeras ? String(precioDeRemeras) : form.price}
                             readOnly={sigueARemeras}
                             aria-readonly={sigueARemeras}
-                            onChange={e => { if (!sigueARemeras) setForm({ ...form, price: numero(e.target.value) }); }}
+                            onChange={e => { if (!sigueARemeras) setForm({ ...form, price: digitos(e.target.value) }); }}
                             className={`${campo} ${sigueARemeras ? 'text-slate-500' : ''}`}
                         />
                     </Campo>
@@ -121,17 +127,17 @@ const NewProduct: React.FC = () => {
                     <ParDeCampos juntos>
                         <Campo etiqueta="Cuántos hay" para="producto-stock">
                             <input
-                                id="producto-stock" type="number" inputMode="numeric" min={0} required
+                                id="producto-stock" type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off" required
                                 value={form.stock}
-                                onChange={e => setForm({ ...form, stock: numero(e.target.value) })}
+                                onChange={e => setForm({ ...form, stock: digitos(e.target.value) })}
                                 className={campo}
                             />
                         </Campo>
                         <Campo etiqueta="Avisar cuando queden" para="producto-minimo" ayuda="O menos.">
                             <input
-                                id="producto-minimo" type="number" inputMode="numeric" min={0} required
+                                id="producto-minimo" type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off" required
                                 value={form.minStock}
-                                onChange={e => setForm({ ...form, minStock: numero(e.target.value) })}
+                                onChange={e => setForm({ ...form, minStock: digitos(e.target.value) })}
                                 className={campo}
                             />
                         </Campo>
@@ -148,7 +154,7 @@ const NewProduct: React.FC = () => {
             <BarraDeRevisar
                 form="form-producto"
                 resumen={`${form.type} talle ${form.size}`}
-                detalle={yaExiste ? 'Ya existe' : `${form.stock} en stock · $${precioFinal.toLocaleString('es-AR')}`}
+                detalle={yaExiste ? 'Ya existe' : `${stock} en stock · $${precioFinal.toLocaleString('es-AR')}`}
                 deshabilitado={yaExiste}
             />
             <HojaDeRevision
@@ -159,8 +165,8 @@ const NewProduct: React.FC = () => {
                     { etiqueta: 'Producto', valor: `${form.type} talle ${form.size}` },
                     { etiqueta: 'Código', valor: codigo },
                     { etiqueta: 'Precio', valor: `$${precioFinal.toLocaleString('es-AR')}${sigueARemeras ? ' (el de las remeras)' : ''}` },
-                    { etiqueta: 'Cuántos hay', valor: String(form.stock) },
-                    { etiqueta: 'Avisar con', valor: `${form.minStock} o menos` },
+                    { etiqueta: 'Cuántos hay', valor: String(stock) },
+                    { etiqueta: 'Avisar con', valor: `${minimo} o menos` },
                 ] }]}
                 textoConfirmar="Crear el producto"
                 guardando={guardando}
