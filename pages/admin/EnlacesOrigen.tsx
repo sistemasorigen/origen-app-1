@@ -770,7 +770,7 @@ const EditorDeLink: React.FC<{
                                         className="caja-portada"
                                     />
                                     <p className="mt-1.5 text-[12px] text-black/60">
-                                        Ocupa toda la tarjeta y el texto va encima. Sin imagen, la tarjeta es blanca.
+                                        Va arriba de la tarjeta, sin nada encima. El título y el botón van debajo.
                                     </p>
 
                                     {b.imagenUrl && (

@@ -37,18 +37,14 @@ import {
 // ── La tarjeta ──────────────────────────────────────────────────────────
 
 /**
- * La forma de la tarjeta: 4:3, la MISMA que el marco del encuadre del panel
+ * La forma de la portada: 4:3, la MISMA que el marco del encuadre del panel
  * (pages/admin/EnlacesOrigen.tsx, MARCO). Que sean iguales no es cosmético:
  * el recorte de una imagen con object-cover depende de la proporción de la
  * caja, así que si el panel encuadra en 400×260 y la tarjeta mide 304×260,
  * lo que se eligió no es lo que se ve. Con una proporción fija, el recorte
  * es idéntico en el teléfono, en la compu y en la vista previa.
- *
- * El `min-h` es un piso para pantallas muy angostas (320px), donde la
- * proporción dejaría la tarjeta más corta que su propio texto y el botón
- * quedaría cortado. Ahí el recorte se desvía menos de un 1%: invisible.
  */
-const FORMA = 'aspect-[4/3] min-h-[232px]';
+const FORMA = 'aspect-[4/3]';
 
 
 /**
@@ -71,14 +67,11 @@ const FORMA = 'aspect-[4/3] min-h-[232px]';
  * abajo), para que la fila se vea pareja. Abierta, un toque en cualquier
  * tarjeta las vuelve a cerrar a todas.
  *
- * Al desplegarse, la tarjeta deja de tener la imagen de fondo y pasa a
- * tenerla de portada, arriba, como la tarjeta de un grupo de GCX. No es un
- * capricho: estirar una tarjeta con la imagen de fondo la deforma, y un
- * texto largo sobre una foto se vuelve ilegible.
- *
- * La portada conserva la MISMA caja 4:3 que tenía cerrada, así que la imagen
- * no se mueve ni cambia de recorte al abrir: lo único que viaja es el texto,
- * que baja de estar encima a estar debajo.
+ * La imagen va siempre de portada, arriba y limpia, y el título y el botón
+ * debajo, sobre blanco. Antes, cerrada, la imagen ocupaba toda la tarjeta
+ * con el título, un velo oscuro y el botón encima: las artes de Origen ya
+ * traen su propio título, y la mitad de abajo quedaba tapada. Al desplegar
+ * la portada no se mueve: sólo aparece la bajada.
  *
  * También la usa el panel como vista previa mientras se carga un link
  * (pages/admin/EnlacesOrigen.tsx). Es la misma tarjeta, no una copia: lo que
@@ -121,10 +114,6 @@ export const TarjetaDeLink: React.FC<{
         ? { duration: 0 }
         : { duration: 0.32, ease: [0.16, 1, 0.3, 1] as const };
 
-    // Cerrada y con imagen, el texto va encima de la foto: blanco. En
-    // cualquier otro caso la tarjeta es blanca y el texto, oscuro.
-    const sobreLaFoto = conImagen && !abierta;
-
     /** Abierta, cualquier tarjeta pliega; cerrada, sólo las que tienen bajada despliegan. */
     const alterna = abierta || hayDetalles;
 
@@ -160,11 +149,13 @@ export const TarjetaDeLink: React.FC<{
                     alTocarLaTarjeta();
                 }
             }}
-            className={`relative overflow-hidden ${abierta ? 'h-full flex flex-col' : FORMA} rounded-2xl dark:shadow-none ${sobreLaFoto ? 'bg-slate-900' : 'bg-white dark:bg-zinc-900'} ${conImagen
+            // h-full: el riel estira todas a la altura de la más alta, y así
+            // los botones de la fila quedan en la misma línea.
+            className={`relative overflow-hidden h-full flex flex-col rounded-2xl dark:shadow-none bg-white dark:bg-zinc-900 ${conImagen
                 // Con imagen NO lleva borde, ni siquiera transparente: un
-                // borde corre la portada un píxel para adentro al abrir, y
-                // entonces el recorte deja de ser el mismo. La sombra alcanza
-                // para despegarla del fondo.
+                // borde corre la portada un píxel para adentro, y entonces el
+                // recorte deja de ser el del panel. La sombra alcanza para
+                // despegarla del fondo.
                 ? (abierta ? 'shadow-[0_4px_16px_rgba(15,23,42,0.08)]' : 'shadow-[0_1px_2px_rgba(15,23,42,0.04)]')
                 : 'border border-slate-200 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${vistaPrevia ? '' : 'cursor-pointer hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)] dark:hover:border-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-zinc-950'}`}
         >
@@ -172,10 +163,7 @@ export const TarjetaDeLink: React.FC<{
                 <motion.div
                     layout={!vistaPrevia}
                     transition={transicion}
-                    // Cerrada ocupa toda la tarjeta; abierta es la portada de
-                    // arriba. En las dos la caja es la misma 4:3, así que la
-                    // imagen no se mueve ni cambia de recorte.
-                    className={abierta ? 'relative w-full aspect-[4/3]' : 'absolute inset-0'}
+                    className={`relative w-full shrink-0 ${FORMA}`}
                 >
                     {/* El encuadre sale de la misma función que dibuja los
                         banners de la home: lo que se eligió en el panel es
@@ -187,20 +175,13 @@ export const TarjetaDeLink: React.FC<{
                         className="w-full h-full object-cover pointer-events-none select-none"
                         style={getMediaFrameStyle(link)}
                     />
-                    {/* Sin este velo, un título blanco sobre una foto clara
-                        desaparece. Carga abajo, que es donde va el texto. */}
-                    <motion.div
-                        className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/15"
-                        animate={{ opacity: abierta ? 0 : 1 }}
-                        transition={transicion}
-                    />
                 </motion.div>
             )}
 
             <motion.div
                 layout={!vistaPrevia}
                 transition={transicion}
-                className={`flex flex-col p-[18px] ${abierta ? 'relative flex-1' : 'absolute inset-0'}`}
+                className="relative flex-1 flex flex-col p-[18px]"
             >
                 {/* La única pastilla que queda es la del cierre, que avisa
                     algo que no se sabe de otra forma. La de "Link externo" /
@@ -215,17 +196,15 @@ export const TarjetaDeLink: React.FC<{
                     </div>
                 )}
 
-                {/* Cerrada y con imagen, el texto se apoya abajo sobre la parte
-                    oscura del velo; en cualquier otro caso arranca arriba. */}
-                <div className={sobreLaFoto ? 'mt-auto' : cierra ? 'mt-3.5' : ''}>
-                    <p className={`mb-0 text-[17.5px] leading-[1.3] font-bold tracking-[-0.01em] line-clamp-2 [overflow-wrap:anywhere] ${sobreLaFoto ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.35)]' : 'text-slate-900 dark:text-white'}`}>
+                <div className={cierra ? 'mt-3.5' : ''}>
+                    <p className="mb-0 text-[17.5px] leading-[1.3] font-bold tracking-[-0.01em] line-clamp-2 [overflow-wrap:anywhere] text-slate-900 dark:text-white">
                         {link.titulo}
                     </p>
 
                     {/* La bajada aparece recién al desplegar. Cerrada, la
-                        tarjeta es el título y poco más: una bajada cortada a
-                        mitad de palabra sobre una foto no se lee, y encima
-                        tapa el arte. Entra con un poco de atraso para llegar
+                        tarjeta es la portada, el título y poco más: con la
+                        bajada, una fila de tarjetas cerradas sería una pared
+                        de texto. Entra con un poco de atraso para llegar
                         a una superficie que ya existe, no junto con ella. */}
                     {abierta && link.descripcion && (
                         <motion.p
@@ -242,7 +221,7 @@ export const TarjetaDeLink: React.FC<{
                 {/* El envoltorio es el que empuja: el botón queda pegado al pie
                     con 18px de aire, y así los botones de la fila quedan a la
                     misma altura aunque los textos midan distinto. */}
-                <span className={`flex w-full gap-2 pt-[18px] ${sobreLaFoto ? '' : 'mt-auto'}`}>
+                <span className="flex w-full gap-2 pt-[18px] mt-auto">
                     {/* Compartir, a la izquierda y más chico: lo principal
                         sigue siendo ir. Abre el mismo panel que los grupos
                         (QR, copiar el link, WhatsApp). */}
@@ -252,9 +231,7 @@ export const TarjetaDeLink: React.FC<{
                             onClick={vistaPrevia ? undefined : e => { e.stopPropagation(); setCompartiendo(true); }}
                             tabIndex={vistaPrevia ? -1 : 0}
                             aria-label={`Compartir ${link.titulo}`}
-                            className={`shrink-0 w-[46px] h-[46px] rounded-xl flex items-center justify-center transition-colors ${sobreLaFoto
-                                ? 'bg-white/20 text-white backdrop-blur-sm hover:bg-white/30'
-                                : 'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white`}
+                            className="shrink-0 w-[46px] h-[46px] rounded-xl flex items-center justify-center transition-colors bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white"
                         >
                             <Share className="w-[18px] h-[18px]" strokeWidth={2.1} />
                         </button>
@@ -268,9 +245,12 @@ export const TarjetaDeLink: React.FC<{
                         onClick={abierta ? e => { e.stopPropagation(); onAbrir(); } : undefined}
                         tabIndex={abierta ? 0 : -1}
                         aria-hidden={abierta ? undefined : true}
-                        className={`flex-1 min-w-0 h-[46px] rounded-xl flex items-center justify-center gap-2 text-[14.5px] font-semibold ${sobreLaFoto
-                            ? 'bg-white text-slate-900'
-                            : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'}`}
+                        // "Ver detalles" va claro e "Ir al enlace" negro: en
+                        // una fila de tarjetas cerradas, diez botones negros
+                        // pesan más que las portadas.
+                        className={`flex-1 min-w-0 h-[46px] rounded-xl flex items-center justify-center gap-2 text-[14.5px] font-semibold ${abierta || !hayDetalles
+                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                            : 'bg-slate-100 text-slate-900 dark:bg-zinc-800 dark:text-white'}`}
                     >
                         {abierta || !hayDetalles ? (
                             <>
@@ -311,12 +291,12 @@ export const TarjetaDeLink: React.FC<{
 // ── Mientras llegan ─────────────────────────────────────────────────────
 
 const Esqueleto: React.FC = () => (
-    <div className={`p-[18px] rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 ${FORMA}`}>
-        <div className="h-6 w-24 rounded-full bg-slate-200 dark:bg-zinc-800 animate-pulse" />
-        <div className="mt-4 h-[18px] w-[85%] rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
-        <div className="mt-3 h-[13px] w-full rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
-        <div className="mt-2 h-[13px] w-[65%] rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
-        <div className="mt-5 h-[46px] w-full rounded-xl bg-slate-200 dark:bg-zinc-800 animate-pulse" />
+    <div className="rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
+        <div className={`${FORMA} bg-slate-200 dark:bg-zinc-800 animate-pulse`} />
+        <div className="p-[18px]">
+            <div className="h-[18px] w-[85%] rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
+            <div className="mt-[18px] h-[46px] w-full rounded-xl bg-slate-200 dark:bg-zinc-800 animate-pulse" />
+        </div>
     </div>
 );
 
@@ -343,9 +323,9 @@ const FLECHA = 'absolute -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-
  * El `relative` es para que el offsetLeft de cada tarjeta se mida desde el
  * riel, y no cambie con lo que se deslizó.
  *
- * La alineación vertical la pone quien lo usa: cerradas van arriba;
- * desplegadas se estiran todas a la altura de la más larga, para que los
- * botones queden en la misma línea al deslizar.
+ * La alineación vertical la pone quien lo usa: el riel estira todas las
+ * tarjetas a la altura de la más larga, para que los botones queden en la
+ * misma línea al deslizar; el esqueleto va arriba.
  */
 const FILA = 'relative flex gap-3 sm:gap-4 -mx-4 px-[44px] sm:mx-0 sm:px-0 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1';
 
@@ -385,12 +365,11 @@ const SeccionDeEnlaces: React.FC = () => {
     /** Sólo tiene sentido dar la vuelta si lo que hay no entra en pantalla. */
     const [enRonda, setEnRonda] = useState(false);
     /**
-     * El alto de una tarjeta CERRADA, para poner las flechas a su mitad.
+     * El alto de la portada, para poner las flechas a su mitad.
      *
      * Se calcula con el ancho —que es el que manda, por la proporción 4:3 de
-     * FORMA— y no se mide la tarjeta: la primera puede estar desplegada, y
-     * entonces las flechas se moverían al abrirla. El piso de 232 es el
-     * `min-h` de FORMA, que gana en pantallas muy angostas.
+     * FORMA— y no se mide la tarjeta: desplegada se estira, y entonces las
+     * flechas se moverían al abrirla.
      */
     const [altoCerrada, setAltoCerrada] = useState(232);
     /** Todas abiertas o todas cerradas: se despliegan juntas. */
@@ -426,7 +405,7 @@ const SeccionDeEnlaces: React.FC = () => {
             const unaCopia = el.scrollWidth / (enRonda ? COPIAS : 1);
             setEnRonda(unaCopia > el.clientWidth + 8);
             const tarjeta = el.querySelector<HTMLElement>('[data-copia]');
-            if (tarjeta) setAltoCerrada(Math.max(232, (tarjeta.offsetWidth * 3) / 4));
+            if (tarjeta) setAltoCerrada((tarjeta.offsetWidth * 3) / 4);
         };
         medir();
         const observador = new ResizeObserver(medir);
@@ -525,7 +504,7 @@ const SeccionDeEnlaces: React.FC = () => {
             </p>
 
             <div className="relative group/riel">
-                <div ref={rielRef} onScroll={alDeslizar} className={`${FILA} ${desplegados ? 'items-stretch' : 'items-start'}`}>
+                <div ref={rielRef} onScroll={alDeslizar} className={`${FILA} items-stretch`}>
                     {Array.from({ length: enRonda ? COPIAS : 1 }).map((_, copia) =>
                         lista.map(l => (
                             <div
